@@ -1485,8 +1485,14 @@ function qualityStop(result: TailorResult): string {
   if (reasons.includes("jd_coverage_below_floor")) {
     const pct = Number.isFinite(result.coverage) ? `${result.coverage}%` : "under 95%"
     const gaps = [...(result.keyword_analysis?.missing || []), ...(result.quality?.missing || [])].filter(m => m && !isCertification(m))
-    const named = [...new Set(gaps)].slice(0, 8)
-    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}.` : ""} Your resume and this job are saved for another try. No incomplete file was delivered.`
+    const all = [...new Set(gaps)]
+    const named = all.slice(0, 8)
+    // Nov 4 SailPoint hold: the pick line counts only the headline requirements
+    // used to choose the resume, while this floor counts every extracted term —
+    // say so, or "2 of 2" followed by "40%" reads as a contradiction. Also show
+    // the hidden total whenever the named list is sliced.
+    const more = all.length > named.length ? ` and ${all.length - named.length} more` : ""
+    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}${more}.` : ""} The earlier pick line counted only the headline requirements used to choose this resume; this floor counts every extracted term. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   if (reasons.includes("supported_coverage_below_floor")) {
     const supported = Number.isFinite(result.supported_coverage) ? `${Math.round(result.supported_coverage!)}%` : "too little"

@@ -160,6 +160,11 @@ const TERM_ALIASES: string[][] = [
   ["ttp", "ttps", "tactics techniques and procedures", "tactics techniques procedures"],
   ["ioc", "iocs", "indicator of compromise", "indicators of compromise"],
   ["csoc", "cyber security operations center", "cybersecurity operations center"],
+  // Nov 4 SailPoint hold: a resume saying IdentityIQ (one word) must count for the
+  // JD term IIQ, and so must the spaced form — otherwise the floor reports a gap
+  // the candidate does not have. SailPoint alone is deliberately NOT an alias:
+  // naming the vendor without the product is not the product.
+  ["iiq", "identityiq", "identity iq"],
 ]
 // v2 keyword matching (resume-keyword-report.ts): accents (résumé == resume), every unicode dash, CI-CD == CI/CD,
 // Node JS == Node.js, ASP.NET / VB.NET contain .NET, and a non-string term matches nothing instead of throwing.

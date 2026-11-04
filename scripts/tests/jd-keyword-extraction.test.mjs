@@ -48,6 +48,12 @@ test('matching does not fabricate absent tools or match inside longer words', ()
   assert.equal(present('Reviewed microservices.', 'services'), false)
   assert.equal(present('Azure security monitoring.', 'AWS'), false)
 })
+test('IIQ matches IdentityIQ in either spelling, but not the vendor alone', () => {
+  assert.equal(present('Administered SailPoint IdentityIQ for 5,000 users.', 'IIQ'), true)
+  assert.equal(present('Administered SailPoint Identity IQ for 5,000 users.', 'IIQ'), true)
+  assert.equal(present('Built IIQ workflows and custom rules.', 'IIQ'), true)
+  assert.equal(present('Administered SailPoint for 5,000 users.', 'IIQ'), false)
+})
 test('technology names ending in s and genuine technical punctuation survive extraction', () => {
   const terms = extractJdKeywords('Use ADFS and Kubernetes with Node.js, CI/CD, IPsec, PAN-OS and AZ-500. Track TTPs (TTPs).')
   for (const term of ['adfs', 'kubernetes', 'node.js', 'ci/cd', 'ipsec', 'pan-os', 'az-500', 'ttp']) assert.ok(terms.includes(term), term)
