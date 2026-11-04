@@ -32,6 +32,10 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
       quality.matched > quality.total) reasons.push("invalid_supported_denominator")
   if (!Number.isFinite(supported) || supported! < 95)
     reasons.push("supported_coverage_below_floor")
+  // Fail closed: a delivered resume must carry a passing ATS parse check
+  // measured on its exported document. A result without one is unproven.
+  if (!result.ats || !result.ats.passed)
+    reasons.push("ats_check_failed")
   // Protect against a stale cache whose quality counts do not match the job-post
   // coverage on the result. coveragePercent truncates to one decimal.
   if (quality.total > 0 && quality.matched >= 0 && quality.matched <= quality.total &&

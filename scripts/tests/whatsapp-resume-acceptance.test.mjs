@@ -35,6 +35,9 @@ const make = (changes = {}) => ({
   diff: [{ section: "Experience", before: "A", after: "B" }],
   quality: resumeQuality({ matched: 13, total: 13, missing: [], partial: false }),
   unverified_added_keywords: [], quality_blockers: [],
+  // Nov4 ATS contract: every deliverable draft carries a passing ATS parse
+  // check measured on its exported document. Fixtures below inherit it.
+  ats: { score: 100, passed: true, checks: [], issues: [] },
   ...changes,
 })
 const rejects = (name, changes, reason) => test(name, () => {
@@ -47,6 +50,17 @@ test("100% of the job post and 100% of supported skills is deliverable", () => {
   const draft = make()
   assert.equal(draft.quality.status, "coverage_met")
   assert.equal(acceptableWhatsAppResume(draft), true)
+})
+test("Nov4 ATS: a draft without an ATS check is held", () => {
+  const draft = make()
+  delete draft.ats
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("ats_check_failed"))
+})
+test("Nov4 ATS: a draft that fails the ATS parse check is held", () => {
+  const draft = make({ ats: { score: 85.7, passed: false, checks: [], issues: ["contact: no email address parses from the document"] } })
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("ats_check_failed"))
 })
 test("switch off: 84.3% of the job post is not delivered even when supported skills are 100%", () => {
   const draft = make({ coverage: 84.3 })

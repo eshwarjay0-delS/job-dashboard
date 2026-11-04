@@ -11,7 +11,7 @@ const block = route.slice(route.indexOf('    // Same release target on web'), ro
 assert.ok(block.includes('for (let repair'))
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 const invoke = new AsyncFunction('result', 'run', 'sameFactsAsSource', 'began', 'acceptableWhatsAppResume', 'whatsappResumeRejectionReasons', 'NextResponse', block+'\nreturn {released: result.token}')
-const good = { token: 'accepted', coverage: 100, supported_coverage: 100, diff: [{}], quality: { status: 'coverage_met', matched: 100, total: 100 }, quality_blockers: [], unverified_added_keywords: [] }
+const good = { token: 'accepted', coverage: 100, supported_coverage: 100, diff: [{}], quality: { status: 'coverage_met', matched: 100, total: 100 }, quality_blockers: [], unverified_added_keywords: [], ats: { score: 100, passed: true, checks: [], issues: [] } }
 const bad = { ...good, token: 'held', coverage: 70, quality: { status: 'needs_review', matched: 70, total: 100 }, keyword_analysis: { missing: ['AWS'] } }
 async function evaluate(initial, candidates, elapsed=0, facts=async()=>true) {
   let calls=0

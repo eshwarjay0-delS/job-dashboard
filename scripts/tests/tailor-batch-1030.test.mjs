@@ -30,7 +30,9 @@ const guardsOff = load("src/lib/tailor-guards.ts", { TAILOR_CACHE_SKIP_REFUSED: 
 const short = (changes = {}) => ({
   token: "t", coverage: 84.3, supported_coverage: 100, diff: [{ section: "Skills", before: "A", after: "B" }],
   quality: resumeQuality({ matched: 27, total: 32, missing: ["kafka", "terraform", "gcp iam", "row-level security", "f5"], partial: false }),
-  unverified_added_keywords: [], quality_blockers: [], ...changes,
+  unverified_added_keywords: [], quality_blockers: [],
+  // Nov4 ATS contract: a complete safe result carries a passing ATS check.
+  ats: { score: 100, passed: true, checks: [], issues: [] }, ...changes,
 })
 
 test("Nov4: a complete file under 95% is held for repair even with legacy switches on", () => {

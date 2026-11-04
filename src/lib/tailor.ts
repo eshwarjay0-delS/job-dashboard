@@ -21,6 +21,7 @@ import { tailorRunKey } from "./tailor-review"
 import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
 import { cleanTerm, isJunkTerm, isGuardUnsafe } from "./resume-skills-line"
 import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
+import { atsCheck, type AtsResult } from "./resume-ats"
 
 export interface TailorResult {
   /** Receipt policy for complete evidence-checked exports; never inferred from overlap. */
@@ -28,6 +29,8 @@ export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
   /** Non-PII codes explaining why a high keyword score may still be blocked. */
   quality_blockers?: string[]
+  /** ATS parseability of the exported DOCX, measured on its extracted text and re-parsed zones. */
+  ats?: AtsResult
   token: string
   score: number
   score_before: number
@@ -154,7 +157,8 @@ function normJD(jd: string): string {
 // Version 19 prevents a high-overlap resume with thin per-role experience coverage from being served as complete.
 // Version 20 places missing job-post skills on the skills line and caches every finished run.
 // Version 21 removes unsupported skills-floor claims and refuses skills-only completion.
-const CACHE_GENERATION = "21"
+// Version 22 adds the exported-document ATS parse check to the delivery gate.
+const CACHE_GENERATION = "22"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
@@ -1109,12 +1113,18 @@ export async function runTailor(opts: {
     ? [...coveredJdKeywords(skillsLines, unsupportedJdKws)].filter(k => !floorNamed.has(k.toLowerCase()) && !isCertification(k)).map(k => jdSpelling(k, jd))
     : []
   if (writerOnSkills.length) notes.push(`Job-post terms the writer put on the skills line, not as confirmed experience: ${writerOnSkills.join(", ")}`)
+  // ATS parseability of the exact bytes that will be stored: the exported
+  // document text plus zones re-parsed from its buffer, never the edits.
+  const exportedZones = await extractZones(buffer)
+  const ats = atsCheck(best.tailoredText, exportedZones)
+  if (!ats.passed) notes.push(`ATS parse check failed: ${ats.issues.join("; ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
     ...(skillsOnly ? ["skills_only"] : []),
     ...(floorCarried ? ["floor_only"] : []),
     ...(best.partial ? ["draft_parts_missing"] : []),
     ...(unverifiedAdded.length ? ["unverified_jd_terms"] : []),
+    ...(!ats.passed ? ["ats_check_failed"] : []),
     // Gate on: roles the job-post terms rollback put back are the candidate's own record (TAILOR_SHIP_ON_ROLLBACK).
     ...roleQualityBlockers({
       splitDraft: !!splitDraft, skillsOnly: !!skillsOnly, lackingRoleCount: splitDraft && !skillsOnly ? lackingRoles(best.edits).length : 0,
@@ -1159,6 +1169,7 @@ export async function runTailor(opts: {
   const result: TailorResult = {
     quality: qualityReport,
     quality_blockers: qualityBlockers,
+    ats,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,

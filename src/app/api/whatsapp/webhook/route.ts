@@ -1488,6 +1488,10 @@ function qualityStop(result: TailorResult): string {
   if (reasons.includes("skills_only")) {
     return "I did not send a file. The writers did not finish a full resume, so nothing incomplete went out. Your resume and this job are saved, and MarketFit will try again."
   }
+  if (reasons.includes("ats_check_failed")) {
+    const issues = (result.ats?.issues || []).slice(0, 4).join("; ")
+    return `I did not send a file. The draft failed the ATS parse check${issues ? `: ${issues}` : ""}. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  }
   return "I did not send a file. The draft did not pass the checks for a finished resume that stays within your real experience. Your resume and this job are saved for another try. No incomplete file was delivered."
 }
 
@@ -1503,12 +1507,14 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
   }
   const supported = Number.isFinite(result.supported_coverage) ? `Skills your resume already supports: ${result.supported_coverage}%` : ""
   const overall = Number.isFinite(result.coverage) ? `JD keyword coverage ${result.coverage}%` : ""
+  const atsLine = result.ats?.passed ? `ATS parse check: ${result.ats.score}%` : ""
   return [
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     ...more,
     ...(supported ? [supported] : []),
     ...(overall ? [overall] : []),
+    ...(atsLine ? [atsLine] : []),
     ...notAdded(result),
     "Reply to this file to request changes.",
   ].join("\n")
