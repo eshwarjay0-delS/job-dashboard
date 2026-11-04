@@ -109,6 +109,8 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {},
     '@/lib/resume-library-store': {}, '@/lib/resume-library': { jobKeyOf: () => 'job' },
     '@/lib/made-floor': {}, '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
+    '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
+    '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: statuses.shift() || 'pending' }),
@@ -134,7 +136,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   samePerson = false
   await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.match(said.at(-1), /changed the name or email/)
+  assert.match(said.at(-1), /contact-details or employment-date preservation check/)
 
   file = Buffer.from('eshwarjay05@gmail.com')
   samePerson = true
