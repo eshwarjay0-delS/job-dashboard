@@ -125,7 +125,7 @@ test("item 4: the website route claims, waits, serves the stored result and rele
 test("item 1: the website runs the WhatsApp round-trip check before handing a file over or charging", () => {
   const route = src("src/app/api/tailor/route.ts")
   assert.ok(route.includes("return sameResumeIdentity(a, b)"))
-  assert.ok(route.includes("if (webRoundTripOn() && !result.unchanged && !(await sameFactsAsSource(result)))"))
+  assert.ok(route.includes("if (!result.unchanged && !(await sameFactsAsSource(result)))"))
   assert.ok(route.indexOf("sameFactsAsSource(result)))") < route.indexOf("deductPoints("), "checked before points are deducted")
   assert.ok(route.indexOf("sameFactsAsSource(result)))") < route.indexOf("await fileTailored("), "checked before the file is saved")
   assert.ok(route.includes(`quality_blockers: ["identity_mismatch"] }, { status: 422 }`))

@@ -17,23 +17,23 @@ import { randomBytes } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
 import { sameResumeIdentity } from "@/lib/resume-identity"
-import { webRoundTripOn, webSharedClaimOn, webClaimKey, takeClaim, waitForClaim, releaseClaim } from "@/lib/tailor-guards"
+import { webSharedClaimOn, webClaimKey, takeClaim, waitForClaim, releaseClaim } from "@/lib/tailor-guards"
 import type { TailorResult } from "@/lib/tailor"
 
 // A double-click that lands on another instance waits this long for the first run before answering "already making it".
 const CLAIM_WAIT_MS = 240_000
 
 // The WhatsApp send check on the website too (blueprint 2026-10-30, item 1): name, every email, phone, link and date of
-// the source must be in the exported file unchanged. A file that cannot be read is not judged here (logged, not blocked).
+// the source must be in the exported file unchanged. An unreadable file cannot pass verification and must be held.
 async function sameFactsAsSource(result: TailorResult): Promise<boolean> {
   try {
     const [source, file] = await Promise.all([blob.get(keyOf(result.matched.filepath)), blob.get(`tailored/${result.token}.docx`)])
-    if (!source || !file) { console.error("[tailor] round-trip check skipped: file unreadable"); return true }
+    if (!source || !file) { console.error("[tailor] round-trip check failed: file unreadable"); return false }
     const [a, b] = await Promise.all([extractText(source), extractText(file)])
     return sameResumeIdentity(a, b)
   } catch (e) {
-    console.error("[tailor] round-trip check skipped", String(e).slice(0, 120))
-    return true
+    console.error("[tailor] round-trip check failed", String(e).slice(0, 120))
+    return false
   }
 }
 
@@ -144,9 +144,9 @@ export async function POST(request: NextRequest) {
       return out
     }
     let result = await run(noCache)
-    // Round-trip check (TAILOR_WEB_ROUND_TRIP, default on). A file that changed the name, contact details or dates is
+    // Required round-trip check. A file that changed the name, contact details or dates is
     // redrawn once while there is time, and otherwise not handed over or charged.
-    if (webRoundTripOn() && !result.unchanged && !(await sameFactsAsSource(result))) {
+    if (!result.unchanged && !(await sameFactsAsSource(result))) {
       console.error("[tailor] round-trip guard stopped web delivery")
       if (Date.now() - began < 120_000) result = await run(true)
       if (!result.unchanged && !(await sameFactsAsSource(result))) {

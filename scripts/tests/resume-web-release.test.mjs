@@ -36,3 +36,12 @@ test('fact-mutating repair is never released', async()=>{
 test('expired request budget holds the file rather than looping indefinitely', async()=>{
   const {result,calls}=await evaluate(bad,[good],121000); assert.equal(calls,0); assert.equal(result.status,422)
 })
+
+const factSource = route.slice(route.indexOf('async function sameFactsAsSource'), route.indexOf('export const runtime'))
+const factCompiled = ts.transpileModule(factSource+'\nexports.check = sameFactsAsSource', { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+function factCheck(blob, extractText=async()=> 'source', sameResumeIdentity=()=>true) {
+  const exports={}; vm.runInNewContext(factCompiled,{exports,blob,extractText,sameResumeIdentity,keyOf:x=>x,console:{error:()=>{}}}); return exports.check({matched:{filepath:'source'},token:'output'})
+}
+test('missing source/export cannot pass identity verification', async()=>assert.equal(await factCheck({get:async()=>null}),false))
+test('extraction failure cannot pass identity verification', async()=>assert.equal(await factCheck({get:async()=>Buffer.from('doc')},async()=>{throw Error('unreadable')}),false))
+test('readable unchanged facts pass identity verification', async()=>assert.equal(await factCheck({get:async()=>Buffer.from('doc')}),true))
