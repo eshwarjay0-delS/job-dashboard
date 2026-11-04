@@ -17,7 +17,7 @@ test('result notice distinguishes incomplete work, coverage gaps and finished re
 test('quality report retains unfinished work even when no keywords are missing', () => {
   const report = resumeQuality({ matched: 100, total: 100, missing: [], partial: true })
   assert.equal(report.incomplete, true)
-  assert.equal(report.status, 'delivered_with_gaps')
+  assert.equal(report.status, 'needs_review')
   assert.equal(resumeQuality({ matched: 96, total: 100, missing: ['AWS'] }).incomplete, false)
 })
 
@@ -65,9 +65,9 @@ test('unfinished rewrites never receive completed status even at full keyword ov
   assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], unchanged: true }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 0, total: 0, missing: [] }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 94, total: 100, missing: [], partial: true }).status, 'needs_review')
-  assert.equal(resumeQuality({ matched: 96, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
-  assert.equal(resumeQuality({ matched: 98, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
-  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 96, total: 100, missing: [], partial: true }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 98, total: 100, missing: [], partial: true }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: true }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: false }).status, 'coverage_met')
 })
 

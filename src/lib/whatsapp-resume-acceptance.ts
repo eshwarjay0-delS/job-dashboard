@@ -5,23 +5,11 @@ import type { TailorResult } from "./tailor"
  * requested section must be complete and unverified JD claims must be absent.
  * Overall JD overlap remains a separate, honest measure of missing skills.
  */
-// Same switch as src/lib/jd-terms-gate.ts, inlined so this module stays import-free for its tests' loader.
-function jdTermsGateOn(): boolean {
-  const v = String(globalThis.process?.env?.JD_TERMS_ALWAYS_ON_SKILLS ?? "").trim().toLowerCase()
-  return !(v === "0" || v === "false" || v === "off" || v === "no")
-}
-
-// Blueprint 2026-10-30, coverage gate: a complete file under 95% of the job post is delivered with the missing terms
-// listed in the reply instead of a refusal. TAILOR_DELIVER_WITH_SHORTFALL=0 (or the job-post terms switch off) restores it.
-function shortfallDeliveryOn(): boolean {
-  const v = String(globalThis.process?.env?.TAILOR_DELIVER_WITH_SHORTFALL ?? "").trim().toLowerCase()
-  return !(v === "0" || v === "false" || v === "off" || v === "no")
-}
-/** A complete draft under 95% of the job post, sent with the shortfall named. Anything incomplete is still refused. */
+/** Compatibility export: Nov4 owner requires at least 95% actual JD coverage.
+ * No environment switch or locked section may waive that delivery target. */
 export function deliveredWithShortfall(result: TailorResult): boolean {
-  return jdTermsGateOn() && shortfallDeliveryOn() && Number.isFinite(result.coverage) && result.coverage! < 95 &&
-    !result.partial && !result.skills_only && !result.unchanged && !result.quality?.incomplete &&
-    !(result.quality_blockers || []).length && !(result.unverified_added_keywords || []).length
+  void result
+  return false
 }
 
 export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
@@ -30,27 +18,24 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
   const supported = result.supported_coverage
   if (!result.token) reasons.push("no_document_token")
   if (result.unchanged || !result.diff?.length) reasons.push("unchanged")
-  if (result.skills_only && !(Number.isFinite(result.coverage) && result.coverage! >= 95))
+  if (result.skills_only)
     reasons.push("skills_only")
-  // Gate on: a resume whose skills are locked or that has no skills section is sent with the job-post terms listed in
-  // the reply, so its coverage is not a refusal. The round-trip guard in the route still decides whether it goes out.
-  // Only the coverage shortfall is excused: the file must otherwise be complete (no failed parts, no incomplete report,
-  // no other blocker), and the only quality problem allowed is terms left out.
-  const unplacedOk = jdTermsGateOn() && !!result.jd_terms_unplaced_reason && !!result.jd_terms_unplaced?.length &&
-    !result.partial && !quality?.incomplete && !(result.quality_blockers || []).length
-  const shortfallOk = deliveredWithShortfall(result)
-  if (!unplacedOk && !shortfallOk && (!Number.isFinite(result.coverage) || result.coverage! < 95))
+  if (!Number.isFinite(result.coverage) || result.coverage! < 95 || result.coverage! > 100)
     reasons.push("jd_coverage_below_floor")
   if (result.partial) reasons.push("draft_parts_missing")
   if (!quality) return [...reasons, "quality_report_missing"]
   if (quality.incomplete) reasons.push("quality_incomplete")
-  if (quality.status !== "coverage_met" && quality.status !== "delivered_with_gaps" && !((unplacedOk || shortfallOk) && quality.status === "needs_review"))
+  if (quality.status !== "coverage_met" && quality.status !== "delivered_with_gaps")
     reasons.push("quality_not_deliverable")
   if (!Number.isInteger(quality.total) || quality.total <= 0 ||
       !Number.isInteger(quality.matched) || quality.matched < 0 ||
       quality.matched > quality.total) reasons.push("invalid_supported_denominator")
   if (!Number.isFinite(supported) || supported! < 95)
     reasons.push("supported_coverage_below_floor")
+  // Fail closed: a delivered resume must carry a passing ATS parse check
+  // measured on its exported document. A result without one is unproven.
+  if (!result.ats || !result.ats.passed)
+    reasons.push("ats_check_failed")
   // Protect against a stale cache whose quality counts do not match the job-post
   // coverage on the result. coveragePercent truncates to one decimal.
   if (quality.total > 0 && quality.matched >= 0 && quality.matched <= quality.total &&
@@ -64,4 +49,27 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
 
 export function acceptableWhatsAppResume(result: TailorResult): boolean {
   return whatsappResumeRejectionReasons(result).length === 0
+}
+
+/** Plain words for rejection codes, for the message that tells the user why a
+ * draft was held. Unknown codes are dropped, never shown as jargon. */
+const REJECTION_WORDS: Record<string, string> = {
+  no_document_token: "no finished document was produced",
+  unchanged: "the rewrite made no changes",
+  draft_parts_missing: "parts of the draft are missing",
+  quality_report_missing: "the quality report is missing",
+  quality_incomplete: "the quality report is incomplete",
+  quality_not_deliverable: "the quality report does not clear the delivery bar",
+  invalid_supported_denominator: "the supported-skills count is invalid",
+  supported_score_mismatch: "the quality counts do not match the job-post coverage",
+  unverified_jd_terms: "the draft added job-post terms that are not in your resume",
+}
+
+export function describeRejectionReasons(reasons: string[]): string[] {
+  const out: string[] = []
+  for (const reason of reasons) {
+    const words = REJECTION_WORDS[reason]
+    if (words && !out.includes(words)) out.push(words)
+  }
+  return out
 }

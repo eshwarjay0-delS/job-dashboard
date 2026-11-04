@@ -177,6 +177,7 @@ export type SavedTailored = { abs: string; rel: string; email: string; category:
  * the job description and the file.
  */
 export async function saveTailored(opts: {
+  qualityPolicy?: "evidence-v1"
   userDir: string; bytes: Buffer; jd: string; role?: string; company?: string; depth: number; from?: string
   asked?: string[]; covers?: string[]; points?: { text: string }[]; replaces?: string; now?: number
 }): Promise<SavedTailored> {
@@ -199,6 +200,7 @@ export async function saveTailored(opts: {
   const before = await readShelf(opts.userDir, email_, category)
   const run = {
     path: relOf(opts.userDir, abs), email: email_, category, role: opts.role || "", company: opts.company || "", depth: opts.depth, from: opts.from,
+    ...(opts.qualityPolicy === "evidence-v1" ? { qualityReceipt: `evidence-v1:${createHash("sha256").update(opts.bytes).digest("hex")}` } : {}),
     jd: opts.jd, asked, covers, points: opts.points, replaces: replaces ? relOf(opts.userDir, replaces) : undefined,
   }
   // One job, one file: a resume saved earlier for this same job in this folder is taken out as this one goes in.

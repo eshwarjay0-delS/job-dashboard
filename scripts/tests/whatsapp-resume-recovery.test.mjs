@@ -8,7 +8,11 @@ const draft = (overrides = {}) => ({
   token: 't-1', diff: [{ section: 'Experience', before: 'Old', after: 'New' }],
   quality: resumeQuality({ matched: 98, total: 100, missing: ['unverified requirement'] }),
   supported_coverage: 98, coverage: 60, partial: undefined,
-  skills_only: false, unchanged: false, ...overrides,
+  skills_only: false, unchanged: false,
+  // Acceptance contract (Nov 4 ATS gate): a result without a passing ATS parse
+  // check is held, so eligible fixtures carry a passing check.
+  ats: { score: 100, passed: true, checks: [], issues: [] },
+  ...overrides,
 })
 
 const scenarios = [
