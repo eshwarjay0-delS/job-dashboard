@@ -270,7 +270,14 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "SOURCE FACT CONTRACT: the baseline resume and explicit candidate confirmations supply experience facts; the JD supplies target requirements only. Incorporate confirmed skills even if absent from the older baseline. Use exact JD terms where supported by either source, respecting role-specific attribution. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
+        // Editing-voice restoration (Nov 4): Oct 2 led with "Add more keywords
+        // from the JD wherever the candidate can honestly support them" and the
+        // model added freely; the current text led with a prohibition contract
+        // instead, so the model held back before it ever added. Voice encourages
+        // here; honesty is enforced mechanically by the Nov 4 evidence gate,
+        // not by a prohibition-led prompt. The confirmations sentence is kept:
+        // Oct 2 had no candidate-confirmation input, current runs do.
+        "Add more keywords from the JD wherever the candidate can honestly support them. The baseline resume and explicit candidate confirmations supply experience facts; the JD supplies target requirements only. Incorporate confirmed skills even if absent from the older baseline. Use exact JD terms where supported by either source, respecting role-specific attribution. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const candidateInput = candidateEvidenceInput(opts.jd, immediatePrefs)
