@@ -80,6 +80,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     },
     // Whether a resume made earlier for the job still meets the 90% floor (src/lib/made-floor.ts, 26 Oct 2026).
     '@/lib/made-floor': { madeMeetsFloor: async () => floorOk },
+    '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
+    '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
@@ -112,7 +114,7 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 1)
   assert.equal(b.runs[0].givenPath, APPSEC, 'the code ranks AppSec first and the agent agreed')
   assert.equal(b.runs[0].userResumeDir, USER_DIR)
-  assert.match(b.said.at(-1), /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title matches the job's role: Application Security Engineer/)
+  assert.match(b.said.find(text => text.startsWith('Updating your')) || '', /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title matches the job's role: Application Security Engineer/)
   assert.equal(b.saved.length, 1)
   assert.equal(b.saved[0].userDir, USER_DIR)
   assert.equal(b.saved[0].depth, 1, 'made from a resume the person wrote')
@@ -170,7 +172,7 @@ test('a "Security Analyst" post starts from the resume titled for it, not the on
   const b = bot({ agent: null, extra: library() })
   await b.wa.handle('15550010', { type: 'text', id: 'm1', text: { body: `${POST}\n1` } }, {}, 'user1')
   assert.equal(b.runs[0].givenPath, CYBER, 'the AI/AppSec resume shows more of the keywords and was picked before; its title is not the role')
-  assert.match(b.said.at(-1), /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title matches the job's role: Security Analyst/)
+  assert.match(b.said.find(text => text.startsWith('Updating your')) || '', /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title matches the job's role: Security Analyst/)
   assert.equal(b.logs[0].role, 'Security Analyst')
   assert.equal(b.logs[0].titled, 1)
 })
