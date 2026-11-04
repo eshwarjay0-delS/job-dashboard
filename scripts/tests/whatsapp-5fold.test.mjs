@@ -100,7 +100,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
     '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity: () => samePerson },
-    '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Eshwar_Resume.docx' },
+    '@/lib/docx': { sameResumeFixedStories: async () => true, extractText: async b => b.toString(), outputNameFor: async () => 'Eshwar_Resume.docx' },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: () => false },
     '@/lib/whatsapp-trace': { trace: () => {} },

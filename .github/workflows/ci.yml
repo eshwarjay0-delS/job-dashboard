@@ -85,7 +85,7 @@ jobs:
         run: node --test scripts/tests/whatsapp-kompas*.test.mjs scripts/tests/kompas-shared-session.test.mjs scripts/tests/kompas-shared-turn.test.mjs
 
       - name: Verify resume identity guard with synthetic DOCX Mammoth round-trip
-        run: node --experimental-strip-types --test scripts/tests/resume-guards.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/resume-guards.test.mjs scripts/tests/resume-header-footer-intake.test.mjs
 
       - name: Verify WhatsApp selected-email identity and duplicate-job boundaries
         run: node --experimental-strip-types --test scripts/tests/library-pick.test.mjs
