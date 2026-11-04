@@ -75,3 +75,28 @@ test('a term wrapped across lines in the document still counts after collapse', 
   assert.ok(exportedCovered.has('zero trust'), 'wrapped term matched')
   assert.ok(exportedCovered.has('siem'), 'plain term matched')
 })
+
+test('enrichment splits suggested terms into placed and gate-blocked', () => {
+  const r = recountExported({ scoreKws: ['siem'], attainableKws: ['siem'], exportedCovered: new Set(['siem']), placed: [], writer: [], summary: [], enrichmentSuggested: ['siem', 'zero trust', 'palo alto'], enrichmentCovered: new Set(['siem']) })
+  assert.deepEqual(r.enrichment?.placed, ['siem'])
+  assert.deepEqual(r.enrichment?.blocked, ['zero trust', 'palo alto'])
+})
+
+test('enrichment matching is case-insensitive and keeps the suggested spelling', () => {
+  const r = recountExported({ scoreKws: [], attainableKws: [], exportedCovered: new Set(), placed: [], writer: [], summary: [], enrichmentSuggested: ['SIEM'], enrichmentCovered: new Set(['siem']) })
+  assert.deepEqual(r.enrichment?.placed, ['SIEM'])
+  assert.deepEqual(r.enrichment?.blocked, [])
+})
+
+test('no enrichment field when no suggestions were supplied', () => {
+  const r = recountExported({ scoreKws: ['siem'], attainableKws: [], exportedCovered: new Set(['siem']), placed: [], writer: [], summary: [] })
+  assert.equal(r.enrichment, undefined)
+})
+
+test('enrichment on a real exported docx follows the file, not the suggestion list', async () => {
+  const buffer = await docxWith(['Senior Security Engineer', 'Experience with SIEM.', 'Skills: SIEM'])
+  const exportedText = (await docxText(buffer)).replace(/\s+/g, ' ')
+  const r = recountExported({ scoreKws: ['siem'], attainableKws: ['siem'], exportedCovered: coveredJdKeywords(exportedText, ['siem']), placed: [], writer: [], summary: [], enrichmentSuggested: ['siem', 'palo alto'], enrichmentCovered: coveredJdKeywords(exportedText, ['siem', 'palo alto']) })
+  assert.deepEqual(r.enrichment?.placed, ['siem'])
+  assert.deepEqual(r.enrichment?.blocked, ['palo alto'])
+})
