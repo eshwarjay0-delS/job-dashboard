@@ -111,11 +111,32 @@ test('a full rewrite keeps run props but collapses mixed formatting into one run
   assert.ok(!xml.includes('Led IAM modernization'), 'old bullet text must be gone')
 })
 
-test('dropIdx physically deletes a paragraph and summary overflow is blanked (the eating mechanisms, pinned)', async () => {
+test('dropIdx physically deletes a paragraph; uncovered summary overflow is now kept, not blanked', async () => {
   const { xml } = await certDoc()
   assert.ok(xml.includes('Eshwar Janjirala'), 'name paragraph untouched')
   assert.ok(xml.includes('Monitored SIEM alerts daily.'), 'control bullet untouched')
   assert.ok(!xml.includes('Attended weekly meetings.'), 'dropped paragraph must be gone')
-  assert.ok(!xml.includes('Additional summary prose from an old run.'), 'summary overflow must be blanked')
+  // Behavior changed Nov 4 (see the overflow test below): blanking now fires only
+  // when the new summary already carries the paragraph. This overflow prose is not
+  // covered by the new summary, so it is kept instead of silently destroyed.
+  assert.ok(xml.includes('Additional summary prose from an old run.'), 'uncovered summary overflow must be kept')
   assert.ok(xml.includes('Security engineer, 8 years in SOC and cloud security.'), 'new summary must be present')
+})
+
+test('summary overflow is blanked only when the new summary already carries it', async () => {
+  const paras = [
+    `<w:p><w:r><w:t>Security engineer with SOC experience.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>Led SOC operations and incident response daily.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>CISSP Certified 2021, Security Architecture.</w:t></w:r></w:p>`,
+  ]
+  const zip = new JSZip()
+  zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paras.join('')}</w:body></w:document>`)
+  const zones = { header: null, summaryIdx: 0, summaryText: 'Security engineer with SOC experience.', summaryOverflowIdx: [1, 2], skills: [], roles: [], extras: [] }
+  const { buffer, notes } = await applyRewrites(await zip.generateAsync({ type: 'nodebuffer' }), { summary: 'Security engineer with SOC experience, led SOC operations and incident response daily.' }, zones)
+  const out = await JSZip.loadAsync(buffer)
+  const xml = await out.file('word/document.xml').async('string')
+  assert.ok(xml.includes('Security engineer with SOC experience, led SOC operations and incident response daily.'), 'new summary must be present')
+  assert.equal((xml.match(/incident response daily/g) || []).length, 1, 'covered overflow paragraph must be blanked, not duplicated')
+  assert.ok(xml.includes('CISSP Certified 2021, Security Architecture.'), 'uncovered overflow paragraph (a cert line the new summary drops) must be kept verbatim')
+  assert.ok(notes.some(n => n.includes('Kept 1 summary paragraph(s)')), 'preservation must be logged, not silent')
 })
