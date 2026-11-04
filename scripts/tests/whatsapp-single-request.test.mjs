@@ -75,7 +75,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { deliveries++; return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
-    '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
+    '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { sameResumeFixedStories: async () => true, extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
     '@/lib/whatsapp-trace': { trace: () => {} },

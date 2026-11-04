@@ -1,5 +1,6 @@
 import JSZip from "jszip"
 import mammoth from "mammoth"
+import { DOMParser } from "@xmldom/xmldom"
 
 // The name/title/contact header is one paragraph of separate runs. We edit ONLY the
 // title run and the identity-tagline run; the name and contact runs are never touched.
@@ -752,4 +753,86 @@ export async function applyRewrites(
   zip.file("word/document.xml", newXml)
   const out = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" })
   return { buffer: out as Buffer, notes }
+}
+
+/** Header/footer stories are outside the editable body. Compare their package
+ * contents and section bindings before delivery; Mammoth omits these stories.
+ * Deliberately conservative: even formatting-only changes require review.
+ */
+export async function sameResumeFixedStories(source: Buffer, output: Buffer): Promise<boolean> {
+  const snapshot = async (buffer: Buffer) => {
+    const zip = await JSZip.loadAsync(buffer)
+    const parse = async (path: string) => {
+      const file = zip.file(path)
+      if (!file) throw new Error('missing DOCX part')
+      const xml = await file.async('string')
+      if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error('unsupported XML declaration')
+      const doc = new DOMParser({ errorHandler: {
+        warning: () => { throw new Error('invalid XML') },
+        error: () => { throw new Error('invalid XML') },
+        fatalError: () => { throw new Error('invalid XML') },
+      } }).parseFromString(xml, 'application/xml')
+      return doc
+    }
+    const content = await parse('[Content_Types].xml')
+    const parts = new Set<string>()
+    const overrides = content.getElementsByTagNameNS('http://schemas.openxmlformats.org/package/2006/content-types', 'Override')
+    for (let i = 0; i < overrides.length; i++) {
+      const item = overrides.item(i)!
+      if (/\.wordprocessingml\.(?:header|footer)\+xml$/.test(item.getAttribute('ContentType') || '')) {
+        const path = (item.getAttribute('PartName') || '').replace(/^\//, '')
+        if (!path || path.split('/').includes('..')) throw new Error('invalid part path')
+        parts.add(path)
+      }
+    }
+    const doc = await parse('word/document.xml')
+    const relationsFile = zip.file('word/_rels/document.xml.rels')
+    const relations = relationsFile ? await relationsFile.async('string') : ''
+    // Bindings are protected as well as part bytes: removing a reference must
+    // not pass merely because the orphaned header remains in the ZIP.
+    const bindings: string[] = []
+    const bindingIds: string[] = []
+    const elements = doc.getElementsByTagName('*')
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements.item(i)!
+      if (el.localName === 'headerReference' || el.localName === 'footerReference') {
+        bindings.push(el.toString())
+        bindingIds.push(el.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || '')
+      }
+    }
+    // Keep only header/footer relationship records so adding a body hyperlink
+    // does not falsely look like a header change.
+    const edges: string[] = []
+    const edgeIds = new Set<string>()
+    if (relations) {
+      const relDoc = await parse('word/_rels/document.xml.rels')
+      const rows = relDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/package/2006/relationships', 'Relationship')
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows.item(i)!
+        if (/\/(?:header|footer)$/.test(row.getAttribute('Type') || '')) {
+          if (row.getAttribute('TargetMode') === 'External') throw new Error('external story')
+          const target = row.getAttribute('Target') || ''
+          const path = target.startsWith('/') ? target.slice(1) : 'word/' + target.replace(/^\.\//, '')
+          if (path.split('/').includes('..') || !parts.has(path)) throw new Error('unresolved story')
+          const id = row.getAttribute('Id') || ''
+          if (!id || edgeIds.has(id)) throw new Error('invalid story relationship')
+          edgeIds.add(id)
+          edges.push(row.toString())
+        }
+      }
+    }
+    if (bindingIds.some(id => !edgeIds.has(id))) throw new Error('missing story relationships')
+    const records: string[][] = []
+    for (const path of [...parts].sort()) {
+      const file = zip.file(path)
+      if (!file) throw new Error('missing story')
+      await parse(path)
+      const slash = path.lastIndexOf('/')
+      const relPath = path.slice(0, slash + 1) + '_rels/' + path.slice(slash + 1) + '.rels'
+      records.push([path, await file.async('string'), await zip.file(relPath)?.async('string') || ''])
+    }
+    return JSON.stringify({ bindings, edges: edges.sort(), records })
+  }
+  try { return await snapshot(source) === await snapshot(output) }
+  catch { return false } // No document content or personal values in diagnostics.
 }

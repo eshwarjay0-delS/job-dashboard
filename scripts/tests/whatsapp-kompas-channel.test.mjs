@@ -70,7 +70,7 @@ runInNewContext(compiled("src/lib/whatsapp-kompas-channel.ts"), {
   module, exports: module.exports,
   require: key => ({
     "@/lib/storage": { blob },
-    "@/lib/docx": { extractText: async bytes => bytes.toString("utf8") },
+    "@/lib/docx": { sameResumeFixedStories: async () => true, extractText: async bytes => bytes.toString("utf8") },
     "@/lib/pdf-text": { pdfText: async bytes => bytes.toString("utf8") },
     "@/lib/whatsapp": { downloadMedia: async (id, limit) => {
       const value = Buffer.from(texts.get(id) || "")

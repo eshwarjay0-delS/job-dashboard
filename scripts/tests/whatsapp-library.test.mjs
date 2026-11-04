@@ -51,7 +51,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Application Security Engineer', company: 'Acme', location: '' }) },
     '@/lib/whatsapp': { sendText: async (to, t) => { said.push(t) }, sendDocument: async (to, f, n, caption) => { docs.push(caption); events.push('delivered'); return 'wamid-' + docs.length }, downloadMedia: async () => Buffer.from('a@x.com uploaded resume') },
     '@/lib/owner': { isOwnerWhatsApp: () => false }, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/resume-identity': { sameResumeIdentity: () => true }, '@/lib/docx': { extractText: async b => b.toString() },
+    '@/lib/resume-identity': { sameResumeIdentity: () => true }, '@/lib/docx': { sameResumeFixedStories: async () => true, extractText: async b => b.toString() },
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: () => false },

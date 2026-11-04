@@ -33,7 +33,7 @@ import { resolveWhatsAppUser, claimNotice, textCodesWork } from "@/lib/whatsapp-
 import { claimLinkCode } from "@/lib/whatsapp-link"
 import { notRegisteredMessage, NOT_CHECKED_MESSAGE, siteOf } from "@/lib/whatsapp-who-core"
 import { sameResumeIdentity } from "@/lib/resume-identity"
-import { extractText } from "@/lib/docx"
+import { extractText, sameResumeFixedStories } from "@/lib/docx"
 import { handleWhatsAppKompas } from "@/lib/whatsapp-kompas-channel"
 import { speechToWhatsAppText } from "@/lib/whatsapp-voice"
 import { extractProfile } from "@/lib/profile"
@@ -1449,6 +1449,10 @@ function resumeGapReport(result: TailorResult): string {
 // The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
 // the name, every email, phone, link and date of the source must be in the exported file unchanged, and none added.
 async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
+  if (!(await sameResumeFixedStories(source, file))) {
+    console.error("[resume] round-trip guard stopped delivery", { problems: 1, categories: ["header_footer"] })
+    return false
+  }
   const [a, b] = await Promise.all([extractText(source), extractText(file)])
   return sameResumeIdentity(a, b)
 }
