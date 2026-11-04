@@ -5,7 +5,7 @@ import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
-import { extractText, sameResumeFixedStories } from '../../src/lib/docx.ts'
+import { extractText, sameResumeFixedStories, extractZones, applyRewrites } from '../../src/lib/docx.ts'
 import { checkRoundTrip } from '../../src/lib/resume-round-trip-guard.ts'
 
 const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -106,3 +106,39 @@ test('custom header part filename is protected through content types', async () 
   assert.equal(await sameResumeFacts(a, a), true)
   assert.equal(await sameResumeFacts(a, await z.generateAsync({ type: 'nodebuffer' })), false)
 })
+
+for (const hasStories of [true, false]) {
+  test(`real rewrite/export preserves protected facts with stories=${hasStories}`, async () => {
+    const source = await changed(async zip => {
+      let xml = await zip.file('word/document.xml').async('string')
+      xml = xml.replace(para('Example Corp Jan 2020 - Present'),
+        para('SUMMARY') + para('Built reliable services for supported teams.') +
+        para('SKILLS') + para('Python, SQL') + para('EXPERIENCE') +
+        para('Example Corp Jan 2020 - Present') + para('- Built Python services.'))
+      if (!hasStories) {
+        xml = xml.replace(/<w:(?:header|footer)Reference[^>]*\/>/g, '')
+        zip.remove('word/header1.xml'); zip.remove('word/footer1.xml')
+        zip.file('[Content_Types].xml', (await zip.file('[Content_Types].xml').async('string')).replace(/<Override PartName="\/word\/(?:header1|footer1)\.xml"[^>]*\/>/g, ''))
+        zip.file('word/_rels/document.xml.rels', `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`)
+      }
+      zip.file('word/document.xml', xml)
+    })
+    const zones = await extractZones(source)
+    assert.notEqual(zones.summaryIdx, null, 'real zone detector must select summary')
+    assert.ok(zones.skills.length, 'real zone detector must select skills')
+    const output = await applyRewrites(source, {
+      summary: 'Built reliable Python services and supported team workflows.',
+      skills: [{ idx: zones.skills[0].idx, text: 'SQL, Python' }],
+    }, zones)
+    assert.match(await extractText(output.buffer), /supported team workflows/)
+    assert.match(await extractText(output.buffer), /SQL, Python/)
+    assert.equal(await sameResumeFacts(source, output.buffer), true)
+    if (hasStories) {
+      const a = await JSZip.loadAsync(source), b = await JSZip.loadAsync(output.buffer)
+      for (const path of ['word/header1.xml', 'word/footer1.xml'])
+        assert.equal(await a.file(path).async('string'), await b.file(path).async('string'))
+      b.file('word/footer1.xml', (await b.file('word/footer1.xml').async('string')).replace('Jan 2020', 'Feb 2020'))
+      assert.equal(await sameResumeFacts(source, await b.generateAsync({ type: 'nodebuffer' })), false)
+    }
+  })
+}

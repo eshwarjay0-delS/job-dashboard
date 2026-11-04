@@ -66,3 +66,12 @@ Continue owner-approved identity preservation repair from de4f840 test evidence.
 45/45 focused tests pass, including 18 source-executed actual send-gate/package cases and 27 existing guard checks. TypeScript and targeted ESLint pass. Broader four webhook suites: changed 33 pass/23 fail, unchanged master 33 pass/23 fail (missing whatsapp-recovery-budget mock); no overall green claim. New suite wired into full CI guard step. Prior three failing extraction assertions are retained as historical evidence; the new suite proves Mammoth omission remains and supplemental actual send gate blocks mutations.
 
 Next: Open draft PR and obtain independent safety review of conservative immutable parts; full exact-head CI/build must pass before merge/deploy. Original Oct17/Nov2 artifact diagnosis and signed delivery acceptance remain open. Other master backlog and native/50-pair acceptance remain unchanged.
+
+
+## 4 November exporter compatibility follow-through
+
+Continued approved PR204 testing without changing runtime or PR202 source. Current master/production f0d9ef7 remain unchanged. All three exact dc826497 gates completed SUCCESS: full CI41823079543, recovery41823079553, baseline41823079562. Draft safety review remains open; no independent approval inferred from CI. Added real extractZones -> applyRewrites -> actual sameResumeFacts regressions for documents with and without header/footer stories, summary/skills edits, and a post-export footer date mutation.
+
+47/47 local focused checks pass: 20 package/send-gate/export cases plus 27 established guards. Actual exporter changes requested summary/skills, retains fixed parts byte-for-byte, passes unchanged identity/date check and rejects footer date tampering. Synthetic packages only; no personal incident replay, model answer or outbound delivery. Previous broader baseline failures remain recorded, not silently cleared.
+
+Next: Review PR204 conservative formatting-only holds and package validation, rerun exact new-head CI, then merge/deploy only after review gate. Actual original resume/JD trace and signed delivery acceptance remain missing. Native Windows, real cross-device and authenticated 50-pair acceptance stay open.
