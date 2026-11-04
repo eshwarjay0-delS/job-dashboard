@@ -42,15 +42,15 @@ const skillsOf = r => r.skills.join('\n').toLowerCase()
 const on = floor()
 const off = floor({ JD_TERMS_ALWAYS_ON_SKILLS: '0' })
 
-test('switch on: gcp security and gcp iam are written on the skills line and the file is sent', () => {
+test('legacy switch on: JD-only GCP skills stay out and provider outage is refused', () => {
   const r = on.gcp
-  for (const t of ['gcp security', 'gcp iam']) assert.ok(skillsOf(r).includes(t), `${t} on the skills line: ${r.skills.join(' | ')}`)
+  for (const t of ['gcp security', 'gcp iam']) assert.ok(!skillsOf(r).includes(t), `${t} on the skills line: ${r.skills.join(' | ')}`)
   assert.ok(!r.bullets.some(b => /gcp/i.test(b)), 'never in an experience bullet')
   assert.deepEqual(r.unverified, [])
   const { acceptableWhatsAppResume, whatsappResumeRejectionReasons } = acceptance({})
   const result = { token: 't', coverage: r.coverage, supported_coverage: 100, diff: r.diff, quality: r.quality, partial: r.partial, skills_only: r.skillsOnlyFlag,
     unverified_added_keywords: r.unverified, quality_blockers: r.blockers, jd_terms_unplaced: r.unplaced, jd_terms_unplaced_reason: r.unplacedReason || undefined }
-  assert.equal(acceptableWhatsAppResume(result), true, whatsappResumeRejectionReasons(result).join(', '))
+  assert.equal(acceptableWhatsAppResume(result), false, whatsappResumeRejectionReasons(result).join(', '))
 })
 test('switch on, skills locked: the skills line is left alone and the terms are named for the reply', () => {
   const r = on.gcpLocked

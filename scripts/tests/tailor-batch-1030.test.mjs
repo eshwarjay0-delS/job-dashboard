@@ -33,11 +33,11 @@ const short = (changes = {}) => ({
   unverified_added_keywords: [], quality_blockers: [], ...changes,
 })
 
-test("item 2: a complete file under 95% is delivered with the shortfall listed (switch on, default)", () => {
+test("Nov4: a complete file under 95% is held for repair even with legacy switches on", () => {
   assert.equal(short().quality.status, "needs_review")
-  assert.equal(on.whatsappResumeRejectionReasons(short()).length, 0, on.whatsappResumeRejectionReasons(short()).join(","))
-  assert.equal(on.acceptableWhatsAppResume(short()), true)
-  assert.equal(on.deliveredWithShortfall(short()), true)
+  assert.ok(on.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"))
+  assert.equal(on.acceptableWhatsAppResume(short()), false)
+  assert.equal(on.deliveredWithShortfall(short()), false)
 })
 test("item 2: switch off or job-post terms switch off restores the 95% refusal", () => {
   assert.ok(off.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"))

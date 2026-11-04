@@ -1,3 +1,4 @@
+import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
 import { NextRequest, NextResponse } from "next/server"
 import { after } from "next/server"
 import path from "path"
@@ -151,6 +152,17 @@ export async function POST(request: NextRequest) {
       if (!result.unchanged && !(await sameFactsAsSource(result))) {
         return NextResponse.json({ error: "The draft changed your name, contact details or dates, so it was not delivered. Your original resume is unchanged. Please try again.", quality_blockers: ["identity_mismatch"] }, { status: 422 })
       }
+    }
+    // Same release target on web and WhatsApp. Retry while the function still has
+    // room; do not charge or expose a download token for unfinished/low-match work.
+    for (let repair = 0; repair < 2 && !acceptableWhatsAppResume(result) && Date.now() - began < 120_000; repair++) {
+      const candidate = await run(true)
+      if (!candidate.unchanged && !(await sameFactsAsSource(candidate))) continue
+      if (acceptableWhatsAppResume(candidate) || (candidate.coverage ?? 0) > (result.coverage ?? 0) ||
+          (candidate.quality_blockers?.length ?? 0) < (result.quality_blockers?.length ?? 0)) result = candidate
+    }
+    if (!acceptableWhatsAppResume(result)) {
+      return NextResponse.json({ error: "Resume needs further revision or confirmed experience before delivery. The required minimum is 95% measured JD keyword coverage with completed experience checks and no unverified claims. Your original resume is unchanged.", coverage: result.coverage, quality: result.quality, missing: result.keyword_analysis?.missing || [], unsupported_keywords: result.unsupported_keywords || [], quality_blockers: whatsappResumeRejectionReasons(result) }, { status: 422 })
     }
     // Gel points: one resume preparation costs 0.25 points (four resumes = one
     // interview session). Idempotent per generation — retries cost nothing extra.

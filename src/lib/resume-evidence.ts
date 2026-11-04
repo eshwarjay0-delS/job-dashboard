@@ -13,10 +13,22 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
  * narrow: the statement must explicitly attribute experience to the candidate. */
 export function explicitlyConfirmsAllRequirements(statements: readonly string[]): boolean {
   const text = statements.filter(Boolean).join("\n").replace(/\s+/g, " ").toLowerCase()
-  if (!text) return false
+  if (!text || /\b(?:except|excluding|not|never|no experience|without)\b/.test(text)) return false
   return [
     /\b(?:i|you)\s+(?:have|possess)\s+experience\s+(?:with|in|using)\s+(?:all|every)\s+(?:(?:of\s+)?them|(?:(?:of\s+)?(?:these|those|the|listed|required(?:\s+and\s+preferred)?|preferred)\s+)?(?:skills?|requirements?|keywords?|tools?|technolog(?:y|ies)))\b/,
     /\bmy\s+experience\s+(?:includes|covers)\s+(?:all|every)\s+(?:(?:of\s+)?(?:these|those|the|listed|required|preferred)\s+)?(?:skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/,
     /\b(?:i|you)\s+(?:have|possess)\s+(?:all|every)\s+(?:listed|required|preferred)\s+(?:skills?|requirements?|tools?|technolog(?:y|ies))\b/,
   ].some(pattern => pattern.test(text))
+}
+
+/** Only explicit candidate assertions can expand deterministic evidence. Naming a
+ * tool in an editing instruction, a question or a negation is not confirmation. */
+export function confirmedCandidateStatements(statements: readonly string[]): string[] {
+  return statements.flatMap(statement => statement.split(/[\n.!?;]+/)).flatMap(raw => {
+    const line = raw.trim()
+    if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
+    if (/^i\s+(?:have|possess)\s+(?:no|not|never)\b/i.test(line)) return []
+    const positive = line.split(/\b(?:except|excluding|but|however|not|never|without)\b/i)[0].trim()
+    return positive ? [positive] : []
+  })
 }

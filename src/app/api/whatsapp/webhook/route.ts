@@ -914,7 +914,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.skills_only) more.push("Not saved in Files: send *redo* once the writers are back for the full rewrite.")
   if (!files && filesDir && !result.skills_only) {
     const fromRel = session.resumeFiled ? relOf(filesDir, session.resumeFiled) : undefined
-    filed = await saveTailored({ userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: floorMade ? 2 : 1,
+    filed = await saveTailored({ qualityPolicy: result.quality_policy, userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: floorMade ? 2 : 1,
       ...(fromRel && !fromRel.startsWith("..") ? { from: fromRel } : {}),
       asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])],
       covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
@@ -922,7 +922,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
   }
   if (files) {
-    filed = result.skills_only ? null : await saveTailored({ userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
+    filed = result.skills_only ? null : await saveTailored({ qualityPolicy: result.quality_policy, userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
       depth: files.depth === 0 && !floorMade ? 1 : 2, from: files.rel, asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])], covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
       .catch(e => { console.error("[whatsapp] not filed", String(e).slice(0, 200)); return null })
     more.push(`Started from ${files.said}.`)
@@ -1189,7 +1189,7 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
     // Sent again as it is only while it meets the 90% floor; one made below it (22-26 Oct 2026) is made again, and
     // not from itself: like a redo, the new run starts from what the person wrote (26 Oct 2026 review).
     const have = await existingForJob(userDir, email, job.jd).catch(() => null)
-    if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at)) return sendSaved(from, have, job.jd, email, userId)
+    if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at, have.file.qualityReceipt)) return sendSaved(from, have, job.jd, email, userId)
     if (have) redo = true
   }
   // One run of a job at a time for a number: a job description pasted again, or a second "redo", while it is being made

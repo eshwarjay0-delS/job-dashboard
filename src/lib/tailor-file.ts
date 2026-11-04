@@ -13,12 +13,14 @@ export type FiledResume = { rel: string; filepath: string; email: string; catego
 
 /** File what a tailor run made. Null when the file cannot be read back or filed: the run's own result still stands. */
 export async function fileTailored(o: { userDir: string; base: string; jd: string; result: TailorResult; role?: string; company?: string }): Promise<FiledResume | null> {
+  if (o.result.skills_only || o.result.partial || o.result.quality?.incomplete || o.result.quality_blockers?.length || o.result.unverified_added_keywords?.length || o.result.unchanged) return null
   const bytes = await blob.get(`tailored/${o.result.token}.docx`).catch(() => null)
   if (!bytes) return null
   const from = relOf(o.userDir, o.base)
   const k = o.result.keyword_analysis
   try {
     const saved = await saveTailored({
+      qualityPolicy: o.result.quality_policy,
       userDir: o.userDir, bytes, jd: o.jd, role: String(o.role || "").slice(0, 120), company: String(o.company || "").slice(0, 80),
       // A resume the person wrote is built on at depth 1; one made for another job is already a copy (depth 2, never built on again).
       // One the floor wrote job-post terms onto is a copy too (26 Oct 2026): those terms are not the person's own record.

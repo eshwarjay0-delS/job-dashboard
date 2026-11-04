@@ -53,9 +53,9 @@ test("switch off: 84.3% of the job post is not delivered even when supported ski
   assert.equal(refusing.acceptableWhatsAppResume(draft), false)
   assert.ok(refusing.whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
 })
-test("switch on: a complete 84.3% draft is delivered with the shortfall listed, not refused", () => {
+test("Nov4: a complete 84.3% draft is held for repair", () => {
   const draft = make({ coverage: 84.3 })
-  assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), false)
+  assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), true)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
@@ -94,8 +94,8 @@ rejects("a skills-only file under 95% of the job post is not delivered", {
   skills_only: true,
   coverage: 84.3,
 }, "jd_coverage_below_floor")
-test("a skills-only file that reaches 95% of the job post can be delivered", () => {
-  assert.equal(acceptableWhatsAppResume(make({ skills_only: true, coverage: 100 })), true)
+test("a skills-only file is incomplete even at 100% overlap", () => {
+  assert.equal(acceptableWhatsAppResume(make({ skills_only: true, coverage: 100 })), false)
 })
 rejects("failed draft parts are not a completed tailored document", {
   partial: { failed: 1, total: 5 },
@@ -200,9 +200,9 @@ const unplaced = {
   jd_terms_unplaced: ["gcp security", "gcp iam", "production"], jd_terms_unplaced_reason: "skills_locked",
 }
 test("switch on: locked skills or no skills section sends the file with the terms in the reply, not a coverage refusal", () => {
-  assert.equal(whatsappResumeRejectionReasons(make(unplaced)).includes("jd_coverage_below_floor"), false)
-  assert.equal(acceptableWhatsAppResume(make(unplaced)), true)
-  assert.equal(acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced_reason: "no_skills_section" })), true)
+  assert.equal(whatsappResumeRejectionReasons(make(unplaced)).includes("jd_coverage_below_floor"), true)
+  assert.equal(acceptableWhatsAppResume(make(unplaced)), false)
+  assert.equal(acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced_reason: "no_skills_section" })), false)
 })
 test("switch on: the locked/no-skills exemption covers the coverage shortfall only", () => {
   assert.ok(refusing.whatsappResumeRejectionReasons(make({ ...unplaced, jd_terms_unplaced_reason: undefined })).includes("jd_coverage_below_floor"))

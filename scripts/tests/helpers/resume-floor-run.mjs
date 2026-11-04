@@ -127,7 +127,26 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { extractJdKeywords, coveredJdKeywords } = await import(src('lib/keywords.ts'))
   const { targetKeywords, floorTerms } = await import(src('lib/keyword-targets.ts'))
   const out = {}
-  const runs = process.env.FLOOR_CASES === 'gate' ? [
+  const qualityJobs = [
+    ['soc2', 'Independently execute SOC 2 Type II assessments, control walkthroughs and AICPA Trust Services Criteria testing. Use Drata and Vanta.'],
+    ['sox', 'Test ITGC design effectiveness and operating effectiveness using COSO, COBIT, DCAM and SEC guidance.'],
+    ['privacy', 'Perform ERD privacy reviews, threat modeling, data minimization and retention assessments.'],
+    ['agents', 'Test AI agents for prompt injection, tool execution and sensitive data exposure.'],
+    ['threat', 'Deploy SkyHigh SWG, F5 SSLO and Trellix FireEye in DMZ networks.'],
+    ['people', JOBS.peoplesoft], ['network', JOBS.zerotrust], ['gcp', GATE_JOBS.gcp],
+    ['cloud', JUNK_JOBS.benefits], ['clearance', JUNK_JOBS.clearance],
+    ['endpoint', 'Manage CyberArk EPM and Tanium endpoint privilege policies.'],
+    ['soc', 'Analyze Splunk alerts and investigate incident response with CrowdStrike.'],
+    ['iam', 'Perform access reviews with Okta, Azure AD and SailPoint IdentityIQ.'],
+    ['python', 'Automate security workflows using Python, PowerShell and SQL.'],
+    ['appsec', 'Conduct SAST and DAST using Checkmarx, Veracode and Burp Suite.'],
+    ['devsecops', 'Secure Kubernetes and Docker deployments with Trivy and Snyk.'],
+    ['grc', 'Implement ISO 27001 controls using ServiceNow GRC and AuditBoard.'],
+    ['recovery', 'Test disaster recovery using Veeam and Commvault.'],
+    ['siem', 'Develop QRadar and Chronicle detections using YARA and Sigma.'],
+    ['azure', 'Secure Azure and AWS infrastructure with Terraform and Microsoft Sentinel.'],
+  ]
+  const runs = process.env.FLOOR_CASES === 'quality20' ? qualityJobs.map(([name, jd], i) => ({ name, jd: 'Responsibilities: '+jd, summary: i % 2 === 0, skills: i % 3 !== 0 })) : process.env.FLOOR_CASES === 'gate' ? [
     { name: 'gcp', jd: GATE_JOBS.gcp, summary: false },
     { name: 'gcpLocked', jd: GATE_JOBS.gcp, summary: false, skills: false },
   ] : [
@@ -148,7 +167,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const shown = coveredJdKeywords(text, targets)
     out[name] = {
       coverage: r.coverage, status: r.quality?.status, skillsOnly: !!r.skills_only, placed: r.placed_from_jd || [], placedSummary: r.placed_in_summary || [], text,
-      targets, shown: [...shown], measured: shown.size / targets.length,
+      beforeShown: [...coveredJdKeywords(RESUME.join("\n"), targets)], unsupported: r.unsupported_keywords || [], supportedCoverage: r.supported_coverage, targets, shown: [...shown], measured: shown.size / targets.length,
       summary: text.split('\n').find(l => l.startsWith('Cyber Security Analyst with')) || '',
       skills: text.split('\n').filter(l => /^(Identity|Security Operations|Languages|Cloud|Governance)/.test(l)),
       email: (text.match(/[\w.]+@[\w.]+/) || [''])[0],

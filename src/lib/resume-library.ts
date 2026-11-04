@@ -85,7 +85,7 @@ export function categoriesForJob(jd: string, role = ""): string[] {
 export const folderFor = (email: string, category: string): string[] => [email || NO_EMAIL, category || NO_CATEGORY]
 
 /** One saved resume. `path` is kept relative to the person's library, with "/" between its parts. */
-export type SavedFile = { path: string; email: string; category: string; role: string; company: string; at: number; depth: number; job: string; covers: string[]; from?: string }
+export type SavedFile = { qualityReceipt?: string; path: string; email: string; category: string; role: string; company: string; at: number; depth: number; job: string; covers: string[]; from?: string }
 /** A line written for a job, and the jobs it was written for again. */
 export type Point = { text: string; words: string[]; jobs: string[]; first: number; last: number }
 /** What is known about one kind of job for one person: the jobs seen, what they asked for, the lines that answered them. */
@@ -142,6 +142,7 @@ export function pointsOf(diff: { section: string; after: string }[] | undefined)
 }
 
 export type Run = {
+  qualityReceipt?: string
   path: string; email: string; category: string; role: string; company: string
   /** 1: made from a resume the person wrote. 2: made from a saved resume that was itself made for a job. */
   depth: number
@@ -211,7 +212,7 @@ export function recordRun(library: Library, run: Run, now: number): Library {
   // One job, one file: whatever was saved for this job before in this folder leaves the record with the file it names.
   const gone = new Set(supersededBy(next, run))
   next.files = next.files.filter(f => f.path !== run.path && f.path !== run.replaces && !gone.has(f.path))
-  next.files.push({ path: run.path, email: run.email, category: run.category, role: cleanLine(run.role).slice(0, 120), company: cleanLine(run.company).slice(0, 80), at: now, depth: run.depth >= 2 ? 2 : 1, job, covers, ...(run.from ? { from: run.from } : {}) })
+  next.files.push({ ...(run.qualityReceipt ? { qualityReceipt: run.qualityReceipt } : {}), path: run.path, email: run.email, category: run.category, role: cleanLine(run.role).slice(0, 120), company: cleanLine(run.company).slice(0, 80), at: now, depth: run.depth >= 2 ? 2 : 1, job, covers, ...(run.from ? { from: run.from } : {}) })
   if (next.files.length > MOST_FILES) next.files = next.files.sort((a, b) => a.at - b.at).slice(-MOST_FILES)
 
   const key = shelfKey(run.email, run.category)
@@ -289,6 +290,7 @@ export function validLibrary(raw: unknown): Library {
   const text = (v: unknown, most: number): string => (typeof v === "string" ? v.slice(0, most) : "")
   const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0)
   const files: SavedFile[] = (Array.isArray(src.files) ? src.files : []).filter(f => f && typeof f.path === "string" && f.path && !f.path.includes("..") && !/^[\\/]|^[a-z]:/i.test(f.path)).slice(-MOST_FILES).map(f => ({
+    ...(typeof f.qualityReceipt === "string" && /^evidence-v1:[a-f0-9]{64}$/.test(f.qualityReceipt) ? { qualityReceipt: f.qualityReceipt } : {}),
     path: text(f.path, 400), email: text(f.email, 120), category: text(f.category, 80), role: text(f.role, 120), company: text(f.company, 80), at: num(f.at), depth: f.depth === 2 ? 2 : 1, job: text(f.job, 40), covers: uniqueWords(f.covers).slice(0, 200), ...(typeof f.from === "string" && f.from ? { from: text(f.from, 200) } : {}),
   }))
   const shelves: Record<string, Shelf> = {}
