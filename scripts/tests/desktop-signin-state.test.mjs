@@ -57,6 +57,39 @@ test('the sign-in page passes on only a well-formed desktop state, nothing else 
 
 // Regression: a completed Chrome session must not repeatedly spawn the Windows
 // protocol handler, because each invocation can relaunch Kompas and trigger UAC.
+test('a silent renewal returns the bearer to this computer and never to another address', async () => {
+  const loop = 'http://127.0.0.1:17321/cb'
+  const went = []
+  const window = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(loop), assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
+  const context = vm.createContext({ window, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
+    createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'aaa.bbb.ccc', expires_at: 9 } } }) } }) })
+  vm.runInContext(helpers + '\n' + effect, context)
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(went.length, 1)
+  const back = new URL(went[0])
+  assert.equal(back.origin + back.pathname, loop)
+  assert.equal(back.searchParams.get('state'), STATE)
+  assert.equal(JSON.parse(Buffer.from(back.searchParams.get('d'), 'base64url').toString()).access_token, 'aaa.bbb.ccc')
+  for (const bad of ['https://127.0.0.1:17321/cb', 'http://127.0.0.1:80/cb', 'http://localhost:17321/cb', 'http://evil.example/cb']) {
+    const quiet = []
+    const again = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(bad), assign: url => quiet.push(url), replace: url => quiet.push(url), set href(url) { quiet.push(url) } } }
+    vm.runInContext(helpers + '\n' + effect, vm.createContext({ window: again, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
+      createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'aaa.bbb.ccc', expires_at: 9 } } }) } }) }))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    assert.equal(quiet.length, 1, bad)
+    assert.ok(quiet[0].startsWith('marketfit-kompas://auth?d='), bad)
+  }
+})
+
+test('a silent renewal with no Chrome session does not open a login form', async () => {
+  const went = []
+  const window = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent('http://127.0.0.1:17321/cb'), assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
+  vm.runInContext(helpers + '\n' + effect, vm.createContext({ window, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
+    createClient: () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }) }))
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(went.length, 0)
+})
+
 test('the desktop handoff launches exactly once, with no hidden protocol retries', async () => {
   const went = []
   const frameSrcs = []

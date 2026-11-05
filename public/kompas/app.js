@@ -1514,6 +1514,7 @@ function reportSources() {
 
 /* ---- capture: voice-activity detection per source ---- */
 let sourceGeneration = { You: 0, Them: 0 };
+let micRecoveries = 0;
 let captures = [];           // { who, stream, owner, rec, chunks, ... }
 // The initial speaker render reads running/captures; invoking it earlier
 // hits the lexical temporal dead zone and prevents Kompas from booting.
@@ -1694,6 +1695,13 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
     track.addEventListener("ended", () => {
       if (cap.stopped || !trackEndStopsCapture(who, track.kind)) return;
       void stopSource(who);
+      // A dropped microphone is tried twice on its own before the person is asked.
+      if (who === "You" && running && micRecoveries < 2) {
+        micRecoveries++;
+        srcOn.mic = true;
+        setTimeout(() => { if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic(); }, 700);
+        return;
+      }
       srcOn[who === "You" ? "mic" : "sys"] = false; syncSrc();
       captureErrors.push(who === "You" ? "Microphone disconnected. Reconnect it and press the mic button." : "Call sharing ended. Press the speaker button to share audio again.");
       reportSources();
@@ -1943,7 +1951,7 @@ function vadStep(cap, rms) {
   try { kompasLevelTap(cap.who, rms); } catch {}   // slice 5d: watchdog level, read only
   const now = performance.now();
   cap.lastVadAt = now;
-  if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
+  if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; if (cap.who === "You") micRecoveries = 0; }
   const step = dictateStep(cap, rms, now, VAD);
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;

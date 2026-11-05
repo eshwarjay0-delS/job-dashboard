@@ -20,15 +20,11 @@ const withState = (path: string, state: string) => state ? path + (path.includes
 // Anything else is ignored so this page cannot be used as an open redirect.
 function loopbackTarget(search: string) {
   const raw = new URLSearchParams(search).get("loopback") || ""
-  try {
-    const url = new URL(raw)
-    const port = Number(url.port)
-    if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || url.pathname !== "/cb") return ""
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) return ""
-    return url.origin + "/cb"
-  } catch {
-    return ""
-  }
+  const match = /^http:\/\/127\.0\.0\.1:(\d+)\/cb$/.exec(raw)
+  if (!match) return ""
+  const port = Number(match[1])
+  if (!Number.isInteger(port) || String(port) !== match[1] || port < 1024 || port > 65535) return ""
+  return raw
 }
 
 export default function DesktopSignIn() {
@@ -65,15 +61,12 @@ export default function DesktopSignIn() {
       // handoff stays visible rather than silently spawning more processes.
       setNote("Opening Kompas…")
       if (loopback && state) {
-        const back = new URL(loopback)
-        back.searchParams.set("state", state)
-        back.searchParams.set("d", b64)
-        window.location.replace(back.toString())
+        window.location.replace(loopback + "?state=" + encodeURIComponent(state) + "&d=" + encodeURIComponent(b64))
         return
       }
       window.location.href = withState("marketfit-kompas://auth?d=" + b64, state)
     }).catch(() => {
-      if (!gone) window.location.assign(login)
+      if (!gone && !loopback) window.location.assign(login)
     })
     return () => { gone = true }
   }, [])
