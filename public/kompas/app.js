@@ -1160,6 +1160,45 @@ function syncSrc() {
   $("sysBtn").setAttribute?.("aria-pressed", String(sysShownOn));
   $("sysBtn").setAttribute?.("aria-busy", String(sysConnecting));
 }
+function micConstraints(deviceId) {
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
+  if (typeof deviceId === "string" && deviceId) audio.deviceId = { exact: deviceId };
+  return { audio };
+}
+let micDeviceId = "";
+try { micDeviceId = localStorage.getItem("perfact.micId") || ""; } catch {}
+async function fillMicPick() {
+  const el = $("micPick");
+  if (!el || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  let devices = [];
+  try { devices = await navigator.mediaDevices.enumerateDevices(); } catch { return; }
+  const mics = devices.filter(d => d.kind === "audioinput");
+  const chosen = el.value || micDeviceId;
+  el.replaceChildren();
+  const any = document.createElement("option");
+  any.value = "";
+  any.textContent = "Default microphone";
+  el.appendChild(any);
+  mics.forEach((d, i) => {
+    const option = document.createElement("option");
+    option.value = d.deviceId;
+    option.textContent = d.label || ("Microphone " + (i + 1));
+    el.appendChild(option);
+  });
+  if ([...el.options].some(option => option.value === chosen)) el.value = chosen;
+}
+const micPick = $("micPick");
+if (micPick) {
+  micPick.onchange = async () => {
+    micDeviceId = micPick.value || "";
+    try { localStorage.setItem("perfact.micId", micDeviceId); } catch {}
+    if (running && srcOn.mic) { await stopSource("You"); await startMic(); }
+  };
+  void fillMicPick();
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", () => { void fillMicPick(); });
+  }
+}
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
 $("sysBtn").onclick = async () => {
   srcOn.sys = !srcOn.sys;
@@ -1298,8 +1337,13 @@ function showCachedLevel(card) {
   if (cards[idx] === card) renderCard();
   return true;
 }
-function sayAloud(s) {
+function spokenShape(s) {
   return String(s || "")
+    .replace(/^[ \t]*#{1,6}[ \t]+.*$/gm, "")
+    .replace(/^[ \t]*(?:\*\*)?(?:situation|task|action|result)\s*:(?:\*\*)?[ \t]*/gim, "");
+}
+function sayAloud(s) {
+  return spokenShape(s)
     .replace(/&amp;/gi, " and ")
     .replace(/\bx-amp\b/gi, "and")
     .replace(/&gt;=/gi, " at least ")
@@ -1514,6 +1558,7 @@ function reportSources() {
 
 /* ---- capture: voice-activity detection per source ---- */
 let sourceGeneration = { You: 0, Them: 0 };
+let micRecoveries = 0;
 let captures = [];           // { who, stream, owner, rec, chunks, ... }
 // The initial speaker render reads running/captures; invoking it earlier
 // hits the lexical temporal dead zone and prevents Kompas from booting.
@@ -1557,9 +1602,31 @@ async function startMic() {
   const generation = sourceGeneration.You;
   if (captures.some(c => c.who === "You")) return;
   try {
-    const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    let mic;
+    try { mic = await navigator.mediaDevices.getUserMedia(micConstraints(micDeviceId)); }
+    catch (e) {
+      if (!micDeviceId || !e || (e.name !== "NotFoundError" && e.name !== "OverconstrainedError")) throw e;
+      micDeviceId = "";
+      try { localStorage.removeItem("perfact.micId"); } catch {}
+      const pick = $("micPick"); if (pick) pick.value = "";
+      mic = await navigator.mediaDevices.getUserMedia(micConstraints(""));
+    }
     await attachSource(mic, "You", null, generation);
-  } catch (e) { if (generation !== sourceGeneration.You || !running) return; captureErrors.push("Mic: " + micError(e)); srcOn.mic = false; syncSrc(); }
+    void fillMicPick();
+  } catch (e) {
+    if (generation !== sourceGeneration.You || !running) return;
+    const message = "Mic: " + micError(e);
+    if (e && e.name === "NotReadableError" && micRecoveries < 2) {
+      micRecoveries++;
+      status(message + " Trying again.", "err");
+      setTimeout(() => { if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic(); }, 700);
+      return;
+    }
+    captureErrors.push(message);
+    srcOn.mic = false;
+    syncSrc();
+    status(message, "err");
+  }
 }
 async function startSys() {
   const generation = sourceGeneration.Them;
@@ -1694,6 +1761,13 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
     track.addEventListener("ended", () => {
       if (cap.stopped || !trackEndStopsCapture(who, track.kind)) return;
       void stopSource(who);
+      // A dropped microphone is tried twice on its own before the person is asked.
+      if (who === "You" && running && micRecoveries < 2) {
+        micRecoveries++;
+        srcOn.mic = true;
+        setTimeout(() => { if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic(); }, 700);
+        return;
+      }
       srcOn[who === "You" ? "mic" : "sys"] = false; syncSrc();
       captureErrors.push(who === "You" ? "Microphone disconnected. Reconnect it and press the mic button." : "Call sharing ended. Press the speaker button to share audio again.");
       reportSources();
@@ -1943,7 +2017,7 @@ function vadStep(cap, rms) {
   try { kompasLevelTap(cap.who, rms); } catch {}   // slice 5d: watchdog level, read only
   const now = performance.now();
   cap.lastVadAt = now;
-  if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
+  if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; if (cap.who === "You") micRecoveries = 0; }
   const step = dictateStep(cap, rms, now, VAD);
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;
@@ -3323,7 +3397,7 @@ function fillAnchor(card, anchor) {
 }
 function serveBook(card, hit, depthKey) {
   answerCtl = null;                                                   // nothing is in flight: the book answered
-  card.answer = hit.text; card.streaming = false; card.meta = "⚡ book · 0.00s · written ahead of the interview";
+  card.answer = hit.text; card.streaming = false; card.meta = "cached";
   card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta };
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
@@ -3337,26 +3411,27 @@ function serveBook(card, hit, depthKey) {
 async function generateAnswer(question, card, opts = {}) {
   if (card && card.screenTask) opts = { ...opts, source: "screen" };
   card = card || addCard(question, ["…"]);
-  let timer;
   const request = generateAnswerRequest(question, card, opts);
   const ctl = card.req;
   try {
-    await Promise.race([request, new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error("Answer request timed out")), 60000);
-    })]);
+    await request;
   } catch (error) {
     if (card.req !== ctl) return;
-    // Invalidate first: an aborted/late read cannot overwrite the visible recovery message.
     card.req = null;
-    ctl?.abort();
+    try { ctl?.abort(); } catch {}
+    const tries = nextStallTry(opts.retries);
+    if (tries) {
+      status("Still working.", "live");
+      setTimeout(() => generateAnswer(question, card, { ...opts, retries: tries }), 800);
+      return;
+    }
     card.streaming = false;
-    const partial = typeof card.answer === "string" && card.answer.trim();
-    if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
-    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
+    const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
+    if (!partial) card.answer = ["…"];
+    card.meta = "";
     if (cards[idx] === card) renderCard();
-    status(error.message || "Answer interrupted. Please retry.", "err");
+    status("The answer did not finish. Press AI Answer to try again.", "live");
   } finally {
-    clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
   }
 }
@@ -3565,12 +3640,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);   // the full heard question, never its last line (owner, 23 Oct)
-    const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
-    const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
-    const len = meta.length && meta.length.secs ? ` · ~${spoken(meta.length.secs[0])}–${spoken(meta.length.secs[1])} spoken` : "";
-    card.meta = `⚡ ${(first / 1000).toFixed(2)}s · ${((performance.now() - t0) / 1000).toFixed(2)}s${kind ? " · " + kind : ""}${len}${retrieved.length ? " · dossier" : ""}${meta.checked ? " · ✓ fact-checked" : ""}${repairBadge(meta.repair)}`;
+    card.meta = `${repairBadge(meta.repair)}`;
     if (cards[idx] === card) renderCard();
-    logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
+    logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), firstMs: Math.round(first), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
     if (directDesktop && !meta.degraded) {
       card.desktopByDepth = card.desktopByDepth || {};

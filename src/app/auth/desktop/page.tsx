@@ -16,18 +16,35 @@ function desktopState(search: string) {
 }
 const withState = (path: string, state: string) => state ? path + (path.includes("?") ? "&" : "?") + "state=" + state : path
 
+// A silent desktop renewal posts the short-lived bearer back to 127.0.0.1.
+// Anything else is ignored so this page cannot be used as an open redirect.
+function loopbackTarget(search: string) {
+  const raw = new URLSearchParams(search).get("loopback") || ""
+  const match = /^http:\/\/127\.0\.0\.1:(\d+)\/cb$/.exec(raw)
+  if (!match) return ""
+  const port = Number(match[1])
+  if (!Number.isInteger(port) || String(port) !== match[1] || port < 1024 || port > 65535) return ""
+  return raw
+}
+
 export default function DesktopSignIn() {
   const [note, setNote] = useState("Checking the sign-in already in this browser…")
 
   useEffect(() => {
     let gone = false
     const state = desktopState(window.location.search)
+    const loopback = loopbackTarget(window.location.search)
     const login = "/login?next=" + encodeURIComponent(withState("/auth/desktop", state))
     const supabase = createClient()
     supabase.auth.getSession().then(({ data }) => {
       if (gone) return
       const session = data.session
       if (!session?.access_token) {
+        // A silent renewal must not turn into a login form over an interview.
+        if (loopback) {
+          setNote("Kompas will keep the sign-in it already has.")
+          return
+        }
         window.location.assign(login)
         return
       }
@@ -43,9 +60,13 @@ export default function DesktopSignIn() {
       // reopen /auth/desktop even after Chrome has authenticated. A failed
       // handoff stays visible rather than silently spawning more processes.
       setNote("Opening Kompas…")
+      if (loopback && state) {
+        window.location.replace(loopback + "?state=" + encodeURIComponent(state) + "&d=" + encodeURIComponent(b64))
+        return
+      }
       window.location.href = withState("marketfit-kompas://auth?d=" + b64, state)
     }).catch(() => {
-      if (!gone) window.location.assign(login)
+      if (!gone && !loopback) window.location.assign(login)
     })
     return () => { gone = true }
   }, [])
