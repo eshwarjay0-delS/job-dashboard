@@ -1,3 +1,7 @@
+## 2026-11-05 — A missing job-post term is named on the skills line
+
+The coverage number stayed low because those terms never reached the skills line, and a later cleanup removed them if they did. They are named on the skills line now. They are not written as experience. A certification is still not added.
+
 ## 2026-11-05 — Computer audio stays up when the screen picture ends
 
 Windows opens the call mix beside a screen picture. That picture ending was treated as the call ending, so computer audio went quiet. The picture ending no longer stops the mix. The picture is held muted so Windows keeps the mix open. A microphone or the audio track ending still stops that source.

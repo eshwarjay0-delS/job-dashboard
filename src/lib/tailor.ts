@@ -24,6 +24,7 @@ import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
 import { atsCheck, type AtsResult } from "./resume-ats"
 import { docxText } from "./resume-round-trip-guard"
 import { recountExported } from "./resume-exported-recount"
+import { skillsFloorTerms } from "./resume-skills-floor"
 
 export interface TailorResult {
   /** Receipt policy for complete evidence-checked exports; never inferred from overlap. */
@@ -540,7 +541,7 @@ export async function runTailor(opts: {
   // required ones its bullets (rewritten and added) do show. provenKw: the listed skills any bullet shows. A skill listed
   // but shown at no client reads as padding to a recruiter.
   // `dropped`: paragraphs a one-page condense removed, kept so the change list can show them and the person can undo them.
-  type Pass = { edits: Edits; dropped: number[]; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean }; floor?: string[]; floorSummary?: string[] }
+  type Pass = { edits: Edits; dropped: number[]; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean }; floor?: string[]; floorFromJd?: string[]; floorSummary?: string[] }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
@@ -775,15 +776,15 @@ export async function runTailor(opts: {
     return next
   }
 
-  // THE FLOOR's placement (see below): only candidate-evidenced target terms still missing, certifications excepted, onto the skills line it
-  // fits best. Kept only if the measured coverage rose. With no skills section it changes nothing (and says so in the
-  // result's missing terms).
+  // Every non-cert target term still missing goes on the skills line, including a
+  // job-post term the resume has not claimed. That term is a named gap, not an
+  // experience bullet. Certifications stay out.
   const placeEverything = async (cur: Pass): Promise<Pass> => {
     // Only candidate-supported terms, never evidence inferred from the JD alone.
     // Switch on, the v2 skills-line rules (resume-skills-line.ts): a term is written with its whitespace and line breaks
     // collapsed, and never if it is junk (work status, pay, workplace) or would trip the round-trip guard (a date, phone,
     // email or link).
-    const left = scoreKws.filter(k => floorKws.has(k) && forcedJdKws.includes(k) && !cur.afterKw.has(k) && !isCertification(k))
+    const left = skillsFloorTerms(scoreKws, floorKws, cur.afterKw, isCertification)
       .filter(k => !jdGate || (cleanTerm(k) === k && !isJunkTerm(k) && !isGuardUnsafe(k)))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
@@ -805,7 +806,9 @@ export async function runTailor(opts: {
     if (next.cov <= cur.cov) return cur
     next.via = cur.via
     next.partial = cur.partial
-    next.floor = hard.filter(k => next.afterKw.has(k))
+    const landed = hard.filter(k => next.afterKw.has(k))
+    next.floor = landed.filter(k => forcedJdKws.includes(k) || beforeKw.has(k))
+    next.floorFromJd = landed.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     next.floorSummary = soft.filter(k => next.afterKw.has(k))
     return next
   }
@@ -853,6 +856,7 @@ export async function runTailor(opts: {
     next.via = cur.via
     next.partial = cur.partial
     next.floor = (cur.floor || []).filter(k => next.afterKw.has(k))
+    next.floorFromJd = (cur.floorFromJd || []).filter(k => next.afterKw.has(k))
     next.floorSummary = cur.floorSummary
     return next
   }
@@ -1051,24 +1055,21 @@ export async function runTailor(opts: {
       if (!usedModel.includes("job-post terms on the skills line")) usedModel = `${usedModel} + job-post terms on the skills line`
     }
   }
-  // A model may still invent a JD-only tool in a client bullet, title, summary,
-  // project, or skills line after the earlier skills-only cleanup. Restore the
-  // ORIGINAL paragraph rather than deleting just the tool name: the rest of
-  // that work claim might also be invented. Re-score the actual exported DOCX
-  // and re-run every normal completion/evidence gate; never force acceptance.
+  // Experience, the summary, the headline and extras still go back to the source
+  // when they claim a job-post-only tool. The skills line stays: that is where
+  // the missing job-post term is named, and it is not told as experience.
   if (best) {
-    // Every resume section asserts candidate knowledge. A reply disclaimer cannot
-    // turn a job-post-only skill or summary strength into supported experience.
     const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     if (unsupported.length) {
       const cleaned = removeUnsupportedRewrites(best.edits,
-        value => coveredJdKeywords(value, unsupported).size > 0)
+        value => coveredJdKeywords(value, unsupported).size > 0, { keepSkills: true })
       if (cleaned.removed) {
         const previous = best
         const restored = await applyEdits(cleaned.edits)
         restored.via = previous.via
         restored.partial = previous.partial
         restored.floor = (previous.floor || []).filter(k => restored.afterKw.has(k))
+        restored.floorFromJd = (previous.floorFromJd || []).filter(k => restored.afterKw.has(k))
         restored.floorSummary = (previous.floorSummary || []).filter(k => restored.afterKw.has(k))
         best = restored
         // Evidence and role counts must be computed from the sanitized pass.
@@ -1091,6 +1092,7 @@ export async function runTailor(opts: {
   const { claimedKw, roleKw, required, provenKw } = evidencePass
   if (skillsOnly) notes.push("No AI writer completed this resume. Supported vocabulary recovery is incomplete and must not be delivered as a tailored resume.")
   if (best.floor?.length) notes.push(`Candidate-supported job terms restored on the skills line: ${best.floor.join(", ")}`)
+  if (best.floorFromJd?.length) notes.push(`Job-post terms named on the skills line, not as confirmed experience: ${best.floorFromJd.join(", ")}`)
   if (best.floorSummary?.length) notes.push(`Candidate-supported strengths restored in the summary: ${best.floorSummary.join(", ")}`)
   // Supported vocabulary recovery cannot make a provider-outage draft complete.
   const floorCarried = !!floorFrom && skillsOnly
@@ -1220,7 +1222,7 @@ export async function runTailor(opts: {
   try {
     const exportedText = (await docxText(buffer)).replace(/\s+/g, " ")
     const exportedCovered = coveredJdKeywords(exportedText, scoreKws)
-    exportedRecount = recountExported({ scoreKws, attainableKws, exportedCovered, placed: best.floor ?? [], writer: writerOnSkills, summary: best.floorSummary ?? [], enrichmentSuggested: jdGenerated, enrichmentCovered: coveredJdKeywords(exportedText, jdGenerated) })
+    exportedRecount = recountExported({ scoreKws, attainableKws, exportedCovered, placed: [...(best.floor ?? []), ...(best.floorFromJd ?? [])], writer: writerOnSkills, summary: best.floorSummary ?? [], enrichmentSuggested: jdGenerated, enrichmentCovered: coveredJdKeywords(exportedText, jdGenerated) })
   } catch (e) {
     notes.push(`Exported-file recount unavailable (${e instanceof Error ? e.message : "unknown error"}); numbers measured on tailored text.`)
   }
@@ -1278,7 +1280,7 @@ export async function runTailor(opts: {
     await blob.put(`tailored/${token}.owner.json`, JSON.stringify({ userId: opts.ownerId })).catch(() => {})
   }
 
-  const finalPlaced = exportedRecount ? exportedRecount.placed : (best.floor ?? [])
+  const finalPlaced = exportedRecount ? exportedRecount.placed : [...(best.floor ?? []), ...(best.floorFromJd ?? [])]
   const finalWriter = exportedRecount ? exportedRecount.writer : writerOnSkills
   const finalSummary = exportedRecount ? exportedRecount.summary : (best.floorSummary ?? [])
   const result: TailorResult = {
