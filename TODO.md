@@ -1,6 +1,6 @@
-## 2026-11-05 — A finished rewrite names a missing job-post term on the skills line
+## 2026-11-05 — Unevidenced job-post terms stay off the skills line
 
-When a writer finishes, a job-post term the resume has not claimed is named on the skills line. It is not written as experience, and it is not treated as an unverified claim. A provider outage still adds nothing. A certification is still not added.
+The floor still writes only terms the resume or a confirmation already supports. A term with no evidence stays off the line. A file under 95 percent measured coverage stays held. That low number is the gap.
 
 ## 2026-11-05 — Computer audio stays up when the screen picture ends
 
