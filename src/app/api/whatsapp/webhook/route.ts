@@ -759,6 +759,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   let sending = false
   let told = false
   let failureCode = "quality_incomplete"
+  // Fail-fast notice timer (Nov 4 baseline doctrine): declared here so the
+  // outer finally can clear it; armed after the "Updating..." line below.
+  let progressTimer: ReturnType<typeof setTimeout> | undefined
   // A quiet recovery still owes the chat one sentence the first time. Repeating it on every later retry is noise.
   const sayOutcome = async (text: string) => {
     if (quiet) {
@@ -784,6 +787,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. A Word file is sent only if this run finishes cleanly.`
     : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. A Word file is sent only if this run finishes cleanly.`)
+
+  // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
+  // 240s budget in silence and then fail. At 60s, if the run is still going,
+  // the chat hears one honest progress line — still running, no outcome
+  // claimed. Quiet recovery runs stay silent (they owe one sentence only
+  // when they finish). The outer finally clears the timer on every path,
+  // so a finished run never gets a stale progress note. No unref: the
+  // function stays alive under after() up to maxDuration.
+  if (!quiet) {
+    progressTimer = setTimeout(() => {
+      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get the file here when it finishes cleanly; if it fails, your resume and this job stay saved for another try.").catch(() => {})
+    }, 60_000)
+  }
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
@@ -984,6 +1000,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
     if (!told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
   } finally {
+    // The progress timer must never outlive the run: a finished run gets no
+    // stale "still working" note, and a failed run's outcome message stands alone.
+    clearTimeout(progressTimer)
     if (!finished && !told) {
       await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
     }
