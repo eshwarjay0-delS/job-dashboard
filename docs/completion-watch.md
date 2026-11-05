@@ -28,7 +28,7 @@ Keep source requests and approval state distinct from assumptions. Do not collec
 
 ## 5 November 2026 desktop session family
 
-Origin/master `e58450c6` includes merged PR #224 and PR #226. PR #224 is the loopback bearer. PR #226 is the logistics filter and was not edited for this slice. No `POST /api/auth/desktop-session` existed. The route is implemented on a branch with tests that keep the desktop refresh family independent of two website tab rotations. It is not merged and not a production deploy. A live three-day Windows sign-in is still unproven. The service-role key is required for the first mint.
+Origin/master `e58450c6` includes merged PR #224 and PR #226. PR #224 is the loopback bearer. PR #226 is the logistics filter and was not edited for this slice. No `POST /api/auth/desktop-session` existed. The route is implemented on PR 227 (`b070c71b`) with tests that keep the desktop refresh family independent of two website tab rotations. It is not merged and not a production deploy. A live three-day Windows sign-in is still unproven. The service-role key is required for the first mint.
 
 ## 5 November 2026 reconciliation
 
