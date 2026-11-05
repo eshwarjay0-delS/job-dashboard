@@ -46,6 +46,7 @@ import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_R
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
+import { confirmedCandidateStatements } from "@/lib/resume-evidence"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
@@ -156,6 +157,7 @@ type Gen = {
   createdAt: number
   saved?: string        // where it was filed in the person's Files (whatsapp-collect.ts skips it then)
   depth?: number
+  held?: boolean        // saved from a hold: a reply re-runs from the baseline and the quality gate applies again
 }
 const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
 
@@ -763,14 +765,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // outer finally can clear it; armed after the "Updating..." line below.
   let progressTimer: ReturnType<typeof setTimeout> | undefined
   // A quiet recovery still owes the chat one sentence the first time. Repeating it on every later retry is noise.
-  const sayOutcome = async (text: string) => {
+  const sayOutcome = async (text: string): Promise<string | undefined> => {
     if (quiet) {
       const current = await readResumeRecovery(job).catch(() => null)
-      if (current?.toldUser) return
+      if (current?.toldUser) return undefined
       await patchResumeRecovery(job, { toldUser: true }).catch(() => {})
     }
     told = true
-    await sendText(from, text).catch(() => {})
+    return sendText(from, text).catch(() => undefined)
   }
   let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
   try {
@@ -907,7 +909,20 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       bulletsReverted: result.bullets_reverted_for_jd_terms ?? 0,
       cached: !!result.cached,
     })
-    await sayOutcome(qualityStop(result))
+    // A hold used to be a dead end: no file went out, so there was nothing to
+    // reply to, and a reply with real experience lines had no path back into
+    // evidence. Anchor the baseline under this hold message instead, so a
+    // reply re-runs from it (see refine) with the gate applied again.
+    const holdWamid = await sayOutcome(qualityStop(result))
+    if (holdWamid) {
+      const baseline = await readPath(session.resumePath).catch(() => null)
+      if (baseline) {
+        const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
+        if (await writePath(vfile, baseline).then(() => true, () => false)) {
+          await saveGen(from, holdWamid, { userId, jd: session.jd, file: vfile, meta: await metaPromise, changes: [], source: session.resumePath, createdAt: Date.now(), held: true })
+        }
+      }
+    }
     return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
@@ -1352,10 +1367,26 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     userResumeDir: path.join(VERSIONS_DIR, digits(from)),
     givenPath: gen.file,
     refine: request,
+    // The reply is not just an edit instruction: a first-person experience
+    // statement in it ("I have experience with X") is candidate evidence, so
+    // the evidence gate keeps the term instead of stripping it back out.
+    // confirmedCandidateStatements admits only explicit assertions, so a
+    // plain edit ("make bullets shorter") contributes nothing here.
+    immediatePrefs: confirmedCandidateStatements([request]),
     noCache: true, // sending the same request again should redraft, not replay the last result
     mode: "full",
     sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
   })
+
+  // A chain that started from a hold keeps the gate: without this, replying
+  // to a hold would deliver a still-below-floor file and bypass the floor
+  // the hold just enforced. A re-hold re-anchors under its own message so
+  // the loop can iterate until the run passes or he stops.
+  if (gen.held && !acceptableWhatsAppResume(result)) {
+    const wamid = await sendText(from, qualityStop(result)).catch(() => "")
+    if (wamid) await saveGen(from, wamid, { ...gen, createdAt: Date.now() })
+    return
+  }
 
   const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
   if (!lines) {
@@ -1517,7 +1548,7 @@ function qualityStop(result: TailorResult): string {
     // say so, or "2 of 2" followed by "40%" reads as a contradiction. Also show
     // the hidden total whenever the named list is sliced.
     const more = all.length > named.length ? ` and ${all.length - named.length} more` : ""
-    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}${more}.` : ""} The earlier pick line counted only the headline requirements used to choose this resume; this floor counts every extracted term. Your resume and this job are saved for another try. No incomplete file was delivered.`
+    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}${more}.` : ""} The earlier pick line counted only the headline requirements used to choose this resume; this floor counts every extracted term. Your resume and this job are saved for another try. No incomplete file was delivered. Reply to this message with the experience you actually have — for example, "I have experience with Splunk and AWS" — and I will redo it with those as evidence.`
   }
   if (reasons.includes("supported_coverage_below_floor")) {
     const supported = Number.isFinite(result.supported_coverage) ? `${Math.round(result.supported_coverage!)}%` : "too little"
