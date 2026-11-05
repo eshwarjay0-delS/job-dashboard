@@ -1,3 +1,13 @@
+## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
+
+No visible page change except that "I live in Dallas, is that a problem?" and "my address is …" are now skipped the same way as "where are you based?". The answer text itself changes only after a model reply: visa, home address, where you live, and personal relocation are removed unless the resume states them and the question asked. A whole-utterance gateway line is not spoken. This is not a new screen.
+
+**Measured, code-level, fictional resume.** Before: those logistics sentences survived settle; five gateway lines were not refused; "I live in Dallas, is that a problem?" was answered. 150 offline drafts on the 50-question fixture had 0 length gaps under 50 percent and 505 same-answer pairs at Jaccard >= 0.7 (stand-in boilerplate, not a live score). Offline sample eval: 15 answers, 3 failures, all the Python question missing a fenced block. That fence gap was already in the stand-in.
+
+**Desktop 10-fold, offline, not Windows.** 2 of 10 asks skipped. The other 8: lowest mode gap 0.50 (code, 28 vs 42 words), highest same-answer ratio 0.561. Production at the start: READY `dpl_kns4gHRz7cSaX4SuexLZtJuCp9PJ` at `c33fd90`. Health 200. Both answer routes 401 signed out. `KOMPAS_EVAL_TOKEN` was unset, so no live score.
+
+**Not verified.** No live model answer. No Windows session. Not production until this branch is merged and the new deployment is READY.
+
 ## 2026-11-05 — Plan & Vision records the 70 to 80 percent rule and closes two stale instructions
 
 No resume-generation behavior changed. The gap-keyword round still runs for every result under 95 percent. The journal now states the owner rule that a third keyword iteration applies only while coverage is still 70 to 80 percent, and it says that round was not narrowed. The Oct 29 instruction to put missing job-post terms on the skills line is marked superseded by the Nov 5 revert at 90cdd1dd. The Oct 27 WhatsApp Kompas "no environment" blocker is marked deployed: the webhook already routes kompas/revert and the live /kompas page shows Open WhatsApp chats. The 60-second notice is recorded as already shipped, so it is not a build-again task. The runtime fallback is still not built. This is a board-text change inside the signed-in Plan & Vision page. It was not checked as a live resume or a live WhatsApp message.

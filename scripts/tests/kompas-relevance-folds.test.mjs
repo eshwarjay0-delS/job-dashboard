@@ -4,8 +4,8 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
-  askedPartList, asksForCode, dissectQuestion, dissectionPrompt, draftSpokenAnswer, evaluateLiveAnswers,
-  experienceLines, leadPhrase, partsScale, questionKeywords, requiredSentence, sentencesOf, settleSpokenAnswer,
+  askedPartList, asksForCode, dissectQuestion, dissectionPrompt,   draftSpokenAnswer, dropParaphrasedRepeat, evaluateLiveAnswers,
+  experienceLines, isProviderErrorAnswer, leadPhrase, partsScale, questionKeywords, requiredSentence, sentencesOf, settleSpokenAnswer,
   topicOfAsk, trimToWords, wordCount,
 } from "../../src/lib/kompasDissection.ts"
 import { applyGuards, questionFigures } from "../../src/lib/kompasGuards.ts"
@@ -177,4 +177,46 @@ test("the live eval reads the token from the environment only and covers the hit
   assert.match(source, /repairs:/)
   assert.doesNotMatch(source, /eyJ|writeFileSync/)
   assert.ok(wordCount(source) > 100)
+})
+
+test("settled answers drop visa, home address, and personal relocation the resume does not state", () => {
+  const q = "What does residual risk mean?"
+  const leaked = "Residual risk is what remains after the control. I need an H-1B and I live in Austin. I am open to relocation. My home address is 10 King Street. The owner decides what is left."
+  const out = settleSpokenAnswer(q, leaked, "engineer", RESUME)
+  assert.doesNotMatch(out.text, /H-1B|Austin|relocation|King Street/i)
+  assert.match(out.text, /residual risk/i)
+  assert.match(out.text, /owner decides/i)
+  const moved = settleSpokenAnswer(q, "I relocated the Vault servers, then I checked the live setting.", "engineer", RESUME)
+  assert.match(moved.text, /Vault servers/)
+  const asked = settleSpokenAnswer("How does work authorization work?", "Work authorization is the legal permission to work. I need an H-1B.", "engineer", RESUME)
+  assert.match(asked.text, /Work authorization is the legal permission/)
+  assert.doesNotMatch(asked.text, /H-1B/)
+  const judged = evaluateLiveAnswers([{ question: q, level: "engineer", text: leaked }], RESUME)
+  assert.ok(judged.failures.some((f) => /ungrounded logistics/.test(f)))
+})
+
+test("a paraphrased repeat of the previous answer keeps only the new point", () => {
+  const previous = "Residual risk is what remains after the planned control. I told the business what was left. The owner decides."
+  const again = "After the planned control, residual risk is what remains. The owner decides, and I told the business what was left. A policy exception is a time-boxed approval with an owner and an end date."
+  const kept = dropParaphrasedRepeat(again, previous)
+  assert.match(kept, /policy exception/)
+  assert.doesNotMatch(kept, /told the business/)
+  const settled = settleSpokenAnswer("What is a policy exception?", again, "engineer", RESUME, previous)
+  assert.match(settled.text, /policy exception/)
+  assert.doesNotMatch(settled.text, /told the business/)
+})
+
+test("gateway sentences are not answers, and a real sentence that mentions a failure still is", () => {
+  for (const raw of [
+    "Something went wrong. Please try again.",
+    "The AI service is unavailable.",
+    "Sorry, the model failed to respond.",
+    "We couldn't generate a response. Please retry.",
+    "Anthropic is experiencing high demand.",
+  ]) {
+    assert.equal(isProviderErrorAnswer(raw), true, raw)
+    assert.equal(settleSpokenAnswer("What does residual risk mean?", raw, "engineer", RESUME).providerError, true, raw)
+  }
+  assert.equal(isProviderErrorAnswer("I would rate limit the scanner so a 429 does not stop the review."), false)
+  assert.equal(isProviderErrorAnswer("Something went wrong with the export, so I checked the live setting."), false)
 })

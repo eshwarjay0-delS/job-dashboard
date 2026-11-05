@@ -100,6 +100,21 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 5 November 2026
+
+Code-level only. `KOMPAS_EVAL_TOKEN` was not set in this run, so no live answer was scored. Production at the start of the run was READY `dpl_kns4gHRz7cSaX4SuexLZtJuCp9PJ` on `c33fd90fe01436445822cf9aeaa83d4ad775c28b`. Unauthenticated `POST /api/answer` and `POST /api/kompas/answer` both returned 401. `GET /api/health` returned ok.
+
+Measured before the fix, on the fictional sample resume:
+
+- Settled text kept "I need an H-1B and I live in Austin", "I am open to relocation", and "My home address is 10 King Street" inside a residual-risk answer.
+- "I live in Dallas, is that a problem?" was not skipped.
+- These whole-utterance gateway lines were not treated as provider errors: "Something went wrong. Please try again.", "The AI service is unavailable.", "Sorry, the model failed to respond.", "We couldn't generate a response. Please retry.", "Anthropic is experiencing high demand."
+- Across the 50-question fixture, 150 offline drafts, 0 length gaps under 50 percent, and 505 same-answer pairs at Jaccard >= 0.7. That pair count is the stand-in sharing approach lines across chains. It is not a live score.
+
+What changed: settle drops visa, home address, where the speaker lives, and personal relocation unless the question asked and the resume states it. Moving a system stays. A question that is only "I live in …" or "my address is …" is skipped. A paraphrased sentence from one of the last three answers is dropped when the new answer also has a new point. The five gateway lines above are refused.
+
+Desktop 10-fold (fictional resume plus a short JD, five pasted and five spoken, offline stand-in): 2 logistics asks skipped, 8 answered. Highest same-answer ratio in that set was 0.561. Lowest mode length gap was 0.50 (code, director 28 words, architect 42). Not a Windows session.
+
 ## Fold log, 29 October 2026 (box session, branch `cursor/kompas-relevance-dissection-2f7c`)
 
 All results below are code-level. No live answer was measured.
@@ -123,7 +138,7 @@ All results below are code-level. No live answer was measured.
 
 - The live model can still ignore the band. The trim enforces the ceiling. It cannot invent the missing words. A short answer stays short and the live eval fails it.
 - The depth and confidence scores are word counts, not a person's judgment.
-- The same answer for two questions is detected when most of the content words match. A paraphrased repeat can still get through.
+- The same answer for two questions is detected when most of the content words match. A sentence that copies one of the last three answers is dropped when the new answer also has a new point. A full paraphrase with no new point still stands, so the repair loop can rewrite it.
 - The repair loop is still one model call per attempt. `repair.status` shows whether it landed. It cannot show whether the rewrite reads well.
 - The criteria checks are word patterns. "Rejected alternative" passes on "instead of", even if the alternative is weak.
 - On the 50-question fixture, the offline draft still repeats itself for chains whose questions share a whole second sentence. The fictional resume has no cloud work, so the draft only has the asked-part sentences. This is a draft limitation. The live model has a real resume.

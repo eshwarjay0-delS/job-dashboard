@@ -16,6 +16,7 @@ const quiet = [
   'What is your current location?', 'Are you willing to work on-site three days a week?', 'Are you on a green card?',
   'What is your expected hourly rate?', 'Is this full time or contract for you?', 'Can you start in two weeks?',
   'We hire quickly. When could you start?', 'Can you relocate if the role requires it?', 'When would you be available to start?',
+  'I live in Dallas, is that a problem?', "I'm based in Austin.", 'My address is 10 King Street.',
 ]
 const answered = [
   'Walk me through your hybrid cloud migration.', 'Have you worked with hybrid environments?',
