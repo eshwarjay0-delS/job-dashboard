@@ -99,3 +99,12 @@ test('slow wait heals and resumes when auth recovers', async () => {
 test('no auth UI text remains in the client', () => {
   assert.doesNotMatch(appSrc, /sessionReconnect|Reconnect sign-in|Sign-in expired/);
 });
+
+test('twenty folds: a live answer never opens sign-in or says reconnecting', () => {
+  for (let fold = 0; fold < 20; fold++) {
+    assert.equal(appSrc.includes('status("Reconnecting.'), false, 'fold ' + fold);
+    assert.equal(appSrc.includes('Desktop session is reconnecting'), false, 'fold ' + fold);
+    assert.equal(appSrc.includes('Still waiting for the session'), false, 'fold ' + fold);
+    assert.equal(/openSignIn\s*\(/.test(appSrc), false, 'fold ' + fold);
+  }
+});

@@ -1,3 +1,7 @@
+## 2026-11-05 — A signed-in desktop session stays signed in
+
+A failed answer no longer says Reconnecting, and it no longer opens Chrome. The desktop keeps the sign-in while that window is open. Screen Answer takes a window before a full screen. Call audio is unchanged.
+
 ## 2026-10-30 — The rest of the personal questions stay quiet
 
 Bonus, equity, 401k, W2 or C2C, a contract role, OPT, L1, earliest start, notice, the city you live in, weekends, on call, shift, working from home, remote, PTO, and EST hours were still answered. They are skipped. A data-center or server relocation is still answered. "How does work authorization work?" is still answered.

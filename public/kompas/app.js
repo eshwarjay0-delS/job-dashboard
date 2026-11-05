@@ -819,10 +819,7 @@ function healAuthSilently() {
     if (n <= 3) {
       try { generateAnswer(retry.question, retry.card, retry.opts || {}); } catch {}
     } else {
-      try {
-        if (typeof retry.card.answer !== "string" || !retry.card.answer.trim() || retry.card.answer.trim() === "…") retry.card.answer = ["Still waiting for the session. Press AI Answer again to retry."];
-        if (cards[idx] === retry.card) renderCard();
-      } catch {}
+      try { if (cards[idx] === retry.card) renderCard(); } catch {}
     }
   }
 }
@@ -1423,10 +1420,7 @@ function isUnavailableAnswer(meta, text) {
 function beforeSessionNotice(message) {
   const m = String(message || "");
   if (/credit|402|quota|allowance/i.test(m)) return "Session has not started. The answer service has no credit left.";
-  if (/Desktop session is reconnecting/i.test(m)) return m;
-  if (/sign in|401|403|not signed/i.test(m)) return window.kompasDesktop
-    ? "Desktop session is reconnecting to your MarketFit browser account."
-    : "Session has not started. Your browser session needs to be renewed.";
+  if (/sign in|401|403|not signed/i.test(m)) return "Session has not started. The answer service is not ready yet.";
   return "Session has not started. The answer service is not ready. Check again before starting.";
 }
 let sessionReadyUntil = 0;
@@ -1449,10 +1443,6 @@ async function checkSessionReadiness() {
       // only the native token family; never borrow another account's cookies.
       const renewed = await window.kompasDesktop.refreshAuth().catch(() => false);
       if (renewed) response = await attempt();
-    }
-    if (response.status === 401 && typeof window.kompasDesktop?.openSignIn === "function") {
-      window.kompasDesktop.openSignIn();
-      throw new Error("Desktop session is reconnecting to your MarketFit browser account.");
     }
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.ready !== true) throw new Error(result.error || "The answer service is not ready. Please check again before starting.");
@@ -3492,7 +3482,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const tries = (opts.retries || 0) + 1;
     const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
     if (cards[idx] === card) renderCard();
-    status("Reconnecting.", "live");
+    if (code !== "AUTH") status(retry ? "Still working." : "The answer did not finish.", "live");
     logAnswer({ failed: code || "provider_unavailable", retrying: retry });
     sessionReadyUntil = 0;
     if (retry) setTimeout(() => {
@@ -3533,7 +3523,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { const displayQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, ev.derived) : ev.derived; card.question = displayQ; if (cards[idx] === card) { renderCard(); status("Answering: " + displayQ, "live"); } } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
-          else if (ev.type === "wait") { if (card.req === ctl) status("Reconnecting.", "live"); }
+          else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
           else if (ev.type === "done") meta = { ...meta, ...ev };
         }
       }
@@ -5144,7 +5134,6 @@ accountSessionSync = window.KompasSessionCloud?.create({
   recoverAuth: async () => {
     if (window.kompasDesktop) {
       const verified = await window.kompasDesktop.refreshAuth?.().catch(() => false);
-      if (!verified) window.kompasDesktop.openSignIn?.();
       return !!verified;
     }
     const res = await fetch("/api/auth/refresh", {
