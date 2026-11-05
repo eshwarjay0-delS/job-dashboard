@@ -916,6 +916,71 @@ export async function runTailor(opts: {
     if (filled !== best) usedModel = `${usedModel} + gap fill`
     best = filled
   }
+  // GAP-KEYWORD ROUND (Nov 4, his loop): the repair rounds reuse the same
+  // missing list and stop once evidenced terms are placed, so a below-floor
+  // run never gets fresh material. While coverage is below the 95% floor and
+  // the deadline allows, ask Gemini for fresh unique relational terms aimed
+  // at the still-missing requirements (never repeating placed or already
+  // suggested terms), run one targeted round with them as an explicit
+  // add-list, and keep it only if quality improves. This sits BEFORE the
+  // post-chain below (strip, floor, sanitize), so fresh terms can only land
+  // where the source supports them. A refinement is left alone: the person's
+  // change is not a coverage climb.
+  if (best && !refine && !skillsOnly && deadline - Date.now() >= 45000) {
+    const base = best
+    const missing = scoreKws.filter(k => !base.afterKw.has(k))
+    if (shareOf(base.afterKw) < 0.95 && missing.length) {
+      try {
+        const fresh = (await expandJdKeywords({ keys: opts.keys, pref: "gemini", jd, known: [...base.afterKw, ...jdGenerated], sourceResume: text, candidateInput, focus: missing, timeoutMs: 10000, usageSink: keywordUsage }))
+          .map(k => k.toLowerCase().trim())
+          .filter(k => k && !base.afterKw.has(k) && !jdGenerated.includes(k) && !isQualificationOrJunk(k))
+        const freshUnique = [...new Set(fresh)].slice(0, 24)
+        if (freshUnique.length) {
+          const gapAsk = `GAP KEYWORD ROUND: the draft is still below the 95% match floor. Weave EACH of these newly gathered ATS terms naturally and contextually into the experience bullets of the roles where the source supports them (and its matching skill line), using exact wording: ${freshUnique.join(", ")}. Do not claim a JD qualification unless the baseline or explicit candidate confirmation substantiates it. Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.`
+          let gapCandidate: Pass | null = null
+          if (splitDraft) {
+            const view = zonesAfter(base.edits)
+            const todo = [
+              ...(sec.skills !== false ? [{ role: -1, skills: freshUnique }] : []),
+              ...countedRoles.map(i => ({ role: i, skills: freshUnique })),
+            ]
+            const roundDeadline = Math.min(deadline - 2000, Date.now() + Math.max(15000, deadline - Date.now() - 2000))
+            const worked = await workParts<typeof todo[number], Edits>({
+              parts: todo, lanes, out: laneOut,
+              says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
+              ask: (t, lane) => {
+                if (t.role < 0) return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
+                  preferences: [...allPrefs, `SKILLS REPAIR (gap keywords): preserve every already-covered JD term. Incorporate these newly gathered terms under the correct existing category, without unsupported claims: ${t.skills.join(", ")}. Original evidence: ${text}`].join("; "),
+                  jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
+                const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join(" ")
+                return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
+                  preferences: [...allPrefs, `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed): ${originalEvidence} GAP KEYWORD ROUND: ${gapAsk}`].join("; "),
+                  jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
+              },
+              startBy: roundDeadline - 6000,
+              assembleBy: roundDeadline,
+            })
+            gapCandidate = await acceptImprovingRepairs(base, worked.filter(w => w.e), async (current, w) => {
+              const next = await applyEdits({ ...current.edits,
+                skills: w.part.role < 0 ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
+                bullets: w.part.role >= 0 ? mergeIndexedEdits(current.edits.bullets || [], w.e!.bullets || []) : current.edits.bullets,
+              })
+              next.via = [current.via, w.via].filter(Boolean).join(" + ")
+              next.partial = current.partial
+              return next
+            }, quality)
+          } else {
+            const lane = lanes.find(l => !laneOut.has(l)) ?? lanes[0]
+            if (lane) gapCandidate = await draftPass(lane, [gapAsk]).catch(() => null)
+          }
+          if (gapCandidate && quality(gapCandidate) > quality(base)) {
+            best = gapCandidate
+            usedModel = `${usedModel} + gap keyword round`
+          }
+        }
+      } catch { /* gap round is optional; the measured run below stands */ }
+    }
+  }
   if (best) best = await stripAddedCerts(best)
   // Remove unconfirmed tools before restoring only supported vocabulary, including refinements.
   if (best) {
