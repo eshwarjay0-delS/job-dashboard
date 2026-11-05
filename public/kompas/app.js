@@ -1160,6 +1160,45 @@ function syncSrc() {
   $("sysBtn").setAttribute?.("aria-pressed", String(sysShownOn));
   $("sysBtn").setAttribute?.("aria-busy", String(sysConnecting));
 }
+function micConstraints(deviceId) {
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
+  if (typeof deviceId === "string" && deviceId) audio.deviceId = { exact: deviceId };
+  return { audio };
+}
+let micDeviceId = "";
+try { micDeviceId = localStorage.getItem("perfact.micId") || ""; } catch {}
+async function fillMicPick() {
+  const el = $("micPick");
+  if (!el || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  let devices = [];
+  try { devices = await navigator.mediaDevices.enumerateDevices(); } catch { return; }
+  const mics = devices.filter(d => d.kind === "audioinput");
+  const chosen = el.value || micDeviceId;
+  el.replaceChildren();
+  const any = document.createElement("option");
+  any.value = "";
+  any.textContent = "Default microphone";
+  el.appendChild(any);
+  mics.forEach((d, i) => {
+    const option = document.createElement("option");
+    option.value = d.deviceId;
+    option.textContent = d.label || ("Microphone " + (i + 1));
+    el.appendChild(option);
+  });
+  if ([...el.options].some(option => option.value === chosen)) el.value = chosen;
+}
+const micPick = $("micPick");
+if (micPick) {
+  micPick.onchange = async () => {
+    micDeviceId = micPick.value || "";
+    try { localStorage.setItem("perfact.micId", micDeviceId); } catch {}
+    if (running && srcOn.mic) { await stopSource("You"); await startMic(); }
+  };
+  void fillMicPick();
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", () => { void fillMicPick(); });
+  }
+}
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
 $("sysBtn").onclick = async () => {
   srcOn.sys = !srcOn.sys;
@@ -1558,8 +1597,17 @@ async function startMic() {
   const generation = sourceGeneration.You;
   if (captures.some(c => c.who === "You")) return;
   try {
-    const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    let mic;
+    try { mic = await navigator.mediaDevices.getUserMedia(micConstraints(micDeviceId)); }
+    catch (e) {
+      if (!micDeviceId || !e || (e.name !== "NotFoundError" && e.name !== "OverconstrainedError")) throw e;
+      micDeviceId = "";
+      try { localStorage.removeItem("perfact.micId"); } catch {}
+      const pick = $("micPick"); if (pick) pick.value = "";
+      mic = await navigator.mediaDevices.getUserMedia(micConstraints(""));
+    }
     await attachSource(mic, "You", null, generation);
+    void fillMicPick();
   } catch (e) { if (generation !== sourceGeneration.You || !running) return; captureErrors.push("Mic: " + micError(e)); srcOn.mic = false; syncSrc(); }
 }
 async function startSys() {
