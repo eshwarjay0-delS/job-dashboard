@@ -227,6 +227,38 @@ export function withoutAddedCerts(lines: { idx: number; text: string }[], source
   return out
 }
 
+/**
+ * Mirror of withoutAddedCerts: certification items the BASELINE skills lines
+ * list that the writer's output skills lines no longer carry are put back on
+ * the line they fit best (Nov 4, catalog gap 7). The floor deliberately never
+ * places certifications, so without this a dropped baseline cert stays
+ * dropped. Only baseline items are restored — never a cert the source does
+ * not list — and only items absent from the output skills text. A cert that
+ * survives in the certifications section but left the skills line is
+ * re-listed there, which is standard resume practice, not a new claim.
+ * Returns only the lines that changed.
+ */
+export function restoreDroppedCerts(baselineLines: { idx: number; text: string }[], outputLines: { idx: number; text: string }[]): { idx: number; text: string }[] {
+  const outText = outputLines.map(l => l.text).join(" ")
+  const dropped: string[] = []
+  for (const l of baselineLines) {
+    const colon = l.text.indexOf(":")
+    const heading = colon >= 2 && colon < 70 ? l.text.slice(0, colon + 1) : ""
+    const body = (heading ? l.text.slice(heading.length) : l.text).trim()
+    const sep = separatorOf(body)
+    const end = body.endsWith(".") || body.endsWith(";") ? body.slice(-1) : ""
+    const core = end ? body.slice(0, -1) : body
+    const parts = sep.trim() === "," ? core.split(",") : core.split(sep)
+    for (const part of parts) {
+      const item = part.trim()
+      if (!item) continue
+      if (isCertification(item) && !contains(outText, item) && !dropped.some(d => d.toLowerCase() === item.toLowerCase())) dropped.push(item)
+    }
+  }
+  if (!dropped.length) return []
+  return placeInSkills(outputLines, dropped, "")
+}
+
 function separatorOf(line: string): string {
   if (line.includes(" | ")) return " | "
   if (line.includes("•")) return " • "

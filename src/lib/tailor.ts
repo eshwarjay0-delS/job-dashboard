@@ -15,7 +15,7 @@ import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords,
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
-import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
+import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, restoreDroppedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
@@ -823,6 +823,25 @@ export async function runTailor(opts: {
     return next
   }
 
+  // Mirror of stripAddedCerts (Nov 4, catalog gap 7): the writer dropping a
+  // baseline cert from the skills lines was unguarded, and the floor never
+  // places certifications, so it stayed dropped. Put baseline certs back.
+  // A refinement is left alone, as everywhere else: the person's change is
+  // not a coverage climb.
+  const restoreDroppedCertsPass = async (cur: Pass): Promise<Pass> => {
+    if (!zones.skills.length) return cur
+    const sk = skillEdits(cur.edits)
+    const restored = restoreDroppedCerts(
+      zones.skills.map(s => ({ idx: s.idx, text: s.text })),
+      zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text })),
+    )
+    if (!restored.length) return cur
+    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], restored) })
+    next.via = cur.via
+    next.partial = cur.partial
+    return next
+  }
+
   // A model sometimes writes a job-post product onto a skills line the source never had.
   // That one item used to fail the whole file. Take the item off the skills line. Leave bullets unchanged.
   const stripUnsupportedSkills = async (cur: Pass, banned: string[]): Promise<Pass> => {
@@ -982,6 +1001,7 @@ export async function runTailor(opts: {
     }
   }
   if (best) best = await stripAddedCerts(best)
+  if (best && !refine) best = await restoreDroppedCertsPass(best)
   // Remove unconfirmed tools before restoring only supported vocabulary, including refinements.
   if (best) {
     const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
