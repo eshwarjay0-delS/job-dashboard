@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 5 November 2026 reconciliation
+
+Master and production were both `90cdd1dd` (`kompas-20261105-call-audio`, `/api/health` ok). Open pull requests 214, 202, 204, 197, and 196 were left untouched: 214 is held for a live redo, and 202, 204, 197, and 196 are still drafts. The 70 to 80 percent third-iteration rule is now in the plan journal. The Oct 27 WhatsApp Kompas environment blocker is re-recorded as deployed code, not as a missing checkout. The Oct 29 missing-term skills floor is superseded by the Nov 5 revert. The runtime fallback design is still unanswered and was not built. No message was sent. Live resume proof, his window, and the held drafts remain the wall.
+
 ## Current highest-priority wall
 
 The 17:28 Chicago WhatsApp resume run was held after repair. The screenshot is available, but this agent has not inspected its complete JD, original Word file, generated artifact or execution trace. Obtain that exact evidence through authorized storage or user-provided inputs. Do not declare the 98% output goal achieved from the 84 passing regression tests.
