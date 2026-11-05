@@ -1,7 +1,7 @@
 import { roleQualityBlockers } from "./tailor-ship-on-rollback"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
-import { candidateEvidenceInput, explicitlyConfirmsAllRequirements } from "./resume-evidence"
+import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -9,23 +9,30 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandConfirmedVocabulary, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
+import { adapt, expandConfirmedVocabulary, expandJdKeywords, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
-import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
+import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, restoreDroppedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
 import { cleanTerm, isJunkTerm, isGuardUnsafe } from "./resume-skills-line"
 import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
+import { atsCheck, type AtsResult } from "./resume-ats"
+import { docxText } from "./resume-round-trip-guard"
+import { recountExported } from "./resume-exported-recount"
 
 export interface TailorResult {
+  /** Receipt policy for complete evidence-checked exports; never inferred from overlap. */
+  quality_policy?: "evidence-v1"
   quality?: ReturnType<typeof resumeQuality>
   /** Non-PII codes explaining why a high keyword score may still be blocked. */
   quality_blockers?: string[]
+  /** ATS parseability of the exported DOCX, measured on its extracted text and re-parsed zones. */
+  ats?: AtsResult
   token: string
   score: number
   score_before: number
@@ -64,6 +71,13 @@ export interface TailorResult {
   supported_coverage?: number
   /** JD requirements not evidenced by the candidate; never add as claimed skills merely to raise a score. */
   unsupported_keywords?: string[]
+  /** Gemini enrichment visibility (Nov 4): the two pre-generation passes'
+   * suggestions, split by whether the exported file actually contains them.
+   * Blocked = the evidence gate refused them, not a missing pass. Absent on
+   * runs whose export recount failed. */
+  enrichment_suggested?: string[]
+  enrichment_placed?: string[]
+  enrichment_blocked?: string[]
   /** Unsupported requirements that appeared as new claims in the generated document. */
   unverified_added_keywords?: string[]
   // Per role: bullets rewritten and added, the listed JD skills this role must show to back the
@@ -151,7 +165,9 @@ function normJD(jd: string): string {
 // Version 18 preserves subthreshold fractional coverage in every result field.
 // Version 19 prevents a high-overlap resume with thin per-role experience coverage from being served as complete.
 // Version 20 places missing job-post skills on the skills line and caches every finished run.
-const CACHE_GENERATION = "20"
+// Version 21 removes unsupported skills-floor claims and refuses skills-only completion.
+// Version 22 adds the exported-document ATS parse check to the delivery gate.
+const CACHE_GENERATION = "23"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
@@ -344,9 +360,10 @@ export async function runTailor(opts: {
   const floorKws = new Set(floorTerms(jd, scoreKws))
   // An empty or unparseable JD keyword set is not 100% coverage. Never award a perfect match on an empty denominator.
   const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 0)
+  const candidateStatements = confirmedCandidateStatements(immediatePrefs)
   const forcedJdKws = explicitlyConfirmsAllRequirements(immediatePrefs)
     ? jdKws
-    : [...coveredJdKeywords([text, ...immediatePrefs].join("\n"), jdKws)].filter(k => jdKws.includes(k))
+    : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
   // The JD is target context, not evidence. Only verified terms are mandatory in
   // rewrite prompts; chasing every JD phrase caused fabricated skills and timeouts.
   const jdKwsPrompt = [...new Set(forcedJdKws)]
@@ -762,13 +779,11 @@ export async function runTailor(opts: {
   // fits best. Kept only if the measured coverage rose. With no skills section it changes nothing (and says so in the
   // result's missing terms).
   const placeEverything = async (cur: Pass): Promise<Pass> => {
-    // The post's own skill terms (floorTerms), certifications excepted. They are written on the skills
-    // line and named in the reply as coming from the job post, not as confirmed experience.
-    // They are not written into experience bullets as work the person did.
+    // Only candidate-supported terms, never evidence inferred from the JD alone.
     // Switch on, the v2 skills-line rules (resume-skills-line.ts): a term is written with its whitespace and line breaks
     // collapsed, and never if it is junk (work status, pay, workplace) or would trip the round-trip guard (a date, phone,
     // email or link).
-    const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))
+    const left = scoreKws.filter(k => floorKws.has(k) && forcedJdKws.includes(k) && !cur.afterKw.has(k) && !isCertification(k))
       .filter(k => !jdGate || (cleanTerm(k) === k && !isJunkTerm(k) && !isGuardUnsafe(k)))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
@@ -803,6 +818,25 @@ export async function runTailor(opts: {
     const cleaned = withoutAddedCerts(zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text })), text)
     if (!cleaned.length) return cur
     const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], cleaned) })
+    next.via = cur.via
+    next.partial = cur.partial
+    return next
+  }
+
+  // Mirror of stripAddedCerts (Nov 4, catalog gap 7): the writer dropping a
+  // baseline cert from the skills lines was unguarded, and the floor never
+  // places certifications, so it stayed dropped. Put baseline certs back.
+  // A refinement is left alone, as everywhere else: the person's change is
+  // not a coverage climb.
+  const restoreDroppedCertsPass = async (cur: Pass): Promise<Pass> => {
+    if (!zones.skills.length) return cur
+    const sk = skillEdits(cur.edits)
+    const restored = restoreDroppedCerts(
+      zones.skills.map(s => ({ idx: s.idx, text: s.text })),
+      zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text })),
+    )
+    if (!restored.length) return cur
+    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], restored) })
     next.via = cur.via
     next.partial = cur.partial
     return next
@@ -901,11 +935,75 @@ export async function runTailor(opts: {
     if (filled !== best) usedModel = `${usedModel} + gap fill`
     best = filled
   }
+  // GAP-KEYWORD ROUND (Nov 4, his loop): the repair rounds reuse the same
+  // missing list and stop once evidenced terms are placed, so a below-floor
+  // run never gets fresh material. While coverage is below the 95% floor and
+  // the deadline allows, ask Gemini for fresh unique relational terms aimed
+  // at the still-missing requirements (never repeating placed or already
+  // suggested terms), run one targeted round with them as an explicit
+  // add-list, and keep it only if quality improves. This sits BEFORE the
+  // post-chain below (strip, floor, sanitize), so fresh terms can only land
+  // where the source supports them. A refinement is left alone: the person's
+  // change is not a coverage climb.
+  if (best && !refine && !skillsOnly && deadline - Date.now() >= 45000) {
+    const base = best
+    const missing = scoreKws.filter(k => !base.afterKw.has(k))
+    if (shareOf(base.afterKw) < 0.95 && missing.length) {
+      try {
+        const fresh = (await expandJdKeywords({ keys: opts.keys, pref: "gemini", jd, known: [...base.afterKw, ...jdGenerated], sourceResume: text, candidateInput, focus: missing, timeoutMs: 10000, usageSink: keywordUsage }))
+          .map(k => k.toLowerCase().trim())
+          .filter(k => k && !base.afterKw.has(k) && !jdGenerated.includes(k) && !isQualificationOrJunk(k))
+        const freshUnique = [...new Set(fresh)].slice(0, 24)
+        if (freshUnique.length) {
+          const gapAsk = `GAP KEYWORD ROUND: the draft is still below the 95% match floor. Weave EACH of these newly gathered ATS terms naturally and contextually into the experience bullets of the roles where the source supports them (and its matching skill line), using exact wording: ${freshUnique.join(", ")}. Do not claim a JD qualification unless the baseline or explicit candidate confirmation substantiates it. Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.`
+          let gapCandidate: Pass | null = null
+          if (splitDraft) {
+            const view = zonesAfter(base.edits)
+            const todo = [
+              ...(sec.skills !== false ? [{ role: -1, skills: freshUnique }] : []),
+              ...countedRoles.map(i => ({ role: i, skills: freshUnique })),
+            ]
+            const roundDeadline = Math.min(deadline - 2000, Date.now() + Math.max(15000, deadline - Date.now() - 2000))
+            const worked = await workParts<typeof todo[number], Edits>({
+              parts: todo, lanes, out: laneOut,
+              says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
+              ask: (t, lane) => {
+                if (t.role < 0) return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
+                  preferences: [...allPrefs, `SKILLS REPAIR (gap keywords): preserve every already-covered JD term. Incorporate these newly gathered terms under the correct existing category, without unsupported claims: ${t.skills.join(", ")}. Original evidence: ${text}`].join("; "),
+                  jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
+                const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join(" ")
+                return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
+                  preferences: [...allPrefs, `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed): ${originalEvidence} GAP KEYWORD ROUND: ${gapAsk}`].join("; "),
+                  jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
+              },
+              startBy: roundDeadline - 6000,
+              assembleBy: roundDeadline,
+            })
+            gapCandidate = await acceptImprovingRepairs(base, worked.filter(w => w.e), async (current, w) => {
+              const next = await applyEdits({ ...current.edits,
+                skills: w.part.role < 0 ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
+                bullets: w.part.role >= 0 ? mergeIndexedEdits(current.edits.bullets || [], w.e!.bullets || []) : current.edits.bullets,
+              })
+              next.via = [current.via, w.via].filter(Boolean).join(" + ")
+              next.partial = current.partial
+              return next
+            }, quality)
+          } else {
+            const lane = lanes.find(l => !laneOut.has(l)) ?? lanes[0]
+            if (lane) gapCandidate = await draftPass(lane, [gapAsk]).catch(() => null)
+          }
+          if (gapCandidate && quality(gapCandidate) > quality(base)) {
+            best = gapCandidate
+            usedModel = `${usedModel} + gap keyword round`
+          }
+        }
+      } catch { /* gap round is optional; the measured run below stands */ }
+    }
+  }
   if (best) best = await stripAddedCerts(best)
-  // A model sometimes writes an unconfirmed tool onto a skills line. Take those off, then the floor
-  // below writes the job post's own terms back in one labelled pass. Stripping after the floor is what
-  // left a delivered file at 47% of the job post. The reply names those terms as from the job post.
-  if (best && !refine) {
+  if (best && !refine) best = await restoreDroppedCertsPass(best)
+  // Remove unconfirmed tools before restoring only supported vocabulary, including refinements.
+  if (best) {
     const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     const stripped = await stripUnsupportedSkills(best, banned)
     if (stripped !== best) { best = stripped; usedModel = `${usedModel} + unconfirmed tools cleared before the skills floor` }
@@ -933,14 +1031,9 @@ export async function runTailor(opts: {
     }
   }
 
-  // THE FLOOR. Owner, 26 Oct 2026, after two WhatsApp resumes came back at 52% and 28.5% ("JD keyword coverage") because
-  // terms such as PeopleSoft Query Manager, row-level security, F5 and Cisco were never written in: "I want this to be a
-  // consistent build. Even if something going wrong ... the baseline is serve at least 90% match." And 19 Oct: every job
-  // keyword goes in, certifications never. Since 22 Oct the passes above write a term into the experience only where the
-  // source resume or the person's own words show it (4cbe02a), and that stays: the bullets are the candidate's record.
-  // What is still missing is written onto the skills line it fits best, as the job post spells it, and named
-  // in the reply so the person sees what came from the job post alone. The pass repeats while coverage is
-  // under 95% and each pass still adds terms. Experience bullets stay the candidate's record.
+  // Owner correction, 4 Nov: real matching, not keyword stuffing. Recovery may
+  // restore only candidate-supported vocabulary. Provider outage remains incomplete
+  // regardless of overlap; a source copy is never a completed tailoring job.
   let floorFrom: Pass | null = null
   if (!best && !refine) {
     const plain = await applyEdits({ headline: { title: "", tagline: "" }, summary: "", skills: [], bullets: [], extras: [] })
@@ -964,19 +1057,18 @@ export async function runTailor(opts: {
   // that work claim might also be invented. Re-score the actual exported DOCX
   // and re-run every normal completion/evidence gate; never force acceptance.
   if (best) {
-    // Switch on (JD_TERMS_ALWAYS_ON_SKILLS): the skills line is not rolled back and the floor's placed terms (skills line,
-    // open-summary "Strengths:") are not counted as unsupported; every other section is rolled back as before. Off: unchanged.
-    const placedByFloor = jdGate ? new Set([...(best.floor || []), ...(best.floorSummary || [])]) : new Set<string>()
-    const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k) && !placedByFloor.has(k))
+    // Every resume section asserts candidate knowledge. A reply disclaimer cannot
+    // turn a job-post-only skill or summary strength into supported experience.
+    const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     if (unsupported.length) {
       const cleaned = removeUnsupportedRewrites(best.edits,
-        value => coveredJdKeywords(value, unsupported).size > 0, { keepSkills: jdGate })
+        value => coveredJdKeywords(value, unsupported).size > 0)
       if (cleaned.removed) {
         const previous = best
         const restored = await applyEdits(cleaned.edits)
         restored.via = previous.via
         restored.partial = previous.partial
-        restored.floor = jdGate ? previous.floor : (previous.floor || []).filter(k => restored.afterKw.has(k))
+        restored.floor = (previous.floor || []).filter(k => restored.afterKw.has(k))
         restored.floorSummary = (previous.floorSummary || []).filter(k => restored.afterKw.has(k))
         best = restored
         // Evidence and role counts must be computed from the sanitized pass.
@@ -997,12 +1089,10 @@ export async function runTailor(opts: {
   const { edits, buffer, notes, afterKw } = best
   const evidencePass = floorFrom ?? best
   const { claimedKw, roleKw, required, provenKw } = evidencePass
-  if (skillsOnly) notes.push("No AI writer answered in time: only the skills section was brought up to the job post. Ask again for the full rewrite.")
-  if (best.floor?.length) notes.push(`Job-post terms placed on the skills line, not as confirmed experience: ${best.floor.join(", ")}`)
-  if (best.floorSummary?.length) notes.push(`Written into the summary as strengths, from the job post: ${best.floorSummary.join(", ")}`)
-  // A skills-line placement is a finished result and is cached with every other finished run.
-  // Experience that was not rewritten, and a skills-only file still under 95% of the job post,
-  // stay blocked through the checks below.
+  if (skillsOnly) notes.push("No AI writer completed this resume. Supported vocabulary recovery is incomplete and must not be delivered as a tailored resume.")
+  if (best.floor?.length) notes.push(`Candidate-supported job terms restored on the skills line: ${best.floor.join(", ")}`)
+  if (best.floorSummary?.length) notes.push(`Candidate-supported strengths restored in the summary: ${best.floorSummary.join(", ")}`)
+  // Supported vocabulary recovery cannot make a provider-outage draft complete.
   const floorCarried = !!floorFrom && skillsOnly
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
@@ -1098,23 +1188,14 @@ export async function runTailor(opts: {
   // interpreted as a failed rewrite, and it must never be silently invented.
   const attainableKws = scoreKws.filter(k => forcedJdKws.includes(k) || beforeKw.has(k))
   const attainableCovered = coveredJdKeywords(best.tailoredText, attainableKws)
-  const attainableCoverage = attainableKws.length ? attainableCovered.size / attainableKws.length : 1
+  const attainableCoverage = attainableKws.length ? attainableCovered.size / attainableKws.length : 0
   const unsupportedJdKws = scoreKws.filter(k => !attainableKws.includes(k))
   if (unsupportedJdKws.length) {
     notes.push(`JD qualification gaps not supported by candidate evidence: ${unsupportedJdKws.length}`)
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
-  const editedBullets = new Map((best.edits.bullets || []).map(b => [b.idx, b.text]))
-  const bulletText = [
-    ...zones.roles.flatMap(r => r.bullets.map(b => editedBullets.get(b.idx) || b.text)),
-    ...(best.edits.added || []).map(a => a.text || ""),
-  ].join("\n")
-  const floorOnSkills = new Set([...(best.floor || []), ...(best.floorSummary || [])].map(k => k.toLowerCase()))
-  // A term the floor wrote onto the skills line, or into an open summary as a strength, is labelled
-  // as coming from the job post. The same term inside an experience bullet is a claim that the person
-  // did that work, and that still blocks delivery.
-  // Gate on: only an experience bullet makes a claim. A term on the skills line or in the summary is labelled in the reply.
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(bulletText, [k]).has(k) || (!jdGate && coveredJdKeywords(best.tailoredText, [k]).has(k) && !floorOnSkills.has(k.toLowerCase())))
+  // Check the actual exported document, including skills, summary and extras.
+  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
   // Gate on, skills locked or no skills section: what the floor could not place is listed in the reply, not a refusal.
   const unplacedReason: JdTermsUnplacedReason | undefined = !jdGate || refine ? undefined : sec.skills === false ? "skills_locked" : !zones.skills.length ? "no_skills_section" : undefined
   const unplacedTerms = unplacedReason ? scoreKws.filter(k => floorKws.has(k) && !afterKw.has(k) && !isCertification(k)).map(k => jdSpelling(k, jd)) : []
@@ -1126,12 +1207,35 @@ export async function runTailor(opts: {
     ? [...coveredJdKeywords(skillsLines, unsupportedJdKws)].filter(k => !floorNamed.has(k.toLowerCase()) && !isCertification(k)).map(k => jdSpelling(k, jd))
     : []
   if (writerOnSkills.length) notes.push(`Job-post terms the writer put on the skills line, not as confirmed experience: ${writerOnSkills.join(", ")}`)
+  // Real-metrics recount (Nov 4): the caption's numbers must be measured on
+  // the exported file's bytes, never on in-memory tailored text alone. The
+  // buffer below is the exact file that gets stored and sent, so a term the
+  // export dropped is a term the file does not have, whatever the tailor
+  // counted. docxText keeps explicit breaks as newlines (mammoth's
+  // extractText glues the runs, turning "Zero<break/>Trust" into "ZeroTrust"),
+  // and whitespace is collapsed first so a term wrapped across lines in the
+  // document still counts. If the recount itself fails, the in-memory
+  // numbers stand and the failure is noted.
+  let exportedRecount: ReturnType<typeof recountExported> | null = null
+  try {
+    const exportedText = (await docxText(buffer)).replace(/\s+/g, " ")
+    const exportedCovered = coveredJdKeywords(exportedText, scoreKws)
+    exportedRecount = recountExported({ scoreKws, attainableKws, exportedCovered, placed: best.floor ?? [], writer: writerOnSkills, summary: best.floorSummary ?? [], enrichmentSuggested: jdGenerated, enrichmentCovered: coveredJdKeywords(exportedText, jdGenerated) })
+  } catch (e) {
+    notes.push(`Exported-file recount unavailable (${e instanceof Error ? e.message : "unknown error"}); numbers measured on tailored text.`)
+  }
+  // ATS parseability of the exact bytes that will be stored: the exported
+  // document text plus zones re-parsed from its buffer, never the edits.
+  const exportedZones = await extractZones(buffer)
+  const ats = atsCheck(best.tailoredText, exportedZones)
+  if (!ats.passed) notes.push(`ATS parse check failed: ${ats.issues.join("; ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
-    ...(skillsOnly && best.cov < RESUME_MIN_COVERAGE ? ["skills_only"] : []),
-    ...(floorCarried && best.cov < RESUME_MIN_COVERAGE ? ["floor_only"] : []),
+    ...(skillsOnly ? ["skills_only"] : []),
+    ...(floorCarried ? ["floor_only"] : []),
     ...(best.partial ? ["draft_parts_missing"] : []),
     ...(unverifiedAdded.length ? ["unverified_jd_terms"] : []),
+    ...(!ats.passed ? ["ats_check_failed"] : []),
     // Gate on: roles the job-post terms rollback put back are the candidate's own record (TAILOR_SHIP_ON_ROLLBACK).
     ...roleQualityBlockers({
       splitDraft: !!splitDraft, skillsOnly: !!skillsOnly, lackingRoleCount: splitDraft && !skillsOnly ? lackingRoles(best.edits).length : 0,
@@ -1142,8 +1246,27 @@ export async function runTailor(opts: {
   // The delivery score is the job post itself. Evidenced-only scoring reported 100% while
   // the file still showed about half the post, and a post the resume had never used
   // scored as an empty denominator (needs review) after the skills line was filled.
-  const coveredScore = scoreKws.filter(k => afterKw.has(k))
-  const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
+  const recount = exportedRecount
+  const coveredScore = recount ? scoreKws.filter(k => !recount.missing.includes(k)) : scoreKws.filter(k => afterKw.has(k))
+  const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: recount ? recount.missing : scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
+  // Independent Gemini feedback on the ACTUAL exported DOCX text. This is advisory:
+  // model-suggested vocabulary never inflates the measured JD coverage or asserts
+  // experience the candidate did not supply. Keep the pass short so WhatsApp
+  // can still finish uploading within the function time budget.
+  if (opts.keys.gemini && qualityReport.missing.length && Date.now() - started < Math.max(0, (opts.maxMs || 240_000) - 18_000)) {
+    try {
+      const feedbackTerms = await expandJdKeywords({
+        keys: { gemini: opts.keys.gemini }, pref: "gemini", jd,
+        known: [...coveredScore], sourceResume: text,
+        candidateInput: immediatePrefs.join("\\n"), timeoutMs: 4500,
+      })
+      const exportedText = await extractText(buffer)
+      const suggested = feedbackTerms.filter(k => !coveredJdKeywords(exportedText, [k]).has(k)).slice(0, 16)
+      notes.push(`Gemini final-document gap feedback: ${suggested.length ? suggested.join(", ") : "no additional terms identified"}. Suggestions are not verified qualifications.`)
+    } catch {
+      notes.push("Gemini final-document feedback unavailable; deterministic DOCX coverage check still applied.")
+    }
+  }
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
   // Owner lock (Nov 1): a token minted with a dashboard caller id carries an owner
@@ -1155,19 +1278,29 @@ export async function runTailor(opts: {
     await blob.put(`tailored/${token}.owner.json`, JSON.stringify({ userId: opts.ownerId })).catch(() => {})
   }
 
+  const finalPlaced = exportedRecount ? exportedRecount.placed : (best.floor ?? [])
+  const finalWriter = exportedRecount ? exportedRecount.writer : writerOnSkills
+  const finalSummary = exportedRecount ? exportedRecount.summary : (best.floorSummary ?? [])
   const result: TailorResult = {
     quality: qualityReport,
     quality_blockers: qualityBlockers,
+    ats,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
-    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), supported_coverage: coveragePercent(attainableCoverage), unsupported_keywords: unsupportedJdKws, unverified_added_keywords: unverifiedAdded, role_alignment,
+    ...(!qualityBlockers.length && !skillsOnly && (exportedRecount ? exportedRecount.coverage / 100 : best.cov) >= RESUME_MIN_COVERAGE ? { quality_policy: "evidence-v1" as const } : {}),
+    cached: false, elapsed_ms: Date.now() - started, coverage: exportedRecount ? exportedRecount.coverage : coveragePercent(best.cov), supported_coverage: exportedRecount ? exportedRecount.supportedCoverage : coveragePercent(attainableCoverage), unsupported_keywords: unsupportedJdKws, unverified_added_keywords: unverifiedAdded, role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
-    ...(best.floor?.length ? { placed_from_jd: best.floor.map(k => jdSpelling(k, jd)) } : {}),
-    ...(writerOnSkills.length ? { skills_from_jd_writer: writerOnSkills } : {}),
-    ...(best.floorSummary?.length ? { placed_in_summary: best.floorSummary.map(k => jdSpelling(k, jd)) } : {}),
+    ...(finalPlaced.length ? { placed_from_jd: finalPlaced.map(k => jdSpelling(k, jd)) } : {}),
+    ...(finalWriter.length ? { skills_from_jd_writer: finalWriter } : {}),
+    ...(finalSummary.length ? { placed_in_summary: finalSummary.map(k => jdSpelling(k, jd)) } : {}),
+    ...(exportedRecount?.enrichment ? {
+      enrichment_suggested: jdGenerated.map(k => jdSpelling(k, jd)),
+      enrichment_placed: exportedRecount.enrichment.placed.map(k => jdSpelling(k, jd)),
+      enrichment_blocked: exportedRecount.enrichment.blocked.map(k => jdSpelling(k, jd)),
+    } : {}),
     ...(skillsOnly ? { skills_only: true } : {}),
     jd_terms_gate: jdGate ? "on" : "off",
     ...(bulletsReverted ? { bullets_reverted_for_jd_terms: bulletsReverted } : {}),
@@ -1186,7 +1319,7 @@ export async function runTailor(opts: {
 
   // Every finished run that changed the file is served again, at any coverage, so a repeat does not pay
   // for another model ladder. An incomplete or unchanged draft is still redone when the providers have room.
-  if (!result.partial && !result.unchanged) {
+  if (!result.partial && !result.unchanged && !result.skills_only && !result.quality_blockers?.length) {
     await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
   }
   return result

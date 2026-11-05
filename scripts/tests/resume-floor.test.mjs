@@ -33,12 +33,14 @@ const runs = (() => {
   }
 })()
 
-test('with every AI provider down, every job post still gets a resume showing at least 90% of its skills, measured on the Word file', () => {
+test('provider outage preserves supported skills and remains incomplete at any coverage', () => {
   for (const [name, r] of Object.entries(runs)) {
-    assert.ok(r.measured >= 0.95, `${name}: ${(r.measured * 100).toFixed(1)}% on the file (${r.shown.length}/${r.targets.length})`)
-    assert.ok(r.coverage >= 95, `${name}: the tailor reports ${r.coverage}%`)
-    assert.equal(r.skillsOnly, true, `${name}: said to be the skills section only`)
-    assert.ok(r.status !== 'needs_review', `${name}: ${r.status}`)
+    assert.equal(r.coverage, Math.floor(r.measured * 1000) / 10, name)
+    assert.equal(r.skillsOnly, true)
+    assert.equal(r.status, 'needs_review')
+    assert.ok(r.blockers.includes('skills_only'))
+    assert.deepEqual(r.placed, [])
+    assert.deepEqual(r.placedSummary, [])
   }
 })
 
@@ -54,7 +56,7 @@ test('the floor never writes the experience, and never a summary the person left
       assert.ok(r.boldHeads.includes(head), `${name}: "${head}" is still bold (${r.boldHeads.join(' | ')})`)
   }
   // A "Languages:" line is a skills line: the lines after it are still the skills section and still take terms.
-  assert.ok(runs.benefits.skills.find(l => l.startsWith('Cloud & Scripting')).includes('GuardDuty'))
+  assert.ok(!runs.benefits.skills.join(' ').includes('GuardDuty'))
 })
 
 test('the keywords are the job post\'s real skills: whole product names, no sentence words, fragments, credentials, ranks, places or people', () => {
@@ -78,41 +80,11 @@ test('the keywords are the job post\'s real skills: whole product names, no sent
   for (const k of ['guardduty', 'kql', 'terragrunt', 'wiz', 'security hub']) assert.ok(runs.benefits.targets.includes(k), 'kept: ' + k)
 })
 
-test('placed terms go where they belong: access with access, network together, strengths into an open summary only', () => {
-  const line = (r, head) => r.skills.find(l => l.startsWith(head)) || ''
-  const ps = runs.peoplesoft, zt = runs.zerotrust, open = runs.peoplesoftOpenSummary
-  for (const k of ['Active Directory', 'LDAP', 'row-level security', 'PeopleSoft Security']) assert.ok(line(ps, 'Identity & Access').includes(k), k + ' in: ' + line(ps, 'Identity & Access'))
-  const net = line(zt, 'Security Operations')
-  for (const k of ['F5', 'BGP', 'OSPF', 'SD-WAN', 'Palo Alto', 'Cisco ISE']) assert.ok(net.includes(k), k + ' with the other network terms: ' + net)
-  assert.ok(!line(zt, 'Identity & Access').includes('BGP') && !line(zt, 'Governance').includes('OSPF'), 'not scattered')
-  assert.ok(line(runs.benefits, 'Cloud & Scripting').includes('Terragrunt') && line(runs.benefits, 'Security Operations').includes('KQL'))
-  // Summary open: the strengths go into it, as one sentence, and not onto a skills line.
-  assert.match(open.summary, /Strengths: problem solving, communication skills\.$/)
-  assert.ok(!open.skills.some(l => /problem solving|communication skills/i.test(l)))
-  assert.deepEqual(open.placedSummary, ['problem solving', 'communication skills'])
-  // Each placed term is named, so the reply can say which ones came from the job post alone.
-  assert.ok(ps.placed.includes('PeopleSoft Query Manager') && zt.placed.includes('F5'))
-})
-
-test('the reply names what came from the job post, never says "cut short", and a resume made below the floor is made again', () => {
-  const bot = read('src/app/api/whatsapp/webhook/route.ts'), choose = read('src/app/api/resumes/choose/route.ts'), tailor = read('src/lib/tailor.ts')
-  assert.ok(!bot.includes('This run was cut short before it could add'))
-  assert.ok(bot.includes('Added to your skills from the job post: ${placed.slice(0, 8).join(", ")}'))
-  assert.ok(bot.includes('if (result.skills_only) out.push('))
-  assert.ok(bot.includes('if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at)) return sendSaved(') && bot.includes('if (have) redo = true'), 'WhatsApp resends a made resume only above the floor, and remakes it from the person\'s own')
-  assert.ok(choose.includes('const have = found && await madeMeetsFloor(found.abs, jd, found.file.at) ? found : null') && choose.includes('...(found && !have ? { redo: true } : {})'), 'Apply likewise')
-  // A resume the floor wrote job-post terms onto is a copy: never the start of another job. One made without any AI
-  // writer is not filed as the job's resume, so the job is written in full next time.
-  assert.ok(bot.includes('depth: floorMade ? 2 : 1') && bot.includes('depth: files.depth === 0 && !floorMade ? 1 : 2') && bot.includes('filed = result.skills_only ? null :'))
-  assert.ok(read('src/lib/tailor-file.ts').includes('o.result.placed_from_jd?.length || o.result.placed_in_summary?.length || o.result.skills_only ? 2 : 1'))
-  // Only the post's own skills are scored and written; a run the floor carried is never cached as complete.
-  assert.ok(tailor.includes('const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, [], jd))') && tailor.includes('const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))'))
-  assert.ok(tailor.includes('for (let floorRound = 0; floorRound < 4; floorRound++)') && tailor.includes('const oneSummary = sec.summary !== false &&'))
-  assert.ok(tailor.includes('Job-post terms placed on the skills line, not as confirmed experience'))
-  // The floor runs last, after the certificate clean-up, and also when no AI writer answered.
-  const at = (s) => tailor.indexOf(s)
-  assert.ok(at('if (best) best = await stripAddedCerts(best)') < at('const floored = await placeEverything(best)'))
-  assert.ok(at('if (!best && !refine) {') > 0 && at('if (!best && !refine) {') < at('const floored = await placeEverything(best)'))
+test('JD-only tools and strengths stay gaps even with the summary open', () => {
+  for (const r of Object.values(runs)) {
+    assert.deepEqual(r.shown.filter(k => !r.beforeShown.includes(k)), [])
+    assert.ok(!r.summary.includes('Strengths:'))
+  }
 })
 
 test('a made resume is offered again only when it still shows 90% of the job post\'s keywords', async () => {

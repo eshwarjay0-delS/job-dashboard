@@ -53,3 +53,90 @@ test('stacked long employer headings and project labels are not editable role bu
   assert.equal(zones.roles[1].current, false)
   assert.deepEqual(Array.from(zones.roles, r => Array.from(r.bullets, b => b.idx)), [[4], [8]])
 })
+
+// Nov 4 cert-image report: a badge image inside a rewritten paragraph must survive,
+// because the text regex never touches drawing runs — but a dropped or blanked
+// paragraph takes its image with it. These tests pin that exact boundary.
+const CERT_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+const CERT_DRAWING = '<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="914400" cy="914400"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:blipFill><a:blip r:embed="rId5" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>'
+
+async function certDoc() {
+  const paras = [
+    `<w:p><w:r><w:t>Eshwar Janjirala</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Identity &amp; Access Management:</w:t></w:r><w:r><w:t> Led IAM modernization across 40 apps.</w:t></w:r></w:p>`,
+    `<w:p>${CERT_DRAWING}<w:r><w:t>CISSP Certified, 2021</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>Monitored SIEM alerts daily.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>Attended weekly meetings.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>Security engineer with 8 years experience.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>Additional summary prose from an old run.</w:t></w:r></w:p>`,
+  ]
+  const zip = new JSZip()
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+  zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/></Relationships>')
+  zip.file('word/media/image1.png', CERT_PNG)
+  zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${paras.join('')}</w:body></w:document>`)
+  const zones = {
+    header: null, summaryIdx: 5, summaryText: 'Security engineer with 8 years experience.', summaryOverflowIdx: [6],
+    skills: [],
+    roles: [{ role: 'Security Engineer', bullets: [
+      { idx: 1, text: 'Identity & Access Management: Led IAM modernization across 40 apps.' },
+      { idx: 3, text: 'Monitored SIEM alerts daily.' },
+      { idx: 4, text: 'Attended weekly meetings.' },
+    ] }],
+    extras: [{ idx: 2, text: 'CISSP Certified, 2021', section: 'certifications' }],
+  }
+  const edits = {
+    summary: 'Security engineer, 8 years in SOC and cloud security.',
+    bullets: [{ idx: 1, text: 'Identity & Access Management: Delivered SSO and MFA modernization across 40 apps with zero downtime.' }],
+    extras: [{ idx: 2, text: 'CISSP Certified, 2021 — Security Architecture.' }],
+  }
+  const input = await zip.generateAsync({ type: 'nodebuffer' })
+  const { buffer } = await applyRewrites(input, edits, zones, { dropIdx: new Set([4]) })
+  const out = await JSZip.loadAsync(buffer)
+  return { xml: await out.file('word/document.xml').async('string'), media: await out.file('word/media/image1.png').async('nodebuffer') }
+}
+
+test('a cert badge image survives the rewrite of its own paragraph', async () => {
+  const { xml, media } = await certDoc()
+  assert.ok(media.equals(CERT_PNG), 'media bytes must be byte-identical')
+  assert.ok(xml.includes('a:blip'), 'drawing element must still be in document.xml')
+  assert.ok(xml.includes('r:embed="rId5"'), 'image relationship must still be referenced')
+  assert.ok(xml.includes('CISSP Certified, 2021 — Security Architecture.'), 'new cert text must be present')
+})
+
+test('a full rewrite keeps run props but collapses mixed formatting into one run', async () => {
+  const { xml } = await certDoc()
+  assert.ok(xml.includes('<w:b/>'), 'bold run properties must survive (blanked run keeps its props)')
+  assert.ok(xml.includes('Delivered SSO and MFA modernization across 40 apps with zero downtime.'), 'new bullet text must be present')
+  assert.ok(!xml.includes('Led IAM modernization'), 'old bullet text must be gone')
+})
+
+test('dropIdx physically deletes a paragraph; uncovered summary overflow is now kept, not blanked', async () => {
+  const { xml } = await certDoc()
+  assert.ok(xml.includes('Eshwar Janjirala'), 'name paragraph untouched')
+  assert.ok(xml.includes('Monitored SIEM alerts daily.'), 'control bullet untouched')
+  assert.ok(!xml.includes('Attended weekly meetings.'), 'dropped paragraph must be gone')
+  // Behavior changed Nov 4 (see the overflow test below): blanking now fires only
+  // when the new summary already carries the paragraph. This overflow prose is not
+  // covered by the new summary, so it is kept instead of silently destroyed.
+  assert.ok(xml.includes('Additional summary prose from an old run.'), 'uncovered summary overflow must be kept')
+  assert.ok(xml.includes('Security engineer, 8 years in SOC and cloud security.'), 'new summary must be present')
+})
+
+test('summary overflow is blanked only when the new summary already carries it', async () => {
+  const paras = [
+    `<w:p><w:r><w:t>Security engineer with SOC experience.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>Led SOC operations and incident response daily.</w:t></w:r></w:p>`,
+    `<w:p><w:r><w:t>CISSP Certified 2021, Security Architecture.</w:t></w:r></w:p>`,
+  ]
+  const zip = new JSZip()
+  zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paras.join('')}</w:body></w:document>`)
+  const zones = { header: null, summaryIdx: 0, summaryText: 'Security engineer with SOC experience.', summaryOverflowIdx: [1, 2], skills: [], roles: [], extras: [] }
+  const { buffer, notes } = await applyRewrites(await zip.generateAsync({ type: 'nodebuffer' }), { summary: 'Security engineer with SOC experience, led SOC operations and incident response daily.' }, zones)
+  const out = await JSZip.loadAsync(buffer)
+  const xml = await out.file('word/document.xml').async('string')
+  assert.ok(xml.includes('Security engineer with SOC experience, led SOC operations and incident response daily.'), 'new summary must be present')
+  assert.equal((xml.match(/incident response daily/g) || []).length, 1, 'covered overflow paragraph must be blanked, not duplicated')
+  assert.ok(xml.includes('CISSP Certified 2021, Security Architecture.'), 'uncovered overflow paragraph (a cert line the new summary drops) must be kept verbatim')
+  assert.ok(notes.some(n => n.includes('Kept 1 summary paragraph(s)')), 'preservation must be logged, not silent')
+})

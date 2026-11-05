@@ -51,7 +51,7 @@ test('only an explicit candidate experience statement confirms the complete JD s
 
 test('forced keyword placement and role repair use candidate evidence, not the JD alone', () => {
   const source = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
-  assert.match(source, /const forcedJdKws = explicitlyConfirmsAllRequirements\(candidateStatements\)/)
+  assert.match(source, /const forcedJdKws = explicitlyConfirmsAllRequirements\(immediatePrefs\)/)
   assert.match(source, /const missing = forcedJdKws\.filter\(k => !covered\.has\(k\)\)/)
   assert.match(source, /const unseen = forcedJdKws\.filter\(k => !cur\.afterKw\.has\(k\)\)/)
   assert.match(source, /const left = forcedJdKws\.filter\(k => !cur\.afterKw\.has\(k\)/)

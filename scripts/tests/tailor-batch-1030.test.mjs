@@ -30,14 +30,16 @@ const guardsOff = load("src/lib/tailor-guards.ts", { TAILOR_CACHE_SKIP_REFUSED: 
 const short = (changes = {}) => ({
   token: "t", coverage: 84.3, supported_coverage: 100, diff: [{ section: "Skills", before: "A", after: "B" }],
   quality: resumeQuality({ matched: 27, total: 32, missing: ["kafka", "terraform", "gcp iam", "row-level security", "f5"], partial: false }),
-  unverified_added_keywords: [], quality_blockers: [], ...changes,
+  unverified_added_keywords: [], quality_blockers: [],
+  // Nov4 ATS contract: a complete safe result carries a passing ATS check.
+  ats: { score: 100, passed: true, checks: [], issues: [] }, ...changes,
 })
 
-test("item 2: a complete file under 95% is delivered with the shortfall listed (switch on, default)", () => {
+test("Nov4: a complete file under 95% is held for repair even with legacy switches on", () => {
   assert.equal(short().quality.status, "needs_review")
-  assert.equal(on.whatsappResumeRejectionReasons(short()).length, 0, on.whatsappResumeRejectionReasons(short()).join(","))
-  assert.equal(on.acceptableWhatsAppResume(short()), true)
-  assert.equal(on.deliveredWithShortfall(short()), true)
+  assert.ok(on.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"))
+  assert.equal(on.acceptableWhatsAppResume(short()), false)
+  assert.equal(on.deliveredWithShortfall(short()), false)
 })
 test("item 2: switch off or job-post terms switch off restores the 95% refusal", () => {
   assert.ok(off.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"))
@@ -125,7 +127,7 @@ test("item 4: the website route claims, waits, serves the stored result and rele
 test("item 1: the website runs the WhatsApp round-trip check before handing a file over or charging", () => {
   const route = src("src/app/api/tailor/route.ts")
   assert.ok(route.includes("return sameResumeIdentity(a, b)"))
-  assert.ok(route.includes("if (webRoundTripOn() && !result.unchanged && !(await sameFactsAsSource(result)))"))
+  assert.ok(route.includes("if (!result.unchanged && !(await sameFactsAsSource(result)))"))
   assert.ok(route.indexOf("sameFactsAsSource(result)))") < route.indexOf("deductPoints("), "checked before points are deducted")
   assert.ok(route.indexOf("sameFactsAsSource(result)))") < route.indexOf("await fileTailored("), "checked before the file is saved")
   assert.ok(route.includes(`quality_blockers: ["identity_mismatch"] }, { status: 422 }`))
@@ -140,7 +142,11 @@ test("item 1: the round-trip guard it calls stops a changed name, phone or date"
 test("item 5: terms the AI writer put on the skills line are named in the result and the reply", () => {
   const tailor = src("src/lib/tailor.ts")
   assert.ok(tailor.includes("skills_from_jd_writer?: string[]"))
-  assert.ok(tailor.includes("...(writerOnSkills.length ? { skills_from_jd_writer: writerOnSkills } : {}),"))
+  // Nov 4 exported-recount: writer terms reach the result through finalWriter,
+  // which is the recount-filtered list when the exported file was recounted
+  // (terms the file does not contain are not named) and writerOnSkills else.
+  assert.ok(tailor.includes("const finalWriter = exportedRecount ? exportedRecount.writer : writerOnSkills"))
+  assert.ok(tailor.includes("...(finalWriter.length ? { skills_from_jd_writer: finalWriter } : {}),"))
   assert.ok(tailor.includes("const writerOnSkills = jdGate && !refine"))
   const route = src("src/app/api/whatsapp/webhook/route.ts")
   assert.ok(route.includes("...(result.skills_from_jd_writer || [])"))

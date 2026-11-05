@@ -84,7 +84,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     getText: async key => entries.get(key) ?? null,
     delete: async key => { entries.delete(key) },
   }
-  const acceptable = { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] } }
+  const acceptable = { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } }
   const { generate } = load('src/app/api/whatsapp/webhook/route.ts', {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('no voice') } },
@@ -109,7 +109,10 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {},
     '@/lib/resume-library-store': {}, '@/lib/resume-library': { jobKeyOf: () => 'job' },
     '@/lib/made-floor': {}, '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
+    '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
+    '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
+    '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: statuses.shift() || 'pending' }),
       patchResumeRecovery: async () => {},
@@ -134,7 +137,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   samePerson = false
   await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.match(said.at(-1), /changed the name or email/)
+  assert.match(said.at(-1), /contact-details or employment-date preservation check/)
 
   file = Buffer.from('eshwarjay05@gmail.com')
   samePerson = true
@@ -148,5 +151,5 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
   const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
   assert.equal(timed, 'done')
-  assert.match(said.at(-1), /could not tailor your resume just now/)
+  assert.match(said.at(-1), /ran out of time just now/) // Nov4: a timeout says so, instead of the generic tailor failure line.
 })

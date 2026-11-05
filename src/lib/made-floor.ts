@@ -3,6 +3,7 @@
 // 26 Oct came back at 28-52% for want of the floor; sent again as they were, the same job would keep getting them.
 // A file made once the floor was in place is not made again on that account: the floor already did what it could for
 // its source, and remaking it on every paste would pay for the same resume again and again.
+import { createHash } from "crypto"
 import { readPath } from "./storage"
 import { extractText } from "./docx"
 import { extractJdKeywords, coveredJdKeywords } from "./keywords"
@@ -15,16 +16,19 @@ export const FLOOR_SINCE = Date.parse("2026-10-26T22:00:00Z")
 /** The share (0-1) of the job post's own skill terms a resume's text shows: the set the tailor scores and the floor fills. */
 export function floorShare(text: string, jd: string): number {
   const targets = floorTerms(jd, targetKeywords(extractJdKeywords(jd), [], jd))
-  if (!targets.length) return 1
+  if (!targets.length) return 0
   return coveredJdKeywords(text, targets).size / targets.length
 }
 
 /** Should a saved resume be offered again? Re-read the actual DOCX regardless of timestamp. */
-export async function madeMeetsFloor(abs: string, jd: string, _at = 0): Promise<boolean> {
-  // Creation date is not proof of quality: even newer files can fail the floor.
+export async function madeMeetsFloor(abs: string, jd: string, _at = 0, qualityReceipt?: string): Promise<boolean> {
+  void _at // Timestamp alone is not evidence.
+  // Old stuffed exports cannot bypass the new generator through saved-file reuse.
+  // The receipt is issued only for a completed evidence-checked run and binds its bytes.
+  if (!qualityReceipt || !/^evidence-v1:[a-f0-9]{64}$/.test(qualityReceipt)) return false
   try {
     const bytes = await readPath(abs)
-    return !!bytes && floorShare(await extractText(bytes), jd) >= MADE_FLOOR
+    return !!bytes && qualityReceipt === `evidence-v1:${createHash("sha256").update(bytes).digest("hex")}` && floorShare(await extractText(bytes), jd) >= MADE_FLOOR
   } catch {
     return false
   }

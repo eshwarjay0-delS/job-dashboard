@@ -40,11 +40,12 @@ import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { isCertification } from "@/lib/keyword-targets"
+import { riskScore } from "@/lib/resume-risk"
 import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
-import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
+import { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
@@ -758,6 +759,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   let sending = false
   let told = false
   let failureCode = "quality_incomplete"
+  // Fail-fast notice timer (Nov 4 baseline doctrine): declared here so the
+  // outer finally can clear it; armed after the "Updating..." line below.
+  let progressTimer: ReturnType<typeof setTimeout> | undefined
   // A quiet recovery still owes the chat one sentence the first time. Repeating it on every later retry is noise.
   const sayOutcome = async (text: string) => {
     if (quiet) {
@@ -783,6 +787,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. A Word file is sent only if this run finishes cleanly.`
     : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. A Word file is sent only if this run finishes cleanly.`)
+
+  // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
+  // 240s budget in silence and then fail. At 60s, if the run is still going,
+  // the chat hears one honest progress line — still running, no outcome
+  // claimed. Quiet recovery runs stay silent (they owe one sentence only
+  // when they finish). The outer finally clears the timer on every path,
+  // so a finished run never gets a stale progress note. No unref: the
+  // function stays alive under after() up to maxDuration.
+  if (!quiet) {
+    progressTimer = setTimeout(() => {
+      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get the file here when it finishes cleanly; if it fails, your resume and this job stay saved for another try.").catch(() => {})
+    }, 60_000)
+  }
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
@@ -812,9 +829,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       sections: { summary: false, skills: true, experience: true },
     })
   } catch (e) {
-    failureCode = "provider_error"
+    // A timeout and a provider failure are different errors with different
+    // fixes, so they are told apart here and recorded apart (failureCode is
+    // persisted as the recovery record's errorCode). Nothing here changes
+    // the retry routing: both codes schedule the same automatic retry.
+    const timedOut = /timed out/i.test(String(e))
+    failureCode = timedOut ? "timeout" : "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    await sayOutcome("I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
+    await sayOutcome(timedOut
+      ? "The rewrite ran out of time just now. Your resume and this job are saved, and MarketFit will try again."
+      : "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
     return;
   }
 
@@ -914,7 +938,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.skills_only) more.push("Not saved in Files: send *redo* once the writers are back for the full rewrite.")
   if (!files && filesDir && !result.skills_only) {
     const fromRel = session.resumeFiled ? relOf(filesDir, session.resumeFiled) : undefined
-    filed = await saveTailored({ userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: floorMade ? 2 : 1,
+    filed = await saveTailored({ qualityPolicy: result.quality_policy, userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: floorMade ? 2 : 1,
       ...(fromRel && !fromRel.startsWith("..") ? { from: fromRel } : {}),
       asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])],
       covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
@@ -922,7 +946,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
   }
   if (files) {
-    filed = result.skills_only ? null : await saveTailored({ userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
+    filed = result.skills_only ? null : await saveTailored({ qualityPolicy: result.quality_policy, userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
       depth: files.depth === 0 && !floorMade ? 1 : 2, from: files.rel, asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])], covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
       .catch(e => { console.error("[whatsapp] not filed", String(e).slice(0, 200)); return null })
     more.push(`Started from ${files.said}.`)
@@ -957,6 +981,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
+  await sendText(from, resumeGapReport(result)).catch(error => console.error("[whatsapp] gap report send failed", String(error).slice(0, 160)))
   // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
   if (files) await markUsed(files.userDir, files.abs).catch(() => {})
 
@@ -975,6 +1000,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
     if (!told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
   } finally {
+    // The progress timer must never outlive the run: a finished run gets no
+    // stale "still working" note, and a failed run's outcome message stands alone.
+    clearTimeout(progressTimer)
     if (!finished && !told) {
       await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
     }
@@ -1188,7 +1216,7 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
     // Sent again as it is only while it meets the 90% floor; one made below it (22-26 Oct 2026) is made again, and
     // not from itself: like a redo, the new run starts from what the person wrote (26 Oct 2026 review).
     const have = await existingForJob(userDir, email, job.jd).catch(() => null)
-    if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at)) return sendSaved(from, have, job.jd, email, userId)
+    if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at, have.file.qualityReceipt)) return sendSaved(from, have, job.jd, email, userId)
     if (have) redo = true
   }
   // One run of a job at a time for a number: a job description pasted again, or a second "redo", while it is being made
@@ -1396,6 +1424,60 @@ function notAdded(result: TailorResult): string[] {
   return out
 }
 
+// Every successful WhatsApp tailoring run gets an explicit, evidence-aware JD gap report.
+// Keyword presence is not proof of hands-on experience, and the percentage is not an employer ATS score.
+function resumeGapReport(result: TailorResult): string {
+  const analysis = result.keyword_analysis
+  const unique = (terms: string[] = []) => {
+    const seen = new Set<string>()
+    return terms.map(t => String(t).replace(/\s+/g, " ").trim()).filter(t => {
+      const key = t.toLowerCase()
+      if (!t || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+  const matched = unique(analysis?.matched || [])
+  const added = unique(analysis?.added || [])
+  const missing = unique([...(analysis?.missing || []), ...(result.jd_terms_unplaced || []), ...(result.quality?.missing || [])])
+  const unverified = unique(result.unverified_added_keywords || [])
+  const measured = (value: number | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100
+  const covered = measured(result.coverage) ? `${result.coverage}%` : "Not measured"
+  const supported = measured(result.supported_coverage) ? `${result.supported_coverage}%` : "Not measured"
+  // sendText truncates at 4000 UTF-16 units. Bound each list independently so
+  // no keyword list can erase the risk or evidence warning. Counts retain omissions.
+  const list = (terms: string[]) => {
+    if (!terms.length) return "None identified"
+    const shown: string[] = []
+    for (const term of terms.slice(0, 20)) {
+      const points = Array.from(term)
+      const short = points.slice(0, 120).join("") + (points.length > 120 ? "…" : "")
+      if ([...shown, short].join(", ").length > 600) break
+      shown.push(short)
+    }
+    return shown.join(", ") + (terms.length > shown.length ? ` (+${terms.length - shown.length} more)` : "")
+  }
+  const needsReview = result.skills_only || result.partial || result.unchanged || missing.length || unverified.length ||
+    result.quality_blockers?.length || result.quality?.incomplete || result.quality?.status !== "coverage_met" ||
+    !measured(result.coverage) || result.coverage < 95 || !measured(result.supported_coverage) || result.supported_coverage < 95
+  return [
+    "*MFit Resume Gap & Risk Report*",
+    `Estimated JD keyword coverage: ${covered} (not an employer ATS score)`,
+    `Resume-supported coverage: ${supported}`,
+    `Risk: ${needsReview ? "Needs review" : "Keyword review passed; experience evidence still requires verification"}`,
+    "Mandatory hands-on requirements must be supported by specific experience bullets, not just keywords. Verify each added claim before applying.",
+    `Already matched: ${list(matched)}`,
+    `Newly placed: ${list(added)}`,
+    `Missing / unresolved JD terms: ${list(missing)}`,
+    `Added claims needing verification: ${list(unverified)}`,
+    // Enrichment visibility (Nov 4): the two Gemini passes run before
+    // editing, but their output used to be invisible — the reported
+    // coverage counts original JD terms only. Show suggested vs placed
+    // vs gate-blocked so a "no keywords added" report can be checked.
+    ...(result.enrichment_suggested?.length ? [`Gemini enrichment (two passes before editing): suggested ${result.enrichment_suggested.length} — placed in the file: ${list(result.enrichment_placed || [])} — not placed because your resume does not evidence them: ${list(result.enrichment_blocked || [])}`] : []),
+  ].join("\n")
+}
+
 // The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
 // the name, every email, phone, link and date of the source must be in the exported file unchanged, and none added.
 async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
@@ -1428,8 +1510,14 @@ function qualityStop(result: TailorResult): string {
   if (reasons.includes("jd_coverage_below_floor")) {
     const pct = Number.isFinite(result.coverage) ? `${result.coverage}%` : "under 95%"
     const gaps = [...(result.keyword_analysis?.missing || []), ...(result.quality?.missing || [])].filter(m => m && !isCertification(m))
-    const named = [...new Set(gaps)].slice(0, 8)
-    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}.` : ""} Your resume and this job are saved for another try. No incomplete file was delivered.`
+    const all = [...new Set(gaps)]
+    const named = all.slice(0, 8)
+    // Nov 4 SailPoint hold: the pick line counts only the headline requirements
+    // used to choose the resume, while this floor counts every extracted term —
+    // say so, or "2 of 2" followed by "40%" reads as a contradiction. Also show
+    // the hidden total whenever the named list is sliced.
+    const more = all.length > named.length ? ` and ${all.length - named.length} more` : ""
+    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}${more}.` : ""} The earlier pick line counted only the headline requirements used to choose this resume; this floor counts every extracted term. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   if (reasons.includes("supported_coverage_below_floor")) {
     const supported = Number.isFinite(result.supported_coverage) ? `${Math.round(result.supported_coverage!)}%` : "too little"
@@ -1437,6 +1525,14 @@ function qualityStop(result: TailorResult): string {
   }
   if (reasons.includes("skills_only")) {
     return "I did not send a file. The writers did not finish a full resume, so nothing incomplete went out. Your resume and this job are saved, and MarketFit will try again."
+  }
+  if (reasons.includes("ats_check_failed")) {
+    const issues = (result.ats?.issues || []).slice(0, 4).join("; ")
+    return `I did not send a file. The draft failed the ATS parse check${issues ? `: ${issues}` : ""}. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  }
+  const named = describeRejectionReasons(reasons)
+  if (named.length) {
+    return `I did not send a file. The draft was held: ${named.join("; ")}. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   return "I did not send a file. The draft did not pass the checks for a finished resume that stays within your real experience. Your resume and this job are saved for another try. No incomplete file was delivered."
 }
@@ -1453,12 +1549,28 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
   }
   const supported = Number.isFinite(result.supported_coverage) ? `Skills your resume already supports: ${result.supported_coverage}%` : ""
   const overall = Number.isFinite(result.coverage) ? `JD keyword coverage ${result.coverage}%` : ""
+  const atsLine = result.ats?.passed ? `ATS parse check: ${result.ats.score}%` : ""
+  // Nov 4: every delivered file reports ATS plus the risk factor score, side by
+  // side, both measured on the run's own record — never a model verdict. The
+  // risk rides the ATS line itself (never a line of its own), so the caption
+  // keeps its short shape: a separate risk line broke the five-line caption
+  // contract in whatsapp-single-request, and a result with no passing ATS
+  // check is a held run, not a delivery, so it carries no delivery caption.
+  const risk = atsLine ? riskScore({
+    coverage: result.coverage,
+    atsIssues: result.ats?.issues,
+    atsPassed: result.ats?.passed,
+    unverifiedAdded: result.unverified_added_keywords,
+    missing: [...(result.keyword_analysis?.missing || []), ...(result.quality?.missing || [])],
+    qualityBlockers: result.quality_blockers,
+  }) : null
   return [
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     ...more,
     ...(supported ? [supported] : []),
     ...(overall ? [overall] : []),
+    ...(atsLine && risk ? [`${atsLine} · Risk factor: ${risk.score}/100 (${risk.level})`] : []),
     ...notAdded(result),
     "Reply to this file to request changes.",
   ].join("\n")

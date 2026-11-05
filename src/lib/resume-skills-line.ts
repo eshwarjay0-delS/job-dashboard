@@ -16,6 +16,12 @@ const FILLER = new Set(['candidates', 'candidate', 'applicants', 'applicant', 'e
   'qualifications', 'skills', 'knowledge', 'work', 'company', 'client', 'we', 'you', 'our'])
 const PLACE = new Set(['remote', 'hybrid', 'onsite', 'on site', 'usa', 'us', 'united states'])
 const RANK = new Set(['senior', 'sr', 'junior', 'jr', 'lead', 'principal', 'staff', 'manager', 'director', 'intern', 'head', 'vp'])
+// Manner adverbs and generic modifiers: never skills. Mirrored in keywords.ts
+// WORD_STOP and keyword-targets.ts isQualificationOrJunk; keep the three
+// lists identical.
+const ADVERB = new Set(['closely', 'effectively', 'proactively', 'diligently', 'efficiently', 'independently', 'consistently', 'actively', 'directly', 'primarily', 'mainly', 'largely', 'generally', 'typically', 'successfully', 'seamlessly', 'rapidly', 'thoroughly', 'accurately', 'promptly', 'strategically', 'collaboratively'])
+const JUNK_WORD = new Set([...ADVERB, 'opportunity', 'please'])
+const MODIFIER_PART = new Set(['based', 'issued'])
 const BENEFIT = /\b(?:medical|dental|vision|401 ?k|pto|paid time off|holidays?|wellness|tuition|equal opportunity|benefits?)\b/
 const DEGREE = /\b(?:degree|bachelor s?|master s?|bs|ba|bsc|ms|msc|mba|phd|diploma|ged)\b/
 const CLEARANCE = /\b(?:clearance|citizen\w*|visa|sponsorship|green card|polygraph)\b/
@@ -40,7 +46,9 @@ export function isJunkTerm(term: unknown): boolean {
   if (/^\d+$/.test(n)) return true
   if (STATUS.has(n) || FILLER.has(n) || PLACE.has(n) || RANK.has(n)) return true
   if (BENEFIT.test(n) || DEGREE.test(n) || CLEARANCE.test(n)) return true
-  return n.split(' ').every(w => FILLER.has(w) || RANK.has(w))
+  const parts = n.split(/[\s/-]+/).filter(Boolean)
+  if (parts.length > 1 && parts.some(p => MODIFIER_PART.has(p))) return true
+  return parts.length > 0 && parts.every(p => JUNK_WORD.has(p) || FILLER.has(p) || RANK.has(p))
 }
 
 

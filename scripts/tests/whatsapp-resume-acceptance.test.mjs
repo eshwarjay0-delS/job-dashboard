@@ -28,13 +28,16 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
   diff: [{ section: "Experience", before: "A", after: "B" }],
   quality: resumeQuality({ matched: 13, total: 13, missing: [], partial: false }),
   unverified_added_keywords: [], quality_blockers: [],
+  // Nov4 ATS contract: every deliverable draft carries a passing ATS parse
+  // check measured on its exported document. Fixtures below inherit it.
+  ats: { score: 100, passed: true, checks: [], issues: [] },
   ...changes,
 })
 const rejects = (name, changes, reason) => test(name, () => {
@@ -48,14 +51,25 @@ test("100% of the job post and 100% of supported skills is deliverable", () => {
   assert.equal(draft.quality.status, "coverage_met")
   assert.equal(acceptableWhatsAppResume(draft), true)
 })
+test("Nov4 ATS: a draft without an ATS check is held", () => {
+  const draft = make()
+  delete draft.ats
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("ats_check_failed"))
+})
+test("Nov4 ATS: a draft that fails the ATS parse check is held", () => {
+  const draft = make({ ats: { score: 85.7, passed: false, checks: [], issues: ["contact: no email address parses from the document"] } })
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("ats_check_failed"))
+})
 test("switch off: 84.3% of the job post is not delivered even when supported skills are 100%", () => {
   const draft = make({ coverage: 84.3 })
   assert.equal(refusing.acceptableWhatsAppResume(draft), false)
   assert.ok(refusing.whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
 })
-test("switch on: a complete 84.3% draft is delivered with the shortfall listed, not refused", () => {
+test("Nov4: a complete 84.3% draft is held for repair", () => {
   const draft = make({ coverage: 84.3 })
-  assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), false)
+  assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), true)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
@@ -94,8 +108,8 @@ rejects("a skills-only file under 95% of the job post is not delivered", {
   skills_only: true,
   coverage: 84.3,
 }, "jd_coverage_below_floor")
-test("a skills-only file that reaches 95% of the job post can be delivered", () => {
-  assert.equal(acceptableWhatsAppResume(make({ skills_only: true, coverage: 100 })), true)
+test("a skills-only file is incomplete even at 100% overlap", () => {
+  assert.equal(acceptableWhatsAppResume(make({ skills_only: true, coverage: 100 })), false)
 })
 rejects("failed draft parts are not a completed tailored document", {
   partial: { failed: 1, total: 5 },
@@ -200,9 +214,9 @@ const unplaced = {
   jd_terms_unplaced: ["gcp security", "gcp iam", "production"], jd_terms_unplaced_reason: "skills_locked",
 }
 test("switch on: locked skills or no skills section sends the file with the terms in the reply, not a coverage refusal", () => {
-  assert.equal(whatsappResumeRejectionReasons(make(unplaced)).includes("jd_coverage_below_floor"), false)
-  assert.equal(acceptableWhatsAppResume(make(unplaced)), true)
-  assert.equal(acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced_reason: "no_skills_section" })), true)
+  assert.equal(whatsappResumeRejectionReasons(make(unplaced)).includes("jd_coverage_below_floor"), true)
+  assert.equal(acceptableWhatsAppResume(make(unplaced)), false)
+  assert.equal(acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced_reason: "no_skills_section" })), false)
 })
 test("switch on: the locked/no-skills exemption covers the coverage shortfall only", () => {
   assert.ok(refusing.whatsappResumeRejectionReasons(make({ ...unplaced, jd_terms_unplaced_reason: undefined })).includes("jd_coverage_below_floor"))
@@ -241,4 +255,13 @@ test("switch off: a placed gcp iam on the skills line is stripped, as master doe
   assert.equal(off.removed, 1)
   assert.deepEqual(off.edits.skills.map(s => s.idx), [2])
   assert.deepEqual(removeUnsupportedRewrites(edits, text => text.includes("gcp iam")).edits.skills.map(s => s.idx), [2])
+})
+
+test("Nov4 hold transparency: rejection codes become plain words, unknowns dropped", () => {
+  // Cross-realm note: loadTS returns vm-realm arrays, so deepEqual fails on
+  // prototypes even when contents match. Compare primitives only.
+  assert.equal(describeRejectionReasons(["draft_parts_missing", "quality_incomplete"]).join(" | "), "parts of the draft are missing | the quality report is incomplete")
+  assert.equal(describeRejectionReasons(["quality_not_deliverable", "quality_not_deliverable"]).join(" | "), "the quality report does not clear the delivery bar")
+  assert.equal(describeRejectionReasons(["some_future_blocker", "ats_check_failed"]).length, 0)
+  assert.equal(describeRejectionReasons([]).length, 0)
 })

@@ -56,6 +56,16 @@ test('roundtrip: link dropped fails', () => { assert.equal(checkRoundTrip(SRC, S
 test('roundtrip: date shifted fails', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('Jan 2020', 'Feb 2020')).ok, false); })
 test('roundtrip: date dropped fails', () => { assert.equal(checkRoundTrip(SRC, SRC.replace(', 2013-2017', '')).ok, false); })
 test('roundtrip: new date added fails', () => { assert.equal(checkRoundTrip(SRC, SRC + '\nNew Co, 2010-2012').ok, false); })
+test('roundtrip: incidental years in summary do not falsely fail preservation', () => {
+  const source = SRC + '\\nSUMMARY\\nBuilt security tooling in 2024.'
+  const output = SRC + '\\nSUMMARY\\nBuilt security tooling for API risk assessment.'
+  assert.equal(checkRoundTrip(source, output).ok, true)
+})
+test('roundtrip: year-only employment range changes still fail', () => {
+  const source = 'Alex Example\\nEXPERIENCE\\nExample Corp | Engineer | 2019-2022'
+  const output = 'Alex Example\\nEXPERIENCE\\nExample Corp | Engineer | 2019-2023'
+  assert.equal(checkRoundTrip(source, output).ok, false)
+})
 test('roundtrip: skills-line-only addition passes', () => {
   const r = checkRoundTrip(SRC, SRC.replace('Python, SQL', 'Python, SQL, Kubernetes, CI/CD, C++'))
   assert.deepEqual(r.problems, []); assert.equal(r.ok, true)

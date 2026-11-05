@@ -70,7 +70,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
-    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] } } } },
+    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { deliveries++; return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
@@ -83,7 +83,10 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
     '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {}, '@/lib/made-floor': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
+    '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
+    '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
+    '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
       patchResumeRecovery: async () => {},
@@ -94,7 +97,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
       readResumeRecovery: async () => ({ status: 'pending' }),
     },
   }
-  const { generate, captionFor } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor };')
+  const { generate, captionFor, resumeGapReport } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor, resumeGapReport };')
   const session = { jdId: 'jd-message', jd: 'job description', resumePath: '/data/whatsapp/inbox/123/unique.docx' }
   await Promise.all([generate('123', session, 'user'), generate('123', session, 'user')])
   assert.equal(runs, 1)
@@ -125,11 +128,14 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   const caption = captionFor('Eshwar', { role: 'Engineer' }, { coverage: 63, quality: { status: 'needs_review' } })
   const gapCaption = captionFor('Eshwar', {}, { coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
   assert.ok(gapCaption.includes('28.5%'))
-  assert.ok(gapCaption.includes('Not covered in this file: f5, cisco'))
+  const gapReport = resumeGapReport({ coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
+  assert.match(gapReport, /Missing \/ unresolved JD terms: f5, cisco/)
+  assert.doesNotMatch(gapReport, /Risk: Keyword review passed/)
+  assert.ok(said.some(text => text.startsWith('*MFit Resume Gap & Risk Report*')), 'successful delivery is followed by the separate risk report')
   assert.ok(!gapCaption.includes('cut short'))
   assert.ok(!gapCaption.includes('could add'))
   assert.ok(caption.includes('63%'))
-  assert.ok(caption.includes('incomplete'))
+  assert.match(resumeGapReport({ coverage: 63, quality: { status: 'needs_review' } }), /Risk: Needs review/)
   assert.ok(!caption.includes('Draft:'))
   assert.ok(caption.split('\n').length <= 5)
 })

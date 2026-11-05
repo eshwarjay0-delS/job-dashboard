@@ -84,11 +84,14 @@ jobs:
       - name: Verify WhatsApp Kompas channel and shared-session safety
         run: node --test scripts/tests/whatsapp-kompas*.test.mjs scripts/tests/kompas-shared-session.test.mjs scripts/tests/kompas-shared-turn.test.mjs
 
+      - name: Verify twenty varied evidence-bound resume exports
+        run: node --test scripts/tests/resume-evidence-quality-20fold.test.mjs scripts/tests/resume-saved-quality.test.mjs scripts/tests/resume-confirmation-quality.test.mjs scripts/tests/resume-web-release.test.mjs scripts/tests/resume-floor.test.mjs scripts/tests/resume-floor-gate.test.mjs
+
       - name: Verify resume identity guard with synthetic DOCX Mammoth round-trip
         run: node --experimental-strip-types --test scripts/tests/resume-guards.test.mjs
 
       - name: Verify WhatsApp selected-email identity and duplicate-job boundaries
-        run: node --experimental-strip-types --test scripts/tests/library-pick.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/library-pick.test.mjs scripts/tests/whatsapp-library.test.mjs scripts/tests/whatsapp-single-request.test.mjs scripts/tests/whatsapp-5fold.test.mjs
 
       - name: Verify WhatsApp voice notes, commands and low-overhead processing
         run: node --test scripts/tests/whatsapp-voice.test.mjs

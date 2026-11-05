@@ -353,7 +353,7 @@ test('a part every lane refused comes back with the reason, and a timeout does n
 // ── what the tailor and the bot promise, read from the source ────────────────
 test('an incomplete or unchanged draft is not stored, not sent as tailored, and old stored drafts are not served', () => {
   const tailor = read('src/lib/tailor.ts'), bot = read('src/app/api/whatsapp/webhook/route.ts'), claude = read('src/lib/claude.ts')
-  assert.match(tailor, /if \(!result\.partial && !result\.unchanged\) \{\s*await blob\.put\(cacheKey/)
+  assert.match(tailor, /if \(!result\.partial && !result\.unchanged && !result\.skills_only && !result\.quality_blockers\?\.length\) \{\s*await blob\.put\(cacheKey/)
   assert.match(tailor, /inflightTailors/, 'an identical request already running is not started again')
   assert.match(tailor, /\[J1_VERSION, CACHE_GENERATION, normJD\(jd\)/, 'drafts stored before the fix are not served again')
   assert.match(tailor, /\.\.\.\(diff\.length \? \{\} : \{ unchanged: true \}\)/)

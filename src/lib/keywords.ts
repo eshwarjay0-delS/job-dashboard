@@ -160,6 +160,11 @@ const TERM_ALIASES: string[][] = [
   ["ttp", "ttps", "tactics techniques and procedures", "tactics techniques procedures"],
   ["ioc", "iocs", "indicator of compromise", "indicators of compromise"],
   ["csoc", "cyber security operations center", "cybersecurity operations center"],
+  // Nov 4 SailPoint hold: a resume saying IdentityIQ (one word) must count for the
+  // JD term IIQ, and so must the spaced form — otherwise the floor reports a gap
+  // the candidate does not have. SailPoint alone is deliberately NOT an alias:
+  // naming the vendor without the product is not the product.
+  ["iiq", "identityiq", "identity iq"],
 ]
 // v2 keyword matching (resume-keyword-report.ts): accents (résumé == resume), every unicode dash, CI-CD == CI/CD,
 // Node JS == Node.js, ASP.NET / VB.NET contain .NET, and a non-string term matches nothing instead of throwing.
@@ -203,6 +208,13 @@ const WORD_STOP = new Set([
   "about","replacing","replacement","overview","summary","description","short",
   // Abbreviation fragments (use full form instead)
   "mgmt","corp","corporation","commission","inc","dept","div","annual","cam",
+  // Generic modifiers and manner adverbs: never skills ("cloud-based",
+  // "government-issued", "work closely"). Mirrored in resume-skills-line.ts
+  // isJunkTerm and keyword-targets.ts isQualificationOrJunk; keep the three
+  // lists identical. "opportunity" and "please" live in TITLE_STOP only, so
+  // they are repeated here: tokenVetoed consults WORD_STOP, not TITLE_STOP,
+  // and without them the compound "opportunity-please" walked past it.
+  "based","issued","closely","effectively","proactively","diligently","efficiently","independently","consistently","actively","directly","primarily","mainly","largely","generally","typically","successfully","seamlessly","rapidly","thoroughly","accurately","promptly","strategically","collaboratively","opportunity","please",
 ])
 // Gerund/verb words that must NOT start a domain-noun phrase (else "implementing
 // security", "performing analysis" leak in as junk that can't match the resume).
@@ -378,6 +390,14 @@ export function extractJdKeywords(jd: string): string[] {
     const low = raw.toLowerCase()
     return tokenVetoed(raw) || WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low) || (low.endsWith("s") && TITLE_STOP.has(low.slice(0, -1)))
   }
+  // A recruiter's name lives on contact and sign-off lines, not in the work:
+  // a multi-word proper-noun run with no technical signal and no vocab
+  // membership, sitting on a contact line or past a sign-off, is a person's
+  // name, not a product. Single-word runs (Wiz, Trivy) are untouched, and so
+  // are runs in requirements text ("Data Mover").
+  const CONTACT_LINE = /\b(contact|recruiter|recruiting|talent acquisition|hiring manager|reach out|send (?:your )?resume|email|phone|regards|thank you|thanks|sincerely|cheers|best,)\b/i
+  const SIGNOFF_LINE = /^(?:best regards|regards|thank you|thanks|sincerely|cheers|best,?)\b/i
+  const jdLines = jd.split("\n")
   for (const m of jd.matchAll(/(?<=[^\s.!?;:•\-–—\n])[ \t]+([A-Z][a-zA-Z0-9]{1,15}(?:[ \t]+[A-Z][a-zA-Z0-9]{1,15}){0,3})\b/g)) {
     // A line written all in capitalised words is a title ("Senior Enterprise Network Zero Trust Security Engineer"), not a
     // sentence: its words are not product names.
@@ -392,6 +412,14 @@ export function extractJdKeywords(jd: string): string[] {
     // "Great Expectations" are names whole, and were cut to "hub", "control policies" and "expectations".
     while (run.length > 1 && (WORD_STOP.has(run[0].toLowerCase()) || /^(?:senior|sr|junior|jr|lead|principal|staff|chief|head)$/i.test(run[0]))) run.shift()
     while (run.length > 1 && ROLE_WORD.test(run[run.length - 1])) run.pop()
+    if (run.length > 1) {
+      const lineIdx = jd.slice(0, start).split("\n").length - 1
+      const onContactLine = CONTACT_LINE.test(lineText)
+      const pastSignoff = jdLines.slice(0, lineIdx).some(l => SIGNOFF_LINE.test(l.trim()))
+      const hasSignal = run.some(t => /[0-9]/.test(t) || /[a-z][A-Z]/.test(t))
+      const inVocab = VOCAB.includes(run.join(" ").toLowerCase())
+      if ((onContactLine || pastSignoff) && !hasSignal && !inVocab) continue
+    }
     if (run.length > 1 && run.some(t => !titleStopped(t))) { out.add(run.join(" ").toLowerCase()); continue }
     const raw = run[0]
     if (raw.length < 3 || /^[A-Z]+$/.test(raw)) continue  // ALL-CAPS already handled above

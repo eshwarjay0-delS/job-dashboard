@@ -639,10 +639,22 @@ export async function applyRewrites(
   if (summary && zones.summaryIdx !== null) {
     rewrites.set(zones.summaryIdx, summary)
     notes.push("Summary rewritten")
-    // Blank any leftover concatenated-summary paragraphs now that the consolidated
-    // single paragraph has been written into the first one.
-    for (const idx of zones.summaryOverflowIdx || []) rewrites.set(idx, "")
-    if (zones.summaryOverflowIdx?.length) notes.push("Consolidated a multi-paragraph summary into one")
+    // Blank an overflow paragraph ONLY when the new summary already carries its
+    // substance. Content the new summary drops is kept, not silently destroyed:
+    // a stale paragraph sitting next to the new summary is visible and fixable,
+    // destroyed content is not. Nov 4: the old code blanked every overflow
+    // paragraph on every summary rewrite, whatever the model kept or dropped.
+    const normWords = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim().split(" ").filter(w => w.length > 2)
+    const summaryWords = new Set(normWords(summary))
+    const paras = allParas(xml)
+    let blanked = 0, kept = 0
+    for (const idx of zones.summaryOverflowIdx || []) {
+      const words = normWords(paraText(paras[idx] || ""))
+      if (!words.length || words.every(w => summaryWords.has(w))) { rewrites.set(idx, ""); blanked++ }
+      else kept++
+    }
+    if (blanked) notes.push("Consolidated a multi-paragraph summary into one")
+    if (kept) notes.push(`Kept ${kept} summary paragraph(s) the new summary does not cover`)
   }
 
   let sk = 0, bl = 0

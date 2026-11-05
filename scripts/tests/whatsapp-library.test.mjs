@@ -47,7 +47,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
     '@/lib/llm': { resolveKeys: () => ({}), hasAnyKey: () => true, keysFor: async () => ({ gemini: 'g' }), tailorKeys: k => k },
-    '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
+    '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Application Security Engineer', company: 'Acme', location: '' }) },
     '@/lib/whatsapp': { sendText: async (to, t) => { said.push(t) }, sendDocument: async (to, f, n, caption) => { docs.push(caption); events.push('delivered'); return 'wamid-' + docs.length }, downloadMedia: async () => Buffer.from('a@x.com uploaded resume') },
     '@/lib/owner': { isOwnerWhatsApp: () => false }, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
@@ -80,7 +80,10 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     },
     // Whether a resume made earlier for the job still meets the 90% floor (src/lib/made-floor.ts, 26 Oct 2026).
     '@/lib/made-floor': { madeMeetsFloor: async () => floorOk },
+    '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
+    '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
+    '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
       patchResumeRecovery: async () => {},
@@ -112,7 +115,7 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 1)
   assert.equal(b.runs[0].givenPath, APPSEC, 'the code ranks AppSec first and the agent agreed')
   assert.equal(b.runs[0].userResumeDir, USER_DIR)
-  assert.match(b.said.at(-1), /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title matches the job's role: Application Security Engineer/)
+  assert.match(b.said.find(text => text.startsWith('Updating your')) || '', /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title matches the job's role: Application Security Engineer/)
   assert.equal(b.saved.length, 1)
   assert.equal(b.saved[0].userDir, USER_DIR)
   assert.equal(b.saved[0].depth, 1, 'made from a resume the person wrote')
@@ -170,7 +173,7 @@ test('a "Security Analyst" post starts from the resume titled for it, not the on
   const b = bot({ agent: null, extra: library() })
   await b.wa.handle('15550010', { type: 'text', id: 'm1', text: { body: `${POST}\n1` } }, {}, 'user1')
   assert.equal(b.runs[0].givenPath, CYBER, 'the AI/AppSec resume shows more of the keywords and was picked before; its title is not the role')
-  assert.match(b.said.at(-1), /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title matches the job's role: Security Analyst/)
+  assert.match(b.said.find(text => text.startsWith('Updating your')) || '', /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title matches the job's role: Security Analyst/)
   assert.equal(b.logs[0].role, 'Security Analyst')
   assert.equal(b.logs[0].titled, 1)
 })
