@@ -8,6 +8,7 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
 import { repairDictation } from "./kompasDictation.ts"
+import { dropUngroundedLogistics, ungroundedLogisticsSentences } from "./kompasLogisticsPhrases.ts"
 
 export type AnswerShape =
   | "intro"
@@ -436,6 +437,7 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
       : `Mode ${level}. Aim for about ${mode.aimWords} words and never more than ${mode.maxWords}. Stop as soon as the question is answered. ${mode.voice}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
+    "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
   ].filter(Boolean).join("\n")
 }
 
@@ -473,9 +475,11 @@ const PROVIDER_FAILURE_SHAPE = [
   // "google.api_core.exceptions.ServiceUnavailable: 503").
   /^\s*(?:[a-z_][a-z0-9_]*\.)+[A-Z]\w*(?:Error|Exception|Timeout|Unavailable|Overloaded)\s*:/,
 ]
+// The whole text is the gateway's sentence, not an interview answer that mentions a failure.
+const BARE_GATEWAY = /^(?:sorry[,.]?\s+)?(?:something went wrong[.!]?\s+please try again|the (?:ai|model|answer) service is unavailable|the model failed to respond|we could(?: not|n't) generate (?:a |the )?response(?:[.!]?\s+please (?:try again|retry))?|(?:anthropic|openai|openrouter|gemini) is experiencing (?:high demand|an outage))[.!?]*$/i
 export function isProviderErrorAnswer(text: string): boolean {
-  const t = String(text || "")
-  if (PROVIDER_ERROR.test(t)) return true
+  const t = String(text || "").trim()
+  if (PROVIDER_ERROR.test(t) || BARE_GATEWAY.test(t)) return true
   const short = wordCount(t) <= 30
   return PROVIDER_FAILURE_SHAPE.some((re) => re.test(t) && (short || re.source.startsWith("^")))
 }
@@ -546,16 +550,16 @@ export function settleSpokenAnswer(
   const fence = String(answer || "").match(/```[\s\S]*?```/)
   if (fence) {
     const prose = String(answer).replace(fence[0], " ").replace(/\s+/g, " ").trim()
-    const around = prose ? trimToWords(stripListMarkers(prose), cap) : ""
+    const around = prose ? trimToWords(stripListMarkers(dropUngroundedLogistics(prose, sources, question)), cap) : ""
     const text = [fence[0], around].filter(Boolean).join("\n\n")
     return { text, words: wordCount(around), providerError: false, banned: [], missingEcho: false, repeated: false, thirdPerson: false, inBand: true }
   }
   // An asked repeat ("say that again") keeps every sentence; only an unasked read-back is trimmed.
   const askedRepeat = /\b(?:repeat|again|once more|say that|same answer)\b/i.test(question)
   const voiced = firstPersonRewrite(spokenMarkup(answer), sources)
-  const spoken = askedRepeat ? voiced.text : dropRepeatedSentences(voiced.text, previousAnswer)
+  const spoken = askedRepeat ? voiced.text : dropParaphrasedRepeat(dropRepeatedSentences(voiced.text, previousAnswer), previousAnswer)
   const kept = sentencesOf(spoken).filter((sentence) => !cut.banned.some((term) => containsTerm(sentence, term)))
-  const stripped = stripListMarkers(kept.join(" "))
+  const stripped = stripListMarkers(dropUngroundedLogistics(kept.join(" "), sources, question))
   const text = trimToWords(stripped, cap, (sentence) => requiredSentence(question, sentence))
   const opening = firstSentence(text).toLowerCase()
   const missingEcho = !ECHO_OPTIONAL.has(cut.shape) && cut.keywords.length > 0 && !cut.keywords.some((keyword) => opening.includes(keyword.toLowerCase()))
@@ -736,6 +740,33 @@ export function spokenMarkup(text: string): string {
 }
 
 /**
+ * Sentences copied from one of the last three answers are dropped when the new answer also has a new point.
+ * A sentence is a copy when fewer than one in five of its content words are new. If every sentence is a copy,
+ * or nothing new is left to stand on, the original stands and the repeated flag still reports it.
+ */
+export function dropParaphrasedRepeat(text: string, previousAnswer = ""): string {
+  const turns = String(previousAnswer || "").split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(-3)
+  let out = text
+  for (const last of turns.reverse()) {
+    const bare = (word: string) => word.replace(/[^a-z0-9+#-]+/g, "")
+    const tokensOf = (value: string) => contentTokens(value).map(bare).filter((word) => word.length >= 4 && !STOP.has(word))
+    const prev = new Set(tokensOf(last))
+    if (!prev.size) continue
+    const scored = sentencesOf(out).map((sentence) => {
+      const tokens = tokensOf(sentence)
+      const novel = tokens.length ? tokens.filter((token) => !prev.has(token)).length / tokens.length : 1
+      return { sentence, novel }
+    })
+    const fresh = scored.filter((row) => row.novel >= 0.5)
+    const stale = scored.filter((row) => row.novel < 0.2)
+    if (!fresh.length || !stale.length) continue
+    const kept = scored.filter((row) => row.novel >= 0.2).map((row) => row.sentence)
+    if (kept.length && wordCount(kept.join(" ")) >= 8) out = kept.join(" ")
+  }
+  return out
+}
+
+/**
  * Stress round 4: when the model reads back the previous answer, the sentences it already said are dropped. If too
  * little is left to stand as an answer, the text is kept as written (the repeated flag still reports it).
  */
@@ -778,6 +809,7 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
     list.push(row)
     grouped.set(row.question, list)
     if (isProviderErrorAnswer(row.text)) failures.push(`provider error text in ${row.level}: ${row.question}`)
+    if (ungroundedLogisticsSentences(row.text, sources, row.question).length) failures.push(`ungrounded logistics in ${row.level}: ${row.question}`)
     const cut = dissectQuestion(row.question, sources)
     const mode = cut.modes[row.level]
     const code = asksForCode(row.question)
