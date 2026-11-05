@@ -1,3 +1,7 @@
+## 2026-11-05 — Computer audio stays up when the screen picture ends
+
+Windows opens the call mix beside a screen picture. That picture ending was treated as the call ending, so computer audio went quiet. The picture ending no longer stops the mix. The picture is held muted so Windows keeps the mix open. A microphone or the audio track ending still stops that source.
+
 ## 2026-11-05 — A signed-in desktop session stays signed in
 
 A failed answer no longer says Reconnecting, and it no longer opens Chrome. The desktop keeps the sign-in while that window is open. Screen Answer takes a window before a full screen. Call audio is unchanged.

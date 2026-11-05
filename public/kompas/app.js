@@ -1619,6 +1619,12 @@ function silenceWarningFor(cap, now) {
   if (cap.who === "Them") return "Kompas is hearing silence from the shared audio. Check the shared tab is playing sound and tab audio is shared, then keep playing.";
   return null;
 }
+// The screen picture exists only so Windows will start the output mix. That
+// picture ending is not the call ending. Stopping on it left computer audio
+// with nothing detected (owner, 1 Nov 2026).
+function trackEndStopsCapture(who, kind) {
+  return !(who === "Them" && kind === "video");
+}
 async function attachSource(stream, who, owner, generation = sourceGeneration[who]) {
   const stale = () => !running || generation !== sourceGeneration[who] || !srcOn[who === "You" ? "mic" : "sys"] || captures.some(c => c.who === who);
   const releaseTracks = () => { stream.getTracks().forEach(t => t.stop()); owner?.getTracks().forEach(t => t.stop()); };
@@ -1629,6 +1635,18 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   if (who === "Them") displayVideo = owner?.getVideoTracks()[0] || null;
   const src = ctx.createMediaStreamSource(stream);
   const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0, lastVadAt: performance.now(), lastAudibleAt: performance.now(), zeroWarned: false, watchdog: null, an: null };
+  if (who === "Them" && displayVideo && typeof document !== "undefined" && document.createElement) {
+    try {
+      const hold = document.createElement("video");
+      hold.muted = true;
+      hold.playsInline = true;
+      hold.setAttribute("playsinline", "");
+      hold.srcObject = typeof MediaStream === "function" ? new MediaStream([displayVideo]) : null;
+      const play = hold.play && hold.play();
+      if (play && typeof play.catch === "function") play.catch(() => {});
+      cap.holdVideo = hold;
+    } catch {}
+  }
   const an = ctx.createAnalyser(); an.fftSize = 1024;
   // Parity (owner, 1 Nov 2026): the mic gets browser auto-gain, the raw
   // system loopback gets none, so quiet call audio sat under the VAD floor
@@ -1674,7 +1692,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   const tracks = owner ? owner.getTracks() : stream.getAudioTracks();
   for (const track of tracks) {
     track.addEventListener("ended", () => {
-      if (cap.stopped) return;
+      if (cap.stopped || !trackEndStopsCapture(who, track.kind)) return;
       void stopSource(who);
       srcOn[who === "You" ? "mic" : "sys"] = false; syncSrc();
       captureErrors.push(who === "You" ? "Microphone disconnected. Reconnect it and press the mic button." : "Call sharing ended. Press the speaker button to share audio again.");
@@ -1699,6 +1717,7 @@ function stopSource(who) {
     if (cap.timer) clearInterval(cap.timer);
     if (cap.watchdog) clearInterval(cap.watchdog);
     try { cap.stream.getTracks().forEach(t => t.stop()); } catch {}
+    try { if (cap.holdVideo) cap.holdVideo.srcObject = null; } catch {}
     try { cap.owner && cap.owner.getTracks().forEach(t => t.stop()); } catch {}
     meter(who, 0, false);
   }
