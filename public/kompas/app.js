@@ -1337,8 +1337,13 @@ function showCachedLevel(card) {
   if (cards[idx] === card) renderCard();
   return true;
 }
-function sayAloud(s) {
+function spokenShape(s) {
   return String(s || "")
+    .replace(/^[ \t]*#{1,6}[ \t]+.*$/gm, "")
+    .replace(/^[ \t]*(?:\*\*)?(?:situation|task|action|result)\s*:(?:\*\*)?[ \t]*/gim, "");
+}
+function sayAloud(s) {
+  return spokenShape(s)
     .replace(/&amp;/gi, " and ")
     .replace(/\bx-amp\b/gi, "and")
     .replace(/&gt;=/gi, " at least ")
@@ -1608,7 +1613,20 @@ async function startMic() {
     }
     await attachSource(mic, "You", null, generation);
     void fillMicPick();
-  } catch (e) { if (generation !== sourceGeneration.You || !running) return; captureErrors.push("Mic: " + micError(e)); srcOn.mic = false; syncSrc(); }
+  } catch (e) {
+    if (generation !== sourceGeneration.You || !running) return;
+    const message = "Mic: " + micError(e);
+    if (e && e.name === "NotReadableError" && micRecoveries < 2) {
+      micRecoveries++;
+      status(message + " Trying again.", "err");
+      setTimeout(() => { if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic(); }, 700);
+      return;
+    }
+    captureErrors.push(message);
+    srcOn.mic = false;
+    syncSrc();
+    status(message, "err");
+  }
 }
 async function startSys() {
   const generation = sourceGeneration.Them;
@@ -3379,7 +3397,7 @@ function fillAnchor(card, anchor) {
 }
 function serveBook(card, hit, depthKey) {
   answerCtl = null;                                                   // nothing is in flight: the book answered
-  card.answer = hit.text; card.streaming = false; card.meta = "⚡ book · 0.00s · written ahead of the interview";
+  card.answer = hit.text; card.streaming = false; card.meta = "cached";
   card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta };
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
@@ -3393,26 +3411,27 @@ function serveBook(card, hit, depthKey) {
 async function generateAnswer(question, card, opts = {}) {
   if (card && card.screenTask) opts = { ...opts, source: "screen" };
   card = card || addCard(question, ["…"]);
-  let timer;
   const request = generateAnswerRequest(question, card, opts);
   const ctl = card.req;
   try {
-    await Promise.race([request, new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error("Answer request timed out")), 60000);
-    })]);
+    await request;
   } catch (error) {
     if (card.req !== ctl) return;
-    // Invalidate first: an aborted/late read cannot overwrite the visible recovery message.
     card.req = null;
-    ctl?.abort();
+    try { ctl?.abort(); } catch {}
+    const tries = nextStallTry(opts.retries);
+    if (tries) {
+      status("Still working.", "live");
+      setTimeout(() => generateAnswer(question, card, { ...opts, retries: tries }), 800);
+      return;
+    }
     card.streaming = false;
-    const partial = typeof card.answer === "string" && card.answer.trim();
-    if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
-    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
+    const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
+    if (!partial) card.answer = ["…"];
+    card.meta = "";
     if (cards[idx] === card) renderCard();
-    status(error.message || "Answer interrupted. Please retry.", "err");
+    status("The answer did not finish. Press AI Answer to try again.", "live");
   } finally {
-    clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
   }
 }
@@ -3621,12 +3640,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);   // the full heard question, never its last line (owner, 23 Oct)
-    const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
-    const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
-    const len = meta.length && meta.length.secs ? ` · ~${spoken(meta.length.secs[0])}–${spoken(meta.length.secs[1])} spoken` : "";
-    card.meta = `⚡ ${(first / 1000).toFixed(2)}s · ${((performance.now() - t0) / 1000).toFixed(2)}s${kind ? " · " + kind : ""}${len}${retrieved.length ? " · dossier" : ""}${meta.checked ? " · ✓ fact-checked" : ""}${repairBadge(meta.repair)}`;
+    card.meta = "";
     if (cards[idx] === card) renderCard();
-    logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
+    logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), firstMs: Math.round(first), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
     if (directDesktop && !meta.degraded) {
       card.desktopByDepth = card.desktopByDepth || {};
