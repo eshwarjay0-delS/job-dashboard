@@ -2,7 +2,7 @@
 // micro-segmentation job of 19 Oct 2026: the job post's literal extraction and Gemini's two passes, as measured.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { targetKeywords, skillLike, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
+import { targetKeywords, skillLike, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, restoreDroppedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
 
 const literal = ['siem', 'splunk', 'ansible', 'aws', 'azure', 'zero trust', 'firewall', 'vpn', 'tcp/ip', 'dns', 'routing', 'network security',
   'compliance', 'nist', 'pci', 'python', 'policy', 'palo alto', 'ipsec', 'micro-segmentation', 'vpc', 'vnet', 'tcp', 'ip', 'globalprotect',
@@ -92,6 +92,19 @@ test('punctuated and named Salesforce credentials never become skills targets', 
   for (const term of ['security', 'network', 'C++', 'Salesforce CPQ', 'Salesforce development', 'security+automation']) {
     assert.equal(isCertification(term), false, term)
   }
+})
+
+test('a baseline cert the writer dropped from the skills lines is put back, and nothing else moves', () => {
+  const baseline = [{idx: 4, text: 'Credentials: CISSP, CISM.'}]
+  const dropped = [{idx: 4, text: 'Credentials: CISM.'}]
+  const out = restoreDroppedCerts(baseline, dropped)
+  assert.equal(out.length, 1, 'one line changed')
+  assert.ok(out[0].text.includes('CISSP'), 'baseline cert restored: ' + out[0].text)
+  assert.ok(out[0].text.includes('CISM'), 'kept cert stays: ' + out[0].text)
+  assert.deepEqual(restoreDroppedCerts(baseline, [{idx: 4, text: 'Credentials: CISSP, CISM.'}]), [], 'nothing dropped, nothing restored')
+  assert.deepEqual(restoreDroppedCerts([{idx: 4, text: 'Tools: Splunk, Sentinel.'}], [{idx: 4, text: 'Tools: Splunk.'}]), [], 'a dropped non-cert is not a cert restore')
+  const addedOnly = restoreDroppedCerts(baseline, [{idx: 4, text: 'Credentials: CISSP, CISM, PCNSE.'}])
+  assert.deepEqual(addedOnly, [], 'an added cert is stripAddedCerts work, not restore work')
 })
 
 test('confirmed keywords and their related terms reach the resume, and an unconfirmed tool does not', () => {
