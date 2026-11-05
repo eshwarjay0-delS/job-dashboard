@@ -27,3 +27,21 @@ test('released work is not left in an implementation-only board state', () => {
     assert.equal(entry.delivery, 'deployed', `${id}: release evidence exists but delivery is stale`)
   }
 })
+
+test('nov 5 handoff records name the 70 to 80 percent rule and close stale blockers', () => {
+  const third = PLAN_JOURNAL.find(e => e.id === 'resume-tailor-quality-restoration-2026-11-04')
+  assert.ok(third, 'quality restoration entry missing')
+  assert.match(third.evidence, /70 to 80 percent/)
+  assert.match(third.next, /not built/)
+  const doctrine = PLAN_JOURNAL.find(e => e.id === 'resume-tailor-baseline-doctrine-2026-11-04')
+  assert.ok(doctrine, 'baseline doctrine entry missing')
+  assert.match(doctrine.detail, /PR 215/)
+  assert.doesNotMatch(doctrine.next, /Build the 60-second/)
+  const floor = PLAN_JOURNAL.find(e => e.id === 'resume-jd-skills-line-2026-10-29')
+  assert.equal(floor.delivery, 'superseded')
+  assert.match(floor.evidence, /90cdd1dd/)
+  const kompas = PLAN_JOURNAL.find(e => e.id === 'whatsapp-kompas-setup-runtime-blocked-oct27')
+  assert.equal(kompas.delivery, 'deployed')
+  assert.match(kompas.evidence, /90cdd1dd/)
+  assert.doesNotMatch(kompas.next, /Restore runnable checkout/)
+})

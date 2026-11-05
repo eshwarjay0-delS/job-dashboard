@@ -1,3 +1,7 @@
+## 2026-11-05 — Plan & Vision records the 70 to 80 percent rule and closes two stale instructions
+
+No resume-generation behavior changed. The gap-keyword round still runs for every result under 95 percent. The journal now states the owner rule that a third keyword iteration applies only while coverage is still 70 to 80 percent, and it says that round was not narrowed. The Oct 29 instruction to put missing job-post terms on the skills line is marked superseded by the Nov 5 revert at 90cdd1dd. The Oct 27 WhatsApp Kompas "no environment" blocker is marked deployed: the webhook already routes kompas/revert and the live /kompas page shows Open WhatsApp chats. The 60-second notice is recorded as already shipped, so it is not a build-again task. The runtime fallback is still not built. This is a board-text change inside the signed-in Plan & Vision page. It was not checked as a live resume or a live WhatsApp message.
+
 ## 2026-11-05 — Unevidenced job-post terms stay off the skills line
 
 The floor still writes only terms the resume or a confirmation already supports. A term with no evidence stays off the line. A file under 95 percent measured coverage stays held. That low number is the gap.

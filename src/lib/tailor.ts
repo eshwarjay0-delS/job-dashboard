@@ -937,7 +937,12 @@ export async function runTailor(opts: {
   }
   // GAP-KEYWORD ROUND (Nov 4, his loop): the repair rounds reuse the same
   // missing list and stop once evidenced terms are placed, so a below-floor
-  // run never gets fresh material. While coverage is below the 95% floor and
+  // run never gets fresh material. His 20:04 rule says a third keyword
+  // iteration runs only while measured coverage is still 70 to 80 percent
+  // after the two Gemini passes. This round is steps 5-6 and runs for every
+  // result under 95 percent, which is wider than that band. Do not narrow it
+  // to 70-80 unless he confirms; runs outside the band still need the repair.
+  // While coverage is below the 95% floor and
   // the deadline allows, ask Gemini for fresh unique relational terms aimed
   // at the still-missing requirements (never repeating placed or already
   // suggested terms), run one targeted round with them as an explicit
