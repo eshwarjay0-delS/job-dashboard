@@ -5,6 +5,9 @@ export default function KompasDesktopDownload() {
   // perfACT release lets the authorized owner install the same proven desktop.
   const publicDesktopUrl = (process.env.KOMPAS_DESKTOP_URL || "").trim();
   const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/job-dashboard/releases/download/kompas-desktop-latest/Kompas.exe";
+  // Verified 0.8.7 copy in the owner's Google Drive (Nov 5, 2026): the GitHub
+  // release download stalls in his browser, so the page offers Drive as well.
+  const driveDesktopUrl = "https://drive.google.com/file/d/1Qcvt51g00Y1Hshtw_veQT7exC9jfuWjY/view?usp=drivesdk";
   const privateRelease = !publicDesktopUrl;
 
   return (
@@ -99,6 +102,27 @@ export default function KompasDesktopDownload() {
               >
                 Download Kompas.exe
               </a>
+              <a
+                href={driveDesktopUrl}
+                style={{
+                  display: "inline-block",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  padding: "12px 22px",
+                  borderRadius: 999,
+                  textDecoration: "none",
+                  background: "transparent",
+                  color: "var(--text, #ece7dd)",
+                  border: "1px solid var(--border, rgba(255,255,255,0.12))",
+                  marginLeft: 12,
+                }}
+              >
+                Download from Google Drive
+              </a>
+              <p style={{ color: "var(--text-muted, #8a8578)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
+                If the GitHub download stalls, use Google Drive instead. Drive may warn the
+                file is too large to scan — choose Download anyway.
+              </p>
               {privateRelease && (
                 <p style={{ color: "var(--text-muted, #8a8578)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
                   The download is hosted in your private perfACT GitHub repository.
