@@ -3640,7 +3640,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);   // the full heard question, never its last line (owner, 23 Oct)
-    card.meta = "";
+    card.meta = `${repairBadge(meta.repair)}`;
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), firstMs: Math.round(first), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
