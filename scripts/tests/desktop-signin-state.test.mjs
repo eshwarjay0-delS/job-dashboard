@@ -69,7 +69,10 @@ test('a silent renewal returns the bearer to this computer and never to another 
   const back = new URL(went[0])
   assert.equal(back.origin + back.pathname, loop)
   assert.equal(back.searchParams.get('state'), STATE)
-  assert.equal(JSON.parse(Buffer.from(back.searchParams.get('d'), 'base64url').toString()).access_token, 'aaa.bbb.ccc')
+  const handed = JSON.parse(Buffer.from(back.searchParams.get('d'), 'base64url').toString())
+  assert.equal(handed.access_token, 'aaa.bbb.ccc')
+  assert.equal(handed.expires_at, 9)
+  assert.equal(Object.hasOwn(handed, 'refresh_token'), false)
   for (const bad of ['https://127.0.0.1:17321/cb', 'http://127.0.0.1:80/cb', 'http://localhost:17321/cb', 'http://evil.example/cb']) {
     const quiet = []
     const again = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(bad), assign: url => quiet.push(url), replace: url => quiet.push(url), set href(url) { quiet.push(url) } } }
@@ -79,6 +82,20 @@ test('a silent renewal returns the bearer to this computer and never to another 
     assert.equal(quiet.length, 1, bad)
     assert.ok(quiet[0].startsWith('marketfit-kompas://auth?d='), bad)
   }
+})
+
+test('a loopback bearer that omits refresh does not carry Chrome\'s refresh token', async () => {
+  const loop = 'http://127.0.0.1:17321/cb'
+  const went = []
+  const window = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(loop), assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
+  const session = { access_token: 'aaa.bbb.ccc', refresh_token: 'chrome-family-secret', expires_at: 9 }
+  vm.runInContext(helpers + '\n' + effect, vm.createContext({ window, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
+    createClient: () => ({ auth: { getSession: async () => ({ data: { session } }) } }) }))
+  await new Promise(resolve => setTimeout(resolve, 0))
+  const handed = JSON.parse(Buffer.from(new URL(went[0]).searchParams.get('d'), 'base64url').toString())
+  assert.deepEqual(handed, { access_token: 'aaa.bbb.ccc', expires_at: 9 })
+  assert.equal(JSON.stringify(handed).includes('chrome-family-secret'), false)
+  assert.match(page, /does not erase a stored desktop refresh/)
 })
 
 test('a silent renewal with no Chrome session does not open a login form', async () => {

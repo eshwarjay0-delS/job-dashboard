@@ -8,6 +8,10 @@ No visible page change except that "I live in Dallas, is that a problem?" and "m
 
 **Not verified.** No live model answer. No Windows session. Not production until this branch is merged and the new deployment is READY.
 
+## 2026-11-05 — Desktop session refresh is a family the website does not rotate
+
+`POST /api/auth/desktop-session` takes a JSON body `{ refresh_token }` and an optional bearer. A presented refresh token rotates only that desktop family. An empty refresh token with a bearer opens a separate Supabase session and does not erase a refresh token the desktop already stored. Two simulated website tabs can revoke the cookie family while the desktop family still renews. A losing desktop renewal returns `already_used` with `Invalid Refresh Token: Already Used` and does not tell the client to wipe. The `/auth/desktop` loopback still returns `{ access_token, expires_at }` to `127.0.0.1` and still leaves Chrome's refresh token out. Kompas answer text and logistics filtering were not changed. This was not checked against a live Supabase project or a Windows install. It is not on production until the pull request merges and the deployment is READY.
+
 ## 2026-11-05 — Plan & Vision records the 70 to 80 percent rule and closes two stale instructions
 
 No resume-generation behavior changed. The gap-keyword round still runs for every result under 95 percent. The journal now states the owner rule that a third keyword iteration applies only while coverage is still 70 to 80 percent, and it says that round was not narrowed. The Oct 29 instruction to put missing job-post terms on the skills line is marked superseded by the Nov 5 revert at 90cdd1dd. The Oct 27 WhatsApp Kompas "no environment" blocker is marked deployed: the webhook already routes kompas/revert and the live /kompas page shows Open WhatsApp chats. The 60-second notice is recorded as already shipped, so it is not a build-again task. The runtime fallback is still not built. This is a board-text change inside the signed-in Plan & Vision page. It was not checked as a live resume or a live WhatsApp message.

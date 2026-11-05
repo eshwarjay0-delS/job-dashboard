@@ -4,6 +4,9 @@ import { createClientFromRequest } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 
 // POST /api/auth/refresh — renew the cookie session in place.
+// This is the website family. The desktop app must not store it. Two browser
+// tabs rotate this cookie, and that rotation must not be the credential the
+// Windows app keeps. Desktop renewal is POST /api/auth/desktop-session.
 // The SSR client reads the refresh token from the session cookies, rotates
 // it, and writes the fresh pair back through setAll. The Kompas client calls
 // this when an API call meets a 401 and whenever the window regains focus,
