@@ -784,14 +784,16 @@ export async function runTailor(opts: {
     // Switch on, the v2 skills-line rules (resume-skills-line.ts): a term is written with its whitespace and line breaks
     // collapsed, and never if it is junk (work status, pay, workplace) or would trip the round-trip guard (a date, phone,
     // email or link).
+    const evidenced = (k: string) => forcedJdKws.includes(k) || beforeKw.has(k)
     const left = skillsFloorTerms(scoreKws, floorKws, cur.afterKw, isCertification)
+      .filter(k => evidenced(k) || (jdGate && !skillsOnly))
       .filter(k => !jdGate || (cleanTerm(k) === k && !isJunkTerm(k) && !isGuardUnsafe(k)))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
     // as one short sentence when the summary is a single paragraph the person left open to rewriting; a summary they
     // locked (WhatsApp's default: "summary left as written") is never touched, and the strength goes with the rest.
     const oneSummary = sec.summary !== false && zones.summaryIdx !== null && !(zones.summaryOverflowIdx || []).length
-    const soft = oneSummary ? left.filter(k => SOFT_SKILL.test(k)) : []
+    const soft = oneSummary ? left.filter(k => evidenced(k) && SOFT_SKILL.test(k)) : []
     const hard = left.filter(k => !soft.includes(k))
     const summaryBase = (cur.edits.summary || zones.summaryText || "").trim()
     // Written as an addition to the paragraph as it stands, so its formatting stays (docx.ts rewriteParaText).
@@ -1197,16 +1199,16 @@ export async function runTailor(opts: {
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
   // Check the actual exported document, including skills, summary and extras.
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
+  const namedByFloor = new Set([...(best.floor || []), ...(best.floorFromJd || [])].map(k => k.toLowerCase()))
+  const unverifiedAdded = unsupportedJdKws.filter(k => !namedByFloor.has(k.toLowerCase()) && coveredJdKeywords(best.tailoredText, [k]).has(k))
   // Gate on, skills locked or no skills section: what the floor could not place is listed in the reply, not a refusal.
   const unplacedReason: JdTermsUnplacedReason | undefined = !jdGate || refine ? undefined : sec.skills === false ? "skills_locked" : !zones.skills.length ? "no_skills_section" : undefined
   const unplacedTerms = unplacedReason ? scoreKws.filter(k => floorKws.has(k) && !afterKw.has(k) && !isCertification(k)).map(k => jdSpelling(k, jd)) : []
   if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
   // Gate on: job-post terms the AI writer itself wrote onto the skills line (not the floor's) are named too (blueprint item 5).
-  const floorNamed = new Set((best.floor || []).map(k => k.toLowerCase()))
   const skillsLines = (best.edits.skills || []).map(s => s.text || "").join("\n")
   const writerOnSkills = jdGate && !refine
-    ? [...coveredJdKeywords(skillsLines, unsupportedJdKws)].filter(k => !floorNamed.has(k.toLowerCase()) && !isCertification(k)).map(k => jdSpelling(k, jd))
+    ? [...coveredJdKeywords(skillsLines, unsupportedJdKws)].filter(k => !namedByFloor.has(k.toLowerCase()) && !isCertification(k)).map(k => jdSpelling(k, jd))
     : []
   if (writerOnSkills.length) notes.push(`Job-post terms the writer put on the skills line, not as confirmed experience: ${writerOnSkills.join(", ")}`)
   // Real-metrics recount (Nov 4): the caption's numbers must be measured on

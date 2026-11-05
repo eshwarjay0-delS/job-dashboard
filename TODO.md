@@ -1,6 +1,6 @@
-## 2026-11-05 — A missing job-post term is named on the skills line
+## 2026-11-05 — A finished rewrite names a missing job-post term on the skills line
 
-The coverage number stayed low because those terms never reached the skills line, and a later cleanup removed them if they did. They are named on the skills line now. They are not written as experience. A certification is still not added.
+When a writer finishes, a job-post term the resume has not claimed is named on the skills line. It is not written as experience, and it is not treated as an unverified claim. A provider outage still adds nothing. A certification is still not added.
 
 ## 2026-11-05 — Computer audio stays up when the screen picture ends
 
