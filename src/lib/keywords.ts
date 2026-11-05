@@ -165,6 +165,19 @@ const TERM_ALIASES: string[][] = [
   // the candidate does not have. SailPoint alone is deliberately NOT an alias:
   // naming the vendor without the product is not the product.
   ["iiq", "identityiq", "identity iq"],
+  // Nov 5 Security Analyst hold (32.4%): the same undercount class as IIQ — the
+  // JD asks for acronyms (soc, saml, mfa, ueba) while a resume spells the term
+  // out. Each group below is the standard expansion only; the acronym alone
+  // never stands for a different product, and no vendor name is an alias.
+  ["soc", "security operations center"],
+  ["siem", "security information and event management"],
+  ["soar", "security orchestration automation and response"],
+  ["edr", "endpoint detection and response"],
+  ["xdr", "extended detection and response"],
+  ["iam", "identity and access management"],
+  ["mfa", "multi factor authentication"],
+  ["saml", "security assertion markup language"],
+  ["ueba", "user and entity behavior analytics"],
 ]
 // v2 keyword matching (resume-keyword-report.ts): accents (résumé == resume), every unicode dash, CI-CD == CI/CD,
 // Node JS == Node.js, ASP.NET / VB.NET contain .NET, and a non-string term matches nothing instead of throwing.

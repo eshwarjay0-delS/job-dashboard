@@ -54,6 +54,25 @@ test('IIQ matches IdentityIQ in either spelling, but not the vendor alone', () =
   assert.equal(present('Built IIQ workflows and custom rules.', 'IIQ'), true)
   assert.equal(present('Administered SailPoint for 5,000 users.', 'IIQ'), false)
 })
+test('security acronyms match their spelled-out expansions, both directions', () => {
+  // Nov 5 Security Analyst hold (32.4%): the JD asks for acronyms while a
+  // resume spells the term out — same undercount class as IIQ. Each group is
+  // the standard expansion only; the acronym never matches an unrelated word.
+  assert.equal(present('Worked in the Security Operations Center triaging alerts.', 'SOC'), true)
+  assert.equal(present('Worked in the SOC triaging alerts.', 'security operations center'), true)
+  assert.equal(present('Tuned Security Information and Event Management rules.', 'SIEM'), true)
+  assert.equal(present('Built Security Orchestration Automation and Response playbooks.', 'SOAR'), true)
+  assert.equal(present('Managed Endpoint Detection and Response tooling.', 'EDR'), true)
+  assert.equal(present('Managed Extended Detection and Response tooling.', 'XDR'), true)
+  assert.equal(present('Ran Identity and Access Management reviews.', 'IAM'), true)
+  assert.equal(present('Configured multi-factor authentication policies.', 'MFA'), true)
+  assert.equal(present('Configured MFA policies.', 'multi factor authentication'), true)
+  assert.equal(present('Federated logins with Security Assertion Markup Language.', 'SAML'), true)
+  assert.equal(present('Monitored User and Entity Behavior Analytics dashboards.', 'UEBA'), true)
+  assert.equal(present('Worked with social teams on awareness.', 'SOC'), false)
+  assert.equal(present('Administered endpoints.', 'EDR'), false)
+  assert.equal(present('Ran access reviews.', 'IAM'), false)
+})
 test('technology names ending in s and genuine technical punctuation survive extraction', () => {
   const terms = extractJdKeywords('Use ADFS and Kubernetes with Node.js, CI/CD, IPsec, PAN-OS and AZ-500. Track TTPs (TTPs).')
   for (const term of ['adfs', 'kubernetes', 'node.js', 'ci/cd', 'ipsec', 'pan-os', 'az-500', 'ttp']) assert.ok(terms.includes(term), term)
