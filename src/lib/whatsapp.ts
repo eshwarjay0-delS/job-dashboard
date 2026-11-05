@@ -113,7 +113,7 @@ export function verifySignature(rawBody: string, header: string | null): boolean
   try { return timingSafeEqual(Buffer.from(got, "hex"), Buffer.from(expected, "hex")) } catch { return false }
 }
 
-export async function sendText(to: string, body: string): Promise<void> {
+export async function sendText(to: string, body: string): Promise<string> {
   // WhatsApp hard-caps a text body at 4096 chars.
   const text = body.length > 4000 ? body.slice(0, 3990) + "…" : body
   const res = await fetch(`${GRAPH}/${phoneId()}/messages`, {
@@ -123,6 +123,10 @@ export async function sendText(to: string, body: string): Promise<void> {
     signal: AbortSignal.timeout(20000),
   })
   if (!res.ok) throw new Error(`WA sendText ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  // Returns the sent message's id (wamid), so a later swipe-reply can be
+  // traced to THIS text — holds anchor here, the way documents already do.
+  const sent = await res.json().catch(() => ({})) as { messages?: { id?: string }[] }
+  return sent.messages?.[0]?.id || ""
 }
 
 /** Upload bytes to Meta, then send them as a document message. */
