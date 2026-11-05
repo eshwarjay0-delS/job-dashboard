@@ -256,3 +256,67 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
   const rehold = JSON.parse(entries.get(reholdKey))
   assert.equal(rehold.held, true, 'the re-hold re-anchors so the loop can iterate')
 })
+
+test('a partial hold names the unfinished sections and invites a reply-redo; other holds do not', async () => {
+  // Nov 5, 06:08 hold: the draft covered the JD and passed ATS, yet the generic
+  // fallthrough said only "the quality report is incomplete" — the run knew
+  // which sections never came back (result.partial) and never said so.
+  const entries = new Map()
+  const blob = {
+    putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
+    put: async (key, value) => entries.set(key, value),
+    get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
+  }
+  const mocks = {
+    '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
+    '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
+    '@/lib/paths': { DATA_DIR: '/data' },
+    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
+    '@/lib/tailor': { runTailor: async () => ({}) },
+    '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
+    '@/lib/whatsapp': { sendText: async () => 'wamid', sendDocument: async () => 'sent' },
+    '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
+    '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
+    '@/lib/supabase/service': { serviceClientAvailable: () => false },
+    '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
+    '@/lib/whatsapp-trace': { trace: () => {} },
+    '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
+    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {}, '@/lib/made-floor': {},
+    '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
+    '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
+    '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
+    '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
+    '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
+    '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
+    '@/lib/whatsapp-resume-recovery': {
+      enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
+      patchResumeRecovery: async () => {},
+      deferResumeRecovery: async () => {},
+      dueResumeRecoveries: async () => [],
+      markResumeDocumentAccepted: async () => true,
+      recordResumeDeliveryStatus: async () => {},
+      readResumeRecovery: async () => ({ status: 'pending' }),
+    },
+  }
+  const { qualityStop } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { qualityStop };')
+  const base = {
+    token: 'partial-result', score: 97, coverage: 97, supported_coverage: 97,
+    diff: [{ section: 'Experience', before: 'A', after: 'B' }],
+    unverified_added_keywords: [], quality_blockers: ['draft_parts_missing'],
+    quality: { status: 'needs_review', matched: 97, total: 100, missing: [], incomplete: true },
+    ats: { score: 100, passed: true, checks: [], issues: [] },
+  }
+  const named = qualityStop({ ...base, partial: { failed: 3, total: 5, pendingRoles: [1, 2], pendingProfile: true } })
+  assert.match(named, /The rewrite did not finish/)
+  assert.match(named, /the profile section and 2 experience sections/)
+  assert.match(named, /Reply to this message and I will run it again/)
+  const bare = qualityStop({ ...base, partial: { failed: 1, total: 3 } })
+  assert.match(bare, /The rewrite did not finish/)
+  assert.match(bare, /Reply to this message and I will run it again/)
+  assert.doesNotMatch(bare, /profile section|experience section/)
+  const other = qualityStop({ ...base, partial: undefined, quality_blockers: [], quality: { status: 'needs_review', matched: 97, total: 100, missing: [] } })
+  assert.match(other, /The draft was held: the quality report does not clear the delivery bar/)
+  assert.doesNotMatch(other, /did not finish|run it again/)
+})

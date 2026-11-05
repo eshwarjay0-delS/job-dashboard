@@ -1561,6 +1561,21 @@ function qualityStop(result: TailorResult): string {
     const issues = (result.ats?.issues || []).slice(0, 4).join("; ")
     return `I did not send a file. The draft failed the ATS parse check${issues ? `: ${issues}` : ""}. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
+  // Nov 5, 06:08 hold: a draft can cover the JD and pass ATS yet still be
+  // partial — some sections never came back from the writers — and the generic
+  // fallthrough below named only "the quality report is incomplete", with no
+  // hint which sections are unfinished or what to do next. Name them (the run
+  // knows: result.partial carries pendingRoles/pendingProfile) and invite the
+  // reply-redo: the hold anchors the baseline, so a reply re-runs it.
+  if (result.partial) {
+    const bits: string[] = []
+    if (result.partial.pendingProfile) bits.push("the profile section")
+    const pendingRoles = result.partial.pendingRoles?.length || 0
+    if (pendingRoles === 1) bits.push("1 experience section")
+    else if (pendingRoles > 1) bits.push(`${pendingRoles} experience sections`)
+    const where = bits.length ? ` The unfinished ${bits.length > 1 ? "parts are" : "part is"} ${bits.join(" and ")}.` : ""
+    return `I did not send a file. The rewrite did not finish.${where} Your resume and this job are saved for another try. No incomplete file was delivered. Reply to this message and I will run it again — the unfinished sections get a fresh attempt.`
+  }
   const named = describeRejectionReasons(reasons)
   if (named.length) {
     return `I did not send a file. The draft was held: ${named.join("; ")}. Your resume and this job are saved for another try. No incomplete file was delivered.`
