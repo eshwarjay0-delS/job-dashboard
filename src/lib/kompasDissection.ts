@@ -1335,6 +1335,15 @@ export function naturalOpener(text: string): string {
     .replace(/\bI treat (who|whom|which|where)\b/, "I treat the question of $1")
 }
 
+const PAIR_GENERIC = new Set("risk incident owner finding findings control business work same issue plan review open access".split(" "))
+/** A comparison may cite a resume line only when that line names one side of the pair, not a shared word such as "risk". */
+function lineMentionsPair(line: string, lead: string): boolean {
+  const words = lead.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= 5 && !PAIR_GENERIC.has(word))
+  if (!words.length) return true
+  const low = line.toLowerCase()
+  return words.some((word) => low.includes(word))
+}
+
 function draftAtLevel(question: string, level: AnswerLevel, resume: string, previous: string[], floor: number): string {
   const cut = dissectQuestion(question, resume)
   const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
@@ -1354,6 +1363,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const bareFollow = (t: string) => /^(?:(?:and|so|then|why|how|what|that|this|happened|next|come|though|go|on|after|not|now)\b[\s,]*)+[?.!]*$/i.test(t.trim())
   const rankOn = tied.previous ? (bareFollow(tied.own) ? tied.previous : tied.own) : question
   let lines = rankedExperience(rankOn, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson).filter(fresh)
+  if (cut.shape === "comparison" || cut.shape === "definition") lines = lines.filter((line) => lineMentionsPair(line, lead))
   // r4: a three-part ask ("triage, access reviews, and HIPAA controls") spent Director's room on two lines for one part
   // and never named the third. With 2+ asked parts, the best line for each part goes first, in the asked order.
   // Failsafe: one part, or any error, keeps the ranked order.

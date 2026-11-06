@@ -145,6 +145,19 @@ test("a definition comparison does not reuse the shared closing catalog", () => 
   assert.ok(director < 0.85, String(director))
 })
 
+test("a director comparison does not reuse unrelated resume lines", () => {
+  const accept = "Now explain the same incident to a director: risk acceptance versus remediation. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const contain = "Now explain the same incident to a director: containment versus customer access. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const left = draftSpokenAnswer(accept, "architect", RESUME)
+  const right = draftSpokenAnswer(contain, "architect", RESUME)
+  assert.match(left, /remediation/)
+  assert.match(right, /containment versus customer access/)
+  assert.equal(right.includes("worked on site"), false)
+  assert.equal(right.includes("weekly risk summary"), false)
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.7, String(ratio))
+})
+
 test("lead phrases and asked parts come from the interviewer's words", () => {
   assert.equal(leadPhrase("How do you assess business impact and residual risk?"), "assess business impact and residual risk")
   assert.match(leadPhrase(HITACHI[2]), /^design multi-cloud controls mapped to NIST 800-53$/)
