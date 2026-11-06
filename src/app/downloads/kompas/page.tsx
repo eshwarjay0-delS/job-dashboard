@@ -5,9 +5,10 @@ export default function KompasDesktopDownload() {
   // perfACT release lets the authorized owner install the same proven desktop.
   const publicDesktopUrl = (process.env.KOMPAS_DESKTOP_URL || "").trim();
   const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/job-dashboard/releases/download/kompas-desktop-latest/Kompas.exe";
-  // Verified 0.8.7 copy in the owner's Google Drive (Nov 5, 2026): the GitHub
+  // Verified 0.8.7 copy in the owner's Google Drive (Nov 6, 2026): the GitHub
   // release download stalls in his browser, so the page offers Drive as well.
-  const driveDesktopUrl = "https://drive.google.com/file/d/1Qcvt51g00Y1Hshtw_veQT7exC9jfuWjY/view?usp=drivesdk";
+  // This is the rebuilt copy with the packaged desktop modules (PR 250).
+  const driveDesktopUrl = "https://drive.google.com/file/d/1jXLCee95Cvr-7sDPuszaOUaZ22r2yrGw/view?usp=drivesdk";
   const privateRelease = !publicDesktopUrl;
 
   return (
