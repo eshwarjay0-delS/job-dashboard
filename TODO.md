@@ -1,3 +1,11 @@
+## 2026-11-06 — A versus answer stays on the two sides
+
+No new screen. A comparison or a definition that names two sides no longer fills length from the shared checklist, the shared honest line, or an approach line.
+
+**Measured on the fictional sample resume, 150 drafts, no model, master `9d2997ac`.** Before: 84 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. Rollback scope versus lateral movement risk, against restoration speed versus reinfection risk: engineer 0.500 (39 and 50 words), director 0.690 (70 and 81), architect 0.811 (114 and 126). Define IDOR versus CSRF against containment versus eradication: engineer 0.636 (29 and 29), director 0.810 (52 and 52), architect 0.793 (94 and 94). After: 16 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That incident pair: engineer 0.400 (46 and 42), director 0.500 (76 and 79), architect 0.500 (120 and 119). That definition pair: engineer 0.273 (34 and 34), director 0.500 (63 and 63), architect 0.467 (98 and 98). The highest remaining pair is an architect design pair at 0.771. Offline sample: 15 answers, 0 failures, 16 warnings. Focused suites 67 pass, 0 fail. `tsc --noEmit` clean.
+
+**Not verified.** These versus answers do not restate the shared checklist. Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 252 is open. Not merged. Not deployed.
+
 ## 2026-11-06 — Only the corner tips are rounded, and the answer box stays solid
 
 The window corners are 28px. The question and answer sit on solid paper so nothing behind them shows through.

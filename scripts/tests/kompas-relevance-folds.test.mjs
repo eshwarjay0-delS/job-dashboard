@@ -128,6 +128,21 @@ test("two incidents that share a frame do not get one answer", () => {
   assert.ok(same.failures.some((f) => /same answer for different questions/.test(f)))
 })
 
+test("two versus explanations do not share the checklist", () => {
+  const rollback = "Now explain the same incident to a director: rollback scope versus lateral movement risk. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const restore = "Now explain the same incident to a director: restoration speed versus reinfection risk. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const left = draftSpokenAnswer(rollback, "architect", RESUME)
+  const right = draftSpokenAnswer(restore, "architect", RESUME)
+  assert.match(left, /rollback scope/i)
+  assert.match(left, /lateral movement/i)
+  assert.match(right, /restoration speed/i)
+  assert.match(right, /reinfection/i)
+  assert.equal(left.includes("For decision owner"), false)
+  assert.equal(right.includes("For decision owner"), false)
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.7, String(ratio))
+})
+
 test("a definition comparison does not reuse the shared closing catalog", () => {
   const idor = "Define IDOR versus CSRF. Keep it suitable for technical HR."
   const containment = "Define containment versus eradication. Keep it suitable for technical HR."
