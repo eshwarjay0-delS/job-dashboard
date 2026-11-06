@@ -76,7 +76,17 @@ export async function docxText(docx: Buffer | Uint8Array | ArrayBuffer): Promise
   const zip = await JSZip.loadAsync(docx)
   const file = zip.file('word/document.xml')
   if (!file) throw new Error('not a .docx: word/document.xml missing')
-  const xml = await file.async('string')
+  // DOCX stores headers and footers in separate parts. Include their visible text
+  // when auditing an exported file, rather than silently omitting protected facts.
+  const partNames = Object.keys(zip.files)
+    .filter(name => /^word\/(?:header|footer)\d+\.xml$/i.test(name))
+    .sort()
+  const xmlParts = [await file.async('string')]
+  for (const name of partNames) {
+    const part = zip.file(name)
+    if (part) xmlParts.push(await part.async('string'))
+  }
+  const xml = xmlParts.join('\n')
   return xml
     .replace(/<w:tab\/>/g, '\t').replace(/<w:br\/>|<\/w:p>/g, '\n')
     .replace(/<[^>]+>/g, '')
