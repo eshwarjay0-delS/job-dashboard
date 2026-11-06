@@ -24,6 +24,11 @@ function normDate(d: string): string {
   let m: RegExpMatchArray | null
   if ((m = s.match(/^([a-z]+)\s+(\d{4})$/))) return `${m[2]}-${String(MONTHS.indexOf(m[1].slice(0, 3)) + 1).padStart(2, '0')}`
   if ((m = s.match(/^(\d{1,2})\/(\d{4})$/))) return `${m[2]}-${m[1].padStart(2, '0')}`
+  // Formatting-only changes to employment year ranges must not look like date mutations.
+  // A changed year still fails the multiset comparison.
+  if ((m = s.match(/^((?:19|20)\d{2})\s*[-–—]\s*((?:19|20)\d{2}|present|current)$/))) {
+    return `${m[1]}-${m[2] === 'current' ? 'present' : m[2]}`
+  }
   if (/^(present|current|now)$/.test(s)) return 'present'
   return s
 }
