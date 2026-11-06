@@ -1,3 +1,7 @@
+## 2026-11-06 — The live controls are fully rounded and stay at the top
+
+Each control is a full capsule and bold. The strip stays at the top. Resize edges are 14px and corners are 22px. A side or bottom drag in the desktop source keeps the top edge fixed. The installed window keeps its own resize code until a new Kompas.exe.
+
 ## 2026-11-06 — The live controls stay on one fixed line
 
 Stop, AI Answer, Caption Capture, Auto, Follow along, Chat, Prev, Next, and the level sit on one 48px strip. Each control stays 32px. The question and the answer scroll under that strip.

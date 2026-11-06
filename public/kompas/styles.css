@@ -1048,13 +1048,34 @@ html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-
 #view-copilot .overlay .bar-actions .icon-btn,
 #view-copilot .overlay .bar-actions .src-btn,
 #view-copilot .overlay .bar-actions .live-select,
-#view-copilot .overlay .bar-actions .card-count{
+#view-copilot .overlay .bar-actions .card-count,
+#view-copilot .overlay .bar-actions #micBtn,
+#view-copilot .overlay .bar-actions #sysBtn{
   height:32px;
   min-height:32px;
   max-height:32px;
   font-size:13px;
+  font-weight:700;
   line-height:1;
+  border-radius:999px;
 }
+html.kd,html.kd body{border-radius:22px}
+html.kd .kd-bar{border-top-left-radius:22px;border-top-right-radius:22px}
+html.kd #view-copilot{
+  position:fixed;
+  top:42px;
+  left:0;
+  right:0;
+  bottom:0;
+  overflow:hidden;
+  border-bottom-left-radius:22px;
+  border-bottom-right-radius:22px;
+}
+html.kd #view-copilot .overlay .bar-actions{position:sticky;top:0;z-index:40;flex-shrink:0}
+html.kd .kd-grip{background:transparent}
+html.kd .kd-grip-n,html.kd .kd-grip-s{height:14px !important}
+html.kd .kd-grip-e,html.kd .kd-grip-w{width:14px !important}
+html.kd .kd-grip-ne,html.kd .kd-grip-nw,html.kd .kd-grip-se,html.kd .kd-grip-sw{width:22px !important;height:22px !important}
 #view-copilot .overlay .bar-actions .asking{
   margin-left:0;
   flex:0 0 auto;
