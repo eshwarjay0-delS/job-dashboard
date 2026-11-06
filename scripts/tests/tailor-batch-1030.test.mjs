@@ -35,11 +35,19 @@ const short = (changes = {}) => ({
   ats: { score: 100, passed: true, checks: [], issues: [] }, ...changes,
 })
 
-test("a complete 84.3% file with 100% supported coverage is delivered; legacy switches still refuse it", () => {
+test("a complete 84.3% file with 100% supported coverage is a clean pass; a 30.8% file is still sendable", () => {
   assert.equal(short().quality.status, "needs_review")
   assert.equal(on.acceptableWhatsAppResume(short()), true, on.whatsappResumeRejectionReasons(short()).join(","))
   assert.equal(on.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"), false)
   assert.equal(on.deliveredWithShortfall(short()), false)
+  assert.equal(on.whatsappRewriteUsable(short()), true)
+  const low = short({
+    coverage: 30.8, supported_coverage: 30.8,
+    quality: resumeQuality({ matched: 4, total: 13, missing: ["soc 2"], partial: false }),
+  })
+  assert.equal(on.acceptableWhatsAppResume(low), false)
+  assert.equal(on.whatsappRewriteUsable(low), true)
+  assert.equal(on.deliveredWithShortfall(low), true)
 })
 test("item 2: switch off or job-post terms switch off restores the 95% refusal", () => {
   assert.ok(off.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"))
@@ -61,7 +69,7 @@ test("item 2: 95% and above is unchanged", () => {
 test("item 2: the WhatsApp reply names the shortfall and a below-target file gets one fresh pass first", () => {
   const route = src("src/app/api/whatsapp/webhook/route.ts")
   assert.ok(route.includes("Below the 95% target ("))
-  assert.ok(route.includes("const firstRejected = !acceptableWhatsAppResume(result) || belowTarget(result)"))
+  assert.ok(route.includes("const firstRejected = !sendable(result) || belowTarget(result)"))
   assert.ok(route.includes("(fresh.coverage ?? 0) > (result.coverage ?? 0))) result = fresh"))
 })
 

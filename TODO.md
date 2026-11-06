@@ -1,3 +1,13 @@
+## 2026-11-06 — WhatsApp always sends a resume file
+
+No new screen. The chat change is on the WhatsApp resume run, on top of the 70% clean pass.
+
+**What changed.** A finished rewrite is sent even under 70 percent of the job post, and the caption names the terms still missing. Added job-post terms do not by themselves refuse the file. If the rewrite fails, times out, or is marked incomplete, the resume already named in "Updating your …" is sent unchanged, labelled as the closest match because the rewrite did not finish. Name, contact, date, and profile guards stay. Houston (eshwarjay05) and Saint Louis (jayeshwar44) are not mixed. A shortfall file is not saved as a new base resume. A complete draft from 70 percent through 94.9 percent with supported coverage at 95 percent is still a clean pass. The website tailor still holds under 95 percent.
+
+**Checked.** Focused WhatsApp and acceptance tests, including the three failsafe cases and the 70 percent clean pass. Not a live WhatsApp message. Not production until the pull request is merged and the deploy is READY.
+
+**Next.** Merge is not part of this change. After it lands, one live job under 70 percent should still receive a Word file.
+
 ## 2026-11-06 — System 3 branch now includes the WhatsApp tailor already on master
 
 No new screen and no new answer or resume behavior beyond keeping both sides. Pull request 229 (head 295c510a, based on 00594c59) could not use GitHub's update-branch API: 422, merge conflict, after master squash-merged pull request 228 as 986ecef7. This branch merges that master commit. The only conflicts were this file and `src/lib/plan-vision-journal.ts`. The Kompas retrieval files and the WhatsApp tailor files merged cleanly.
@@ -22,7 +32,7 @@ No new screen. WhatsApp intake now treats a new Word file or a readable PDF as t
 
 **Delivery band.** Supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is sent when the draft is otherwise complete (ATS, diff, no unverified terms, no role blockers). Under 70% is still held, including 28.5% and 0%. `TAILOR_DELIVER_WITH_SHORTFALL=0` and `JD_TERMS_ALWAYS_ON_SKILLS=0` restore the strict under-95% refusal. Unevidenced job-post terms are still not written onto the skills line.
 
-**Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. That WhatsApp change later landed on master as 986ecef7 (squash of pull request 228). This pull request is the System 3 update on top of that commit, and it is still not merged.
+**Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. The under-70% hold with no file is replaced by the failsafe entry above. That WhatsApp tailor later landed on master as 986ecef7 (squash of pull request 228). System 3 landed on master as 0bb575a0 (squash of pull request 229). This pull request is the resume failsafe on top of that, and it is still not merged.
 
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 

@@ -128,11 +128,14 @@ test('keywords: Java not matched inside JavaScript', () => {
 })
 
 // Guarded WhatsApp refine failures must never attribute a non-email mismatch to email.
+// A missing original still sends no file. An identity, contact, or date mismatch does not
+// send the rewritten bytes; it sends the already-chosen baseline and names that reason.
 test('WhatsApp refine: missing original and failed identity verification have distinct, accurate refusals', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
   assert.match(route, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\."\)/)
-  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*return sendText\(from, "The update failed identity\/contact\/date verification, so I stopped delivery\. No file was sent\."\)/)
+  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*await sendBaseline\("The rewrite did not keep your name, contact details and dates, so it was not sent\.", source, meta\)/)
   assert.doesNotMatch(route, /The update changed the resume.s contact email, so I stopped delivery/)
+  assert.doesNotMatch(route, /The update failed identity\/contact\/date verification, so I stopped delivery\. No file was sent\./)
 })
 
 test('resume identity: email-only mismatch logs category without exposing addresses', () => {
