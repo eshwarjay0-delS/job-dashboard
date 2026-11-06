@@ -17,6 +17,10 @@ The web dashboard and Kompas now renew on open, focus, visibility return and a 2
 
 This is a reliability boundary, not a promise that authentication can never expire. The server remains authoritative. Passing a 1,000-cycle policy test is not a three-day live soak, and a deployed web client is not a rebuilt Windows executable. Canonical native refresh-token rotation, installer publication and Windows sleep/network/multi-day acceptance remain separate until recorded with their own evidence.
 
+## Desktop session the website does not rotate — 6 November 2026
+
+The Windows app keeps its own refresh family at `POST /api/auth/desktop-session`. A website tab rotating the cookie session does not present that token. The family is treated as three days. From 24 hours before expiry, and still inside the last 10 hours, the shell mints the next family with the bearer it already holds. A failed renewal does not delete the stored session and does not open a sign-in window over a live Kompas session. Screen Answer prefers Windows Live Captions, then another window, then the screen. Computer audio remains the output-mix loopback. A remembered taskbar choice is not asked again. A normal launch does not request administrator rights. That is not a signed binary, and it is not a completed three-day Windows run.
+
 ## Desktop response focus — 20 October 2026
 
 Approved owner correction: reduce the crowded desktop controls and persistent setup information; make the response the dominant reading surface while preserving reliability. Default desktop-only Focus view uses an opaque answer surface, restrained typography and secondary controls behind Details. Start/Stop, AI Answer, mic/system audio, Chat, status and native window controls remain available. Enabled Auto and Follow Along remain visible. Details restores audience, captions, dossier progress and auxiliary controls. Focus can be switched off, with the preference saved; the ordinary web interface stays unchanged. No session/audio/answer handlers are replaced, no programmatic answer scrolling is introduced, and no Windows-wide dimming is claimed.

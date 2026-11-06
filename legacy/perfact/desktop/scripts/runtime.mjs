@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { asInvokerManifest } from "./execution-level.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const appDir = path.resolve(here, "..");
@@ -47,16 +48,15 @@ export async function stampExe(exe) {
     const icon = ResEdit.Data.IconFile.from(icoFromPng(fs.readFileSync(iconPng)));
     ResEdit.Resource.IconGroupEntry.replaceIconsForResource(res.entries, group ? group.id : 1, group ? group.lang : 1033, icon.icons.map(i => i.data));
   }
-  // Runs as administrator, like the ProcessSpoofer the owner showed (C:\CCT\ProcessSpoofer.exe, manifest
-  // level='highestAvailable'): on his admin account Windows shows the UAC run prompt on every launch (owner,
-  // 7 Oct 2026: "It basically would run as administrator as well. The processpoofer as well."). Electron ships
-  // asInvoker; rewrite that one word in the embedded manifest so the exe asks for the highest rights it can get.
+  // 6 Nov 2026: a normal launch must not ask for administrator rights. The earlier
+  // choice to request the highest rights the account can get is superseded.
+  // Electron's manifest stays asInvoker. This does not sign Kompas.exe, so an
+  // unknown-publisher SmartScreen prompt is unchanged.
   const RT_MANIFEST = 24;
   for (const e of res.entries) {
     if (e.type !== RT_MANIFEST || !e.bin) continue;
     const xml = Buffer.from(e.bin).toString("utf8");
-    if (!/requestedExecutionLevel/i.test(xml)) continue;
-    const next = xml.replace(/(<requestedExecutionLevel\s+level=")[^"]*(")/i, "$1highestAvailable$2");
+    const next = asInvokerManifest(xml);
     if (next !== xml) e.bin = Uint8Array.from(Buffer.from(next, "utf8")).buffer;
   }
   res.outputResource(image);

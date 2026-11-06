@@ -9,8 +9,8 @@ test("New self-hosted build and cache key agree so old Electron cannot silently 
  const cache=index.match(/src="app\.js\?v=([^"]+)"/)?.[1]
  assert.ok(build && cache)
  assert.equal(build,version.build)
- assert.equal(cache,"20261106-question-intake")
- assert.equal(build,"kompas-20261106-question-intake")
+ assert.equal(cache,"20261106-desktop-session")
+ assert.equal(build,"kompas-20261106-desktop-session")
  assert.equal(cache,build.replace(/^kompas-/,""))
  assert.ok(!build.includes("20261030"),"release stamp must advance after the answer changes")
 })

@@ -1,3 +1,15 @@
+## 2026-11-06 — Desktop 3-day session, captions first, remembered hide, asInvoker
+
+No new screen on the website. The Windows shell is what changed, plus the desktop-session response now includes `user_id`.
+
+**Already on master `21ba3028`.** Merged PR #227 is `POST /api/auth/desktop-session`. Merged PR #224 returns a short-lived bearer and does not copy Chrome's refresh token. Computer audio was already Electron `audio: "loopback"` on a screen source (the WASAPI output mix). Caption-once already required a uniquely named Live Captions window. Question intake from PR #233 was already on master.
+
+**What changed.** The shell opens and renews its own refresh family on that route. The clock is three days. From 24 hours before expiry, including the last 10 hours, it mints the next family without showing a sign-in window and without deleting the stored session on failure. Screen Answer prefers Live Captions, then another window, then the primary screen. Hide-from-taskbar can be remembered. The packaged manifest is rewritten to `asInvoker`. The exe was not signed.
+
+**Checked.** Offline only. The focused command listed in `docs/research/desktop-auth-continuity.md` was 246 pass and 0 fail. `tsc --noEmit --skipLibCheck` was clean. `PHRASE_FIXES` was not edited. Not a live Windows session, not a live Supabase login, and not a UAC observation on the laptop.
+
+**Next.** The pull request is the handoff. After it lands, a real Kompas.exe launch still has to stay signed in for the three-day window, capture Live Captions, and start without an administrator prompt.
+
 ## 2026-11-06 — Constructed JD is the tailor target
 
 No new screen. The change is in the resume tailor used by the website download and the WhatsApp send.

@@ -34,11 +34,13 @@ function createFamilies() {
     return credential(familyId, 0)
   }
   function credential(familyId, generation) {
+    const family = families.get(familyId)
     return {
       accessToken: familyId + '-a' + generation,
       refreshToken: familyId + '-r' + generation,
       expiresAt: 1_800_000_000 + generation,
       familyId,
+      userId: family?.userId || '',
     }
   }
   function refresh(token) {
@@ -102,6 +104,7 @@ describe('desktop session refresh family', { concurrency: 1 }, () => {
     assert.equal(opened.status, 200)
     assert.equal(opened.body.ok, true)
     assert.equal(opened.body.session, 'desktop')
+    assert.equal(opened.body.user_id, 'user-1')
     assert.equal(typeof opened.body.expires_at, 'number')
     assert.notEqual(opened.body.refresh_token, web.refreshToken)
     const desktopFamily = server.familyOf(opened.body.refresh_token)

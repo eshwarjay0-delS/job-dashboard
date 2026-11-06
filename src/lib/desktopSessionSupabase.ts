@@ -27,6 +27,7 @@ function issued(session: Session | null): DesktopCredential | null {
     refreshToken: session.refresh_token,
     expiresAt,
     familyId: session.user?.id || "desktop",
+    userId: session.user?.id || "",
   }
 }
 
