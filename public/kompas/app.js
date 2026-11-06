@@ -4000,6 +4000,84 @@ function lastAsk(lines) {
   const src = them.length ? them : lines;
   return String((src[src.length - 1] && src[src.length - 1].text) || "").replace(/\s+/g, " ").trim().slice(0, 600);
 }
+// Question windows (6 Nov 2026). Kept equal to src/lib/kompasQuestionWindow.ts.
+// Last 1 2 3 4, then Last 1 2 3, then Last 1 2, then Last 1. The longest
+// coherent tail wins. A fragment stays with the setup it needs. Unrelated
+// later questions are not glued into one mega-question.
+const QW_LABELS = { 1: "Last 1", 2: "Last 1 2", 3: "Last 1 2 3", 4: "Last 1 2 3 4" };
+const QW_NOISE = /^(?:ok(?:ay)?|yeah|yep|yes|no|right|thanks|thank you|uh+|um+|hmm+|sure|great|perfect|cool|got it|alright|all right|sounds good)[.!?]*$/i;
+const QW_ASK = /^(?:(?:ok(?:ay)?|alright|all right|so|and|also|but|now|then|well|right|yeah|yes|um+|uh+|please)[, ]+)*(?:what|which|who|why|how|where|when|can you|could you|would you|will you|do you|did you|have you|are you|is there|tell me|describe|explain|give me|walk me|talk me|show me|share)\b/i;
+const QW_FACET = /^(?:specifically|especially|particularly|including|namely|in particular|more on|focusing on|starting with)\b/i;
+const QW_PREFACE = /^(?:we(?:'ve| have| use| follow| manage| need| can| want| finished)|i(?:'m| am| appreciate| liked| work)|our|the (?:team|ceo|first)|there (?:are|is)|you (?:cannot|can't|must|have|should|will|need|know)|no |only the|within the|a change must|the remediation must|thanks for)\b/i;
+const QW_PIVOT = /(?:[;,]\s*|\b(?:so|then|now)\s*,?\s*|\b(?:my|the) (?:real |next )?question is\s*)(?=(?:what|which|who|why|how|when|can|could|would|do|have|tell me|describe|explain|give me|walk me through)\b)/gi;
+const QW_STOP = new Set("about after again also been before being could does doing from have here into just like more most much only other over same some such than that their them then there these they this those through very what when where which while will with would your yours explain describe tell walk specifically especially particularly including namely change differently communicated handle handled next else about your you plan time".split(" "));
+const QW_PROPER = new Set("what how why when where which who tell walk have has can could would will did does are the and but for you your yeah okay right great thanks this that those these specifically especially and give show share describe explain me".split(" "));
+function qwClean(value) {
+  return String(value || "").replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim();
+}
+function qwSentences(value) {
+  const hidden = qwClean(value).replace(/\bU\.S\.(?=\s)/gi, "U\u0001S\u0001").replace(/\bU\.K\.(?=\s)/gi, "U\u0001K\u0001");
+  return hidden.split(/(?<=[?!.])\s+(?=[A-Z]|(?:[Ss]o|[Ww]hat|[Hh]ow|[Ww]hich|[Ww]hy|[Tt]ell|[Aa]nd|[Nn]ow|[Ss]pecifically)\b)/).map((s) => s.replace(/\u0001/g, ".").trim()).filter(Boolean);
+}
+function qwWords(value) { return String(value || "").toLowerCase().replace(/[^a-z0-9+# ]+/g, " ").split(/\s+/).filter(Boolean); }
+function qwContent(value) { return qwWords(value).filter((w) => w.length >= 4 && !QW_STOP.has(w)); }
+function qwProper(value) { return (String(value || "").match(/\b[A-Z][A-Za-z0-9+#.-]{2,}\b/g) || []).map((w) => w.toLowerCase()).filter((w) => !QW_PROPER.has(w)); }
+function qwHead(value) { const m = String(value || "").match(/^(?:(?:and|but|so)\s+)?what (?:is|are)\s+(?:an?|the\s+)?([a-z0-9][\w+#.-]*)/i); return m ? m[1].toLowerCase() : ""; }
+function qwAsk(value) { const t = String(value || "").trim(); if (!t || QW_NOISE.test(t)) return false; if (QW_ASK.test(t) || QW_FACET.test(t)) return true; return /\?\s*$/.test(t) && !/^(?:right|okay|yeah|you know)\??$/i.test(t); }
+function qwEmbedded(sentence) { QW_PIVOT.lastIndex = 0; const parts = Array.from(String(sentence || "").matchAll(QW_PIVOT)); if (!parts.length) return sentence; const m = parts[parts.length - 1]; const after = sentence.slice((m.index || 0) + m[0].length).trim(); return after || sentence; }
+function qwPiece(sentence) {
+  const s = String(sentence || "").trim();
+  if (!s || QW_NOISE.test(s)) return null;
+  if (QW_FACET.test(s) || QW_ASK.test(s)) return s;
+  if (QW_PREFACE.test(s)) { const embedded = qwEmbedded(s); if (embedded !== s && qwAsk(embedded)) return embedded; return null; }
+  return qwAsk(s) ? s : null;
+}
+function questionPieces(heard) { const out = []; for (const sentence of qwSentences(heard)) { const piece = qwPiece(sentence); if (piece) out.push(piece); } return out; }
+function qwOwnNoun(value) { return qwContent(value).length > 0; }
+function dependentQuestionPiece(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (QW_FACET.test(raw)) return true;
+  if (/^(?:and|but)\s+what (?:is|are)\b/i.test(raw) && qwHead(raw)) return false;
+  if (/^(?:and|but)\b/i.test(raw)) return true;
+  const t = raw.replace(/^(?:(?:and|but|so|then|now|well)[, ]+)/i, "");
+  if (/^(?:what|how|why)\b/i.test(t) && qwWords(t).length <= 6 && !qwOwnNoun(t)) return true;
+  if (/\b(?:it|that|this|them|those)\b/i.test(t) && qwWords(t).length <= 12 && !/^what (?:is|are)\b/i.test(t)) return true;
+  return false;
+}
+function qwLogistics(value) { return /\b(?:where (?:do|are) you|visa|salary|notice period|relocat|address|work authorization|citizen|green card|h-?1b)\b/i.test(value); }
+function qwParallel(value) { return /^(?:(?:and|but|so)\s+)?(?:how|what|why|when|where)\b/i.test(String(value || "").trim()); }
+function questionPieceContinues(prevSpan, next) {
+  if (!next || !prevSpan.length) return false;
+  if (dependentQuestionPiece(next)) { const head = qwHead(next); if (head && !prevSpan.join(" ").toLowerCase().includes(head)) return false; return true; }
+  const prevHead = qwHead(prevSpan[prevSpan.length - 1] || "");
+  const nextHead = qwHead(next);
+  if (prevHead && nextHead && prevHead !== nextHead) return false;
+  if (qwLogistics(next) && !prevSpan.some(qwLogistics)) return false;
+  if (/\bwhat (?:is|are)\b/i.test(next) && !prevSpan.some((p) => /\bwhat (?:is|are)\b/i.test(p))) { const bag = new Set(qwContent(prevSpan.join(" "))); if (!qwContent(next).some((w) => bag.has(w))) return false; }
+  if (qwParallel(next) && prevSpan.some(qwParallel)) { const prevProper = new Set(prevSpan.flatMap(qwProper)); const fresh = qwProper(next).filter((n) => !prevProper.has(n)); if (fresh.length && !/\b(?:it|that|this|them|those|the same)\b/i.test(next)) return false; return true; }
+  const bag = new Set(qwContent(prevSpan.join(" ")));
+  return qwContent(next).filter((w) => bag.has(w)).length >= 1;
+}
+function questionWindowCoherent(parts) { if (parts.length <= 1) return true; for (let i = 1; i < parts.length; i++) if (!questionPieceContinues(parts.slice(0, i), parts[i])) return false; return true; }
+function qwJoin(parts) { let out = ""; for (const part of parts) { const piece = String(part || "").trim(); if (!piece) continue; if (!out) { out = piece; continue; } out += (/[.?!]["']?$/.test(out) ? " " : ". ") + piece; } return out.replace(/\s+/g, " ").trim(); }
+function selectQuestionWindow(pieces) {
+  const recent = (Array.isArray(pieces) ? pieces : []).map((p) => String(p || "").trim()).filter(Boolean).slice(-4);
+  if (!recent.length) return { text: "", span: 1, label: "Last 1" };
+  for (let size = recent.length; size >= 1; size--) {
+    const window = recent.slice(-size);
+    if (size === 1 || questionWindowCoherent(window)) return { text: qwJoin(window), span: size, label: QW_LABELS[size] };
+  }
+  return { text: recent[recent.length - 1], span: 1, label: "Last 1" };
+}
+function assembleQuestionWindow(heard) { return selectQuestionWindow(questionPieces(heard)); }
+function mergeQuestionSpans(spans) {
+  const list = (Array.isArray(spans) ? spans : []).map((s) => String(s || "").trim()).filter(Boolean);
+  if (list.length < 2) return list;
+  const selected = selectQuestionWindow(list.slice(-4));
+  if (selected.span <= 1) return list;
+  return list.slice(0, list.length - selected.span).concat([selected.text]);
+}
 // ── Question intake ────────────────────────────────────────────────────
 // Owner, 2026-10-21: the question that gets answered is a CONCATENATION of
 // every source — the typed box, the computer audio (Them) and the mic —
@@ -5006,8 +5084,23 @@ function frameHeardQuestion(chunks, opts = {}) {
     start--;
   }
   const parts = rows.slice(start, end + 1).map((r) => r.text);
+  // The frame gathered the latest chunks. The window then keeps the longest
+  // coherent tail: Last 1 2 3 4, then Last 1 2 3, then Last 1 2, then Last 1.
+  // A replay that slices only this function still has the framed question.
+  let chosen = parts;
+  let chosenSeq = rows[start].seq;
+  if (typeof selectQuestionWindow === "function" && parts.length > 1) {
+    try {
+      const pick = selectQuestionWindow(parts);
+      if (pick && pick.text && pick.span > 0 && pick.span <= parts.length) {
+        const drop = parts.length - pick.span;
+        chosen = parts.slice(drop);
+        chosenSeq = rows[start + drop].seq;
+      }
+    } catch { /* the framed parts still stand */ }
+  }
   let joined = "";
-  for (const bit of parts) {
+  for (const bit of chosen) {
     if (!joined) joined = bit;
     else joined = joined.replace(/[,:\s]+$/, "") + " " + bit;
   }
@@ -5024,7 +5117,7 @@ function frameHeardQuestion(chunks, opts = {}) {
     if (typeof personalLogistics === "function" && personalLogistics(x)) return true;
     return /\b(?:salary|compensation|visa status|sponsorship|h-?1b|willing to relocate|open to relocation|your address|where do you live|notice period)\b/i.test(x);
   };
-  if (logistics(bare) || logistics(t)) return { question: "", skip: "logistics", parts };
+  if (logistics(bare) || logistics(t)) return { question: "", skip: "logistics", parts: chosen };
   const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
   let question = "";
   if (/^(?:intro(?:duction)?|introduce(?: yourself)?)$/i.test(bare)) question = "Tell me about yourself.";
@@ -5042,8 +5135,8 @@ function frameHeardQuestion(chunks, opts = {}) {
     else question = cap(bare);
   }
   question = String(question || "").replace(/\s+/g, " ").replace(/\?\?+$/g, "?").trim();
-  if (!question) return { question: "", skip: "noise", parts };
-  return { question, skip: "", parts, seq: rows[start].seq };
+  if (!question) return { question: "", skip: "noise", parts: chosen };
+  return { question, skip: "", parts: chosen, seq: chosenSeq };
 }
 // Live press decision (session 4): merge back-to-back interviewer asks, keep the
 // outstanding interviewer ask on a candidate/Them turn, and hold at
@@ -5428,7 +5521,7 @@ async function aiAnswer(fromAuto, options = {}) {
       const heardOnly = !typedText;
       // Typed words are the question, and two questions in the box are two asks.
       // A design followed by an explanation stays one. The microphone uses the same cut.
-      const spans = splitDistinctAsks(heardOnly ? (intake.derived || said || "") : (typedText || said || ""));
+      const spans = mergeQuestionSpans(splitDistinctAsks(heardOnly ? (intake.derived || said || "") : (typedText || said || "")));
       // Merge with slice 3: a typed "And why? …" after an answer keeps its subject on the first card.
       if (!heardOnly && followTyped && spans.length > 1) spans[0] = typedFollowUpQuestion(spans[0], cur.question) || spans[0];
       if (spans.length > 1) {

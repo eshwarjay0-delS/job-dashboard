@@ -11,6 +11,7 @@ import { downloadMedia } from "@/lib/whatsapp"
 import { sharedKompasStore } from "@/lib/kompas-session-store"
 import { sharedKompasTurn } from "@/lib/kompas-shared-turn"
 import { splitDistinctAsks } from "@/lib/kompasAnswer"
+import { mergeQuestionSpans } from "@/lib/kompasQuestionWindow"
 import { classifyKompasPastedSource, kompasTransition, type KompasInput } from "@/lib/whatsapp-kompas"
 
 type Message = Record<string, unknown>
@@ -256,7 +257,7 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
     if (transitioned.action === "answer" && transitioned.question) {
       // The microphone already answers each question in one breath. A WhatsApp
       // message used to send both to one turn, so the second ask was lost.
-      const asks = splitDistinctAsks(transitioned.question)
+      const asks = mergeQuestionSpans(splitDistinctAsks(transitioned.question))
       const questions = asks.length ? asks : [transitioned.question]
       let revision = original.revision
       for (let i = 0; i < questions.length; i++) {
