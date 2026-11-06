@@ -909,9 +909,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   const tailorWithin = (opts: Parameters<typeof runTailor>[0]) => {
     const limit = Math.max(1000, Math.min(opts.maxMs || maxMs, maxMs))
     // The plan is two pre-edit passes, the constructed JD, the in-place rewrite, and one extra
-    // pass when coverage is not above 95. Export can finish a few seconds after the model
-    // deadline. A result that arrives in that window is the file to send, not the original.
+    // pass when coverage is not above 95. On a full WhatsApp budget, export can finish a few
+    // seconds after the model deadline, and that file is the one to send. A hung call, or a
+    // budget too short to hold that export, rejects at the deadline so the chat is told the
+    // rewrite ran out of time instead of sitting on "still waiting".
     const work = runTailor({ ...opts, maxMs: limit })
+    const graceMs = limit >= 20_000 ? 8000 : 0
     return new Promise<TailorResult>((resolve, reject) => {
       let settled = false
       const finish = (fn: () => void) => {
@@ -920,7 +923,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
         fn()
       }
       const timer = setTimeout(() => {
-        const grace = setTimeout(() => finish(() => reject(new Error("Tailoring timed out"))), 8000)
+        const grace = setTimeout(() => finish(() => reject(new Error("Tailoring timed out"))), graceMs)
         work.then(
           value => { clearTimeout(grace); finish(() => resolve(value)) },
           error => { clearTimeout(grace); finish(() => reject(error)) },
