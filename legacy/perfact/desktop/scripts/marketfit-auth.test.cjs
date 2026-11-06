@@ -254,7 +254,8 @@ test("canonical Windows handoff retains the account-scoped session until validat
   assert.match(main, /deliverSession\(\)/);
   assert.match(main, /server-attested/);
   assert.match(main, /for \(const key of \["token", "refreshToken", "tokenExp", "access_token", "refresh_token", "ownerId"\]\) delete verified\[key\]/);
-  assert.match(main, /if \(desktopAuth\.hasSession\(\)\) return;/);
+  assert.match(main, /if \(desktopAuth\.hasSession\(\)\) return hideHandoff\(\);/);
+  assert.equal(main.includes("desktopAuth.clear("), false);
 });
 
 test("native take-session IPC and webContents delivery share the same owner gate", () => {

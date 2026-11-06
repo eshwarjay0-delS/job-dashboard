@@ -18,6 +18,18 @@ No new screen. The answer path consults an explicit table after retrieval and be
 
 **Next.** Leave the pull request open. A live answer is still unverified.
 
+## 2026-11-06 — Chrome handoff continues in the open Kompas window
+
+The sign-in card is the same one from the Nov 6 screenshot. It is shown only when this computer has no stored desktop session.
+
+**What failed.** The Nov 6 shell opened Chrome with `?state=` and then waited on `marketfit-kompas://auth`. That relaunch does not continue the window already open, so the card stayed up. The page note was the short string `Opening Kompas…`, which is the leftover `Openir` on the screenshot. The state nonce was not supposed to be painted. A stored session was not the thing being cleared. `safeAuthNext` kept only `state`, so a `127.0.0.1` return could not survive Google.
+
+**What changed.** The shell listens on `http://127.0.0.1:<port>/cb` and opens Chrome with that address and `handoff=start`. Chrome posts the bearer back to this window. Google sign-in keeps the loopback and `handoff=start` and still drops every other query. The card is the full title, the full body, and Open Chrome again. There is no separate Opening label and the state is not written on the card. A failed callback does not clear a stored session. Success removes the card and the window continues. A session that is already stored never shows the card.
+
+**Checked.** Offline. Desktop `npm run check`: 42 pass, 0 fail, protocol self-test passed. Sign-in state and auth-gate: 19 pass, 0 fail. `tsc --noEmit --skipLibCheck` clean. ESLint 0 errors on the two edited TypeScript files. `PHRASE_FIXES` was not edited. Not a live click on the laptop. Not a new `Kompas.exe`. Not production until this pull request is merged and a later Windows build is installed.
+
+**Next.** Leave the pull request open. The installed Nov 6 exe keeps the old opener until that later build.
+
 ## 2026-11-06 — A finished WhatsApp rewrite was held by a false ATS miss
 
 No new screen. The WhatsApp send path and the exported-document ATS check changed.

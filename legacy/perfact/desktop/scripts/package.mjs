@@ -29,7 +29,7 @@ const out = await build({
     productName: "Kompas",
     executableName: "Kompas",
     directories: { output: "dist" },
-    files: ["main.js", "marketfit-auth.cjs", "desktop-handoff.cjs", "desktop-update.cjs", "preload.js", "panel.css", "picker.html", "picker.js", "picker-preload.js", "icon-256.png", "package.json",
+    files: ["main.js", "marketfit-auth.cjs", "chrome-handoff.cjs", "desktop-handoff.cjs", "desktop-update.cjs", "preload.js", "panel.css", "picker.html", "picker.js", "picker-preload.js", "icon-256.png", "package.json",
       { from: ".stage/copilot", to: "copilot", filter: COPILOT_FILES }],
     asar: true,
     npmRebuild: false,

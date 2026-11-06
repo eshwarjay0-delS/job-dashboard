@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("kompasDesktop", {
   captureScreen: () => ipcRenderer.invoke("kompas:capture-screen"),
   refreshAuth: (reason) => ipcRenderer.invoke("kompas:refresh-auth", reason === "rejected" ? "rejected" : ""),
   openSignIn: () => ipcRenderer.send("kompas:open-signin"),
+  retryChromeSignIn: () => ipcRenderer.send("kompas:retry-chrome"),
   onAuthReady: fn => { if (typeof fn === "function") ipcRenderer.on("kompas:auth-ready", () => fn()); },
   setScreen: (name) => { screenName = String(name); ipcRenderer.send("kompas:screen", screenName); paintScreen(); },
   setLive: (on) => ipcRenderer.send("kompas:live", !!on),

@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — Chrome handoff returns to the open Kompas window
+
+The Nov 6 exe opened Chrome with a state and then waited on a protocol relaunch. The already-open window stayed on the sign-in card, with the short Opening note left as `Openir`. A stored session is still not shown that card and is not cleared. The first launch with no session now listens on `127.0.0.1` and continues when Chrome returns the bearer. Open Chrome again retries. Offline: desktop check 42 pass, 0 fail; sign-in and auth-gate 19 pass, 0 fail; `tsc --noEmit --skipLibCheck` clean. Not a live laptop click-through. Not merged. The installed exe does not change until a later Windows build.
+
 ## 6 November 2026 — Kompas route table before generation
 
 A pull request adds `src/lib/kompasJevRoute.ts` in front of the answer model call. Question class plus the existing retrieval coverage choose go, confirm, or stop. Personal logistics still returns before the key read. An experience story with middling coverage confirms on the existing answer card and does not fetch a model. A lexical miss still generates. No TypeSafe Jev. Offline: the new suite and the related logistics, grounding, System 3, speed, source, and relevance suites passed 224 and failed 0. `tsc --noEmit` was clean. Not merged. Not a live model, WhatsApp, or desktop session. Not deployed.

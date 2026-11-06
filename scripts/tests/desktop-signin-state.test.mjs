@@ -15,7 +15,7 @@ const STATE = 'Zm9yIGEgdGVzdCBvbmx5IC0gbm90IGEgcmVhbCBzdGF0ZQ' // 46 base64url c
 
 async function visit(search, session = { access_token: 'aaa.bbb.ccc', refresh_token: 'r', expires_at: 9 }) {
   const went = []
-  const window = { location: { search, assign: url => went.push(url), set href(url) { went.push(url) } } }
+  const window = { location: { search, assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
   const context = vm.createContext({ window, document: { cookie: 'sb-x-auth-token=' + 'v'.repeat(30) }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
     createClient: () => ({ auth: { getSession: async () => ({ data: { session } }) } }) })
   vm.runInContext(helpers + '\n' + effect, context)
@@ -128,10 +128,24 @@ test('the desktop handoff launches exactly once, with no hidden protocol retries
 
 test('native desktop never launches another automatic Chrome login on reconnect', () => {
   const native = readFileSync(new URL('../../legacy/perfact/desktop/main.js', import.meta.url), 'utf8')
+  const handoff = readFileSync(new URL('../../legacy/perfact/desktop/chrome-handoff.cjs', import.meta.url), 'utf8')
   assert.match(native, /let chromeSignInAttempted = false/)
   assert.match(native, /if \(desktopAuth\.hasSession\(\)\) return/)
-  assert.match(native, /if \(!interactive && chromeSignInAttempted\) return/)
   assert.match(native, /chromeSignInAttempted = true/)
   assert.match(native, /beginChromeSignIn\(\{ interactive: true \}\)/)
+  assert.match(handoff, /if \(!interactive && alreadyAttempted\) return \{ show: true, openChrome: false/)
   assert.doesNotMatch(native, /Date\.now\(\) - lastChromeSignIn < 8000/)
+  assert.equal(native.includes('desktopAuth.clear('), false)
+})
+
+test('a first Chrome handoff keeps the loopback through Google sign-in', async () => {
+  const loop = 'http://127.0.0.1:17321/cb'
+  const login = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start', null)
+  const next = new URL(login, 'https://marketfit.test').searchParams.get('next')
+  assert.equal(safeAuthNext(next), '/auth/desktop?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start')
+  const back = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start')
+  const returned = new URL(back)
+  assert.equal(returned.origin + returned.pathname, loop)
+  assert.equal(returned.searchParams.get('state'), STATE)
+  assert.equal(JSON.parse(Buffer.from(returned.searchParams.get('d'), 'base64url').toString()).refresh_token, undefined)
 })

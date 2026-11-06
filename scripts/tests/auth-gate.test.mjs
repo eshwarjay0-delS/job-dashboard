@@ -39,6 +39,9 @@ test('a signed-in user on the sign-in page keeps the desktop handoff state', () 
   assert.equal(authGateRedirect('/login', '', '/auth/desktop?state=' + STATE, true), '/auth/desktop?state=' + STATE)
   assert.equal(authGateRedirect('/login', '', '/auth/desktop', true), '/auth/desktop')
   assert.equal(authGateRedirect('/login', '', '/auth/desktop?state=short', true), '/auth/desktop')
+  const loop = 'http://127.0.0.1:17321/cb'
+  const next = '/auth/desktop?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start&next=https://evil.example'
+  assert.equal(authGateRedirect('/login', '', next, true), '/auth/desktop?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start')
 })
 
 test('a signed-in user on the sign-in page never leaves the site through next', () => {
