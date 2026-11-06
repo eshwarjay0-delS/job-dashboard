@@ -23,6 +23,7 @@ import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestio
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
+import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
@@ -753,6 +754,29 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }, { headers: NO_STORE })
 }
 
+/** Confirm and evidence-stop use the card the page already has. No new chrome, no generation call. */
+function routeDecisionResponse(stream: boolean, lane: JevRoute): Response | NextResponse {
+  if (lane.action === "confirm") {
+    if (stream) {
+      const body = `data: ${JSON.stringify({ type: "meta", route: lane })}\n\ndata: ${JSON.stringify({ type: "replace", text: CONFIRM_LINE })}\n\ndata: ${JSON.stringify({ type: "done", route: lane, text: CONFIRM_LINE })}\n\n`
+      return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+    }
+    return NextResponse.json({
+      text: CONFIRM_LINE,
+      polished: false,
+      degraded: false,
+      route: lane,
+      meta: { engine: "marketfit", provider: "code", model: "" },
+    }, { headers: NO_STORE })
+  }
+  const skipped = lane.reason === "out-of-lane" ? "logistics" : "evidence"
+  if (stream) {
+    const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true, skipped, route: lane })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true, skipped, route: lane })}\n\n`
+    return new Response(quiet, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+  }
+  return NextResponse.json({ noQuestion: true, skipped, route: lane }, { headers: NO_STORE })
+}
+
 /** Internal entry point: callers must verify the channel identity before invoking. */
 export async function answerForVerifiedUser(request: NextRequest, user: { id: string }) {
   const startedAt = Date.now()
@@ -1024,6 +1048,17 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // Behavior 8 (r2): passages the last two answers already used are demoted unless the ask goes back to them.
   const recentAnswers = historyArr.slice(-2).map((h: unknown) => (h && typeof h === "object" ? String((h as Record<string, unknown>).a ?? (h as Record<string, unknown>).answer ?? "") : "")).filter(Boolean)
   const sourceRetrieval = retrievePassages(question, groundingDocs, answerPassageCount(), { recent: recentAnswers })
+  // Route before any generation call. Logistics already returned above. Depth and audience
+  // stay the values this turn already picked; the table only chooses go, confirm, or stop.
+  const lane = routeAnswer({
+    question,
+    questionClass: focus.intent,
+    retrieval: sourceRetrieval,
+    confirmSurface: true,
+    outOfLane: false,
+    audience: level,
+  })
+  if (lane.action !== "go") return routeDecisionResponse(body.stream === true, lane)
   // r5: a false interviewer premise about the candidate is named so the model corrects it instead of accepting it
   const sourceBlock = [sourcePassagesPrompt(sourceRetrieval), premisePrompt(question, groundingDocs)].filter(Boolean).join("\n")
   // Two independent, bounded server-side retrieval lanes: active source-pair

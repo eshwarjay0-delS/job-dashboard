@@ -1,3 +1,13 @@
+## 2026-11-06 — Route table before Kompas answer generation
+
+No new screen. The answer path consults an explicit table after retrieval and before the model call.
+
+**What changed.** `src/lib/kompasJevRoute.ts` maps question class and retrieval confidence to go, confirm, or stop. Personal logistics still stops before the key read and before a model fetch. An experience story that only partly clears the existing coverage gate confirms with the line the product already speaks, `I would want to confirm that`, on the answer card that already exists, and does not call the model. A full match generates as before. A lexical miss still generates, because that is the existing not-in-sources answer and a zero score is not an empty resume. Other classes generate. Depth and audience are the reads this path already made. No TypeSafe Jev, no new vendor, no new card. Dictation repairs, the resume tailor, desktop sign-in, and the three profiles were not edited.
+
+**Checked.** Offline. The new suite plus logistics, grounding (including the 30-fold), System 3 retrieval, speed r6, source retrieval, and relevance recovery: 224 pass, 0 fail. `tsc --noEmit` clean. ESLint clean on the two edited TypeScript files. Not a live model. Not a Windows session. Not production until this pull request is merged.
+
+**Next.** Leave the pull request open. A live answer is still unverified.
+
 ## 2026-11-06 — A finished WhatsApp rewrite was held by a false ATS miss
 
 No new screen. The WhatsApp send path and the exported-document ATS check changed.
