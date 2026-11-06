@@ -57,8 +57,47 @@ test('missing phone fails contact only', () => {
 })
 
 test('missing name fails name only', () => {
-  const r = atsCheck(BASE_TEXT, zones({ header: { idx: 0, name: '', title: '', tagline: '' } }))
+  const text = BASE_TEXT.replace('Eshwar Janjirala\n', '')
+  const r = atsCheck(text, zones({ header: { idx: 0, name: '', title: '', tagline: '' } }))
   assert.deepEqual(r.issues.map(i => i.split(':')[0]), ['name'])
+})
+
+test('a drawing id glued to the name still counts', () => {
+  const text = BASE_TEXT.replace('Eshwar Janjirala', '438150356870Eshwar Janjirala')
+  const r = atsCheck(text, zones({ header: { idx: 0, name: '', title: '', tagline: '' } }))
+  assert.equal(r.checks.find(c => c.id === 'name').passed, true)
+  assert.equal(r.passed, true, r.issues.join('; '))
+})
+
+test('a name on the contact line passes when the header zone missed it', () => {
+  const r = atsCheck(BASE_TEXT, zones({ header: { idx: 0, name: '', title: 'Security Engineer', tagline: '' } }))
+  assert.equal(r.checks.find(c => c.id === 'name').passed, true)
+  assert.equal(r.passed, true)
+})
+
+test('a Projects section bucket is not an undated employment row', () => {
+  const z = zones()
+  z.roles = [
+    ...z.roles,
+    { role: 'Projects', bullets: [{ idx: 12, text: '• SailPoint certification campaign.' }] },
+  ]
+  const r = atsCheck(BASE_TEXT, z)
+  assert.equal(r.checks.find(c => c.id === 'roles_have_dates').passed, true)
+  assert.equal(r.passed, true, r.issues.join('; '))
+})
+
+test('glued months and till-date endings are employment dates', () => {
+  const z = zones()
+  z.roles = [
+    { role: 'Client: Paypal, Boston, MAFeb 2021 – Till date', bullets: [{ idx: 1, text: 'x' }] },
+    { role: 'Data and Generative AI EngineerSept 2023 to Present', bullets: [{ idx: 2, text: 'y' }] },
+  ]
+  assert.equal(atsCheck(BASE_TEXT, z).checks.find(c => c.id === 'roles_have_dates').passed, true)
+})
+
+test('a dotted or en-dash phone still parses', () => {
+  assert.equal(atsCheck(BASE_TEXT.replace('314-255-9156', '314.255.9156'), zones()).checks.find(c => c.id === 'contact').passed, true)
+  assert.equal(atsCheck(BASE_TEXT.replace('314-255-9156', '314\u2013255\u20139156'), zones()).checks.find(c => c.id === 'contact').passed, true)
 })
 
 test('no skills lines fails skills_section only', () => {

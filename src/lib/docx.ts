@@ -121,10 +121,16 @@ type Section = "summary" | "skills" | "experience" | "projects" | "other"
 function sectionHead(t: string, p: string): Section | null {
   if (t.length > 45) return null
   if (/<w:numPr\b/.test(p) || BULLET_RE.test(t)) return null // a bullet is never a heading
-  // "Languages: Java, SQL" is a line of a skills section, not the start of a Languages section: a heading with items
-  // after its colon is content. Read as a heading, it ended the skills section and the tailor could place nothing
-  // after it (26 Oct 2026 review).
+  // "Languages: Java, SQL" is a skills line, not a Languages section (26 Oct 2026).
+  // "Backend Languages:" is the same kind of category: the label is not itself a
+  // section title. "Experience:" and "Technical Skills:" still are.
   if (/^[^:]{2,40}:\s*\S{2,}/.test(t.trim())) return null
+  const bare = t.trim().match(/^([^:]{2,40}):\s*$/)
+  if (bare) {
+    const label = bare[1].trim().toLowerCase()
+    const known = [...SUMMARY_HEADS, ...SKILLS_HEADS, ...PROJECT_HEADS, ...EXPERIENCE_HEADS, ...OTHER_HEADS]
+    if (!known.some(h => label === h)) return null
+  }
   const low = t.toLowerCase()
   if (matchesHead(low, SUMMARY_HEADS)) return "summary"
   if (matchesHead(low, SKILLS_HEADS)) return "skills"
