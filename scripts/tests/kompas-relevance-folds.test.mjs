@@ -166,13 +166,17 @@ test("two design questions leave the shared architect closing lines", () => {
   const left = draftSpokenAnswer(door, "architect", RESUME)
   const right = draftSpokenAnswer(tenant, "architect", RESUME)
   assert.match(left, /Front Door/)
+  assert.match(left, /apim/i)
   assert.match(right, /tenant isolation/)
+  assert.match(right, /cache/i)
+  assert.equal(left.includes("data flow"), false)
+  assert.equal(right.includes("data flow"), false)
   assert.equal(left.includes("The boundary I watch"), false)
   assert.equal(right.includes("The boundary I watch"), false)
   assert.ok(wordCount(left) < 277, String(wordCount(left)))
   assert.ok(wordCount(right) < 281, String(wordCount(right)))
   const ratio = sameAnswerRatio(left, right)
-  assert.ok(ratio < 0.85, String(ratio))
+  assert.ok(ratio < 0.7, String(ratio))
 })
 
 test("a director comparison does not reuse unrelated resume lines", () => {
