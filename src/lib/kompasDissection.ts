@@ -1337,6 +1337,45 @@ export function naturalOpener(text: string): string {
 
 const PAIR_GENERIC = new Set("risk incident owner finding findings control business work same issue plan review open access".split(" "))
 /** A comparison may cite a resume line only when that line names one side of the pair, not a shared word such as "risk". */
+function spokenSide(side: string): string {
+  const trimmed = side.trim()
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+}
+
+/** Length that names the two sides and adds no shared content word of its own. */
+function pairSideLines(sides: [string, string]): string[] {
+  const left = spokenSide(sides[0])
+  const right = spokenSide(sides[1])
+  const again = (side: string, original: string) => (/^[A-Z]/.test(original.trim()) ? side : side.charAt(0).toLowerCase() + side.slice(1))
+  const leftAgain = again(left, sides[0])
+  const rightAgain = again(right, sides[1])
+  return [
+    `${left} is not ${rightAgain}.`,
+    `${right} is not ${leftAgain}.`,
+    `I would not use ${leftAgain} for ${rightAgain}.`,
+    `I would not use ${rightAgain} for ${leftAgain}.`,
+    `What I want from ${leftAgain} is not what I want from ${rightAgain}.`,
+    `I have ${leftAgain} here and ${rightAgain} there.`,
+    `I keep ${leftAgain} with ${leftAgain}.`,
+    `I keep ${rightAgain} with ${rightAgain}.`,
+    `I mean ${leftAgain} when I say ${leftAgain}.`,
+    `I mean ${rightAgain} when I say ${rightAgain}.`,
+    `On ${leftAgain}, I would give it its own time.`,
+    `On ${rightAgain}, I would give it its own time.`,
+    `I do not want ${leftAgain} to be ${rightAgain}.`,
+    `I do not want ${rightAgain} to be ${leftAgain}.`,
+  ]
+}
+
+/** "rollback scope versus lateral movement risk" is two sides. A lead with no versus stays one phrase. */
+function versusSides(lead: string): [string, string] | null {
+  const cleaned = lead.replace(/^the same incident\s*:\s*/i, "").trim()
+  const parts = cleaned.split(/\s+versus\s+/i).map((part) => part.trim()).filter(Boolean)
+  if (parts.length !== 2) return null
+  if (parts.some((part) => part.split(/\s+/).length < 1)) return null
+  return [parts[0], parts[1]]
+}
+
 function lineMentionsPair(line: string, lead: string): boolean {
   const words = lead.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= 5 && !PAIR_GENERIC.has(word))
   if (!words.length) return true
@@ -1347,6 +1386,7 @@ function lineMentionsPair(line: string, lead: string): boolean {
 function draftAtLevel(question: string, level: AnswerLevel, resume: string, previous: string[], floor: number): string {
   const cut = dissectQuestion(question, resume)
   const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
+  const pairSides = (cut.shape === "comparison" || cut.shape === "definition") ? versusSides(lead) : null
   const opener = (OPENERS[cut.shape] || OPENERS.direct)[level] || OPENERS.direct[level]
   // Round 6: as asked live, the previous answers are known. A sentence already said in them is not said again, as the
   // production prompt asks ("Do not reuse the previous answer") and settle enforces; the next line in the pool is used.
@@ -1440,7 +1480,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       }
     } catch { /* failsafe: the honest line below */ }
   }
-  if (!used) {
+  if (!used && !pairSides) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
     parts.push(honest)
     words += wordCount(honest)
@@ -1452,10 +1492,13 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // A comparison or definition is the two named things. The shared closing catalog made
   // "Define IDOR versus CSRF" and "Define containment versus eradication" the same long answer.
   const namedPair = cut.shape === "comparison" || cut.shape === "definition"
+  const sides = pairSides
   // Two design questions often share the same "explain trust boundaries…" list. An approach
   // line that does not name this design is the same sentence for both.
   const namedDesign = /^\s*design\b/i.test(question) && lead.split(/\s+/).filter(Boolean).length >= 3
-  askedParts.slice(0, level === "engineer" ? 2 : level === "director" ? 3 : askedParts.length).forEach((part, i) => {
+  // A shared checklist ("decision owner, business exposure, measures") is the same sentence
+  // on every pair that asks it. The two sides are the difference, so the checklist stays off.
+  if (!sides) askedParts.slice(0, level === "engineer" ? 2 : level === "director" ? 3 : askedParts.length).forEach((part, i) => {
     const templates = PART_LINES[level]
     // Round 11: a listed part was said in the interviewer's voice ("On what would you check yourself"); it is said as mine.
     const said = spokenLead(part.replace(/^(what|how|when|who|why|where|which) (would|do|will|should|did) you\s+(.+)$/i,
@@ -1478,7 +1521,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const approach = APPROACH[level].map((make) => make(cut.shape === "personal-experience" ? "that situation" : lead)).filter((line) => fresh(line) && !parts.includes(line))
   const anchored = namedPair || namedDesign ? approach.filter((line) => line.toLowerCase().includes(lead.toLowerCase())) : approach
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
-  if (!incident && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
+  if (!incident && !sides && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
     for (const line of anchored) {
       const n = wordCount(line)
       if (words >= stop) break
@@ -1498,7 +1541,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // The floor from the mode below: unused supported lines first, then approach lines, each only if it fits the ceiling.
   // An incident that already named its parts does not refill from the shared catalog.
   if (words < floor) {
-    for (const line of [...lines, ...(incident || namedPair || namedDesign ? [] : CLOSERS[level].filter(fresh)), ...(incident ? [] : anchored)]) {
+    for (const line of [...lines, ...(incident || namedPair || namedDesign ? [] : CLOSERS[level].filter(fresh)), ...(incident || sides ? [] : anchored)]) {
       if (words >= floor) break
       const n = wordCount(line)
       if (parts.includes(line) || words + n > mode.maxWords) continue
@@ -1508,12 +1551,15 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   }
   // Length for a named incident or a named comparison comes from those words, not the shared catalog.
   if (incident || namedPair || namedDesign) {
-    for (const line of [
-      `I start from ${lead}.`,
-      `The case is ${lead}.`,
-      `I check ${lead} before I move on.`,
-      `What I watch is ${lead}.`,
-    ]) {
+    const extra = sides
+      ? pairSideLines(sides)
+      : [
+          `I start from ${lead}.`,
+          `The case is ${lead}.`,
+          `I check ${lead} before I move on.`,
+          `What I watch is ${lead}.`,
+        ]
+    for (const line of extra) {
       if (words >= Math.max(stop, mode.minWords)) break
       const n = wordCount(line)
       if (words + n > mode.maxWords || parts.includes(line)) continue
