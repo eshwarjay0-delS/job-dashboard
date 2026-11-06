@@ -34,6 +34,14 @@ No new screen. WhatsApp intake now treats a new Word file or a readable PDF as t
 
 **Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. The under-70% hold with no file is replaced by the failsafe entry above. That WhatsApp tailor later landed on master as 986ecef7 (squash of pull request 228). System 3 landed on master as 0bb575a0 (squash of pull request 229). This pull request is the resume failsafe on top of that, and it is still not merged.
 
+## 2026-11-06 — Kompas relevance fold: code questions open on a fence, and a long plan cannot outrun the mode ceiling
+
+No new screen. The offline stand-in for a code question now starts with one fenced block, and settle cuts spoken prose at the mode ceiling even when a caller passes a larger plan. A sentence that actually names the question is spoken first when the opening had buried it.
+
+**Measured, code-level, fictional resume.** Offline sample before: 15 answers, 3 failures, all the Python question with no fence. After: 15 answers, 0 failures, 15 warnings, 0 length warnings. A 180-word residual-risk answer with a 400-word plan settled to 36 words; the engineer ceiling is 40. Python stand-in prose: engineer 15 of 18, director 28 of 28, architect 42 of 42, each starting with a python fence. Desktop 10-fold harness still passes. It is not a Windows session.
+
+**Not verified.** `KOMPAS_EVAL_TOKEN` was unset, so live scored folds remain 0. Production at the start of the run was READY `dpl_BdCvdFcfTKPzLAV4dutnkZGFfNc8` at `986ecef`. This branch is not production until it merges.
+
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 
 No visible page change except that "I live in Dallas, is that a problem?" and "my address is …" are now skipped the same way as "where are you based?". The answer text itself changes only after a model reply: visa, home address, where you live, and personal relocation are removed unless the resume states them and the question asked. A whole-utterance gateway line is not spoken. This is not a new screen.

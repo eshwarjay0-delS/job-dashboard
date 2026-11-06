@@ -100,6 +100,14 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026
+
+Code-level only. `KOMPAS_EVAL_TOKEN` was unset. Live scored folds remain 0. Production at the start of the run was READY `dpl_BdCvdFcfTKPzLAV4dutnkZGFfNc8` on `986ecef7c318bb23fd7e338db3fc63f8843dc3be`.
+
+Offline sample set before this fold: 15 answers, 3 failures, all "code question without a fenced block first" for the Python question. After: 15 answers, 0 failures, 15 warnings, 0 length warnings. The stand-in now opens a code question with one fenced block. Spoken length still ignores that block.
+
+A 180-word residual-risk answer passed with a 400-word plan settled to 36 words. The engineer ceiling for that question is 40. An answer that opened on the owner and buried "residual risk" now opens on residual risk.
+
 ## Fold log, 5 November 2026
 
 Code-level only. `KOMPAS_EVAL_TOKEN` was not set in this run, so no live answer was scored. Production at the start of the run was READY `dpl_kns4gHRz7cSaX4SuexLZtJuCp9PJ` on `c33fd90fe01436445822cf9aeaa83d4ad775c28b`. Unauthenticated `POST /api/answer` and `POST /api/kompas/answer` both returned 401. `GET /api/health` returned ok.

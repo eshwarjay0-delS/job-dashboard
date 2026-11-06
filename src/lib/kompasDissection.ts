@@ -532,6 +532,17 @@ export type SpokenAssessment = {
 
 const ECHO_OPTIONAL = new Set<AnswerShape>(["intro", "closing", "logistics", "acknowledgement"])
 
+/** If the opening misses the question's words and a later sentence has them, that sentence is spoken first. */
+function leadWithAskedWords(text: string, keywords: string[]): string {
+  const all = sentencesOf(text)
+  if (all.length < 2 || !keywords.length) return text
+  const has = (sentence: string) => keywords.some((keyword) => sentence.toLowerCase().includes(keyword.toLowerCase()))
+  if (has(all[0])) return text
+  const idx = all.findIndex(has)
+  if (idx <= 0) return text
+  return [all[idx], ...all.slice(0, idx), ...all.slice(idx + 1)].join(" ")
+}
+
 export function settleSpokenAnswer(
   question: string,
   answer: string,
@@ -542,7 +553,8 @@ export function settleSpokenAnswer(
 ): SpokenAssessment {
   const cut = dissectQuestion(question, sources)
   const mode = cut.modes[level] || cut.modes.engineer
-  const cap = ceiling && ceiling > 0 ? ceiling : mode.maxWords
+  // A caller may pass a larger plan. The spoken answer still stops at this mode's ceiling.
+  const cap = ceiling && ceiling > 0 ? Math.min(ceiling, mode.maxWords) : mode.maxWords
   if (isProviderErrorAnswer(answer)) {
     return { text: "", words: 0, providerError: true, banned: [], missingEcho: false, repeated: false, thirdPerson: false, inBand: false }
   }
@@ -550,7 +562,7 @@ export function settleSpokenAnswer(
   const fence = String(answer || "").match(/```[\s\S]*?```/)
   if (fence) {
     const prose = String(answer).replace(fence[0], " ").replace(/\s+/g, " ").trim()
-    const around = prose ? trimToWords(stripListMarkers(dropUngroundedLogistics(prose, sources, question)), cap) : ""
+    const around = prose ? trimToWords(stripListMarkers(leadWithAskedWords(dropUngroundedLogistics(prose, sources, question), cut.keywords)), cap) : ""
     const text = [fence[0], around].filter(Boolean).join("\n\n")
     return { text, words: wordCount(around), providerError: false, banned: [], missingEcho: false, repeated: false, thirdPerson: false, inBand: true }
   }
@@ -559,7 +571,7 @@ export function settleSpokenAnswer(
   const voiced = firstPersonRewrite(spokenMarkup(answer), sources)
   const spoken = askedRepeat ? voiced.text : dropParaphrasedRepeat(dropRepeatedSentences(voiced.text, previousAnswer), previousAnswer)
   const kept = sentencesOf(spoken).filter((sentence) => !cut.banned.some((term) => containsTerm(sentence, term)))
-  const stripped = stripListMarkers(dropUngroundedLogistics(kept.join(" "), sources, question))
+  const stripped = stripListMarkers(leadWithAskedWords(dropUngroundedLogistics(kept.join(" "), sources, question), cut.keywords))
   const text = trimToWords(stripped, cap, (sentence) => requiredSentence(question, sentence))
   const opening = firstSentence(text).toLowerCase()
   const missingEcho = !ECHO_OPTIONAL.has(cut.shape) && cut.keywords.length > 0 && !cut.keywords.some((keyword) => opening.includes(keyword.toLowerCase()))
@@ -840,7 +852,8 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
         const a = byLevel.get(LEVELS[i])
         const b = byLevel.get(LEVELS[j])
         if (!a || !b) continue
-        const lengthGap = relativeGap(wordCount(a.text), wordCount(b.text))
+        const spoken = (row: LiveAnswer) => wordCount(asksForCode(question) ? row.text.replace(/```[\s\S]*?(?:```|$)/g, " ") : row.text)
+        const lengthGap = relativeGap(spoken(a), spoken(b))
         const depthGap = relativeGap(scoreDepth(a.text), scoreDepth(b.text))
         const confidenceGap = relativeGap(scoreConfidence(a.text), scoreConfidence(b.text))
         if (lengthGap < 0.5) (exempt ? warnings : failures).push(`length gap ${lengthGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
@@ -1187,8 +1200,24 @@ const CLOSERS: Record<AnswerLevel, string[]> = {
  * experience lines that match the question (never the resume header), and adds more supported lines per mode
  * instead of filler, so Engineer, Director, and Architect differ by real content. It is a stand-in, not a live answer.
  */
+/**
+ * The offline stand-in has no model, so a code question still needs one fenced block first.
+ * The block is a short runnable sketch of the ask. It is not a claim about the candidate.
+ * Spoken word counts ignore it; settle keeps it verbatim.
+ */
+export function standInFence(question: string): string {
+  const q = String(question || "")
+  if (/\bsql\b/i.test(q)) return "```sql\nselect id\nfrom items\nwhere open_days > 30;\n```"
+  const lang = /\btypescript\b/i.test(q) ? "typescript" : /\bjavascript\b/i.test(q) ? "javascript" : "python"
+  const body = lang === "python"
+    ? "def still_open(items, days=30):\n    return [item for item in items if item.get(\"age_days\", 0) > days]\n"
+    : "function stillOpen(items, days = 30) {\n  return items.filter((item) => item.ageDays > days)\n}\n"
+  return "```" + lang + "\n" + body + "```"
+}
+
 export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: string, previous: string[] = []): string {
-  return draftLadder(question, resume, previous)[level]
+  const text = draftLadder(question, resume, previous)[level]
+  return asksForCode(question) ? `${standInFence(question)}\n\n${text}` : text
 }
 
 // Round 6: each mode is at least 1.5 times the one below it. The mode below is drafted first and the next fills to
