@@ -1,3 +1,7 @@
+## 2026-11-06 — The live panel ends are curves, not a box
+
+The panel, the connect card, and the menus are full curves at each end, with no box border. Centering a resize on the place the window already had is in the desktop source. The installed window still uses its own resize until a new Kompas.exe.
+
 ## 2026-11-06 — The opacity slider fades the paper again
 
 The live sheet is clear on the desktop. The bars use the slider. The letters stay dark.

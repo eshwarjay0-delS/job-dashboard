@@ -1059,8 +1059,8 @@ html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-
   line-height:1;
   border-radius:999px;
 }
-html.kd,html.kd body{border-radius:22px}
-html.kd .kd-bar{border-top-left-radius:22px;border-top-right-radius:22px}
+html.kd,html.kd body{border-radius:999px;overflow:hidden}
+html.kd .kd-bar{border:0;border-top-left-radius:999px;border-top-right-radius:999px}
 html.kd #view-copilot{
   position:fixed;
   top:42px;
@@ -1068,8 +1068,16 @@ html.kd #view-copilot{
   right:0;
   bottom:0;
   overflow:hidden;
-  border-bottom-left-radius:22px;
-  border-bottom-right-radius:22px;
+  border-bottom-left-radius:999px;
+  border-bottom-right-radius:999px;
+}
+html.kd .cn-card,
+html.kd .modal-card,
+html.kd .more-menu,
+html.kd .overlay{
+  border:0 !important;
+  border-radius:999px !important;
+  box-shadow:none !important;
 }
 html.kd #view-copilot .overlay .bar-actions{position:sticky;top:0;z-index:40;flex-shrink:0}
 html.kd .kd-grip{background:transparent}
