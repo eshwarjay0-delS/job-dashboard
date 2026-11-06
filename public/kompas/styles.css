@@ -1221,8 +1221,30 @@ html.kd.desktop-focus #view-copilot .content{
   background-image:none !important;
 }
 html.kd .kd-bar,
+html.kd #kdBar,
 html.kd #view-copilot .bar,
 html.kd #view-copilot .manual,
 html.kd #view-copilot .statusline{
-  background-color:rgba(253,252,249,var(--panel-a)) !important;
+  background-color:rgba(253,252,249,max(var(--panel-a),0.94)) !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .a,
+html.kd #view-copilot .a-head{
+  opacity:1 !important;
+  background-color:rgba(253,252,249,max(var(--panel-a),0.94)) !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .q span,
+html.kd #view-copilot .q b,
+html.kd #view-copilot #question,
+html.kd #view-copilot #answer,
+html.kd #view-copilot #answer li,
+html.kd #view-copilot .a-head,
+html.kd #kdBar,
+html.kd .kd-word,
+html.kd #view-copilot .bar-actions .pill,
+html.kd #view-copilot .bar-actions .live-select,
+html.kd #view-copilot .manual,
+html.kd #view-copilot .statusline{
+  opacity:1 !important;
 }
