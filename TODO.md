@@ -1,3 +1,7 @@
+## 2026-11-06 — The opacity slider fades the paper again
+
+The live sheet is clear on the desktop. The bars use the slider. The letters stay dark.
+
 ## 2026-11-06 — The top bar stays one size and the question and answer flex
 
 Title bar 42px. Control strip 48px. Controls 32px. Text size does not change them. The question can use up to 40 percent of the card. The answer takes the rest.

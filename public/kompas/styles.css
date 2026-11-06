@@ -1171,3 +1171,18 @@ html.kd #view-copilot #answer.following{
   height:auto !important;
   font-size:var(--text-size) !important;
 }
+/* The focus sheet was a solid colour, so the opacity slider faded the window
+   behind it and the panel stayed opaque. The paper uses the slider. The letters stay dark. */
+html.kd.desktop-focus #view-copilot #overlay,
+html.kd.desktop-focus #view-copilot #card,
+html.kd.desktop-focus #view-copilot .content{
+  background:transparent !important;
+  background-color:transparent !important;
+  background-image:none !important;
+}
+html.kd .kd-bar,
+html.kd #view-copilot .bar,
+html.kd #view-copilot .manual,
+html.kd #view-copilot .statusline{
+  background-color:rgba(253,252,249,var(--panel-a)) !important;
+}
