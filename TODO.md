@@ -34,6 +34,18 @@ No new screen. The answer path consults an explicit table after retrieval and be
 
 **Next.** Leave the pull request open. A live answer is still unverified.
 
+## 2026-11-06 — Published exe was missing the modules main.js loads first
+
+No change to sign-in, sessions, answers, or dictation. The Windows package list was short.
+
+**What failed.** `Kompas-20261106-1b116ce.exe` (SHA256 `ff6202c315acc9f66a5a94bc10ba6b9b5c332ba1a02ca0261de9ca70d40a2e03`, 162208028 bytes) dies at startup: `Cannot find module './capture-source.cjs'`. The same asar is also missing `taskbar-choice.cjs`, which is the next require. The laptop folder `162200852-AA090000` is that payload length.
+
+**What changed.** The packaged file list is the runtime closure of `main.js`, the preloads, and the picker page. `npm run dist` stops if the built exe asar drops one. Windows CI checks `dist/Kompas.exe` and starts the unpacked exe with `KOMPAS_SMOKE=1`, which returns before the session file is read and before Chrome opens.
+
+**Checked.** Desktop `npm run check`: 46 pass, 0 fail. The published exe fails the new gate on those two files. This machine did not launch Windows. Not merged. The download stays the crashing build until this pull request merges and the Windows workflow replaces the release asset.
+
+**Next.** Leave the pull request open.
+
 ## 2026-11-06 — Chrome handoff continues in the open Kompas window
 
 The sign-in card is the same one from the Nov 6 screenshot. It is shown only when this computer has no stored desktop session.

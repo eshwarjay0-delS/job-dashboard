@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — published Kompas.exe missing startup modules
+
+`kompas-desktop-latest` at SHA256 `ff6202c315acc9f66a5a94bc10ba6b9b5c332ba1a02ca0261de9ca70d40a2e03` (162208028 bytes, master `1b116ce`) crashes on launch: `Cannot find module './capture-source.cjs'`. The asar is also missing `taskbar-choice.cjs`. The package list is now the runtime closure, and the Windows build checks the exe asar and smoke-launches the unpacked app with `KOMPAS_SMOKE=1` before any session read. Offline desktop check 46 pass, 0 fail. This machine did not start the Windows exe. Not merged.
+
 ## 6 November 2026 — Chrome handoff returns to the open Kompas window
 
 The Nov 6 exe opened Chrome with a state and then waited on a protocol relaunch. The already-open window stayed on the sign-in card, with the short Opening note left as `Openir`. A stored session is still not shown that card and is not cleared. The first launch with no session now listens on `127.0.0.1` and continues when Chrome returns the bearer. Open Chrome again retries. Offline: desktop check 42 pass, 0 fail; sign-in and auth-gate 19 pass, 0 fail; `tsc --noEmit --skipLibCheck` clean. Not a live laptop click-through. Not merged. The installed exe does not change until a later Windows build.

@@ -10,6 +10,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { build, Platform } from "electron-builder";
 import { appDir, stampExe } from "./runtime.mjs";
+import { shellPackageFiles } from "./package-closure.mjs";
+import { assertPackagedExe } from "./verify-packaged-app.mjs";
 
 if (process.platform !== "win32") { console.error("Kompas.exe is a Windows build."); process.exit(1); }
 
@@ -29,7 +31,7 @@ const out = await build({
     productName: "Kompas",
     executableName: "Kompas",
     directories: { output: "dist" },
-    files: ["main.js", "marketfit-auth.cjs", "chrome-handoff.cjs", "desktop-handoff.cjs", "desktop-update.cjs", "preload.js", "panel.css", "picker.html", "picker.js", "picker-preload.js", "icon-256.png", "package.json",
+    files: [...shellPackageFiles(appDir),
       { from: ".stage/copilot", to: "copilot", filter: COPILOT_FILES }],
     asar: true,
     npmRebuild: false,
@@ -78,6 +80,13 @@ const mach = Buffer.alloc(2);
 fs.readSync(fd, mach, 0, 2, hdr.readUInt32LE(0x3c) + 4);
 fs.closeSync(fd);
 if (mach.readUInt16LE(0) !== 0x8664) { console.error(`Kompas.exe is PE machine 0x${mach.readUInt16LE(0).toString(16)}, not x64`); process.exit(1); }
+try {
+  const packed = assertPackagedExe(exe);
+  console.log("packaged runtime closure ok: " + packed.required.join(", "));
+} catch (error) {
+  console.error(String(error && error.message || error));
+  process.exit(1);
+}
 console.log(`Kompas.exe: ${exe} (${(fs.statSync(exe).size / 1048576).toFixed(1)} MB, PE 0x8664)`);
 
 const i = process.argv.indexOf("--copy-to");
