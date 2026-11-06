@@ -1,3 +1,19 @@
+## 2026-11-06 — A design answer leaves the shared close
+
+No new screen. A question that starts with "Design" no longer fills extra length from the shared closing lines or from an approach line that does not name that design.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before, on the pair-resume tree: 106 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. "Design Front Door, APIM and private backend trust boundaries" versus "Design tenant isolation across API, cache and asynchronous workers": engineer 0.406 (89 and 93 words), director 0.683 (165 and 167), architect 0.882 (277 and 281, ceiling 281). Both architect drafts included "The boundary I watch". After: 84 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.542 (89 and 89), director 0.651 (138 and 143), architect 0.771 (212 and 226). The closer is gone. Engineer overlap rose and stays under 0.7. The highest remaining pair is 0.811. The previous incident pair stayed at architect 0.543. Offline sample: 15 answers, 0 failures, 16 warnings. `tsc --noEmit` clean.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 249 is open on the pair-resume stack. Not merged. Not deployed.
+
+## 2026-11-06 — A comparison cites a resume line only when it names a side
+
+No new screen. The offline stand-in for a definition or a comparison drops a resume line that does not name either side of the pair.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before, on the comparison tree rebased onto master `1b116ce4`: 103 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. "Explain the same incident to a director: risk acceptance versus remediation" versus "containment versus customer access": engineer 0.619 (49 and 49 words), director 0.676 (76 and 79), architect 0.907 (126 and 126). Both architect drafts included "worked on site" and the weekly risk summary. After: 106 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.214 (51 and 48), director 0.474 (82 and 79), architect 0.543 (125 and 122). The containment draft no longer includes those two lines. The remediation draft still uses the resume line that names remediation. The pair count rose by 3. Offline sample: 15 answers, 0 failures, 16 depth and confidence warnings. Focused suites 56 pass, 0 fail. `tsc --noEmit` clean.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 248 is open on the comparison stack. Not merged. Not deployed.
+
 ## 2026-11-06 — Lens PEER_VOICE v3, after REALISM, not merged
 
 No new screen. The desktop lens prompt and the offline lens composer changed. The route table did not.
@@ -41,6 +57,13 @@ The sign-in card is the same one from the Nov 6 screenshot. It is shown only whe
 **Checked.** Offline. Desktop `npm run check`: 42 pass, 0 fail, protocol self-test passed. Sign-in state and auth-gate: 19 pass, 0 fail. `tsc --noEmit --skipLibCheck` clean. ESLint 0 errors on the two edited TypeScript files. `PHRASE_FIXES` was not edited. Not a live click on the laptop. Not a new `Kompas.exe`. Not production until this pull request is merged and a later Windows build is installed.
 
 **Next.** Leave the pull request open. The installed Nov 6 exe keeps the old opener until that later build.
+## 2026-11-06 — A comparison stays on the two named things
+
+No new screen. The offline stand-in for a definition or a comparison no longer adds the shared closing lines.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before this change, on the incident-ontopic tree: 113 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures. "Define IDOR versus CSRF" versus "Define containment versus eradication": engineer 0.636 (29 words), director 0.867 (62 words), architect 0.905 (105 words). The architect draft included "The boundary I watch". After: 103 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. That pair: engineer 0.636 (29 words), director 0.810 (52 words), architect 0.793 (94 words). The boundary line is gone. Offline sample 15 answers, 0 failures.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed.
 
 ## 2026-11-06 — A finished WhatsApp rewrite was held by a false ATS miss
 
