@@ -1,3 +1,7 @@
+## 2026-11-06 — The live controls stay on one fixed line
+
+Stop, AI Answer, Caption Capture, Auto, Follow along, Chat, Prev, Next, and the level sit on one 48px strip. Each control stays 32px. The question and the answer scroll under that strip.
+
 ## 2026-11-06 — A design answer leaves the shared close
 
 No new screen. A question that starts with "Design" no longer fills extra length from the shared closing lines or from an approach line that does not name that design.
