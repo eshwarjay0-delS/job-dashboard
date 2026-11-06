@@ -145,6 +145,34 @@ test("a definition comparison does not reuse the shared closing catalog", () => 
   assert.ok(director < 0.85, String(director))
 })
 
+test("two design questions leave the shared architect closing lines", () => {
+  const door = "Design Front Door, APIM and private backend trust boundaries. Explain trust boundaries, data flow, failure isolation, rollout and validation."
+  const tenant = "Design tenant isolation across API, cache and asynchronous workers. Explain trust boundaries, data flow, failure isolation, rollout and validation."
+  const left = draftSpokenAnswer(door, "architect", RESUME)
+  const right = draftSpokenAnswer(tenant, "architect", RESUME)
+  assert.match(left, /Front Door/)
+  assert.match(right, /tenant isolation/)
+  assert.equal(left.includes("The boundary I watch"), false)
+  assert.equal(right.includes("The boundary I watch"), false)
+  assert.ok(wordCount(left) < 277, String(wordCount(left)))
+  assert.ok(wordCount(right) < 281, String(wordCount(right)))
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.85, String(ratio))
+})
+
+test("a director comparison does not reuse unrelated resume lines", () => {
+  const accept = "Now explain the same incident to a director: risk acceptance versus remediation. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const contain = "Now explain the same incident to a director: containment versus customer access. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const left = draftSpokenAnswer(accept, "architect", RESUME)
+  const right = draftSpokenAnswer(contain, "architect", RESUME)
+  assert.match(left, /remediation/)
+  assert.match(right, /containment versus customer access/)
+  assert.equal(right.includes("worked on site"), false)
+  assert.equal(right.includes("weekly risk summary"), false)
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.7, String(ratio))
+})
+
 test("lead phrases and asked parts come from the interviewer's words", () => {
   assert.equal(leadPhrase("How do you assess business impact and residual risk?"), "assess business impact and residual risk")
   assert.match(leadPhrase(HITACHI[2]), /^design multi-cloud controls mapped to NIST 800-53$/)
