@@ -1,3 +1,7 @@
+## 2026-11-06 — Start, Answer and Capture stay large
+
+Those three stay 32px. The other controls are 22px on the same row as Kompas. The question and the answer are what change size. The strong edge pull is in the desktop source. The installed window still snaps at 24px until a new Kompas.exe.
+
 ## 2026-11-06 — The live panel ends are curves, not a box
 
 The panel, the connect card, and the menus are full curves at each end, with no box border. Centering a resize on the place the window already had is in the desktop source. The installed window still uses its own resize until a new Kompas.exe.
