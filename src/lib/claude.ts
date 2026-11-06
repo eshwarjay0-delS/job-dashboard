@@ -3,6 +3,7 @@ import { routeFieldEdit } from "./ai/jev"
 import type { Edits, Zones } from "./docx"
 import { callLLM, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { fixHavingOpener, clampSummary } from "./resume/rules"
+import { FULL_EXPERIENCE_DEPTH, FULL_SUMMARY_WORDS, summaryWordCap } from "./resume-verbosity"
 import { parseConfirmedVocabulary, type RelationalPair } from "./keyword-targets"
 
 const RULES = `${J1_HEADER}
@@ -46,7 +47,7 @@ HEADER — the candidate's NAME and contact details are ALWAYS kept exactly as-i
 - "headline.title": ALWAYS set to the JD's ONE primary identity (e.g. "Agentic AI Engineer", "Software Engineer – AI"). NEVER return "".
 - "headline.tagline": 3-5 focused bullet phrases that all support the ONE target identity. NEVER return "".
 
-SUMMARY — ONE coherent paragraph, 3-4 sentences, 60-80 words MAXIMUM. Specific and memorable. Start: "<Target role> with <the source's own experience-length wording> <doing the core thing>...". NEVER begin with the word "Having" (or "Having <N> years…") — that opener is the #1 recruiter-flagged AI fingerprint and is strictly banned. Copy the candidate's stated years/duration of experience EXACTLY from the source summary — never recompute, inflate, or reduce it; if the source states no number, do not add one. Name only the JD's 2-3 central tools. One clean paragraph — nothing more. NEVER repeat yourself or stack 10+ technologies. ALWAYS return a rewritten summary re-aimed at the target identity — returning an empty "summary" is a failure. If the source has several stacked summary paragraphs, CONSOLIDATE them into this one coherent paragraph.
+SUMMARY — ONE coherent paragraph. A full rewrite may use up to 140 words when the source supports that detail; do not pad a short source and do not invent tools to fill the length. Start: "<Target role> with <the source's own experience-length wording> <doing the core thing>...". NEVER begin with the word "Having" (or "Having <N> years…") — that opener is the #1 recruiter-flagged AI fingerprint and is strictly banned. Copy the candidate's stated years/duration of experience EXACTLY from the source summary — never recompute, inflate, or reduce it; if the source states no number, do not add one. Name the JD tools the source already supports, not a stack the candidate has not used. One clean paragraph — nothing more. NEVER repeat yourself. ALWAYS return a rewritten summary re-aimed at the target identity — returning an empty "summary" is a failure. If the source has several stacked summary paragraphs, CONSOLIDATE them into this one coherent paragraph. Keep every concrete tool and outcome the source summary already states.
 
 GOAL: Produce a credible resume focused on the applicable JD requirements, while preserving evidence-based qualifications. High keyword coverage is not proof of eligibility; never distort the source to reach a percentage. Rewrite only lines for which you can strengthen accurate, already-supported alignment.
 
@@ -246,12 +247,15 @@ export async function adapt(opts: {
   const quickLine = opts.mode === "quick"
     ? `\n\nQUICK MODE: do a fast, focused pass — rewrite the headline, summary, the top 2-3 skill lines, and the 5-6 strongest bullets in the CURRENT role only. Skip marginal edits; speed over exhaustiveness.`
     : ""
+  const fullDepth = !opts.onePage && opts.mode !== "quick" && !opts.refine
+    ? `\n\n${FULL_EXPERIENCE_DEPTH}\nSUMMARY LENGTH: a full rewrite may use up to ${FULL_SUMMARY_WORDS} words in one paragraph when the source supports that detail. Do not pad. Do not invent employers, metrics, or logistics.`
+    : ""
   // Split passes: say exactly which fields this call owns (see `part` above).
   const sectionScope = `\n\nSECTION PERMISSIONS (override general rewrite instructions): ${opts.sections?.summary === false ? 'Summary is LOCKED. Return "summary":""; do not spend output on rewriting it.' : 'Summary may be edited.'} ${(opts.sections?.headline ?? opts.sections?.summary) === false ? 'Headline is LOCKED. Return empty headline fields.' : 'Headline may be edited.'} Preserve existing paragraph structure and technical expertise headings. Elaborate actual work using action, supported technology and purpose/result; keyword lists alone are not experience.`
   const scopeLine = part === "profile"
     ? `\n\nTHIS PASS — PROFILE ONLY: rewrite only enabled profile sections. Preserve technical expertise headings and update each existing skill line under its correct category. Return "bullets": [] (a parallel pass is rewriting the experience bullets against the same JD).`
     : part === "experience"
-    ? `\n\nTHIS PASS — EXPERIENCE BULLETS ONLY, for the roles shown with [idx] lines. Return "headline":{"title":"","tagline":""}, "summary":"", "skills":[]. Spread the JD's tools, platforms, and responsibilities evenly across EVERY one of these roles: in EACH role rewrite at least half of its bullets (all of them when it has 4 or fewer) and name the JD's exact tools inside them, so every role proves the skills the candidate lists. Never leave a role untouched. A bullet line that holds several "•" parts must keep every part, each rewritten in place in that same line.`
+    ? `\n\nTHIS PASS — EXPERIENCE BULLETS ONLY, for the roles shown with [idx] lines. Return "headline":{"title":"","tagline":""}, "summary":"", "skills":[]. Spread the JD's tools, platforms, and responsibilities evenly across EVERY one of these roles where the source already supports them: in EACH role rewrite at least half of its bullets (all of them when it has 4 or fewer) and keep the JD's exact tools that this role already shows. Never leave a role untouched. A bullet line that holds several "•" parts must keep every part, each rewritten in place in that same line. ${FULL_EXPERIENCE_DEPTH}`
     : ""
   // The RESUME + the candidate's fixed experience-length are STABLE across every JD, so
   // they go in a cached block (cacheContext). Only the JD-derived hints + user prefs vary
@@ -262,7 +266,7 @@ export async function adapt(opts: {
   const cacheContext =
     `RESUME LINES TO EDIT (each [idx] is stable — return only what you change):\n${lines.slice(0, 40000)}${yoeLine}`
   const user =
-    `JOB DESCRIPTION:\n${opts.jd.slice(0, 12000)}${idLine}${kwLine}${onePageLine}${quickLine}${pref}${scopeLine}${sectionScope}\n\n` +
+    `JOB DESCRIPTION:\n${opts.jd.slice(0, 12000)}${idLine}${kwLine}${onePageLine}${quickLine}${fullDepth}${pref}${scopeLine}${sectionScope}\n\n` +
     `Using the resume lines provided, return the rewrite JSON (only the [idx] lines you change).`
 
   // Try twice: a one-off malformed reply no longer fails the whole tailoring.
@@ -328,13 +332,12 @@ export async function adapt(opts: {
       if (!edits.headline.title && !opts.refine && part !== "experience") {
         edits.headline.title = firstLine || ""
       }
-      // Enforce the CLAUDE.md text rules on the summary even if the model slips:
-      // never ship a "Having …" opener (the #1 AI fingerprint), and keep it to one
-      // paragraph of ≤80 words. Both are safe text-only transforms (no format change).
+      // Never ship a "Having …" opener. Full mode may keep a longer grounded paragraph;
+      // one-page, quick, and refine stay on the shorter caps.
       if (edits.summary) {
         edits.summary = clampSummary(
           fixHavingOpener(edits.summary, { title: edits.headline.title, years: computed }),
-          80,
+          summaryWordCap({ onePage: opts.onePage, quick: opts.mode === "quick", refine: opts.refine }),
         )
       }
       if (opts.sections?.summary === false) edits.summary = ""
