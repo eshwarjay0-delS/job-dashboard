@@ -100,6 +100,30 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026, a design answer leaves the shared close
+
+On the pair-resume tree, the worst pair was two Design questions that share the same explain list: Front Door, APIM and a private backend, versus tenant isolation across API, cache and workers. Architect Jaccard was 0.882 at 277 and 281 words, on a 281-word ceiling. Both drafts ended on "The boundary I watch" and on approach lines that do not name the design.
+
+A question that starts with "Design" and whose lead is at least three words no longer takes those lines. Extra length uses the design words. After: engineer 0.542 (89 and 89 words), director 0.651 (138 and 143), architect 0.771 (212 and 226). The engineer ratio rose from 0.406 because the removed lines were shared. It stays under 0.7. The closer is gone.
+
+Across 150 drafts, pairs at Jaccard >= 0.7 went from 106 to 84. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0. The highest remaining pair is 0.811. Offline sample stayed 15 answers, 0 failures, 16 warnings. Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10.
+
+## Fold log, 6 November 2026, a comparison cites only a resume line that names a side
+
+On the comparison tree rebased onto master `1b116ce4`, the worst pair was two "explain the same incident to a director" questions: risk acceptance versus remediation, and containment versus customer access. Architect Jaccard was 0.907 at 126 words each. Both drafts reused the same five resume sentences, including "worked on site" and the weekly risk summary. Those lines match the shared word "risk". They do not name containment.
+
+A comparison or definition now keeps a resume line only when the line names one side of the pair. After that, the same pair is engineer 0.214 (51 and 48 words), director 0.474 (82 and 79), architect 0.543 (125 and 122). The containment draft no longer includes "worked on site" or "weekly risk summary". The remediation draft still uses the resume line that names remediation.
+
+Across 150 drafts, pairs at Jaccard >= 0.7 went from 103 to 106. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0. The three new pairs are comparisons whose resume lines had been the only difference. Offline sample stayed 15 answers, 0 failures, 16 depth and confidence warnings. Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10.
+
+## Fold log, 6 November 2026, comparisons stay on the two names
+
+A definition or comparison no longer takes the shared closing catalog. Length that is still required uses the two named things.
+
+On the incident-ontopic tree, 150 drafts had 113 pairs at Jaccard >= 0.7. After: 103. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0.
+
+"Define IDOR versus CSRF" versus "Define containment versus eradication": architect 0.905 (105 words, included "The boundary I watch") to 0.793 (94 words, that line gone). Director 0.867 (62 words) to 0.810 (52 words). Engineer stayed 0.636 at 29 words. Offline sample stayed 15 answers, 0 failures.
+
 ## Fold log, 6 November 2026, incident length without the shared close
 
 On the rebased distinct-incident tree, the worker and updater architect drafts still overlapped at 0.778 because the shared closing lines were filled back in to meet the longer mode. Those lines do not name the incident. They stay off for a named incident. The length that the longer modes still need is said with the incident itself.
