@@ -17,7 +17,7 @@ const DATE = new RegExp(
   `|\\b(?:0?[1-9]|1[0-2])\\/(?:19|20)\\d{2}\\b` + // 01/2020
   `|\\b(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])\\b` +    // 2020-01
   `|\\b(?:19|20)\\d{2}\\s*[-–—]\\s*(?:(?:19|20)\\d{2}|present|current)\\b` + // employment year ranges
-  `|\\b(?:present|current|now)\\b`, 'gi')
+  '', 'gi')
 
 function normDate(d: string): string {
   const s = d.toLowerCase().replace(/\./g, '')
