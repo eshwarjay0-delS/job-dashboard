@@ -4,7 +4,7 @@ No new screen. The offline stand-in for a definition or a comparison drops a res
 
 **Measured on the fictional sample resume, 150 drafts, no model.** Before, on the comparison tree rebased onto master `1b116ce4`: 103 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. "Explain the same incident to a director: risk acceptance versus remediation" versus "containment versus customer access": engineer 0.619 (49 and 49 words), director 0.676 (76 and 79), architect 0.907 (126 and 126). Both architect drafts included "worked on site" and the weekly risk summary. After: 106 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.214 (51 and 48), director 0.474 (82 and 79), architect 0.543 (125 and 122). The containment draft no longer includes those two lines. The remediation draft still uses the resume line that names remediation. The pair count rose by 3. Offline sample: 15 answers, 0 failures, 16 depth and confidence warnings. Focused suites 56 pass, 0 fail. `tsc --noEmit` clean.
 
-**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed.
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 248 is open on the comparison stack. Not merged. Not deployed.
 
 ## 2026-11-06 — Lens PEER_VOICE v3, after REALISM, not merged
 
