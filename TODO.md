@@ -1,3 +1,11 @@
+## 2026-11-06 — A design answer leaves the shared close
+
+No new screen. A question that starts with "Design" no longer fills extra length from the shared closing lines or from an approach line that does not name that design.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before, on the pair-resume tree: 106 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. "Design Front Door, APIM and private backend trust boundaries" versus "Design tenant isolation across API, cache and asynchronous workers": engineer 0.406 (89 and 93 words), director 0.683 (165 and 167), architect 0.882 (277 and 281, ceiling 281). Both architect drafts included "The boundary I watch". After: 84 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.542 (89 and 89), director 0.651 (138 and 143), architect 0.771 (212 and 226). The closer is gone. Engineer overlap rose and stays under 0.7. The highest remaining pair is 0.811. The previous incident pair stayed at architect 0.543. Offline sample: 15 answers, 0 failures, 16 warnings. `tsc --noEmit` clean.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed.
+
 ## 2026-11-06 — A comparison cites a resume line only when it names a side
 
 No new screen. The offline stand-in for a definition or a comparison drops a resume line that does not name either side of the pair.
