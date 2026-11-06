@@ -48,9 +48,11 @@ export default function DesktopSignIn() {
         window.location.assign(login)
         return
       }
-      // Never duplicate Chrome's rotating refresh-token family in Electron.
-      // The native app receives a short-lived bearer only after the callback
-      // passes its own one-use state and validates that bearer server-side.
+      // Chrome's refresh token stays in this browser. It is a different family
+      // from the desktop session opened at POST /api/auth/desktop-session.
+      // A bearer with no refresh token does not erase a stored desktop refresh.
+      // The optional refresh field is omitted here on purpose: copying Chrome's
+      // refresh token would put the desktop on the family two web tabs rotate.
       const payload = JSON.stringify({ access_token: session.access_token, expires_at: session.expires_at || 0 })
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       // Prefer the isolated MarketFit handler over the legacy kompas handler,

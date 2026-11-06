@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 5 November 2026 desktop session family
+
+Origin/master `e58450c6` includes merged PR #224 and PR #226. PR #224 is the loopback bearer. PR #226 is the logistics filter and was not edited for this slice. No `POST /api/auth/desktop-session` existed. The route is implemented on PR 227 (`b070c71b`) with tests that keep the desktop refresh family independent of two website tab rotations. It is not merged and not a production deploy. A live three-day Windows sign-in is still unproven. The service-role key is required for the first mint.
+
 ## 5 November 2026 reconciliation
 
 Master and production were both `90cdd1dd` (`kompas-20261105-call-audio`, `/api/health` ok). Open pull requests 214, 202, 204, 197, and 196 were left untouched: 214 is held for a live redo, and 202, 204, 197, and 196 are still drafts. The 70 to 80 percent third-iteration rule is now in the plan journal. The Oct 27 WhatsApp Kompas environment blocker is re-recorded as deployed code, not as a missing checkout. The Oct 29 missing-term skills floor is superseded by the Nov 5 revert. The runtime fallback design is still unanswered and was not built. No message was sent. Live resume proof, his window, and the held drafts remain the wall.
