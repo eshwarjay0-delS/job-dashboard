@@ -13,7 +13,7 @@
  */
 import { applyGuards, type SpeakFacts } from "./kompasGuards.ts"
 import { isProviderErrorAnswer } from "./kompasDissection.ts"
-import { retrievePassages, sourceIndexFor, unsupportedClaims, type Passage, type SourceDoc } from "./kompasSourceRetrieval.ts"
+import { answerPassageCount, retrievePassages, sourceIndexFor, unsupportedClaims, type Passage, type SourceDoc } from "./kompasSourceRetrieval.ts"
 
 /** Lens contract v1 (research/lens-opener-contract.md): Opener. sourceDoc optional for the r6 hook's callers. */
 export interface SourcedOpener { text: string; sourceId: string; sourceDoc?: string; category: string; verbatim: true; leadIn?: string }
@@ -227,7 +227,7 @@ export function lensOpenerProvider(o: { table: (docs: SourceDoc[]) => OpenerTabl
     try {
       const table = o.table(docs)
       let match: { passages: Array<{ id: string; kind?: string; proves?: string }> } = { passages: [] }
-      try { match = { passages: retrievePassages(question, docs, 4).passages } } catch { /* first item in the category */ }
+      try { match = { passages: retrievePassages(question, docs, answerPassageCount()).passages } } catch { /* first item in the category */ }
       const op = o.pick(table, question, match)
       if (!op || op.verbatim !== true || typeof op.text !== "string" || typeof op.sourceId !== "string" || !String(op.category || "").trim()) return null
       return { text: op.text, sourceId: op.sourceId, sourceDoc: op.sourceDoc, category: op.category, verbatim: true, ...(typeof op.leadIn === "string" ? { leadIn: op.leadIn } : {}) }

@@ -9,11 +9,14 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { createHash } from "node:crypto"
 import { CTX, dropCoveredFigureClaims, figureContextKeys, figureMentions, mentionSupported, type FigureMention } from "./kompasFigureContext.ts"
 import { dossierItems, relatedTerms } from "./kompasDossierItems.ts"
+import { dropUngroundedLogistics } from "./kompasLogisticsPhrases.ts"
+import { fuseAndRerank, hybridRetrievalOn } from "./kompasHybridRank.ts"
 
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
 export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number; span?: [number, number]; weight?: number; itemId?: string; body?: string }
-export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[] }
+export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[]; candidates?: number }
+export { answerPassageCount, hybridRetrievalOn, HYBRID_POOL, HYBRID_ANSWER_K, HYBRID_SWITCH } from "./kompasHybridRank.ts"
 
 export const NOT_IN_SOURCES =
   "NOT IN YOUR SOURCES: nothing in the candidate's resume, documents, dossier or saved answers covers this. Do not claim personal experience of it, and never invent an employer, tool, project or number. Answer in general voice (\"In general, teams...\"), then bridge to the closest real example below only if it truly relates."
@@ -236,7 +239,7 @@ const PART_SPLIT = /\s*(?:,\s*(?:and\s+)?|\band\b|\bas well as\b|\bplus\b)\s*/i
 const PART_FRAME = /^(?:(?:how|what|why|when|where|did|do|does|you|your|tell|me|about|walk|through|approach|approached|handle|handled|work|on|with|the|a|an|so|um|like)\s+)+/i
 // Speed r6: `index` false forces the old per-question scan (equivalence tests and the "before" measurement); a
 // prebuilt SourceIndex may be passed; otherwise the session index for these docs is looked up (built once per content).
-export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full"; index?: SourceIndex | false | unknown }
+export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full"; index?: SourceIndex | false | unknown; hybrid?: boolean }
 
 // ---- Speed r6: a per-session source index (29 Oct 2026). Everything retrievePassages derived from the source text on
 // every question (passages, token lists, vocabulary, document frequency, term counts) is built once per content hash
@@ -522,7 +525,28 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       }
     } catch { /* failsafe: matched unchanged */ }
     const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, experience)
-    return missing.length ? { matched, passages: ranked.slice(0, k), closest, all: scored, missing } : { matched, passages: ranked.slice(0, k), closest, all: scored }
+    // System 3: BM25 order above stays the coverage signal. Hybrid adds dense matches, reranks the top 25,
+    // then the caller slices to k (5 on the answer path). Failsafe: any error leaves the BM25 slice.
+    let presented = ranked
+    let candidates = 0
+    const useHybrid = opts?.hybrid !== undefined ? opts.hybrid !== false : hybridRetrievalOn()
+    if (useHybrid) {
+      try {
+        const isDemoted = (p: Passage) => !!(demote && recent.some((r) => usedIn(p, r)))
+        const fused = fuseAndRerank(q, scored, isDemoted)
+        candidates = fused.candidates
+        // The BM25/intent leader stays first (story ranking, document-first, demotion).
+        // The other slots are the reranked pool, so a dense paraphrase can still enter the top 5.
+        const leader = ranked[0]
+        const rest = fused.passages.filter((p) => !leader || p.id !== leader.id)
+        presented = leader ? [leader, ...rest] : rest
+      } catch { presented = ranked; candidates = 0 }
+    }
+    const top = (useHybrid ? presented.slice(0, k).map((p, i, arr) => ({ ...p, score: arr.length - i })) : presented.slice(0, k))
+    const extra = useHybrid ? { candidates } : {}
+    return missing.length
+      ? { matched, passages: top, closest, all: scored, missing, ...extra }
+      : { matched, passages: top, closest, all: scored, ...extra }
   } catch {
     return EMPTY
   }
@@ -977,4 +1001,60 @@ function foldSet(text: string, moneyOk: boolean): Set<string> {
 function entityWords(q: string): string[] {
   const ws = String(q || "").replace(/[?!.,]/g, " ").split(/\s+/).filter(Boolean).slice(1)
   return [...new Set(ws.filter((w) => /^[A-Z][A-Za-z0-9&]+$/.test(w) && !/^(?:I|I'm|I've|What|Who|How|When|Why|Which|Whose|Tell|Did|Do)$/.test(w)).map((w) => stem(w.toLowerCase())))]
+}
+
+const NOT_IN_DETAIL = "That detail is not in the sources."
+const PART_NOT_IN = "That part is not in the sources."
+const DISCOURSE_CLAIM = /^(?:hypothesis|maybe|possibly|unclear|unknown)$/i
+
+export interface GroundedSpeech {
+  /** Exact source or transcript text. Never rewritten from the presentation. */
+  raw: string
+  /** Spoken text. Unsupported detail is removed, not replaced with a guess. */
+  presentation: string
+  uncertain: string[]
+}
+
+function inventedInSentence(sentence: string, passages: Passage[], docs: SourceDoc[] | null | undefined, question: string): string[] {
+  try {
+    return unsupportedClaims(sentence, passages, docs, question).filter((c) => !DISCOURSE_CLAIM.test(c))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Separate raw retrieved text from what may be spoken.
+ * `rawSource`, when passed, is returned unchanged (a transcript hypothesis stays as heard).
+ * A sentence that adds a figure, tool, or name the sources do not back is dropped.
+ * Personal logistics follows the existing filter. "I relocated the Vault servers" stays.
+ */
+export function groundSpokenAnswer(
+  answer: string,
+  passages: Passage[] | null | undefined,
+  docs: SourceDoc[] | null | undefined,
+  question = "",
+  rawSource?: string,
+): GroundedSpeech {
+  const list = Array.isArray(passages) ? passages : []
+  const passageRaw = list.map((p) => p.text).join("\n")
+  const raw = rawSource != null ? String(rawSource) : passageRaw
+  const uncertain: string[] = []
+  const sentences = String(answer || "").split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+  const kept: string[] = []
+  for (const sentence of sentences) {
+    const bad = inventedInSentence(sentence, list, docs, question)
+    if (bad.length) { uncertain.push(...bad); continue }
+    kept.push(sentence)
+  }
+  let presentation = kept.join(" ")
+  const sourceText = (Array.isArray(docs) ? docs : []).filter((d) => d.proves === "experience").map((d) => d.text).join("\n")
+  const afterLogistics = dropUngroundedLogistics(presentation, sourceText, question)
+  if (afterLogistics !== presentation) {
+    uncertain.push("personal logistics")
+    presentation = afterLogistics
+  }
+  if (!presentation.trim()) presentation = NOT_IN_DETAIL
+  else if (uncertain.length && kept.length && afterLogistics === kept.join(" ")) presentation = `${presentation} ${PART_NOT_IN}`
+  return { raw, presentation, uncertain }
 }

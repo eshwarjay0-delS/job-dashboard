@@ -26,7 +26,7 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
-import { premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
+import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -390,7 +390,13 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
   if (job.plan.kind === "code") return { text, providerError: false }
   const level = job.level === "architect" || job.level === "director" ? job.level : "engineer"
   const settled = settleSpokenAnswer(job.question, text, level, job.sourceText, job.previousAnswer, job.plan.words)
-  return { text: settled.text, providerError: settled.providerError || !settled.text.trim() }
+  if (settled.providerError || !settled.text.trim()) return { text: settled.text, providerError: true }
+  // Presentation is separate from the retrieved passage text. Unsupported detail is dropped, not guessed.
+  try {
+    const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
+    if (grounded.presentation.trim()) return { text: grounded.presentation, providerError: false }
+  } catch { /* the settled answer stands */ }
+  return { text: settled.text, providerError: false }
 }
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
@@ -421,7 +427,7 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
 function repairSourceBlock(job: AnswerJob): string {
   try {
     if (!Array.isArray(job.sourceDocs) || !job.sourceDocs.some((d) => d.proves === "experience")) return ""
-    return sourcePassagesPrompt(retrievePassages(job.question, job.sourceDocs))
+    return sourcePassagesPrompt(retrievePassages(job.question, job.sourceDocs, answerPassageCount()))
   } catch {
     return ""
   }
@@ -767,34 +773,27 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
-  // Speed r6: on an answer turn the key vault is read WHILE the question, sources, dossier race and prompt are prepared
-  // (awaited just before the answer is built), instead of before all of it. Same keysFor, same 4 s ceiling, same
-  // fail-closed rule for paid keys and the same 503 when no key. Preflight and model derive still wait first, as before.
-  const keysPromise = keysFor("kompas:answer", () => resolveKeys({}))
-  keysPromise.catch(() => { /* awaited below; a failure there surfaces exactly as before */ })
-  const paidKeyNow = async () => (await keysPromise).openrouter || resolveKeys({}).openrouter
-  const NO_KEY = () => NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
+  // Preflight and model derivation are the only turns that need a provider before the question is known.
   if (body.preflight === true || body.deriveOnly) {
+    const keysPromise = keysFor("kompas:answer", () => resolveKeys({}))
+    keysPromise.catch(() => { /* awaited below; a failure there surfaces exactly as before */ })
+    const paidKeyNow = async () => (await keysPromise).openrouter || resolveKeys({}).openrouter
+    const NO_KEY = () => NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
     if (!(await paidKeyNow())) return NO_KEY()
-  }
-  if (body.preflight === true) {
-    const paidKey = (await paidKeyNow()) as string
-    try {
-      await fetchOpenRouter(paidKey, PAID_MODEL, "Reply with READY only.", "Check answer service readiness.", 256, AbortSignal.any([request.signal, AbortSignal.timeout(20000)]))
-      return NextResponse.json({ ready: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
-    } catch (e) {
-      const failure = answerFailure(String((e as Error)?.message || e))
-      return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
+    if (body.preflight === true) {
+      const paidKey = (await paidKeyNow()) as string
+      try {
+        await fetchOpenRouter(paidKey, PAID_MODEL, "Reply with READY only.", "Check answer service readiness.", 256, AbortSignal.any([request.signal, AbortSignal.timeout(20000)]))
+        return NextResponse.json({ ready: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
+      } catch (e) {
+        const failure = answerFailure(String((e as Error)?.message || e))
+        return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
+      }
     }
-  }
-
-  // deriveOnly: the frontend asking "was that a question?" — cheapest first.
-  // Gate 1 (code): speaker-aware — no Them: line and no ask pattern = no question.
-  // Gate 2 (code): the transcript reduces to one clean question → extract verbatim.
-  // Gate 3 (model): consolidated derivation with speaker labels.
-  if (body.deriveOnly) {
-    // The page sends the new speech as `question` and what was already answered as `transcript`.
-    // Deriving from the earlier text is what answered "No question yet" while the question was the new speech.
+    // deriveOnly: the frontend asking "was that a question?" — cheapest first.
+    // Gate 1 (code): speaker-aware — no Them: line and no ask pattern = no question.
+    // Gate 2 (code): the transcript reduces to one clean question → extract verbatim.
+    // Gate 3 (model): consolidated derivation with speaker labels.
     const paidKey = (await paidKeyNow()) as string
     const heard = str(body.question, 5000)
     const earlier = str(body.transcript, 900)
@@ -820,6 +819,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   let question = latestInterviewerAsk(questionForAnswer(heardAll, asked, body.pinned === true, again, body.history))
   // Owner rule 29 Oct: personal logistics is never answered, even on a re-press. Voice's clause-level
   // helper (kompasRelevance) runs first; the server helper (kompasLogistics) is a belt-and-braces backstop.
+  // Salary, visa, address, relocation, availability, and notice return here, before keysFor and before any model call.
   const stripLogistics = (s: string) => serverWithoutLogistics(withoutLogistics(s))
   const skipped = question && !stripLogistics(question) ? "logistics" : undefined; if (skipped) question = ""
   if (!question) {
@@ -830,6 +830,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     return NextResponse.json({ noQuestion: true, skipped }, { headers: NO_STORE })
   }
   question = stripLogistics(question) || question   // "What is your visa status and tell me about PAM": only PAM is answered
+
+  // Speed r6: on an answer turn the key vault is read WHILE the question, sources, dossier race and prompt are prepared
+  // (awaited just before the answer is built), instead of before all of it. Same keysFor, same 4 s ceiling, same
+  // fail-closed rule for paid keys and the same 503 when no key. Logistics already returned above.
+  const keysPromise = keysFor("kompas:answer", () => resolveKeys({}))
+  keysPromise.catch(() => { /* awaited below; a failure there surfaces exactly as before */ })
+  const paidKeyNow = async () => (await keysPromise).openrouter || resolveKeys({}).openrouter
+  const NO_KEY = () => NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
   // The active sources take precedence over an older profile or generated Q&A.
@@ -1015,7 +1023,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const groundingDocs: SourceDoc[] = sourceDocs({ resume: resumeSrc, jd: jdSrc, documents: docsSrc, dossier: grounding, savedQA: str(config.savedQA, 8000) })
   // Behavior 8 (r2): passages the last two answers already used are demoted unless the ask goes back to them.
   const recentAnswers = historyArr.slice(-2).map((h: unknown) => (h && typeof h === "object" ? String((h as Record<string, unknown>).a ?? (h as Record<string, unknown>).answer ?? "") : "")).filter(Boolean)
-  const sourceRetrieval = retrievePassages(question, groundingDocs, 4, { recent: recentAnswers })
+  const sourceRetrieval = retrievePassages(question, groundingDocs, answerPassageCount(), { recent: recentAnswers })
   // r5: a false interviewer premise about the candidate is named so the model corrects it instead of accepting it
   const sourceBlock = [sourcePassagesPrompt(sourceRetrieval), premisePrompt(question, groundingDocs)].filter(Boolean).join("\n")
   // Two independent, bounded server-side retrieval lanes: active source-pair
