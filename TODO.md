@@ -4,9 +4,9 @@ No new screen. The desktop lens prompt and the offline lens composer changed. Th
 
 **What changed.** `PEER_VOICE` is a separate block after the existing `REALISM` string, which was not edited. It rides inside `lensBlock`, so the desktop switch `KOMPAS_DESKTOP_LENS` still decides whether a live prompt sees it, and a logistics ask still gets nothing. Standard and deep offline answers add one teammate line (bottleneck, warning, consequence, advice, or an inner check). Simple answers stay picture-first. The line is a habit unless the concept already holds that move. It does not invent a war story, a bad-advice episode, or a number. Only the v3 patch was applied (sha256 `995e2c5ab4bb412b348eabe53d23e3c18b749f44801873fd185984c749dcf169`). v1 and v2 were not. `fa8f7026` was not pushed.
 
-**Checked.** Offline. Peer voice 4 pass, 0 fail. Lens r1 (T1–T5) 9 pass, 0 fail. Lens r2 8 pass, 0 fail. Lens r3 12 pass, 2 fail — those two already fail on master `eae0b30` because `REALISM` no longer says "a number the question quotes is not a source". `tsc --noEmit` clean. ESLint clean on the edited TypeScript files. Not a live model. Not a Windows session. Not a WhatsApp send. Not production until this pull request is merged, and this task does not merge it.
+**Checked.** Offline. Peer voice 4 pass, 0 fail. Lens r1 (T1–T5) 9 pass, 0 fail. Lens r2 8 pass, 0 fail. Lens r3 12 pass, 2 fail — those two already fail on master `eae0b30` because `REALISM` no longer says "a number the question quotes is not a source". `tsc --noEmit` clean. ESLint clean on the edited TypeScript files. Not a live model. Not a Windows session. Not a WhatsApp send. Not production until pull request 246 is merged, and this task does not merge it.
 
-**Next.** Leave the pull request open.
+**Next.** Leave pull request 246 open. Do not merge it from this run.
 
 ## 2026-11-06 — Route table before Kompas answer generation
 
