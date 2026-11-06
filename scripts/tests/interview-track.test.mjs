@@ -201,7 +201,7 @@ test('rewording what is sent, or re-ticking its days, never switches it on or of
   assert.deepEqual(validState({ marks: [], handed: [{ id, on: true, at: 1, sent: [], days: [] }] }).handed, [{ id, on: true, at: 1, sent: [] }])
 })
 
-test('Send now never presents as a working button on a card the server must refuse', () => {
+test('Send now is never blocked by the four-count, only by a card the server must refuse', () => {
   const contact = { name: 'Shikha Rao', email: 'shikha@vendorone.example', company: 'VendorOne', phones: [], recruiter: false }
   const own = { ...contact, recruiter: true }
   const base = { phase: 'waiting', contact, theyWrote: false, sent: 0 }
@@ -212,7 +212,7 @@ test('Send now never presents as a working button on a card the server must refu
   assert.match(sendNowBlockReason({ ...base, contact: null }), /no outside contact/)
   assert.match(sendNowBlockReason({ ...base, contact: own }), /own recruiters/)
   assert.match(sendNowBlockReason({ ...base, theyWrote: true }), /wrote last/)
-  assert.match(sendNowBlockReason({ ...base, sent: MOST_SENT_FOR_YOU }), /Four follow-ups already sent/)
+  assert.equal(sendNowBlockReason({ ...base, sent: MOST_SENT_FOR_YOU }), '', 'four already sent is his word to carry on, not a block on a tap')
 })
 
 test('a follow-up due later the same Chicago day is caught by the morning run, not the next ring day', () => {

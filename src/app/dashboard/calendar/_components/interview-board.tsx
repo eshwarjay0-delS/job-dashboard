@@ -195,7 +195,7 @@ export default function InterviewBoard() {
           const name = (t.contact?.name || t.contact?.email || "them").split(/\s+/)[0]
           const words = data.words[t.id]
           const mine = !!t.forYou?.on
-          const sendBlock = sendNowBlockReason({ phase: t.phase, contact: t.contact, theyWrote: t.theyWrote, sent: t.forYou?.sent ?? 0 })
+          const sendBlock = sendNowBlockReason({ phase: t.phase, contact: t.contact, theyWrote: t.theyWrote })
           return (
             <article key={t.id} id={t.threadId ? `interview-${t.threadId}` : undefined} style={{ ...card, borderLeft: t.action === "none" ? undefined : "4px solid var(--spot)" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -219,7 +219,7 @@ export default function InterviewBoard() {
               )}
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {t.threadId && <Link href={openHref(t.threadId, t.account)} className={t.action === "none" ? "btn-outline" : "btn-accent"} style={big}>{t.action === "reply" ? "Open and reply" : t.action === "follow_up" ? "Open and follow up" : "Open"}</Link>}
+                {t.threadId && <Link href={openHref(t.threadId, t.account)} className={t.action === "none" ? "btn-outline" : "btn-accent"} style={big}>{t.action === "none" ? "Open" : "Open and follow up"}</Link>}
                 {t.phase === "waiting" && t.contact && !t.contact.recruiter && !t.theyWrote && (mine
                   ? <button type="button" className="btn-outline" disabled={busyFor(t.id)} onClick={() => { void choose(t.id, "stop_sending") }} style={big}>{busy === `stop_sending:${t.id}` ? "Saving…" : "Stop sending for me"}</button>
                   : <button type="button" className="btn-outline" aria-expanded={asking === t.id} onClick={() => { setAsking(a => (a === t.id ? "" : t.id)); setAskDays(t.forYou?.days?.length ? [...t.forYou.days] : [...DEFAULT_DAYS]) }} style={big}>Send one for me every week</button>)}
@@ -260,14 +260,11 @@ export default function InterviewBoard() {
                           onClick={() => { void choose(t.id, "save_words", { subject: editSubject, body: editBody }) }} style={big}>
                           {busy === `save_words:${t.id}` ? "Saving…" : "Save words"}
                         </button>
-                        {sendBlock ? (
-                          <p style={{ ...muted, margin: 0, alignSelf: "center" }}>{sendBlock}</p>
-                        ) : (
-                          <button type="button" className="btn-outline" disabled={busyFor(t.id)}
-                            onClick={() => { void choose(t.id, "send_now", { subject: editSubject, body: editBody }) }} style={big}>
-                            {busy === `send_now:${t.id}` ? "Sending…" : "Send edited now"}
-                          </button>
-                        )}
+                        <button type="button" className="btn-outline" disabled={busyFor(t.id) || !!sendBlock}
+                          onClick={() => { void choose(t.id, "send_now", { subject: editSubject, body: editBody }) }} style={big}>
+                          {busy === `send_now:${t.id}` ? "Sending…" : "Send edited now"}
+                        </button>
+                        {sendBlock ? <p style={{ ...muted, margin: 0, alignSelf: "center" }}>{sendBlock}</p> : null}
                         <button type="button" className="btn-outline" onClick={() => setEditing("")} style={big}>Cancel edit</button>
                       </div>
                     </>
@@ -290,14 +287,11 @@ export default function InterviewBoard() {
                       <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
                       {t.forYou?.sentAt?.length ? <p style={{ ...muted, margin: "0 0 10px" }}>Last sent {dayTime(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p> : null}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        {sendBlock ? (
-                          <p style={{ ...muted, margin: 0 }}>{sendBlock}</p>
-                        ) : (
-                          <button type="button" className="btn-accent" disabled={busyFor(t.id)}
-                            onClick={() => { void choose(t.id, "send_now") }} style={big}>
-                            {busy === `send_now:${t.id}` ? "Sending…" : "Send now"}
-                          </button>
-                        )}
+                        <button type="button" className="btn-accent" disabled={busyFor(t.id) || !!sendBlock}
+                          onClick={() => { void choose(t.id, "send_now") }} style={big}>
+                          {busy === `send_now:${t.id}` ? "Sending…" : "Send now"}
+                        </button>
+                        {sendBlock ? <p style={{ ...muted, margin: 0 }}>{sendBlock}</p> : null}
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
                       </div>
                       <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
@@ -345,14 +339,11 @@ export default function InterviewBoard() {
                         onClick={() => { void choose(t.id, "send_for_me", editing === t.id ? { subject: editSubject, body: editBody } : undefined, askDays.length ? askDays : undefined) }} style={big}>
                         {busy === `send_for_me:${t.id}` ? "Saving…" : editing === t.id ? "Yes, send my edited version every week" : "Yes, send it for me every week"}
                       </button>
-                      {sendBlock ? (
-                        <p style={{ ...muted, margin: 0 }}>{sendBlock}</p>
-                      ) : (
-                        <button type="button" className="btn-outline" disabled={busyFor(t.id)}
-                          onClick={() => { void choose(t.id, "send_now", editing === t.id ? { subject: editSubject, body: editBody } : undefined) }} style={big}>
-                          {busy === `send_now:${t.id}` ? "Sending…" : editing === t.id ? "Send edited now" : "Send now"}
-                        </button>
-                      )}
+                      <button type="button" className="btn-outline" disabled={busyFor(t.id) || !!sendBlock}
+                        onClick={() => { void choose(t.id, "send_now", editing === t.id ? { subject: editSubject, body: editBody } : undefined) }} style={big}>
+                        {busy === `send_now:${t.id}` ? "Sending…" : editing === t.id ? "Send edited now" : "Send now"}
+                      </button>
+                      {sendBlock ? <p style={{ ...muted, margin: 0 }}>{sendBlock}</p> : null}
                       {editing !== t.id && (
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
                       )}

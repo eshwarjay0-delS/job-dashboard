@@ -8,7 +8,7 @@
 import { blob } from "@/lib/storage"
 import { fetchClassifiedThreads, threadsToInterviews, TRACKING_DAYS, type ClassifiedThread } from "@/app/api/gmail/_lib"
 import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
-import { emptyState, followUpWords, noteSent, toSendForYou, trackInterviews, validState, MOST_SENT_FOR_YOU, dueButUnsent, effectiveHand, withHand, type TrackState } from "@/lib/interview-track"
+import { emptyState, followUpWords, noteSent, toSendForYou, trackInterviews, validState, dueButUnsent, effectiveHand, withHand, type TrackState } from "@/lib/interview-track"
 import { isMyRecruiter } from "@/lib/my-recruiters"
 import { readRecruiters } from "@/lib/my-recruiters-store"
 
@@ -97,8 +97,9 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
 
 /**
  * Send one follow-up right now, on the person's tap — not on the daily check's schedule. It still counts: it goes
- * only to an interview still waiting, with a contact who is not one of their own recruiters, and only while fewer
- * than four have gone out. Ticked days do not bind it; the tap is the schedule. It is send-once-only: it works
+ * only to an interview still waiting, with a contact who is not one of their own recruiters. The four-count binds
+ * only the automatic weekly send — a tap is his word to carry on past four, so no count check here. Ticked days
+ * do not bind it; the tap is the schedule. It is send-once-only: it works
  * whether or not sending was switched on for the interview, and it never switches the weekly on — that stays the
  * "Yes, send it for me every week" tap alone. A card that only inherited its switch keeps it, so the weekly
  * carries on after a tap; a card never switched on gets a switched-off record that only counts the send.
@@ -113,8 +114,7 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
 export async function sendInterviewFollowUpNow(userId: string, myName: string, id: string, wordsIn?: { subject: string; body: string }, now = Date.now(), threadsIn?: ClassifiedThread[]): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
   const state0 = await readTrackState(userId)
   const hand = state0.handed.find(h => h.id === id)
-  // Send-once-only: no switch is needed, and none is switched on by this tap. Only the four-count and the hour's double-tap guard still bind it.
-  if (hand && hand.sent.length >= MOST_SENT_FOR_YOU) return { ok: false, error: "Four follow-ups have already been sent for this interview." }
+  // Send-once-only: no switch is needed, and none is switched on by this tap. The four-count binds only the automatic weekly send — a tap carries on past four. Only the hour's double-tap guard still binds it.
   // A plain re-tap within the hour of a recorded send is a double-tap, not a new send: skip it.
   if (!wordsIn?.subject && !wordsIn?.body && hand?.sent.some(at => now - at < 60 * 60 * 1000)) return { ok: true, skipped: true }
   const [accounts, recruiters] = await Promise.all([listGoogleWorkspaceAccounts(userId), readRecruiters(userId)])

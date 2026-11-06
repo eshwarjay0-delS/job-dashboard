@@ -130,12 +130,13 @@ export function withHand(state: TrackState, id: string, threadId: string, thread
 }
 
 /** Why Send now cannot go out for this card, in the server's own gate order — or "" when it can.
- * The board shows this instead of a Send now button a tap cannot honour: a button the server
- * must refuse (interview not waiting yet, recruiter wrote last, no outside contact, four already
- * sent) may never present as a working send. The hour's double-tap guard is not a reason here:
- * it is a skip, and the board names it as one when it happens. */
-export function sendNowBlockReason(t: { phase: Phase; contact: Reach | null; theyWrote: boolean; sent: number }): string {
-  if (t.sent >= MOST_SENT_FOR_YOU) return "Four follow-ups already sent for this interview."
+ * The four-count is not a reason here: the automatic weekly stops at four, but a tap is his word
+ * to carry on, so a manual Send now always goes past four. What still blocks a tap is a card the
+ * server must refuse (interview not waiting yet, recruiter wrote last, no outside contact). The
+ * board keeps the button visible and names the reason beside it when one of those applies. The
+ * hour's double-tap guard is not a reason here: it is a skip, and the board names it as one when
+ * it happens. */
+export function sendNowBlockReason(t: { phase: Phase; contact: Reach | null; theyWrote: boolean }): string {
   if (t.theyWrote) return "The recruiter wrote last, so there is nothing to follow up right now."
   if (t.contact?.recruiter) return "This contact is one of your own recruiters, so nothing is sent to them."
   if (!t.contact) return "There is no outside contact to follow up with on this card."
