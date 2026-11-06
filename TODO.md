@@ -1,3 +1,31 @@
+## 2026-11-06 — A finished WhatsApp rewrite sends the scored Word file
+
+No new screen. The change is on the WhatsApp resume run.
+
+**Cause.** The 7:23 PM America/Chicago caption is exact: `closestResumeCaption` plus "The rewrite was marked incomplete." That sentence is used when the tailor returns a result that is partial, `quality.incomplete`, or skills-only. `quality.incomplete` was set for every quality blocker except unchanged, so a role under the 98 percent evidence target discarded an edited file and sent the library resume. The first split draft was also assembled after only 40 percent of the call (60 percent reserved, up to 150 seconds), so role calls still running were marked pending before a scored file existed. The picker line "16 of 17" is not this score. `uploads/quality-bar-from-user-2026-11-05.md` is not in the checkout.
+
+**What changed.** A finished file is sent even under 95 percent. The caption names coverage, supported coverage, ATS, risk, and the missing job-post terms, measured on the exported bytes. `role_evidence_gaps` is that kind of gap. A failure, a timeout, a missing part, a skills-only outage, or a role that was not rewritten still sends the already-chosen library file, labelled unchanged. The 70 to 94.9 percent clean pass is unchanged, and it is still what gets filed. The website download stays on the 95 percent gate. Unsupported skills are not added. The first draft now keeps at least three quarters of the call, and a part still running is repaired instead of thrown away. Houston (`eshwarjay05`) and Saint Louis (`jayeshwar44`) are not mixed.
+
+**Checked.** Focused suites 152/152, including the 30.8 percent scored send, the library backup, the 70 percent clean pass, and the website hold. `tsc --noEmit` passed. Not a live WhatsApp message. Not production until this pull request is merged.
+
+**Next.** Pull request 232 is open at `4b3e4353`. Leave it open. After it lands, one live Houston job should receive the updated scored docx when the rewrite finishes.
+
+## 2026-11-06 — Kompas question intake (not merged, not deployed)
+
+No new screen. Speech, caption, and dictation chunks now keep one question whole and leave the next different question on its own card. A keyword such as "intro" becomes "Tell me about yourself." Other stems (strengths, weaknesses, why this role, experience with X, walk me through, a time when, questions for us, how would you, conflict) do the same, and a fragment with no question syntax still becomes a question. The answer engine receives that whole question. Salary, visa, address, relocation, and notice are still formed and then skipped by the existing logistics gate. Dictation repairs for kube cuddle, pee key eye, leased privilege, zero thrust, and the other new mishearings match on the desktop list and the server list.
+
+**Verified offline.** New slice 13/13. The old last-four-lines-plus-last-600-characters behavior glued 4 different-topic sequences and dropped 1 long opening; after, both counts are 0. The existing 50-sequence replay stays 0 missed, 0 merged, 0 misheard and was already 0 on master. That replay is not a live microphone. Core suites 81/81. A wider question, speech, dictation, and voice run was 289 pass and 5 fail; those 5 fail on master without this change. `tsc --noEmit` clean. Baseline contract 15/15.
+
+**Not verified.** No Windows microphone and no live caption box. Not merged. Not deployed. WhatsApp resume tailoring and System 3 retrieval were not edited. Rebased onto master `c011a72c` (the scored WhatsApp rewrite). Conflicts were only in this file, `docs/completion-watch.md`, `src/lib/plan-vision-journal.ts`, and `src/lib/rea-register.ts`.
+
+## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
+
+No new screen and no second System 3 change. Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `0bb575a` (merged pull request 229). Master then moved to `629be0fe` (WhatsApp always sends a resume file), which includes `0bb575a`. The published branch is rebased onto `629be0fe`. Hybrid retrieval, the 25-to-5 rerank, and source grounding match that master. The WhatsApp failsafe below is unchanged. The code-fence opener, the spoken-ceiling settle, and the residual-risk opener stay in `src/lib/kompasDissection.ts`.
+
+Conflicts were only in `src/lib/plan-vision-journal.ts`, this file, `docs/completion-watch.md`, and `src/lib/rea-register.ts`. `kompasAnswerService.ts`, `kompasHybridRank.ts`, `kompasSentenceGate.ts`, and `kompasSourceRetrieval.ts` match `629be0fe`.
+
+**Verified offline on the rebased tree.** `scripts/tests/kompas-relevance-folds.test.mjs` 22/22. `scripts/tests/kompas-desktop-answer-10fold.test.mjs` 1/1. `scripts/tests/kompas-dissection.test.mjs` 9/9. `scripts/tests/kompas-system3-retrieval.test.mjs` 12/12. `tsc --noEmit` clean. Live scored folds remain 0. Not merged. Not deployed. No `KOMPAS_VERCEL_API_TOKEN`. No FluidVoice.
+
 ## 2026-11-06 — WhatsApp always sends a resume file
 
 No new screen. The chat change is on the WhatsApp resume run, on top of the 70% clean pass.
@@ -33,6 +61,14 @@ No new screen. WhatsApp intake now treats a new Word file or a readable PDF as t
 **Delivery band.** Supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is sent when the draft is otherwise complete (ATS, diff, no unverified terms, no role blockers). Under 70% is still held, including 28.5% and 0%. `TAILOR_DELIVER_WITH_SHORTFALL=0` and `JD_TERMS_ALWAYS_ON_SKILLS=0` restore the strict under-95% refusal. Unevidenced job-post terms are still not written onto the skills line.
 
 **Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. The under-70% hold with no file is replaced by the failsafe entry above. That WhatsApp tailor later landed on master as 986ecef7 (squash of pull request 228). System 3 landed on master as 0bb575a0 (squash of pull request 229). This pull request is the resume failsafe on top of that, and it is still not merged.
+
+## 2026-11-06 — Kompas relevance fold: code questions open on a fence, and a long plan cannot outrun the mode ceiling
+
+No new screen. The offline stand-in for a code question now starts with one fenced block, and settle cuts spoken prose at the mode ceiling even when a caller passes a larger plan. A sentence that actually names the question is spoken first when the opening had buried it.
+
+**Measured, code-level, fictional resume.** Offline sample before: 15 answers, 3 failures, all the Python question with no fence. After: 15 answers, 0 failures, 15 warnings, 0 length warnings. A 180-word residual-risk answer with a 400-word plan settled to 36 words; the engineer ceiling is 40. Python stand-in prose: engineer 15 of 18, director 28 of 28, architect 42 of 42, each starting with a python fence. Desktop 10-fold harness still passes. It is not a Windows session.
+
+**Not verified.** `KOMPAS_EVAL_TOKEN` was unset, so live scored folds remain 0. Production at the start of the run was READY `dpl_BdCvdFcfTKPzLAV4dutnkZGFfNc8` at `986ecef`. This branch is not production until it merges.
 
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 

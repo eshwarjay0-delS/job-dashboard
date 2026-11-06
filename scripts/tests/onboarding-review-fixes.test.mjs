@@ -66,7 +66,7 @@ test('what the routes and the engine promise, read from the source', () => {
   assert.match(read('src/app/api/onboarding/status/route.ts'), /const phoneRequired = !admin/ )
   assert.ok(!read('src/app/api/profile/route.ts').includes('await phoneStepAvailable()'), 'profile completion cannot bypass verification during provider downtime')
   const tailor = read('src/lib/tailor.ts')
-  assert.match(tailor, /if \(failed \* 2 > total\) throw new Error\(`Tailoring incomplete/, 'a draft most providers refused is not delivered as a draft')
+  assert.match(tailor, /if \(refused \* 2 > total\) throw new Error\(`Tailoring incomplete/, 'a draft most providers refused is not delivered as a draft')
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   assert.match(bot, /first\.slice\(1\)\.toLowerCase\(\)\}_Resume`/, 'the file is named after the person, written as a name: Eshwar_Resume'); assert.match(bot, /sendDocument\(from, file, `\$\{name\}\.docx`/)
   // Since 16 Oct 2026 (7b5c71b) the pair is used up before generation, so "Nothing was changed" gave way to how to retry.

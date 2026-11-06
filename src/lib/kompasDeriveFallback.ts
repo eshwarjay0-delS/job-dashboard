@@ -3,22 +3,27 @@
 // question", so a real question was silently passed over. Now a failed call is retried once with a short timeout, and if
 // that fails too the question is formed locally from what the interviewer said. Only an explicit NO_QUESTION from the
 // model, or nothing heard at all, is still "no question". Logistics is stripped later by the answer path as before.
+import { intakeQuestions } from "./kompasQuestionIntake.ts"
 import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
 
 const LABEL = /^\s*(?:You(?: \((?:typed|earlier)\))?|Them(?: \(earlier\))?):\s*/i
 
-/** The interviewer's latest ask, formed without a model. "" only when nothing usable was heard. */
+/** The interviewer's latest ask, formed without a model. "" only when nothing usable was heard.
+ * Different recent lines stay separate: the fallback returns the latest whole question, not the last four lines glued, and not only its tail. */
 export function localDeriveFallback(heard: string): string {
   try {
     const lines = String(heard || "").split("\n").map((l) => l.trim()).filter(Boolean)
     const them = lines.filter((l) => /^\s*Them\b/i.test(l))
-    const pool = (them.length ? them : lines).slice(-4).map((l) => l.replace(LABEL, "").trim()).filter(Boolean)
+    const pool = (them.length ? them : lines).map((l) => l.replace(LABEL, "").trim()).filter(Boolean)
+    const formed = intakeQuestions(pool)
+    const last = formed[formed.length - 1] || ""
+    if (last) return last.slice(0, 4000).trim()
     const joined = pool.join(" ").replace(/\s+/g, " ").trim()
     if (!joined) return ""
     const ask = String(latestInterviewerAsk(joined) || joined).trim()
-    return ask.slice(-600).trim()
+    return ask.slice(0, 4000).trim()
   } catch {
-    return String(heard || "").replace(/^\s*(?:You|Them)[^:\n]{0,12}:\s*/gim, " ").replace(/\s+/g, " ").trim().slice(-600)
+    return String(heard || "").replace(/^\s*(?:You|Them)[^:\n]{0,12}:\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 4000)
   }
 }
 

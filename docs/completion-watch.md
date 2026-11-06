@@ -26,6 +26,14 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — scored WhatsApp rewrite
+
+The 7:23 PM America/Chicago caption, "closest matching resume because the rewrite did not finish cleanly. The rewrite was marked incomplete," is produced only after `runTailor` returns. `quality.incomplete` was set for every quality blocker except unchanged, including `role_evidence_gaps`. A finished edited file was discarded and the library resume was sent. The first split draft was also assembled after 40 percent of the call. This slice sends a finished file, including a truthful score under 95 percent, and names the missing terms. The library file stays the backup for a failure, a timeout, a missing part, a skills-only outage, or a role that was not rewritten. The 70 to 94.9 percent clean pass and the website 95 percent gate stay. No live WhatsApp message was sent. The pull request is not merged and production was not deployed from this slice.
+
+## 6 November 2026 — Kompas question intake
+
+A pull request against master groups speech, caption, and dictation chunks so one question stays whole and the last few different messages do not glue. Keywords such as "intro" become a real question for the answer engine. Logistics still follow the existing skip after the question is formed. Offline only: the focused replay went from 4 glued different-topic sequences and 1 dropped opening to 0 and 0. The older 50-sequence replay remains 0/0/0 and is not a live microphone. Not merged. Not deployed. A live Windows microphone session is still required before anyone calls the live path accepted. Rebased onto master `c011a72c`. The scored WhatsApp rewrite on that commit stays. Conflicts were only in this file, `TODO.md`, the plan journal, and the REA register.
+
 ## 6 November 2026 — WhatsApp resume file failsafe
 
 The Nov 5 6:43 PM America/Chicago EASM run refused a rewrite at 30.8 percent and sent no file. The approved failsafe sends a usable rewrite with the missing terms labelled, including under the 70 percent clean pass, and sends the already-chosen resume when the rewrite fails, times out, or is incomplete. Identity and profile guards stay. The web 95 percent gate and the 70 percent clean pass stay. This slice is a pull request, not a production deploy, until that pull request is merged and the production alias serves it. No live WhatsApp message was sent.
@@ -33,6 +41,10 @@ The Nov 5 6:43 PM America/Chicago EASM run refused a rewrite at 30.8 percent and
 ## 5 November 2026 desktop session family
 
 Origin/master `e58450c6` includes merged PR #224 and PR #226. PR #224 is the loopback bearer. PR #226 is the logistics filter and was not edited for this slice. No `POST /api/auth/desktop-session` existed. The route is implemented on PR 227 (`b070c71b`) with tests that keep the desktop refresh family independent of two website tab rotations. It is not merged and not a production deploy. A live three-day Windows sign-in is still unproven. The service-role key is required for the first mint.
+
+## 6 November 2026 fence fold onto the System 3 master
+
+Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `629be0fe`, which includes System 3 at `0bb575a` and the WhatsApp resume failsafe. Conflicts were only in the journal, `TODO.md`, this file, and the REA register. Hybrid retrieval, rerank 25 to 5, and source grounding stay as on that master commit. The code-fence opener, spoken-ceiling settle, and residual-risk opener stay. Offline: relevance folds 22/22, desktop 10-fold 1/1, dissection 9/9, system 3 retrieval 12/12, `tsc --noEmit` clean. Live scored folds remain 0. Pull request 231 is not merged. Production was not deployed from this rebase. Merge and ship are left to others.
 
 ## 6 November 2026 System 3 onto the WhatsApp master
 

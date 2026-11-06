@@ -4,7 +4,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
-  askedPartList, asksForCode, dissectQuestion, dissectionPrompt,   draftSpokenAnswer, dropParaphrasedRepeat, evaluateLiveAnswers,
+  askedPartList, asksForCode, dissectQuestion, dissectionPrompt,   draftSpokenAnswer, dropParaphrasedRepeat, evaluateLiveAnswers, standInFence,
   experienceLines, isProviderErrorAnswer, leadPhrase, partsScale, questionKeywords, requiredSentence, sentencesOf, settleSpokenAnswer,
   topicOfAsk, trimToWords, wordCount,
 } from "../../src/lib/kompasDissection.ts"
@@ -204,6 +204,37 @@ test("a paraphrased repeat of the previous answer keeps only the new point", () 
   const settled = settleSpokenAnswer("What is a policy exception?", again, "engineer", RESUME, previous)
   assert.match(settled.text, /policy exception/)
   assert.doesNotMatch(settled.text, /told the business/)
+})
+
+test("the stand-in puts one fenced block first for a code question", () => {
+  const q = "Write a Python function that returns the findings still open after 30 days."
+  for (const level of LEVELS) {
+    const draft = draftSpokenAnswer(q, level, RESUME)
+    assert.ok(draft.startsWith("```python\n"), level)
+    assert.equal((draft.match(/```/g) || []).length, 2, level)
+    const settled = settleSpokenAnswer(q, draft, level, RESUME)
+    assert.ok(settled.text.startsWith("```python\n"), level)
+    assert.ok(settled.words <= dissectQuestion(q, RESUME).modes[level].maxWords, `${level} ${settled.words}`)
+  }
+  assert.ok(standInFence("Write a SQL query that returns each customer's latest invoice.").startsWith("```sql\n"))
+  assert.equal(draftSpokenAnswer("What does residual risk mean?", "engineer", RESUME).includes("```"), false)
+})
+
+test("a larger plan cannot leave a spoken answer past the mode ceiling", () => {
+  const q = "What does residual risk mean?"
+  const long = "Residual risk is what remains after the planned control. ".repeat(20)
+  const band = dissectQuestion(q, RESUME).modes.engineer.maxWords
+  const out = settleSpokenAnswer(q, long, "engineer", RESUME, "", 400)
+  assert.ok(wordCount(out.text) <= band, `${wordCount(out.text)} > ${band}`)
+  assert.match(out.text, /residual risk/i)
+})
+
+test("an answer that buries the question opens on the question's words", () => {
+  const q = "What does residual risk mean?"
+  const buried = "I would start with the owner and the ticket. Residual risk is what remains after the planned control. The owner decides what is left."
+  const out = settleSpokenAnswer(q, buried, "engineer", RESUME)
+  assert.match(out.text, /^Residual risk is what remains/)
+  assert.match(out.text, /start with the owner/)
 })
 
 test("gateway sentences are not answers, and a real sentence that mentions a failure still is", () => {

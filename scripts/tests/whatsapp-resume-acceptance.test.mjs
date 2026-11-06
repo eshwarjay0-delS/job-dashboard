@@ -103,6 +103,34 @@ test("69.9% is not a clean pass, and the finished file is still sendable", () =>
   assert.equal(gate.whatsappRewriteUsable(draft), true)
   assert.equal(gate.deliveredWithShortfall(draft), true)
 })
+test("30.8% with a role evidence gap is sent, and it is not a clean pass or a website download", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    coverage: 30.8,
+    supported_coverage: 30.8,
+    quality: resumeQuality({ matched: 4, total: 13, missing: ["soc 2", "tprm", "supplier"], partial: true, unfinished: false }),
+    quality_blockers: ["role_evidence_gaps"],
+  })
+  assert.equal(draft.quality.incomplete, false)
+  assert.equal(draft.quality.status, "needs_review")
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.equal(gate.whatsappRewriteUsable(draft), true)
+  assert.equal(gate.deliveredWithShortfall(draft), true)
+  assert.equal(gate.acceptableWebResume(draft), false)
+  assert.equal(gate.honestProfessionalGap(draft), false)
+})
+test("a role that was not rewritten still uses the library backup", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    coverage: 30.8,
+    supported_coverage: 80,
+    quality: resumeQuality({ matched: 4, total: 13, missing: ["soc 2"], partial: true, unfinished: false }),
+    quality_blockers: ["roles_unrewritten", "role_evidence_gaps"],
+  })
+  assert.equal(gate.whatsappRewriteUsable(draft), false)
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.equal(gate.acceptableWebResume(draft), false)
+})
 test("28.5% is not a clean pass, and the finished file is still sendable", () => {
   const draft = make({
     coverage: 28.5,

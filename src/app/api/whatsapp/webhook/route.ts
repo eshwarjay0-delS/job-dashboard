@@ -1014,10 +1014,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       bulletsReverted: result.bullets_reverted_for_jd_terms ?? 0,
       cached: !!result.cached,
     })
-    const why = result.partial || result.quality?.incomplete || result.skills_only
-      ? "The rewrite was marked incomplete."
-      : "The rewrite did not finish cleanly."
-    if (await sendClosest(why)) return
+    if (await sendClosest(unfinishedRewriteWhy(result))) return
     // No chosen file could be sent (missing, or it belongs to another profile).
     await sayOutcome(qualityStop(result))
     return;
@@ -1515,10 +1512,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     const baseline = await readPath(gen.file).catch(() => null)
     const meta = await metaPromise
     if (baseline) {
-      const why = result.partial || result.quality?.incomplete || result.skills_only
-        ? "The rewrite was marked incomplete."
-        : "The rewrite did not finish cleanly."
-      await sendBaseline(why, baseline, meta)
+      await sendBaseline(unfinishedRewriteWhy(result), baseline, meta)
       return
     }
     return sendText(from, qualityStop(result))
@@ -1671,6 +1665,12 @@ function chosenLabel(files: FromFiles | undefined, resumeName?: string): string 
   if (files?.said) return files.said.split(". I chose")[0]
   if (resumeName) return `*${resumeName}*`
   return "the resume already chosen for this job"
+}
+
+function unfinishedRewriteWhy(result: TailorResult): string {
+  if (result.partial || result.quality?.incomplete || result.skills_only) return "The rewrite was marked incomplete."
+  if (result.quality_blockers?.includes("roles_unrewritten")) return "Some experience sections were not rewritten."
+  return "The rewrite did not finish cleanly."
 }
 
 function closestResumeCaption(name: string, label: string, why: string): string {
