@@ -81,10 +81,17 @@ export async function docxText(docx: Buffer | Uint8Array | ArrayBuffer): Promise
   const zip = await JSZip.loadAsync(docx)
   const file = zip.file('word/document.xml')
   if (!file) throw new Error('not a .docx: word/document.xml missing')
-  const xml = await file.async('string')
-  return xml
-    .replace(/<w:tab\/>/g, '\t').replace(/<w:br\/>|<\/w:p>/g, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
-    .replace(/\n{2,}/g, '\n').trim() + '\n'
+  // Include header/footer text as well as the body: Word may store contact details there.
+  // Keep the body first so the name-line heuristic still sees the resume heading.
+  const parts = ['word/document.xml', ...Object.keys(zip.files)
+    .filter(p => /^word\/(?:header|footer)\d+\.xml$/i.test(p)).sort()]
+  const textParts = await Promise.all(parts.map(async p => {
+    const xml = await zip.file(p)!.async('string')
+    return xml
+      .replace(/<w:tab\s*\/>/g, '\t').replace(/<w:br\s*\/>|<\/w:p>/g, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+      .replace(/\n{2,}/g, '\n').trim()
+  }))
+  return textParts.filter(Boolean).join('\n') + '\n'
 }
