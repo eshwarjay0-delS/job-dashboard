@@ -177,6 +177,16 @@ export default function InterviewBoard() {
       <p style={{ margin: "0 0 14px", fontSize: 14.5, lineHeight: 1.6, color: "var(--text-muted)", maxWidth: 720 }}>
         Every interview stays here until you tell me how it ended. Nothing below is late. I say when a follow-up is a good idea, and I can send it for you.
       </p>
+      {data.lastWatchdogRun && (
+        <p style={{ margin: "0 0 14px", fontSize: 13.5, lineHeight: 1.6, color: "var(--text-muted)", maxWidth: 720 }}>
+          Daily check {dayTime(data.lastWatchdogRun.at)}: sent {data.lastWatchdogRun.sent}
+          {data.lastWatchdogRun.failed > 0 ? `, ${data.lastWatchdogRun.failed} failed` : ""}
+          {data.lastWatchdogRun.dueButUnsent.length > 0
+            ? `, ${data.lastWatchdogRun.dueButUnsent.length} due but held back — ${data.lastWatchdogRun.dueButUnsent.map(d => d.reason).join("; ")}`
+            : ", nothing held back"}
+          {data.lastWatchdogRun.error ? ` The check hit a problem: ${data.lastWatchdogRun.error}` : ""}
+        </p>
+      )}
       {error && <p role="alert" style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "0 0 10px" }}>{error}</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

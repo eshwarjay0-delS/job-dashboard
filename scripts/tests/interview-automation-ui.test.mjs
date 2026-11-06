@@ -114,4 +114,6 @@ test('a watchdog day with no sends leaves a record, and the board answer carries
   assert.ok(api.includes('readWatchdogRun('), 'the answer reads the record')
   const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
   assert.ok(board.includes('lastWatchdogRun'), 'the board answer type carries the run')
+  assert.ok(board.includes('Daily check'), 'the board shows the last daily check as a line')
+  assert.ok(board.includes('due but held back'), 'the line names cards held back, so a zero-send day is visible')
 })
