@@ -1059,24 +1059,23 @@ html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-
   line-height:1;
   border-radius:999px;
 }
-html.kd,html.kd body{border-radius:999px;overflow:hidden}
-html.kd .kd-bar{border:0;border-top-left-radius:999px;border-top-right-radius:999px}
+html.kd,html.kd body{border-radius:28px !important;overflow:hidden !important}
+html.kd .kd-bar{border:0 !important;border-radius:28px 28px 0 0 !important}
 html.kd #view-copilot{
   position:fixed;
-  top:42px;
+  top:48px !important;
   left:0;
   right:0;
   bottom:0;
   overflow:hidden;
-  border-bottom-left-radius:999px;
-  border-bottom-right-radius:999px;
+  border-radius:0 0 28px 28px !important;
 }
 html.kd .cn-card,
 html.kd .modal-card,
 html.kd .more-menu,
 html.kd .overlay{
   border:0 !important;
-  border-radius:999px !important;
+  border-radius:28px !important;
   box-shadow:none !important;
 }
 html.kd #view-copilot .overlay .bar-actions{position:sticky;top:0;z-index:40;flex-shrink:0}
@@ -1122,33 +1121,66 @@ html.kd #screenCaptureAnswerBtn:hover{border-color:var(--line-strong);background
 /* Desktop window, even a narrow one: the top bar stays the size on screen.
    Text size changes the question and the answer only. */
 html.kd .kd-bar{
-  height:42px !important;
-  min-height:42px !important;
-  max-height:42px !important;
+  height:48px !important;
+  min-height:48px !important;
+  max-height:48px !important;
   font-size:13px !important;
 }
+html.kd .kd-left{flex:0 0 auto !important}
 html.kd #view-copilot .overlay .bar-actions{
+  position:fixed !important;
+  top:0 !important;
+  left:108px !important;
+  right:8px !important;
+  z-index:140 !important;
   flex:0 0 48px !important;
   height:48px !important;
   min-height:48px !important;
   max-height:48px !important;
   flex-wrap:nowrap !important;
-  font-size:13px !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:4px !important;
+  padding:0 6px !important;
+  overflow:visible !important;
+  background:transparent !important;
+  pointer-events:none !important;
+  font-size:11px !important;
 }
+html.kd #view-copilot .overlay .bar-actions>*{pointer-events:auto !important}
 html.kd #view-copilot .overlay .bar-actions .pill,
 html.kd #view-copilot .overlay .bar-actions .icon-btn,
 html.kd #view-copilot .overlay .bar-actions .src-btn,
 html.kd #view-copilot .overlay .bar-actions .live-select,
 html.kd #view-copilot .overlay .bar-actions .card-count,
 html.kd #view-copilot .overlay .bar-actions #micBtn,
-html.kd #view-copilot .overlay .bar-actions #sysBtn,
+html.kd #view-copilot .overlay .bar-actions #sysBtn{
+  height:22px !important;
+  min-height:22px !important;
+  max-height:22px !important;
+  font-size:11px !important;
+  padding:0 7px !important;
+  flex:0 1 auto !important;
+}
+html.kd #view-copilot .overlay .bar-actions #micBtn,
+html.kd #view-copilot .overlay .bar-actions #sysBtn{
+  width:22px !important;
+  min-width:22px !important;
+  flex:0 0 22px !important;
+  padding:0 !important;
+}
+html.kd #view-copilot .overlay .bar-actions #startBtn,
+html.kd #view-copilot .overlay .bar-actions #answerBtn,
 html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
   height:32px !important;
   min-height:32px !important;
   max-height:32px !important;
   font-size:13px !important;
+  padding:0 12px !important;
+  flex:0 0 auto !important;
 }
-html.kd #view-copilot .overlay .bar-actions .asking{flex:0 0 auto !important;height:32px !important}
+html.kd #view-copilot .overlay .bar-actions .asking{flex:0 1 auto !important;height:22px !important;font-size:11px !important}
+html.kd #view-copilot .overlay .bar-actions .asking .live-select{height:22px !important;max-height:22px !important;max-width:7rem !important;font-size:11px !important;padding:0 6px !important}
 html.kd #view-copilot .a-head,
 html.kd #view-copilot .bar-ask,
 html.kd #view-copilot .statusline{
@@ -1182,15 +1214,59 @@ html.kd #view-copilot #answer.following{
 /* The focus sheet was a solid colour, so the opacity slider faded the window
    behind it and the panel stayed opaque. The paper uses the slider. The letters stay dark. */
 html.kd.desktop-focus #view-copilot #overlay,
-html.kd.desktop-focus #view-copilot #card,
 html.kd.desktop-focus #view-copilot .content{
   background:transparent !important;
   background-color:transparent !important;
   background-image:none !important;
 }
+html.kd #view-copilot #card,
+html.kd.desktop-focus #view-copilot #card,
+html.kd #view-copilot .q,
+html.kd #view-copilot .a,
+html.kd #view-copilot #answer{
+  opacity:1 !important;
+  background:#fdfcf9 !important;
+  background-color:#fdfcf9 !important;
+  background-image:none !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .q span,
+html.kd #view-copilot #question,
+html.kd #view-copilot #answer,
+html.kd #view-copilot #answer li{
+  opacity:1 !important;
+  color:#15140f !important;
+}
 html.kd .kd-bar,
+html.kd #kdBar,
 html.kd #view-copilot .bar,
 html.kd #view-copilot .manual,
 html.kd #view-copilot .statusline{
-  background-color:rgba(253,252,249,var(--panel-a)) !important;
+  background-color:rgba(253,252,249,max(var(--panel-a),0.94)) !important;
+}
+html.kd #view-copilot #card,
+html.kd.desktop-focus #view-copilot #card,
+html.kd #view-copilot .q,
+html.kd #view-copilot .a,
+html.kd #view-copilot .a-head,
+html.kd #view-copilot #answer{
+  opacity:1 !important;
+  background:#fdfcf9 !important;
+  background-color:#fdfcf9 !important;
+  background-image:none !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .q span,
+html.kd #view-copilot .q b,
+html.kd #view-copilot #question,
+html.kd #view-copilot #answer,
+html.kd #view-copilot #answer li,
+html.kd #view-copilot .a-head,
+html.kd #kdBar,
+html.kd .kd-word,
+html.kd #view-copilot .bar-actions .pill,
+html.kd #view-copilot .bar-actions .live-select,
+html.kd #view-copilot .manual,
+html.kd #view-copilot .statusline{
+  opacity:1 !important;
 }
