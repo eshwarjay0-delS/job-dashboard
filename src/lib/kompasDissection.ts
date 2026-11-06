@@ -1452,6 +1452,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // A comparison or definition is the two named things. The shared closing catalog made
   // "Define IDOR versus CSRF" and "Define containment versus eradication" the same long answer.
   const namedPair = cut.shape === "comparison" || cut.shape === "definition"
+  // Two design questions often share the same "explain trust boundaries…" list. An approach
+  // line that does not name this design is the same sentence for both.
+  const namedDesign = /^\s*design\b/i.test(question) && lead.split(/\s+/).filter(Boolean).length >= 3
   askedParts.slice(0, level === "engineer" ? 2 : level === "director" ? 3 : askedParts.length).forEach((part, i) => {
     const templates = PART_LINES[level]
     // Round 11: a listed part was said in the interviewer's voice ("On what would you check yourself"); it is said as mine.
@@ -1464,7 +1467,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     words += n
   })
   // Shared closing lines do not name the incident or the two things being compared.
-  if (!incident && !namedPair) {
+  if (!incident && !namedPair && !namedDesign) {
     for (const line of CLOSERS[level]) {
       const n = wordCount(line)
       if (words + n > stop || !fresh(line)) continue
@@ -1473,7 +1476,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     }
   }
   const approach = APPROACH[level].map((make) => make(cut.shape === "personal-experience" ? "that situation" : lead)).filter((line) => fresh(line) && !parts.includes(line))
-  const anchored = namedPair ? approach.filter((line) => line.toLowerCase().includes(lead.toLowerCase())) : approach
+  const anchored = namedPair || namedDesign ? approach.filter((line) => line.toLowerCase().includes(lead.toLowerCase())) : approach
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
   if (!incident && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
     for (const line of anchored) {
@@ -1495,7 +1498,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // The floor from the mode below: unused supported lines first, then approach lines, each only if it fits the ceiling.
   // An incident that already named its parts does not refill from the shared catalog.
   if (words < floor) {
-    for (const line of [...lines, ...(incident || namedPair ? [] : CLOSERS[level].filter(fresh)), ...(incident ? [] : anchored)]) {
+    for (const line of [...lines, ...(incident || namedPair || namedDesign ? [] : CLOSERS[level].filter(fresh)), ...(incident ? [] : anchored)]) {
       if (words >= floor) break
       const n = wordCount(line)
       if (parts.includes(line) || words + n > mode.maxWords) continue
@@ -1504,7 +1507,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     }
   }
   // Length for a named incident or a named comparison comes from those words, not the shared catalog.
-  if (incident || namedPair) {
+  if (incident || namedPair || namedDesign) {
     for (const line of [
       `I start from ${lead}.`,
       `The case is ${lead}.`,
