@@ -128,6 +128,23 @@ test("two incidents that share a frame do not get one answer", () => {
   assert.ok(same.failures.some((f) => /same answer for different questions/.test(f)))
 })
 
+test("a definition comparison does not reuse the shared closing catalog", () => {
+  const idor = "Define IDOR versus CSRF. Keep it suitable for technical HR."
+  const containment = "Define containment versus eradication. Keep it suitable for technical HR."
+  for (const level of LEVELS) {
+    const left = draftSpokenAnswer(idor, level, RESUME)
+    const right = draftSpokenAnswer(containment, level, RESUME)
+    assert.match(left, /IDOR versus CSRF/)
+    assert.match(right, /containment versus eradication/)
+    assert.equal(left.includes("The boundary I watch"), false, level)
+    assert.equal(right.includes("The boundary I watch"), false, level)
+  }
+  const architect = sameAnswerRatio(draftSpokenAnswer(idor, "architect", RESUME), draftSpokenAnswer(containment, "architect", RESUME))
+  const director = sameAnswerRatio(draftSpokenAnswer(idor, "director", RESUME), draftSpokenAnswer(containment, "director", RESUME))
+  assert.ok(architect < 0.85, String(architect))
+  assert.ok(director < 0.85, String(director))
+})
+
 test("lead phrases and asked parts come from the interviewer's words", () => {
   assert.equal(leadPhrase("How do you assess business impact and residual risk?"), "assess business impact and residual risk")
   assert.match(leadPhrase(HITACHI[2]), /^design multi-cloud controls mapped to NIST 800-53$/)

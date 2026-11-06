@@ -100,6 +100,14 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026, comparisons stay on the two names
+
+A definition or comparison no longer takes the shared closing catalog. Length that is still required uses the two named things.
+
+On the incident-ontopic tree, 150 drafts had 113 pairs at Jaccard >= 0.7. After: 103. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0.
+
+"Define IDOR versus CSRF" versus "Define containment versus eradication": architect 0.905 (105 words, included "The boundary I watch") to 0.793 (94 words, that line gone). Director 0.867 (62 words) to 0.810 (52 words). Engineer stayed 0.636 at 29 words. Offline sample stayed 15 answers, 0 failures.
+
 ## Fold log, 6 November 2026, incident length without the shared close
 
 On the rebased distinct-incident tree, the worker and updater architect drafts still overlapped at 0.778 because the shared closing lines were filled back in to meet the longer mode. Those lines do not name the incident. They stay off for a named incident. The length that the longer modes still need is said with the incident itself.

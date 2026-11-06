@@ -29,6 +29,13 @@ The sign-in card is the same one from the Nov 6 screenshot. It is shown only whe
 **Checked.** Offline. Desktop `npm run check`: 42 pass, 0 fail, protocol self-test passed. Sign-in state and auth-gate: 19 pass, 0 fail. `tsc --noEmit --skipLibCheck` clean. ESLint 0 errors on the two edited TypeScript files. `PHRASE_FIXES` was not edited. Not a live click on the laptop. Not a new `Kompas.exe`. Not production until this pull request is merged and a later Windows build is installed.
 
 **Next.** Leave the pull request open. The installed Nov 6 exe keeps the old opener until that later build.
+## 2026-11-06 — A comparison stays on the two named things
+
+No new screen. The offline stand-in for a definition or a comparison no longer adds the shared closing lines.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before this change, on the incident-ontopic tree: 113 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures. "Define IDOR versus CSRF" versus "Define containment versus eradication": engineer 0.636 (29 words), director 0.867 (62 words), architect 0.905 (105 words). The architect draft included "The boundary I watch". After: 103 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. That pair: engineer 0.636 (29 words), director 0.810 (52 words), architect 0.793 (94 words). The boundary line is gone. Offline sample 15 answers, 0 failures.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed.
 
 ## 2026-11-06 — A finished WhatsApp rewrite was held by a false ATS miss
 
