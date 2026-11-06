@@ -19,12 +19,17 @@ export const WHATSAPP_SUPPORTED_FLOOR = 95
 export const WHATSAPP_JOB_POST_FLOOR = 70
 
 /** Coverage and added job-post terms are labelled on the WhatsApp reply.
- * They do not, by themselves, make a finished Word file unusable. */
+ * They do not, by themselves, make a finished Word file unusable.
+ * role_evidence_gaps is the same kind of gap: the file was edited and scored,
+ * and a role is under the 98% evidence target. Missing terms stay in the caption.
+ * roles_unrewritten, a missing part, and a skills-only outage are not in this
+ * set. Those are unfinished, and the already-chosen library file is the backup. */
 const WHATSAPP_SHORTFALL_REASONS = new Set([
   "jd_coverage_below_floor",
   "supported_coverage_below_floor",
   "unverified_jd_terms",
   "quality_not_deliverable",
+  "role_evidence_gaps",
 ])
 
 function envFlag(name: string): string {
@@ -111,8 +116,10 @@ export function acceptableWebResume(result: TailorResult): boolean {
   return whatsappResumeRejectionReasons(result, { strict: true }).length === 0
 }
 
-/** A finished rewrite WhatsApp can send. Incomplete, unchanged, or unproven
- * files are not usable: the caller sends the already-chosen resume instead.
+/** A finished rewrite WhatsApp can send. A file whose writers did not return,
+ * that did not change, or that failed the exported ATS check is not usable:
+ * the caller sends the already-chosen resume instead. A role under the 98%
+ * evidence target is a named gap on that finished file, not a missing file.
  * Identity, name, dates and contact details are checked on the file bytes. */
 export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false

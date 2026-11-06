@@ -1,3 +1,15 @@
+## 2026-11-06 — A finished WhatsApp rewrite sends the scored Word file
+
+No new screen. The change is on the WhatsApp resume run.
+
+**Cause.** The 7:23 PM America/Chicago caption is exact: `closestResumeCaption` plus "The rewrite was marked incomplete." That sentence is used when the tailor returns a result that is partial, `quality.incomplete`, or skills-only. `quality.incomplete` was set for every quality blocker except unchanged, so a role under the 98 percent evidence target discarded an edited file and sent the library resume. The first split draft was also assembled after only 40 percent of the call (60 percent reserved, up to 150 seconds), so role calls still running were marked pending before a scored file existed. The picker line "16 of 17" is not this score. `uploads/quality-bar-from-user-2026-11-05.md` is not in the checkout.
+
+**What changed.** A finished file is sent even under 95 percent. The caption names coverage, supported coverage, ATS, risk, and the missing job-post terms, measured on the exported bytes. `role_evidence_gaps` is that kind of gap. A failure, a timeout, a missing part, a skills-only outage, or a role that was not rewritten still sends the already-chosen library file, labelled unchanged. The 70 to 94.9 percent clean pass is unchanged, and it is still what gets filed. The website download stays on the 95 percent gate. Unsupported skills are not added. The first draft now keeps at least three quarters of the call, and a part still running is repaired instead of thrown away. Houston (`eshwarjay05`) and Saint Louis (`jayeshwar44`) are not mixed.
+
+**Checked.** Focused suites 152/152, including the 30.8 percent scored send, the library backup, the 70 percent clean pass, and the website hold. `tsc --noEmit` passed. Not a live WhatsApp message. Not production until this pull request is merged.
+
+**Next.** Pull request 232 is open at `4b3e4353`. Leave it open. After it lands, one live Houston job should receive the updated scored docx when the rewrite finishes.
+
 ## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
 
 No new screen and no second System 3 change. Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `0bb575a` (merged pull request 229). Master then moved to `629be0fe` (WhatsApp always sends a resume file), which includes `0bb575a`. The published branch is rebased onto `629be0fe`. Hybrid retrieval, the 25-to-5 rerank, and source grounding match that master. The WhatsApp failsafe below is unchanged. The code-fence opener, the spoken-ceiling settle, and the residual-risk opener stay in `src/lib/kompasDissection.ts`.

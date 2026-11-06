@@ -1,4 +1,5 @@
 import { roleQualityBlockers } from "./tailor-ship-on-rollback"
+import { firstDraftRepairReserveMs } from "./tailor-budget"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
 import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements } from "./resume-evidence"
@@ -624,11 +625,15 @@ export async function runTailor(opts: {
         assembleBy: deadline - repairReserve,  // what is still running then is left behind; the draft is made of what came back
       })
       const done = worked.filter(w => w.e)
-      const total = worked.length, failed = total - done.length
+      const total = worked.length
+      const refused = worked.filter(w => !w.e && w.err).length
       if (!done.length) throw worked.find(w => w.err)?.err ?? new Error("Tailoring draft came back empty")
-      // Most of it refused on every lane: that is not a draft. Failing here lets the caller say so.
-      if (failed * 2 > total) throw new Error(`Tailoring incomplete: the AI providers refused ${failed} of ${total} parts of the draft.`)
-      partsFailed = failed; partsTotal = total
+      // Most parts were refused by the providers: that is not a draft. A part
+      // still running when the first pass is assembled is pending, not a refusal.
+      // Gap fill uses the repair window for those roles instead of throwing the
+      // finished parts away and leaving no scored file.
+      if (refused * 2 > total) throw new Error(`Tailoring incomplete: the AI providers refused ${refused} of ${total} parts of the draft.`)
+      partsFailed = total - done.length; partsTotal = total
       pendingRoles = worked.filter(w => !w.e && w.part.kind === "experience").flatMap(w => w.part.roles || [])
       pendingProfile = worked.some(w => !w.e && w.part.kind === "profile")
       const profile = worked.find(w => w.part.kind === "profile")?.e
@@ -651,7 +656,7 @@ export async function runTailor(opts: {
   const MIN_KEYWORD_COVERAGE = RESUME_MIN_COVERAGE
   const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || RESUME_TARGET_COVERAGE))
   const TAILOR_MAX_MS = Math.max(1000, Math.min(opts.maxMs || Number(E.TAILOR_MAX_MS) || 52000, 280000))
-  const repairReserve = Math.min(150000, Math.floor(TAILOR_MAX_MS * .6))
+  const repairReserve = firstDraftRepairReserveMs(TAILOR_MAX_MS)
   const deadline = started + TAILOR_MAX_MS
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
@@ -1254,7 +1259,19 @@ export async function runTailor(opts: {
   // scored as an empty denominator (needs review) after the skills line was filled.
   const recount = exportedRecount
   const coveredScore = recount ? scoreKws.filter(k => !recount.missing.includes(k)) : scoreKws.filter(k => afterKw.has(k))
-  const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: recount ? recount.missing : scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
+  // A review blocker keeps the status off coverage_met, so the file is not cached
+  // as complete. It is not the same event as the writers failing to return.
+  // quality.incomplete is only that unfinished case. A finished file is scored
+  // on the exported bytes and can still be sent with the gap named.
+  const writersUnfinished = !!(best.partial || skillsOnly)
+  const qualityReport = resumeQuality({
+    matched: coveredScore.length, total: scoreKws.length,
+    missing: recount ? recount.missing : scoreKws.filter(k => !afterKw.has(k)),
+    weightedCoverage: best.cov,
+    partial: qualityBlockers.some(k => k !== "unchanged"),
+    unfinished: writersUnfinished,
+    unchanged: !diff.length,
+  })
   // Independent Gemini feedback on the ACTUAL exported DOCX text. This is advisory:
   // model-suggested vocabulary never inflates the measured JD coverage or asserts
   // experience the candidate did not supply. Keep the pass short so WhatsApp
