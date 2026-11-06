@@ -8,7 +8,7 @@ No new screen. The change is on the WhatsApp resume run.
 
 **Checked.** Focused suites 152/152, including the 30.8 percent scored send, the library backup, the 70 percent clean pass, and the website hold. `tsc --noEmit` passed. Not a live WhatsApp message. Not production until this pull request is merged.
 
-**Next.** Leave the pull request open. After it lands, one live Houston job should receive the updated scored docx when the rewrite finishes.
+**Next.** Pull request 232 is open at `4b3e4353`. Leave it open. After it lands, one live Houston job should receive the updated scored docx when the rewrite finishes.
 
 ## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
 
