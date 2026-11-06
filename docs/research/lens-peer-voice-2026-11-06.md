@@ -39,4 +39,4 @@ Logistics and the default-off switch suite also passed. `tsc --noEmit` was clean
 
 ## Limits
 
-The composer is a deterministic stand-in. It does not prove a live model will pick one move. The two r3 failures stay until someone is asked to edit `REALISM`, which this task was told not to do. The pull request is not merged and production was not deployed from it.
+The composer is a deterministic stand-in. It does not prove a live model will pick one move. The two r3 failures stay until someone is asked to edit `REALISM`, which this task was told not to do. Implementation commit `fc577906`. The pull request is not merged and production was not deployed from it.
