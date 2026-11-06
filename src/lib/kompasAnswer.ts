@@ -1,4 +1,5 @@
 import { repairDictation } from "./kompasDictation.ts"
+import { formQuestionFromHeard } from "./kompasQuestionIntake.ts"
 import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
 import { interviewIntent } from "./kompasRelevance.ts"
 
@@ -805,14 +806,26 @@ export function deriveByCode(heard: string, history: unknown, reask = false): st
   return derived ? tidySpokenAsk(derived) : derived
 }
 
+function heardBare(heard: string): string {
+  return String(heard || "").replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim()
+}
+
 function deriveByCodeRaw(heard: string, history: unknown, reask = false): string | null {
-  if (!heard || plainlyNoQuestion(heard)) return null
+  if (!heard) return null
   // Every line is small talk ("Them: makes sense"): nothing to derive, and the model is not asked to find a question in it.
   if (String(heard).split("\n").filter((l) => l.trim()).every((l) => noiseOnly(l))) return null
-  const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history), reask)
-  if (clean) return clean
-  const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
-  return topic ? String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 4000) : ""
+  if (!plainlyNoQuestion(heard)) {
+    const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history), reask)
+    if (clean) return clean
+  }
+  const bare = heardBare(heard)
+  if (!bare || noiseOnly(bare) || smallTalkOnly(bare)) return plainlyNoQuestion(heard) ? null : ""
+  // No formal ask: still hand the answer engine a whole question built from what was heard.
+  const formed = formQuestionFromHeard(bare)
+  if (formed) return formed
+  if (plainlyNoQuestion(heard)) return null
+  const topic = topicFragment(bare)
+  return topic ? bare.slice(0, 4000) : ""
 }
 
 /**

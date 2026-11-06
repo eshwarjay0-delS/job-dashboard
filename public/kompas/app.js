@@ -3053,6 +3053,21 @@ const PHRASE_FIXES = [
   [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
   [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
   [/\bdocker\s+file\b/gi, "Dockerfile"],
+  // Question-intake mishearings (6 Nov 2026). Each one is a technical garble, not ordinary English.
+  [/\bkube\s+cuddle\b/gi, "Kubernetes"],
+  [/\bkoo\s*ber\s*nett(?:y|ie)s\b/gi, "Kubernetes"],
+  [/\bpee\s+key\s+eye\b/gi, "PKI"],
+  [/\bleased\s+privilege\b/gi, "least privilege"],
+  [/\bleast\s+priviledge\b/gi, "least privilege"],
+  [/\bzero\s+thrust\b/gi, "zero trust"],
+  [/\broll[\s-]based\s+access\b/gi, "role-based access"],
+  [/\bgrafanna\b/gi, "Grafana"],
+  [/\bprometh(?:i|e)us\b/gi, "Prometheus"],
+  [/\binfra\s+structure\b/gi, "infrastructure"],
+  [/\bsee\s+eye\s+see\s+dee\b/gi, "CI/CD"],
+  [/\bactive\s+die\s+rectory\b/gi, "Active Directory"],
+  [/\bsale\s+point\b/gi, "SailPoint"],
+  [/\bservice\s+principle(?=\s+(?:name|names|password|credential|credentials|app|application|azure|object))\b/gi, "service principal"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -3258,6 +3273,161 @@ function closingSentence(x) {
 function askSentence(x) { return !closingSentence(x) && (Q_CUE.test(x) || /\?/.test(x) || ASK_PHRASE.test(x)); }
 const NOISE_WORDS = new Set("hi hello hey ok okay yeah yes no uh um hmm thanks thank you right alright sure good great nice bye there everyone all guys".split(" "));
 function isNoiseLine(text) { const ws = String(text || "").toLowerCase().replace(/[^a-z\s]+/g, " ").split(/\s+/).filter(Boolean); return ws.length >= 1 && ws.length <= 4 && ws.every(w => NOISE_WORDS.has(w)); }
+// ── question intake slice 2026-11-06 ──
+// Same rules as src/lib/kompasQuestionIntake.ts. Fragments of one question join.
+// The next different chunk does not. A keyword still becomes a question.
+const INTAKE_LEAD = /^(?:(?:um+|uh+|erm+|so|okay|ok|yeah|yes|right|well|now|then|alright|all right|and|but)[,.]?\s+)+/i;
+const INTAKE_FRESH = /^(?:what|why|how|when|where|which|who|can you|could you|would you|will you|do you|did you|have you|are you|is there|tell me|walk me|describe|explain|give me)\b/i;
+const INTAKE_CONT = /^(?:and|or|but|for|with|without|that|which|to|of|in|on|about|including|plus|then|because|if|when|where|while|until|from|into|by|using|across|during|after|before)\b/i;
+const INTAKE_DANGLING = /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should|me|us|you|how|what|why|when|where|which|who)\s*$/i;
+const SLICE_STOP = new Set("what how why when where which who tell walk have has can could would will did does are the and but for you your yeah okay right great thanks this that those these about with from into our their them they been being just like really very also more most some any".split(" "));
+const INTAKE_NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|right|alright|all right|cool|sure|great|nice|bye|goodbye|good morning|good afternoon)[.!?]*$/i;
+const INTAKE_FOLLOW = /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how|walk me through that)(?:\s+though)?[.?!]*$/i;
+function intakeBare(text) { return String(text || "").replace(INTAKE_LEAD, "").replace(/\s+/g, " ").trim(); }
+function intakeRepair(text) { const raw = String(text || ""); return (typeof fixPhrases === "function" ? fixPhrases(raw) : raw).replace(/\s+/g, " ").trim(); }
+function intakeContent(text) { return intakeBare(text).toLowerCase().replace(/[^a-z0-9+#]+/g, " ").split(/\s+/).filter((w) => w.length >= 4 && !SLICE_STOP.has(w)); }
+function intakeOpens(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim(), t = intakeBare(raw);
+  if (!t || INTAKE_FOLLOW.test(raw) || INTAKE_FOLLOW.test(t)) return false;
+  if (INTAKE_CONT.test(t) && !INTAKE_FRESH.test(t.replace(INTAKE_CONT, "").trim())) return false;
+  return INTAKE_FRESH.test(t) || /\?\s*$/.test(t);
+}
+function intakeDifferent(prev, next) {
+  const raw = String(next || "").replace(/\s+/g, " ").trim();
+  if (INTAKE_FOLLOW.test(raw) || INTAKE_FOLLOW.test(intakeBare(raw))) return false;
+  const bare = intakeBare(raw);
+  const pointed = /\b(?:that|it|those|these|there|the same)\b/i.test(bare) || (/\bthis\b/i.test(bare) && !/\bthis\s+[a-z0-9]{4,}/i.test(bare));
+  if (pointed && intakeContent(raw).length <= 1) return false;
+  const prevWords = new Set(intakeContent(prev)), nextWords = intakeContent(raw);
+  if (!nextWords.length) return false;
+  return nextWords.every((w) => !prevWords.has(w));
+}
+const INTAKE_UNFINISHED = /^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|tell|walk|give|explain)\b/i;
+function intakeOpen(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t || /[?.!…]["']?\s*$/.test(t) || !INTAKE_DANGLING.test(t)) return false;
+  if (t.split(/\s+/).length <= 4 && !INTAKE_UNFINISHED.test(intakeBare(t))) return false;
+  return true;
+}
+function intakeKeyword(text) {
+  const t = intakeBare(text).replace(/[.?!]+$/g, "").trim(), n = t.split(/\s+/).filter(Boolean).length;
+  if (n < 1 || n > 4 || intakeOpens(t) || INTAKE_CONT.test(t) || INTAKE_NOISE.test(t)) return false;
+  if (INTAKE_DANGLING.test(t) && INTAKE_UNFINISHED.test(t)) return false;
+  return true;
+}
+const INTAKE_ASIDE = /\b(?:thanks for (?:making|taking)|thank you for (?:making|taking|your time)|happy to (?:talk|meet|be here)|nice to meet|good to meet|hiring team|hard stop|have a (?:great|good|nice) (?:day|evening|weekend))\b/i;
+function intakeUnanswered(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim(), t = intakeBare(raw);
+  if (!t || INTAKE_NOISE.test(t) || INTAKE_NOISE.test(raw)) return true;
+  if (/\?/.test(raw) || INTAKE_FRESH.test(t) || /^(?:design|define|compare|explain|describe|tell|walk|give)\b/i.test(t)) return false;
+  if (INTAKE_ASIDE.test(raw)) return true;
+  if (/\bis when\b/i.test(t) && !/\b(?:question|ask|wanted to ask|wondering)\b/i.test(t)) return true;
+  if (/^(?:i|i'm|i've|i'd|i'll)\b/i.test(t) && !/\b(?:question|ask)\b/i.test(t)) return true;
+  if (/^(?:so|yeah|yes|um+|uh+|alright|okay|ok)\b/i.test(raw) && intakeContent(raw).length <= 1) return true;
+  return false;
+}
+function continuesSameQuestion(previous, next) {
+  const prev = String(previous || "").replace(/\s+/g, " ").trim(), nxt = String(next || "").replace(/\s+/g, " ").trim();
+  if (!prev || !nxt) return true;
+  if (intakeUnanswered(prev)) return false;
+  if (intakeUnanswered(nxt) && !INTAKE_NOISE.test(intakeBare(nxt)) && !INTAKE_NOISE.test(nxt)) return false;
+  if (INTAKE_NOISE.test(intakeBare(nxt)) || INTAKE_NOISE.test(nxt)) return true;
+  if (INTAKE_FOLLOW.test(nxt) || INTAKE_FOLLOW.test(intakeBare(nxt))) return true;
+  if (INTAKE_CONT.test(intakeBare(nxt)) && !intakeOpens(nxt)) return true;
+  if (intakeKeyword(prev) && intakeKeyword(nxt) && intakeDifferent(prev, nxt)) return false;
+  if (intakeOpen(prev) && !intakeOpens(nxt)) return true;
+  if (intakeOpen(prev) && intakeOpens(nxt) && !intakeDifferent(prev, nxt)) return true;
+  const candidate = /^(?:i|i'm|i've|i'd|i'll|my)\b/i.test(intakeBare(prev));
+  if (!intakeOpens(prev) && !candidate && !intakeKeyword(prev) && intakeOpens(nxt) && !/\?\s*$/.test(prev)) return true;
+  if (intakeOpens(nxt) && intakeDifferent(prev, nxt)) return false;
+  if (!intakeOpens(nxt)) {
+    if (INTAKE_FOLLOW.test(nxt) || INTAKE_FOLLOW.test(intakeBare(nxt)) || (INTAKE_CONT.test(intakeBare(nxt)) && !intakeUnanswered(nxt)) || intakeOpen(prev)) return true;
+    if (/[?]["']?\s*$/.test(prev)) return false;
+    return true;
+  }
+  if (!intakeOpens(prev) && intakeOpens(nxt)) return true;
+  return false;
+}
+function questionGroups(chunks) {
+  const groups = [];
+  for (const raw of chunks || []) {
+    const chunk = intakeRepair(raw);
+    if (!chunk) continue;
+    const prev = groups[groups.length - 1];
+    if (!prev || !continuesSameQuestion(prev.join(" "), chunk)) groups.push([chunk]);
+    else prev.push(chunk);
+  }
+  return groups;
+}
+function intakeCap(text) { const t = String(text || "").replace(/\s+/g, " ").trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) : ""; }
+function intakeStrip(text) {
+  let t = String(text || "").replace(/\s+/g, " ").trim().replace(INTAKE_LEAD, "");
+  const sentences = t.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  while (sentences.length > 1 && INTAKE_NOISE.test(intakeBare(sentences[0]))) sentences.shift();
+  while (sentences.length > 1 && INTAKE_NOISE.test(intakeBare(sentences[sentences.length - 1]))) sentences.pop();
+  return sentences.join(" ").replace(/\s+/g, " ").trim();
+}
+function intakeFormal(text) {
+  const t = intakeBare(text);
+  if (!t) return false;
+  if (/\?/.test(t) || INTAKE_FRESH.test(t)) return true;
+  if (/^(?:design|define|compare|explain|describe|tell|walk|give|outline|list|name|state|share)\b/i.test(t)) return true;
+  return /\b(?:how|what|why|when|where|which|who)\b(?!\s+to\b)/i.test(t) && t.split(/\s+/).length >= 4;
+}
+function intakeFinish(text) {
+  const t = intakeCap(intakeStrip(text));
+  if (!t) return "";
+  if (/[.?!]["']?$/.test(t)) return t;
+  if (INTAKE_FRESH.test(intakeBare(t)) || /\b(?:how|what|why|when|where|which|who)\b/i.test(t)) return t.replace(/[,;:\s]+$/, "") + "?";
+  return t.replace(/[,;:\s]+$/, "") + ".";
+}
+function intakeTail(tail) { return String(tail || "").replace(/[.?!]+$/g, "").replace(/\s+/g, " ").trim(); }
+function intakeTemplate(text) {
+  const t = intakeStrip(text).replace(/[.?!]+$/g, "").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  const rules = [
+    [/^(?:(?:a|the|my|your|quick|brief|short|self)\s+)?intro(?:duction)?$/i, () => "Tell me about yourself."],
+    [/^(?:about yourself|who are you|your background|describe yourself)$/i, () => "Tell me about yourself."],
+    [/^(?:(?:your|my|the)\s+)?(?:strengths?|strong points?)$/i, () => "What are your strengths?"],
+    [/^(?:(?:your|my|a|the)\s+)?(?:weakness(?:es)?|areas? (?:to|for) improvement)$/i, () => "What is a weakness you are working on?"],
+    [/^(?:why (?:this )?(?:role|job|company|position|us|here)|why do you want (?:this )?(?:role|job)|why (?:our|this) company)$/i, () => "Why do you want this role?"],
+    [/^(?:experience(?:\s+with)?|worked with|work with)(?:\s+(.+))?$/i, (m) => m[1] ? "What is your experience with " + intakeTail(m[1]) + "?" : "What is your experience?"],
+    [/^(?:walk(?:\s+me)?\s+through)(?:\s+(.+))?$/i, (m) => m[1] ? "Walk me through " + intakeTail(m[1]) + "." : "Walk me through your background."],
+    [/^(?:(?:tell me )?about a time|a time when|star(?:\s+method)?)(?:\s+(.+))?$/i, (m) => m[1] ? "Tell me about a time you " + intakeTail(m[1]) + "." : "Tell me about a time you handled a difficult situation."],
+    [/^(?:questions?(?:\s+for\s+(?:us|me|the team|the interviewer))?|any questions)$/i, () => "What questions do you have for us?"],
+    [/^(?:scenario|how would you|what would you do)(?:\s+(.+))?$/i, (m) => m[1] ? "How would you handle " + intakeTail(m[1]) + "?" : "How would you handle this situation?"],
+    [/^(?:conflict|failure|mistake|a time you failed)(?:\s+(.+))?$/i, () => "Tell me about a time something went wrong and what you did."],
+    [/^(?:salary|compensation|pay(?:\s+expectations?)?)$/i, () => "What are your salary expectations?"],
+    [/^(?:visa|sponsorship|h-?1b|work authorization)$/i, () => "What is your visa status?"],
+    [/^(?:address|where do you live|where are you based)$/i, () => "What is your address?"],
+    [/^(?:relocation|relocate|willing to relocate)$/i, () => "Are you open to relocation?"],
+    [/^(?:availability|notice|notice period|start date)$/i, () => "What is your notice period?"],
+  ];
+  for (const [test, build] of rules) { const match = t.match(test); if (match) return build(match); }
+  return "";
+}
+function intakeBest(text) {
+  const t = intakeCap(intakeStrip(text)).replace(/[.?!]+$/g, "").trim();
+  if (!t || INTAKE_NOISE.test(t)) return "";
+  const words = t.split(/\s+/).filter(Boolean);
+  if (/^(?:i|i'm|i've)\b/i.test(t) && words.length > 12 && !/\b(?:how|what|why|when|where|which|who|question)\b/i.test(t)) return "";
+  if (words.length <= 3 && !/\b(?:is|are|was|were|have|has|do|does|did|failed|broke|happened)\b/i.test(t)) return "What is " + t + "?";
+  if (/\b(?:failed|broke|happened|outage|incident|was down|went down)\b/i.test(t)) return "Tell me about a time when " + t.charAt(0).toLowerCase() + t.slice(1) + ".";
+  return "Can you speak to this: " + t + "?";
+}
+function formQuestionFromHeard(text) {
+  const repaired = intakeRepair(text);
+  if (intakeUnanswered(repaired)) return "";
+  const stripped = intakeStrip(repaired);
+  if (!stripped || INTAKE_NOISE.test(stripped) || INTAKE_NOISE.test(intakeBare(stripped)) || intakeUnanswered(stripped)) return "";
+  const templated = intakeTemplate(stripped);
+  const shortStem = stripped.split(/\s+/).length <= 5;
+  if (templated && (shortStem || !intakeFormal(stripped))) return templated;
+  if (intakeFormal(stripped)) return intakeFinish(stripped).slice(0, 4000);
+  return intakeBest(stripped).slice(0, 4000);
+}
+function intakeQuestions(chunks) { return questionGroups(chunks).map((group) => formQuestionFromHeard(group.join(" "))).filter(Boolean); }
+// ── end question intake slice 2026-11-06 ──
 function composeIntake(lines, opts = {}) {
   const answerText = opts.answerText || "";
   const micIsSource = !!opts.micIsSource;
@@ -3867,6 +4037,32 @@ async function aiAnswer(fromAuto, options = {}) {
         if (recoverSeq != null) page.formSeq = recoverSeq;
         showPressed(page, heardOnly ? cur.question : q);
         return await generateAnswer(heard, page, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
+      }
+      // Fresh speech: same-question chunks become one whole question. Different recent chunks each get their own card.
+      // A keyword with no question syntax is formed into a question and pinned, so the answer engine receives the whole ask.
+      if (!typedText) {
+        try {
+          const srcLines = pending.filter(t => t.who === questionSource()).map(t => t.text);
+          const groups = questionGroups(srcLines);
+          const formed = groups.map(parts => ({ parts, q: formQuestionFromHeard(parts.join(" ")) })).filter(g => g.q);
+          const one = formed.length === 1 ? formed[0] : null;
+          const formalLine = one && one.parts.length === 1 && (Q_CUE.test(one.parts[0]) || opensNewAsk(one.parts[0]));
+          if (formed.length && !formalLine) {
+            answeredSeq = heardSeq; updatePending();
+            const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
+            const earlierFormed = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+            const who = questionSource() === "You" ? "You" : "Them";
+            for (const g of formed) {
+              const spanHeard = g.parts.map(text => `${who}: ${text}`).join("\n");
+              const card = addCard(g.q, ["…"]);
+              card.heard = spanHeard; card.earlier = earlierFormed; card.formed = spanHeard;
+              card.formSeq = pending.length ? pending[0].seq : null;
+              showPressed(card, g.q);
+              await generateAnswer(spanHeard, card, { consolidated: true, earlier: earlierFormed, derived: g.q, pinned: true });
+            }
+            return;
+          }
+        } catch { /* the intake below still answers a single formal line */ }
       }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }

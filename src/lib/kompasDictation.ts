@@ -158,6 +158,21 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
   [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
   [/\bdocker\s+file\b/gi, "Dockerfile"],
+  // Question-intake mishearings (6 Nov 2026). Each one is a technical garble, not ordinary English.
+  [/\bkube\s+cuddle\b/gi, "Kubernetes"],
+  [/\bkoo\s*ber\s*nett(?:y|ie)s\b/gi, "Kubernetes"],
+  [/\bpee\s+key\s+eye\b/gi, "PKI"],
+  [/\bleased\s+privilege\b/gi, "least privilege"],
+  [/\bleast\s+priviledge\b/gi, "least privilege"],
+  [/\bzero\s+thrust\b/gi, "zero trust"],
+  [/\broll[\s-]based\s+access\b/gi, "role-based access"],
+  [/\bgrafanna\b/gi, "Grafana"],
+  [/\bprometh(?:i|e)us\b/gi, "Prometheus"],
+  [/\binfra\s+structure\b/gi, "infrastructure"],
+  [/\bsee\s+eye\s+see\s+dee\b/gi, "CI/CD"],
+  [/\bactive\s+die\s+rectory\b/gi, "Active Directory"],
+  [/\bsale\s+point\b/gi, "SailPoint"],
+  [/\bservice\s+principle(?=\s+(?:name|names|password|credential|credentials|app|application|azure|object))\b/gi, "service principal"],
 ]
 
 /** The repair list, exported for the parity test. Read only. */

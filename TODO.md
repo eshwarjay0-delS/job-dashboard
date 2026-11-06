@@ -10,6 +10,14 @@ No new screen. The change is on the WhatsApp resume run.
 
 **Next.** Pull request 232 is open at `4b3e4353`. Leave it open. After it lands, one live Houston job should receive the updated scored docx when the rewrite finishes.
 
+## 2026-11-06 — Kompas question intake (not merged, not deployed)
+
+No new screen. Speech, caption, and dictation chunks now keep one question whole and leave the next different question on its own card. A keyword such as "intro" becomes "Tell me about yourself." Other stems (strengths, weaknesses, why this role, experience with X, walk me through, a time when, questions for us, how would you, conflict) do the same, and a fragment with no question syntax still becomes a question. The answer engine receives that whole question. Salary, visa, address, relocation, and notice are still formed and then skipped by the existing logistics gate. Dictation repairs for kube cuddle, pee key eye, leased privilege, zero thrust, and the other new mishearings match on the desktop list and the server list.
+
+**Verified offline.** New slice 13/13. The old last-four-lines-plus-last-600-characters behavior glued 4 different-topic sequences and dropped 1 long opening; after, both counts are 0. The existing 50-sequence replay stays 0 missed, 0 merged, 0 misheard and was already 0 on master. That replay is not a live microphone. Core suites 81/81. A wider question, speech, dictation, and voice run was 289 pass and 5 fail; those 5 fail on master without this change. `tsc --noEmit` clean. Baseline contract 15/15.
+
+**Not verified.** No Windows microphone and no live caption box. Not merged. Not deployed. WhatsApp resume tailoring and System 3 retrieval were not edited. Rebased onto master `c011a72c` (the scored WhatsApp rewrite). Conflicts were only in this file, `docs/completion-watch.md`, `src/lib/plan-vision-journal.ts`, and `src/lib/rea-register.ts`.
+
 ## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
 
 No new screen and no second System 3 change. Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `0bb575a` (merged pull request 229). Master then moved to `629be0fe` (WhatsApp always sends a resume file), which includes `0bb575a`. The published branch is rebased onto `629be0fe`. Hybrid retrieval, the 25-to-5 rerank, and source grounding match that master. The WhatsApp failsafe below is unchanged. The code-fence opener, the spoken-ceiling settle, and the residual-risk opener stay in `src/lib/kompasDissection.ts`.
