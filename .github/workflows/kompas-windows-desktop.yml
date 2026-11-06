@@ -51,7 +51,14 @@ jobs:
           if (!(Test-Path $path)) { throw 'Missing Kompas.exe' }
           $size = (Get-Item $path).Length
           if ($size -lt 20000000) { throw "Unexpectedly small Windows build: $size" }
-          Write-Output "Verified Kompas.exe: $size bytes"
+          $hash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLower()
+          Write-Output "Verified Kompas.exe: $size bytes sha256 $hash"
+      - name: Gate the packaged app on its runtime closure
+        working-directory: legacy/perfact/desktop
+        run: node scripts/verify-packaged-app.mjs dist/Kompas.exe
+      - name: Smoke-launch the unpacked app past module load
+        working-directory: legacy/perfact/desktop
+        run: node scripts/smoke-launch.mjs dist/win-unpacked/Kompas.exe
       - name: Publish Windows artifact for verification
         uses: actions/upload-artifact@v4
         with:

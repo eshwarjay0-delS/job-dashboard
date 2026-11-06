@@ -753,6 +753,9 @@ else {
     deliverSession();
   });
   app.whenReady().then(async () => {
+    // CI startup check only. It runs after the requires above and before any
+    // session file is read, so a stored sign-in is left where it is.
+    if (process.env.KOMPAS_SMOKE === "1") { app.exit(0); return; }
     const saved = readConfig();
     const remembered = rememberedTaskbar(saved);
     if (remembered.ask) {
