@@ -4,7 +4,7 @@ No new screen. A design answer speaks the pieces in the design sentence and leav
 
 **Measured on the fictional sample resume, 150 drafts, no model, on the versus-side tree.** Before: 16 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. Front Door versus tenant isolation: engineer 0.542 (89 and 89 words), director 0.651 (138 and 143), architect 0.771 (212 and 226, ceiling 281). After: 4 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.556 (59 and 67), director 0.533 (91 and 101), architect 0.533 (143 and 159). Engineer overlap rose and stays under 0.7. The highest remaining pair is 0.710. The versus-side pair stayed at architect 0.500. Offline sample: 15 answers, 0 failures, 16 warnings. Focused suites 67 pass, 0 fail. `tsc --noEmit` clean.
 
-**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed.
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 253 is open on the versus-side stack. Not merged. Not deployed.
 
 ## 2026-11-06 — A versus answer stays on the two sides
 
