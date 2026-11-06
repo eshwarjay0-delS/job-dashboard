@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — Kompas question windows
+
+Question stripping was answering the newest fragment. The selector now tries the last four, three, two, and one detected question pieces and keeps the longest coherent span. A follow-on such as "and what would you change?" stays with the walk-through it depends on. Unrelated successive questions are not one mega-question. Preface and logistics stripping stay. System 3 retrieval, the code-fence opener, and the spoken ceiling stay. Offline suites that cover this path passed except two failures already on master `c011a72c` (question-box height and an old derived-question source pin). `tsc --noEmit` was clean. This slice is a pull request. It is not merged and production was not deployed from it. No live interview was run.
+
 ## 6 November 2026 — scored WhatsApp rewrite
 
 The 7:23 PM America/Chicago caption, "closest matching resume because the rewrite did not finish cleanly. The rewrite was marked incomplete," is produced only after `runTailor` returns. `quality.incomplete` was set for every quality blocker except unchanged, including `role_evidence_gaps`. A finished edited file was discarded and the library resume was sent. The first split draft was also assembled after 40 percent of the call. This slice sends a finished file, including a truthful score under 95 percent, and names the missing terms. The library file stays the backup for a failure, a timeout, a missing part, a skills-only outage, or a role that was not rewritten. The 70 to 94.9 percent clean pass and the website 95 percent gate stay. No live WhatsApp message was sent. The pull request is not merged and production was not deployed from this slice.

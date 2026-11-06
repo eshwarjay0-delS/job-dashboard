@@ -56,7 +56,7 @@ test("#5 the answer pane shows the muted one-line note on a skipped logistics ca
   assert.match(r, /className = "skipnote"/); assert.match(r, /textContent = "Personal logistics, not answered"/)
 })
 test("#4 a typed compound card shows only the non-logistics part; the original is kept for logs", () => {
-  const press = app.slice(app.indexOf("const spans = splitDistinctAsks(heardOnly"), app.indexOf("if (fromAuto) return;\n    const c = cards[idx];"))
+  const press = app.slice(app.indexOf("splitDistinctAsks(heardOnly"), app.indexOf("if (fromAuto) return;\n    const c = cards[idx];"))
   assert.match(press, /const shown = heardOnly \? span : \(withoutLogistics\(span\) \|\| span\)/)
   assert.match(press, /const shownSaid = heardOnly \? said : \(withoutLogistics\(said\) \|\| said\)/)
   assert.match(press, /card\.original = /)

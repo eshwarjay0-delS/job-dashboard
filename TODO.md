@@ -1,3 +1,15 @@
+## 2026-11-06 — Kompas question windows keep the setup a fragment depends on
+
+No new screen. The question Kompas answers can change. The card and the spoken answer are still the same interview speech.
+
+**What was wrong.** Question stripping kept the newest clause. `questionKernel` cut "and how you measured MTTR" out of "walk me through how you designed the incident pipeline and how you measured MTTR," and it dropped "Tell me about a time you led a migration. Specifically the rollback plan." when the last piece was "And how you communicated it." The page also opened a separate card for "And what would you change?" Desktop loads this same page.
+
+**What it does now.** Recent question pieces are tried as Last 1 2 3 4, Last 1 2 3, Last 1 2, then Last 1. The longest span that is still one interview question wins. A trailing fragment stays with the earlier setup. Four unrelated questions are not glued together. A complete standalone last question does not pull in an earlier unrelated ask. Company preface stays out. Logistics, visa, address, and relocation stripping is unchanged. System 3 retrieval, the 25-to-5 rerank, source grounding, the code fence, and the spoken ceiling are unchanged.
+
+**Checked.** New suite `scripts/tests/kompas-question-window-select.test.mjs` plus the question-window, cut, kernel, relevance-fold, dissection, system 3, precision, desktop 10-fold, and WhatsApp channel suites: 197 pass, 2 fail. Those 2 fail on current master without this change (question box height 3.1em vs 4.65em, and an old `card.question = ev.derived` source pin). `tsc --noEmit` clean. Not a live interview. Not merged. Not deployed.
+
+**Next.** Leave the pull request for review. Do not merge or deploy from this change.
+
 ## 2026-11-06 — A finished WhatsApp rewrite sends the scored Word file
 
 No new screen. The change is on the WhatsApp resume run.
