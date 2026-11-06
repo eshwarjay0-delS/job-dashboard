@@ -1110,3 +1110,64 @@ html.kd #screenCaptureAnswerBtn:hover{border-color:var(--line-strong);background
   .mini{min-height:44px;min-width:44px}
   .drawer{max-height:40dvh}
 }
+
+/* Desktop window, even a narrow one: the top bar stays the size on screen.
+   Text size changes the question and the answer only. */
+html.kd .kd-bar{
+  height:42px !important;
+  min-height:42px !important;
+  max-height:42px !important;
+  font-size:13px !important;
+}
+html.kd #view-copilot .overlay .bar-actions{
+  flex:0 0 48px !important;
+  height:48px !important;
+  min-height:48px !important;
+  max-height:48px !important;
+  flex-wrap:nowrap !important;
+  font-size:13px !important;
+}
+html.kd #view-copilot .overlay .bar-actions .pill,
+html.kd #view-copilot .overlay .bar-actions .icon-btn,
+html.kd #view-copilot .overlay .bar-actions .src-btn,
+html.kd #view-copilot .overlay .bar-actions .live-select,
+html.kd #view-copilot .overlay .bar-actions .card-count,
+html.kd #view-copilot .overlay .bar-actions #micBtn,
+html.kd #view-copilot .overlay .bar-actions #sysBtn,
+html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
+  height:32px !important;
+  min-height:32px !important;
+  max-height:32px !important;
+  font-size:13px !important;
+}
+html.kd #view-copilot .overlay .bar-actions .asking{flex:0 0 auto !important;height:32px !important}
+html.kd #view-copilot .a-head,
+html.kd #view-copilot .bar-ask,
+html.kd #view-copilot .statusline{
+  flex:0 0 auto;
+  font-size:13px !important;
+}
+html.kd #view-copilot .bar-ask{height:52px;min-height:52px;max-height:52px}
+html.kd #view-copilot .live-mid,
+html.kd #view-copilot .overlay .content,
+html.kd #view-copilot .overlay .card,
+html.kd #view-copilot .overlay .a{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  height:auto !important;
+}
+html.kd #view-copilot .overlay .q,
+html.kd #view-copilot .card .q,
+html.kd #view-copilot .card .q.live{
+  flex:0 1 auto !important;
+  max-height:40% !important;
+  font-size:var(--text-size) !important;
+}
+html.kd #view-copilot .overlay #answer,
+html.kd #view-copilot #answer.following{
+  flex:1 1 auto !important;
+  max-height:none !important;
+  min-height:0 !important;
+  height:auto !important;
+  font-size:var(--text-size) !important;
+}

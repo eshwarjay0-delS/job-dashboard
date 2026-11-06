@@ -1,3 +1,7 @@
+## 2026-11-06 — The top bar stays one size and the question and answer flex
+
+Title bar 42px. Control strip 48px. Controls 32px. Text size does not change them. The question can use up to 40 percent of the card. The answer takes the rest.
+
 ## 2026-11-06 — The live controls are fully rounded and stay at the top
 
 Each control is a full capsule and bold. The strip stays at the top. Resize edges are 14px and corners are 22px. A side or bottom drag in the desktop source keeps the top edge fixed. The installed window keeps its own resize code until a new Kompas.exe.
