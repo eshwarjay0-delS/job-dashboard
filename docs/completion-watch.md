@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — Kompas route table before generation
+
+A pull request adds `src/lib/kompasJevRoute.ts` in front of the answer model call. Question class plus the existing retrieval coverage choose go, confirm, or stop. Personal logistics still returns before the key read. An experience story with middling coverage confirms on the existing answer card and does not fetch a model. A lexical miss still generates. No TypeSafe Jev. Offline: the new suite and the related logistics, grounding, System 3, speed, source, and relevance suites passed 224 and failed 0. `tsc --noEmit` was clean. Not merged. Not a live model, WhatsApp, or desktop session. Not deployed.
+
 ## 6 November 2026 — false ATS hold on a finished WhatsApp rewrite
 
 The 12:08 PM America/Chicago send on jayeshwar44 (request fnnrf-1793988396338, deployment dpl_2aTkS5YJcFNsJeKjtWo26tYzkxzA, commit f1ba579) scored 100 percent and then sent the original library file. The ATS check ran and failed. That single blocker labelled the quality report needs_review. The Projects section bucket, glued months, and a name on the contact line were the false misses. A file with no email and no phone is still held. Offline: 35 of 36 library resumes pass the check, and the focused suites passed 92/92. No live WhatsApp send. Not deployed. The pull request is the handoff.
