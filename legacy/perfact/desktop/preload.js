@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld("kompasDesktop", {
   systemAudio: true,
   captureCaptionOnce: () => ipcRenderer.invoke("kompas:caption-once"),
   captureScreen: () => ipcRenderer.invoke("kompas:capture-screen"),
-  refreshAuth: () => ipcRenderer.invoke("kompas:refresh-auth"),
+  refreshAuth: (reason) => ipcRenderer.invoke("kompas:refresh-auth", reason === "rejected" ? "rejected" : ""),
   openSignIn: () => ipcRenderer.send("kompas:open-signin"),
   onAuthReady: fn => { if (typeof fn === "function") ipcRenderer.on("kompas:auth-ready", () => fn()); },
   setScreen: (name) => { screenName = String(name); ipcRenderer.send("kompas:screen", screenName); paintScreen(); },

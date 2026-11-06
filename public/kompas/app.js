@@ -745,16 +745,21 @@ function isAuthError(e) {
   const m = String((e && e.message) || e || "");
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
-async function tryRefreshAuth() {
+async function tryRefreshAuth(reason) {
   // Coalesce simultaneous prep, answer, focus and keepalive renewals.
   // The Electron shell exclusively owns its refresh family: never fall back
   // to stale webview cookies, which could revoke the desktop session.
+  // reason "rejected" is a 401: the shell rotates its own desktop family.
+  // A quiet call lets the shell renew only near access expiry or inside the
+  // 10–24 hour window before the 3-day desktop session ends.
   if (__authRefreshFlight) return __authRefreshFlight;
   __authRefreshFlight = (async () => {
     try {
       if (window.kompasDesktop) {
         if (typeof window.kompasDesktop.refreshAuth !== "function") return false;
-        const renewed = await window.kompasDesktop.refreshAuth();
+        const renewed = reason === "rejected"
+          ? await window.kompasDesktop.refreshAuth("rejected")
+          : await window.kompasDesktop.refreshAuth();
         if (renewed) { __lastAuthRefresh = Date.now(); return true; }
         return false;
       }
@@ -778,10 +783,10 @@ async function tryRefreshAuth() {
   finally { __authRefreshFlight = null; }
 }
 async function recoverLiveAuth() {
-  if (await tryRefreshAuth()) return true;
+  if (await tryRefreshAuth("rejected")) return true;
   for (const delay of [800, 2400]) {
     await new Promise(resolve => setTimeout(resolve, delay));
-    if (await tryRefreshAuth()) return true;
+    if (await tryRefreshAuth("rejected")) return true;
   }
   return false;
 }
@@ -833,7 +838,7 @@ function waitForAuthSilently(retry) {
   const tick = async () => {
     tries++;
     try {
-      try { await tryRefreshAuth(); } catch {}
+      try { await tryRefreshAuth("rejected"); } catch {}
       const res = await fetch("/api/kompas/answer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: "ping" }) });
       if (res.ok) { healAuthSilently(); return; }
     } catch {}
@@ -1485,7 +1490,7 @@ async function checkSessionReadiness() {
     if (response.status === 401 && typeof window.kompasDesktop?.refreshAuth === "function") {
       // Browser sign-in and Electron are different security contexts. Restore
       // only the native token family; never borrow another account's cookies.
-      const renewed = await window.kompasDesktop.refreshAuth().catch(() => false);
+      const renewed = await window.kompasDesktop.refreshAuth("rejected").catch(() => false);
       if (renewed) response = await attempt();
     }
     const result = await response.json().catch(() => ({}));
@@ -5420,7 +5425,7 @@ accountSessionSync = window.KompasSessionCloud?.create({
   // back to a different cookie-account identity.
   recoverAuth: async () => {
     if (window.kompasDesktop) {
-      const verified = await window.kompasDesktop.refreshAuth?.().catch(() => false);
+      const verified = await window.kompasDesktop.refreshAuth?.("rejected").catch(() => false);
       return !!verified;
     }
     const res = await fetch("/api/auth/refresh", {
