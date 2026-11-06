@@ -52,7 +52,7 @@ import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-rec
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
-import { uploadStale } from "@/lib/whatsapp-upload-age"
+import { uploadStale, classifyInboundResume, freshUploadBlocksLibrary, pdfLines, textToResumeDocx, unreadableResumeReply } from "@/lib/whatsapp-upload-age"
 import { titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
 import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft, sendLocked, keepOpenFlags } from "@/lib/chief-approvals"
 // The first words the Chief answers; the module itself is loaded only when one is sent.
@@ -98,7 +98,6 @@ async function outputNameFor(resume: Buffer | null): Promise<string> {
   return OUTPUT_NAME
 }
 const OUTPUT_NAME = process.env.WHATSAPP_OUTPUT_NAME || "MarketFit Resume"
-const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 // Every resume the bot sends is kept so a swipe-reply can edit that exact version. It lives
 // OUTSIDE the resume library on purpose: versions never appear on the dashboard (as files
 // or folders) and never compete in auto-select matching.
@@ -121,6 +120,8 @@ type Session = {
   preferredEmail?: string
   /** Approval card awaiting the owner's edited draft text (Phase 4, chief-approvals). */
   awaitingEditCardId?: string
+  /** The newest photo or PDF could not be read as text, so the older resume must not be tailored. */
+  resumeBlocked?: "image" | "pdf"
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
@@ -358,6 +359,16 @@ export async function POST(request: NextRequest) {
   return ok()
 }
 
+async function readablePdfText(bytes: Buffer): Promise<string> {
+  try {
+    const { isPdf, pdfText } = await import("@/lib/pdf-text")
+    if (!isPdf(bytes)) return ""
+    return await pdfText(bytes, { requireComplete: true })
+  } catch {
+    return ""
+  }
+}
+
 async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string, verified: boolean) {
   const type = String(msg.type || "")
 
@@ -550,6 +561,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         remember(cur, email)
         await saveSession(from, cur)
         await pinProfile(from, email)
+        // A resume sent while the email question was open is the file to tailor.
+        // The library's older copy is not.
+        if (cur.resumeBlocked && !cur.resumePath) return sendText(from, unreadableResumeReply(cur.resumeBlocked, true))
+        if (freshUploadBlocksLibrary(cur.resumePath, cur.resumeAt)) {
+          cur.jd = job.jd
+          cur.jdId = job.jdId
+          await saveSession(from, cur)
+          return generate(from, cur, userId)
+        }
         return fromLibrary(from, job, email, userId, !!session.pending.hint, session.pending.slots, session.pending.hint ? { hint: session.pending.hint } : undefined)
       }
       if (!replyTo) return sendText(from, askWhichEmail(session.pending.slots))
@@ -641,6 +661,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       delete session.resumePath; delete session.resumeName; delete session.resumeAt; delete session.resumeFiled
       await saveSession(from, session)
     }
+    if (session.resumeBlocked && !session.resumePath) {
+      return sendText(from, unreadableResumeReply(session.resumeBlocked, true))
+    }
     if (session.resumePath) return generate(from, session, userId)
     // A resume sent with the job description arrives as its own message a second or two later, and it wins: without
     // this short wait the run from Files claimed the job first and the resume was ignored without a word (found 19 Oct
@@ -675,35 +698,76 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     return sendText(from, askWhichEmail(slots))
   }
 
-  // ── Resume upload ───────────────────────────────────────────────────────────
-  if (type === "document") {
-    const doc = msg.document as { id?: string; filename?: string; mime_type?: string } | undefined
-    const filename = doc?.filename || "resume.docx"
-    if (!doc?.id || (doc.mime_type !== DOCX && !filename.toLowerCase().endsWith(".docx"))) {
-      return sendText(from, "I can only read *.docx* resumes. Please export from Word and resend.")
+  // ── Resume upload (Word, readable PDF, or a photo) ─────────────────────────
+  // A new file replaces any older upload before tailoring. A photo or an unreadable
+  // PDF does not fall through to the library's cached resume.
+  const inbound = classifyInboundResume(msg as { type?: unknown; document?: { id?: string; filename?: string; mime_type?: string }; image?: { id?: string; mime_type?: string; caption?: string } })
+  if (type === "document" && !inbound) {
+    return sendText(from, "I can read a Word *.docx* or a text PDF. Please export and resend. I did not use an older resume.")
+  }
+  if (inbound) {
+    let bytes: Buffer
+    try { bytes = await downloadMedia(inbound.id, inbound.kind === "docx" ? undefined : 8 * 1024 * 1024) }
+    catch (error) {
+      const tooBig = /exceeds size limit/i.test(String(error))
+      return sendText(from, tooBig
+        ? "That file is too large. Send a Word .docx under 8 MB. I did not use an older resume."
+        : "I couldn't download that file from WhatsApp. Please send it again. I did not use an older resume.")
     }
-    const bytes = await downloadMedia(doc.id)
-    // Temporary inbox only. Do not write originals into MarketFit Files or its resume libraries.
-    const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
-    const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-${safe}`)
-    await writePath(dest, bytes)
-    // Filed in the person's Files too, once (the same file sent again is the same path), under the email written in it
-    // and its kind of work, so a later job can start from it. Until 19 Oct 2026 a resume sent with a job description
-    // never reached Files, nor did what was made from it (owner: "Files weren't saved and mapped properly").
-    const filesDir = filesOf(userId)
-    const kept = filesDir ? await saveUpload({ userDir: filesDir, bytes, filename: safe, kind: "docx" })
-      .catch(e => { console.error("[whatsapp] resume not filed", String(e).slice(0, 200)); return null }) : null
-
     session = await loadSession(from)
-    session.resumePath = dest
-    if (kept) session.resumeFiled = kept.abs; else delete session.resumeFiled
-    session.resumeName = safe.replace(/\.docx$/i, "")
-    session.resumeAt = Date.now()
+    delete session.resumePath
+    delete session.resumeName
+    delete session.resumeAt
+    delete session.resumeFiled
+    delete session.resumeBlocked
+    const caption = inbound.kind === "image"
+      ? String((msg.image as { caption?: string } | undefined)?.caption || "").trim()
+      : ""
+    if (caption.length >= 60 && !session.jd) {
+      session.jd = caption
+      session.jdId = String(msg.id || "")
+      delete session.pending
+    }
+    if (inbound.kind === "docx") {
+      const filename = inbound.name || "resume.docx"
+      const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
+      const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-${safe}`)
+      await writePath(dest, bytes)
+      const filesDir = filesOf(userId)
+      const kept = filesDir ? await saveUpload({ userDir: filesDir, bytes, filename: safe, kind: "docx" })
+        .catch(e => { console.error("[whatsapp] resume not filed", String(e).slice(0, 200)); return null }) : null
+      session.resumePath = dest
+      if (kept) session.resumeFiled = kept.abs
+      session.resumeName = safe.replace(/\.docx$/i, "")
+      session.resumeAt = Date.now()
+    } else if (inbound.kind === "pdf") {
+      const text = await readablePdfText(bytes)
+      const lines = pdfLines(text)
+      if (lines.join(" ").length < 80) {
+        session.resumeBlocked = "pdf"
+        session.resumeAt = Date.now()
+      } else {
+        const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-resume.docx`)
+        await writePath(dest, await textToResumeDocx(lines))
+        session.resumePath = dest
+        session.resumeName = inbound.name.replace(/\.pdf$/i, "") || "resume"
+        session.resumeAt = Date.now()
+      }
+    } else {
+      session.resumeBlocked = "image"
+      session.resumeAt = Date.now()
+    }
+    if (!session.jd && session.pending?.jd && session.resumePath) {
+      session.jd = session.pending.jd
+      session.jdId = session.pending.jdId
+      delete session.pending
+    }
     await saveSession(from, session)
+    if (session.resumeBlocked && !session.resumePath) return sendText(from, unreadableResumeReply(session.resumeBlocked, !!session.jd))
     if (!session.jd) {
       await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
       const now = await loadSession(from)
-      if (now.jd || now.resumePath !== dest) return
+      if (now.jd || now.resumePath !== session.resumePath) return
       return sendText(from, `Saved *${now.resumeName || session.resumeName}*. Now paste the job description.`)
     }
     return generate(from, session, userId)
@@ -827,8 +891,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       maxMs: maxMs >= 120_000 ? Math.min(195_000, Math.floor(maxMs * 0.82)) : maxMs,
       // "redo" asks for a fresh rewrite, not the one kept for the same inputs.
       ...(files?.redo ? { noCache: true } : {}),
-      // Match the dashboard defaults: summary left as written, skills + experience retargeted.
-      sections: { summary: false, skills: true, experience: true },
+      // Summary is rewritten in full mode so the tailored file keeps a complete, grounded profile.
+      sections: { summary: true, skills: true, experience: true },
     })
   } catch (e) {
     // A timeout and a provider failure are different errors with different
@@ -869,7 +933,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
           givenPath: session.resumePath,
           mode: "full", noCache: true, maxMs: remaining,
-          sections: { summary: false, skills: true, experience: true },
+          sections: { summary: true, skills: true, experience: true },
         })
         if (acceptableWhatsAppResume(fresh) && (!acceptableWhatsAppResume(result) || (fresh.coverage ?? 0) > (result.coverage ?? 0))) result = fresh
         else if (!acceptableWhatsAppResume(result)) {

@@ -67,9 +67,45 @@ test("switch off: 84.3% of the job post is not delivered even when supported ski
   assert.equal(refusing.acceptableWhatsAppResume(draft), false)
   assert.ok(refusing.whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
 })
-test("Nov4: a complete 84.3% draft is held for repair", () => {
+test("Nov4: a complete 84.3% draft whose quality counts still say 100% is held", () => {
   const draft = make({ coverage: 84.3 })
   assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), true)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("supported_score_mismatch"))
+})
+test("Salesforce Security Specialist: 82% of the job post and 97% supported coverage is delivered", () => {
+  const draft = make({
+    coverage: 82,
+    supported_coverage: 97,
+    quality: resumeQuality({ matched: 82, total: 100, missing: ["salesforce shield"], partial: false }),
+  })
+  assert.equal(draft.quality.status, "needs_review")
+  assert.equal(acceptableWhatsAppResume(draft), true, whatsappResumeRejectionReasons(draft).join(","))
+})
+test("70% job-post overlap with 95% supported coverage is the delivery floor", () => {
+  const draft = make({
+    coverage: 70,
+    supported_coverage: 95,
+    quality: resumeQuality({ matched: 70, total: 100, missing: ["gap"], partial: false }),
+  })
+  assert.equal(acceptableWhatsAppResume(draft), true, whatsappResumeRejectionReasons(draft).join(","))
+})
+test("69.9% of the job post is still held", () => {
+  const draft = make({
+    coverage: 69.9,
+    supported_coverage: 100,
+    quality: resumeQuality({ matched: 699, total: 1000, missing: ["gap"], partial: false }),
+  })
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
+})
+test("the 28.5% hold is still refused even when supported skills are complete", () => {
+  const draft = make({
+    coverage: 28.5,
+    supported_coverage: 100,
+    quality: resumeQuality({ matched: 285, total: 1000, missing: ["f5"], partial: false }),
+  })
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({

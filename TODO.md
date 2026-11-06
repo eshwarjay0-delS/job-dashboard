@@ -1,3 +1,11 @@
+## 2026-11-06 — WhatsApp tailors the new file and can send a complete 70% draft
+
+No new screen. WhatsApp intake now treats a new Word file or a readable PDF as the resume, including while the email question is open. A photo or an unreadable PDF clears the older upload and says an older resume was not used. It does not transcribe the photo. Full-mode summaries may stay up to 140 words when the source supports them, and the experience instruction keeps the source tools instead of collapsing the bullet. Cache generation is 24 so a thinner cached draft is not replayed.
+
+**Delivery band.** Supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is sent when the draft is otherwise complete (ATS, diff, no unverified terms, no role blockers). Under 70% is still held, including 28.5% and 0%. `TAILOR_DELIVER_WITH_SHORTFALL=0` and `JD_TERMS_ALWAYS_ON_SKILLS=0` restore the strict under-95% refusal. Unevidenced job-post terms are still not written onto the skills line.
+
+**Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change.
+
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 
 No visible page change except that "I live in Dallas, is that a problem?" and "my address is …" are now skipped the same way as "where are you based?". The answer text itself changes only after a model reply: visa, home address, where you live, and personal relocation are removed unless the resume states them and the question asked. A whole-utterance gateway line is not spoken. This is not a new screen.

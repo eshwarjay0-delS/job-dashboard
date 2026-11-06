@@ -167,7 +167,8 @@ function normJD(jd: string): string {
 // Version 20 places missing job-post skills on the skills line and caches every finished run.
 // Version 21 removes unsupported skills-floor claims and refuses skills-only completion.
 // Version 22 adds the exported-document ATS parse check to the delivery gate.
-const CACHE_GENERATION = "23"
+// Version 24: full-mode bullets keep source detail (resume-verbosity). Do not replay a thinner cached draft.
+const CACHE_GENERATION = "24"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
