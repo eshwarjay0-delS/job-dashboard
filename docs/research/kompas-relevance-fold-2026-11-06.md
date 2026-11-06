@@ -33,3 +33,6 @@ The desktop 10-fold harness still passes. It counts spoken words after the fence
 
 ## Limits
 No live model answer. Live scored folds remain 0 of 50. The 5 November count of 505 same-answer pairs in the 50-question stand-in was not re-run as a live score and is not claimed as changed.
+
+## Rebase onto System 3 master
+Pull request 231 was rebased onto master `629be0fe89705601091b54c33e58428c87d14b3a`. That commit includes System 3 at `0bb575a0605b7c1cbd55ae35b774ef26be8660da` and the WhatsApp resume failsafe. Hybrid retrieval, the 25-to-5 rerank, and source grounding were not edited. The fence opener, the mode-ceiling settle, and the residual-risk opener remain. Conflicts were only in the journal, `TODO.md`, `docs/completion-watch.md`, and the REA register. Offline on that rebased tree: `scripts/tests/kompas-relevance-folds.test.mjs` 22/22, `scripts/tests/kompas-desktop-answer-10fold.test.mjs` 1/1, `scripts/tests/kompas-dissection.test.mjs` 9/9, `scripts/tests/kompas-system3-retrieval.test.mjs` 12/12, `tsc --noEmit` clean. Not merged and not deployed. Live scored folds remain 0.

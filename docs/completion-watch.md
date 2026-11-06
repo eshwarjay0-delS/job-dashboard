@@ -34,6 +34,10 @@ The Nov 5 6:43 PM America/Chicago EASM run refused a rewrite at 30.8 percent and
 
 Origin/master `e58450c6` includes merged PR #224 and PR #226. PR #224 is the loopback bearer. PR #226 is the logistics filter and was not edited for this slice. No `POST /api/auth/desktop-session` existed. The route is implemented on PR 227 (`b070c71b`) with tests that keep the desktop refresh family independent of two website tab rotations. It is not merged and not a production deploy. A live three-day Windows sign-in is still unproven. The service-role key is required for the first mint.
 
+## 6 November 2026 fence fold onto the System 3 master
+
+Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `629be0fe`, which includes System 3 at `0bb575a` and the WhatsApp resume failsafe. Conflicts were only in the journal, `TODO.md`, this file, and the REA register. Hybrid retrieval, rerank 25 to 5, and source grounding stay as on that master commit. The code-fence opener, spoken-ceiling settle, and residual-risk opener stay. Offline: relevance folds 22/22, desktop 10-fold 1/1, dissection 9/9, system 3 retrieval 12/12, `tsc --noEmit` clean. Live scored folds remain 0. Pull request 231 is not merged. Production was not deployed from this rebase. Merge and ship are left to others.
+
 ## 6 November 2026 System 3 onto the WhatsApp master
 
 Pull request 229 (`cursor/kompas-system-3-ea0b`) was `295c510a`, based on `00594c59`. GitHub's update-branch API returned 422 after master moved to `986ecef7` (squash of pull request 228). Merging that master commit conflicted only in `TODO.md` and `src/lib/plan-vision-journal.ts`. WhatsApp 70–94.9% delivery and System 3 hybrid retrieval both remain. Pull request 229 is not merged. Production was not deployed from this update. Offline on the merged tree: system 3 suite 12/12, related retrieval and guard suites 390/390, dossier r8 7/7, WhatsApp acceptance and upload suites 56/56, `tsc --noEmit` clean. No live model answer and no live WhatsApp send.

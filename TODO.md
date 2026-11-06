@@ -1,3 +1,11 @@
+## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
+
+No new screen and no second System 3 change. Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `0bb575a` (merged pull request 229). Master then moved to `629be0fe` (WhatsApp always sends a resume file), which includes `0bb575a`. The published branch is rebased onto `629be0fe`. Hybrid retrieval, the 25-to-5 rerank, and source grounding match that master. The WhatsApp failsafe below is unchanged. The code-fence opener, the spoken-ceiling settle, and the residual-risk opener stay in `src/lib/kompasDissection.ts`.
+
+Conflicts were only in `src/lib/plan-vision-journal.ts`, this file, `docs/completion-watch.md`, and `src/lib/rea-register.ts`. `kompasAnswerService.ts`, `kompasHybridRank.ts`, `kompasSentenceGate.ts`, and `kompasSourceRetrieval.ts` match `629be0fe`.
+
+**Verified offline on the rebased tree.** `scripts/tests/kompas-relevance-folds.test.mjs` 22/22. `scripts/tests/kompas-desktop-answer-10fold.test.mjs` 1/1. `scripts/tests/kompas-dissection.test.mjs` 9/9. `scripts/tests/kompas-system3-retrieval.test.mjs` 12/12. `tsc --noEmit` clean. Live scored folds remain 0. Not merged. Not deployed. No `KOMPAS_VERCEL_API_TOKEN`. No FluidVoice.
+
 ## 2026-11-06 — WhatsApp always sends a resume file
 
 No new screen. The chat change is on the WhatsApp resume run, on top of the 70% clean pass.
