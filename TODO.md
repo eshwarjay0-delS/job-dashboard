@@ -1,3 +1,13 @@
+## 2026-11-06 — Kompas System 3: hybrid retrieval, rerank, source grounding
+
+No new screen. Answers still look like interview speech. What changed is which source lines are retrieved and which sentences are allowed to be spoken.
+
+Hybrid retrieval is on by default. It adds a local dense score (no paid token) to the existing BM25 rank over resume, documents, dossier, saved Q&A, and the job description. The answer uses five passages after a 25-candidate rerank. The old first passage stays first. Set `KOMPAS_HYBRID_RETRIEVAL=0` to go back to BM25-only and four passages.
+
+A spoken sentence that adds a figure, tool, or name the sources do not contain is removed, and the reply says that detail is not in the sources. The raw retrieved line is kept as retrieved. Salary, visa, address, relocation, availability, and notice questions return before any model call. "I relocated the Vault servers" is still answered.
+
+Holes A, B, and C were already fixed on master. The new tests lock them. Verified offline: system 3 suite 12/12, related retrieval/guard suites 83/83 and 374/374, tsc clean. Not a live model answer. Not deployed. The pull request is not merged.
+
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 
 No visible page change except that "I live in Dallas, is that a problem?" and "my address is …" are now skipped the same way as "where are you based?". The answer text itself changes only after a model reply: visa, home address, where you live, and personal relocation are removed unless the resume states them and the question asked. A whole-utterance gateway line is not spoken. This is not a new screen.
