@@ -15,7 +15,7 @@ import RecruiterButton from "../../_components/recruiter-button"
 import { createClient } from "@/lib/supabase/client"
 import { dayList, DEFAULT_DAYS, sendNowBlockReason, type Tracked } from "@/lib/interview-track"
 
-type Answer = { ok: boolean; error?: string; active: Tracked[]; past: Tracked[]; due: number; canSendForYou: boolean; words: Record<string, { subject: string; body: string }> }
+type Answer = { ok: boolean; error?: string; active: Tracked[]; past: Tracked[]; due: number; canSendForYou: boolean; words: Record<string, { subject: string; body: string }>; lastWatchdogRun?: { at: number; usersChecked: number; sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string } | null }
 
 // ── Instant copy on this device ─────────────────────────────────────────────
 // The last good board lives in memory and in localStorage (under the signed-in
@@ -177,6 +177,16 @@ export default function InterviewBoard() {
       <p style={{ margin: "0 0 14px", fontSize: 14.5, lineHeight: 1.6, color: "var(--text-muted)", maxWidth: 720 }}>
         Every interview stays here until you tell me how it ended. Nothing below is late. I say when a follow-up is a good idea, and I can send it for you.
       </p>
+      {data.lastWatchdogRun && (
+        <p style={{ margin: "0 0 14px", fontSize: 13.5, lineHeight: 1.6, color: "var(--text-muted)", maxWidth: 720 }}>
+          Daily check {dayTime(data.lastWatchdogRun.at)}: sent {data.lastWatchdogRun.sent}
+          {data.lastWatchdogRun.failed > 0 ? `, ${data.lastWatchdogRun.failed} failed` : ""}
+          {data.lastWatchdogRun.dueButUnsent.length > 0
+            ? `, ${data.lastWatchdogRun.dueButUnsent.length} due but held back — ${data.lastWatchdogRun.dueButUnsent.map(d => d.reason).join("; ")}`
+            : ", nothing held back"}
+          {data.lastWatchdogRun.error ? ` The check hit a problem: ${data.lastWatchdogRun.error}` : ""}
+        </p>
+      )}
       {error && <p role="alert" style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "0 0 10px" }}>{error}</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -329,16 +339,27 @@ export default function InterviewBoard() {
                   <p style={{ ...muted, margin: "0 0 10px" }}>It stops by itself when {name} answers, when you mark this finished, or after four. You can stop it at any time.</p>
 
                   {data.canSendForYou ? (
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                       <button type="button" className="btn-accent" disabled={busyFor(t.id)}
                         onClick={() => { void choose(t.id, "send_for_me", editing === t.id ? { subject: editSubject, body: editBody } : undefined, askDays.length ? askDays : undefined) }} style={big}>
                         {busy === `send_for_me:${t.id}` ? "Saving…" : editing === t.id ? "Yes, send my edited version every week" : "Yes, send it for me every week"}
                       </button>
+                      {sendBlock ? (
+                        <p style={{ ...muted, margin: 0 }}>{sendBlock}</p>
+                      ) : (
+                        <button type="button" className="btn-outline" disabled={busyFor(t.id)}
+                          onClick={() => { void choose(t.id, "send_now", editing === t.id ? { subject: editSubject, body: editBody } : undefined) }} style={big}>
+                          {busy === `send_now:${t.id}` ? "Sending…" : editing === t.id ? "Send edited now" : "Send now"}
+                        </button>
+                      )}
                       {editing !== t.id && (
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
                       )}
                       <button type="button" className="btn-outline" onClick={() => { setAsking(""); setEditing("") }} style={big}>No, I will do it myself</button>
                     </div>
+                    <p style={{ ...muted, margin: "10px 0 0" }}>Send now sends this message once only. It does not switch on the weekly send.</p>
+                    </>
                   ) : <p style={{ margin: 0, fontSize: 14 }}>I cannot send for you yet: this site&apos;s daily job is not switched on. You can still follow up yourself with the button above.</p>}
                 </div>
               )}
