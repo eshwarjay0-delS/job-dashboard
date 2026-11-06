@@ -1436,6 +1436,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     words += wordCount(honest)
   }
   const askedParts = askedPartList(question)
+  // A named incident plus three or more asked parts is already the answer. The shared approach
+  // catalog and the shared closing lines made those different incidents the same long answer.
+  const incident = lead.split(/\s+/).filter(Boolean).length >= 6 && askedParts.length >= 3
   askedParts.slice(0, level === "engineer" ? 2 : level === "director" ? 3 : askedParts.length).forEach((part, i) => {
     const templates = PART_LINES[level]
     // Round 11: a listed part was said in the interviewer's voice ("On what would you check yourself"); it is said as mine.
@@ -1447,16 +1450,16 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     parts.push(line)
     words += n
   })
-  for (const line of CLOSERS[level]) {
-    const n = wordCount(line)
-    if (words + n > stop || !fresh(line)) continue
-    parts.push(line)
-    words += n
+  // Shared closing lines do not name the incident, so they are left off here.
+  if (!incident) {
+    for (const line of CLOSERS[level]) {
+      const n = wordCount(line)
+      if (words + n > stop || !fresh(line)) continue
+      parts.push(line)
+      words += n
+    }
   }
   const approach = APPROACH[level].map((make) => make(cut.shape === "personal-experience" ? "that situation" : lead)).filter((line) => fresh(line) && !parts.includes(line))
-  // A named incident plus three or more asked parts is already the answer. The shared approach
-  // catalog made those different incidents the same long answer.
-  const incident = lead.split(/\s+/).filter(Boolean).length >= 6 && askedParts.length >= 3
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
   if (!incident && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
     for (const line of approach) {
@@ -1478,10 +1481,25 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // The floor from the mode below: unused supported lines first, then approach lines, each only if it fits the ceiling.
   // An incident that already named its parts does not refill from the shared catalog.
   if (words < floor) {
-    for (const line of [...lines, ...CLOSERS[level].filter(fresh), ...(incident ? [] : approach)]) {
+    for (const line of [...lines, ...(incident ? [] : CLOSERS[level].filter(fresh)), ...(incident ? [] : approach)]) {
       if (words >= floor) break
       const n = wordCount(line)
       if (parts.includes(line) || words + n > mode.maxWords) continue
+      parts.push(line)
+      words += n
+    }
+  }
+  // Length for a named incident comes from that incident, not from the shared closing catalog.
+  if (incident) {
+    for (const line of [
+      `I start from ${lead}.`,
+      `The case is ${lead}.`,
+      `I check ${lead} before I move on.`,
+      `What I watch is ${lead}.`,
+    ]) {
+      if (words >= Math.max(stop, mode.minWords)) break
+      const n = wordCount(line)
+      if (words + n > mode.maxWords || parts.includes(line)) continue
       parts.push(line)
       words += n
     }

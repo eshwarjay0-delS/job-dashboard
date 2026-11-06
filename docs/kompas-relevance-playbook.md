@@ -100,6 +100,12 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026, incident length without the shared close
+
+On the rebased distinct-incident tree, the worker and updater architect drafts still overlapped at 0.778 because the shared closing lines were filled back in to meet the longer mode. Those lines do not name the incident. They stay off for a named incident. The length that the longer modes still need is said with the incident itself.
+
+Worker versus updater after that change: engineer 0.455, director 0.576, architect 0.650. Architect words 149 and 164, both under the 281 ceiling. Across 150 drafts, pairs at Jaccard >= 0.7 went from 153 to 113. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0.
+
 ## Fold log, 6 November 2026, distinct incidents
 
 Code-level only. `KOMPAS_EVAL_TOKEN` was unset. Live scored folds remain 0. Desktop 10-fold harness stays an offline stand-in, not a Windows session.

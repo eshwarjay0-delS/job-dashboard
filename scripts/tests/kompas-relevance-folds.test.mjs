@@ -118,6 +118,8 @@ test("two incidents that share a frame do not get one answer", () => {
     rows.push({ question: worker, level, text: left }, { question: updater, level, text: right })
   }
   assert.equal(evaluateLiveAnswers(rows, RESUME).failures.filter((f) => f.startsWith("same")).length, 0)
+  assert.ok(sameAnswerRatio(draftSpokenAnswer(worker, "architect", RESUME), draftSpokenAnswer(updater, "architect", RESUME)) < 0.7)
+  assert.equal(draftSpokenAnswer(worker, "architect", RESUME).includes("The boundary I watch"), false)
   const copied = "On in that design, here is what I do in practice. My resume does not show this exact work."
   const same = evaluateLiveAnswers([
     { question: worker, level: "engineer", text: copied },
