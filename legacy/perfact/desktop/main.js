@@ -23,6 +23,7 @@ const { chooseCaptureSource } = require("./capture-source.cjs");
 const { rememberedTaskbar, taskbarAnswer } = require("./taskbar-choice.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
 const { chooseDesktopUpdate } = require("./desktop-update.cjs");
+const { handoffAction, chromeHandoffUrl, startChromeLoopback, protocolArgFromLoopback, handoffPaintScript } = require("./chrome-handoff.cjs");
 
 app.setName("Kompas");
 // Preserve the existing perfACT desktop while MarketFit gets its own native
@@ -84,15 +85,64 @@ async function checkNativeDesktopUpdate() {
 // A single first-run browser handoff is allowed per native process; subsequent
 // reconnects remain silent until the user explicitly chooses to sign in.
 let chromeSignInAttempted = false;
+let handoffVisible = false;
+let loopbackPromise = null;
+function paintHandoff() {
+  if (!win || win.isDestroyed()) return;
+  const mode = handoffVisible && !desktopAuth.hasSession() ? "show" : "hide";
+  const run = () => { if (win && !win.isDestroyed()) win.webContents.executeJavaScript(handoffPaintScript(mode)).catch(() => {}); };
+  run();
+  if (win.webContents.isLoading()) win.webContents.once("did-finish-load", run);
+}
+function ensureLoopback() {
+  if (loopbackPromise) return loopbackPromise;
+  loopbackPromise = startChromeLoopback({
+    onCallback(handed) {
+      // A session that already exists stays. A bad callback does not clear it.
+      if (desktopAuth.hasSession()) return hideHandoff();
+      const arg = protocolArgFromLoopback(handed);
+      if (!arg) return;
+      const payload = desktopAuth.callback([arg]);
+      if (!payload) return;
+      void desktopAuth.acceptCallback(payload, pendingSession && pendingSession.ownerId || "").then(ok => {
+        if (!ok || !desktopAuth.hasSession()) return;
+        continueSignedIn();
+      }).catch(() => {});
+    },
+  });
+  return loopbackPromise;
+}
+function hideHandoff() { handoffVisible = false; paintHandoff(); }
+function continueSignedIn() {
+  hideHandoff();
+  if (!win || win.isDestroyed()) return;
+  const deliver = () => {
+    if (!win || win.isDestroyed() || !desktopAuth.hasSession()) return;
+    deliverSession();
+    win.webContents.send("kompas:auth-ready");
+  };
+  if (win.webContents.isLoading()) win.webContents.once("did-finish-load", deliver);
+  else deliver();
+}
 function beginChromeSignIn({ interactive = false } = {}) {
   // A stored desktop session stays up. Opening Chrome would put auth UI over a live interview.
-  if (desktopAuth.hasSession()) return;
-  if (!interactive && chromeSignInAttempted) return;
+  if (desktopAuth.hasSession()) return hideHandoff();
+  const action = handoffAction({ hasSession: false, interactive, alreadyAttempted: chromeSignInAttempted });
+  if (!action.show) return;
+  handoffVisible = true;
+  paintHandoff();
+  if (!action.openChrome) return;
   chromeSignInAttempted = true;
   const state = desktopAuth.issueState();
   // User credentials stay in the existing Chrome account. The callback is one-use
   // and must match a state this desktop issued, never an unsolicited deep link.
-  void shell.openExternal(MARKETFIT_API_ORIGIN + "/auth/desktop?state=" + encodeURIComponent(state)).catch(() => {});
+  // The state is only on the URL. It is not written into the window.
+  void ensureLoopback().then(loop => {
+    if (desktopAuth.hasSession()) return hideHandoff();
+    const url = chromeHandoffUrl(MARKETFIT_API_ORIGIN, state, loop.url);
+    const opened = shell.openExternal(url);
+    if (opened && typeof opened.catch === "function") opened.catch(() => {});
+  }).catch(() => {});
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
@@ -642,6 +692,9 @@ function wireIpc() {
   ipcMain.on("kompas:open-signin", (event) => {
     if (win && event.sender.id === win.webContents.id) beginChromeSignIn({ interactive: true });
   });
+  ipcMain.on("kompas:retry-chrome", (event) => {
+    if (win && event.sender.id === win.webContents.id) beginChromeSignIn({ interactive: true });
+  });
   ipcMain.handle("kompas:capture-screen", async (event) => {
     if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw Error("Invalid screen capture caller");
     const thumb = { width: 1600, height: 1000 };
@@ -675,10 +728,8 @@ else {
       if (accepted && win && !win.isDestroyed()) {
         if (win.isMinimized()) win.restore();
         win.show(); bringBack(); win.focus();
-        if (win.webContents.isLoading()) return;
-        deliverSession();
-        win.webContents.send("kompas:auth-ready");
-      } else if (!accepted) beginChromeSignIn();
+        continueSignedIn();
+      } else if (!accepted && !desktopAuth.hasSession()) beginChromeSignIn();
       return;
     }
     let handed = sessionFromArgv(argv);
