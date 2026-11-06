@@ -1,3 +1,11 @@
+## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
+
+No new screen and no second System 3 change. Pull request 231 (`cursor/kompas-relevance-fence-72a8`) was rebased onto master `0bb575a` (merged pull request 229). Master then moved to `629be0fe` (WhatsApp always sends a resume file), which includes `0bb575a`. The published branch is rebased onto `629be0fe`. Hybrid retrieval, the 25-to-5 rerank, and source grounding match that master. The WhatsApp failsafe below is unchanged. The code-fence opener, the spoken-ceiling settle, and the residual-risk opener stay in `src/lib/kompasDissection.ts`.
+
+Conflicts were only in `src/lib/plan-vision-journal.ts`, this file, `docs/completion-watch.md`, and `src/lib/rea-register.ts`. `kompasAnswerService.ts`, `kompasHybridRank.ts`, `kompasSentenceGate.ts`, and `kompasSourceRetrieval.ts` match `629be0fe`.
+
+**Verified offline on the rebased tree.** `scripts/tests/kompas-relevance-folds.test.mjs` 22/22. `scripts/tests/kompas-desktop-answer-10fold.test.mjs` 1/1. `scripts/tests/kompas-dissection.test.mjs` 9/9. `scripts/tests/kompas-system3-retrieval.test.mjs` 12/12. `tsc --noEmit` clean. Live scored folds remain 0. Not merged. Not deployed. No `KOMPAS_VERCEL_API_TOKEN`. No FluidVoice.
+
 ## 2026-11-06 — WhatsApp always sends a resume file
 
 No new screen. The chat change is on the WhatsApp resume run, on top of the 70% clean pass.
@@ -33,6 +41,14 @@ No new screen. WhatsApp intake now treats a new Word file or a readable PDF as t
 **Delivery band.** Supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is sent when the draft is otherwise complete (ATS, diff, no unverified terms, no role blockers). Under 70% is still held, including 28.5% and 0%. `TAILOR_DELIVER_WITH_SHORTFALL=0` and `JD_TERMS_ALWAYS_ON_SKILLS=0` restore the strict under-95% refusal. Unevidenced job-post terms are still not written onto the skills line.
 
 **Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. The under-70% hold with no file is replaced by the failsafe entry above. That WhatsApp tailor later landed on master as 986ecef7 (squash of pull request 228). System 3 landed on master as 0bb575a0 (squash of pull request 229). This pull request is the resume failsafe on top of that, and it is still not merged.
+
+## 2026-11-06 — Kompas relevance fold: code questions open on a fence, and a long plan cannot outrun the mode ceiling
+
+No new screen. The offline stand-in for a code question now starts with one fenced block, and settle cuts spoken prose at the mode ceiling even when a caller passes a larger plan. A sentence that actually names the question is spoken first when the opening had buried it.
+
+**Measured, code-level, fictional resume.** Offline sample before: 15 answers, 3 failures, all the Python question with no fence. After: 15 answers, 0 failures, 15 warnings, 0 length warnings. A 180-word residual-risk answer with a 400-word plan settled to 36 words; the engineer ceiling is 40. Python stand-in prose: engineer 15 of 18, director 28 of 28, architect 42 of 42, each starting with a python fence. Desktop 10-fold harness still passes. It is not a Windows session.
+
+**Not verified.** `KOMPAS_EVAL_TOKEN` was unset, so live scored folds remain 0. Production at the start of the run was READY `dpl_BdCvdFcfTKPzLAV4dutnkZGFfNc8` at `986ecef`. This branch is not production until it merges.
 
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 

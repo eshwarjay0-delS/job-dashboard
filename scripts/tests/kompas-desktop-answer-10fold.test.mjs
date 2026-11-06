@@ -48,8 +48,10 @@ test("ten desktop folds: logistics questions stay quiet, the other eight stay ap
       const settled = settleSpokenAnswer(asked, draft, level, RESUME)
       assert.equal(settled.providerError, false, item.id)
       assert.equal(ungroundedLogisticsSentences(settled.text, RESUME, asked).length, 0, `${item.id} ${level}: ${settled.text.slice(0, 140)}`)
-      assert.ok(wordCount(settled.text) > 0, item.id)
-      rows.push({ id: item.id, question: asked, level, text: settled.text, words: wordCount(settled.text) })
+      const spoken = settled.text.replace(/```[\s\S]*?```/g, " ")
+      assert.ok(wordCount(spoken) > 0, item.id)
+      if (item.id === "pasted-code") assert.ok(settled.text.startsWith("```"), level)
+      rows.push({ id: item.id, question: asked, level, text: settled.text, words: wordCount(spoken) })
     }
     assert.ok(policy.director >= policy.engineer * 1.5 - 1, item.id)
     assert.ok(policy.architect >= policy.director * 1.5 - 1, item.id)
