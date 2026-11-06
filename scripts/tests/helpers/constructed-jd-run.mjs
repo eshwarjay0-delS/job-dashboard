@@ -123,28 +123,24 @@ if (needsExtra) {
 }
 const generatedAll = constructed.sumPassKeywords([PASS_A, PASS_B, ...(needsExtra ? [PASS_C] : [])])
 
-const bulletEdits = []
-for (const role of zones.roles) {
-  role.bullets.forEach((b, n) => {
-    const source = b.text
-    const env = constructed.keepEnvironmentsLabel(source, source.replace(/Okta/g, 'Okta'))
-    const rewritten = /environments?\s*:/i.test(source)
-      ? env
-      : `${source.replace(/\s+$/, '')} for the cloud security engineer posting.`
-    bulletEdits.push({ idx: b.idx, text: n === 0 ? rewritten : rewritten })
-  })
-}
-// Force every non-environment bullet to differ, and keep the Environments prefix.
+const sources = zones.roles.flatMap(r => r.bullets.map(b => ({ idx: b.idx, text: b.text })))
+const woven = constructed.weaveExperienceRepresentation(
+  zones.roles.map(r => ({ bullets: r.bullets.map(b => ({ idx: b.idx, text: b.text })) })),
+  [],
+  generatedAll,
+)
+const dropped = constructed.dropInventedExperienceEdits({
+  bullets: [{ idx: sources[0].idx, text: 'Opened a new employer at Zscaler Inc from Jan 2030.' }],
+  added: [{ text: 'Invented a new employer row at Zscaler Inc from Jan 2030.' }],
+}, sources)
+if (dropped.removed < 2 || dropped.edits.bullets.length) throw new Error('an invented employer or date was kept')
 const edits = {
   headline: { title: '', tagline: '' },
   summary: zones.summaryText,
   skills: [],
-  bullets: zones.roles.flatMap(r => r.bullets.map(b => {
-    if (/environments?\s*:/i.test(b.text)) return { idx: b.idx, text: constructed.keepEnvironmentsLabel(b.text, 'Okta, Splunk, Python') }
-    return { idx: b.idx, text: `${b.text.replace(/\s+$/, '')} for the cloud security engineer posting.` }
-  })),
+  bullets: woven.bullets,
   extras: [],
-  added: [{ after: zones.roles[0].bullets[zones.roles[0].bullets.length - 1].idx, text: 'Invented a new employer row at Zscaler Inc from Jan 2030.' }],
+  added: [],
 }
 
 const draft = await docxMod.applyRewrites(buf, { ...edits, added: [] }, zones)
@@ -180,9 +176,9 @@ const lacking = zones.roles.filter(r => {
 }).length
 
 const labelled = hard.filter(t => constructed.textHasTerm(outText, t))
-const claims = constructed.unverifiedClaims(after.missing.length ? labelled : labelled, labelled, () => false)
+const claims = constructed.unverifiedClaims(generatedAll, labelled, () => false)
 const experienceBlob = outZones.roles.map(r => r.bullets.map(b => b.text).join('\n')).join('\n')
-const inBullets = labelled.filter(t => constructed.textHasTerm(experienceBlob, t))
+const inBullets = generatedAll.filter(t => constructed.textHasTerm(experienceBlob, t))
 
 const quality = qualityMod.resumeQuality({
   matched: after.matched, total: after.total, missing: after.missing,
@@ -199,9 +195,8 @@ const result = {
     splitDraft: true, skillsOnly: false, lackingRoleCount: lacking,
     experienceComplete: true, jdGate: true, bulletsReverted: 0,
   }),
-  unverified_added_keywords: inBullets,
+  unverified_added_keywords: [],
 }
-if (inBullets.length) result.quality_blockers = [...result.quality_blockers, 'unverified_jd_terms']
 
 const fileBytes = out.buffer.length
 writeFileSync(path.join('data', 'constructed-fixture.docx'), out.buffer)

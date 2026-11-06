@@ -2,8 +2,10 @@
 // experiences, points, bullets, skill lines, and a summary from the job post plus
 // the candidate's existing work. Those keywords are summed, and that combined text
 // is the JD the tailor updates against. If measured coverage is not above 95%, one
-// more generate-then-tailor pass runs. Experience rows stay as they are. Terms that
-// do not fit a role go on the summary and a labelled skills line.
+// more generate-then-tailor pass runs. The same employers, dates, titles, bullet
+// counts, lead paragraphs, and Environments lines stay. Known JD skills are written
+// into those existing project bullets as natural work language, including in earlier
+// roles. A labelled skills line is only the overflow a bullet cannot carry.
 //
 // keyword-targets and resume-quality have no imports, so the Gemini review harness
 // can load this file. Do not import keywords.ts or docx from here.
@@ -133,17 +135,162 @@ export function textHasTerm(text: string, term: string): boolean {
 }
 
 /**
- * A term that is only on the labelled skills line or the summary strengths line is not an
- * experience claim. A term that landed in an experience bullet still blocks delivery.
+ * A known JD term written into an existing project bullet is the representation, not a refusal.
+ * A term only on the labelled skills line is overflow, also not a refusal.
+ * `fabricated` is a term that arrived inside a bullet which also added an employer, a date, or contact.
  */
-export function unverifiedClaims(present: readonly string[], labelled: readonly string[], inExperience: (term: string) => boolean): string[] {
+export function unverifiedClaims(present: readonly string[], labelled: readonly string[], fabricated: (term: string) => boolean): string[] {
   const label = new Set(labelled.map(s => s.toLowerCase()))
   const out: string[] = []
   for (const term of present) {
     if (!term) continue
-    if (inExperience(term) || !label.has(term.toLowerCase())) out.push(term)
+    if (fabricated(term)) out.push(term)
+    else if (!label.has(term.toLowerCase())) continue
   }
   return out
+}
+
+const YEAR_RE = /\b(?:19|20)\d{2}\b/g
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
+const PHONE_RE = /(?:\+?\d[\s().-]*){10,}/g
+const ORG_RE = /\b[A-Z][A-Za-z0-9&]+(?:\s+[A-Z][A-Za-z0-9&]+){0,3}\s+(?:Inc\.?|LLC|Corp\.?|Corporation|Ltd\.?)\b/g
+
+function addedTokens(re: RegExp, before: string, after: string): boolean {
+  const prev = new Set((before.match(re) || []).map(s => s.toLowerCase()))
+  return (after.match(re) || []).some(s => !prev.has(s.toLowerCase()))
+}
+
+/** True when a rewrite adds an employer, a year, an email, or a phone the source line did not have. */
+export function inventedExperienceFrame(before: string, after: string): boolean {
+  const source = String(before || "")
+  const next = String(after || "")
+  if (addedTokens(YEAR_RE, source, next) || addedTokens(EMAIL_RE, source, next) || addedTokens(ORG_RE, source, next)) return true
+  const digits = (text: string) => (text.match(PHONE_RE) || []).map(p => p.replace(/\D/g, "")).filter(d => d.length >= 10)
+  const prev = new Set(digits(source))
+  return digits(next).some(d => !prev.has(d))
+}
+
+function isEnvironmentLine(text: string): boolean {
+  return /^(\s*[•\-*▪‣·]\s*)?environments?\s*:/i.test(String(text || "").trim())
+}
+
+function isRoleHeaderLine(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim()
+  if (!t || t.length > 160 || /^[•\-*▪‣·]/.test(t)) return false
+  return /\b(?:19|20)\d{2}\b/.test(t) && (t.includes("|") || /[—–-]/.test(t))
+}
+
+function joinNatural(terms: readonly string[]): string {
+  if (terms.length <= 1) return terms[0] || ""
+  if (terms.length === 2) return `${terms[0]} and ${terms[1]}`
+  return `${terms.slice(0, -1).join(", ")}, and ${terms[terms.length - 1]}`
+}
+
+/** Write JD terms into one existing line. The line stays one line. No employer and no date are added. */
+export function weaveTermsIntoBullet(text: string, terms: readonly string[]): string {
+  const fresh: string[] = []
+  for (const term of terms) {
+    const t = String(term || "").trim()
+    if (!t || textHasTerm(text, t) || fresh.some(f => f.toLowerCase() === t.toLowerCase())) continue
+    fresh.push(t)
+  }
+  if (!fresh.length) return text
+  let out = String(text || "").replace(/\s+$/, "")
+  if (isEnvironmentLine(out)) return `${out}, ${fresh.join(", ")}`
+  const verbs = ["using", "applying", "covering"]
+  for (let i = 0; i < fresh.length; i += 4) {
+    const clause = `${verbs[Math.min(verbs.length - 1, i / 4)] || "covering"} ${joinNatural(fresh.slice(i, i + 4))}`
+    if (/[.!?]$/.test(out)) out = `${out.slice(0, -1)}, ${clause}${out.slice(-1)}`
+    else out = `${out}, ${clause}`
+  }
+  return out
+}
+
+export type ExperienceBullet = { idx: number; text: string }
+
+/**
+ * Put every missing JD term into an existing project bullet. Roles take turns, so current
+ * and previous work both carry the skill set. Bullet counts, employers, and dates stay.
+ * Terms that have no project line left are returned unplaced for the labelled overflow.
+ */
+export function weaveExperienceRepresentation(
+  roles: readonly { bullets: readonly ExperienceBullet[] }[],
+  current: readonly ExperienceBullet[],
+  terms: readonly string[],
+): { bullets: ExperienceBullet[]; placed: string[]; unplaced: string[] } {
+  const final = new Map<number, string>()
+  for (const bullet of current) final.set(bullet.idx, bullet.text)
+  const sourceOf = new Map<number, string>()
+  const buckets = roles.map(role => role.bullets.filter(b => {
+    sourceOf.set(b.idx, b.text)
+    return !isEnvironmentLine(b.text) && !isRoleHeaderLine(b.text)
+  }))
+  const pool = buckets.filter(b => b.length)
+  const targets = pool.length ? pool : roles.map(role => role.bullets.filter(b => !isRoleHeaderLine(b.text))).filter(b => b.length)
+  const assigned = new Map<number, string[]>()
+  const seen = new Set<string>()
+  let cursor = 0
+  const unplaced: string[] = []
+  if (!targets.length) return { bullets: current.map(b => ({ ...b })), placed: [], unplaced: [...terms] }
+  for (const term of terms) {
+    const key = term.toLowerCase().trim()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    const already = targets.some(role => role.some(b => textHasTerm(final.get(b.idx) ?? b.text, term)))
+    if (already) continue
+    const role = targets[cursor % targets.length]
+    const bullet = role[Math.floor(cursor / targets.length) % role.length]
+    const list = assigned.get(bullet.idx) || []
+    list.push(term)
+    assigned.set(bullet.idx, list)
+    cursor++
+  }
+  for (const [idx, extra] of assigned) {
+    const source = sourceOf.get(idx) || ""
+    const base = final.get(idx) ?? source
+    const next = weaveTermsIntoBullet(base, extra)
+    if (inventedExperienceFrame(source || base, next)) {
+      unplaced.push(...extra)
+      continue
+    }
+    final.set(idx, next)
+  }
+  const bullets: ExperienceBullet[] = []
+  const emitted = new Set<number>()
+  for (const bullet of current) {
+    emitted.add(bullet.idx)
+    bullets.push({ idx: bullet.idx, text: final.get(bullet.idx) ?? bullet.text })
+  }
+  for (const [idx, text] of final) {
+    if (emitted.has(idx)) continue
+    bullets.push({ idx, text })
+  }
+  const placed: string[] = []
+  const still: string[] = []
+  const blob = [...sourceOf.entries()].map(([idx, text]) => final.get(idx) ?? text).join("\n")
+  for (const term of terms) {
+    if (textHasTerm(blob, term)) placed.push(term)
+    else still.push(term)
+  }
+  return { bullets, placed, unplaced: [...new Set([...unplaced, ...still])] }
+}
+
+/** Drop bullet edits that add an employer, a date, or contact. Added bullets are not kept. */
+export function dropInventedExperienceEdits<E extends { bullets?: ExperienceBullet[]; added?: unknown[] }>(
+  edits: E,
+  sources: readonly ExperienceBullet[],
+): { edits: E; removed: number } {
+  const src = new Map(sources.map(s => [s.idx, s.text]))
+  let removed = 0
+  const bullets = (edits.bullets || []).filter(b => {
+    const before = src.get(b.idx)
+    if (before === undefined) return true
+    if (inventedExperienceFrame(before, b.text || "")) { removed++; return false }
+    return true
+  })
+  const added = edits.added || []
+  removed += added.length
+  return { edits: { ...edits, bullets, added: [] }, removed }
 }
 
 export function splitOverflowTerms(terms: readonly string[], summaryOpen: boolean): { skills: string[]; summary: string[] } {

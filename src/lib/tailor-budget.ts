@@ -10,3 +10,11 @@ export function firstDraftRepairReserveMs(maxMs: number): number {
   const budget = Number.isFinite(maxMs) && maxMs > 0 ? maxMs : 0
   return Math.min(45_000, Math.floor(budget * 0.25))
 }
+
+/** Time held back from the draft so the one extra generate-then-tailor pass still runs.
+ * A draft that uses the whole call used to leave under 8 seconds and skip that pass. */
+export function extraPassReserveMs(maxMs: number): number {
+  const budget = Number.isFinite(maxMs) && maxMs > 0 ? maxMs : 0
+  if (budget < 20_000) return 0
+  return Math.min(36_000, Math.max(12_000, Math.floor(budget * 0.18)))
+}

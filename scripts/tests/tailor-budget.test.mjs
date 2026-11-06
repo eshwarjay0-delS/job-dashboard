@@ -35,6 +35,12 @@ test('the reserve never takes 60 percent of a long call', () => {
   }
 })
 
+test('the extra generate-then-tailor pass keeps a window on a WhatsApp call', () => {
+  assert.equal(load('src/lib/tailor-budget.ts').extraPassReserveMs(195_000), 35_100)
+  assert.equal(load('src/lib/tailor-budget.ts').extraPassReserveMs(10_000), 0)
+  assert.ok(load('src/lib/tailor-budget.ts').extraPassReserveMs(52_000) >= 12_000)
+})
+
 test('a short call still leaves a repair window without going negative', () => {
   assert.equal(firstDraftRepairReserveMs(10_000), 2_500)
   assert.equal(firstDraftRepairReserveMs(0), 0)
