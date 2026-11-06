@@ -1,30 +1,53 @@
 "use strict";
 
-// MarketFit-owned desktop auth. The website and Electron have separate session
-// stores; a browser login does NOT authenticate the native protocol's API calls.
-// No provider secret is embedded. The main process holds only an access JWT.
+// MarketFit desktop auth. Chrome and this process do not share a refresh
+// family. The browser hands over a short-lived bearer only. This process
+// opens its own session at POST /api/auth/desktop-session, stores that
+// refresh token, and renews only that token. A website tab rotating the
+// cookie family never presents it. A failed renewal does not delete the
+// stored session and does not ask the shell to show a login window.
 const { randomBytes } = require("node:crypto");
 const path = require("node:path");
 const JWT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const STATE_TTL = 10 * 60_000;
+const SESSION_MS = 3 * 24 * 60 * 60 * 1000;
+const PROACTIVE_BEFORE_MS = 24 * 60 * 60 * 1000;
+const PROACTIVE_DEADLINE_MS = 10 * 60 * 60 * 1000;
+const ACCESS_LEAD_MS = 15 * 60 * 1000;
 const validOwner = s => typeof s === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(s);
+
+function proactiveReauthDue(now, familyExpiresAt) {
+  if (!Number.isFinite(familyExpiresAt) || familyExpiresAt <= 0) return false;
+  return familyExpiresAt - now <= PROACTIVE_BEFORE_MS;
+}
+
+function proactiveReauthInWindow(now, familyExpiresAt) {
+  if (!Number.isFinite(familyExpiresAt) || familyExpiresAt <= 0) return false;
+  const remain = familyExpiresAt - now;
+  return remain <= PROACTIVE_BEFORE_MS && remain >= PROACTIVE_DEADLINE_MS;
+}
 
 function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, now = Date.now }) {
   if (new URL(origin).protocol !== "https:") throw Error("MarketFit auth requires HTTPS");
-  let access = "", owner = "", expiresAt = 0, flight = null;
+  let access = "", refresh = "", owner = "", expiresAt = 0, familyExpiresAt = 0, flight = null;
   const states = new Map();
   const file = () => path.join(profileDir(), "marketfit-auth.bin");
   const encrypted = () => !!safeStorage?.isEncryptionAvailable?.();
-  const valid = (s) => !!s && typeof s === "object" &&
+  const validAccess = (s) => !!s && typeof s === "object" &&
     typeof s.access_token === "string" && s.access_token.length <= 16384 &&
     JWT.test(s.access_token) &&
     Number.isFinite(Number(s.expires_at)) && Number(s.expires_at) > 0;
+  const liveAccess = () => !!(access && expiresAt > now() + 1000);
 
   function persist() {
-    if (!encrypted() || !access) return false;
+    if (!encrypted() || (!access && !refresh)) return false;
     try {
       const bytes = safeStorage.encryptString(JSON.stringify({
-        access_token: access, expires_at: expiresAt, ownerId: owner
+        access_token: access,
+        refresh_token: refresh,
+        expires_at: expiresAt > 0 ? Math.floor(expiresAt / 1000) : 0,
+        family_expires_at: familyExpiresAt,
+        ownerId: owner,
       }));
       fs.mkdirSync(profileDir(), { recursive: true });
       fs.writeFileSync(file(), bytes, { mode: 0o600 });
@@ -32,26 +55,45 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     } catch { return false; }
   }
   function clear() {
-    access = ""; owner = ""; expiresAt = 0;
+    access = ""; refresh = ""; owner = ""; expiresAt = 0; familyExpiresAt = 0;
     try { fs.rmSync(file(), { force: true }); } catch {}
   }
-  function setTokens(s, verifiedOwner) {
-    if (!valid(s) || !validOwner(verifiedOwner)) return false;
-    access = s.access_token;
-    owner = verifiedOwner;
-    expiresAt = Number(s.expires_at) * 1000;
+  function hasSession() {
+    return validOwner(owner) && (!!refresh || liveAccess());
+  }
+  function adopt(body, resetFamily) {
+    if (!body || body.ok !== true || body.session !== "desktop" || !validAccess(body)) return false;
+    if (typeof body.refresh_token !== "string" || !body.refresh_token || body.refresh_token.length > 4096) return false;
+    const userId = typeof body.user_id === "string" && validOwner(body.user_id) ? body.user_id : owner;
+    if (!validOwner(userId)) return false;
+    access = body.access_token;
+    refresh = body.refresh_token;
+    owner = userId;
+    expiresAt = Number(body.expires_at) * 1000;
+    if (resetFamily || !familyExpiresAt) familyExpiresAt = now() + SESSION_MS;
     persist();
     return true;
   }
   function load() {
-    if (!encrypted()) return false; // Never load plaintext credentials.
+    if (!encrypted()) return false;
     try {
       const s = JSON.parse(safeStorage.decryptString(fs.readFileSync(file())));
-      return setTokens(s, s.ownerId);
+      if (!validOwner(s.ownerId)) return false;
+      owner = s.ownerId;
+      refresh = typeof s.refresh_token === "string" && s.refresh_token.length <= 4096 ? s.refresh_token : "";
+      familyExpiresAt = Number.isFinite(Number(s.family_expires_at)) ? Number(s.family_expires_at) : 0;
+      if (validAccess(s)) {
+        access = s.access_token;
+        expiresAt = Number(s.expires_at) * 1000;
+      } else {
+        access = "";
+        expiresAt = 0;
+      }
+      return hasSession();
     } catch { return false; }
   }
   function token() {
-    return access && expiresAt > now() + 1000 ? access : "";
+    return liveAccess() ? access : "";
   }
   function issueState() {
     for (const [s, expiry] of states) if (expiry <= now()) states.delete(s);
@@ -71,52 +113,82 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
           [...u.searchParams.keys()].some(k => !["state", "d"].includes(k))) continue;
       const state = u.searchParams.get("state"), d = u.searchParams.get("d");
       if (!state || !states.has(state) || !d || d.length > 24000 || states.get(state) <= now()) continue;
-      // One use; callbacks from stale browser tabs cannot rotate identity.
       states.clear();
       try {
         const payload = JSON.parse(Buffer.from(d, "base64url").toString("utf8"));
-        return valid(payload) ? payload : null;
+        return validAccess(payload) ? payload : null;
       } catch { return null; }
     }
     return null;
   }
+  async function postSession(refreshToken, bearer) {
+    const headers = { "content-type": "application/json" };
+    if (bearer) headers.authorization = "Bearer " + bearer;
+    const response = await net.fetch(origin + "/api/auth/desktop-session", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      redirect: "error",
+      cache: "no-store",
+    });
+    let json = null;
+    try { json = await response.json(); } catch { json = null; }
+    return { ok: response.ok, status: response.status, json };
+  }
   async function acceptCallback(payload, expectedOwner = "") {
-    if (!valid(payload)) return false;
+    if (!validAccess(payload)) return false;
+    // payload.refresh_token belongs to Chrome. It is never sent or stored.
     try {
-      const result = await net.fetch(origin + "/api/auth/refresh", {
-        method: "POST", headers: { authorization: "Bearer " + payload.access_token },
-        redirect: "error", cache: "no-store"
-      });
-      if (!result.ok) return false;
-      const verified = await result.json();
-      if (verified?.ok !== true || !validOwner(verified.userId) ||
-          (expectedOwner && verified.userId !== expectedOwner)) return false;
-      return setTokens(payload, verified.userId);
+      const result = await postSession("", payload.access_token);
+      if (!result.ok || !result.json) return false;
+      const userId = result.json.user_id;
+      if (!validOwner(userId) || (expectedOwner && userId !== expectedOwner)) return false;
+      return adopt(result.json, true);
     } catch { return false; }
   }
-  // Chrome and Electron MUST NOT rotate the same refresh token. This native
-  // client holds only an access JWT; after expiry it asks Chrome for a fresh,
-  // state-bound one-use handoff. Browser refresh tokens never leave Chrome.
-  async function renew(force = false) {
-    if (!token()) return false;
-    if (!force) return true;
-    if (flight) return flight;
-    flight = (async () => {
-      try {
-        const response = await net.fetch(origin + "/api/auth/refresh", {
-          method: "POST", headers: { authorization: "Bearer " + access },
-          cache: "no-store", redirect: "error"
-        });
-        if (response.status === 401) { clear(); return false; }
-        if (!response.ok) return false;
-        const verified = await response.json();
-        if (verified?.ok === true && verified.userId === owner) return true;
-        clear();
+  async function runRenew(forced) {
+    try {
+      if (!liveAccess() && refresh) {
+        const rotated = await postSession(refresh, "");
+        if (!rotated.ok || !adopt(rotated.json, false)) return false;
+      }
+      const due = proactiveReauthDue(now(), familyExpiresAt) || (!familyExpiresAt && liveAccess());
+      if (due && liveAccess()) {
+        const minted = await postSession("", access);
+        if (minted.ok && adopt(minted.json, true)) return true;
+        return liveAccess();
+      }
+      const lead = liveAccess() && expiresAt - now() <= ACCESS_LEAD_MS;
+      if ((forced || lead) && refresh) {
+        const rotated = await postSession(refresh, liveAccess() ? access : "");
+        if (rotated.ok && adopt(rotated.json, false)) return true;
         return false;
-      } catch { return false; }
-    })();
+      }
+      return liveAccess();
+    } catch { return false; }
+  }
+  async function renew(force = false) {
+    const forced = force === true || force === "rejected";
+    if (!hasSession()) return false;
+    const due = proactiveReauthDue(now(), familyExpiresAt) || (!familyExpiresAt && liveAccess());
+    const lead = liveAccess() && expiresAt - now() <= ACCESS_LEAD_MS;
+    if (!forced && liveAccess() && !due && !lead) return true;
+    if (flight) return flight;
+    flight = runRenew(forced);
     try { return await flight; } finally { flight = null; }
   }
-  return { token, ownerId:()=>owner, load, clear, issueState, callback, acceptCallback, renew };
+  return {
+    token, ownerId: () => owner, hasSession, load, clear, issueState, callback, acceptCallback, renew,
+    familyExpiresAt: () => familyExpiresAt,
+  };
 }
-module.exports = { createMarketFitDesktopAuth };
+
+module.exports = {
+  createMarketFitDesktopAuth,
+  SESSION_MS,
+  PROACTIVE_BEFORE_MS,
+  PROACTIVE_DEADLINE_MS,
+  ACCESS_LEAD_MS,
+  proactiveReauthDue,
+  proactiveReauthInWindow,
+};

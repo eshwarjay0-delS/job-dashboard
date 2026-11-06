@@ -15,7 +15,7 @@ export function summaryWordCap(mode: { onePage?: boolean; quick?: boolean; refin
 
 /** Experience rewrite instruction for a full tailor. Grounded in the source line.
  * Does not ask the model to invent employers, metrics, or logistics. */
-export const FULL_EXPERIENCE_DEPTH = `DEPTH: rewrite each relevant bullet as a complete line grounded only in that bullet's own facts. Keep every tool, system, employer, date, and outcome already written. When the source line supports it, say the action, the technology, and the purpose in one or two sentences, not a keyword list. Do not shorten a detailed bullet into a fragment. Do not invent employers, dates, metrics, certifications, or tools the source does not show. Do not add address, visa, relocation, or work authorization unless that exact fact is already in the source line.`
+export const FULL_EXPERIENCE_DEPTH = `DEPTH: rewrite each existing bullet in place as a complete line. Keep every employer, date, and outcome already written, and keep the tools the source already names. Write the known JD skills into these same bullets as natural project language, including in earlier roles where that kind of work repeats. An older bullet that omitted a tool is not a reason to leave the tool out. Do not shorten a detailed bullet into a fragment. Do not invent employers, dates, metrics, certifications, or a new contact. Do not add address, visa, relocation, or work authorization unless that exact fact is already in the source line. Do not leave a JD skill only on a skills line when a current or previous bullet can carry it.`
 
 const STOP = new Set(["about", "after", "their", "there", "these", "those", "which", "while", "where", "using", "would", "could", "should", "being", "other", "every", "under", "again"])
 

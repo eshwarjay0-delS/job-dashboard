@@ -39,14 +39,50 @@ export interface AtsResult {
 }
 
 const EMAIL_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/
-const PHONE_RE = /(?:\d[\s\-().]*){10,}/
-const MONTH_YEAR_RE =
-  /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b/i
-const YEAR_RANGE_RE = /\b\d{4}\s*[-–—]\s*(?:present|current|now|\d{4})\b/i
+// Dots and unicode dashes are normal in a phone ("314.255.9156", "314–255–9156").
+const PHONE_RE = /(?:\d[\s.\u2010\u2011\u2012\u2013\u2014\u2015\-().]*){10,}/
+const MONTH = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+// No leading word boundary: "MAFeb 2021" and "RemoteNov 2022" are dates, not missing dates.
+const MONTH_YEAR_RE = new RegExp(`(?:${MONTH})\\.?\\s+\\d{4}\\b`, "i")
+// "Till date" and "to Present" are current-role endings. A month word may sit between the dash and the end year.
+const YEAR_RANGE_RE = new RegExp(
+  `\\b\\d{4}\\s*(?:[-–—]|to)\\s*(?:(?:${MONTH})\\.?\\s+)?(?:present|current|now|till(?:\\s+date)?|ongoing|\\d{4})\\b`,
+  "i",
+)
 const NUMERIC_DATE_RE = /\b\d{1,2}\/\d{4}\b/
+// extractZones opens a bucket named "Projects" or "Experience" when that section has
+// lines and no dated employer header. That label is not an employment row.
+const SECTION_BUCKET = /^(?:projects?|experience|professional experience|work experience|employment|work history|career history|selected projects|key projects)$/i
+const SECTION_LINE = /^(?:(?:professional|technical|core)\s+)?(?:summary|skills|experience|education|objective|profile|projects|certifications?|competencies)\b/i
 
 function roleHasDate(roleLine: string): boolean {
   return MONTH_YEAR_RE.test(roleLine) || YEAR_RANGE_RE.test(roleLine) || NUMERIC_DATE_RE.test(roleLine)
+}
+
+function employmentRole(roleLine: string): boolean {
+  const title = roleLine.replace(/\s+/g, " ").trim()
+  return !!title && !SECTION_BUCKET.test(title)
+}
+
+function lineLooksLikeName(line: string): boolean {
+  // Word drawing ids are stored as text and docxText glues them to the name ("438150356870JAY ESHWAR").
+  let head = line.replace(/\s+/g, " ").trim().replace(/^\d+(?=[A-Za-z])/, "").replace(/^name\s*:\s*/i, "")
+  head = head.split(/\s+(?:e-?mail\s*:|ph(?:one)?\s*:|https?:|www\.|linkedin\b)/i)[0] || ""
+  head = head.split(/\s*[|]\s*/)[0] || ""
+  head = head.split(/\s+[—–-]\s+/)[0] || ""
+  head = head.trim()
+  if (!head || head.length > 60 || SECTION_LINE.test(head) || /@|\d/.test(head)) return false
+  if (!/^[A-Za-z][A-Za-z.'’-]*(?:\s+[A-Za-z][A-Za-z.'’-]*){0,4}$/.test(head)) return false
+  const tokens = head.split(/\s+/)
+  if (tokens.length === 1 && (tokens[0].length < 4 || /engineer|analyst|security|developer|manager|summary|skills/i.test(tokens[0]))) return false
+  return true
+}
+
+/** Header-zone misses are common when the name shares a run with the email.
+ * The exported text still has the name. A document with neither is a real miss. */
+function documentHasCandidateName(text: string, headerName: string): boolean {
+  if (headerName.trim()) return true
+  return text.split(/\n/).map(line => line.trim()).filter(Boolean).slice(0, 8).some(lineLooksLikeName)
 }
 
 export function atsCheck(text: string, zones: Zones): AtsResult {
@@ -68,7 +104,7 @@ export function atsCheck(text: string, zones: Zones): AtsResult {
   const name = (zones.header?.name || "").trim()
   checks.push({
     id: "name",
-    passed: name.length > 0,
+    passed: documentHasCandidateName(body, name),
     reason: "no candidate name parses from the document header",
   })
 
@@ -86,12 +122,13 @@ export function atsCheck(text: string, zones: Zones): AtsResult {
     reason: "no experience section parses from the document",
   })
 
-  const dateless = roles.filter(r => !roleHasDate(r.role || ""))
+  const datedRoles = roles.filter(r => employmentRole(r.role || ""))
+  const dateless = datedRoles.filter(r => !roleHasDate(r.role || ""))
   checks.push({
     id: "roles_have_dates",
     passed: dateless.length === 0,
     reason: dateless.length
-      ? `${dateless.length} of ${roles.length} role(s) have no parseable date range`
+      ? `${dateless.length} of ${datedRoles.length} role(s) have no parseable date range`
       : "every role header carries a parseable date range",
   })
 

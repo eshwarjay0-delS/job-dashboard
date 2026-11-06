@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 // navigator.locks when available; same-tab callers already coalesce on
 // __authRefreshFlight, and desktop never reaches the lock (bridge first).
 const src = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
-const fnAt = src.indexOf('async function tryRefreshAuth()')
+const fnAt = src.indexOf('async function tryRefreshAuth(')
 const fn = src.slice(fnAt, src.indexOf('function keepAuthAlive()', fnAt))
 
 test('refresh serializes across tabs when locks exist', () => {

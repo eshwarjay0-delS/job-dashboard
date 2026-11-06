@@ -90,8 +90,10 @@ export function whatsappResumeRejectionReasons(result: TailorResult, opts?: { st
       quality.matched > quality.total) reasons.push("invalid_supported_denominator")
   if (!Number.isFinite(supported) || supported! < WHATSAPP_SUPPORTED_FLOOR)
     reasons.push("supported_coverage_below_floor")
-  // Fail closed: a delivered resume must carry a passing ATS parse check
-  // measured on its exported document. A result without one is unproven.
+  // A clean pass still requires a passing ATS parse of the exported document.
+  // WhatsApp delivery is separate: whatsappRewriteUsable holds the file only
+  // when that check shows the export has no resume text or no contact.
+  // A missing check, or a date/name miss on a readable file, is not that hold.
   if (!result.ats || !result.ats.passed)
     reasons.push("ats_check_failed")
   // Protect against a stale cache whose quality counts do not match the job-post
@@ -116,17 +118,39 @@ export function acceptableWebResume(result: TailorResult): boolean {
   return whatsappResumeRejectionReasons(result, { strict: true }).length === 0
 }
 
+type AtsLike = { passed?: boolean; checks?: { id?: string; passed?: boolean }[]; issues?: string[] }
+
+/** The exported file did not parse as a resume: no body text, or no email and phone.
+ * A missing ATS object is not this case. The check was skipped or not attached,
+ * and a finished rewrite is still the file to send. A date or name miss on a
+ * document that already parsed contact is a gap in the caption, not a broken export. */
+export function atsExportUnreadable(ats: AtsLike | null | undefined): boolean {
+  if (!ats || ats.passed) return false
+  const failed = new Set<string>()
+  for (const check of ats.checks || []) if (check && check.passed === false && check.id) failed.add(check.id)
+  if (!failed.size) {
+    for (const issue of ats.issues || []) {
+      const id = String(issue).split(":")[0]?.trim()
+      if (id) failed.add(id)
+    }
+  }
+  if (!failed.size) return true
+  return failed.has("substantive") || failed.has("contact")
+}
+
 /** A finished rewrite WhatsApp can send. A file whose writers did not return,
- * that did not change, or that failed the exported ATS check is not usable:
+ * that did not change, or whose export has no resume text or contact is not usable:
  * the caller sends the already-chosen resume instead. A role under the 98%
- * evidence target is a named gap on that finished file, not a missing file.
+ * evidence target, a missing ATS attachment, or a date/name parse miss on a
+ * readable file is a named gap on that finished file, not a missing file.
  * Identity, name, dates and contact details are checked on the file bytes. */
 export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false
   if (result.unchanged || !result.diff?.length) return false
   if (result.skills_only || result.partial || result.quality?.incomplete) return false
-  if (!result.ats?.passed) return false
-  return whatsappResumeRejectionReasons(result).every(reason => WHATSAPP_SHORTFALL_REASONS.has(reason))
+  if (atsExportUnreadable(result.ats)) return false
+  return whatsappResumeRejectionReasons(result).every(reason =>
+    WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")
 }
 
 /** The usable rewrite is under a coverage floor, or it added job-post terms.

@@ -43,6 +43,11 @@ export const REALISM = "REALISM (workbench voice): R1 one tradeoff: 'I would rat
 
 /** Dossier only (written, never spoken): the marked hole a candidate fills. Lens r3 moved it out of the spoken REALISM block,
  *  because the guards' unbracket turns a spoken "[ ___ confirm ]" into a broken sentence. */
+
+/** Human intelligence layer (5 Nov 2026, research/lens-human-intelligence-note.md): teammate talk on top of R1–R6.
+ *  Kept as its own block so REALISM stays under the 170-word test cap. Still sourced: no invented war stories. */
+export const PEER_VOICE = "PEER VOICE: talk like a teammate sharing real work, not a brochure. Unshy about hard ideas: plain line, one picture, then the real name. Pick the one move the question is asking for: the bottleneck, the consequence, what you would tell a teammate, what you would warn them off, or an inner check. When the sources support that move, say it; if they do not, use a habit, never a dated private battle. Do not invent a war story, a bad-advice episode, or a number to sound more human. At most one of these moves per answer."
+
 export const DOSSIER_NUMBERS = "In a dossier, a figure the sources do not hold is written [ ___ confirm: your actual figure ]."
 
 export type LensId = "hiring_manager" | "practitioner" | "director" | "architect" | "hr"
@@ -86,7 +91,7 @@ export function lensBlock(audience: string, question: string): string {
   if (String(question || "").trim() && !withoutLogistics(question)) return ""
   const id = lensOf(audience), l = LENS[id], d = depthFor(question)
   const depth = d === "deep" && id === "director" ? DEPTH_DEEP_DIRECTOR : DEPTH_LINE[d]
-  return `LENS ${l.label}: open with ${l.opens}; go into ${l.goes}; avoid ${l.avoids}. The facts are the same for every listener; only order, depth and wording change. ${depth} ${OWN_THE_ROOM} ${REALISM}`
+  return `LENS ${l.label}: open with ${l.opens}; go into ${l.goes}; avoid ${l.avoids}. The facts are the same for every listener; only order, depth and wording change. ${depth} ${OWN_THE_ROOM} ${REALISM} ${PEER_VOICE}`
 }
 
 /** Follow-up deepening ladder: 1 what it is, 2 how it works and how we verified it, 3 where it breaks. */
@@ -102,7 +107,52 @@ export function dossierFigure(phrase: string, figure: string | null, allowed?: S
   return f && allowed && (allowed.has(f) || allowed.has(f.replace(/%$/, ""))) ? `${phrase} by ${figure}` : `${phrase} by [ ___ confirm: your actual figure ]`
 }
 
-export type LensConcept = { term: string; define: string; picture: string; challenge: string; resolve: string; rather: string; over: string; because: string }
+export type LensConcept = { term: string; define: string; picture: string; challenge: string; resolve: string; rather: string; over: string; because: string; bottleneck?: string; warn?: string; consequence?: string; innerCheck?: string }
+export type PeerVoiceKind = "bottleneck" | "warn" | "consequence" | "advice" | "inner"
+/** Which shop-talk move the question is asking for, or null if it does not name one. */
+export function peerVoiceKind(question: string): PeerVoiceKind | null {
+  const q = String(question || "")
+  if (/\b(?:bottleneck|hard part|what was hard|constraint)\b/i.test(q)) return "bottleneck"
+  if (/\b(?:warn|avoid|mistake|bad advice|would not)\b/i.test(q)) return "warn"
+  if (/\b(?:impact|consequence|repercussion|what (?:changed|happened)|result for)\b/i.test(q)) return "consequence"
+  if (/\b(?:advice|teammate|would you tell|what helped)\b/i.test(q)) return "advice"
+  if (/\b(?:how do you (?:make sure|check)|presence of mind|before you (?:send|ship|move))\b/i.test(q)) return "inner"
+  return null
+}
+const sourcedMove = (c: LensConcept, kind: PeerVoiceKind): string => {
+  const bottleneck = String(c.bottleneck || "").trim()
+  const warn = String(c.warn || "").trim()
+  const consequence = String(c.consequence || "").trim()
+  const inner = String(c.innerCheck || "").trim()
+  if (kind === "bottleneck" && bottleneck) return `What I would tell a teammate is that the bottleneck is ${bottleneck}, not just the tool.`
+  if (kind === "warn" && warn) return `I would warn a teammate not to ${warn}.`
+  if (kind === "consequence" && consequence) return `The consequence is ${consequence}.`
+  if (kind === "inner" && inner) return `I check ${inner} before I move on.`
+  if (kind === "advice" && bottleneck) return `What I would tell a teammate is that the bottleneck is ${bottleneck}, not just the tool.`
+  return ""
+}
+const fallbackMove = (kind: PeerVoiceKind | null, depth: Depth): string => {
+  if (kind === "bottleneck") return "What I would tell a teammate is to watch the bottleneck, not only the tool."
+  if (kind === "warn") return "I would warn a teammate not to treat the tool as the whole fix."
+  if (kind === "consequence") return "The consequence is what changes if you skip that check."
+  if (kind === "advice") return "What I would tell a teammate is to watch the hard part, not only the tool."
+  if (kind === "inner" || depth === "deep") return "I check what normal looks like before I treat a finding as done."
+  return "What I would tell a teammate is to watch the hard part, not only the tool."
+}
+/** One shop-talk move for standard/deep answers. Question kind first when a sourced line exists for it, then any sourced move, then a question-aware default. Never more than one. */
+export function peerVoiceLine(c: LensConcept, depth: Depth, question = ""): string {
+  const asked = peerVoiceKind(question)
+  if (asked) {
+    const hit = sourcedMove(c, asked)
+    if (hit) return hit
+  }
+  for (const kind of ["bottleneck", "warn", "consequence", "inner", "advice"] as PeerVoiceKind[]) {
+    const hit = sourcedMove(c, kind)
+    if (hit) return hit
+  }
+  return fallbackMove(asked, depth)
+}
+
 const bare = (term: string) => term.replace(/^(?:an?|the) /i, "")
 /** A resume bullet in first person, past tense kept (the source holds it); split into short sentences for the simple depth. */
 function firstPerson(fact: string, simple: boolean): string[] {
@@ -145,6 +195,7 @@ export function composeLensParts(o: { question: string; lens: LensId | "simple";
   out.push(`You might say ${challenge}.`, simple ? `That is not quite right: ${c.resolve}.` : `The fair answer is that ${c.resolve}.`)
   if (!simple) {
     out.push(`I would rather ${c.rather} than ${c.over}, because ${c.because}.`)
+    out.push(peerVoiceLine(c, depth, o.question))
     if (depth === "deep") out.push(`The hard part is almost never the tool; it is knowing what normal looks like, so I would check the result against that.`)
   }
   // r3: the rung offer is a clause inside the last sentence, so the last sentence is still the takeaway.
@@ -166,6 +217,7 @@ export function realismMarkers(text: string, sources: string[] = []) {
     challenge: /\b(?:You might say|A fair pushback is|The catch is)\b/.test(t),
     resolve: /\b(?:still holds|stops holding|Not quite:)/.test(t),
     unsourcedDated: dated.length,
+    shopTalk: /\b(?:what I would tell a teammate|the bottleneck is|I would warn|the consequence is|I check .{2,80} before I )\b/i.test(t),
   }
 }
 

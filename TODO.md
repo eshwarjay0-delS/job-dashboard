@@ -1,14 +1,103 @@
-## 2026-11-06 — Kompas question windows keep the setup a fragment depends on
+## 2026-11-06 — A design answer leaves the shared close
 
-No new screen. The question Kompas answers can change. The card and the spoken answer are still the same interview speech.
+No new screen. A question that starts with "Design" no longer fills extra length from the shared closing lines or from an approach line that does not name that design.
 
-**What was wrong.** Question stripping kept the newest clause. `questionKernel` cut "and how you measured MTTR" out of "walk me through how you designed the incident pipeline and how you measured MTTR," and it dropped "Tell me about a time you led a migration. Specifically the rollback plan." when the last piece was "And how you communicated it." The page also opened a separate card for "And what would you change?" Desktop loads this same page.
+**Measured on the fictional sample resume, 150 drafts, no model.** Before, on the pair-resume tree: 106 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. "Design Front Door, APIM and private backend trust boundaries" versus "Design tenant isolation across API, cache and asynchronous workers": engineer 0.406 (89 and 93 words), director 0.683 (165 and 167), architect 0.882 (277 and 281, ceiling 281). Both architect drafts included "The boundary I watch". After: 84 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.542 (89 and 89), director 0.651 (138 and 143), architect 0.771 (212 and 226). The closer is gone. Engineer overlap rose and stays under 0.7. The highest remaining pair is 0.811. The previous incident pair stayed at architect 0.543. Offline sample: 15 answers, 0 failures, 16 warnings. `tsc --noEmit` clean.
 
-**What it does now.** Recent question pieces are tried as Last 1 2 3 4, Last 1 2 3, Last 1 2, then Last 1. The longest span that is still one interview question wins. A trailing fragment stays with the earlier setup. Four unrelated questions are not glued together. A complete standalone last question does not pull in an earlier unrelated ask. Company preface stays out. Logistics, visa, address, and relocation stripping is unchanged. System 3 retrieval, the 25-to-5 rerank, source grounding, the code fence, and the spoken ceiling are unchanged.
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 249 is open on the pair-resume stack. Not merged. Not deployed.
 
-**Checked.** New suite `scripts/tests/kompas-question-window-select.test.mjs` plus the question-window, cut, kernel, relevance-fold, dissection, system 3, precision, desktop 10-fold, and WhatsApp channel suites: 197 pass, 2 fail. Those 2 fail on current master without this change (question box height 3.1em vs 4.65em, and an old `card.question = ev.derived` source pin). `tsc --noEmit` clean. Not a live interview. Not merged. Not deployed.
+## 2026-11-06 — A comparison cites a resume line only when it names a side
 
-**Next.** Leave the pull request for review. Do not merge or deploy from this change.
+No new screen. The offline stand-in for a definition or a comparison drops a resume line that does not name either side of the pair.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before, on the comparison tree rebased onto master `1b116ce4`: 103 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. "Explain the same incident to a director: risk acceptance versus remediation" versus "containment versus customer access": engineer 0.619 (49 and 49 words), director 0.676 (76 and 79), architect 0.907 (126 and 126). Both architect drafts included "worked on site" and the weekly risk summary. After: 106 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.214 (51 and 48), director 0.474 (82 and 79), architect 0.543 (125 and 122). The containment draft no longer includes those two lines. The remediation draft still uses the resume line that names remediation. The pair count rose by 3. Offline sample: 15 answers, 0 failures, 16 depth and confidence warnings. Focused suites 56 pass, 0 fail. `tsc --noEmit` clean.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 248 is open on the comparison stack. Not merged. Not deployed.
+
+## 2026-11-06 — Lens PEER_VOICE v3, after REALISM, not merged
+
+No new screen. The desktop lens prompt and the offline lens composer changed. The route table did not.
+
+**What changed.** `PEER_VOICE` is a separate block after the existing `REALISM` string, which was not edited. It rides inside `lensBlock`, so the desktop switch `KOMPAS_DESKTOP_LENS` still decides whether a live prompt sees it, and a logistics ask still gets nothing. Standard and deep offline answers add one teammate line (bottleneck, warning, consequence, advice, or an inner check). Simple answers stay picture-first. The line is a habit unless the concept already holds that move. It does not invent a war story, a bad-advice episode, or a number. Only the v3 patch was applied (sha256 `995e2c5ab4bb412b348eabe53d23e3c18b749f44801873fd185984c749dcf169`). v1 and v2 were not. `fa8f7026` was not pushed.
+
+**Checked.** Offline. Peer voice 4 pass, 0 fail. Lens r1 (T1–T5) 9 pass, 0 fail. Lens r2 8 pass, 0 fail. Lens r3 12 pass, 2 fail — those two already fail on master `eae0b30` because `REALISM` no longer says "a number the question quotes is not a source". `tsc --noEmit` clean. ESLint clean on the edited TypeScript files. Not a live model. Not a Windows session. Not a WhatsApp send. Not production until pull request 246 is merged, and this task does not merge it.
+
+**Next.** Leave pull request 246 open. Do not merge it from this run.
+
+## 2026-11-06 — Route table before Kompas answer generation
+
+No new screen. The answer path consults an explicit table after retrieval and before the model call.
+
+**What changed.** `src/lib/kompasJevRoute.ts` maps question class and retrieval confidence to go, confirm, or stop. Personal logistics still stops before the key read and before a model fetch. An experience story that only partly clears the existing coverage gate confirms with the line the product already speaks, `I would want to confirm that`, on the answer card that already exists, and does not call the model. A full match generates as before. A lexical miss still generates, because that is the existing not-in-sources answer and a zero score is not an empty resume. Other classes generate. Depth and audience are the reads this path already made. No TypeSafe Jev, no new vendor, no new card. Dictation repairs, the resume tailor, desktop sign-in, and the three profiles were not edited.
+
+**Checked.** Offline. The new suite plus logistics, grounding (including the 30-fold), System 3 retrieval, speed r6, source retrieval, and relevance recovery: 224 pass, 0 fail. `tsc --noEmit` clean. ESLint clean on the two edited TypeScript files. Not a live model. Not a Windows session. Not production until this pull request is merged.
+
+**Next.** Leave the pull request open. A live answer is still unverified.
+
+## 2026-11-06 — Chrome handoff continues in the open Kompas window
+
+The sign-in card is the same one from the Nov 6 screenshot. It is shown only when this computer has no stored desktop session.
+
+**What failed.** The Nov 6 shell opened Chrome with `?state=` and then waited on `marketfit-kompas://auth`. That relaunch does not continue the window already open, so the card stayed up. The page note was the short string `Opening Kompas…`, which is the leftover `Openir` on the screenshot. The state nonce was not supposed to be painted. A stored session was not the thing being cleared. `safeAuthNext` kept only `state`, so a `127.0.0.1` return could not survive Google.
+
+**What changed.** The shell listens on `http://127.0.0.1:<port>/cb` and opens Chrome with that address and `handoff=start`. Chrome posts the bearer back to this window. Google sign-in keeps the loopback and `handoff=start` and still drops every other query. The card is the full title, the full body, and Open Chrome again. There is no separate Opening label and the state is not written on the card. A failed callback does not clear a stored session. Success removes the card and the window continues. A session that is already stored never shows the card.
+
+**Checked.** Offline. Desktop `npm run check`: 42 pass, 0 fail, protocol self-test passed. Sign-in state and auth-gate: 19 pass, 0 fail. `tsc --noEmit --skipLibCheck` clean. ESLint 0 errors on the two edited TypeScript files. `PHRASE_FIXES` was not edited. Not a live click on the laptop. Not a new `Kompas.exe`. Not production until this pull request is merged and a later Windows build is installed.
+
+**Next.** Leave the pull request open. The installed Nov 6 exe keeps the old opener until that later build.
+## 2026-11-06 — A comparison stays on the two named things
+
+No new screen. The offline stand-in for a definition or a comparison no longer adds the shared closing lines.
+
+**Measured on the fictional sample resume, 150 drafts, no model.** Before this change, on the incident-ontopic tree: 113 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures. "Define IDOR versus CSRF" versus "Define containment versus eradication": engineer 0.636 (29 words), director 0.867 (62 words), architect 0.905 (105 words). The architect draft included "The boundary I watch". After: 103 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. That pair: engineer 0.636 (29 words), director 0.810 (52 words), architect 0.793 (94 words). The boundary line is gone. Offline sample 15 answers, 0 failures.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed.
+
+## 2026-11-06 — A finished WhatsApp rewrite was held by a false ATS miss
+
+No new screen. The WhatsApp send path and the exported-document ATS check changed.
+
+**What failed.** At 12:08 PM America/Chicago on 6 Nov 2026, request `fnnrf-1793988396338` (deployment `dpl_2aTkS5YJcFNsJeKjtWo26tYzkxzA`, commit `f1ba579`) finished a Cyber Security Analyst / IAM rewrite at 100 percent coverage and 100 percent supported coverage. `bulletsReverted` was 0. The quality gate still logged `quality_not_deliverable` and `ats_check_failed`, and WhatsApp sent the original `Eshwar_Resume.docx` with "did not finish cleanly." The ATS check had run. A section bucket titled Projects, a month glued to the previous word, or a name sitting on the contact line was enough to fail it. That failure is what marked an otherwise finished file `needs_review`.
+
+**What changed.** Those parse misses pass. The check reads header and footer text. A skills category such as "Backend Languages:" stays in the skills section. A finished rewrite is sent when the ATS result is missing or the only miss is a date or a name on a file that already has contact. An export with no resume text, or with no email and no phone, is still held and the library file goes out. Known JD terms that are not already in the experience bullets are written into those bullets before anything is added to the skills line. The three profiles stay apart. Experience length and format stay.
+
+**Checked.** Offline. 35 of 36 resumes under `resumes/` pass the ATS check. The one that does not has no email and no phone. resume-ats, whatsapp-resume-acceptance, constructed-jd-tailor, whatsapp-resume-failsafe, resume-floor, resume-structure, and tailor-ship-on-rollback: 92 pass, 0 fail. `tsc --noEmit` clean. ESLint clean on the edited files. Not a live model. Not a live WhatsApp send. Not production until this pull request is merged.
+
+**Next.** After merge, the next jayeshwar44 IAM job should come back as the rewritten Word file, with the coverage and the ATS score in the caption.
+
+## 2026-11-06 — Constructed JD is written into the existing project bullets
+
+No new screen. The tailor and the WhatsApp send path changed.
+
+**What failed.** A production WhatsApp run on the constructed-JD deploy (`21ba3028`) finished in 138 seconds at 100 percent coverage and was still rejected. Thirty-two paragraphs were rolled back because they named JD tools the older bullets did not, 118 terms were dumped on the skills line, the ATS check failed, and the chat received the original library file with "did not finish cleanly." The 8:41 AM CT thread matches that shape. Its exact log line is outside hobby retention.
+
+**What changed.** Known JD terms are written into the current role and the previous roles as project language (`using` / `applying` / `covering` on the existing lines). A new employer, year, email, or phone is removed. The one extra generate-then-tailor pass is reserved time and is not skipped when fewer than 8 seconds remain. A rewrite that finishes is the file WhatsApp sends. The original stays the backup when the run throws, times out, comes back partial, or is skills-only. Houston, Saint Louis, and eshwarjay06 are not mixed. The website 95 percent gate and the WhatsApp 70–94.9 percent band stay.
+
+**Checked.** Offline. The same five suites plus `scripts/tests/whatsapp-5fold.test.mjs`: 66 pass, 0 fail. The 5-fold stall (300ms budget) reaches `done` and says the rewrite ran out of time. The 8-second export grace applies only when the tailor budget is at least 20 seconds, so a usable file that lands just after a full deadline is still kept. `tsc --noEmit` was clean before this grace adjustment. ESLint was clean on the edited files. Not a live model. Not a live WhatsApp send. Not production until this pull request is merged. GitHub Actions run 42249274226 failed on the unconditional grace; this push is the fix. Not merged.
+
+**Next.** After merge, one live jayeshwar44 IAM job should come back as a rewritten docx above 95 percent of the constructed JD, with the same employers and dates.
+
+## 2026-11-06 — Desktop 3-day session, captions first, remembered hide, asInvoker
+
+No new screen on the website. The Windows shell is what changed, plus the desktop-session response now includes `user_id`.
+
+**Already on master `21ba3028`.** Merged PR #227 is `POST /api/auth/desktop-session`. Merged PR #224 returns a short-lived bearer and does not copy Chrome's refresh token. Computer audio was already Electron `audio: "loopback"` on a screen source (the WASAPI output mix). Caption-once already required a uniquely named Live Captions window. Question intake from PR #233 was already on master.
+
+**What changed.** The shell opens and renews its own refresh family on that route. The clock is three days. From 24 hours before expiry, including the last 10 hours, it mints the next family without showing a sign-in window and without deleting the stored session on failure. Screen Answer prefers Live Captions, then another window, then the primary screen. Hide-from-taskbar can be remembered. The packaged manifest is rewritten to `asInvoker`. The exe was not signed.
+
+**Checked.** Offline only. The focused command listed in `docs/research/desktop-auth-continuity.md` was 246 pass and 0 fail. `tsc --noEmit --skipLibCheck` was clean. `PHRASE_FIXES` was not edited. Not a live Windows session, not a live Supabase login, and not a UAC observation on the laptop.
+
+**Next.** The pull request is the handoff. After it lands, a real Kompas.exe launch still has to stay signed in for the three-day window, capture Live Captions, and start without an administrator prompt.
+
+## 2026-11-06 — Constructed JD is the tailor target
+
+No new screen. The change is in the resume tailor used by the website download and the WhatsApp send.
+
+**What changed.** Before any edit, two passes generate related skills, experiences, points, bullets, skill lines, and a summary from the job post and the resume. Those keywords are summed, and that text is the JD. If the score is not above 95%, one more generate-then-tailor pass runs. Experience rows, employers, dates, titles, and Environments lines are not added or removed. Terms that do not fit a role go on a `Job-post terms` skills line, and soft skills can go in an open summary. A file is not refused only because those labelled terms were absent from the source. A term written into an experience bullet as new work still blocks. If every writer fails, nothing is invented and WhatsApp still sends the resume already chosen.
+
+**Checked.** Offline only. New suite 4/4, including a Word file above 95% with the same experience frame. Floor, floor-gate, and the 20-fold outage suite still pass. `tsc --noEmit` passed. ESLint on the edited files passed. Not a live model run. Not a WhatsApp send. Not production until this pull request is merged.
+
+**Next.** Leave the pull request open. After it lands, one live Houston job should come back at or above 95% of the constructed JD with the experience rows unchanged.
 
 ## 2026-11-06 — A finished WhatsApp rewrite sends the scored Word file
 
@@ -21,6 +110,14 @@ No new screen. The change is on the WhatsApp resume run.
 **Checked.** Focused suites 152/152, including the 30.8 percent scored send, the library backup, the 70 percent clean pass, and the website hold. `tsc --noEmit` passed. Not a live WhatsApp message. Not production until this pull request is merged.
 
 **Next.** Pull request 232 is open at `4b3e4353`. Leave it open. After it lands, one live Houston job should receive the updated scored docx when the rewrite finishes.
+
+## 2026-11-06 — Kompas question intake (not merged, not deployed)
+
+No new screen. Speech, caption, and dictation chunks now keep one question whole and leave the next different question on its own card. A keyword such as "intro" becomes "Tell me about yourself." Other stems (strengths, weaknesses, why this role, experience with X, walk me through, a time when, questions for us, how would you, conflict) do the same, and a fragment with no question syntax still becomes a question. The answer engine receives that whole question. Salary, visa, address, relocation, and notice are still formed and then skipped by the existing logistics gate. Dictation repairs for kube cuddle, pee key eye, leased privilege, zero thrust, and the other new mishearings match on the desktop list and the server list.
+
+**Verified offline.** New slice 13/13. The old last-four-lines-plus-last-600-characters behavior glued 4 different-topic sequences and dropped 1 long opening; after, both counts are 0. The existing 50-sequence replay stays 0 missed, 0 merged, 0 misheard and was already 0 on master. That replay is not a live microphone. Core suites 81/81. A wider question, speech, dictation, and voice run was 289 pass and 5 fail; those 5 fail on master without this change. `tsc --noEmit` clean. Baseline contract 15/15.
+
+**Not verified.** No Windows microphone and no live caption box. Not merged. Not deployed. WhatsApp resume tailoring and System 3 retrieval were not edited. Rebased onto master `c011a72c` (the scored WhatsApp rewrite). Conflicts were only in this file, `docs/completion-watch.md`, `src/lib/plan-vision-journal.ts`, and `src/lib/rea-register.ts`.
 
 ## 2026-11-06 — Relevance fence branch rebased onto the System 3 master
 

@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS, sendNowBlockReason } from '../../src/lib/interview-track.ts'
+import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS, sendNowBlockReason, chicagoDay, effectiveHand, withHand, dueButUnsent } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com', DAY = 86_400_000, NOW = Date.UTC(2026, 9, 13, 18, 0, 0)
@@ -201,7 +201,7 @@ test('rewording what is sent, or re-ticking its days, never switches it on or of
   assert.deepEqual(validState({ marks: [], handed: [{ id, on: true, at: 1, sent: [], days: [] }] }).handed, [{ id, on: true, at: 1, sent: [] }])
 })
 
-test('Send now never presents as a working button on a card the server must refuse', () => {
+test('Send now is never blocked by the four-count, only by a card the server must refuse', () => {
   const contact = { name: 'Shikha Rao', email: 'shikha@vendorone.example', company: 'VendorOne', phones: [], recruiter: false }
   const own = { ...contact, recruiter: true }
   const base = { phase: 'waiting', contact, theyWrote: false, sent: 0 }
@@ -212,5 +212,87 @@ test('Send now never presents as a working button on a card the server must refu
   assert.match(sendNowBlockReason({ ...base, contact: null }), /no outside contact/)
   assert.match(sendNowBlockReason({ ...base, contact: own }), /own recruiters/)
   assert.match(sendNowBlockReason({ ...base, theyWrote: true }), /wrote last/)
-  assert.match(sendNowBlockReason({ ...base, sent: MOST_SENT_FOR_YOU }), /Four follow-ups already sent/)
+  assert.equal(sendNowBlockReason({ ...base, sent: MOST_SENT_FOR_YOU }), '', 'four already sent is his word to carry on, not a block on a tap')
+})
+
+test('a follow-up due later the same Chicago day is caught by the morning run, not the next ring day', () => {
+  const id = `${ME}:quiet`
+  const thu7 = Date.UTC(2026, 9, 15, 12, 0, 0) // Thursday 07:00 in Chicago
+  assert.equal(weekdayForHim(thu7), 4)
+  // Interview Saturday Oct 10 at 12:30 Chicago; the first follow-up falls due Thursday Oct 15 at 12:30 Chicago — after the 07:00 run, same day.
+  const f = { id, threadId: 'quiet', account: ME, role: 'Security Engineer', company: 'Northpier', kind: 'Video', ts: Date.UTC(2026, 9, 10, 17, 30, 0) }
+  const threads = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 6, INVITE))]
+  const run = (state, now, found) => { const r = trackInterviews([found], threads, [ME], now, { state }); return toSendForYou(r.active, state, now) }
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', thu7), thu7, f).map(t => t.id), [id], 'due today, on a ring day, goes out at 07:00')
+  // Due tomorrow, same hour: still not sent.
+  const f2 = { ...f, ts: Date.UTC(2026, 9, 11, 17, 30, 0) }
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', thu7), thu7, f2), [], 'due Friday is not sent Thursday')
+  // Due today but Friday is not a ring day: the ring-day gate still holds.
+  const fri7 = Date.UTC(2026, 9, 16, 12, 0, 0)
+  assert.equal(weekdayForHim(fri7), 5)
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', fri7), fri7, f2), [], 'due Friday, not a ring day, stays')
+  // Chicago days, not UTC days: 23:30 Chicago is the same day; 00:30 Chicago is the next.
+  assert.equal(chicagoDay(Date.UTC(2026, 9, 15, 4, 30, 0)), '2026-10-14')
+  assert.equal(chicagoDay(Date.UTC(2026, 9, 15, 5, 30, 0)), '2026-10-15')
+  assert.equal(chicagoDay(Date.UTC(2026, 9, 16, 4, 30, 0)), '2026-10-15')
+})
+
+test('arming carries to a new round in the same thread: switch, ring days and edited words, never the sends', () => {
+  const oldId = `${ME}:round1`, newId = `${ME}:round2`
+  const threads = [thread('same', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE))]
+  const oldF = { id: oldId, threadId: 'same', account: ME, role: 'Security Engineer', company: 'Northpier', kind: 'Video', ts: NOW - 12 * DAY }
+  const newF = { id: newId, threadId: 'same', account: ME, role: 'Security Engineer', company: 'Northpier', kind: 'Video', ts: NOW - 9 * DAY }
+  const threadOf = new Map([[oldId, 'same'], [newId, 'same']])
+  const state = decide(emptyState(), oldId, 'send_for_me', NOW, { subject: 'Edited subject', body: 'Edited body' }, [1, 4])
+  // The new round shows as armed with the old round's days and words, and no sends counted against it.
+  const eff = effectiveHand(state, newId, 'same', threadOf)
+  assert.equal(eff?.on, true)
+  assert.deepEqual(eff?.days, [1, 4])
+  assert.equal(eff?.subject, 'Edited subject'); assert.equal(eff?.body, 'Edited body')
+  assert.deepEqual(eff?.sent, [])
+  const mon = Date.UTC(2026, 9, 12, 18, 0, 0) // Monday 13:00 in Chicago
+  const { active } = trackInterviews([oldF, newF], threads, [ME], mon, { state })
+  const by = Object.fromEntries(active.map(t => [t.id, t]))
+  assert.equal(by[newId].forYou.on, true); assert.deepEqual(by[newId].forYou.days, [1, 4]); assert.equal(by[newId].forYou.sent, 0)
+  assert.ok(toSendForYou(active, state, mon).map(t => t.id).includes(newId), 'the inherited card is sent on a ring day')
+  // A switched-off record of its own stops the inheritance.
+  const stopped = decide(state, newId, 'stop_sending', mon)
+  assert.equal(effectiveHand(stopped, newId, 'same', threadOf)?.on, false)
+  assert.equal(toSendForYou(trackInterviews([oldF, newF], threads, [ME], mon, { state: stopped }).active, stopped, mon).map(t => t.id).includes(newId), false)
+  // Another thread never inherits.
+  assert.equal(effectiveHand(state, newId, 'other', threadOf), undefined)
+  // Recording a send for the new round keeps the weekly on and counts only against the new round.
+  const recorded = noteSent(withHand(state, newId, 'same', threadOf, mon), newId, mon)
+  assert.equal(recorded.handed.find(h => h.id === newId)?.on, true)
+  assert.deepEqual(recorded.handed.find(h => h.id === newId)?.sent, [mon])
+  assert.deepEqual(recorded.handed.find(h => h.id === oldId)?.sent, [])
+})
+
+test('edited words survive a write and a read', () => {
+  const state = decide(emptyState(), `${ME}:quiet`, 'send_for_me', NOW, { subject: 'Edited subject', body: 'Edited body' }, [1, 4])
+  const round = validState(JSON.parse(JSON.stringify(state)))
+  assert.equal(round.handed[0]?.subject, 'Edited subject'); assert.equal(round.handed[0]?.body, 'Edited body')
+  assert.deepEqual(round.handed[0]?.days, [1, 4])
+})
+
+test('the daily job names the armed cards it looked at but did not send', () => {
+  const id = `${ME}:quiet`
+  const threads = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE))]
+  const run = (state, now = NOW) => { const r = trackInterviews([found('quiet', -9)], threads, [ME], now, { state }); return { unsent: dueButUnsent(r.active, state, now), send: toSendForYou(r.active, state, now) } }
+  // Nothing armed: nothing to name.
+  assert.deepEqual(run(emptyState()).unsent, [])
+  // Armed, due, but today is not a ring day: named with the reason.
+  const wed = decide(emptyState(), id, 'send_for_me', NOW, undefined, [3])
+  assert.deepEqual(run(wed).unsent.map(u => u.id), [id])
+  assert.match(run(wed).unsent[0].reason, /not one of its ring days/)
+  assert.deepEqual(run(wed).send, [])
+  // Armed, due, on a ring day: sent, so not named.
+  const tue = decide(emptyState(), id, 'send_for_me', NOW, undefined, [2])
+  assert.deepEqual(run(tue).unsent, [])
+  assert.deepEqual(run(tue).send.map(t => t.id), [id])
+  // Four already sent: named with the reason.
+  let spent = decide(emptyState(), id, 'send_for_me', NOW, undefined, [2])
+  for (let i = 0; i < MOST_SENT_FOR_YOU; i++) spent = noteSent(spent, id, NOW - (40 - i * 7) * DAY)
+  assert.deepEqual(run(spent).unsent.map(u => u.id), [id])
+  assert.match(run(spent).unsent[0].reason, /Four follow-ups/)
 })

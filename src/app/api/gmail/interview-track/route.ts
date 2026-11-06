@@ -15,8 +15,8 @@ import { NextResponse } from "next/server"
 import { requireAuth, isAuthContext, threadsToInterviews, enrichInterviewEvidence, scheduleInterviewDiscovery, TRACKING_DAYS, type AuthContext } from "../_lib"
 import { keptThreads } from "../_kept"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { decide, followUpWords, trackInterviews, cleanDays } from "@/lib/interview-track"
-import { readTrackState, writeTrackState, sendInterviewFollowUpNow } from "@/lib/interview-followups"
+import { decide, followUpWords, trackInterviews, cleanDays, effectiveHand } from "@/lib/interview-track"
+import { readTrackState, writeTrackState, sendInterviewFollowUpNow, readWatchdogRun } from "@/lib/interview-followups"
 import { isMyRecruiter } from "@/lib/my-recruiters"
 import { readRecruiters } from "@/lib/my-recruiters-store"
 
@@ -26,7 +26,7 @@ const ACTIONS = new Set(["rejected", "completed", "reopen", "send_for_me", "stop
 
 async function answer(ctx: AuthContext) {
   const { data: { user } } = await ctx.supabase.auth.getUser()
-  const [kept, recruiters, state] = await Promise.all([keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true }), readRecruiters(ctx.userId), readTrackState(ctx.userId)])
+  const [kept, recruiters, state, lastWatchdogRun] = await Promise.all([keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true }), readRecruiters(ctx.userId), readTrackState(ctx.userId), readWatchdogRun(ctx.userId)])
   const threads = await enrichInterviewEvidence(ctx.userId, kept.threads).catch(() => kept.threads)
   // Discovery for interviews the kept copy missed runs behind this answer, never inside it.
   scheduleInterviewDiscovery(ctx.userId, threads)
@@ -35,15 +35,16 @@ async function answer(ctx: AuthContext) {
   const meta = (user?.user_metadata || {}) as { full_name?: string; name?: string }
   const myName = String(meta.full_name || meta.name || "").trim().split(/\s+/)[0] || ""
   const words: Record<string, { subject: string; body: string }> = {}
+  const threadOf = new Map(out.active.map(t => [t.id, t.threadId]))
   for (const t of out.active) {
     if (t.phase !== "waiting" || !t.contact) continue
-    // Prefer user-edited words when present; fall back to the generated draft.
-    const hand = state.handed.find(h => h.id === t.id)
+    // Prefer user-edited words when present — an earlier round's edited words carry to a new round; fall back to the generated draft.
+    const hand = effectiveHand(state, t.id, t.threadId, threadOf)
     words[t.id] = hand?.subject && hand?.body ? { subject: hand.subject, body: hand.body } : followUpWords(t, myName)
   }
   // Sending for the person needs the site's daily job to be running. Said, so the switch never promises what will not happen.
   const canSendForYou = (process.env.CRON_SECRET || "").length >= 16 || (process.env.WATCHDOG_CRON_SECRET || "").length >= 32
-  return { ok: true, kept: kept.kept, ...out, words, canSendForYou }
+  return { ok: true, kept: kept.kept, ...out, words, canSendForYou, lastWatchdogRun }
 }
 
 export async function GET() {

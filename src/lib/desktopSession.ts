@@ -20,6 +20,7 @@ export type DesktopCredential = {
   refreshToken: string
   expiresAt: number
   familyId: string
+  userId?: string
 }
 
 export type DesktopAuthFailure = { message?: string; code?: string }
@@ -36,6 +37,7 @@ export type DesktopSessionSuccess = {
   refresh_token: string
   expires_at: number
   session: "desktop"
+  user_id: string
 }
 
 export type DesktopSessionFailure = {
@@ -117,6 +119,7 @@ function success(session: DesktopCredential): DesktopSessionResult {
       refresh_token: session.refreshToken,
       expires_at: session.expiresAt,
       session: "desktop",
+      user_id: session.userId || "",
     },
   }
 }

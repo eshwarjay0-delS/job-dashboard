@@ -5,7 +5,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
   askedPartList, asksForCode, dissectQuestion, dissectionPrompt,   draftSpokenAnswer, dropParaphrasedRepeat, evaluateLiveAnswers, standInFence,
-  experienceLines, isProviderErrorAnswer, leadPhrase, partsScale, questionKeywords, requiredSentence, sentencesOf, settleSpokenAnswer,
+  experienceLines, isProviderErrorAnswer, leadPhrase, partsScale, questionKeywords, requiredSentence, sameAnswerRatio, sentencesOf, settleSpokenAnswer,
   topicOfAsk, trimToWords, wordCount,
 } from "../../src/lib/kompasDissection.ts"
 import { applyGuards, questionFigures } from "../../src/lib/kompasGuards.ts"
@@ -99,6 +99,78 @@ test("with nothing matching in the resume, the draft says so instead of reusing 
   const text = draftSpokenAnswer(HITACHI[2], "engineer", "## Experience\n- Baked bread for a busy cafe every morning before six.\n")
   assert.match(text, /does not show this exact work/)
   assert.equal(/bread/.test(text), false)
+})
+
+test("two incidents that share a frame do not get one answer", () => {
+  const worker = "In that design, a worker processes an object after its ownership changes. Walk through diagnosis, competing hypotheses, safe containment and rollback."
+  const updater = "In that design, a signed updater launches an unsigned child used by a critical service. Walk through diagnosis, competing hypotheses, safe containment and rollback."
+  assert.equal(leadPhrase(worker), "a worker processes an object after its ownership changes")
+  assert.equal(leadPhrase(updater), "a signed updater launches an unsigned child used by a critical service")
+  const rows = []
+  for (const level of LEVELS) {
+    const left = draftSpokenAnswer(worker, level, RESUME)
+    const right = draftSpokenAnswer(updater, level, RESUME)
+    assert.match(left, /worker/)
+    assert.match(right, /updater/)
+    assert.equal(/updater/.test(left), false, level)
+    assert.equal(/worker/.test(right), false, level)
+    assert.ok(sameAnswerRatio(left, right) < 1, `${level} ${sameAnswerRatio(left, right)}`)
+    rows.push({ question: worker, level, text: left }, { question: updater, level, text: right })
+  }
+  assert.equal(evaluateLiveAnswers(rows, RESUME).failures.filter((f) => f.startsWith("same")).length, 0)
+  assert.ok(sameAnswerRatio(draftSpokenAnswer(worker, "architect", RESUME), draftSpokenAnswer(updater, "architect", RESUME)) < 0.7)
+  assert.equal(draftSpokenAnswer(worker, "architect", RESUME).includes("The boundary I watch"), false)
+  const copied = "On in that design, here is what I do in practice. My resume does not show this exact work."
+  const same = evaluateLiveAnswers([
+    { question: worker, level: "engineer", text: copied },
+    { question: updater, level: "engineer", text: copied },
+  ], RESUME)
+  assert.ok(same.failures.some((f) => /same answer for different questions/.test(f)))
+})
+
+test("a definition comparison does not reuse the shared closing catalog", () => {
+  const idor = "Define IDOR versus CSRF. Keep it suitable for technical HR."
+  const containment = "Define containment versus eradication. Keep it suitable for technical HR."
+  for (const level of LEVELS) {
+    const left = draftSpokenAnswer(idor, level, RESUME)
+    const right = draftSpokenAnswer(containment, level, RESUME)
+    assert.match(left, /IDOR versus CSRF/)
+    assert.match(right, /containment versus eradication/)
+    assert.equal(left.includes("The boundary I watch"), false, level)
+    assert.equal(right.includes("The boundary I watch"), false, level)
+  }
+  const architect = sameAnswerRatio(draftSpokenAnswer(idor, "architect", RESUME), draftSpokenAnswer(containment, "architect", RESUME))
+  const director = sameAnswerRatio(draftSpokenAnswer(idor, "director", RESUME), draftSpokenAnswer(containment, "director", RESUME))
+  assert.ok(architect < 0.85, String(architect))
+  assert.ok(director < 0.85, String(director))
+})
+
+test("two design questions leave the shared architect closing lines", () => {
+  const door = "Design Front Door, APIM and private backend trust boundaries. Explain trust boundaries, data flow, failure isolation, rollout and validation."
+  const tenant = "Design tenant isolation across API, cache and asynchronous workers. Explain trust boundaries, data flow, failure isolation, rollout and validation."
+  const left = draftSpokenAnswer(door, "architect", RESUME)
+  const right = draftSpokenAnswer(tenant, "architect", RESUME)
+  assert.match(left, /Front Door/)
+  assert.match(right, /tenant isolation/)
+  assert.equal(left.includes("The boundary I watch"), false)
+  assert.equal(right.includes("The boundary I watch"), false)
+  assert.ok(wordCount(left) < 277, String(wordCount(left)))
+  assert.ok(wordCount(right) < 281, String(wordCount(right)))
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.85, String(ratio))
+})
+
+test("a director comparison does not reuse unrelated resume lines", () => {
+  const accept = "Now explain the same incident to a director: risk acceptance versus remediation. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const contain = "Now explain the same incident to a director: containment versus customer access. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
+  const left = draftSpokenAnswer(accept, "architect", RESUME)
+  const right = draftSpokenAnswer(contain, "architect", RESUME)
+  assert.match(left, /remediation/)
+  assert.match(right, /containment versus customer access/)
+  assert.equal(right.includes("worked on site"), false)
+  assert.equal(right.includes("weekly risk summary"), false)
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.7, String(ratio))
 })
 
 test("lead phrases and asked parts come from the interviewer's words", () => {

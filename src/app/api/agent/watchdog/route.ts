@@ -3,7 +3,7 @@ import crypto from "crypto"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { fetchClassifiedThreads } from "../_tools"
-import { sendInterviewFollowUps } from "@/lib/interview-followups"
+import { sendInterviewFollowUps, writeWatchdogRun, type WatchdogRunUser } from "@/lib/interview-followups"
 import { runChecks } from "@/lib/agent/watchdog-checks"
 
 export const runtime = "nodejs"
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
   const userIds = [...new Set(((accounts || []) as Array<{ user_id: string }>).map(a => a.user_id))]
 
   const results: Record<string, { checked: number; notified: number } | { error: string }> = {}
-  const followUps: Record<string, { sent: number; failed: number } | { error: string }> = {}
+  const followUps: Record<string, { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[] } | { error: string }> = {}
   for (const uid of userIds) {
     try {
       results[uid] = await runForUser(uid)
@@ -111,15 +111,22 @@ export async function GET(req: NextRequest) {
     }
     // The weekly interview follow-ups a person asked to have sent for them (13 Oct 2026, src/lib/interview-followups.ts).
     // Only in this scheduled run, never from a page. Someone who handed nothing over costs one small read.
+    // Every user is recorded, sent or not: a day with no sends is a record with zeros, never silence.
     try {
       const { data } = await service.from("profiles").select("full_name").eq("id", uid).maybeSingle()
       const first = String((data as { full_name?: string } | null)?.full_name || "").trim().split(/\s+/)[0] || ""
-      const sent = await sendInterviewFollowUps(uid, first)
-      if (sent.sent || sent.failed) followUps[uid] = sent
+      followUps[uid] = await sendInterviewFollowUps(uid, first)
     } catch (err) {
       followUps[uid] = { error: String(err).slice(0, 200) }
     }
   }
+  // The run record: what the day's check did for every person, kept in Blob so a silent miss can be seen afterwards.
+  const users: Record<string, WatchdogRunUser> = {}
+  for (const uid of userIds) {
+    const f = followUps[uid]
+    users[uid] = f && "sent" in f ? { sent: f.sent, failed: f.failed, dueButUnsent: f.dueButUnsent } : { sent: 0, failed: 0, dueButUnsent: [], error: f && "error" in f ? f.error : "The run did not report." }
+  }
+  await writeWatchdogRun({ at: Date.now(), usersChecked: userIds.length, users })
   return NextResponse.json({ ok: true, users: userIds.length, results, followUps })
 }
 

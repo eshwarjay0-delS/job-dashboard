@@ -26,13 +26,41 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
-## 6 November 2026 — Kompas question windows
+## 6 November 2026 — Chrome handoff returns to the open Kompas window
 
-Question stripping was answering the newest fragment. The selector now tries the last four, three, two, and one detected question pieces and keeps the longest coherent span. A follow-on such as "and what would you change?" stays with the walk-through it depends on. Unrelated successive questions are not one mega-question. Preface and logistics stripping stay. System 3 retrieval, the code-fence opener, and the spoken ceiling stay. Offline suites that cover this path passed except two failures already on master `c011a72c` (question-box height and an old derived-question source pin). `tsc --noEmit` was clean. This slice is a pull request. It is not merged and production was not deployed from it. No live interview was run.
+The Nov 6 exe opened Chrome with a state and then waited on a protocol relaunch. The already-open window stayed on the sign-in card, with the short Opening note left as `Openir`. A stored session is still not shown that card and is not cleared. The first launch with no session now listens on `127.0.0.1` and continues when Chrome returns the bearer. Open Chrome again retries. Offline: desktop check 42 pass, 0 fail; sign-in and auth-gate 19 pass, 0 fail; `tsc --noEmit --skipLibCheck` clean. Not a live laptop click-through. Not merged. The installed exe does not change until a later Windows build.
+
+## 6 November 2026 — Kompas route table before generation
+
+A pull request adds `src/lib/kompasJevRoute.ts` in front of the answer model call. Question class plus the existing retrieval coverage choose go, confirm, or stop. Personal logistics still returns before the key read. An experience story with middling coverage confirms on the existing answer card and does not fetch a model. A lexical miss still generates. No TypeSafe Jev. Offline: the new suite and the related logistics, grounding, System 3, speed, source, and relevance suites passed 224 and failed 0. `tsc --noEmit` was clean. Not merged. Not a live model, WhatsApp, or desktop session. Not deployed.
+
+## 6 November 2026 — Lens PEER_VOICE v3 onto the route-table master
+
+Checked origin/master `eae0b30` (PR #245, the route table). The unpublished base `fa8f7026` was not pushed. Only the v3 patch was applied, sha256 `995e2c5ab4bb412b348eabe53d23e3c18b749f44801873fd185984c749dcf169`. `REALISM` is unchanged. `PEER_VOICE` is appended in `lensBlock`. Logistics asks stay empty. The route table, System 3, the resume tailor, WhatsApp send, and dictation repairs were not edited. Offline: peer voice 4/4, lens r1 9/9, lens r2 8/8, lens r3 12 pass and 2 fail. The two r3 failures are the same ones already on `eae0b30`. Not a live desktop session, not a WhatsApp send, and not a production merge. Pull request 246 is the handoff.
+
+## 6 November 2026 — false ATS hold on a finished WhatsApp rewrite
+
+The 12:08 PM America/Chicago send on jayeshwar44 (request fnnrf-1793988396338, deployment dpl_2aTkS5YJcFNsJeKjtWo26tYzkxzA, commit f1ba579) scored 100 percent and then sent the original library file. The ATS check ran and failed. That single blocker labelled the quality report needs_review. The Projects section bucket, glued months, and a name on the contact line were the false misses. A file with no email and no phone is still held. Offline: 35 of 36 library resumes pass the check, and the focused suites passed 92/92. No live WhatsApp send. Not deployed. The pull request is the handoff.
+
+## 6 November 2026 — constructed JD written into the existing roles
+
+The 8:41 AM CT WhatsApp send of the unre written jayeshwar44 library file was checked against the later production log still inside retention. On deployment `21ba3028` a tailor ran 138 seconds, scored 100 percent, and was rejected for an ATS failure plus 10 unverified terms after 32 paragraphs were reverted and 118 terms were parked on the skills line. That rejection is what sent the original with "did not finish cleanly." The 9:55 AM CT clarification writes known JD skills into the existing project bullets, including earlier roles, and does not treat that as a fabricated claim. Employers, dates, contact, and the three profiles stay apart. The extra generate-then-tailor pass keeps a reserved window. Offline: the five focused suites passed 60/60 and `tsc --noEmit` was clean. No live WhatsApp send. Not deployed. The pull request is the handoff.
+
+## 6 November 2026 — desktop 3-day session on current master
+
+Checked origin/master `21ba3028` directly. Merged PR #224 is the loopback bearer. Merged PR #227 (`00594c59`) is `POST /api/auth/desktop-session`. The desktop client on that master still stored only an access JWT and called `POST /api/auth/refresh`. WASAPI-equivalent `audio: "loopback"` was already on a screen source. Caption-once was already strict. Hide-from-taskbar was asked every launch. The packaged manifest rewrite requested the highest rights available. parfAct pull request 34 was HTTP 404 from this environment. This slice pairs the client with the desktop route, renews 24 hours before the 3-day expiry and still inside the last 10 hours, prefers Live Captions for Screen Answer, remembers the taskbar choice, and sets the manifest to asInvoker. It does not sign the exe. Question intake and PHRASE_FIXES were not rewritten. Resume tailor files were not edited. Offline focused run: 246 pass, 0 fail. tsc --noEmit --skipLibCheck was clean. Not a live Windows session and not a production deploy. The pull request is the handoff.
+
+## 6 November 2026 — constructed JD tailor
+
+Eshwar's 7:23 AM CT method is now the tailor path on a pull request. Two pre-edit passes generate related skills, experiences, points, bullets, skill lines, and a summary. Their keywords are summed with the job post, and that text is the JD that is scored. If coverage is not above 95%, one more generate-then-tailor pass runs. Experience rows, employers, dates, and Environments lines stay. Overflow terms go on a labelled skills line. A labelled term is not the old "not in your resume" refusal. A term invented into an experience bullet still blocks. A provider outage still adds nothing and still sends the already-chosen resume. Offline fixture coverage was above 95% with the source experience frame unchanged. `tsc --noEmit` was clean. No live model, no WhatsApp send, and no production deploy. The pull request is not merged.
 
 ## 6 November 2026 — scored WhatsApp rewrite
 
 The 7:23 PM America/Chicago caption, "closest matching resume because the rewrite did not finish cleanly. The rewrite was marked incomplete," is produced only after `runTailor` returns. `quality.incomplete` was set for every quality blocker except unchanged, including `role_evidence_gaps`. A finished edited file was discarded and the library resume was sent. The first split draft was also assembled after 40 percent of the call. This slice sends a finished file, including a truthful score under 95 percent, and names the missing terms. The library file stays the backup for a failure, a timeout, a missing part, a skills-only outage, or a role that was not rewritten. The 70 to 94.9 percent clean pass and the website 95 percent gate stay. No live WhatsApp message was sent. The pull request is not merged and production was not deployed from this slice.
+
+## 6 November 2026 — Kompas question intake
+
+A pull request against master groups speech, caption, and dictation chunks so one question stays whole and the last few different messages do not glue. Keywords such as "intro" become a real question for the answer engine. Logistics still follow the existing skip after the question is formed. Offline only: the focused replay went from 4 glued different-topic sequences and 1 dropped opening to 0 and 0. The older 50-sequence replay remains 0/0/0 and is not a live microphone. Not merged. Not deployed. A live Windows microphone session is still required before anyone calls the live path accepted. Rebased onto master `c011a72c`. The scored WhatsApp rewrite on that commit stays. Conflicts were only in this file, `TODO.md`, the plan journal, and the REA register.
 
 ## 6 November 2026 — WhatsApp resume file failsafe
 

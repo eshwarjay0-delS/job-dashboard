@@ -1,5 +1,5 @@
 import { roleQualityBlockers } from "./tailor-ship-on-rollback"
-import { firstDraftRepairReserveMs } from "./tailor-budget"
+import { extraPassReserveMs, firstDraftRepairReserveMs } from "./tailor-budget"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
 import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements } from "./resume-evidence"
@@ -10,7 +10,8 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandConfirmedVocabulary, expandJdKeywords, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
+import { adapt, expandConfirmedVocabulary, expandJdKeywords, generateRelatedMaterialTwice, generateRelatedPass, type ConfirmedVocabulary } from "./claude"
+import { constructJd, coverageNeedsAnotherPass, dropInventedExperienceEdits, inventedExperienceFrame, keepEnvironmentsLabel, keywordsFromPass, labelledSkillEdit, restoreMentionedTerms, splitOverflowTerms, strengthsSummary, textHasTerm, unverifiedClaims, weaveExperienceRepresentation } from "./constructed-jd"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
@@ -20,7 +21,7 @@ import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, 
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
-import { cleanTerm, isJunkTerm, isGuardUnsafe } from "./resume-skills-line"
+import { cleanTerm, isJunkTerm, isGuardUnsafe, JOB_POST_LABEL } from "./resume-skills-line"
 import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
 import { atsCheck, type AtsResult } from "./resume-ats"
 import { docxText } from "./resume-round-trip-guard"
@@ -169,7 +170,9 @@ function normJD(jd: string): string {
 // Version 21 removes unsupported skills-floor claims and refuses skills-only completion.
 // Version 22 adds the exported-document ATS parse check to the delivery gate.
 // Version 24: full-mode bullets keep source detail (resume-verbosity). Do not replay a thinner cached draft.
-const CACHE_GENERATION = "24"
+// Version 25: the two pre-edit passes are summed into the JD the tailor scores. Do not replay a draft scored on the raw post only.
+// Version 26: known JD terms are written into the existing project bullets. Do not replay a draft that only dumped them on a skills line.
+const CACHE_GENERATION = "26"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
@@ -206,7 +209,7 @@ export async function runTailor(opts: {
   refine?: string
 }): Promise<TailorResult> {
   const started = Date.now()
-  const jd = requirementText(opts.jd).trim()
+  let jd = requirementText(opts.jd).trim()
   const immediatePrefs = (opts.immediatePrefs || []).filter(s => typeof s === "string" && s.trim())
   // Second prompt: ask the model for the ATS keywords a recruiter expects for this JD
   // (synonyms, acronym expansions, implied tooling) to concat with the literal extraction.
@@ -216,17 +219,18 @@ export async function runTailor(opts: {
   // Is GPT Luna in use for this tailor? One switch for the ladder below and for the keyword call here.
   const openaiOn = !!opts.keys.openai && process.env.TAILOR_USE_OPENAI !== "0" && process.env.TAILOR_USE_OPENAI !== "false"
   const keywordUsage: TokenUsage[] = []
-  const expandKeywords = async (sourceResume: string, candidateInput: string): Promise<{ generated: string[]; pairs: ConfirmedVocabulary[] }> => {
-    if (opts.refine) return { generated: [], pairs: [] }
+  const expandKeywords = async (sourceResume: string, candidateInput: string): Promise<{ generated: string[]; pairs: ConfirmedVocabulary[]; constructedJd: string }> => {
+    if (opts.refine) return { generated: [], pairs: [], constructedJd: jd }
     const timeoutMs = Number(process.env.TAILOR_KW_EXPAND_MS) || 10000
-    const [generated, pairs] = await Promise.all([
-      expandJdKeywordsTwice({ keys: opts.keys, jd, known: extractJdKeywords(jd), sourceResume, candidateInput, timeoutMs, usageSink: keywordUsage }),
+    // Two iterations before any edit. Their keywords are summed and that text becomes the JD.
+    const [material, pairs] = await Promise.all([
+      generateRelatedMaterialTwice({ keys: opts.keys, jd, sourceResume, candidateInput, timeoutMs, usageSink: keywordUsage }),
       expandConfirmedVocabulary({ keys: opts.keys, confirmed: immediatePrefs, sourceResume, timeoutMs, usageSink: keywordUsage }),
     ])
-    return { generated, pairs }
+    return { generated: material.keywords, pairs, constructedJd: constructJd(jd, material.passes) }
   }
-  // Start only after a cache miss; both Gemini passes finish before generation.
-  let kwExpandPromise: Promise<{ generated: string[]; pairs: ConfirmedVocabulary[] }> | null = null
+  // Start only after a cache miss; both pre-edit passes finish before generation.
+  let kwExpandPromise: Promise<{ generated: string[]; pairs: ConfirmedVocabulary[]; constructedJd: string }> | null = null
 
   // 1) Pick the resume (cheap — no LLM).
   let matched: { filepath: string; filename: string; category: string }
@@ -272,7 +276,8 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "SOURCE FACT CONTRACT: the baseline resume and explicit candidate confirmations supply experience facts; the JD supplies target requirements only. Incorporate confirmed skills even if absent from the older baseline. Use exact JD terms where supported by either source, respecting role-specific attribution. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
+        "EXPERIENCE SHAPE: rewrite existing experience in place. Keep the same employers, titles, locations, and dates, the same number of bullets and paragraphs under each employer, the lead paragraph, and any Environments line. Do not add or delete experience rows. Write every known JD term into the current role and the previous roles as natural project language. An older bullet that omitted a tool is not a reason to leave that tool out. Do not park a term only on a skills line when a project bullet can carry it. Never add an employer, a date, or a contact detail.",
+        "REPRESENTATION: the candidate claims this JD skill set and will establish the details in the interview. Re-vision the existing projects so those skills read as work he already does. Security and IAM patterns repeat across projects; write them in every role that does that kind of work. Do not sound cautious or apologetic. Never add an employer, a date, a phone number, an email, a metric, or a different person's contact.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const candidateInput = candidateEvidenceInput(opts.jd, immediatePrefs)
@@ -343,21 +348,22 @@ export async function runTailor(opts: {
   //   • jdKwsPrompt (the union) is what the MODEL sees — so the expansions still get
   //     woven into the resume, which is the part an ATS actually reads.
   // Result: richer keywords in the document, without the extra escalation or the delay.
-  const jdExtracted = extractJdKeywords(jd)
   const expanded = await (kwExpandPromise ??= expandKeywords(text, candidateInput))
+  // The summed keyword bank is the JD from here on. Resume matching and the cache key already used the original post.
+  if (expanded.constructedJd) jd = expanded.constructedJd
+  const jdExtracted = extractJdKeywords(jd)
   const jdGenerated = expanded.generated.filter(k => !jdExtracted.includes(k))
   const relationalPairs: RelationalPair[] = expanded.pairs
   // Since 19 Oct 2026 the target is the job post's own terms AND Gemini's skill-like suggestions, together, cleaned of
   // generic words and fragments (owner: "give this to gemini free api for more keywords ... then concatenate both given
   // user input and that results"). The full set is scored and shown to the model, but deterministic placement and
   // mandatory repair apply only where the baseline or the candidate's own statement supplies evidence.
-  // Since 26 Oct 2026 the MATCH is scored on the post's own terms only (scoreKws), with qualifications and words that
-  // are not skills left out (a clearance, a degree, a rank, a benefit, a place: isQualificationOrJunk), so the floor at
-  // the end can meet it honestly and a resume made earlier is checked against the same set (made-floor.ts). Gemini's
-  // suggestions stay targets for the writer (jdKws, jdKwsPrompt), never for the score or the floor.
+  // Since 6 Nov 2026 the match is scored on the constructed JD: the original post plus the two pre-edit passes.
+  // Qualifications and words that are not skills stay out (isQualificationOrJunk), and a term has to appear in that
+  // constructed text (floorTerms) before it counts. With no Gemini key the bank is empty and the score is the post itself.
   // The job-post terms switch (JD_TERMS_ALWAYS_ON_SKILLS, default on), read once per run.
   const jdGate = jdTermsGateOn()
-  const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, [], jd))
+  const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, jdGenerated, jd))
   const jdKws = [...new Set([...targetKeywords(jdExtracted, jdGenerated, jd).filter(k => !isQualificationOrJunk(k)), ...scoreKws])]
   const floorKws = new Set(floorTerms(jd, scoreKws))
   // An empty or unparseable JD keyword set is not 100% coverage. Never award a perfect match on an empty denominator.
@@ -549,7 +555,15 @@ export async function runTailor(opts: {
   const applyEdits = async (edits: Edits): Promise<Pass> => {
     edits = constrainResumeEdits(edits, zones)
     edits.skills = preserveSkillHeadings(zones.skills, edits.skills || [])
-    edits = { ...edits, bullets: (edits.bullets || []).filter(b => keepsParts(b.idx, b.text || "")), added: [] }
+    edits = {
+      ...edits,
+      bullets: (edits.bullets || []).filter(b => keepsParts(b.idx, b.text || "")).map(b => {
+        const before = bulletBefore.get(b.idx) || ""
+        const kept = keepEnvironmentsLabel(before, b.text || "")
+        return { ...b, text: restoreMentionedTerms(before, kept, scoreKws, k => jdSpelling(k, jd)) }
+      }),
+      added: [],
+    }
     // FORMAT-PRESERVING by default: never delete paragraphs, so the tailored resume
     // keeps the EXACT layout, bullet count, and structure of the source — we only
     // rewrite existing lines in place. Bullet trimming (capRoleBullets) is allowed
@@ -657,7 +671,10 @@ export async function runTailor(opts: {
   const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || RESUME_TARGET_COVERAGE))
   const TAILOR_MAX_MS = Math.max(1000, Math.min(opts.maxMs || Number(E.TAILOR_MAX_MS) || 52000, 280000))
   const repairReserve = firstDraftRepairReserveMs(TAILOR_MAX_MS)
-  const deadline = started + TAILOR_MAX_MS
+  // The draft stops early enough that the one extra generate-then-tailor pass still has a window.
+  const fullDeadline = started + TAILOR_MAX_MS
+  const extraReserve = refine || !opts.keys.gemini ? 0 : extraPassReserveMs(TAILOR_MAX_MS)
+  const deadline = fullDeadline - extraReserve
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
   // A full retarget is ranked on the whole resume AND on how well EACH client role shows the listed JD skills, with a
@@ -681,7 +698,7 @@ export async function runTailor(opts: {
   const injectFor = (covered: Set<string>): string[] => {
     const missing = forcedJdKws.filter(k => !covered.has(k))
     if (!missing.length) return []
-    return [`ATS COVERAGE (rewrite existing lines in place): ensure these JD terms appear, weaving EACH one into the experience bullets of the roles where it fits (and its matching skill line) using the JD's exact wording: ${missing.join(", ")}`]
+    return [`ATS COVERAGE (rewrite existing lines in place): write EACH of these JD terms into the current and previous project bullets as natural work, using the JD's exact wording. Do not leave a term only on the skills line: ${missing.join(", ")}`]
   }
 
   // GAP FILL (full retarget): every role must show each listed JD skill the years math requires of it, and no role may be
@@ -726,7 +743,7 @@ export async function runTailor(opts: {
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
-          const ask = `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed):\n${originalEvidence}\nGAP FILL: this resume is already tailored to the JD. The baseline resume AND explicit candidate confirmations in the supplied input are the factual record; the JD alone is a target, not proof of experience. Recover confirmed experience even when it was absent from the baseline, respecting the confirmed role scope. Map each missing requirement to specific original work, including synonymous and transferable responsibilities. The exact JD phrase need not already occur in the original: rewrite equivalent work using the target terminology. Named products still require source evidence. Include each supported term with the action performed, technical context and purpose or documented result. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), preserving this client's original paragraph structure. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write the missing JD terms into THIS role's existing bullets as natural project language. The older wording does not have to already name the tool. Security and IAM work repeats across projects, so say the JD skills here the way a hiring manager expects to read them. Do not add a bullet, an employer, a date, or a contact. Do not leave the term only on a skills line. Keep every JD term its bullets already carry. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
           return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
         },
         startBy: roundDeadline - 6000,
@@ -813,6 +830,35 @@ export async function runTailor(opts: {
     next.partial = cur.partial
     next.floor = hard.filter(k => next.afterKw.has(k))
     next.floorSummary = soft.filter(k => next.afterKw.has(k))
+    return next
+  }
+
+  // Overflow from the constructed JD. A finished writer places every remaining score term on the
+  // labelled skills line (soft skills in an open summary). Experience bullets are not lengthened.
+  // A provider outage (skillsOnly) adds nothing, so the no-model floor stays the source resume.
+  // The legacy switch off leaves these terms unplaced.
+  const placeConstructedOverflow = async (cur: Pass): Promise<Pass> => {
+    if (skillsOnly || refine || !jdGate || sec.skills === false || !zones.skills.length) return cur
+    const missing = scoreKws.filter(k => !cur.afterKw.has(k) && !isCertification(k) && cleanTerm(k) === k && !isJunkTerm(k) && !isGuardUnsafe(k) && !isQualificationOrJunk(k))
+    if (!missing.length) return cur
+    const summaryOpen = sec.summary !== false && zones.summaryIdx !== null && !(zones.summaryOverflowIdx || []).length
+    const parts = splitOverflowTerms(missing, summaryOpen)
+    const sk = skillEdits(cur.edits)
+    const lines = zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text }))
+    const skillEdit = labelledSkillEdit(lines, parts.skills.map(k => jdSpelling(k, jd)))
+    const summaryBase = ((cur.edits.summary || zones.summaryText || "").trim())
+    const summary = parts.summary.length && summaryBase ? strengthsSummary(summaryBase, parts.summary.map(k => jdSpelling(k, jd))) : cur.edits.summary
+    if (!skillEdit && summary === cur.edits.summary) return cur
+    const next = await applyEdits({
+      ...cur.edits,
+      summary,
+      skills: skillEdit ? mergeIndexedEdits(cur.edits.skills || [], [skillEdit]) : cur.edits.skills,
+    })
+    if (next.cov < cur.cov) return cur
+    next.via = cur.via
+    next.partial = cur.partial
+    next.floor = [...new Set([...(cur.floor || []), ...parts.skills.filter(k => next.afterKw.has(k))])]
+    next.floorSummary = [...new Set([...(cur.floorSummary || []), ...parts.summary.filter(k => next.afterKw.has(k))])]
     return next
   }
 
@@ -941,32 +987,32 @@ export async function runTailor(opts: {
     if (filled !== best) usedModel = `${usedModel} + gap fill`
     best = filled
   }
-  // GAP-KEYWORD ROUND (Nov 4, his loop): the repair rounds reuse the same
-  // missing list and stop once evidenced terms are placed, so a below-floor
-  // run never gets fresh material. His 20:04 rule says a third keyword
-  // iteration runs only while measured coverage is still 70 to 80 percent
-  // after the two Gemini passes. This round is steps 5-6 and runs for every
-  // result under 95 percent, which is wider than that band. Do not narrow it
-  // to 70-80 unless he confirms; runs outside the band still need the repair.
-  // While coverage is below the 95% floor and
-  // the deadline allows, ask Gemini for fresh unique relational terms aimed
-  // at the still-missing requirements (never repeating placed or already
-  // suggested terms), run one targeted round with them as an explicit
-  // add-list, and keep it only if quality improves. This sits BEFORE the
-  // post-chain below (strip, floor, sanitize), so fresh terms can only land
-  // where the source supports them. A refinement is left alone: the person's
-  // change is not a coverage climb.
-  if (best && !refine && !skillsOnly && deadline - Date.now() >= 45000) {
+  // One more generate-then-tailor pass when the constructed JD is not above 95%.
+  // The two pre-edit passes already ran. This is the single extra iteration, not a 70–80% special case.
+  // New keywords join the constructed JD and the score. Experience rows are not added.
+  // A refinement is left alone: the person's change is not a coverage climb.
+  if (best && !refine && !skillsOnly && opts.keys.gemini && coverageNeedsAnotherPass(coveragePercent(shareOf(best.afterKw))) && fullDeadline - Date.now() > 1000) {
     const base = best
     const missing = scoreKws.filter(k => !base.afterKw.has(k))
-    if (shareOf(base.afterKw) < 0.95 && missing.length) {
+    if (missing.length) {
       try {
-        const fresh = (await expandJdKeywords({ keys: opts.keys, pref: "gemini", jd, known: [...base.afterKw, ...jdGenerated], sourceResume: text, candidateInput, focus: missing, timeoutMs: 10000, usageSink: keywordUsage }))
-          .map(k => k.toLowerCase().trim())
-          .filter(k => k && !base.afterKw.has(k) && !jdGenerated.includes(k) && !isQualificationOrJunk(k))
-        const freshUnique = [...new Set(fresh)].slice(0, 24)
+        const extraPass = await generateRelatedPass({
+          keys: opts.keys, jd, sourceResume: text, candidateInput,
+          known: [...base.afterKw, ...jdGenerated], focus: missing, timeoutMs: 10000, usageSink: keywordUsage,
+        })
+        const freshUnique = keywordsFromPass(extraPass)
+          .filter(k => !base.afterKw.has(k) && !jdGenerated.includes(k) && !scoreKws.includes(k) && !isQualificationOrJunk(k))
+          .slice(0, 24)
         if (freshUnique.length) {
-          const gapAsk = `GAP KEYWORD ROUND: the draft is still below the 95% match floor. Weave EACH of these newly gathered ATS terms naturally and contextually into the experience bullets of the roles where the source supports them (and its matching skill line), using exact wording: ${freshUnique.join(", ")}. Do not claim a JD qualification unless the baseline or explicit candidate confirmation substantiates it. Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.`
+          jd = constructJd(jd, [{ skills: freshUnique, experiences: [], points: [], bullets: [], skillLines: [], summary: "" }])
+          for (const k of freshUnique) {
+            if (!jdExtracted.includes(k)) jdExtracted.push(k)
+            if (!jdGenerated.includes(k)) jdGenerated.push(k)
+            if (!jdKws.includes(k)) jdKws.push(k)
+            if (!scoreKws.includes(k)) scoreKws.push(k)
+            floorKws.add(k)
+          }
+          const gapAsk = `EXTRA GENERATE-THEN-TAILOR PASS: coverage is not above 95%. Write these JD terms into the existing project bullets of the current role and the previous roles, as natural work. Do not add or remove bullets, employers, dates, or titles. Keep every Environments line. Use the exact wording: ${freshUnique.join(", ")}. Do not leave a term only on the skills line when a bullet can carry it. Do not add an employer, a date, or a contact.`
           let gapCandidate: Pass | null = null
           if (splitDraft) {
             const view = zonesAfter(base.edits)
@@ -974,13 +1020,13 @@ export async function runTailor(opts: {
               ...(sec.skills !== false ? [{ role: -1, skills: freshUnique }] : []),
               ...countedRoles.map(i => ({ role: i, skills: freshUnique })),
             ]
-            const roundDeadline = Math.min(deadline - 2000, Date.now() + Math.max(15000, deadline - Date.now() - 2000))
+            const roundDeadline = Math.min(fullDeadline - 2000, Date.now() + Math.max(15000, fullDeadline - Date.now() - 2000))
             const worked = await workParts<typeof todo[number], Edits>({
               parts: todo, lanes, out: laneOut,
               says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
               ask: (t, lane) => {
                 if (t.role < 0) return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
-                  preferences: [...allPrefs, `SKILLS REPAIR (gap keywords): preserve every already-covered JD term. Incorporate these newly gathered terms under the correct existing category, without unsupported claims: ${t.skills.join(", ")}. Original evidence: ${text}`].join("; "),
+                  preferences: [...allPrefs, `SKILLS REPAIR (gap keywords): preserve every already-covered JD term. Write these known JD terms into the existing categories: ${t.skills.join(", ")}. Original evidence: ${text}`].join("; "),
                   jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
                 const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join(" ")
                 return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
@@ -1003,9 +1049,9 @@ export async function runTailor(opts: {
             const lane = lanes.find(l => !laneOut.has(l)) ?? lanes[0]
             if (lane) gapCandidate = await draftPass(lane, [gapAsk]).catch(() => null)
           }
-          if (gapCandidate && quality(gapCandidate) > quality(base)) {
+          if (gapCandidate && (quality(gapCandidate) > quality(base) || gapCandidate.cov >= base.cov)) {
             best = gapCandidate
-            usedModel = `${usedModel} + gap keyword round`
+            usedModel = `${usedModel} + extra generate-then-tailor pass`
           }
         }
       } catch { /* gap round is optional; the measured run below stands */ }
@@ -1020,14 +1066,21 @@ export async function runTailor(opts: {
     if (stripped !== best) { best = stripped; usedModel = `${usedModel} + unconfirmed tools cleared before the skills floor` }
   }
 
-  // Job-post terms gate (owner, 29 Oct 2026). A job-post-only term the writer put into an experience bullet is a claim
-  // the person did that work. The bullet goes back to the source text (a new bullet carrying it is dropped), and the
-  // floor below writes the term onto the skills line, named in the reply. Bullets without such a term keep the edit.
+  // Known JD terms stay in the existing project bullets. Only a new employer, date, or contact is removed.
+  // Added bullets are dropped so the experience length does not change. The labelled skills line is overflow.
   let bulletsReverted = 0
-  // Switch on: master's rollback (removeUnsupportedRewrites, the whole original paragraph back) runs once BEFORE the floor
-  // too, so a job-post-only term the writer put in a bullet, an added row, an extra, the headline or the summary is taken
-  // out there and the floor below then writes it onto the skills line. The skills line itself is left for the floor.
   if (best && !refine && jdGate) {
+    const cleaned = dropInventedExperienceEdits(best.edits, zones.roles.flatMap(r => r.bullets.map(b => ({ idx: b.idx, text: b.text }))))
+    if (!(cleaned.edits.summary || "").trim() && zones.summaryText) cleaned.edits.summary = zones.summaryText
+    if (cleaned.removed || cleaned.edits.summary !== best.edits.summary) {
+      const next = await applyEdits(cleaned.edits)
+      next.via = best.via
+      next.partial = best.partial
+      best = next
+      bulletsReverted = cleaned.removed
+      usedModel = `${usedModel} + ${cleaned.removed} invented employer, date, or contact line(s) removed`
+    }
+  } else if (best && !refine && !jdGate) {
     const jobOnly = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k) && !isCertification(k))
     if (jobOnly.length) {
       const cleaned = removeUnsupportedRewrites(best.edits, value => coveredJdKeywords(value, jobOnly).size > 0, { keepSkills: true })
@@ -1053,6 +1106,32 @@ export async function runTailor(opts: {
     usedModel = plain.via
     skillsOnly = true
   }
+  // Known JD terms go into the existing project bullets before any skills-line overflow.
+  // A term already on the skills line or in the summary is still missing from the
+  // bullets, so the whole-document set is the wrong filter. Current and previous
+  // roles take turns. Employers, dates, and contact stay out of the clause.
+  if (best && !refine && !skillsOnly && jdGate && zones.roles.some(r => r.bullets.length)) {
+    const current = best
+    const bulletText = zones.roles.flatMap(r => r.bullets.map(b => {
+      const edited = (current.edits.bullets || []).find(x => x.idx === b.idx)
+      return edited?.text || b.text
+    })).join("\n")
+    const missing = scoreKws.filter(k => !isCertification(k) && !isQualificationOrJunk(k) && !coveredJdKeywords(bulletText, [k]).has(k))
+    if (missing.length) {
+      const woven = weaveExperienceRepresentation(
+        zones.roles.map(r => ({ bullets: r.bullets.map(b => ({ idx: b.idx, text: b.text })) })),
+        current.edits.bullets || [],
+        missing.map(k => jdSpelling(k, jd)),
+      )
+      if (woven.placed.length) {
+        const next = await applyEdits({ ...current.edits, bullets: mergeIndexedEdits(current.edits.bullets || [], woven.bullets), added: [] })
+        next.via = current.via
+        next.partial = current.partial
+        best = next
+        usedModel = `${usedModel} + JD terms written into existing projects`
+      }
+    }
+  }
   if (best && !refine) {
     for (let floorRound = 0; floorRound < 4; floorRound++) {
       const floored = await placeEverything(best)
@@ -1062,14 +1141,9 @@ export async function runTailor(opts: {
       if (!usedModel.includes("job-post terms on the skills line")) usedModel = `${usedModel} + job-post terms on the skills line`
     }
   }
-  // A model may still invent a JD-only tool in a client bullet, title, summary,
-  // project, or skills line after the earlier skills-only cleanup. Restore the
-  // ORIGINAL paragraph rather than deleting just the tool name: the rest of
-  // that work claim might also be invented. Re-score the actual exported DOCX
-  // and re-run every normal completion/evidence gate; never force acceptance.
-  if (best) {
-    // Every resume section asserts candidate knowledge. A reply disclaimer cannot
-    // turn a job-post-only skill or summary strength into supported experience.
+  // Gate off keeps the old whole-paragraph rollback. Gate on writes the JD into the existing bullets
+  // and only then puts a term the bullets could not carry on the labelled skills line.
+  if (best && !jdGate) {
     const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     if (unsupported.length) {
       const cleaned = removeUnsupportedRewrites(best.edits,
@@ -1082,10 +1156,16 @@ export async function runTailor(opts: {
         restored.floor = (previous.floor || []).filter(k => restored.afterKw.has(k))
         restored.floorSummary = (previous.floorSummary || []).filter(k => restored.afterKw.has(k))
         best = restored
-        // Evidence and role counts must be computed from the sanitized pass.
         floorFrom = null
         usedModel += " + unsupported claim paragraphs restored"
       }
+    }
+  }
+  if (best && !refine && !skillsOnly && jdGate) {
+    const overflow = await placeConstructedOverflow(best)
+    if (overflow !== best) {
+      best = overflow
+      if (!usedModel.includes(JOB_POST_LABEL)) usedModel = `${usedModel} + ${JOB_POST_LABEL} on the skills line`
     }
   }
   if (!best) {
@@ -1206,7 +1286,14 @@ export async function runTailor(opts: {
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
   // Check the actual exported document, including skills, summary and extras.
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
+  const rewrittenBullets = rewrites(edits)
+  const labelledPlacement = [...(best.floor || []), ...(best.floorSummary || [])]
+  const experienceSources = zones.roles.flatMap(r => r.bullets.map(b => ({ idx: b.idx, before: b.text, after: rewrittenBullets.get(b.idx) ?? b.text })))
+  const unverifiedAdded = unverifiedClaims(
+    unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k)),
+    labelledPlacement,
+    term => experienceSources.some(row => inventedExperienceFrame(row.before, row.after) && textHasTerm(row.after, term) && !textHasTerm(row.before, term)),
+  )
   // Gate on, skills locked or no skills section: what the floor could not place is listed in the reply, not a refusal.
   const unplacedReason: JdTermsUnplacedReason | undefined = !jdGate || refine ? undefined : sec.skills === false ? "skills_locked" : !zones.skills.length ? "no_skills_section" : undefined
   const unplacedTerms = unplacedReason ? scoreKws.filter(k => floorKws.has(k) && !afterKw.has(k) && !isCertification(k)).map(k => jdSpelling(k, jd)) : []
@@ -1235,10 +1322,13 @@ export async function runTailor(opts: {
   } catch (e) {
     notes.push(`Exported-file recount unavailable (${e instanceof Error ? e.message : "unknown error"}); numbers measured on tailored text.`)
   }
-  // ATS parseability of the exact bytes that will be stored: the exported
-  // document text plus zones re-parsed from its buffer, never the edits.
+  // ATS parseability of the exact bytes that will be stored. docxText includes
+  // header and footer contact, which mammoth's body extract drops. Zones are
+  // re-parsed from the buffer, never taken from the edits.
   const exportedZones = await extractZones(buffer)
-  const ats = atsCheck(best.tailoredText, exportedZones)
+  let atsSource = best.tailoredText
+  try { atsSource = await docxText(buffer) } catch { /* tailored text stands */ }
+  const ats = atsCheck(atsSource, exportedZones)
   if (!ats.passed) notes.push(`ATS parse check failed: ${ats.issues.join("; ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [

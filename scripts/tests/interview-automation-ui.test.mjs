@@ -52,10 +52,11 @@ test('a tap never claims a send it did not make: the toast is gated on ok, a ski
   assert.ok(api.includes('sent.skipped ? { ...out, skipped: true } : out'), 'the route carries the skip to the board')
 })
 
-test('a Send now button the server must refuse is replaced by its reason, and a refused send counts nothing', () => {
+test('a Send now button the server must refuse stays visible but disabled, with its reason beside it, and a refused send counts nothing', () => {
   const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
   assert.ok(board.includes('sendNowBlockReason('), 'the panel asks the server gate before showing Send now')
-  assert.ok(board.includes('sendBlock ?'), 'a blocked card shows the reason instead of the button')
+  assert.ok(board.includes('disabled={busyFor(t.id) || !!sendBlock}'), 'a blocked card keeps the button visible but disabled')
+  assert.ok(board.includes('{sendBlock ? <p'), 'a blocked card still names the reason beside the button')
   const sender = read('src/lib/interview-followups.ts')
   assert.ok(sender.includes('sent: x.sent.slice(0, -1)'), 'a definite refusal rolls the recorded send back')
   assert.ok(sender.includes('Nothing was counted, so you can try again.'), 'a rolled-back refusal says nothing was counted')
@@ -83,4 +84,43 @@ test('history always shows the exact time of every send, never a bare date', () 
   assert.equal((board.match(/Last sent \{dayTime\(/g) || []).length, 2, 'both Last sent lines show the exact time')
   assert.ok(board.includes('<li key={at}>{dayTime(at)}</li>'), 'every History entry shows the exact time')
   assert.ok(board.includes('day(t.at)'), 'interview dates keep the bare date format')
+})
+
+test('the asking panel offers Send now once only, without arming the weekly', () => {
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  // The button sits in the asking panel, after "Yes, send it for me every week", and calls the same send_now the armed panel uses — same busy label, same toast.
+  const asking = board.indexOf('This is what I will send')
+  assert.ok(asking > -1, 'asking panel')
+  const panel = board.slice(asking, board.indexOf('</article>', asking))
+  assert.ok(panel.indexOf('Send now') > panel.indexOf('Yes, send it for me every week'), 'Send now sits next to the weekly switch')
+  assert.ok(panel.includes('"send_now"'), 'asking panel sends now through the same action')
+  assert.ok(panel.includes('Send now sends this message once only. It does not switch on the weekly send.'), 'send-once-only is said in plain words')
+  assert.ok(panel.includes('disabled={busyFor(t.id) || !!sendBlock}'), 'Send now stays visible, disabled with its reason when blocked')
+  const sender = read('src/lib/interview-followups.ts')
+  assert.ok(!sender.includes('Sending for this interview is not switched on.'), 'send-now no longer needs the switch on')
+  assert.ok(!sender.includes('Four follow-ups have already been sent for this interview.'), 'a tap is never refused on the four-count — the count binds only the automatic send')
+  assert.ok(sender.includes('never switches the weekly on'), 'send-once-only is the rule in the sender')
+  assert.ok(sender.includes('withHand(state0, id, t.threadId, threadOf, now)'), 'a tap with no hand of its own still counts')
+})
+
+test('Open and follow up is the only open label on a card', () => {
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  assert.ok(!board.includes('Open and reply'), 'no Open and reply label anywhere')
+  assert.ok(board.includes('{t.action === "none" ? "Open" : "Open and follow up"}'), 'the thread link reads Open and follow up whenever there is something to do')
+})
+
+test('a watchdog day with no sends leaves a record, and the board answer carries it', () => {
+  const daily = read('src/app/api/agent/watchdog/route.ts')
+  assert.ok(daily.includes('writeWatchdogRun('), 'the watchdog writes its run record')
+  assert.ok(daily.includes('dueButUnsent'), 'the record names the cards that stayed unsent')
+  const sender = read('src/lib/interview-followups.ts')
+  assert.ok(sender.includes('watchdog-latest.json'), 'the run record lives in Blob')
+  assert.ok(sender.includes('export async function readWatchdogRun'), 'the latest run can be read back')
+  const api = read('src/app/api/gmail/interview-track/route.ts')
+  assert.ok(api.includes('lastWatchdogRun'), 'the interview-track answer carries the latest run')
+  assert.ok(api.includes('readWatchdogRun('), 'the answer reads the record')
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  assert.ok(board.includes('lastWatchdogRun'), 'the board answer type carries the run')
+  assert.ok(board.includes('Daily check'), 'the board shows the last daily check as a line')
+  assert.ok(board.includes('due but held back'), 'the line names cards held back, so a zero-send day is visible')
 })

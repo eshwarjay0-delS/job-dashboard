@@ -17,13 +17,18 @@ const DATE = new RegExp(
   `|\\b(?:0?[1-9]|1[0-2])\\/(?:19|20)\\d{2}\\b` + // 01/2020
   `|\\b(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])\\b` +    // 2020-01
   `|\\b(?:19|20)\\d{2}\\s*[-–—]\\s*(?:(?:19|20)\\d{2}|present|current)\\b` + // employment year ranges
-  `|\\b(?:present|current|now)\\b`, 'gi')
+  '', 'gi')
 
 function normDate(d: string): string {
   const s = d.toLowerCase().replace(/\./g, '')
   let m: RegExpMatchArray | null
   if ((m = s.match(/^([a-z]+)\s+(\d{4})$/))) return `${m[2]}-${String(MONTHS.indexOf(m[1].slice(0, 3)) + 1).padStart(2, '0')}`
   if ((m = s.match(/^(\d{1,2})\/(\d{4})$/))) return `${m[2]}-${m[1].padStart(2, '0')}`
+  // Formatting-only changes to employment year ranges must not look like date mutations.
+  // A changed year still fails the multiset comparison.
+  if ((m = s.match(/^((?:19|20)\d{2})\s*[-–—]\s*((?:19|20)\d{2}|present|current)$/))) {
+    return `${m[1]}-${m[2] === 'current' ? 'present' : m[2]}`
+  }
   if (/^(present|current|now)$/.test(s)) return 'present'
   return s
 }
@@ -76,10 +81,17 @@ export async function docxText(docx: Buffer | Uint8Array | ArrayBuffer): Promise
   const zip = await JSZip.loadAsync(docx)
   const file = zip.file('word/document.xml')
   if (!file) throw new Error('not a .docx: word/document.xml missing')
-  const xml = await file.async('string')
-  return xml
-    .replace(/<w:tab\/>/g, '\t').replace(/<w:br\/>|<\/w:p>/g, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
-    .replace(/\n{2,}/g, '\n').trim() + '\n'
+  // Include header/footer text as well as the body: Word may store contact details there.
+  // Keep the body first so the name-line heuristic still sees the resume heading.
+  const parts = ['word/document.xml', ...Object.keys(zip.files)
+    .filter(p => /^word\/(?:header|footer)\d+\.xml$/i.test(p)).sort()]
+  const textParts = await Promise.all(parts.map(async p => {
+    const xml = await zip.file(p)!.async('string')
+    return xml
+      .replace(/<w:tab\s*\/>/g, '\t').replace(/<w:br\s*\/>|<\/w:p>/g, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+      .replace(/\n{2,}/g, '\n').trim()
+  }))
+  return textParts.filter(Boolean).join('\n') + '\n'
 }

@@ -15,6 +15,15 @@ function desktopState(search: string) {
   return /^[A-Za-z0-9_-]{20,128}$/.test(state) ? state : ""
 }
 const withState = (path: string, state: string) => state ? path + (path.includes("?") ? "&" : "?") + "state=" + state : path
+function handoffMode(search: string) {
+  return new URLSearchParams(search).get("handoff") === "start" ? "start" : ""
+}
+function returnPath(state: string, loopback: string, handoff: string) {
+  let path = withState("/auth/desktop", state)
+  if (loopback) path += (path.includes("?") ? "&" : "?") + "loopback=" + encodeURIComponent(loopback)
+  if (handoff === "start") path += (path.includes("?") ? "&" : "?") + "handoff=start"
+  return path
+}
 
 // A silent desktop renewal posts the short-lived bearer back to 127.0.0.1.
 // Anything else is ignored so this page cannot be used as an open redirect.
@@ -34,14 +43,16 @@ export default function DesktopSignIn() {
     let gone = false
     const state = desktopState(window.location.search)
     const loopback = loopbackTarget(window.location.search)
-    const login = "/login?next=" + encodeURIComponent(withState("/auth/desktop", state))
+    const handoff = handoffMode(window.location.search)
+    const login = "/login?next=" + encodeURIComponent(returnPath(state, loopback, handoff))
     const supabase = createClient()
     supabase.auth.getSession().then(({ data }) => {
       if (gone) return
       const session = data.session
       if (!session?.access_token) {
         // A silent renewal must not turn into a login form over an interview.
-        if (loopback) {
+        // The first handoff (handoff=start) is the one case that may open Google.
+        if (loopback && handoff !== "start") {
           setNote("Kompas will keep the sign-in it already has.")
           return
         }
@@ -61,7 +72,7 @@ export default function DesktopSignIn() {
       // Repeating protocol URLs can restart the executable, trigger UAC, and
       // reopen /auth/desktop even after Chrome has authenticated. A failed
       // handoff stays visible rather than silently spawning more processes.
-      setNote("Opening Kompas…")
+      setNote("Chrome is opening MarketFit. The Google sign-in already in that browser is used, and this window continues from there.")
       if (loopback && state) {
         window.location.replace(loopback + "?state=" + encodeURIComponent(state) + "&d=" + encodeURIComponent(b64))
         return

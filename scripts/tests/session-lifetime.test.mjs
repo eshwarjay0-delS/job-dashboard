@@ -58,7 +58,7 @@ test('desktop bridge is preferred for renewal and reconnect is silent, never use
 });
 
 test('1000 desktop renewal attempts use the bridge without navigation', async () => {
-  const start = appSrc.indexOf('async function tryRefreshAuth()');
+  const start = appSrc.indexOf('async function tryRefreshAuth(');
   const end = appSrc.indexOf('// Idle is where sessions used to die', start);
   const body = appSrc.slice(start, end) + '\nthis.tryRefreshAuth = tryRefreshAuth;';
   let calls = 0;
@@ -80,7 +80,7 @@ test('1000 desktop renewal attempts use the bridge without navigation', async ()
 // the cookie refresh — presenting an older token can revoke the whole family. On desktop the cookie path must
 // never run, bridge or no bridge; the shell's live token keeps calls working.
 test('desktop shell without the bridge never presents the cookie token', async () => {
-  const start = appSrc.indexOf('async function tryRefreshAuth()');
+  const start = appSrc.indexOf('async function tryRefreshAuth(');
   const end = appSrc.indexOf('// Idle is where sessions used to die', start);
   const body = appSrc.slice(start, end) + '\nthis.tryRefreshAuth = tryRefreshAuth;';
   let fetches = 0;

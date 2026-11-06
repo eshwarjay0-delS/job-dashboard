@@ -13,14 +13,17 @@
 // resize. Place and size are saved and restored on the next launch.
 // Computer audio is the Windows output mix (WASAPI loopback): a call, a video, a browser tab — whatever the
 // speakers are playing. The process is always Kompas.exe. Still not here: a blank process name, meeting detection.
-// Every launch asks whether to keep the window off the taskbar; the answer holds until Kompas quits (askTaskbar).
+// Hide-from-taskbar is asked until the person checks Remember; a remembered choice is applied with no dialog.
 // Pinned means above everything, the taskbar included, and the window cannot be lost: see holdOnTop and bringBack.
 const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net, desktopCapturer, powerMonitor, globalShortcut, dialog, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
+const { chooseCaptureSource } = require("./capture-source.cjs");
+const { rememberedTaskbar, taskbarAnswer } = require("./taskbar-choice.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
 const { chooseDesktopUpdate } = require("./desktop-update.cjs");
+const { handoffAction, chromeHandoffUrl, startChromeLoopback, protocolArgFromLoopback, handoffPaintScript } = require("./chrome-handoff.cjs");
 
 app.setName("Kompas");
 // Preserve the existing perfACT desktop while MarketFit gets its own native
@@ -82,14 +85,64 @@ async function checkNativeDesktopUpdate() {
 // A single first-run browser handoff is allowed per native process; subsequent
 // reconnects remain silent until the user explicitly chooses to sign in.
 let chromeSignInAttempted = false;
+let handoffVisible = false;
+let loopbackPromise = null;
+function paintHandoff() {
+  if (!win || win.isDestroyed()) return;
+  const mode = handoffVisible && !desktopAuth.hasSession() ? "show" : "hide";
+  const run = () => { if (win && !win.isDestroyed()) win.webContents.executeJavaScript(handoffPaintScript(mode)).catch(() => {}); };
+  run();
+  if (win.webContents.isLoading()) win.webContents.once("did-finish-load", run);
+}
+function ensureLoopback() {
+  if (loopbackPromise) return loopbackPromise;
+  loopbackPromise = startChromeLoopback({
+    onCallback(handed) {
+      // A session that already exists stays. A bad callback does not clear it.
+      if (desktopAuth.hasSession()) return hideHandoff();
+      const arg = protocolArgFromLoopback(handed);
+      if (!arg) return;
+      const payload = desktopAuth.callback([arg]);
+      if (!payload) return;
+      void desktopAuth.acceptCallback(payload, pendingSession && pendingSession.ownerId || "").then(ok => {
+        if (!ok || !desktopAuth.hasSession()) return;
+        continueSignedIn();
+      }).catch(() => {});
+    },
+  });
+  return loopbackPromise;
+}
+function hideHandoff() { handoffVisible = false; paintHandoff(); }
+function continueSignedIn() {
+  hideHandoff();
+  if (!win || win.isDestroyed()) return;
+  const deliver = () => {
+    if (!win || win.isDestroyed() || !desktopAuth.hasSession()) return;
+    deliverSession();
+    win.webContents.send("kompas:auth-ready");
+  };
+  if (win.webContents.isLoading()) win.webContents.once("did-finish-load", deliver);
+  else deliver();
+}
 function beginChromeSignIn({ interactive = false } = {}) {
-  if (desktopAuth.token()) return;
-  if (!interactive && chromeSignInAttempted) return;
+  // A stored desktop session stays up. Opening Chrome would put auth UI over a live interview.
+  if (desktopAuth.hasSession()) return hideHandoff();
+  const action = handoffAction({ hasSession: false, interactive, alreadyAttempted: chromeSignInAttempted });
+  if (!action.show) return;
+  handoffVisible = true;
+  paintHandoff();
+  if (!action.openChrome) return;
   chromeSignInAttempted = true;
   const state = desktopAuth.issueState();
   // User credentials stay in the existing Chrome account. The callback is one-use
   // and must match a state this desktop issued, never an unsolicited deep link.
-  void shell.openExternal(MARKETFIT_API_ORIGIN + "/auth/desktop?state=" + encodeURIComponent(state)).catch(() => {});
+  // The state is only on the URL. It is not written into the window.
+  void ensureLoopback().then(loop => {
+    if (desktopAuth.hasSession()) return hideHandoff();
+    const url = chromeHandoffUrl(MARKETFIT_API_ORIGIN, state, loop.url);
+    const opened = shell.openExternal(url);
+    if (opened && typeof opened.catch === "function") opened.catch(() => {});
+  }).catch(() => {});
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
@@ -115,11 +168,10 @@ let config = { onTop: true, isPrivate: true, bounds: null };
 
 let win = null, collapsed = false, resizing = null, saveTimer = null, pendingSession = null, hideTaskbar = true;
 
-// Asked on every launch, never saved (owner, 7 Oct 2026: "Give a dialog before whether would you like hide this from
-// taskbar. If they say yes then work it out."). Closing the box with Esc or X is a No: the button stays, so a window
-// that might be lost behind others always has a way back.
+// Closing the box with Esc or X is a No: the button stays, so a window that might be lost behind others always
+// has a way back. Remember stores the choice; the next launch applies it and does not ask again.
 async function askTaskbar() {
-  const { response } = await dialog.showMessageBox({
+  const { response, checkboxChecked } = await dialog.showMessageBox({
     type: "question",
     title: "Kompas",
     message: "Hide Kompas from the taskbar?",
@@ -128,8 +180,10 @@ async function askTaskbar() {
     defaultId: 0,
     cancelId: 1,
     noLink: true,
+    checkboxLabel: "Remember this choice",
+    checkboxChecked: false,
   });
-  return response === 0;
+  return taskbarAnswer(response, checkboxChecked);
 }
 
 // kompas://open?d=<base64url json> is the session the website just started. kompas://app/ is the page itself.
@@ -176,7 +230,7 @@ function takeVerifiedSession() {
   // tickets and bound to their authenticated owner. Never accept arbitrary
   // desktop://open?d= data as a trusted account session.
   if (pendingSession.site !== "perfact" &&
-      (!pendingSession.ownerId || !desktopAuth.token() ||
+      (!pendingSession.ownerId || !desktopAuth.hasSession() ||
        desktopAuth.ownerId() !== pendingSession.ownerId)) return null;
   const verified = { ...pendingSession };
   // Account identity is not a credential. Transfer ONLY this server-verified
@@ -576,8 +630,9 @@ function lockDownSession() {
     if (!win || win.isDestroyed()) { callback({}); return; }
     desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } }).then((sources) => {
       const video = sources[0];
-      // audio: "loopback" is the whole output mix. The screen source is only there because Windows will not
-      // start that track without one; the page keeps the audio and labels it Them.
+      // WASAPI loopback (Electron audio: "loopback") is the whole output mix.
+      // The screen source stays a screen: Windows will not start that track without one.
+      // Screen Answer is separate and prefers Live Captions. The page keeps this audio and labels it Them.
       callback(video ? { video, audio: "loopback" } : {});
     }).catch(() => callback({}));
   });
@@ -628,20 +683,33 @@ function wireIpc() {
     if (!verified && pendingSession) beginChromeSignIn();
     return verified;
   });
-  ipcMain.handle("kompas:refresh-auth", (event) => {
+  ipcMain.handle("kompas:refresh-auth", (event, reason) => {
     if (!win || event.sender.id !== win.webContents.id) throw Error("Invalid auth caller");
-    return desktopAuth.renew(true);
+    // A rejected call rotates the desktop family. A quiet call renews only
+    // inside the access lead or the 10–24 hour window before the 3-day expiry.
+    return desktopAuth.renew(reason === "rejected" ? "rejected" : false);
   });
   ipcMain.on("kompas:open-signin", (event) => {
     if (win && event.sender.id === win.webContents.id) beginChromeSignIn({ interactive: true });
   });
+  ipcMain.on("kompas:retry-chrome", (event) => {
+    if (win && event.sender.id === win.webContents.id) beginChromeSignIn({ interactive: true });
+  });
   ipcMain.handle("kompas:capture-screen", async (event) => {
     if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw Error("Invalid screen capture caller");
-    const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 1600, height: 1000 } });
-    const preferred = String(screen.getPrimaryDisplay().id);
-    const chosen = sources.find(x => String(x.display_id) === preferred) || sources[0];
-    if (!chosen?.thumbnail || chosen.thumbnail.isEmpty()) throw Error("No screen capture was available");
-    const bytes = chosen.thumbnail.toJPEG(76);
+    const thumb = { width: 1600, height: 1000 };
+    const [windows, screens] = await Promise.all([
+      desktopCapturer.getSources({ types: ["window"], thumbnailSize: thumb, fetchWindowIcons: false }),
+      desktopCapturer.getSources({ types: ["screen"], thumbnailSize: thumb }),
+    ]);
+    const tagged = [
+      ...windows.map(src => ({ id: src.id, name: src.name, display_id: src.display_id, thumbnail: src.thumbnail, kind: "window" })),
+      ...screens.map(src => ({ id: src.id, name: src.name, display_id: src.display_id, thumbnail: src.thumbnail, kind: "screen" })),
+    ];
+    const chosen = chooseCaptureSource(tagged, { primaryDisplayId: String(screen.getPrimaryDisplay().id) });
+    const shot = chosen.source;
+    if (!shot?.thumbnail || shot.thumbnail.isEmpty()) throw Error("No screen capture was available");
+    const bytes = shot.thumbnail.toJPEG(76);
     if (bytes.length < 1000 || bytes.length > 2800000) throw Error("Screen frame was unreadable or too large");
     return "data:image/jpeg;base64," + bytes.toString("base64");
   });
@@ -660,10 +728,8 @@ else {
       if (accepted && win && !win.isDestroyed()) {
         if (win.isMinimized()) win.restore();
         win.show(); bringBack(); win.focus();
-        if (win.webContents.isLoading()) return;
-        deliverSession();
-        win.webContents.send("kompas:auth-ready");
-      } else if (!accepted) beginChromeSignIn();
+        continueSignedIn();
+      } else if (!accepted && !desktopAuth.hasSession()) beginChromeSignIn();
       return;
     }
     let handed = sessionFromArgv(argv);
@@ -687,12 +753,22 @@ else {
     deliverSession();
   });
   app.whenReady().then(async () => {
-    hideTaskbar = await askTaskbar();
     const saved = readConfig();
+    const remembered = rememberedTaskbar(saved);
+    if (remembered.ask) {
+      const answer = await askTaskbar();
+      hideTaskbar = answer.hide;
+      if (answer.remember) {
+        saved.hideTaskbar = answer.hide;
+        saved.hideTaskbarRemembered = true;
+      }
+    } else hideTaskbar = remembered.hide;
     const opacity = typeof saved.opacity === "number" ? Math.min(1, Math.max(0.15, saved.opacity)) : 1;
-    config = { onTop: true, isPrivate: typeof saved.isPrivate === "boolean" ? saved.isPrivate : true,
+    config = { ...saved, onTop: true, isPrivate: typeof saved.isPrivate === "boolean" ? saved.isPrivate : true,
       bounds: saved.bounds || null, section: Number.isInteger(saved.section) ? saved.section : null,
-      opacity, dock: typeof saved.dock === "string" && saved.dock ? saved.dock : null };
+      opacity, dock: typeof saved.dock === "string" && saved.dock ? saved.dock : null,
+      hideTaskbar, hideTaskbarRemembered: saved.hideTaskbarRemembered === true };
+    if (saved.hideTaskbarRemembered === true) writeConfig();
     desktopAuth.load();
     pendingSession = sessionFromArgv(process.argv);
     if (ticketFromArgv(process.argv)) {
@@ -708,10 +784,12 @@ else {
     createWindow();
     // Reuse the browser login already present. On first install the shell has
     // no cookie jar, so initiate a state-bound handoff only when renewal fails.
-    void desktopAuth.renew(false).then(ok => { if (!ok && !desktopAuth.token()) beginChromeSignIn(); });
+    const renewQuiet = () => { void desktopAuth.renew(false); };
+    void desktopAuth.renew(false).then(ok => { if (!ok && !desktopAuth.hasSession()) beginChromeSignIn(); });
     const later = () => setTimeout(bringBack, 400);
     for (const ev of ["display-removed", "display-added", "display-metrics-changed"]) screen.on(ev, later);
-    for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, later);
+    for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, () => { later(); renewQuiet(); });
+    setInterval(renewQuiet, 30 * 60 * 1000);
     app.on("child-process-gone", (_e, d) => { if (d.type === "GPU") later(); });
   });
   app.on("window-all-closed", () => app.quit());

@@ -65,6 +65,8 @@ const first = (name: string): string => String(name || "").trim().split(/\s+/)[0
 const dayWord = (at: number): string => new Date(at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })
 /** Short weekday names indexed like getUTCDay (0 = Sunday). Shared by the day ticks and the copy that names them. */
 export const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+/** The Chicago calendar day of a moment, as YYYY-MM-DD — the day the person lives in. The daily job runs at 07:00 his time, so a follow-up due later that same day is due that day, not the next morning. */
+export const chicagoDay = (at: number): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(at))
 /** The days an automatic send rings on when none were ticked: Monday and Thursday, his standing default (28 Oct 2026). */
 export const DEFAULT_DAYS = [1, 4]
 /** The days a send may ring on: the ticked ones, or Monday and Thursday when none were ticked. */
@@ -88,7 +90,10 @@ export function validState(raw: unknown): TrackState {
   const marks = (Array.isArray(src.marks) ? src.marks : []).filter(m => m && id(m.id) && (m.outcome === "rejected" || m.outcome === "completed")).map(m => ({ id: m.id, outcome: m.outcome, at: num(m.at) })).slice(-400)
   const handed = (Array.isArray(src.handed) ? src.handed : []).filter(h => h && id(h.id)).map(h => {
     const days = cleanDays(h.days)
-    return { id: h.id, on: h.on === true, at: num(h.at), sent: (Array.isArray(h.sent) ? h.sent : []).map(num).filter(Boolean).slice(-MOST_SENT_FOR_YOU * 2), ...(days.length ? { days } : {}) }
+    // The edited words are part of the hand: without them, a saved rewording would not survive a write and read, and the daily job would always send the generated draft.
+    const subject = typeof h.subject === "string" ? h.subject.slice(0, 200) : ""
+    const body = typeof h.body === "string" ? h.body.slice(0, 2000) : ""
+    return { id: h.id, on: h.on === true, at: num(h.at), sent: (Array.isArray(h.sent) ? h.sent : []).map(num).filter(Boolean).slice(-MOST_SENT_FOR_YOU * 2), ...(days.length ? { days } : {}), ...(subject ? { subject } : {}), ...(body ? { body } : {}) }
   }).slice(-400)
   return { marks, handed }
 }
@@ -103,17 +108,35 @@ export function decide(state: TrackState, id: string, action: "rejected" | "comp
   // Rewording what is sent, or re-ticking its days, never switches it on or off and never forgets what went out.
   if (action === "save_words") return { marks: state.marks, handed: [...handed, { ...had, id, on: had?.on ?? false, at: had?.at ?? now, sent: had?.sent || [], ...(words ? { subject: words.subject.slice(0, 200), body: words.body.slice(0, 2000) } : {}), ...(days !== undefined ? { days: cleanDays(days) } : {}) }] }
   if (action === "set_days") return { marks: state.marks, handed: [...handed, { ...had, id, on: had?.on ?? false, at: had?.at ?? now, sent: had?.sent || [], days: cleanDays(days) }] }
-  return { marks: state.marks, handed: had ? [...handed, { ...had, on: false }] : handed }
+  // Stopping is always recorded, even for a card that only inherited its switch: without a switched-off record of its own, the inherited switch would carry on and the stop would do nothing.
+  return { marks: state.marks, handed: [...handed, { ...(had || { id, at: now, sent: [] }), on: false }] }
 }
 export const noteSent = (state: TrackState, id: string, now: number): TrackState => ({ marks: state.marks, handed: state.handed.map(h => (h.id === id ? { ...h, sent: [...h.sent, now] } : h)) })
 
+/** The hand that governs one interview: its own, or the one an earlier round in the same thread left armed. A new round inherits the switch, the ring days and the edited words — never the sends already made, which stay with the old round and its own count of four. `threadOf` maps interview id to thread id, from the interviews in view. */
+export function effectiveHand(state: TrackState, id: string, threadId: string, threadOf: Map<string, string>): Handed | undefined {
+  const own = state.handed.find(h => h.id === id)
+  if (own) return own
+  if (!threadId) return undefined
+  const donor = state.handed.find(h => h.id !== id && h.on && threadOf.get(h.id) === threadId)
+  if (!donor) return undefined
+  return { id, on: true, at: donor.at, sent: [], ...(donor.subject ? { subject: donor.subject } : {}), ...(donor.body ? { body: donor.body } : {}), ...(donor.days?.length ? { days: [...donor.days] } : {}) }
+}
+/** The state with a hand recorded for one interview: the effective hand when there is one, otherwise a switched-off record that only counts sends. A send is never recorded against an interview with no hand at all, or the count would be lost and the next run would send again. */
+export function withHand(state: TrackState, id: string, threadId: string, threadOf: Map<string, string>, now: number): TrackState {
+  if (state.handed.some(h => h.id === id)) return state
+  const eff = effectiveHand(state, id, threadId, threadOf)
+  return { ...state, handed: [...state.handed, eff ? { ...eff, sent: [] } : { id, on: false, at: now, sent: [] }] }
+}
+
 /** Why Send now cannot go out for this card, in the server's own gate order — or "" when it can.
- * The board shows this instead of a Send now button a tap cannot honour: a button the server
- * must refuse (interview not waiting yet, recruiter wrote last, no outside contact, four already
- * sent) may never present as a working send. The hour's double-tap guard is not a reason here:
- * it is a skip, and the board names it as one when it happens. */
-export function sendNowBlockReason(t: { phase: Phase; contact: Reach | null; theyWrote: boolean; sent: number }): string {
-  if (t.sent >= MOST_SENT_FOR_YOU) return "Four follow-ups already sent for this interview."
+ * The four-count is not a reason here: the automatic weekly stops at four, but a tap is his word
+ * to carry on, so a manual Send now always goes past four. What still blocks a tap is a card the
+ * server must refuse (interview not waiting yet, recruiter wrote last, no outside contact). The
+ * board keeps the button visible and names the reason beside it when one of those applies. The
+ * hour's double-tap guard is not a reason here: it is a skip, and the board names it as one when
+ * it happens. */
+export function sendNowBlockReason(t: { phase: Phase; contact: Reach | null; theyWrote: boolean }): string {
   if (t.theyWrote) return "The recruiter wrote last, so there is nothing to follow up right now."
   if (t.contact?.recruiter) return "This contact is one of your own recruiters, so nothing is sent to them."
   if (!t.contact) return "There is no outside contact to follow up with on this card."
@@ -130,6 +153,8 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
   const me = new Set(myEmails.map(e => String(e || "").toLowerCase()).filter(Boolean))
   const state = opts.state || emptyState()
   const byThread = new Map((threads || []).map(t => [`${String(t.accountEmail || "").toLowerCase()}:${t.threadId}`, t] as const))
+  // Interview id to thread id, so a new round can inherit the armed hand an earlier round in the same thread left behind.
+  const threadOf = new Map((found || []).map(f => [f.id, String(f.threadId || "")] as const))
   const out: Tracked[] = []
   for (const f of found || []) {
     const account = String(f.account || "").toLowerCase(), threadId = String(f.threadId || "")
@@ -156,7 +181,7 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
     const theirLastAt = Number(theirLast?.internalDate || 0)
     const theyWrote = theirLastAt > at && theirLastAt > myLastAt
     const lastMine = ordered.length ? me.has(senderEmail(ordered[ordered.length - 1].from)) : false
-    const mark = state.marks.find(m => m.id === f.id), hand = state.handed.find(h => h.id === f.id)
+    const mark = state.marks.find(m => m.id === f.id), hand = effectiveHand(state, f.id, threadId, threadOf)
     const sentForYou = hand?.sent.length || 0
 
     const startOfToday = Math.floor(now / DAY) * DAY
@@ -197,17 +222,33 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
   return { active, past, due: active.filter(t => t.action !== "none").length }
 }
 
-/** The interviews a follow-up is to be sent for now, on the person's standing word. Never to one of their own recruiters. */
+/** The interviews a follow-up is to be sent for now, on the person's standing word. Never to one of their own recruiters. Due means due on his calendar day: the daily job runs at 07:00 his time, so a follow-up due at noon is due that morning, not the next day the ring days allow. */
 export function toSendForYou(active: Tracked[], state: TrackState, now: number): Tracked[] {
+  const threadOf = new Map(active.map(t => [t.id, t.threadId]))
   return active.filter(t => {
-    const hand = state.handed.find(h => h.id === t.id)
+    const hand = effectiveHand(state, t.id, t.threadId, threadOf)
     if (!hand?.on || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) return false
-    if (hand.sent.length >= MOST_SENT_FOR_YOU || !t.nextAt || now < t.nextAt) return false
+    if (hand.sent.length >= MOST_SENT_FOR_YOU || !t.nextAt || chicagoDay(t.nextAt) > chicagoDay(now)) return false
     // Ticked days are the only days the automatic send may ring on; with none ticked it is Monday and Thursday. A manual Send now is not bound by them.
     if (!ringDays(hand.days).includes(weekdayForHim(now))) return false
     // Never two within six days, whatever else is true.
     return !hand.sent.some(at => now - at < 6 * DAY)
   })
+}
+
+/** Armed cards the daily job looked at but did not send, with the reason in plain words — so a day with no sends can be told apart from a day with nothing due. A card the job sends is never in this list. */
+export function dueButUnsent(active: Tracked[], state: TrackState, now: number): { id: string; reason: string }[] {
+  const threadOf = new Map(active.map(t => [t.id, t.threadId]))
+  const out: { id: string; reason: string }[] = []
+  for (const t of active) {
+    const hand = effectiveHand(state, t.id, t.threadId, threadOf)
+    if (!hand?.on || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) continue
+    if (hand.sent.length >= MOST_SENT_FOR_YOU) { out.push({ id: t.id, reason: "Four follow-ups already sent for this interview." }); continue }
+    if (!t.nextAt || chicagoDay(t.nextAt) > chicagoDay(now)) continue
+    if (!ringDays(hand.days).includes(weekdayForHim(now))) { out.push({ id: t.id, reason: `Today is not one of its ring days (${dayList(ringDays(hand.days))}).` }); continue }
+    if (hand.sent.some(at => now - at < 6 * DAY)) { out.push({ id: t.id, reason: "A follow-up went out less than six days ago." }); continue }
+  }
+  return out
 }
 
 /** The few words of a follow-up: short, friendly, nothing invented. Shown to the person before anything is sent for them. */
