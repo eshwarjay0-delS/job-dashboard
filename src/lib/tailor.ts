@@ -1106,6 +1106,32 @@ export async function runTailor(opts: {
     usedModel = plain.via
     skillsOnly = true
   }
+  // Known JD terms go into the existing project bullets before any skills-line overflow.
+  // A term already on the skills line or in the summary is still missing from the
+  // bullets, so the whole-document set is the wrong filter. Current and previous
+  // roles take turns. Employers, dates, and contact stay out of the clause.
+  if (best && !refine && !skillsOnly && jdGate && zones.roles.some(r => r.bullets.length)) {
+    const current = best
+    const bulletText = zones.roles.flatMap(r => r.bullets.map(b => {
+      const edited = (current.edits.bullets || []).find(x => x.idx === b.idx)
+      return edited?.text || b.text
+    })).join("\n")
+    const missing = scoreKws.filter(k => !isCertification(k) && !isQualificationOrJunk(k) && !coveredJdKeywords(bulletText, [k]).has(k))
+    if (missing.length) {
+      const woven = weaveExperienceRepresentation(
+        zones.roles.map(r => ({ bullets: r.bullets.map(b => ({ idx: b.idx, text: b.text })) })),
+        current.edits.bullets || [],
+        missing.map(k => jdSpelling(k, jd)),
+      )
+      if (woven.placed.length) {
+        const next = await applyEdits({ ...current.edits, bullets: mergeIndexedEdits(current.edits.bullets || [], woven.bullets), added: [] })
+        next.via = current.via
+        next.partial = current.partial
+        best = next
+        usedModel = `${usedModel} + JD terms written into existing projects`
+      }
+    }
+  }
   if (best && !refine) {
     for (let floorRound = 0; floorRound < 4; floorRound++) {
       const floored = await placeEverything(best)
@@ -1132,24 +1158,6 @@ export async function runTailor(opts: {
         best = restored
         floorFrom = null
         usedModel += " + unsupported claim paragraphs restored"
-      }
-    }
-  }
-  if (best && !refine && !skillsOnly && jdGate) {
-    const current = best
-    const missing = scoreKws.filter(k => !current.afterKw.has(k) && !isCertification(k) && !isQualificationOrJunk(k))
-    if (missing.length && zones.roles.some(r => r.bullets.length)) {
-      const woven = weaveExperienceRepresentation(
-        zones.roles.map(r => ({ bullets: r.bullets.map(b => ({ idx: b.idx, text: b.text })) })),
-        current.edits.bullets || [],
-        missing.map(k => jdSpelling(k, jd)),
-      )
-      if (woven.placed.length) {
-        const next = await applyEdits({ ...current.edits, bullets: mergeIndexedEdits(current.edits.bullets || [], woven.bullets), added: [] })
-        next.via = current.via
-        next.partial = current.partial
-        best = next
-        usedModel = `${usedModel} + JD terms written into existing projects`
       }
     }
   }
@@ -1314,10 +1322,13 @@ export async function runTailor(opts: {
   } catch (e) {
     notes.push(`Exported-file recount unavailable (${e instanceof Error ? e.message : "unknown error"}); numbers measured on tailored text.`)
   }
-  // ATS parseability of the exact bytes that will be stored: the exported
-  // document text plus zones re-parsed from its buffer, never the edits.
+  // ATS parseability of the exact bytes that will be stored. docxText includes
+  // header and footer contact, which mammoth's body extract drops. Zones are
+  // re-parsed from the buffer, never taken from the edits.
   const exportedZones = await extractZones(buffer)
-  const ats = atsCheck(best.tailoredText, exportedZones)
+  let atsSource = best.tailoredText
+  try { atsSource = await docxText(buffer) } catch { /* tailored text stands */ }
+  const ats = atsCheck(atsSource, exportedZones)
   if (!ats.passed) notes.push(`ATS parse check failed: ${ats.issues.join("; ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [

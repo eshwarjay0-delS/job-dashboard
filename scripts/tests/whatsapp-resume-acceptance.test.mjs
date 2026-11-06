@@ -61,6 +61,75 @@ test("Nov4 ATS: a draft that fails the ATS parse check is held", () => {
   const draft = make({ ats: { score: 85.7, passed: false, checks: [], issues: ["contact: no email address parses from the document"] } })
   assert.equal(acceptableWhatsAppResume(draft), false)
   assert.ok(whatsappResumeRejectionReasons(draft).includes("ats_check_failed"))
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  assert.equal(gate.whatsappRewriteUsable(draft), false)
+})
+test("live fnnrf shape: 100% needs_review with quality_not_deliverable and ats_check_failed still sends the finished file", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    coverage: 100,
+    supported_coverage: 100,
+    quality: resumeQuality({ matched: 8, total: 8, missing: [], partial: true, unfinished: false }),
+    quality_blockers: ["ats_check_failed"],
+    ats: {
+      score: 85.7,
+      passed: false,
+      checks: [
+        { id: "contact", passed: true },
+        { id: "name", passed: true },
+        { id: "skills_section", passed: true },
+        { id: "experience_section", passed: true },
+        { id: "roles_have_dates", passed: false },
+        { id: "summary_not_empty", passed: true },
+        { id: "substantive", passed: true },
+      ],
+      issues: ["roles_have_dates: 1 of 3 role(s) have no parseable date range"],
+    },
+  })
+  assert.equal(draft.quality.status, "needs_review")
+  assert.equal(draft.quality.incomplete, false)
+  const reasons = whatsappResumeRejectionReasons(draft)
+  assert.ok(reasons.includes("quality_not_deliverable"))
+  assert.ok(reasons.includes("ats_check_failed"))
+  assert.equal(reasons.filter(r => r === "quality_not_deliverable" || r === "ats_check_failed").sort().join(","), "ats_check_failed,quality_not_deliverable")
+  assert.equal(gate.whatsappRewriteUsable(draft), true)
+  assert.equal(acceptableWhatsAppResume(draft), false)
+})
+test("a finished 100% rewrite with no ATS object is not the original-file path", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    coverage: 100,
+    supported_coverage: 100,
+    quality: resumeQuality({ matched: 8, total: 8, missing: [], partial: true, unfinished: false }),
+  })
+  delete draft.ats
+  assert.equal(draft.quality.status, "needs_review")
+  assert.equal(draft.quality.incomplete, false)
+  const reasons = whatsappResumeRejectionReasons(draft)
+  assert.ok(reasons.includes("quality_not_deliverable"))
+  assert.ok(reasons.includes("ats_check_failed"))
+  assert.equal(gate.whatsappRewriteUsable(draft), true)
+  assert.equal(acceptableWhatsAppResume(draft), false)
+})
+test("an export with no contact and no resume text is still held", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    ats: {
+      score: 0,
+      passed: false,
+      checks: [
+        { id: "contact", passed: false },
+        { id: "substantive", passed: false },
+      ],
+      issues: [
+        "contact: no email address or phone number parses from the document",
+        "substantive: the extracted document text is under 200 characters — the export did not carry the resume",
+      ],
+    },
+  })
+  assert.equal(gate.atsExportUnreadable(draft.ats), true)
+  assert.equal(gate.whatsappRewriteUsable(draft), false)
+  assert.equal(acceptableWhatsAppResume(draft), false)
 })
 test("switch off: 84.3% of the job post is not delivered even when supported skills are 100%", () => {
   const draft = make({ coverage: 84.3 })

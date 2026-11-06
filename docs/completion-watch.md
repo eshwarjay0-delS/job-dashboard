@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — false ATS hold on a finished WhatsApp rewrite
+
+The 12:08 PM America/Chicago send on jayeshwar44 (request fnnrf-1793988396338, deployment dpl_2aTkS5YJcFNsJeKjtWo26tYzkxzA, commit f1ba579) scored 100 percent and then sent the original library file. The ATS check ran and failed. That single blocker labelled the quality report needs_review. The Projects section bucket, glued months, and a name on the contact line were the false misses. A file with no email and no phone is still held. Offline: 35 of 36 library resumes pass the check, and the focused suites passed 92/92. No live WhatsApp send. Not deployed. The pull request is the handoff.
+
 ## 6 November 2026 — constructed JD written into the existing roles
 
 The 8:41 AM CT WhatsApp send of the unre written jayeshwar44 library file was checked against the later production log still inside retention. On deployment `21ba3028` a tailor ran 138 seconds, scored 100 percent, and was rejected for an ATS failure plus 10 unverified terms after 32 paragraphs were reverted and 118 terms were parked on the skills line. That rejection is what sent the original with "did not finish cleanly." The 9:55 AM CT clarification writes known JD skills into the existing project bullets, including earlier roles, and does not treat that as a fabricated claim. Employers, dates, contact, and the three profiles stay apart. The extra generate-then-tailor pass keeps a reserved window. Offline: the five focused suites passed 60/60 and `tsc --noEmit` was clean. No live WhatsApp send. Not deployed. The pull request is the handoff.

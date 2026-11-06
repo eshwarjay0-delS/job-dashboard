@@ -1,3 +1,15 @@
+## 2026-11-06 — A finished WhatsApp rewrite was held by a false ATS miss
+
+No new screen. The WhatsApp send path and the exported-document ATS check changed.
+
+**What failed.** At 12:08 PM America/Chicago on 6 Nov 2026, request `fnnrf-1793988396338` (deployment `dpl_2aTkS5YJcFNsJeKjtWo26tYzkxzA`, commit `f1ba579`) finished a Cyber Security Analyst / IAM rewrite at 100 percent coverage and 100 percent supported coverage. `bulletsReverted` was 0. The quality gate still logged `quality_not_deliverable` and `ats_check_failed`, and WhatsApp sent the original `Eshwar_Resume.docx` with "did not finish cleanly." The ATS check had run. A section bucket titled Projects, a month glued to the previous word, or a name sitting on the contact line was enough to fail it. That failure is what marked an otherwise finished file `needs_review`.
+
+**What changed.** Those parse misses pass. The check reads header and footer text. A skills category such as "Backend Languages:" stays in the skills section. A finished rewrite is sent when the ATS result is missing or the only miss is a date or a name on a file that already has contact. An export with no resume text, or with no email and no phone, is still held and the library file goes out. Known JD terms that are not already in the experience bullets are written into those bullets before anything is added to the skills line. The three profiles stay apart. Experience length and format stay.
+
+**Checked.** Offline. 35 of 36 resumes under `resumes/` pass the ATS check. The one that does not has no email and no phone. resume-ats, whatsapp-resume-acceptance, constructed-jd-tailor, whatsapp-resume-failsafe, resume-floor, resume-structure, and tailor-ship-on-rollback: 92 pass, 0 fail. `tsc --noEmit` clean. ESLint clean on the edited files. Not a live model. Not a live WhatsApp send. Not production until this pull request is merged.
+
+**Next.** After merge, the next jayeshwar44 IAM job should come back as the rewritten Word file, with the coverage and the ATS score in the caption.
+
 ## 2026-11-06 — Constructed JD is written into the existing project bullets
 
 No new screen. The tailor and the WhatsApp send path changed.
