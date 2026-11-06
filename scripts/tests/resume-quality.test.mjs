@@ -21,6 +21,13 @@ test('quality report retains unfinished work even when no keywords are missing',
   assert.equal(resumeQuality({ matched: 96, total: 100, missing: ['AWS'] }).incomplete, false)
 })
 
+test('a finished file with a review blocker is not marked unfinished', () => {
+  const report = resumeQuality({ matched: 4, total: 13, missing: ['soc 2', 'tprm'], partial: true, unfinished: false })
+  assert.equal(report.incomplete, false)
+  assert.equal(report.status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 13, total: 13, missing: [], partial: false, unfinished: true }).incomplete, true)
+})
+
 test('overall keyword overlap cannot hide an experience role with thin JD coverage', () => {
   const uneven = [
     { role: 'Current Client', bullets: 10, rewritten: 8, added: 0, skills: 10, required: 10 },

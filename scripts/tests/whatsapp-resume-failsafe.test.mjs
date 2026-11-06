@@ -157,6 +157,52 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
+test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
+  const finished = {
+    ...low,
+    token: 'easm-scored',
+    quality: { ...low.quality, incomplete: false, status: 'needs_review' },
+    quality_blockers: ['role_evidence_gaps'],
+    ats: { score: 92, passed: true, checks: [], issues: [] },
+  }
+  const { generate, docs, said, filesFor } = harness(async () => finished)
+  await generate('15550021', {
+    jdId: 'easm-scored', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 1)
+  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].caption, /30\.8%/)
+  assert.match(docs[0].caption, /Skills your resume already supports: 30\.8%/)
+  assert.match(docs[0].caption, /ATS parse check: 92%/)
+  assert.match(docs[0].caption, /Risk factor:/)
+  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
+  assert.doesNotMatch(docs[0].caption, /was not rewritten/)
+  assert.doesNotMatch(docs[0].caption, /marked incomplete/)
+  assert.doesNotMatch(docs[0].caption, /closest matching resume/)
+  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+})
+
+test('roles that were not rewritten still send the chosen library file', async () => {
+  const unfinished = {
+    ...low,
+    token: 'easm-unrewritten',
+    quality: { ...low.quality, incomplete: false },
+    quality_blockers: ['roles_unrewritten'],
+  }
+  const { generate, docs, filesFor } = harness(async () => unfinished)
+  await generate('15550021', {
+    jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Some experience sections were not rewritten/)
+  assert.match(docs[0].caption, /was not rewritten/)
+  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
+})
+
 test('the Houston and Saint Louis profiles are not mixed when the failsafe sends a file', async () => {
   const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
   await generate('15550021', {

@@ -36,6 +36,8 @@ export function resumeQuality(input: {
   /** Optional weighted ratio (0–1); never a substitute for the actual term count. */
   weightedCoverage?: number
   partial?: boolean
+  /** Writers did not return the requested sections. When omitted, partial still means unfinished. */
+  unfinished?: boolean
   unchanged?: boolean
 }) {
   const validCounts = Number.isInteger(input.total) && Number.isInteger(input.matched) && input.total > 0 && input.matched >= 0 && input.matched <= input.total
@@ -44,9 +46,11 @@ export function resumeQuality(input: {
   const coverage = validWeight ? Math.min(rawCoverage, input.weightedCoverage ?? rawCoverage) : 0
   // Coverage and completion are independent. An incomplete rewrite, missing
   // experience section or unverified claim is never deliverable merely because
-  // its supported keywords score 95-100%.
+  // its supported keywords score 95-100%. A finished file can still carry a
+  // review blocker (partial) without the writers having failed to return.
+  const unfinished = input.unfinished === undefined ? !!input.partial : !!input.unfinished
   const coverageOk = validCounts && validWeight && coverage >= RESUME_MIN_COVERAGE
-  const complete = !input.unchanged && !input.partial
+  const complete = !input.unchanged && !input.partial && !unfinished
   const meetsTarget = coverageOk && coverage >= RESUME_TARGET_COVERAGE && complete
   const meetsFloor = coverageOk && complete
   return {
@@ -56,7 +60,7 @@ export function resumeQuality(input: {
     matched: input.matched,
     total: input.total,
     missing: input.missing,
-    incomplete: !!input.partial,
+    incomplete: unfinished,
     ...(input.weightedCoverage === undefined ? {} : { weightedCoverage: input.weightedCoverage }),
   }
 }
