@@ -34,9 +34,13 @@ The Nov 5 6:43 PM America/Chicago EASM run refused a rewrite at 30.8 percent and
 
 Origin/master `e58450c6` includes merged PR #224 and PR #226. PR #224 is the loopback bearer. PR #226 is the logistics filter and was not edited for this slice. No `POST /api/auth/desktop-session` existed. The route is implemented on PR 227 (`b070c71b`) with tests that keep the desktop refresh family independent of two website tab rotations. It is not merged and not a production deploy. A live three-day Windows sign-in is still unproven. The service-role key is required for the first mint.
 
+## 6 November 2026 System 3 onto the WhatsApp master
+
+Pull request 229 (`cursor/kompas-system-3-ea0b`) was `295c510a`, based on `00594c59`. GitHub's update-branch API returned 422 after master moved to `986ecef7` (squash of pull request 228). Merging that master commit conflicted only in `TODO.md` and `src/lib/plan-vision-journal.ts`. WhatsApp 70–94.9% delivery and System 3 hybrid retrieval both remain. Pull request 229 is not merged. Production was not deployed from this update. Offline on the merged tree: system 3 suite 12/12, related retrieval and guard suites 390/390, dossier r8 7/7, WhatsApp acceptance and upload suites 56/56, `tsc --noEmit` clean. No live model answer and no live WhatsApp send.
+
 ## 6 November 2026 WhatsApp tailor
 
-Production at the start of this slice was `00594c59` (PR #227). The WhatsApp path tailored an older library file when a new photo never set `resumePath`, and when the email-choice reply ignored a fresh upload. A complete draft under 95% raw job-post overlap was held even when supported coverage was already 95%. This slice delivers from 70% raw overlap in that complete case and tells the full rewrite to keep source detail. The later failsafe above replaces the under-70% refusal that sent no file. Kompas logistics and desktop sign-in were not edited. No live WhatsApp message was sent. The PR is the handoff; production acceptance is the merge SHA on `job-dashboard-fawn.vercel.app`.
+Production at the start of this slice was `00594c59` (PR #227). The WhatsApp path tailored an older library file when a new photo never set `resumePath`, and when the email-choice reply ignored a fresh upload. A complete draft under 95% raw job-post overlap was held even when supported coverage was already 95%. This slice delivers from 70% raw overlap in that complete case and tells the full rewrite to keep source detail. The later failsafe above replaces the under-70% refusal that sent no file. Kompas logistics and desktop sign-in were not edited. No live WhatsApp message was sent. The PR is the handoff; production acceptance is the merge SHA on `job-dashboard-fawn.vercel.app`. That pull request later squash-merged to master as `986ecef7`. System 3 then squash-merged as `0bb575a0`. The System 3 update did not check whether the production alias serves `986ecef7`.
 
 ## 5 November 2026 reconciliation
 
