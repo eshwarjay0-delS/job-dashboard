@@ -47,7 +47,7 @@ test("full mode keeps a longer grounded summary and one-page mode stays short", 
   assert.match(verbosity.FULL_EXPERIENCE_DEPTH, /Do not add address, visa, relocation/)
   assert.match(claude, /FULL_EXPERIENCE_DEPTH/)
   assert.match(claude, /summaryWordCap\(/)
-  assert.match(tailor, /CACHE_GENERATION = "24"/)
+  assert.match(tailor, /CACHE_GENERATION = "25"/)
 })
 
 const SALESFORCE = `Salesforce Security Specialist

@@ -26,6 +26,10 @@ A plan needs implementation evidence. A release needs a commit and successful de
 
 Keep source requests and approval state distinct from assumptions. Do not collect private conversations from other systems without a scoped integration. Historical retrieval is incomplete and is not an exhaustive archive of every chat.
 
+## 6 November 2026 — constructed JD tailor
+
+Eshwar's 7:23 AM CT method is now the tailor path on a pull request. Two pre-edit passes generate related skills, experiences, points, bullets, skill lines, and a summary. Their keywords are summed with the job post, and that text is the JD that is scored. If coverage is not above 95%, one more generate-then-tailor pass runs. Experience rows, employers, dates, and Environments lines stay. Overflow terms go on a labelled skills line. A labelled term is not the old "not in your resume" refusal. A term invented into an experience bullet still blocks. A provider outage still adds nothing and still sends the already-chosen resume. Offline fixture coverage was above 95% with the source experience frame unchanged. `tsc --noEmit` was clean. No live model, no WhatsApp send, and no production deploy. The pull request is not merged.
+
 ## 6 November 2026 — scored WhatsApp rewrite
 
 The 7:23 PM America/Chicago caption, "closest matching resume because the rewrite did not finish cleanly. The rewrite was marked incomplete," is produced only after `runTailor` returns. `quality.incomplete` was set for every quality blocker except unchanged, including `role_evidence_gaps`. A finished edited file was discarded and the library resume was sent. The first split draft was also assembled after 40 percent of the call. This slice sends a finished file, including a truthful score under 95 percent, and names the missing terms. The library file stays the backup for a failure, a timeout, a missing part, a skills-only outage, or a role that was not rewritten. The 70 to 94.9 percent clean pass and the website 95 percent gate stay. No live WhatsApp message was sent. The pull request is not merged and production was not deployed from this slice.

@@ -1,3 +1,13 @@
+## 2026-11-06 — Constructed JD is the tailor target
+
+No new screen. The change is in the resume tailor used by the website download and the WhatsApp send.
+
+**What changed.** Before any edit, two passes generate related skills, experiences, points, bullets, skill lines, and a summary from the job post and the resume. Those keywords are summed, and that text is the JD. If the score is not above 95%, one more generate-then-tailor pass runs. Experience rows, employers, dates, titles, and Environments lines are not added or removed. Terms that do not fit a role go on a `Job-post terms` skills line, and soft skills can go in an open summary. A file is not refused only because those labelled terms were absent from the source. A term written into an experience bullet as new work still blocks. If every writer fails, nothing is invented and WhatsApp still sends the resume already chosen.
+
+**Checked.** Offline only. New suite 4/4, including a Word file above 95% with the same experience frame. Floor, floor-gate, and the 20-fold outage suite still pass. `tsc --noEmit` passed. ESLint on the edited files passed. Not a live model run. Not a WhatsApp send. Not production until this pull request is merged.
+
+**Next.** Leave the pull request open. After it lands, one live Houston job should come back at or above 95% of the constructed JD with the experience rows unchanged.
+
 ## 2026-11-06 — A finished WhatsApp rewrite sends the scored Word file
 
 No new screen. The change is on the WhatsApp resume run.
