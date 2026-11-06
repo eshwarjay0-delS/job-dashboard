@@ -1,10 +1,20 @@
+## 2026-11-06 — WhatsApp always sends a resume file
+
+No new screen. The chat change is on the WhatsApp resume run, on top of the 70% clean pass.
+
+**What changed.** A finished rewrite is sent even under 70 percent of the job post, and the caption names the terms still missing. Added job-post terms do not by themselves refuse the file. If the rewrite fails, times out, or is marked incomplete, the resume already named in "Updating your …" is sent unchanged, labelled as the closest match because the rewrite did not finish. Name, contact, date, and profile guards stay. Houston (eshwarjay05) and Saint Louis (jayeshwar44) are not mixed. A shortfall file is not saved as a new base resume. A complete draft from 70 percent through 94.9 percent with supported coverage at 95 percent is still a clean pass. The website tailor still holds under 95 percent.
+
+**Checked.** Focused WhatsApp and acceptance tests, including the three failsafe cases and the 70 percent clean pass. Not a live WhatsApp message. Not production until the pull request is merged and the deploy is READY.
+
+**Next.** Merge is not part of this change. After it lands, one live job under 70 percent should still receive a Word file.
+
 ## 2026-11-06 — WhatsApp tailors the new file and can send a complete 70% draft
 
 No new screen. WhatsApp intake now treats a new Word file or a readable PDF as the resume, including while the email question is open. A photo or an unreadable PDF clears the older upload and says an older resume was not used. It does not transcribe the photo. Full-mode summaries may stay up to 140 words when the source supports them, and the experience instruction keeps the source tools instead of collapsing the bullet. Cache generation is 24 so a thinner cached draft is not replayed.
 
 **Delivery band.** Supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is sent when the draft is otherwise complete (ATS, diff, no unverified terms, no role blockers). Under 70% is still held, including 28.5% and 0%. `TAILOR_DELIVER_WITH_SHORTFALL=0` and `JD_TERMS_ALWAYS_ON_SKILLS=0` restore the strict under-95% refusal. Unevidenced job-post terms are still not written onto the skills line.
 
-**Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change.
+**Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. The under-70% hold with no file is replaced by the failsafe entry above.
 
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 

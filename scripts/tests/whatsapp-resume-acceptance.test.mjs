@@ -67,10 +67,12 @@ test("switch off: 84.3% of the job post is not delivered even when supported ski
   assert.equal(refusing.acceptableWhatsAppResume(draft), false)
   assert.ok(refusing.whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
 })
-test("Nov4: a complete 84.3% draft whose quality counts still say 100% is held", () => {
+test("Nov4: a complete 84.3% draft whose quality counts still say 100% is not a usable file", () => {
   const draft = make({ coverage: 84.3 })
   assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), true)
   assert.ok(whatsappResumeRejectionReasons(draft).includes("supported_score_mismatch"))
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  assert.equal(gate.whatsappRewriteUsable(draft), false)
 })
 test("Salesforce Security Specialist: 82% of the job post and 97% supported coverage is delivered", () => {
   const draft = make({
@@ -81,7 +83,7 @@ test("Salesforce Security Specialist: 82% of the job post and 97% supported cove
   assert.equal(draft.quality.status, "needs_review")
   assert.equal(acceptableWhatsAppResume(draft), true, whatsappResumeRejectionReasons(draft).join(","))
 })
-test("70% job-post overlap with 95% supported coverage is the delivery floor", () => {
+test("70% job-post overlap with 95% supported coverage is the clean delivery floor", () => {
   const draft = make({
     coverage: 70,
     supported_coverage: 95,
@@ -89,7 +91,7 @@ test("70% job-post overlap with 95% supported coverage is the delivery floor", (
   })
   assert.equal(acceptableWhatsAppResume(draft), true, whatsappResumeRejectionReasons(draft).join(","))
 })
-test("69.9% of the job post is still held", () => {
+test("69.9% is not a clean pass, and the finished file is still sendable", () => {
   const draft = make({
     coverage: 69.9,
     supported_coverage: 100,
@@ -97,8 +99,11 @@ test("69.9% of the job post is still held", () => {
   })
   assert.equal(acceptableWhatsAppResume(draft), false)
   assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  assert.equal(gate.whatsappRewriteUsable(draft), true)
+  assert.equal(gate.deliveredWithShortfall(draft), true)
 })
-test("the 28.5% hold is still refused even when supported skills are complete", () => {
+test("28.5% is not a clean pass, and the finished file is still sendable", () => {
   const draft = make({
     coverage: 28.5,
     supported_coverage: 100,
@@ -106,6 +111,14 @@ test("the 28.5% hold is still refused even when supported skills are complete", 
   })
   assert.equal(acceptableWhatsAppResume(draft), false)
   assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  assert.equal(gate.whatsappRewriteUsable(draft), true)
+})
+test("Houston and Saint Louis emails are not treated as the same profile", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com"), true)
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({

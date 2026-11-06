@@ -360,7 +360,7 @@ test('an incomplete or unchanged draft is not stored, not sent as tailored, and 
   assert.match(tailor, /if \(failed \* 2 > total\) throw new Error\(`Tailoring incomplete/)
   assert.match(tailor, /LADDER\.unshift\(lunaStep\)/, 'GPT Luna leads when the caller holds the key')
   assert.match(tailor, /for \(const lane of splitDraft \? lanes\.slice\(0, 1\) : lanes\)/, 'a split draft is made once: it already uses every lane')
-  assert.match(bot, /if \(result\.unchanged\) \{[\s\S]{0,500}The rewrite produced no changes, so I did not send a file/)
+  assert.match(bot, /if \(result\.unchanged\) \{[\s\S]{0,700}The rewrite produced no changes, so this is the resume already chosen/)
   assert.match(claude, /API \(400\|401\|402\|403\|404\|413\|429\)\\b\|TimeoutError/, 'a refusal that will not clear, or a timeout, is not asked again on the same model')
 })
 

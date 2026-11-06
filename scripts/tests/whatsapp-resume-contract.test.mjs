@@ -15,9 +15,12 @@ test('failed quality is retained for automatic recovery', () => {
   assert.match(webhook, /failureCode = "quality_rejected"/)
   assert.match(webhook, /deferResumeRecovery\(job, failureCode, failedCandidate\)/)
 })
-test('never silently deliver the original resume as a tailored fallback', () => {
+test('a chosen-resume failsafe is labelled and is not presented as a tailored rewrite', () => {
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
-  assert.match(webhook, /if \(!acceptableWhatsAppResume\(result\)\)/)
+  assert.match(webhook, /if \(!whatsappRewriteUsable\(result\)\)/)
+  assert.match(webhook, /This file was not rewritten/)
+  assert.match(webhook, /closest matching resume/)
+  assert.match(webhook, /acceptableWhatsAppResume\(result\)/)
 })
 test('skills recovery only restores candidate-supported job terms', () => {
   assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && forcedJdKws\.includes\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
@@ -114,7 +117,7 @@ test('WhatsApp never mistakes Meta API acceptance for handset delivery', () => {
   assert.match(webhook, /I will not send a duplicate while its status is unknown/)
 })
 test('a failed JD stays saved without asking for manual resubmission', () => {
-  assert.match(webhook, /The rewrite produced no changes, so I did not send a file\. Your request is saved and will be retried automatically/)
+  assert.match(webhook, /The rewrite produced no changes, so this is the resume already chosen for this job, unchanged/)
   assert.match(webhook, /The document upload is unconfirmed\. Your request is saved/)
   assert.doesNotMatch(webhook, /If nothing arrives, send \*redo\*/)
 })

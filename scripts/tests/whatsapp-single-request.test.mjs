@@ -58,6 +58,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   const entries = new Map()
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
   const said = []
+  const docs = []
   const blob = {
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
@@ -72,7 +73,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { deliveries++; return 'sent' } },
+    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { deliveries++; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
@@ -110,18 +111,22 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   failNext = true
   await generate('123', session, 'user')
   assert.equal(runs, 3)
-  assert.equal(deliveries, 2, 'a failed rewrite is not delivered')
-  assert.match(said.at(-1), /I could not tailor your resume just now/)
-  assert.doesNotMatch(said.at(-1), /provider timeout/)
+  assert.equal(deliveries, 3, 'a failed rewrite still delivers the chosen resume')
+  assert.match(docs.at(-1).caption, /closest matching resume/)
+  assert.match(docs.at(-1).caption, /stopped before it finished/)
+  assert.equal(docs.at(-1).body, 'same@email.com')
+  assert.doesNotMatch(docs.at(-1).caption, /No incomplete file was delivered/)
+  assert.doesNotMatch(said.at(-1) || '', /provider timeout/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'a failed rewrite also releases its claim')
   await generate('123', session, 'user')
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
-  assert.equal(deliveries, 3)
+  assert.equal(deliveries, 4)
   unchangedNext = true
   await generate('123', session, 'user')
   assert.equal(runs, 5)
-  assert.equal(deliveries, 3, 'an unchanged rewrite must not be sent as tailored')
-  assert.match(said.at(-1), /The rewrite produced no changes/)
+  assert.equal(deliveries, 5, 'an unchanged rewrite delivers the chosen resume and does not call it tailored')
+  assert.match(docs.at(-1).caption, /The rewrite produced no changes/)
+  assert.match(docs.at(-1).caption, /was not rewritten/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'unchanged rewrite releases its claim')
   const saved = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(saved.resumePath, undefined)
@@ -141,11 +146,10 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.ok(caption.split('\n').length <= 5)
 })
 
-test('a below-floor hold anchors the baseline under the hold message and invites a reply', async () => {
+test('a below-floor rewrite still delivers the Word file and names what is missing', async () => {
   const entries = new Map()
   const said = []
-  const writes = []
-  const { createHash } = require('node:crypto')
+  const docs = []
   const blob = {
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
@@ -154,12 +158,12 @@ test('a below-floor hold anchors the baseline under the hold message and invites
   const mocks = {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async (p, d) => { writes.push([p, d]) }, deletePath: async () => {} },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async () => ({ token: 'held-result', score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }) },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold1' }, sendDocument: async () => { throw new Error('held runs must not deliver') } },
+    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold1' }, sendDocument: async (_to, _body, _name, caption) => { docs.push(caption); return 'wamid.doc1' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
@@ -185,23 +189,21 @@ test('a below-floor hold anchors the baseline under the hold message and invites
     },
   }
   const { generate } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate };')
-  const session = { jdId: 'jd-message', jd: 'job description', resumePath: '/data/whatsapp/inbox/123/unique.docx' }
+  const session = { jdId: 'jd-message', jd: 'job description', resumePath: '/data/whatsapp/inbox/123/unique.docx', resumeName: 'EASM Cybersecurity Engineer' }
   await generate('123', session, 'user')
-  const hold = said.find(text => text.includes('below the 95% floor'))
-  assert.ok(hold, 'a below-floor hold message is sent')
-  assert.match(hold, /Reply to this message with the experience you actually have/)
-  const genKey = `whatsapp/gens/123/${createHash('sha1').update('wamid.hold1').digest('hex').slice(0, 24)}.json`
-  const gen = JSON.parse(entries.get(genKey))
-  assert.equal(gen.held, true)
-  assert.equal(gen.jd, 'job description')
-  assert.ok(gen.file.endsWith('.docx'), 'the anchored gen points at a baseline copy')
-  assert.ok(writes.some(([p]) => p === gen.file), 'the baseline copy was written where the gen points')
+  assert.equal(docs.length, 1, 'a below-floor rewrite still delivers a Word file')
+  assert.match(docs[0], /Still missing: splunk/)
+  assert.match(docs[0], /40%/)
+  assert.doesNotMatch(docs[0], /No incomplete file was delivered/)
+  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+  assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
 })
 
-test('a reply to a hold re-runs with the reply experience as evidence, and a still-below-floor redo re-holds', async () => {
+test('a reply to a hold re-runs with the reply experience as evidence, and a still-below-floor redo still delivers', async () => {
   const entries = new Map()
   const said = []
   let deliveries = 0, captured = null, heldNext = false
+  const docs = []
   const { createHash } = require('node:crypto')
   const blob = {
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
@@ -216,7 +218,7 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async opts => { captured = opts; if (heldNext) return { token: 'redo-held', edits: { extras: [] }, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async () => { deliveries++; return 'sent' } },
+    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
@@ -250,11 +252,9 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
   assert.equal(deliveries, 1, 'a passing redo delivers')
   heldNext = true
   await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
-  assert.equal(deliveries, 1, 'a still-below-floor redo must not deliver')
-  assert.ok(said.some(text => text.includes('below the 95% floor') && text.includes('Reply to this message')), 'the redo re-holds with the invitation')
-  const reholdKey = `whatsapp/gens/123/${createHash('sha1').update('wamid.hold2').digest('hex').slice(0, 24)}.json`
-  const rehold = JSON.parse(entries.get(reholdKey))
-  assert.equal(rehold.held, true, 'the re-hold re-anchors so the loop can iterate')
+  assert.equal(deliveries, 2, 'a still-below-floor redo still delivers the rewritten file')
+  assert.ok(docs.some(text => text.includes('Still missing: splunk') && text.includes('40%')), 'the redo names the shortfall on the file')
+  assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
 })
 
 test('a partial hold names the unfinished sections and invites a reply-redo; other holds do not', async () => {

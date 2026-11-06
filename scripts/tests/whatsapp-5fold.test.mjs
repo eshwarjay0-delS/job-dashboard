@@ -70,6 +70,7 @@ function load(file, mocks = {}, extra = '') {
 
 test('fold 5: a run that cannot send a file says so instead of stopping', async () => {
   const said = []
+  const docs = []
   let runs = 0
   let file = null
   let samePerson = true
@@ -94,7 +95,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(acceptable) } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer', company: '', location: '' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { if (sendError) throw sendError; return 'sent' } },
+    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { if (sendError) throw sendError; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
     '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
@@ -132,13 +133,22 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   file = null
   await generate('15550021', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
-  assert.match(said.at(-1), /Word file could not be opened/)
+  assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
+  assert.match(docs[0].caption, /updated Word file could not be opened/)
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
+  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 
+  docs.length = 0
   file = Buffer.from('jayeshwar44@gmail.com')
   samePerson = false
   await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.match(said.at(-1), /contact-details or employment-date preservation check/)
+  assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
+  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
+  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.match(docs[0].caption, /name, contact details and dates/)
+  assert.match(docs[0].caption, /closest matching resume/)
 
   file = Buffer.from('eshwarjay05@gmail.com')
   samePerson = true

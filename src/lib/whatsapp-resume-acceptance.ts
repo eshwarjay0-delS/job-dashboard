@@ -5,25 +5,27 @@ import type { TailorResult } from "./tailor"
  * requested section must be complete and unverified JD claims must be absent.
  * Overall JD overlap remains a separate, honest measure of missing skills.
  */
-/** Supported-vocabulary floor. The rewrite must keep at least this share of the
- * terms the resume or a confirmation already supports. */
+/** Supported-vocabulary floor for a clean WhatsApp pass that can be filed as a base.
+ * A finished file under this share is still sent; the reply names the gap. */
 export const WHATSAPP_SUPPORTED_FLOOR = 95
-/** Raw job-post overlap floor for an otherwise complete draft.
- * 95% remains the target and is still named in the caption when the file is short of it.
- * A complete draft from 70% through 94.9% is delivered when supported coverage is
- * already at the 95% floor, so an honest gap (a certification or product the
- * resume does not claim) does not hold a professional file.
- * Below 70% stays held. That still refuses the 28.5% and 0% WhatsApp holds.
- * TAILOR_DELIVER_WITH_SHORTFALL=0 or JD_TERMS_ALWAYS_ON_SKILLS=0 restores the
- * strict under-95% refusal. */
+/** Clean WhatsApp pass for raw job-post overlap.
+ * 95% remains the target and is named in the caption when the file is short of it.
+ * A complete draft from 70% through 94.9% is a clean pass when supported coverage
+ * is already at 95%, so an honest gap does not block filing.
+ * Below 70% is not a clean pass. It is still sent when the rewrite finished,
+ * with the missing terms named. A failed or incomplete rewrite sends the
+ * already-chosen resume instead. TAILOR_DELIVER_WITH_SHORTFALL=0 or
+ * JD_TERMS_ALWAYS_ON_SKILLS=0 restores the strict under-95% clean-pass refusal. */
 export const WHATSAPP_JOB_POST_FLOOR = 70
 
-/** Compatibility export. The 70% band is decided in whatsappResumeRejectionReasons,
- * not by this flag. */
-export function deliveredWithShortfall(result: TailorResult): boolean {
-  void result
-  return false
-}
+/** Coverage and added job-post terms are labelled on the WhatsApp reply.
+ * They do not, by themselves, make a finished Word file unusable. */
+const WHATSAPP_SHORTFALL_REASONS = new Set([
+  "jd_coverage_below_floor",
+  "supported_coverage_below_floor",
+  "unverified_jd_terms",
+  "quality_not_deliverable",
+])
 
 function envFlag(name: string): string {
   const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
@@ -104,9 +106,41 @@ export function acceptableWhatsAppResume(result: TailorResult): boolean {
 
 /** Web download gate. Two repair passes still run, then a draft under 95% raw overlap
  * is held with no token. Unverified claims, identity changes, and an expired budget
- * are not waived by the WhatsApp 70% band. */
+ * are not waived by the WhatsApp 70% band or by the delivery failsafe. */
 export function acceptableWebResume(result: TailorResult): boolean {
   return whatsappResumeRejectionReasons(result, { strict: true }).length === 0
+}
+
+/** A finished rewrite WhatsApp can send. Incomplete, unchanged, or unproven
+ * files are not usable: the caller sends the already-chosen resume instead.
+ * Identity, name, dates and contact details are checked on the file bytes. */
+export function whatsappRewriteUsable(result: TailorResult): boolean {
+  if (!result?.token) return false
+  if (result.unchanged || !result.diff?.length) return false
+  if (result.skills_only || result.partial || result.quality?.incomplete) return false
+  if (!result.ats?.passed) return false
+  return whatsappResumeRejectionReasons(result).every(reason => WHATSAPP_SHORTFALL_REASONS.has(reason))
+}
+
+/** The usable rewrite is under a coverage floor, or it added job-post terms.
+ * The reply names that shortfall. An incomplete draft is not a shortfall delivery.
+ * A clean 70–94.9% pass has no rejection reasons, so this stays false for it. */
+export function deliveredWithShortfall(result: TailorResult): boolean {
+  if (!whatsappRewriteUsable(result)) return false
+  const reasons = whatsappResumeRejectionReasons(result)
+  return reasons.includes("jd_coverage_below_floor")
+    || reasons.includes("supported_coverage_below_floor")
+    || reasons.includes("unverified_jd_terms")
+}
+
+/** The already-chosen file may go out only for the profile this run selected.
+ * No selected email means the person uploaded that file. Two emails in one file
+ * are a mixed profile and are not sent. */
+export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
+  if (!email) return true
+  const want = email.toLowerCase()
+  const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
+  return found.length === 1 && found[0] === want
 }
 
 /** Plain words for rejection codes, for the message that tells the user why a
