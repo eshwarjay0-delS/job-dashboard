@@ -61,11 +61,12 @@ export function honestProfessionalGap(result: TailorResult): boolean {
   return true
 }
 
-export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
+export function whatsappResumeRejectionReasons(result: TailorResult, opts?: { strict?: boolean }): string[] {
   const reasons: string[] = []
   const quality = result.quality
   const supported = result.supported_coverage
-  const honest = honestProfessionalGap(result)
+  // Web repair withholds anything under 95% raw overlap. The 70% band is WhatsApp delivery only.
+  const honest = !opts?.strict && honestProfessionalGap(result)
   if (!result.token) reasons.push("no_document_token")
   if (result.unchanged || !result.diff?.length) reasons.push("unchanged")
   if (result.skills_only)
@@ -99,6 +100,13 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
 
 export function acceptableWhatsAppResume(result: TailorResult): boolean {
   return whatsappResumeRejectionReasons(result).length === 0
+}
+
+/** Web download gate. Two repair passes still run, then a draft under 95% raw overlap
+ * is held with no token. Unverified claims, identity changes, and an expired budget
+ * are not waived by the WhatsApp 70% band. */
+export function acceptableWebResume(result: TailorResult): boolean {
+  return whatsappResumeRejectionReasons(result, { strict: true }).length === 0
 }
 
 /** Plain words for rejection codes, for the message that tells the user why a

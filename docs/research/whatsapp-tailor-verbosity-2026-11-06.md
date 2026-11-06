@@ -18,7 +18,7 @@ Make the WhatsApp intake → tailor → reply path use the new document or photo
 ## What changed
 
 - A new `.docx` or a readable PDF becomes the tailor source. A PDF's own lines are written into a Word file and nothing is added. A photo or an unreadable PDF clears the pending upload and the reply says an older resume was not tailored.
-- Delivery band: supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is delivered when the draft is otherwise complete. Under 70% stays held (the 28.5% and 0% cases). `TAILOR_DELIVER_WITH_SHORTFALL=0` or `JD_TERMS_ALWAYS_ON_SKILLS=0` restores the strict under-95% refusal.
+- Delivery band, WhatsApp only: supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is delivered when the draft is otherwise complete. Under 70% stays held (the 28.5% and 0% cases). `TAILOR_DELIVER_WITH_SHORTFALL=0` or `JD_TERMS_ALWAYS_ON_SKILLS=0` restores the strict under-95% refusal. The website download gate stays strict: it still repairs twice and withholds a token under 95% raw overlap. Unverified claims, a fact-changing repair, and an expired budget are not waived.
 - Full mode may keep a grounded summary up to 140 words and is instructed to keep each bullet's tools, employer, and outcome. Cache generation is 24.
 - Salesforce Security Specialist is the representative professional case in `scripts/tests/whatsapp-tailor-verbosity.test.mjs`: a grounded resume must measure at least 70% of that post, and a junk resume must measure under 70%.
 
