@@ -1059,8 +1059,8 @@ html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-
   line-height:1;
   border-radius:999px;
 }
-html.kd,html.kd body{border-radius:999px !important;overflow:hidden !important}
-html.kd .kd-bar{border:0 !important;border-radius:999px 999px 0 0 !important}
+html.kd,html.kd body{border-radius:28px !important;overflow:hidden !important}
+html.kd .kd-bar{border:0 !important;border-radius:28px 28px 0 0 !important}
 html.kd #view-copilot{
   position:fixed;
   top:48px !important;
@@ -1068,14 +1068,14 @@ html.kd #view-copilot{
   right:0;
   bottom:0;
   overflow:hidden;
-  border-radius:0 0 999px 999px !important;
+  border-radius:0 0 28px 28px !important;
 }
 html.kd .cn-card,
 html.kd .modal-card,
 html.kd .more-menu,
 html.kd .overlay{
   border:0 !important;
-  border-radius:999px !important;
+  border-radius:28px !important;
   box-shadow:none !important;
 }
 html.kd #view-copilot .overlay .bar-actions{position:sticky;top:0;z-index:40;flex-shrink:0}
@@ -1214,11 +1214,28 @@ html.kd #view-copilot #answer.following{
 /* The focus sheet was a solid colour, so the opacity slider faded the window
    behind it and the panel stayed opaque. The paper uses the slider. The letters stay dark. */
 html.kd.desktop-focus #view-copilot #overlay,
-html.kd.desktop-focus #view-copilot #card,
 html.kd.desktop-focus #view-copilot .content{
   background:transparent !important;
   background-color:transparent !important;
   background-image:none !important;
+}
+html.kd #view-copilot #card,
+html.kd.desktop-focus #view-copilot #card,
+html.kd #view-copilot .q,
+html.kd #view-copilot .a,
+html.kd #view-copilot #answer{
+  opacity:1 !important;
+  background:#fdfcf9 !important;
+  background-color:#fdfcf9 !important;
+  background-image:none !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .q span,
+html.kd #view-copilot #question,
+html.kd #view-copilot #answer,
+html.kd #view-copilot #answer li{
+  opacity:1 !important;
+  color:#15140f !important;
 }
 html.kd .kd-bar,
 html.kd #kdBar,
@@ -1227,11 +1244,16 @@ html.kd #view-copilot .manual,
 html.kd #view-copilot .statusline{
   background-color:rgba(253,252,249,max(var(--panel-a),0.94)) !important;
 }
+html.kd #view-copilot #card,
+html.kd.desktop-focus #view-copilot #card,
 html.kd #view-copilot .q,
 html.kd #view-copilot .a,
-html.kd #view-copilot .a-head{
+html.kd #view-copilot .a-head,
+html.kd #view-copilot #answer{
   opacity:1 !important;
-  background-color:rgba(253,252,249,max(var(--panel-a),0.94)) !important;
+  background:#fdfcf9 !important;
+  background-color:#fdfcf9 !important;
+  background-image:none !important;
 }
 html.kd #view-copilot .q,
 html.kd #view-copilot .q span,

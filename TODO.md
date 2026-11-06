@@ -1,3 +1,7 @@
+## 2026-11-06 — Only the corner tips are rounded, and the answer box stays solid
+
+The window corners are 28px. The question and answer sit on solid paper so nothing behind them shows through.
+
 ## 2026-11-06 — Lowering the opacity leaves the words readable
 
 The question, the answer, the title and the type line never go below a 0.94 paper, and the letters stay fully opaque.
