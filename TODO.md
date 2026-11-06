@@ -1,3 +1,11 @@
+## 2026-11-06 — System 3 branch now includes the WhatsApp tailor already on master
+
+No new screen and no new answer or resume behavior beyond keeping both sides. Pull request 229 (head 295c510a, based on 00594c59) could not use GitHub's update-branch API: 422, merge conflict, after master squash-merged pull request 228 as 986ecef7. This branch merges that master commit. The only conflicts were this file and `src/lib/plan-vision-journal.ts`. The Kompas retrieval files and the WhatsApp tailor files merged cleanly.
+
+Both behaviors stay. WhatsApp may send a complete draft at 70–94.9% raw overlap when supported coverage is at least 95%. Under 70% stays held. The website download stays the strict 95% repair/hold gate (`acceptableWebResume`). Unevidenced job-post terms stay off the skills line. A fresh WhatsApp Word upload wins over an older library file. Hybrid retrieval stays on by default (local BM25 plus dense, rerank 25 to 5). Spoken text stays separate from the raw sources. An unsourced figure, tool, or name is dropped and the reply says it is not in the sources. `KOMPAS_HYBRID_RETRIEVAL=0`, `off`, or `false` restores BM25-only and four passages. Holes A, B, and C stay locked: a first-person close or rotate does not borrow the question's figure, an interviewer resume premise is not a covered fact, and salary, visa, address, relocation, availability, and notice return before `keysFor` and the model with zero model fetches. "I relocated the Vault servers" still reaches the model. No paid token. No FluidVoice. No `KOMPAS_VERCEL_API_TOKEN`. Houston and Saint Louis profiles were not mixed.
+
+**Verified on this merged head, offline.** System 3 suite 12/12. Related retrieval, grounding, guard, premise, logistics, stress, round, and explain-length suites 390/390. Dossier grounding r8 7/7 with `KOMPAS_DOSSIER_ITEMS=1`. WhatsApp acceptance, verbosity, upload-age, and website-release suites 56/56. `tsc --noEmit` clean. Not a live model answer. No live WhatsApp send. Pull request 229 is not merged. Production is not deployed. The two notes below are the original records from each side.
+
 ## 2026-11-06 — Kompas System 3: hybrid retrieval, rerank, source grounding
 
 No new screen. Answers still look like interview speech. What changed is which source lines are retrieved and which sentences are allowed to be spoken.
@@ -7,6 +15,14 @@ Hybrid retrieval is on by default. It adds a local dense score (no paid token) t
 A spoken sentence that adds a figure, tool, or name the sources do not contain is removed, and the reply says that detail is not in the sources. The raw retrieved line is kept as retrieved. Salary, visa, address, relocation, availability, and notice questions return before any model call. "I relocated the Vault servers" is still answered.
 
 Holes A, B, and C were already fixed on master. The new tests lock them. Verified offline: system 3 suite 12/12, related retrieval/guard suites 83/83 and 374/374, tsc clean. Not a live model answer. Not deployed. The pull request is not merged.
+
+## 2026-11-06 — WhatsApp tailors the new file and can send a complete 70% draft
+
+No new screen. WhatsApp intake now treats a new Word file or a readable PDF as the resume, including while the email question is open. A photo or an unreadable PDF clears the older upload and says an older resume was not used. It does not transcribe the photo. Full-mode summaries may stay up to 140 words when the source supports them, and the experience instruction keeps the source tools instead of collapsing the bullet. Cache generation is 24 so a thinner cached draft is not replayed.
+
+**Delivery band.** Supported coverage stays at 95%. Raw job-post overlap from 70% through 94.9% is sent when the draft is otherwise complete (ATS, diff, no unverified terms, no role blockers). Under 70% is still held, including 28.5% and 0%. `TAILOR_DELIVER_WITH_SHORTFALL=0` and `JD_TERMS_ALWAYS_ON_SKILLS=0` restore the strict under-95% refusal. Unevidenced job-post terms are still not written onto the skills line.
+
+**Not verified.** No live WhatsApp send. No model generation. Not production until this branch is merged and the alias serves the merge SHA. Kompas logistics and desktop sign-in were not part of this change. That WhatsApp change later landed on master as 986ecef7 (squash of pull request 228). This pull request is the System 3 update on top of that commit, and it is still not merged.
 
 ## 2026-11-05 — Kompas relevance fold: ungrounded logistics and gateway text stay off the answer
 

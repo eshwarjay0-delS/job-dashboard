@@ -35,10 +35,10 @@ const short = (changes = {}) => ({
   ats: { score: 100, passed: true, checks: [], issues: [] }, ...changes,
 })
 
-test("Nov4: a complete file under 95% is held for repair even with legacy switches on", () => {
+test("a complete 84.3% file with 100% supported coverage is delivered; legacy switches still refuse it", () => {
   assert.equal(short().quality.status, "needs_review")
-  assert.ok(on.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"))
-  assert.equal(on.acceptableWhatsAppResume(short()), false)
+  assert.equal(on.acceptableWhatsAppResume(short()), true, on.whatsappResumeRejectionReasons(short()).join(","))
+  assert.equal(on.whatsappResumeRejectionReasons(short()).includes("jd_coverage_below_floor"), false)
   assert.equal(on.deliveredWithShortfall(short()), false)
 })
 test("item 2: switch off or job-post terms switch off restores the 95% refusal", () => {
