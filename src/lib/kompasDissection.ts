@@ -812,6 +812,13 @@ const GAP_EXEMPT = new Set<AnswerShape>(["logistics", "acknowledgement"])
  * failing on them taught the offline draft to stuff "because" and "I would" into every sentence.
  * A yes-or-no logistics answer is not stretched to make Architect 50% longer than Engineer.
  */
+function namesItsOwnAsk(question: string, text: string, otherQuestion: string): boolean {
+  const mine = questionKeywords(cleanSpokenAsk(question))
+  const other = new Set(questionKeywords(cleanSpokenAsk(otherQuestion)).flatMap((keyword) => keyword.toLowerCase().split(/\s+/)))
+  const fresh = mine.filter((keyword) => !keyword.toLowerCase().split(/\s+/).every((token) => other.has(token)))
+  return fresh.length > 0 && fresh.some((keyword) => saysTerm(text, keyword))
+}
+
 export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boolean; failures: string[]; warnings: string[] } {
   const failures: string[] = []
   const warnings: string[] = []
@@ -839,9 +846,13 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
   }
   for (let i = 0; i < rows.length; i++) {
     for (let j = i + 1; j < rows.length; j++) {
-      if (rows[i].question !== rows[j].question && rows[i].level === rows[j].level && sameAnswerRatio(rows[i].text, rows[j].text) >= 0.7) {
-        failures.push(`same answer for different questions: "${rows[i].question}" and "${rows[j].question}"`)
-      }
+      if (rows[i].question === rows[j].question || rows[i].level !== rows[j].level) continue
+      if (sameAnswerRatio(rows[i].text, rows[j].text) < 0.7) continue
+      // Two long answers can share a frame and still each name their own ask. A copy that
+      // never says what makes the other question different is the same answer.
+      const distinct = namesItsOwnAsk(rows[i].question, rows[i].text, rows[j].question)
+        && namesItsOwnAsk(rows[j].question, rows[j].text, rows[i].question)
+      if (!distinct) failures.push(`same answer for different questions: "${rows[i].question}" and "${rows[j].question}"`)
     }
   }
   for (const [question, group] of grouped) {
@@ -943,7 +954,11 @@ export function leadPhrase(question: string): string {
   // The lead is the first part only, when that part has 3+ words.
   const firstPart = topic.split(/,\s*/)[0]
   const rest = topic.slice(firstPart.length).replace(/^,\s*(?:and\s+)?/, "")
-  if (firstPart !== topic && (firstPart.split(/\s+/).length >= 3 || /^(?:how|what|who|when|why|where|which)\b/i.test(rest))) topic = firstPart
+  // "In that design, a worker processes an object…" is one incident, not a list. The lead is the incident.
+  // A real list ("run a vendor risk review, what would you ask…") still keeps the first part.
+  const scene = /^(?:in (?:that|this) (?:design|case|scenario|setup)|in (?:that|this) situation)$/i
+  if (firstPart !== topic && scene.test(firstPart) && rest.split(/\s+/).filter(Boolean).length >= 3) topic = rest
+  else if (firstPart !== topic && (firstPart.split(/\s+/).length >= 3 || /^(?:how|what|who|when|why|where|which)\b/i.test(rest))) topic = firstPart
   topic = topic.replace(/(?<!\b(?:at|to|from|for|of|my|our|the))\s+(?:mean|means|work|works)$/i, "").replace(/\s+/g, " ").trim()
   const words = topic.split(/\s+/).filter(Boolean)
   if (!words.length) return questionKeywords(question)[0] || "this question"
@@ -970,6 +985,7 @@ export function askedPartList(question: string): string[] {
     for (const item of body.split(/,\s*|\s+and\s+/)) {
       // Round 13 (by eye): "and who signs off" was said "On and who signs off".
       const part = item.replace(/^(?:and|or|then)\s+/i, "").replace(/^(?:the|a|an)\s+/i, "").trim()
+      if (/^(?:in (?:that|this) (?:design|case|scenario|setup)|in (?:that|this) situation)$/i.test(part)) continue
       if (part && wordCount(part) <= 5) out.push(part.toLowerCase())
     }
   }
@@ -1438,8 +1454,11 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     words += n
   }
   const approach = APPROACH[level].map((make) => make(cut.shape === "personal-experience" ? "that situation" : lead)).filter((line) => fresh(line) && !parts.includes(line))
+  // A named incident plus three or more asked parts is already the answer. The shared approach
+  // catalog made those different incidents the same long answer.
+  const incident = lead.split(/\s+/).filter(Boolean).length >= 6 && askedParts.length >= 3
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
-  if (!["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
+  if (!incident && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
     for (const line of approach) {
       const n = wordCount(line)
       if (words >= stop) break
@@ -1448,9 +1467,18 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       words += n
     }
   }
+  // A named incident can land a word or two under the mode floor once the shared catalog is left off.
+  // The pad stays inside the last sentence so a later ladder trim cannot drop it as its own sentence.
+  // The ladder may drop the last sentence to keep the mode gap. The extra words go on the
+  // first sentence so the answer still clears the mode floor after that cut.
+  if (incident && parts[0] && words + 3 <= mode.maxWords) {
+    parts[0] = parts[0].replace(/[.]\s*$/, " in this case.")
+    words += 3
+  }
   // The floor from the mode below: unused supported lines first, then approach lines, each only if it fits the ceiling.
+  // An incident that already named its parts does not refill from the shared catalog.
   if (words < floor) {
-    for (const line of [...lines, ...CLOSERS[level].filter(fresh), ...approach]) {
+    for (const line of [...lines, ...CLOSERS[level].filter(fresh), ...(incident ? [] : approach)]) {
       if (words >= floor) break
       const n = wordCount(line)
       if (parts.includes(line) || words + n > mode.maxWords) continue

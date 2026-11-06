@@ -100,6 +100,16 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026, distinct incidents
+
+Code-level only. `KOMPAS_EVAL_TOKEN` was unset. Live scored folds remain 0. Desktop 10-fold harness stays an offline stand-in, not a Windows session.
+
+On master `21ba302`, 150 offline drafts of the 50-question fixture had 505 pairs at Jaccard >= 0.7. Ten of those questions start with "In that design," and then name a different incident. The stand-in lead stopped at "in that design", so engineer, director, and architect each returned the same answer for a worker-ownership incident and a signed-updater incident. Ratio 1.000 at every level.
+
+After the lead keeps the incident, and a named incident no longer refills from the shared approach catalog: that pair is engineer 0.455, director 0.667, architect 0.778. Each answer names its own incident and not the other. The 150-draft gate reports 0 same-answer failures. Raw pairs still at Jaccard >= 0.7: 153, and each of those names its own ask. Length failures: 0. Mode length gaps under 0.50: 0. Answers over the mode ceiling: 0. Offline sample remains 15 answers, 0 failures.
+
+TODO.md and the plan journal were not edited. Pull request 234 already changes both and does not merge cleanly.
+
 ## Fold log, 6 November 2026
 
 Code-level only. `KOMPAS_EVAL_TOKEN` was unset. Live scored folds remain 0. Production at the start of the run was READY `dpl_BdCvdFcfTKPzLAV4dutnkZGFfNc8` on `986ecef7c318bb23fd7e338db3fc63f8843dc3be`.

@@ -5,7 +5,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
   askedPartList, asksForCode, dissectQuestion, dissectionPrompt,   draftSpokenAnswer, dropParaphrasedRepeat, evaluateLiveAnswers, standInFence,
-  experienceLines, isProviderErrorAnswer, leadPhrase, partsScale, questionKeywords, requiredSentence, sentencesOf, settleSpokenAnswer,
+  experienceLines, isProviderErrorAnswer, leadPhrase, partsScale, questionKeywords, requiredSentence, sameAnswerRatio, sentencesOf, settleSpokenAnswer,
   topicOfAsk, trimToWords, wordCount,
 } from "../../src/lib/kompasDissection.ts"
 import { applyGuards, questionFigures } from "../../src/lib/kompasGuards.ts"
@@ -99,6 +99,31 @@ test("with nothing matching in the resume, the draft says so instead of reusing 
   const text = draftSpokenAnswer(HITACHI[2], "engineer", "## Experience\n- Baked bread for a busy cafe every morning before six.\n")
   assert.match(text, /does not show this exact work/)
   assert.equal(/bread/.test(text), false)
+})
+
+test("two incidents that share a frame do not get one answer", () => {
+  const worker = "In that design, a worker processes an object after its ownership changes. Walk through diagnosis, competing hypotheses, safe containment and rollback."
+  const updater = "In that design, a signed updater launches an unsigned child used by a critical service. Walk through diagnosis, competing hypotheses, safe containment and rollback."
+  assert.equal(leadPhrase(worker), "a worker processes an object after its ownership changes")
+  assert.equal(leadPhrase(updater), "a signed updater launches an unsigned child used by a critical service")
+  const rows = []
+  for (const level of LEVELS) {
+    const left = draftSpokenAnswer(worker, level, RESUME)
+    const right = draftSpokenAnswer(updater, level, RESUME)
+    assert.match(left, /worker/)
+    assert.match(right, /updater/)
+    assert.equal(/updater/.test(left), false, level)
+    assert.equal(/worker/.test(right), false, level)
+    assert.ok(sameAnswerRatio(left, right) < 1, `${level} ${sameAnswerRatio(left, right)}`)
+    rows.push({ question: worker, level, text: left }, { question: updater, level, text: right })
+  }
+  assert.equal(evaluateLiveAnswers(rows, RESUME).failures.filter((f) => f.startsWith("same")).length, 0)
+  const copied = "On in that design, here is what I do in practice. My resume does not show this exact work."
+  const same = evaluateLiveAnswers([
+    { question: worker, level: "engineer", text: copied },
+    { question: updater, level: "engineer", text: copied },
+  ], RESUME)
+  assert.ok(same.failures.some((f) => /same answer for different questions/.test(f)))
 })
 
 test("lead phrases and asked parts come from the interviewer's words", () => {
