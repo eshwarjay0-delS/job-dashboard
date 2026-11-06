@@ -908,11 +908,31 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   const tailorWithin = (opts: Parameters<typeof runTailor>[0]) => {
     const limit = Math.max(1000, Math.min(opts.maxMs || maxMs, maxMs))
-    let timer: ReturnType<typeof setTimeout> | undefined
+    // The plan is two pre-edit passes, the constructed JD, the in-place rewrite, and one extra
+    // pass when coverage is not above 95. On a full WhatsApp budget, export can finish a few
+    // seconds after the model deadline, and that file is the one to send. A hung call, or a
+    // budget too short to hold that export, rejects at the deadline so the chat is told the
+    // rewrite ran out of time instead of sitting on "still waiting".
+    const work = runTailor({ ...opts, maxMs: limit })
+    const graceMs = limit >= 20_000 ? 8000 : 0
     return new Promise<TailorResult>((resolve, reject) => {
-      timer = setTimeout(() => reject(new Error("Tailoring timed out")), limit)
-      const stop = () => { try { clearTimeout(timer) } catch { /* the timer already fired */ } }
-      runTailor(opts).then(value => { stop(); resolve(value) }, error => { stop(); reject(error) })
+      let settled = false
+      const finish = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        fn()
+      }
+      const timer = setTimeout(() => {
+        const grace = setTimeout(() => finish(() => reject(new Error("Tailoring timed out"))), graceMs)
+        work.then(
+          value => { clearTimeout(grace); finish(() => resolve(value)) },
+          error => { clearTimeout(grace); finish(() => reject(error)) },
+        )
+      }, limit)
+      work.then(
+        value => { clearTimeout(timer); finish(() => resolve(value)) },
+        error => { clearTimeout(timer); finish(() => reject(error)) },
+      )
     })
   }
   let result: TailorResult
@@ -923,8 +943,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
       givenPath: session.resumePath,
       mode: "full",
-      // Allow the primary full rewrite more time for long JDs and multi-page DOCX files; reserve the remaining window for validation and delivery.
-      maxMs: maxMs >= 120_000 ? Math.min(195_000, Math.floor(maxMs * 0.82)) : maxMs,
+      // The constructed-JD plan runs inside this one call, including the extra pass. Leave a short
+      // window so the Word file can still be checked and sent. Do not cut the call so short that
+      // the extra pass is dropped and the original library file goes out instead.
+      maxMs: Math.max(45_000, maxMs - 25_000),
       // "redo" asks for a fresh rewrite, not the one kept for the same inputs.
       ...(files?.redo ? { noCache: true } : {}),
       // Summary is rewritten in full mode so the tailored file keeps a complete, grounded profile.

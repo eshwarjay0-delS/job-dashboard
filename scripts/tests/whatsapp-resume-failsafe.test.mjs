@@ -183,6 +183,32 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
+test('a slow constructed-JD rewrite sends the rewritten file, not the original', async () => {
+  const finished = {
+    token: 'iam-rewritten', score: 97, coverage: 97, supported_coverage: 98,
+    diff: [{ section: 'Experience', before: 'Administered access.', after: 'Administered access, using SailPoint and CyberArk.' }],
+    quality: { status: 'coverage_met', matched: 97, total: 100, missing: [], incomplete: false },
+    quality_blockers: [],
+    ats: { score: 100, passed: true, checks: [], issues: [] },
+    keyword_analysis: { matched: ['okta'], added: ['sailpoint', 'cyberark'], missing: [] },
+  }
+  const { generate, docs, said, filesFor } = harness(async () => {
+    await new Promise(resolve => setTimeout(resolve, 50))
+    return finished
+  })
+  await generate('15550021', {
+    jdId: 'iam-slow', jd: 'IAM consultant with SailPoint and CyberArk',
+    resumePath: HOUSTON_PATH, resumeName: 'Senior IAM Business Analyst',
+  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 1)
+  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].caption, /97%/)
+  assert.doesNotMatch(docs[0].caption, /was not rewritten/)
+  assert.doesNotMatch(docs[0].caption, /did not finish cleanly/)
+  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+})
+
 test('roles that were not rewritten still send the chosen library file', async () => {
   const unfinished = {
     ...low,

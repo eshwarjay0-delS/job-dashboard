@@ -23,6 +23,11 @@ test('two pre-edit passes are summed into the JD before any draft', () => {
   assert.match(tailor, /if \(expanded\.constructedJd\) jd = expanded\.constructedJd/)
   assert.match(tailor, /const scoreKws = floorTerms\(jd, targetKeywords\(jdExtracted, jdGenerated, jd\)\)/)
   assert.match(tailor, /coverageNeedsAnotherPass\(coveragePercent\(shareOf\(best\.afterKw\)\)\)/)
+  assert.doesNotMatch(tailor, /deadline - Date\.now\(\) >= 8000/)
+  assert.match(tailor, /weaveExperienceRepresentation/)
+  assert.match(tailor, /extraPassReserveMs/)
+  assert.match(tailor, /Write every known JD term into the current role and the previous roles/)
+  assert.match(read('src/lib/claude.ts'), /Write the known JD tools into EVERY role/)
   assert.match(tailor, /generateRelatedPass\(/)
   assert.match(tailor, /placeConstructedOverflow/)
   assert.match(tailor, /added: \[\]/)
@@ -30,7 +35,7 @@ test('two pre-edit passes are summed into the JD before any draft', () => {
   assert.match(claude, /const second = await generateRelatedPass/)
 })
 
-test('labelled skills terms are not an experience claim, and a bullet claim still blocks', () => {
+test('known JD terms belong in existing project bullets, and a new employer or date does not', () => {
   assert.match(tailor, /unverifiedClaims\(/)
   const source = read('src/lib/constructed-jd.ts')
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -56,8 +61,24 @@ test('labelled skills terms are not an experience claim, and a bullet claim stil
   assert.match(jd, /Monitor Splunk and Okta/)
   assert.match(jd.toLowerCase(), /illumio/)
   assert.match(jd.toLowerCase(), /micro-segmentation/)
-  assert.equal(JSON.stringify(exports.unverifiedClaims(['illumio', 'zscaler'], ['illumio'], (term) => term === 'zscaler')), JSON.stringify(['zscaler']))
-  assert.equal(JSON.stringify(exports.unverifiedClaims(['illumio'], ['Illumio'], () => false)), JSON.stringify([]))
+  assert.equal(JSON.stringify(exports.unverifiedClaims(['illumio', 'zscaler'], ['illumio'], () => false)), JSON.stringify([]))
+  assert.equal(JSON.stringify(exports.unverifiedClaims(['zscaler inc'], [], () => true)), JSON.stringify(['zscaler inc']))
+  assert.equal(exports.inventedExperienceFrame('Administered Okta for the bank.', 'Administered Okta for Zscaler Inc in 2030.'), true)
+  assert.equal(exports.inventedExperienceFrame('Administered Okta for the bank.', 'Administered Okta and SailPoint for the bank.'), false)
+  const woven = exports.weaveExperienceRepresentation(
+    [{ bullets: [{ idx: 1, text: 'Lead identity analyst for the bank access program.' }, { idx: 2, text: '• Administered role-based access across Okta and Azure AD, cutting orphaned accounts by 40%.' }, { idx: 3, text: 'Environments: Okta, Splunk' }] },
+     { bullets: [{ idx: 4, text: 'Supported workforce identity for the earlier client.' }, { idx: 5, text: '• Onboarded business applications and documented approval workflows.' }] }],
+    [],
+    ['SailPoint', 'CyberArk', 'problem solving'],
+  )
+  const project = woven.bullets.map(b => b.text).join('\n')
+  assert.match(project, /SailPoint/)
+  assert.match(project, /CyberArk/)
+  assert.match(project, /problem solving/)
+  assert.equal(woven.bullets.some(b => b.idx === 3), false)
+  assert.equal(woven.bullets.length, 3)
+  assert.match(project, /, using /)
+  assert.equal(exports.inventedExperienceFrame('• Administered Okta.', woven.bullets.find(b => /SailPoint/.test(b.text)).text), false)
   const line = exports.labelledSkillEdit([{ idx: 3, text: 'Security Operations: Splunk' }], ['Illumio', 'ZTNA'])
   assert.match(line.text, /Job-post terms: Illumio, ZTNA/)
   assert.match(line.text, /^Security Operations:/)
@@ -133,6 +154,8 @@ test('a representative file stays at or above 95% without a new employer or a ne
     assert.equal(out.lacking, 0)
     assert.ok(out.changedBullets >= 2)
     assert.equal(out.bulletCountBefore, out.bulletCountAfter)
+    assert.ok(out.inBullets.some(t => /illumio/i.test(t)), `Illumio should be in a project bullet, got ${out.inBullets.join(', ')}`)
+    assert.ok(out.inBullets.some(t => /zscaler/i.test(t)))
     assert.equal(out.labelInFile, true)
     assert.equal(out.email, 'jordan.test@example.com')
     assert.equal(out.inventedEmployer, false)
@@ -141,7 +164,7 @@ test('a representative file stays at or above 95% without a new employer or a ne
     assert.equal(out.atsPassed, true, out.atsIssues.join('; '))
     assert.equal(out.web, true, out.webReasons.join(', '))
     assert.equal(out.whatsApp, true, out.webReasons.join(', '))
-    assert.deepEqual(out.inBullets, [])
+    assert.ok(out.inBullets.length >= 4, `project bullets should carry the constructed JD, got ${out.inBullets.join(', ')}`)
     assert.ok(!out.blockers.includes('roles_unrewritten'))
     assert.ok(!out.blockers.includes('unverified_jd_terms'))
   } finally {

@@ -1,3 +1,15 @@
+## 2026-11-06 — Constructed JD is written into the existing project bullets
+
+No new screen. The tailor and the WhatsApp send path changed.
+
+**What failed.** A production WhatsApp run on the constructed-JD deploy (`21ba3028`) finished in 138 seconds at 100 percent coverage and was still rejected. Thirty-two paragraphs were rolled back because they named JD tools the older bullets did not, 118 terms were dumped on the skills line, the ATS check failed, and the chat received the original library file with "did not finish cleanly." The 8:41 AM CT thread matches that shape. Its exact log line is outside hobby retention.
+
+**What changed.** Known JD terms are written into the current role and the previous roles as project language (`using` / `applying` / `covering` on the existing lines). A new employer, year, email, or phone is removed. The one extra generate-then-tailor pass is reserved time and is not skipped when fewer than 8 seconds remain. A rewrite that finishes is the file WhatsApp sends. The original stays the backup when the run throws, times out, comes back partial, or is skills-only. Houston, Saint Louis, and eshwarjay06 are not mixed. The website 95 percent gate and the WhatsApp 70–94.9 percent band stay.
+
+**Checked.** Offline. The same five suites plus `scripts/tests/whatsapp-5fold.test.mjs`: 66 pass, 0 fail. The 5-fold stall (300ms budget) reaches `done` and says the rewrite ran out of time. The 8-second export grace applies only when the tailor budget is at least 20 seconds, so a usable file that lands just after a full deadline is still kept. `tsc --noEmit` was clean before this grace adjustment. ESLint was clean on the edited files. Not a live model. Not a live WhatsApp send. Not production until this pull request is merged. GitHub Actions run 42249274226 failed on the unconditional grace; this push is the fix. Not merged.
+
+**Next.** After merge, one live jayeshwar44 IAM job should come back as a rewritten docx above 95 percent of the constructed JD, with the same employers and dates.
+
 ## 2026-11-06 — Desktop 3-day session, captions first, remembered hide, asInvoker
 
 No new screen on the website. The Windows shell is what changed, plus the desktop-session response now includes `user_id`.
