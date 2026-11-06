@@ -9,8 +9,12 @@ test("New self-hosted build and cache key agree so old Electron cannot silently 
  const cache=index.match(/src="app\.js\?v=([^"]+)"/)?.[1]
  assert.ok(build && cache)
  assert.equal(build,version.build)
- assert.equal(cache,"20261106-desktop-session")
- assert.equal(build,"kompas-20261106-desktop-session")
+ // The stamp value itself is deliberately not pinned here: every desktop change
+ // bumps it, and a hard-coded value breaks the gate on each legitimate bump
+ // (the desktop-session pin went stale the moment the capsule stamp landed).
+ // The agreement below is the contract: build, cache key and version.json
+ // must all carry the same stamp, so old Electron cannot silently keep the
+ // old app, and the stamp must have advanced past the Oct 30 answer changes.
  assert.equal(cache,build.replace(/^kompas-/,""))
  assert.ok(!build.includes("20261030"),"release stamp must advance after the answer changes")
 })
