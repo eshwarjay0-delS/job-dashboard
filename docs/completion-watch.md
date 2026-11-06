@@ -30,6 +30,10 @@ Keep source requests and approval state distinct from assumptions. Do not collec
 
 A pull request adds `src/lib/kompasJevRoute.ts` in front of the answer model call. Question class plus the existing retrieval coverage choose go, confirm, or stop. Personal logistics still returns before the key read. An experience story with middling coverage confirms on the existing answer card and does not fetch a model. A lexical miss still generates. No TypeSafe Jev. Offline: the new suite and the related logistics, grounding, System 3, speed, source, and relevance suites passed 224 and failed 0. `tsc --noEmit` was clean. Not merged. Not a live model, WhatsApp, or desktop session. Not deployed.
 
+## 6 November 2026 — Lens PEER_VOICE v3 onto the route-table master
+
+Checked origin/master `eae0b30` (PR #245, the route table). The unpublished base `fa8f7026` was not pushed. Only the v3 patch was applied, sha256 `995e2c5ab4bb412b348eabe53d23e3c18b749f44801873fd185984c749dcf169`. `REALISM` is unchanged. `PEER_VOICE` is appended in `lensBlock`. Logistics asks stay empty. The route table, System 3, the resume tailor, WhatsApp send, and dictation repairs were not edited. Offline: peer voice 4/4, lens r1 9/9, lens r2 8/8, lens r3 12 pass and 2 fail. The two r3 failures are the same ones already on `eae0b30`. Not a live desktop session, not a WhatsApp send, and not a production merge. Pull request 246 is the handoff.
+
 ## 6 November 2026 — false ATS hold on a finished WhatsApp rewrite
 
 The 12:08 PM America/Chicago send on jayeshwar44 (request fnnrf-1793988396338, deployment dpl_2aTkS5YJcFNsJeKjtWo26tYzkxzA, commit f1ba579) scored 100 percent and then sent the original library file. The ATS check ran and failed. That single blocker labelled the quality report needs_review. The Projects section bucket, glued months, and a name on the contact line were the false misses. A file with no email and no phone is still held. Offline: 35 of 36 library resumes pass the check, and the focused suites passed 92/92. No live WhatsApp send. Not deployed. The pull request is the handoff.
