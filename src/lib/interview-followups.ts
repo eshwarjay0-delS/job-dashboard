@@ -22,10 +22,10 @@ export async function writeTrackState(userId: string, state: TrackState): Promis
 }
 
 /** One daily watchdog run, as the board and the owner can read it: when it ran, how many people it checked, what went out, what was due and stayed, and what failed. A day with no sends is a record with zeros, never silence. */
-export type WatchdogRunUser = { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string }
+export type WatchdogRunUser = { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string; submissions?: { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string } }
 export type WatchdogRun = { at: number; usersChecked: number; users: Record<string, WatchdogRunUser> }
 /** The latest run for one person, as the interview-track answer carries it. */
-export type WatchdogRunSummary = { at: number; usersChecked: number; sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string }
+export type WatchdogRunSummary = { at: number; usersChecked: number; sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string; submissions?: { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[]; error?: string } }
 const watchdogKey = "mail/interviews/watchdog-latest.json"
 export async function writeWatchdogRun(run: WatchdogRun): Promise<void> {
   try { await blob.put(watchdogKey, JSON.stringify(run)) } catch { /* the run still went out; the record is only the trace */ }
@@ -37,7 +37,7 @@ export async function readWatchdogRun(userId: string): Promise<WatchdogRunSummar
     const run = JSON.parse(raw) as WatchdogRun
     const u = run.users?.[userId]
     if (!u) return null
-    return { at: run.at, usersChecked: run.usersChecked, sent: u.sent, failed: u.failed, dueButUnsent: Array.isArray(u.dueButUnsent) ? u.dueButUnsent : [], ...(u.error ? { error: u.error } : {}) }
+    return { at: run.at, usersChecked: run.usersChecked, sent: u.sent, failed: u.failed, dueButUnsent: Array.isArray(u.dueButUnsent) ? u.dueButUnsent : [], ...(u.error ? { error: u.error } : {}), ...(u.submissions ? { submissions: u.submissions } : {}) }
   } catch { return null }
 }
 

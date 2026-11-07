@@ -16,7 +16,10 @@ import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
+import { filterChainsByStage } from "@/lib/submission-track"
+import type { Tracked } from "@/lib/interview-track"
 import StandingSection from "./_components/standing"
+import SubmissionFollowUp from "./_components/submission-followup"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
   { key: "rtr", label: "RTR" },
@@ -282,7 +285,7 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
 }
 
 
-function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => void }) {
+function ChainRow({ chain, onView, target, words, canSendForYou, onSubChanged }: { chain: ApplicationChain; onView: () => void; target?: Tracked | null; words?: { subject: string; body: string }; canSendForYou?: boolean; onSubChanged?: () => void }) {
   // Declutter, Oct 2026: a row shows only company, role, quiet warning, and the
   // progress bar. The latest quote, journey numbers, and contact pills — the
   // detail that made every row a wall — wait behind one tap, per row.
@@ -356,9 +359,12 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
             cursor: "pointer", color: "var(--text)",
           }}
         >
-          <Eye size={14} /> View
+          <Eye size={14} /> {target && target.action !== "none" ? "Open and follow up" : "View"}
         </button>
       </div>
+      {target && words && onSubChanged && (
+        <SubmissionFollowUp target={target} words={words} canSendForYou={!!canSendForYou} onChanged={onSubChanged} />
+      )}
       <div style={{ marginTop: 10 }}>
         <TrackBar chain={chain} />
       </div>
@@ -389,6 +395,18 @@ function OverviewInner() {
   const [scanStatus, setScanStatus] = useState("")
   const [error, setError] = useState("")
   const [viewId, setViewId] = useState<string | null>(null)
+  // Stage filter (7 Nov 2026): show all rows, or only the rows at one stage.
+  const [stageFilter, setStageFilter] = useState<ChainStageKey | "all">("all")
+  // Submission follow-ups (7 Nov 2026): the Interviews tab's machinery,
+  // pointed at these chains. Loaded once; a row's tap reloads it.
+  const [subTrack, setSubTrack] = useState<{ active: Tracked[]; words: Record<string, { subject: string; body: string }>; canSendForYou: boolean } | null>(null)
+  const loadSubTrack = () => {
+    fetch("/api/gmail/submission-track", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j?.ok) setSubTrack({ active: j.active || [], words: j.words || {}, canSendForYou: !!j.canSendForYou }) })
+      .catch(() => {})
+  }
+  useEffect(() => { loadSubTrack() }, [])
   // Declutter, Oct 2026: "What matters now" used to sit above everything and
   // repeat the tables below it. It now waits behind one tap, after the tables.
   const [showStanding, setShowStanding] = useState(false)
@@ -477,7 +495,7 @@ function OverviewInner() {
   const { rails, waiting } = useMemo(() => {
     const rails: ApplicationChain[] = []
     const waiting: ApplicationChain[] = []
-    for (const c of chains) {
+    for (const c of filterChainsByStage(chains, stageFilter)) {
       if (!c.stops.some(s => s.key !== "rtr" && s.reached)) waiting.push(c)
       else rails.push(c)
     }
@@ -485,7 +503,11 @@ function OverviewInner() {
     rails.sort(byActivity)
     waiting.sort(byActivity)
     return { rails, waiting }
-  }, [chains])
+  }, [chains, stageFilter])
+
+  // The follow-up target for one chain, if the submission track knows it.
+  const targetFor = (c: ApplicationChain): Tracked | null =>
+    subTrack?.active.find(t => t.id === `${c.accountEmail}:${c.threadId}`) || null
 
   const viewing = viewId ? chains.find(c => (c.threadId === viewId || c.sourceThreadIds?.includes(viewId)) && (!account || c.accountEmail === account)) || null : null
   const interviews = chains.filter(c => c.stops.some(s => s.key === "interview" && s.reached)).length
@@ -503,6 +525,7 @@ function OverviewInner() {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={filter} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
+        <label>Stage <select aria-label="Filter by stage" value={stageFilter} onChange={e => setStageFilter(e.target.value as ChainStageKey | "all")}><option value="all">All stages</option>{STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select></label>
         <button className="btn-outline" disabled={scanning} onClick={() => setRefreshKey(k => k + 1)}>{scanning ? "Reading history…" : "Refresh history"}</button>
       </div>
       <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>
@@ -544,9 +567,12 @@ function OverviewInner() {
           <Card style={{ padding: "4px 18px 14px", marginBottom: 26 }}>
             {rails.length === 0 ? (
               <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>No submission or later stage evidence found in this scan.</p>
-            ) : rails.map(c => (
-              <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
-            ))}
+            ) : rails.map(c => {
+              const target = targetFor(c)
+              return (
+                <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} target={target} words={target ? subTrack?.words[target.id] : undefined} canSendForYou={subTrack?.canSendForYou} onSubChanged={loadSubTrack} />
+              )
+            })}
           </Card>
 
           {/* Waiting to board */}
@@ -557,9 +583,12 @@ function OverviewInner() {
           <Card style={{ padding: "4px 18px 14px" }}>
             {waiting.length === 0 ? (
               <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>Nothing waiting.</p>
-            ) : waiting.map(c => (
-              <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
-            ))}
+            ) : waiting.map(c => {
+              const target = targetFor(c)
+              return (
+                <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} target={target} words={target ? subTrack?.words[target.id] : undefined} canSendForYou={subTrack?.canSendForYou} onSubChanged={loadSubTrack} />
+              )
+            })}
           </Card>
 
           <div style={{ marginTop: 26 }}>

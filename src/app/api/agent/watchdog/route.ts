@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { fetchClassifiedThreads } from "../_tools"
 import { sendInterviewFollowUps, writeWatchdogRun, type WatchdogRunUser } from "@/lib/interview-followups"
+import { sendSubmissionFollowUps } from "@/lib/submission-followups"
 import { runChecks } from "@/lib/agent/watchdog-checks"
 
 export const runtime = "nodejs"
@@ -103,6 +104,7 @@ export async function GET(req: NextRequest) {
 
   const results: Record<string, { checked: number; notified: number } | { error: string }> = {}
   const followUps: Record<string, { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[] } | { error: string }> = {}
+  const submissionFollowUps: Record<string, { sent: number; failed: number; dueButUnsent: { id: string; reason: string }[] } | { error: string }> = {}
   for (const uid of userIds) {
     try {
       results[uid] = await runForUser(uid)
@@ -119,15 +121,27 @@ export async function GET(req: NextRequest) {
     } catch (err) {
       followUps[uid] = { error: String(err).slice(0, 200) }
     }
+    // The weekly submission follow-ups a person asked to have sent for them (7 Nov 2026, src/lib/submission-followups.ts):
+    // the same daily job, the same standing word, recorded apart from the interviews so the two traces never mix.
+    try {
+      const { data } = await service.from("profiles").select("full_name").eq("id", uid).maybeSingle()
+      const first = String((data as { full_name?: string } | null)?.full_name || "").trim().split(/\s+/)[0] || ""
+      submissionFollowUps[uid] = await sendSubmissionFollowUps(uid, first)
+    } catch (err) {
+      submissionFollowUps[uid] = { error: String(err).slice(0, 200) }
+    }
   }
   // The run record: what the day's check did for every person, kept in Blob so a silent miss can be seen afterwards.
   const users: Record<string, WatchdogRunUser> = {}
   for (const uid of userIds) {
     const f = followUps[uid]
-    users[uid] = f && "sent" in f ? { sent: f.sent, failed: f.failed, dueButUnsent: f.dueButUnsent } : { sent: 0, failed: 0, dueButUnsent: [], error: f && "error" in f ? f.error : "The run did not report." }
+    const s = submissionFollowUps[uid]
+    users[uid] = f && "sent" in f
+      ? { sent: f.sent, failed: f.failed, dueButUnsent: f.dueButUnsent, ...(s && "sent" in s ? { submissions: { sent: s.sent, failed: s.failed, dueButUnsent: s.dueButUnsent } } : s && "error" in s ? { submissions: { sent: 0, failed: 0, dueButUnsent: [], error: s.error } } : {}) }
+      : { sent: 0, failed: 0, dueButUnsent: [], error: f && "error" in f ? f.error : "The run did not report." }
   }
   await writeWatchdogRun({ at: Date.now(), usersChecked: userIds.length, users })
-  return NextResponse.json({ ok: true, users: userIds.length, results, followUps })
+  return NextResponse.json({ ok: true, users: userIds.length, results, followUps, submissionFollowUps })
 }
 
 // ── POST: on-demand run for the signed-in user ────────────────────────────
