@@ -281,7 +281,7 @@ function MindMap({ chain, onClose, target, words, canSendForYou, onSubChanged }:
             and the weekly scheduling, with the stage words. The panel itself
             stays silent when there is nothing to follow up, so the heading
             only renders when the panel will show; keep the two in step. */}
-        {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && !target.theyWrote && words && onSubChanged && (
+        {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && words && onSubChanged && (
           <div style={{ marginTop: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 8 }}>
               Follow up

@@ -40,13 +40,15 @@ export default function SubmissionFollowUp({ target, words, canSendForYou, onCha
   const [editBody, setEditBody] = useState("")
 
   // No follow-up control when there is nothing to follow up: the submission
-  // is closed, the recruiter wrote last, there is no outside contact, or the
-  // contact is one of his own recruiters. The row's View button still reads
+  // is closed, there is no outside contact, or the contact is one of his own
+  // recruiters. The recruiter writing last does NOT hide it: that is the
+  // normal waiting state, and a manual tap is his word to follow up even
+  // then (owner order, 7 Nov 2026). The row's View button still reads
   // "Open and follow up" when there is something to do (a reply to read).
-  if (target.phase !== "waiting" || !target.contact || target.contact.recruiter || target.theyWrote) return null
+  if (target.phase !== "waiting" || !target.contact || target.contact.recruiter) return null
   const name = (target.contact?.name || target.contact?.email || "them").split(/\s+/)[0]
   const mine = !!target.forYou?.on
-  const sendBlock = submissionSendNowBlockReason({ terminal: null, contact: target.contact, theyWrote: target.theyWrote })
+  const sendBlock = submissionSendNowBlockReason({ terminal: null, contact: target.contact })
   const busyFor = busy !== ""
 
   const choose = async (action: "send_for_me" | "stop_sending" | "save_words" | "set_days" | "send_now", customWords?: { subject: string; body: string }, days?: number[]): Promise<boolean> => {
