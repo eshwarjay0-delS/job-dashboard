@@ -75,7 +75,7 @@ export function Papers({ account = "", onCount }: { account?: string; onCount?: 
             {p.people.map(x => <Who key={x.email} p={x} onChanged={() => setAgain(n => n + 1)} />)}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <Link href={openHref(p.threadId)} className={p.answered ? "btn-outline" : "btn-accent"} style={{ minHeight: 44, padding: "0 18px", fontSize: 15, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>{p.answered ? "Open" : "Open and reply"}</Link>
+            <Link href={openHref(p.threadId)} className={p.answered ? "btn-outline" : "btn-accent"} style={{ minHeight: 44, padding: "0 18px", fontSize: 15, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>{p.answered ? "Open" : "Open and follow up"}</Link>
             <button type="button" className="btn-ghost" aria-expanded={history === p.threadId} onClick={() => setHistory(h => (h === p.threadId ? "" : p.threadId))} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>
               {history === p.threadId ? "Close the history" : `History with ${(p.from.name || p.from.email).split(/\s+/)[0]}`}
             </button>

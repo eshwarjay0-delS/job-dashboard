@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rateLimit"
 
 // GET /api/gmail/conversation?id=<thread id>&account=<the inbox it is in, when known>
 // One conversation as a row of the inbox, from the kept copy. The inbox page holds the last 30 days; Overview and
-// Follow-ups point at conversations up to 90 days old ("Open and nudge" on one that has been quiet for six weeks). When
+// Follow-ups point at conversations up to 90 days old ("Open and follow up" on one that has been quiet for six weeks). When
 // the page is asked to open one it does not hold, it asks here, so that the conversation asked for is the one shown
 // and never the first one in the list in its place.
 // It reads one kept row and never calls Gmail. Output { ok, mail } or 404 { ok: false, error }.

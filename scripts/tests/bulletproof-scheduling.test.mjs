@@ -90,3 +90,15 @@ test('the declutter removals: nothing dead is left showing', () => {
   assert.ok(calendar.includes('title="Older week"') && calendar.includes('title="Newer week"'), 'the past view keeps its week buttons')
   assert.ok(calendar.includes('setWeekOff'), 'the past view buttons still move weeks')
 })
+
+test('no thread link anywhere still reads Open and reply', () => {
+  // Owner order, 6 Nov 2026: the thread link reads Open and follow up whenever
+  // there is something to do; there is no Open and reply label anywhere. Two
+  // survived the Nov 6 fix (papers, standing) and were renamed here.
+  for (const p of ['src/app/dashboard/mail/_components/papers.tsx', 'src/app/dashboard/overview/_components/standing.tsx']) {
+    const src = read(p)
+    assert.ok(!src.includes('Open and reply'), `${p} still reads Open and reply`)
+    assert.ok(!src.includes('Open and nudge'), `${p} still reads Open and nudge`)
+    assert.ok(src.includes('Open and follow up'), `${p} does not read Open and follow up`)
+  }
+})
