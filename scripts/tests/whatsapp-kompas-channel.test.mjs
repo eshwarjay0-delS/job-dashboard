@@ -5,6 +5,7 @@ import { createRequire } from "node:module"
 import { runInNewContext } from "node:vm"
 import ts from "typescript"
 import { splitDistinctAsks } from "../../src/lib/kompasAnswer.ts"
+import { mergeQuestionSpans } from "../../src/lib/kompasQuestionWindow.ts"
 
 const nodeRequire = createRequire(import.meta.url)
 const revisions = new Map()
@@ -80,6 +81,7 @@ runInNewContext(compiled("src/lib/whatsapp-kompas-channel.ts"), {
     "@/lib/kompas-session-store": { sharedKompasStore: () => store },
     "@/lib/kompas-shared-turn": { sharedKompasTurn: sharedTurn },
     "@/lib/kompasAnswer": { splitDistinctAsks },
+    "@/lib/kompasQuestionWindow": { mergeQuestionSpans },
     "@/lib/whatsapp-kompas": { kompasTransition: reducer.exports.kompasTransition, classifyKompasPastedSource: reducer.exports.classifyKompasPastedSource },
   })[key] || nodeRequire(key),
   Buffer, Date,
