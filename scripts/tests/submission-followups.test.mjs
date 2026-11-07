@@ -124,13 +124,40 @@ test('the follow-up goes to the person who last wrote, or the contact with the m
   assert.equal(submissionContact(noMail), null, 'a contact with no email address cannot be written to')
 })
 
-test('the hard blocks say why, in plain words — and none of them is the four-count', () => {
-  const open = { terminal: null, contact, theyWrote: false }
+test('the hard blocks say why, in plain words — and none of them is the four-count or the recruiter writing last', () => {
+  const open = { terminal: null, contact }
   assert.equal(submissionSendNowBlockReason(open), '')
-  assert.equal(submissionSendNowBlockReason({ ...open, theyWrote: true }), 'The recruiter wrote last, so there is nothing to follow up right now.')
   assert.equal(submissionSendNowBlockReason({ ...open, contact: { ...contact, recruiter: true } }), 'This contact is one of your own recruiters, so nothing is sent to them.')
   assert.equal(submissionSendNowBlockReason({ ...open, contact: null }), 'There is no outside contact to follow up with on this submission.')
   assert.equal(submissionSendNowBlockReason({ ...open, terminal: 'rejected' }), 'This submission is closed, so Send now can\'t go out.')
+})
+
+test('the follow-up panel shows on every open row, even when the recruiter wrote last', () => {
+  // Owner order, 7 Nov 2026: he could not see the Send now box or the
+  // scheduling on most rows, because the recruiter writing last is the normal
+  // waiting state and it hid the panel. A manual tap is his word to follow up
+  // even then. The automatic weekly send still waits: its due rule stays
+  // gated on the recruiter not having written last.
+  assert.equal(submissionSendNowBlockReason({ terminal: null, contact }), '', 'the recruiter writing last never blocks a manual tap')
+  const panel = read('src/app/dashboard/overview/_components/submission-followup.tsx')
+  assert.ok(!panel.includes('theyWrote'), 'the panel guard no longer hides on theyWrote')
+  const page = read('src/app/dashboard/overview/page.tsx')
+  const followUpBlock = page.slice(page.indexOf('Follow up: the same panel as the row, inside the view'))
+  assert.ok(!followUpBlock.slice(0, 800).includes('theyWrote'), 'the chain-view guard no longer hides on theyWrote')
+  const folded = read('src/app/dashboard/mail/_components/folded-conversation.tsx')
+  assert.ok(!folded.includes('theyWrote'), 'the mail-thread guard no longer hides on theyWrote')
+  const detail = read('src/app/dashboard/tracker/_components/chain-detail.tsx')
+  assert.ok(!detail.includes('theyWrote'), 'the tracker-sheet guard no longer hides on theyWrote')
+  const server = read('src/lib/submission-followups.ts')
+  assert.ok(!server.includes('found.t.theyWrote'), 'the server send-now guard no longer refuses theyWrote')
+  // But the automatic send still waits while they wrote last.
+  const c = chain({ lastActivity: NOW - 2 * DAY, events: [ev('Shikha Rao', 'shikha@vendorone.example', 2, false)] })
+  const { active } = trackSubmissions([c], { marks: [], handed: [{ id: submissionId(c), on: true, at: NOW - 30 * DAY, sent: [] }] }, NOW)
+  assert.equal(active.length, 1)
+  assert.equal(active[0].theyWrote, true)
+  assert.equal(active[0].action, 'reply', 'the row says read it and answer')
+  assert.equal(active[0].due, false, 'the automatic send does not fire while they wrote last')
+  assert.deepEqual(toSendForYou(active, { marks: [], handed: [{ id: submissionId(c), on: true, at: NOW - 30 * DAY, sent: [] }] }, NOW).map(t => t.id), [], 'the daily job skips it')
 })
 
 test('the four-count binds only the automatic weekly send, never a manual tap', () => {
@@ -145,7 +172,7 @@ test('the four-count binds only the automatic weekly send, never a manual tap', 
   assert.deepEqual(toSendForYou(active, fourSent, NOW).map(t => t.id), [], 'the automatic send stops at four')
   assert.equal(active[0].forYou.ended, 'limit')
   // The tap is his word to carry on past four: no block reason ever names the count.
-  assert.equal(submissionSendNowBlockReason({ terminal: null, contact: active[0].contact, theyWrote: false }), '')
+  assert.equal(submissionSendNowBlockReason({ terminal: null, contact: active[0].contact }), '')
   // And the daily job says why it stayed, instead of going silent.
   assert.ok(dueButUnsent(active, fourSent, NOW, "submission").some(d => d.id === id && /Four automatic follow-ups already sent for this submission/.test(d.reason)))
   // Four manual taps, a week apart, do not touch the automatic count: the daily job still sends.

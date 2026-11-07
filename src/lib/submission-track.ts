@@ -133,10 +133,14 @@ export function submissionWords(chain: ApplicationChain, contact: Reach | null, 
 /**
  * Why Send now cannot go out for this submission, in plain words — or "" when
  * it can. The four-count is deliberately not here: it binds only the
- * automatic weekly send, never a manual tap.
+ * automatic weekly send, never a manual tap. The recruiter writing last is
+ * deliberately not here either: a manual tap is his word to follow up even
+ * then (owner order, 7 Nov 2026 — the panel was invisible on most rows
+ * because the recruiter writing last is the normal waiting state). The
+ * automatic weekly send still waits: its own due rule stays gated on the
+ * recruiter not having written last.
  */
-export function submissionSendNowBlockReason(t: { terminal: ApplicationChain["terminal"]; contact: Reach | null; theyWrote: boolean }): string {
-  if (t.theyWrote) return "The recruiter wrote last, so there is nothing to follow up right now."
+export function submissionSendNowBlockReason(t: { terminal: ApplicationChain["terminal"]; contact: Reach | null }): string {
   if (t.contact?.recruiter) return "This contact is one of your own recruiters, so nothing is sent to them."
   if (!t.contact) return "There is no outside contact to follow up with on this submission."
   if (t.terminal) return "This submission is closed, so Send now can't go out."

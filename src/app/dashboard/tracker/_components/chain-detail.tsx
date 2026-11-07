@@ -204,7 +204,7 @@ export default function ChainDetail({
 
             {/* Follow up: the same scheduling control as the Overview rows, after the milestones — the same
                 guard, so the heading never sits over an empty panel. */}
-            {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && !target.theyWrote && words && onSubChanged && (
+            {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && words && onSubChanged && (
               <div style={{ marginTop: 18 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 10 }}>
                   Follow up

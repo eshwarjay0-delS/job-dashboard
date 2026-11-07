@@ -134,7 +134,7 @@ export async function sendSubmissionFollowUpNow(userId: string, myName: string, 
     threadsUsed = threads
     found = verify(threads)
   }
-  if (!found || found.t.phase !== "waiting" || found.t.theyWrote || !found.t.contact || found.t.contact.recruiter) return { ok: false, error: "This submission cannot be followed up right now." }
+  if (!found || found.t.phase !== "waiting" || !found.t.contact || found.t.contact.recruiter) return { ok: false, error: "This submission cannot be followed up right now." }
   const { t, chain } = found
   const contact = found.t.contact
   const token = await senderToken(userId, accounts, t.account)
