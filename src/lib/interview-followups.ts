@@ -73,7 +73,7 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
     // tries it again instead. Only the ambiguous timeout below keeps its count, because the
     // mail may still have gone out during it. A card that only inherited its switch gets its hand
     // recorded first, or the send would have nowhere to count against.
-    state = noteSent(withHand(state, t.id, t.threadId, threadOf, now), t.id, now)
+    state = noteSent(withHand(state, t.id, t.threadId, threadOf, now), t.id, now, true)
     await writeTrackState(userId, state)
     try {
       const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
@@ -86,7 +86,7 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
         failed++
         console.error("[interviews] a follow-up was refused", res.status)
         try {
-          state = { ...state, handed: state.handed.map(x => (x.id === t.id ? { ...x, sent: x.sent.slice(0, -1) } : x)) }
+          state = { ...state, handed: state.handed.map(x => (x.id === t.id ? { ...x, sent: x.sent.slice(0, -1), ...(x.sentAuto ? { sentAuto: x.sentAuto.slice(0, -1) } : {}) } : x)) }
           await writeTrackState(userId, state)
         } catch {}
       }
@@ -150,8 +150,9 @@ export async function sendInterviewFollowUpNow(userId: string, myName: string, i
     if (res.ok) return { ok: true }
     console.error("[interviews] a send-now follow-up was refused", res.status)
     // A definite refusal means Gmail answered and no mail went out, so the recorded send is
-    // rolled back: a refused tap must never consume one of the four sends. Only the ambiguous
-    // case below (timeout, where the mail may still have gone out) keeps the count.
+    // rolled back: a refused tap must never show as sent, and must never block the retry with
+    // the hour's double-tap guard. Only the ambiguous case below (timeout, where the mail may
+    // still have gone out) keeps the count.
     let rolledBack = false
     try {
       await writeTrackState(userId, { ...state, handed: state.handed.map(x => (x.id === id ? { ...x, sent: x.sent.slice(0, -1) } : x)) })

@@ -25,6 +25,7 @@ import {
   followUpWords,
   effectiveHand,
   withHand,
+  autoSent,
   FIRST_AFTER_DAYS,
   EVERY_DAYS,
   MOST_SENT_FOR_YOU,
@@ -39,7 +40,7 @@ import {
 } from "./interview-track.ts"
 import type { ApplicationChain, ChainStageKey } from "../app/api/gmail/_lib"
 
-export { decide, noteSent, toSendForYou, dueButUnsent, effectiveHand, withHand, cleanDays, DEFAULT_DAYS, MOST_SENT_FOR_YOU }
+export { decide, noteSent, toSendForYou, dueButUnsent, effectiveHand, withHand, autoSent, cleanDays, DEFAULT_DAYS, MOST_SENT_FOR_YOU }
 export type { Tracked, TrackState, Reach }
 
 const DAY = 86_400_000
@@ -166,7 +167,9 @@ export function trackSubmissions(chains: ApplicationChain[], state: TrackState, 
     const terminal = chain.terminal
     const phase = terminal ? "past" : "waiting"
     const hand = effectiveHand(state, id, threadId, threadOf)
-    const sentForYou = hand?.sent?.length || 0
+    // The four-count sees only the automatic sends; the sentence and the count of follow-ups see every send.
+    const sentForYou = autoSent(hand)
+    const sentAll = hand?.sent?.length || 0
     // The next follow-up: five days after the last word on the chain, then a
     // week after each time he (or the app, for him) wrote.
     const lastWord = Math.max(myLastAt, ...(hand?.sent || []))
@@ -184,12 +187,12 @@ export function trackSubmissions(chains: ApplicationChain[], state: TrackState, 
     else if (carried) say = `Your recruiter ${name} is carrying this one. There is nothing for you to chase.`
     else if (sending) say = `I send ${name} a short follow-up for you on ${dayList(ringDays(hand?.days))} until there is news.`
     else if (old) say = `This submission has had no news for ${days(since)}. I am not asking you to chase it.`
-    else if (due) { say = mineAfter.length || sentForYou ? `It has been ${days(Math.floor((now - lastWord) / DAY))} since the last follow-up and there is no news yet. Another short, friendly one to ${name} is a good idea.` : `No news on this submission for ${days(since)} yet. A short, friendly follow-up to ${name} is a good idea.`; action = "follow_up" }
-    else say = mineAfter.length || sentForYou ? `You followed up ${days(Math.max(0, Math.floor((now - lastWord) / DAY)))} ago. Nothing to do now; I will bring it back on ${dayWord(nextAt)}.` : `No news since ${dayWord(anchor)}. It is normal to hear nothing yet. I will bring it back on ${dayWord(nextAt)}.`
+    else if (due) { say = mineAfter.length || sentAll ? `It has been ${days(Math.floor((now - lastWord) / DAY))} since the last follow-up and there is no news yet. Another short, friendly one to ${name} is a good idea.` : `No news on this submission for ${days(since)} yet. A short, friendly follow-up to ${name} is a good idea.`; action = "follow_up" }
+    else say = mineAfter.length || sentAll ? `You followed up ${days(Math.max(0, Math.floor((now - lastWord) / DAY)))} ago. Nothing to do now; I will bring it back on ${dayWord(nextAt)}.` : `No news since ${dayWord(anchor)}. It is normal to hear nothing yet. I will bring it back on ${dayWord(nextAt)}.`
 
     out.push({
       id, threadId, account, role: chain.role, company: chain.company, kind: "", at: anchor, timeKnown: !!anchor, phase, days: since, contact, lastMine: !theyWrote, theyWrote,
-      followUps: mineAfter.length + sentForYou, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
+      followUps: mineAfter.length + sentAll, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
       ...(terminal ? { outcome: terminal === "rejected" ? "rejected" : "completed", decidedAt: anchor } : {}),
       ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, sentAt: [...(hand.sent || [])], nextAt: sending ? nextAt : 0, days: ringDays(hand.days), ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
     })

@@ -97,6 +97,7 @@ export default function SubmissionFollowUp({ target, words, canSendForYou, onCha
 
   return (
     <div>
+      {target.forYou?.ended === "limit" && <p style={{ ...muted, margin: "0 0 8px" }}>I sent four for you and stopped. Say the word and I will carry on.</p>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
         {mine
           ? <button type="button" className="btn-outline" disabled={busyFor} onClick={() => { void choose("stop_sending") }} style={big}>{busy === `stop_sending:${target.id}` ? "Saving…" : "Stop sending for me"}</button>
@@ -171,7 +172,7 @@ export default function SubmissionFollowUp({ target, words, canSendForYou, onCha
                 {sendBlock ? <p style={{ ...muted, margin: 0 }}>{sendBlock}</p> : null}
                 <button type="button" className="btn-outline" onClick={() => startEdit(words.subject, words.body)} style={big}>Edit</button>
               </div>
-              <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
+              <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once. It does not count toward the four automatic sends. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
             </>
           )}
           </>)}

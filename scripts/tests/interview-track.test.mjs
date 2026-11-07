@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS, sendNowBlockReason, chicagoDay, effectiveHand, withHand, dueButUnsent } from '../../src/lib/interview-track.ts'
+import { trackInterviews, decide, noteSent, autoSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS, sendNowBlockReason, chicagoDay, effectiveHand, withHand, dueButUnsent } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com', DAY = 86_400_000, NOW = Date.UTC(2026, 9, 13, 18, 0, 0)
@@ -108,8 +108,8 @@ test('a follow-up is sent for him only on his standing word, once a week, and it
   assert.deepEqual(r.active[0].forYou.days, [0, 1, 2, 3, 4, 5, 6])
   assert.deepEqual(r.active[0].forYou.sentAt, [])
   assert.match(r.active[0].say, /^I send Shikha a short follow-up for you on Sun, Mon, Tue, Wed, Thu, Fri, Sat until there is news\.$/)
-  // Once sent, not again for a week.
-  state = noteSent(state, id, NOW)
+  // Once sent, not again for a week. The send in this run is the automatic one, so it counts toward the four.
+  state = noteSent(state, id, NOW, true)
   assert.deepEqual(run(state, NOW + 3 * DAY).send, [])
   assert.match(run(state, NOW + 3 * DAY).r.active[0].say, /^I send Shikha a short follow-up for you on Sun, Mon, Tue, Wed, Thu, Fri, Sat until there is news\.$/)
   assert.deepEqual(run(state, NOW + 3 * DAY).r.active[0].forYou.sentAt, [NOW])
@@ -119,7 +119,7 @@ test('a follow-up is sent for him only on his standing word, once a week, and it
   const after = run(state, NOW + 8 * DAY, answered)
   assert.deepEqual(after.send, []); assert.equal(after.r.active[0].action, 'reply'); assert.equal(after.r.active[0].forYou.ended, 'answered')
   // Four at most, then it stops and he is asked again.
-  for (let i = 1; i < MOST_SENT_FOR_YOU; i++) state = noteSent(state, id, NOW + i * 7 * DAY)
+  for (let i = 1; i < MOST_SENT_FOR_YOU; i++) state = noteSent(state, id, NOW + i * 7 * DAY, true)
   const spent = run(state, NOW + 40 * DAY)
   assert.deepEqual(spent.send, []); assert.equal(spent.r.active[0].forYou.ended, 'limit'); assert.equal(spent.r.active[0].action, 'none'); assert.equal(spent.r.active[0].old, true)
   // Marked finished, or stopped by him: nothing more goes out. Never to one of his own recruiters.
@@ -185,9 +185,9 @@ test('rewording what is sent, or re-ticking its days, never switches it on or of
   let state = decide(emptyState(), id, 'send_for_me', NOW, { subject: 'Old subject', body: 'Old body' }, [1])
   state = noteSent(state, id, NOW)
   state = decide(state, id, 'save_words', NOW + DAY, { subject: 'New subject', body: 'New body' })
-  assert.deepEqual(state.handed, [{ id, on: true, at: NOW, sent: [NOW], subject: 'New subject', body: 'New body', days: [1] }])
+  assert.deepEqual(state.handed, [{ id, on: true, at: NOW, sent: [NOW], sentAuto: [], subject: 'New subject', body: 'New body', days: [1] }])
   state = decide(state, id, 'set_days', NOW + DAY, undefined, [2, 5])
-  assert.deepEqual(state.handed, [{ id, on: true, at: NOW, sent: [NOW], subject: 'New subject', body: 'New body', days: [2, 5] }])
+  assert.deepEqual(state.handed, [{ id, on: true, at: NOW, sent: [NOW], sentAuto: [], subject: 'New subject', body: 'New body', days: [2, 5] }])
   // Opting in again keeps the ticks he already chose unless he ticks new ones.
   state = decide(decide(emptyState(), id, 'send_for_me', NOW, undefined, [4]), id, 'stop_sending', NOW)
   assert.deepEqual(decide(state, id, 'send_for_me', NOW).handed[0].days, [4])
@@ -213,6 +213,38 @@ test('Send now is never blocked by the four-count, only by a card the server mus
   assert.match(sendNowBlockReason({ ...base, contact: own }), /own recruiters/)
   assert.match(sendNowBlockReason({ ...base, theyWrote: true }), /wrote last/)
   assert.equal(sendNowBlockReason({ ...base, sent: MOST_SENT_FOR_YOU }), '', 'four already sent is his word to carry on, not a block on a tap')
+})
+
+test('four manual Send-now taps never consume the automatic four', () => {
+  const id = `${ME}:quiet`
+  const threads = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE))]
+  // The interview is two days old, so the card is still inside the 35-day window when the last check runs.
+  const run = (state, now = NOW) => { const r = trackInterviews([found('quiet', -2)], threads, [ME], now, { state }); return { r, send: toSendForYou(r.active, state, now) } }
+  let state = decide(emptyState(), id, 'send_for_me', NOW, undefined, [0, 1, 2, 3, 4, 5, 6])
+  // Four taps, a week apart: each is a manual send, so none of them counts toward the four.
+  for (let i = 0; i < MOST_SENT_FOR_YOU; i++) state = noteSent(state, id, NOW + i * 7 * DAY)
+  const afterTaps = run(state, NOW + 28 * DAY)
+  assert.equal(autoSent(state.handed[0]), 0, 'manual taps leave the automatic count at zero')
+  assert.equal(afterTaps.r.active[0].forYou.sent, 0, 'the count the gate reads is the automatic one')
+  assert.deepEqual(afterTaps.r.active[0].forYou.sentAt, [NOW, NOW + 7 * DAY, NOW + 14 * DAY, NOW + 21 * DAY], 'the history still lists every send')
+  assert.equal(afterTaps.r.active[0].followUps, 4, 'the follow-up count still counts the taps')
+  assert.equal(afterTaps.r.active[0].forYou.ended, undefined, 'no limit after taps alone')
+  assert.deepEqual(afterTaps.send.map(t => t.id), [id], 'the automatic send is still due after four taps')
+  // Four automatic sends after that: then it stops, and he is asked again.
+  for (let i = 0; i < MOST_SENT_FOR_YOU; i++) state = noteSent(state, id, NOW + (4 + i) * 7 * DAY, true)
+  const spent = run(state, NOW + 56 * DAY)
+  assert.equal(autoSent(state.handed[0]), 4)
+  assert.deepEqual(spent.send, [])
+  assert.equal(spent.r.active[0].forYou.ended, 'limit')
+  // A hand written before the split has no sentAuto list, so every send it recorded still counts.
+  const legacy = { marks: [], handed: [{ id, on: true, at: NOW, sent: [NOW, NOW + 7 * DAY, NOW + 14 * DAY, NOW + 21 * DAY] }] }
+  assert.equal(autoSent(legacy.handed[0]), 4, 'legacy hands keep the old, stricter count')
+  assert.equal(run(legacy, NOW + 28 * DAY).r.active[0].forYou.ended, 'limit')
+  // validState keeps the split, and re-arming keeps the automatic count.
+  const kept = validState({ marks: [], handed: [{ id, on: true, at: NOW, sent: [NOW, NOW + 7 * DAY], sentAuto: [NOW], days: [1] }] })
+  assert.deepEqual(kept.handed[0].sentAuto, [NOW])
+  assert.deepEqual(decide(kept, id, 'send_for_me', NOW).handed[0].sentAuto, [NOW], 're-arming never forgets the automatic count')
+  assert.deepEqual(decide(kept, id, 'send_for_me', NOW).handed[0].sent, [NOW, NOW + 7 * DAY])
 })
 
 test('a follow-up due later the same Chicago day is caught by the morning run, not the next ring day', () => {
@@ -290,9 +322,9 @@ test('the daily job names the armed cards it looked at but did not send', () => 
   const tue = decide(emptyState(), id, 'send_for_me', NOW, undefined, [2])
   assert.deepEqual(run(tue).unsent, [])
   assert.deepEqual(run(tue).send.map(t => t.id), [id])
-  // Four already sent: named with the reason.
+  // Four already sent: named with the reason. The sends here are the automatic ones.
   let spent = decide(emptyState(), id, 'send_for_me', NOW, undefined, [2])
-  for (let i = 0; i < MOST_SENT_FOR_YOU; i++) spent = noteSent(spent, id, NOW - (40 - i * 7) * DAY)
+  for (let i = 0; i < MOST_SENT_FOR_YOU; i++) spent = noteSent(spent, id, NOW - (40 - i * 7) * DAY, true)
   assert.deepEqual(run(spent).unsent.map(u => u.id), [id])
-  assert.match(run(spent).unsent[0].reason, /Four follow-ups/)
+  assert.match(run(spent).unsent[0].reason, /Four automatic follow-ups/)
 })

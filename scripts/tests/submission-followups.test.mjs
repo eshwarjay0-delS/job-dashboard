@@ -147,7 +147,15 @@ test('the four-count binds only the automatic weekly send, never a manual tap', 
   // The tap is his word to carry on past four: no block reason ever names the count.
   assert.equal(submissionSendNowBlockReason({ terminal: null, contact: active[0].contact, theyWrote: false }), '')
   // And the daily job says why it stayed, instead of going silent.
-  assert.ok(dueButUnsent(active, fourSent, NOW, "submission").some(d => d.id === id && /Four follow-ups already sent for this submission/.test(d.reason)))
+  assert.ok(dueButUnsent(active, fourSent, NOW, "submission").some(d => d.id === id && /Four automatic follow-ups already sent for this submission/.test(d.reason)))
+  // Four manual taps, a week apart, do not touch the automatic count: the daily job still sends.
+  const mc = chain({ lastActivity: MON - 8 * DAY, events: [ev('Shikha Rao', 'shikha@vendorone.example', 10, false, MON - 10 * DAY), ev('Sam Carter', 'me@example.com', 8, true, MON - 8 * DAY)] })
+  const mid = submissionId(mc)
+  const manual = { marks: [], handed: [{ id: mid, on: true, at: MON - 30 * DAY, sent: [MON - 28 * DAY, MON - 21 * DAY, MON - 14 * DAY, MON - 7 * DAY], sentAuto: [] }] }
+  const mActive = trackSubmissions([mc], manual, MON).active
+  assert.equal(mActive[0].forYou.sent, 0, 'the count the gate reads is the automatic one')
+  assert.equal(mActive[0].forYou.ended, undefined, 'no limit after taps alone')
+  assert.deepEqual(toSendForYou(mActive, manual, MON).map(t => t.id), [mid], 'the automatic send is still due after four taps')
 })
 
 test('the weekly switches on only with the tap, and a Send now never switches it on', () => {
@@ -160,6 +168,7 @@ test('the weekly switches on only with the tap, and a Send now never switches it
   const afterTap = noteSent(withHand(emptyState(), id, c.threadId, threadOf, NOW), id, NOW)
   assert.equal(afterTap.handed[0].on, false, 'a Send now records only the send, never the weekly')
   assert.equal(afterTap.handed[0].sent.length, 1)
+  assert.deepEqual(afterTap.handed[0].sentAuto, [], 'the first tap freezes the automatic count at the sends already recorded — none, here')
   // An inherited switch is kept: a card that only inherited its switch keeps it after a tap.
   const inherited = { marks: [], handed: [{ id: 'me@example.com:other', on: true, at: NOW - 5 * DAY, sent: [] }] }
   const eff = effectiveHand(inherited, id, c.threadId, new Map([['me@example.com:other', c.threadId]]))

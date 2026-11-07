@@ -33,7 +33,7 @@ export const OLD_AFTER_DAYS = 35
 
 export type Outcome = "rejected" | "completed"
 export type Mark = { id: string; outcome: Outcome; at: number }
-export type Handed = { id: string; on: boolean; at: number; sent: number[]; subject?: string; body?: string; days?: number[] }
+export type Handed = { id: string; on: boolean; at: number; sent: number[]; sentAuto?: number[]; subject?: string; body?: string; days?: number[] }
 export type TrackState = { marks: Mark[]; handed: Handed[] }
 export const emptyState = (): TrackState => ({ marks: [], handed: [] })
 
@@ -93,7 +93,13 @@ export function validState(raw: unknown): TrackState {
     // The edited words are part of the hand: without them, a saved rewording would not survive a write and read, and the daily job would always send the generated draft.
     const subject = typeof h.subject === "string" ? h.subject.slice(0, 200) : ""
     const body = typeof h.body === "string" ? h.body.slice(0, 2000) : ""
-    return { id: h.id, on: h.on === true, at: num(h.at), sent: (Array.isArray(h.sent) ? h.sent : []).map(num).filter(Boolean).slice(-MOST_SENT_FOR_YOU * 2), ...(days.length ? { days } : {}), ...(subject ? { subject } : {}), ...(body ? { body } : {}) }
+    // sentAuto counts only the automatic weekly sends: the four-count binds the automatic send, never a manual tap.
+    // A hand written before sentAuto existed has no list, so it falls back to all sends (autoSent) — the old count.
+    // An empty list is kept when it is there: it means the hand has been through the split with zero automatic
+    // sends, which is not the same as a hand written before the split.
+    const hasSentAuto = Array.isArray(h.sentAuto)
+    const sentAuto = (Array.isArray(h.sentAuto) ? h.sentAuto : []).map(num).filter(Boolean).slice(-MOST_SENT_FOR_YOU * 2)
+    return { id: h.id, on: h.on === true, at: num(h.at), sent: (Array.isArray(h.sent) ? h.sent : []).map(num).filter(Boolean).slice(-MOST_SENT_FOR_YOU * 2), ...(hasSentAuto ? { sentAuto } : {}), ...(days.length ? { days } : {}), ...(subject ? { subject } : {}), ...(body ? { body } : {}) }
   }).slice(-400)
   return { marks, handed }
 }
@@ -104,14 +110,23 @@ export function decide(state: TrackState, id: string, action: "rejected" | "comp
   const had = state.handed.find(h => h.id === id)
   if (action === "rejected" || action === "completed") return { marks: [...marks, { id, outcome: action, at: now }], handed: had ? [...handed, { ...had, on: false }] : handed }
   if (action === "reopen") return { marks, handed: state.handed }
-  if (action === "send_for_me") return { marks: state.marks, handed: [...handed, { id, on: true, at: now, sent: had?.sent || [], ...(words ? { subject: words.subject.slice(0, 200), body: words.body.slice(0, 2000) } : {}), ...(days !== undefined ? { days: cleanDays(days) } : had?.days?.length ? { days: had.days } : {}) }] }
+  if (action === "send_for_me") return { marks: state.marks, handed: [...handed, { id, on: true, at: now, sent: had?.sent || [], ...(had?.sentAuto ? { sentAuto: had.sentAuto } : {}), ...(words ? { subject: words.subject.slice(0, 200), body: words.body.slice(0, 2000) } : {}), ...(days !== undefined ? { days: cleanDays(days) } : had?.days?.length ? { days: had.days } : {}) }] }
   // Rewording what is sent, or re-ticking its days, never switches it on or off and never forgets what went out.
   if (action === "save_words") return { marks: state.marks, handed: [...handed, { ...had, id, on: had?.on ?? false, at: had?.at ?? now, sent: had?.sent || [], ...(words ? { subject: words.subject.slice(0, 200), body: words.body.slice(0, 2000) } : {}), ...(days !== undefined ? { days: cleanDays(days) } : {}) }] }
   if (action === "set_days") return { marks: state.marks, handed: [...handed, { ...had, id, on: had?.on ?? false, at: had?.at ?? now, sent: had?.sent || [], days: cleanDays(days) }] }
   // Stopping is always recorded, even for a card that only inherited its switch: without a switched-off record of its own, the inherited switch would carry on and the stop would do nothing.
   return { marks: state.marks, handed: [...handed, { ...(had || { id, at: now, sent: [] }), on: false }] }
 }
-export const noteSent = (state: TrackState, id: string, now: number): TrackState => ({ marks: state.marks, handed: state.handed.map(h => (h.id === id ? { ...h, sent: [...h.sent, now] } : h)) })
+/** How many automatic weekly sends went out for this hand. A hand with no sentAuto list yet was written before the
+ * split, so every send it recorded counts — the old, stricter count, never a free extra send. */
+export const autoSent = (hand?: Handed | null): number => hand?.sentAuto ? hand.sentAuto.length : (hand?.sent.length || 0)
+
+/** Record one send. A manual Send now goes only on `sent`: it never consumes one of the four automatic sends. An
+ * automatic send goes on both lists, so the four-count sees it. A hand written before the split has no sentAuto
+ * list: the first send on it freezes the count — a manual tap freezes sentAuto to the sends already recorded (those
+ * were all automatic under the old counting), an automatic send seeds sentAuto from them and appends. Either way the
+ * old count is kept, not forgotten, and no manual tap after the split ever lands in it. */
+export const noteSent = (state: TrackState, id: string, now: number, auto = false): TrackState => ({ marks: state.marks, handed: state.handed.map(h => (h.id === id ? { ...h, sent: [...h.sent, now], ...(auto ? { sentAuto: [...(h.sentAuto ?? h.sent), now] } : h.sentAuto ? {} : { sentAuto: [...h.sent] }) } : h)) })
 
 /** The hand that governs one interview: its own, or the one an earlier round in the same thread left armed. A new round inherits the switch, the ring days and the edited words — never the sends already made, which stay with the old round and its own count of four. `threadOf` maps interview id to thread id, from the interviews in view. */
 export function effectiveHand(state: TrackState, id: string, threadId: string, threadOf: Map<string, string>): Handed | undefined {
@@ -182,7 +197,9 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
     const theyWrote = theirLastAt > at && theirLastAt > myLastAt
     const lastMine = ordered.length ? me.has(senderEmail(ordered[ordered.length - 1].from)) : false
     const mark = state.marks.find(m => m.id === f.id), hand = effectiveHand(state, f.id, threadId, threadOf)
-    const sentForYou = hand?.sent.length || 0
+    // The four-count sees only the automatic sends; the sentence and the count of follow-ups see every send.
+    const sentForYou = autoSent(hand)
+    const sentAll = hand?.sent.length || 0
 
     const startOfToday = Math.floor(now / DAY) * DAY
     const phase: Phase = mark ? "past" : at >= startOfToday + DAY ? "coming" : at >= startOfToday && at > now - 3 * 3_600_000 ? "today" : "waiting"
@@ -206,12 +223,12 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
     else if (carried) say = `Your recruiter ${name} is carrying this one. There is nothing for you to chase.`
     else if (sending) say = `I send ${name} a short follow-up for you on ${dayList(ringDays(hand?.days))} until there is news.`
     else if (old) say = `Your interview was ${days(since)} ago and nothing has come since. If it is over, tell me and I will stop following it.`
-    else if (due) { say = mineAfter.length || sentForYou ? `It has been ${days(Math.floor((now - lastWord) / DAY))} since the last follow-up and there is no news yet. Another short, friendly one to ${name} is a good idea.` : `Your interview was ${days(since)} ago and there is no news yet. A short, friendly follow-up to ${name} is a good idea.`; action = "follow_up" }
-    else say = mineAfter.length || sentForYou ? `You followed up ${days(Math.max(0, Math.floor((now - lastWord) / DAY)))} ago. Nothing to do now; I will bring it back on ${dayWord(nextAt)}.` : `Your interview was ${since === 0 ? "today" : `${days(since)} ago`}. It is normal to hear nothing yet. I will bring it back on ${dayWord(nextAt)}.`
+    else if (due) { say = mineAfter.length || sentAll ? `It has been ${days(Math.floor((now - lastWord) / DAY))} since the last follow-up and there is no news yet. Another short, friendly one to ${name} is a good idea.` : `Your interview was ${days(since)} ago and there is no news yet. A short, friendly follow-up to ${name} is a good idea.`; action = "follow_up" }
+    else say = mineAfter.length || sentAll ? `You followed up ${days(Math.max(0, Math.floor((now - lastWord) / DAY)))} ago. Nothing to do now; I will bring it back on ${dayWord(nextAt)}.` : `Your interview was ${since === 0 ? "today" : `${days(since)} ago`}. It is normal to hear nothing yet. I will bring it back on ${dayWord(nextAt)}.`
 
     out.push({
       id: f.id, threadId, account, role: f.role, company: f.company, kind: f.kind || "", at, timeKnown, phase, days: phase === "coming" ? until : since, contact, lastMine, theyWrote,
-      followUps: mineAfter.length + sentForYou, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
+      followUps: mineAfter.length + sentAll, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
       ...(mark ? { outcome: mark.outcome, decidedAt: mark.at } : {}),
       ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, sentAt: [...(hand.sent || [])], nextAt: sending ? nextAt : 0, days: ringDays(hand.days), ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
     })
@@ -228,7 +245,7 @@ export function toSendForYou(active: Tracked[], state: TrackState, now: number):
   return active.filter(t => {
     const hand = effectiveHand(state, t.id, t.threadId, threadOf)
     if (!hand?.on || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) return false
-    if (hand.sent.length >= MOST_SENT_FOR_YOU || !t.nextAt || chicagoDay(t.nextAt) > chicagoDay(now)) return false
+    if (autoSent(hand) >= MOST_SENT_FOR_YOU || !t.nextAt || chicagoDay(t.nextAt) > chicagoDay(now)) return false
     // Ticked days are the only days the automatic send may ring on; with none ticked it is Monday and Thursday. A manual Send now is not bound by them.
     if (!ringDays(hand.days).includes(weekdayForHim(now))) return false
     // Never two within six days, whatever else is true.
@@ -243,7 +260,7 @@ export function dueButUnsent(active: Tracked[], state: TrackState, now: number, 
   for (const t of active) {
     const hand = effectiveHand(state, t.id, t.threadId, threadOf)
     if (!hand?.on || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) continue
-    if (hand.sent.length >= MOST_SENT_FOR_YOU) { out.push({ id: t.id, reason: `Four follow-ups already sent for this ${what}.` }); continue }
+    if (autoSent(hand) >= MOST_SENT_FOR_YOU) { out.push({ id: t.id, reason: `Four automatic follow-ups already sent for this ${what}.` }); continue }
     if (!t.nextAt || chicagoDay(t.nextAt) > chicagoDay(now)) continue
     if (!ringDays(hand.days).includes(weekdayForHim(now))) { out.push({ id: t.id, reason: `Today is not one of its ring days (${dayList(ringDays(hand.days))}).` }); continue }
     if (hand.sent.some(at => now - at < 6 * DAY)) { out.push({ id: t.id, reason: "A follow-up went out less than six days ago." }); continue }

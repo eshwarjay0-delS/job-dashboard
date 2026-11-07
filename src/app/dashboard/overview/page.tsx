@@ -45,11 +45,6 @@ function TrackBar({ chain }: { chain: ApplicationChain }) {
   return (
     <div style={{ position: "relative", paddingTop: TOP }} aria-label={`At ${STAGES[doneIdx]?.label}`}>
       <div style={{ position: "absolute", top: TOP + DOT / 2 - 1, left: 16, right: 16, height: 2, background: "var(--border)", borderRadius: 2 }} />
-      <div style={{
-        position: "absolute", top: TOP + DOT / 2 - 1, left: 16, height: 2, borderRadius: 2,
-        width: `calc(${(doneIdx / (STAGES.length - 1)) * 100}% - ${32 * (doneIdx / (STAGES.length - 1))}px)`,
-        background: "var(--border)",
-      }} />
       <div style={{ position: "relative", display: "flex" }}>
         {STAGES.map((s, i) => {
           const reached = !!chain.stops.find(stop => stop.key === s.key)?.reached

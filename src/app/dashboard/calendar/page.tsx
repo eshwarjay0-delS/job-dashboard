@@ -354,9 +354,7 @@ export default function CalendarPage() {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <Btn variant="ghost" title="Previous week" style={{ padding: "0 8px" }}><ChevronLeft size={16} /></Btn>
                 <span style={{ fontSize: 17, fontWeight: 750, letterSpacing: "-0.02em" }}>{WEEK_LABEL}</span>
-                <Btn variant="ghost" title="Next week" style={{ padding: "0 8px" }}><ChevronRight size={16} /></Btn>
               </div>
               <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                 {(Object.keys(KIND) as Interview["kind"][]).map(kk => (
