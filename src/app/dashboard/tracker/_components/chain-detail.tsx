@@ -4,6 +4,8 @@ import Link from "next/link"
 import { X, TrainFront, User, ArrowRight } from "lucide-react"
 import ChainRail from "./chain-rail"
 import TypingDots from "../../_components/typing-dots"
+import SubmissionFollowUp from "../../overview/_components/submission-followup"
+import type { Tracked } from "@/lib/interview-track"
 import type { ApplicationChain, ChainEventKind } from "@/app/api/gmail/_lib"
 
 const EVENT_DOT: Record<ChainEventKind, string> = {
@@ -28,11 +30,15 @@ const EVENT_DOT: Record<ChainEventKind, string> = {
    now, and the next move. Slides up as a bottom sheet on mobile. */
 
 export default function ChainDetail({
-  chain, loading, onClose,
+  chain, loading, onClose, target, words, canSendForYou, onSubChanged,
 }: {
   chain: ApplicationChain | null
   loading: boolean
   onClose: () => void
+  target?: Tracked | null
+  words?: { subject: string; body: string }
+  canSendForYou?: boolean
+  onSubChanged?: () => void
 }) {
   if (!chain && !loading) return null
   return (
@@ -196,10 +202,21 @@ export default function ChainDetail({
               </div>
             </div>
 
+            {/* Follow up: the same scheduling control as the Overview rows, after the milestones — the same
+                guard, so the heading never sits over an empty panel. */}
+            {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && !target.theyWrote && words && onSubChanged && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 10 }}>
+                  Follow up
+                </div>
+                <SubmissionFollowUp target={target} words={words} canSendForYou={!!canSendForYou} onChanged={onSubChanged} />
+              </div>
+            )}
+
             {/* Actions */}
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               {!chain.terminal && chain.stalledDays >= 7 && (
-                <Link href="/dashboard/mail" style={{
+                <Link href={`/dashboard/mail?open=${encodeURIComponent(chain.threadId)}&account=${encodeURIComponent(chain.accountEmail)}`} style={{
                   flex: 1, textAlign: "center", padding: "13px", borderRadius: 14, fontWeight: 750, fontSize: 14,
                   background: "var(--accent)", color: "#fff", textDecoration: "none",
                 }}>

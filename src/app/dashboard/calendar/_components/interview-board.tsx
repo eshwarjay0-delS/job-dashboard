@@ -294,7 +294,7 @@ export default function InterviewBoard() {
                         {sendBlock ? <p style={{ ...muted, margin: 0 }}>{sendBlock}</p> : null}
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
                       </div>
-                      <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
+                      <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once. It does not count toward the four automatic sends. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
                     </>
                   )}
                   </>)}

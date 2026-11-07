@@ -20,6 +20,7 @@ import { useRecruiters } from "../_components/recruiter-button"
 import { isMyRecruiter } from "@/lib/my-recruiters"
 import { type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
+import type { Tracked } from "@/lib/interview-track"
 
 import IgnoreControls from "./_components/ignore-controls"
 import { ignoreReason, type IgnoreRule } from "@/lib/gmail-ignore"
@@ -227,6 +228,17 @@ export default function MailPage() {
 
   // ── Live Gmail data ────────────────────────────────────────────────────
   const { mails, loading, connected, error, refresh, drafts, radar, updatedAt, interviews } = useGmailData()
+  // Submission follow-ups (7 Nov 2026): the same scheduling control as the Overview rows, on the thread in view.
+  // Loaded once; a tap on the control reloads it. A thread that is not a tracked submission has no target, and
+  // shows no control — the panel itself stays hidden until the recruiter's last word is answered, same as Overview.
+  const [subTrack, setSubTrack] = useState<{ active: Tracked[]; words: Record<string, { subject: string; body: string }>; canSendForYou: boolean } | null>(null)
+  const loadSubTrack = () => {
+    fetch("/api/gmail/submission-track", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j?.ok) setSubTrack({ active: j.active || [], words: j.words || {}, canSendForYou: !!j.canSendForYou }) })
+      .catch(() => {})
+  }
+  useEffect(() => { if (connected) loadSubTrack() }, [connected])
   const [connectedEmails, setConnectedEmails] = useState<string[]>([])
   useEffect(() => {let active=true;fetch('/api/gmail-sync').then(r=>r.json()).then(j=>{if(active)setConnectedEmails((j.accounts||[]).filter((a:{gmail_enabled:boolean})=>a.gmail_enabled).map((a:{google_email:string})=>a.google_email))}).catch(()=>{});return()=>{active=false}},[])
   const accounts = buildAccounts([...connectedEmails,...mails.map(m => m.account)])
@@ -270,6 +282,9 @@ export default function MailPage() {
   const [openNote, setOpenNote] = useState("")
   const selectedMail = (x: Mail) => x.id === sel && (!selectedInbox || x.account === selectedInbox)
   const m = shown.find(selectedMail) ?? (sel && sel === opened ? mails.find(selectedMail) ?? (fetched && selectedMail(fetched) ? fetched : undefined) : undefined)
+  // The thread in view, as a tracked submission: its id is inbox + thread, the same key the Overview rows use.
+  const mailTarget = m && subTrack ? subTrack.active.find(t => t.id === `${m.account}:${m.id}`) ?? null : null
+  const mailWords = mailTarget ? subTrack?.words[mailTarget.id] : undefined
 
   // Piles a person can hold in their head, interviews among them: the thread that proved an interview is looked at
   // here as well as on the interviews board, and each one links to the other. The other ways of looking wait behind "More".
@@ -552,7 +567,7 @@ export default function MailPage() {
                   <Link href={interviewBoardHref(m.id)} style={{ fontSize: 13.5, fontWeight: 700, color: "var(--accent-txt)" }}>View this interview on the Interviews board →</Link>
                 </div>
               )}
-              {m && <FoldedConversation key={`${m.account}:${m.id}`} mail={m} tint={acct(m.account).tint} restored={restored.includes(m.id)} onSent={()=>approve(m.id)} />}
+              {m && <FoldedConversation key={`${m.account}:${m.id}`} mail={m} tint={acct(m.account).tint} restored={restored.includes(m.id)} onSent={()=>approve(m.id)} target={mailTarget} words={mailWords} canSendForYou={subTrack?.canSendForYou ?? false} onSubChanged={loadSubTrack} />}
 
             </div>
           )}

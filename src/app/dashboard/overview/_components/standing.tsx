@@ -17,7 +17,7 @@ import RecruiterButton, { changeRecruiter } from "../../_components/recruiter-bu
 //   - a contact box for everyone who wrote, the people being worked with first;
 //   - who is not worth the time (they keep writing and were never answered), with one press to hide them, and the list
 //     of who is hidden already, with one press to bring them back.
-// Every sentence comes from the mail. Nothing here sends anything: "Open and nudge" opens the conversation in the inbox.
+// Every sentence comes from the mail. Nothing here sends anything: "Open and follow up" opens the conversation in the inbox.
 
 type Shown = Person & { hidden?: boolean }
 type Listed = Standing & { nudgeReady?: boolean }
@@ -79,7 +79,7 @@ function Stage({ s }: { s: Standing }) {
 }
 
 function Conversation({ s, top, nudgeKept, onChanged }: { s: Listed; top?: boolean; nudgeKept: boolean; onChanged: () => void }) {
-  const label = s.action === "reply" ? "Open and reply" : s.action === "nudge" ? "Open and nudge" : "Open"
+  const label = s.action === "reply" || s.action === "nudge" ? "Open and follow up" : "Open"
   return (
     <Card style={top ? { borderLeft: "4px solid var(--spot)" } : undefined}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>

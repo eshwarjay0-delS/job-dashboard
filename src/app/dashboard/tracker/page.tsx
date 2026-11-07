@@ -11,6 +11,7 @@ import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
 import { STAGE, type App, type Stage } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
+import type { Tracked } from "@/lib/interview-track"
 
 const COLUMNS: { title: string; stages: Stage[] }[] = [
   { title: "Applied", stages: ["applied"] },
@@ -115,6 +116,20 @@ export default function TrackerPage() {
   const [chainLoading, setChainLoading] = useState(false)
   const [openChain, setOpenChain] = useState<ApplicationChain | null>(null)
 
+  // Submission follow-ups (7 Nov 2026): the same scheduling control as the Overview rows, inside the chain's
+  // detail sheet. Loaded once; a tap on the control reloads it.
+  const [subTrack, setSubTrack] = useState<{ active: Tracked[]; words: Record<string, { subject: string; body: string }>; canSendForYou: boolean } | null>(null)
+  const loadSubTrack = () => {
+    fetch("/api/gmail/submission-track", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j?.ok) setSubTrack({ active: j.active || [], words: j.words || {}, canSendForYou: !!j.canSendForYou }) })
+      .catch(() => {})
+  }
+  useEffect(() => { if (connected) loadSubTrack() }, [connected])
+  // The open chain, as a tracked submission: its id is inbox + thread, the same key the Overview rows use.
+  const openTarget = openChain && subTrack ? subTrack.active.find(t => t.id === `${openChain.accountEmail}:${openChain.threadId}`) ?? null : null
+  const openWords = openTarget ? subTrack?.words[openTarget.id] : undefined
+
   useEffect(() => {
     if (!connected) return
     fetch("/api/gmail/application-chains", { cache: "no-store" })
@@ -192,7 +207,7 @@ export default function TrackerPage() {
       </div>
       {view === "table" ? <TableView apps={shown} setStage={setStage} acct={acct} onOpen={openApp} /> : <BoardView apps={shown} acct={acct} onOpen={openApp} />}
       {(openChain || chainLoading) && (
-        <ChainDetail chain={openChain} loading={chainLoading && !openChain} onClose={() => { setOpenChain(null); setChainLoading(false) }} />
+        <ChainDetail chain={openChain} loading={chainLoading && !openChain} onClose={() => { setOpenChain(null); setChainLoading(false) }} target={openTarget} words={openWords} canSendForYou={subTrack?.canSendForYou ?? false} onSubChanged={loadSubTrack} />
       )}
       </>)}
       <div style={{ display: "flex", gap: 10, marginTop: 20, padding: 16, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.55, color: "var(--text-muted)" }}>
