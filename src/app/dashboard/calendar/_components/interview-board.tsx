@@ -63,7 +63,7 @@ const mailto = (email: string) => { const at = email.lastIndexOf("@"); return at
 const openHref = (threadId: string, account?: string) => `/dashboard/mail?open=${encodeURIComponent(threadId)}${account ? `&account=${encodeURIComponent(account)}` : ""}`
 // Weekday ticks, like an alarm: which days the automatic follow-up may ring on. No ticks means Monday and Thursday.
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"]
-function DayTicks({ days, onToggle, disabled }: { days: number[]; onToggle: (day: number) => void; disabled?: boolean }) {
+export function DayTicks({ days, onToggle, disabled }: { days: number[]; onToggle: (day: number) => void; disabled?: boolean }) {
   return (
     <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", alignItems: "center" }} role="group" aria-label="Days the automatic follow-up may go out">
       {DAY_LETTERS.map((letter, d) => {

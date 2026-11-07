@@ -237,13 +237,13 @@ export function toSendForYou(active: Tracked[], state: TrackState, now: number):
 }
 
 /** Armed cards the daily job looked at but did not send, with the reason in plain words — so a day with no sends can be told apart from a day with nothing due. A card the job sends is never in this list. */
-export function dueButUnsent(active: Tracked[], state: TrackState, now: number): { id: string; reason: string }[] {
+export function dueButUnsent(active: Tracked[], state: TrackState, now: number, what = "interview"): { id: string; reason: string }[] {
   const threadOf = new Map(active.map(t => [t.id, t.threadId]))
   const out: { id: string; reason: string }[] = []
   for (const t of active) {
     const hand = effectiveHand(state, t.id, t.threadId, threadOf)
     if (!hand?.on || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) continue
-    if (hand.sent.length >= MOST_SENT_FOR_YOU) { out.push({ id: t.id, reason: "Four follow-ups already sent for this interview." }); continue }
+    if (hand.sent.length >= MOST_SENT_FOR_YOU) { out.push({ id: t.id, reason: `Four follow-ups already sent for this ${what}.` }); continue }
     if (!t.nextAt || chicagoDay(t.nextAt) > chicagoDay(now)) continue
     if (!ringDays(hand.days).includes(weekdayForHim(now))) { out.push({ id: t.id, reason: `Today is not one of its ring days (${dayList(ringDays(hand.days))}).` }); continue }
     if (hand.sent.some(at => now - at < 6 * DAY)) { out.push({ id: t.id, reason: "A follow-up went out less than six days ago." }); continue }

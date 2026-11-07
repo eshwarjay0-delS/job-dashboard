@@ -6,7 +6,7 @@
 // View button that opens the submission's mind map: who touched the profile,
 // in what order, where it stands, and what is next.
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
@@ -16,7 +16,12 @@ import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
+import { filterChainsByStage, compareChainsByStagePriority, STAGE_OPTIONS_PRIORITY } from "@/lib/submission-track"
+import { OVERVIEW_SNAPSHOT_KEY_PREFIX, readOverviewSnapshot, keepOverviewSnapshot, mergeChains, snapshotIsFresh } from "@/lib/overview-cache"
+import { createClient } from "@/lib/supabase/client"
+import type { Tracked } from "@/lib/interview-track"
 import StandingSection from "./_components/standing"
+import SubmissionFollowUp from "./_components/submission-followup"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
   { key: "rtr", label: "RTR" },
@@ -94,7 +99,7 @@ const EVENT_DOT: Record<ChainEventKind, string> = {
 }
 
 // ── Mind map: the people who carried the profile, in order ─────────────────
-function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => void }) {
+function MindMap({ chain, onClose, target, words, canSendForYou, onSubChanged }: { chain: ApplicationChain; onClose: () => void; target?: Tracked | null; words?: { subject: string; body: string }; canSendForYou?: boolean; onSubChanged?: () => void }) {
   const [files, setFiles] = useState<HopFile[]>([])
   useEffect(() => {
     Promise.all((chain.sourceThreadIds || [chain.threadId]).map(id => fetch(`/api/gmail/chain-attachments?threadId=${encodeURIComponent(id)}&account=${encodeURIComponent(chain.accountEmail)}`, { cache: "no-store" }).then(r => r.json())))
@@ -276,13 +281,26 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
             </div>
           ))}
         </div>
+
+        {/* Follow up: the same panel as the row, inside the view — Send now
+            and the weekly scheduling, with the stage words. The panel itself
+            stays silent when there is nothing to follow up, so the heading
+            only renders when the panel will show; keep the two in step. */}
+        {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && !target.theyWrote && words && onSubChanged && (
+          <div style={{ marginTop: 18 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 8 }}>
+              Follow up
+            </div>
+            <SubmissionFollowUp target={target} words={words} canSendForYou={!!canSendForYou} onChanged={onSubChanged} />
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
 
-function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => void }) {
+function ChainRow({ chain, onView, target, words, canSendForYou, onSubChanged }: { chain: ApplicationChain; onView: () => void; target?: Tracked | null; words?: { subject: string; body: string }; canSendForYou?: boolean; onSubChanged?: () => void }) {
   // Declutter, Oct 2026: a row shows only company, role, quiet warning, and the
   // progress bar. The latest quote, journey numbers, and contact pills — the
   // detail that made every row a wall — wait behind one tap, per row.
@@ -356,9 +374,12 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
             cursor: "pointer", color: "var(--text)",
           }}
         >
-          <Eye size={14} /> View
+          <Eye size={14} /> {target && target.action !== "none" ? "Open and follow up" : "View"}
         </button>
       </div>
+      {target && words && onSubChanged && (
+        <SubmissionFollowUp target={target} words={words} canSendForYou={!!canSendForYou} onChanged={onSubChanged} />
+      )}
       <div style={{ marginTop: 10 }}>
         <TrackBar chain={chain} />
       </div>
@@ -389,6 +410,23 @@ function OverviewInner() {
   const [scanStatus, setScanStatus] = useState("")
   const [error, setError] = useState("")
   const [viewId, setViewId] = useState<string | null>(null)
+  // Stage filter (7 Nov 2026): show all rows, or only the rows at one stage.
+  const [stageFilter, setStageFilter] = useState<ChainStageKey | "all">("all")
+  // Submission follow-ups (7 Nov 2026): the Interviews tab's machinery,
+  // pointed at these chains. Loaded once; a row's tap reloads it.
+  const [subTrack, setSubTrack] = useState<{ active: Tracked[]; words: Record<string, { subject: string; body: string }>; canSendForYou: boolean } | null>(null)
+  const loadSubTrack = () => {
+    fetch("/api/gmail/submission-track", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j?.ok) setSubTrack({ active: j.active || [], words: j.words || {}, canSendForYou: !!j.canSendForYou }) })
+      .catch(() => {})
+  }
+  useEffect(() => { loadSubTrack() }, [])
+  // Instant copy (7 Nov 2026): the last good list lives on this device, so the
+  // page paints at once and the Gmail scan runs quietly behind it.
+  const cacheKeyRef = useRef<string | null>(null)
+  const paintedRef = useRef<ApplicationChain[]>([])
+  const forceRefreshRef = useRef(false)
   // Declutter, Oct 2026: "What matters now" used to sit above everything and
   // repeat the tables below it. It now waits behind one tap, after the tables.
   const [showStanding, setShowStanding] = useState(false)
@@ -396,13 +434,45 @@ function OverviewInner() {
   useEffect(() => {
     let active = true
     const controller = new AbortController()
-    setLoading(true)
-    setScanning(true)
-    setChains([])
+    const force = forceRefreshRef.current
+    forceRefreshRef.current = false
     setIssues([])
     setError("")
-    setScanStatus("Reading submission evidence from Gmail…")
     async function scan() {
+      // 1. Paint the saved list at once, if this device has one. The page never
+      // waits on Gmail to show what it already knows.
+      let key: string | null = null
+      let painted: ApplicationChain[] = []
+      let paintedAt = 0
+      try {
+        const { data } = await createClient().auth.getSession()
+        const id = data.session?.user?.id || null
+        key = id ? `${OVERVIEW_SNAPSHOT_KEY_PREFIX}${id}:${filter || "all"}` : null
+      } catch { key = null }
+      cacheKeyRef.current = key
+      const snap = key ? readOverviewSnapshot(key) : null
+      if (snap) {
+        painted = snap.chains
+        paintedAt = snap.at
+        paintedRef.current = snap.chains
+        setChains(snap.chains)
+        setLoading(false)
+      }
+      const savedWhen = new Date(paintedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      if (snap && snapshotIsFresh(snap, Date.now()) && !force) {
+        // Fresh enough: the saved list is the list. No scan behind it.
+        setScanning(false)
+        setScanStatus(`Showing your saved list from ${savedWhen}. Tap Refresh history for a fresh scan.`)
+        return
+      }
+      if (painted.length === 0) {
+        setLoading(true)
+        setChains([])
+        setScanStatus("Reading submission evidence from Gmail…")
+      } else {
+        setScanStatus(`Showing your saved list from ${savedWhen} — checking for new mail…`)
+      }
+      setScanning(true)
       const byAccount = new Map<string, ApplicationChain[]>()
       const discovery = await fetch("/api/gmail/application-chains?accountsOnly=1", { cache: "no-store", signal: controller.signal })
       const connections = await discovery.json()
@@ -444,13 +514,18 @@ function OverviewInner() {
               const j = await readPage(query)
               if (!active) return
               byAccount.set(selected, j.chains || [])
-              setChains([...byAccount.values()].flat())
-              setLoading(false)
               scanned += j.scanned || 0
+              // New things append as they arrive; nothing already shown is ever
+              // taken away by a slow load. Each page is saved at once.
+              const merged = mergeChains(paintedRef.current, [...byAccount.values()].flat())
+              paintedRef.current = merged
+              setChains(merged)
+              if (key) keepOverviewSnapshot(key, { chains: merged, scanned, at: Date.now() })
+              setLoading(false)
               token = j.nextPageToken || null
               if (token && seen.has(token)) throw new Error("Gmail repeated a history page")
               if (token) seen.add(token)
-              setScanStatus(`Reading ${selected}: ${scanned} conversation checks. Older updates are still loading.`)
+              if (painted.length === 0) setScanStatus(`Reading ${selected}: ${scanned} conversation checks. Older updates are still loading.`)
             } while (token && active)
           } catch (e) {
             if (!active) return
@@ -459,9 +534,20 @@ function OverviewInner() {
           }
         }
       }
-      if (active) setScanStatus(failures.size
-        ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.`
-        : `History scan finished for ${pending.length} inboxes. ${scanned} conversation checks completed.`)
+      if (active) {
+        // A full scan that finished cleanly becomes the saved copy exactly:
+        // a chain the scan no longer returns has aged out, and only a clean
+        // finish may drop anything. A failed scan keeps the merged list.
+        if (failures.size === 0 && key) {
+          const fresh = [...byAccount.values()].flat()
+          keepOverviewSnapshot(key, { chains: fresh, scanned, at: Date.now() })
+          setChains(fresh)
+          paintedRef.current = fresh
+        }
+        setScanStatus(failures.size
+          ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.`
+          : `History scan finished for ${pending.length} inboxes. ${scanned} conversation checks completed.`)
+      }
     }
     scan().catch(e => { if (active) { setIssues([`History scan stopped before completion: ${e.message}. Refresh history to retry.`]); setScanStatus("History incomplete. Displayed stages may change as more emails are read.") } })
       .finally(() => { if (active) { setLoading(false); setScanning(false) } })
@@ -477,22 +563,29 @@ function OverviewInner() {
   const { rails, waiting } = useMemo(() => {
     const rails: ApplicationChain[] = []
     const waiting: ApplicationChain[] = []
-    for (const c of chains) {
+    for (const c of filterChainsByStage(chains, stageFilter)) {
       if (!c.stops.some(s => s.key !== "rtr" && s.reached)) waiting.push(c)
       else rails.push(c)
     }
-    const byActivity = (a: ApplicationChain, b: ApplicationChain) => (b.lastActivity || 0) - (a.lastActivity || 0)
-    rails.sort(byActivity)
-    waiting.sort(byActivity)
+    const byPriority = compareChainsByStagePriority
+    rails.sort(byPriority)
+    waiting.sort(byPriority)
     return { rails, waiting }
-  }, [chains])
+  }, [chains, stageFilter])
+
+  // The follow-up target for one chain, if the submission track knows it.
+  const targetFor = (c: ApplicationChain): Tracked | null =>
+    subTrack?.active.find(t => t.id === `${c.accountEmail}:${c.threadId}`) || null
 
   const viewing = viewId ? chains.find(c => (c.threadId === viewId || c.sourceThreadIds?.includes(viewId)) && (!account || c.accountEmail === account)) || null : null
   const interviews = chains.filter(c => c.stops.some(s => s.key === "interview" && s.reached)).length
   // Summary first, from data already on this page only: no invented dates.
   const nextInterview = [...chains].filter(c => c.current === "interview").sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))[0] || null
 
-  if (viewing && !loading) return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")} /></>
+  if (viewing && !loading) {
+    const viewingTarget = targetFor(viewing)
+    return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")} target={viewingTarget} words={viewingTarget ? subTrack?.words[viewingTarget.id] : undefined} canSendForYou={subTrack?.canSendForYou} onSubChanged={loadSubTrack} /></>
+  }
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -503,7 +596,8 @@ function OverviewInner() {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={filter} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
-        <button className="btn-outline" disabled={scanning} onClick={() => setRefreshKey(k => k + 1)}>{scanning ? "Reading history…" : "Refresh history"}</button>
+        <label>Stage <select aria-label="Filter by stage" value={stageFilter} onChange={e => setStageFilter(e.target.value as ChainStageKey | "all")}><option value="all">All stages</option>{STAGE_OPTIONS_PRIORITY.map(k => { const s = STAGES.find(x => x.key === k)!; return <option key={k} value={k}>{s.label}</option> })}</select></label>
+        <button className="btn-outline" disabled={scanning} onClick={() => { forceRefreshRef.current = true; setRefreshKey(k => k + 1) }}>{scanning ? "Reading history…" : "Refresh history"}</button>
       </div>
       <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>
       <p role="status" style={{ fontSize: 13 }}>{scanStatus}</p>
@@ -544,9 +638,12 @@ function OverviewInner() {
           <Card style={{ padding: "4px 18px 14px", marginBottom: 26 }}>
             {rails.length === 0 ? (
               <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>No submission or later stage evidence found in this scan.</p>
-            ) : rails.map(c => (
-              <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
-            ))}
+            ) : rails.map(c => {
+              const target = targetFor(c)
+              return (
+                <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} target={target} words={target ? subTrack?.words[target.id] : undefined} canSendForYou={subTrack?.canSendForYou} onSubChanged={loadSubTrack} />
+              )
+            })}
           </Card>
 
           {/* Waiting to board */}
@@ -557,9 +654,12 @@ function OverviewInner() {
           <Card style={{ padding: "4px 18px 14px" }}>
             {waiting.length === 0 ? (
               <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>Nothing waiting.</p>
-            ) : waiting.map(c => (
-              <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
-            ))}
+            ) : waiting.map(c => {
+              const target = targetFor(c)
+              return (
+                <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} target={target} words={target ? subTrack?.words[target.id] : undefined} canSendForYou={subTrack?.canSendForYou} onSubChanged={loadSubTrack} />
+              )
+            })}
           </Card>
 
           <div style={{ marginTop: 26 }}>
