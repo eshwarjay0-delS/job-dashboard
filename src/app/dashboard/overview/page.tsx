@@ -6,7 +6,7 @@
 // View button that opens the submission's mind map: who touched the profile,
 // in what order, where it stands, and what is next.
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
@@ -17,6 +17,8 @@ import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
 import { filterChainsByStage, compareChainsByStagePriority, STAGE_OPTIONS_PRIORITY } from "@/lib/submission-track"
+import { OVERVIEW_SNAPSHOT_KEY_PREFIX, readOverviewSnapshot, keepOverviewSnapshot, mergeChains, snapshotIsFresh } from "@/lib/overview-cache"
+import { createClient } from "@/lib/supabase/client"
 import type { Tracked } from "@/lib/interview-track"
 import StandingSection from "./_components/standing"
 import SubmissionFollowUp from "./_components/submission-followup"
@@ -420,6 +422,11 @@ function OverviewInner() {
       .catch(() => {})
   }
   useEffect(() => { loadSubTrack() }, [])
+  // Instant copy (7 Nov 2026): the last good list lives on this device, so the
+  // page paints at once and the Gmail scan runs quietly behind it.
+  const cacheKeyRef = useRef<string | null>(null)
+  const paintedRef = useRef<ApplicationChain[]>([])
+  const forceRefreshRef = useRef(false)
   // Declutter, Oct 2026: "What matters now" used to sit above everything and
   // repeat the tables below it. It now waits behind one tap, after the tables.
   const [showStanding, setShowStanding] = useState(false)
@@ -427,13 +434,45 @@ function OverviewInner() {
   useEffect(() => {
     let active = true
     const controller = new AbortController()
-    setLoading(true)
-    setScanning(true)
-    setChains([])
+    const force = forceRefreshRef.current
+    forceRefreshRef.current = false
     setIssues([])
     setError("")
-    setScanStatus("Reading submission evidence from Gmail…")
     async function scan() {
+      // 1. Paint the saved list at once, if this device has one. The page never
+      // waits on Gmail to show what it already knows.
+      let key: string | null = null
+      let painted: ApplicationChain[] = []
+      let paintedAt = 0
+      try {
+        const { data } = await createClient().auth.getSession()
+        const id = data.session?.user?.id || null
+        key = id ? `${OVERVIEW_SNAPSHOT_KEY_PREFIX}${id}:${filter || "all"}` : null
+      } catch { key = null }
+      cacheKeyRef.current = key
+      const snap = key ? readOverviewSnapshot(key) : null
+      if (snap) {
+        painted = snap.chains
+        paintedAt = snap.at
+        paintedRef.current = snap.chains
+        setChains(snap.chains)
+        setLoading(false)
+      }
+      const savedWhen = new Date(paintedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      if (snap && snapshotIsFresh(snap, Date.now()) && !force) {
+        // Fresh enough: the saved list is the list. No scan behind it.
+        setScanning(false)
+        setScanStatus(`Showing your saved list from ${savedWhen}. Tap Refresh history for a fresh scan.`)
+        return
+      }
+      if (painted.length === 0) {
+        setLoading(true)
+        setChains([])
+        setScanStatus("Reading submission evidence from Gmail…")
+      } else {
+        setScanStatus(`Showing your saved list from ${savedWhen} — checking for new mail…`)
+      }
+      setScanning(true)
       const byAccount = new Map<string, ApplicationChain[]>()
       const discovery = await fetch("/api/gmail/application-chains?accountsOnly=1", { cache: "no-store", signal: controller.signal })
       const connections = await discovery.json()
@@ -475,13 +514,18 @@ function OverviewInner() {
               const j = await readPage(query)
               if (!active) return
               byAccount.set(selected, j.chains || [])
-              setChains([...byAccount.values()].flat())
-              setLoading(false)
               scanned += j.scanned || 0
+              // New things append as they arrive; nothing already shown is ever
+              // taken away by a slow load. Each page is saved at once.
+              const merged = mergeChains(paintedRef.current, [...byAccount.values()].flat())
+              paintedRef.current = merged
+              setChains(merged)
+              if (key) keepOverviewSnapshot(key, { chains: merged, scanned, at: Date.now() })
+              setLoading(false)
               token = j.nextPageToken || null
               if (token && seen.has(token)) throw new Error("Gmail repeated a history page")
               if (token) seen.add(token)
-              setScanStatus(`Reading ${selected}: ${scanned} conversation checks. Older updates are still loading.`)
+              if (painted.length === 0) setScanStatus(`Reading ${selected}: ${scanned} conversation checks. Older updates are still loading.`)
             } while (token && active)
           } catch (e) {
             if (!active) return
@@ -490,9 +534,20 @@ function OverviewInner() {
           }
         }
       }
-      if (active) setScanStatus(failures.size
-        ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.`
-        : `History scan finished for ${pending.length} inboxes. ${scanned} conversation checks completed.`)
+      if (active) {
+        // A full scan that finished cleanly becomes the saved copy exactly:
+        // a chain the scan no longer returns has aged out, and only a clean
+        // finish may drop anything. A failed scan keeps the merged list.
+        if (failures.size === 0 && key) {
+          const fresh = [...byAccount.values()].flat()
+          keepOverviewSnapshot(key, { chains: fresh, scanned, at: Date.now() })
+          setChains(fresh)
+          paintedRef.current = fresh
+        }
+        setScanStatus(failures.size
+          ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.`
+          : `History scan finished for ${pending.length} inboxes. ${scanned} conversation checks completed.`)
+      }
     }
     scan().catch(e => { if (active) { setIssues([`History scan stopped before completion: ${e.message}. Refresh history to retry.`]); setScanStatus("History incomplete. Displayed stages may change as more emails are read.") } })
       .finally(() => { if (active) { setLoading(false); setScanning(false) } })
@@ -542,7 +597,7 @@ function OverviewInner() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={filter} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
         <label>Stage <select aria-label="Filter by stage" value={stageFilter} onChange={e => setStageFilter(e.target.value as ChainStageKey | "all")}><option value="all">All stages</option>{STAGE_OPTIONS_PRIORITY.map(k => { const s = STAGES.find(x => x.key === k)!; return <option key={k} value={k}>{s.label}</option> })}</select></label>
-        <button className="btn-outline" disabled={scanning} onClick={() => setRefreshKey(k => k + 1)}>{scanning ? "Reading history…" : "Refresh history"}</button>
+        <button className="btn-outline" disabled={scanning} onClick={() => { forceRefreshRef.current = true; setRefreshKey(k => k + 1) }}>{scanning ? "Reading history…" : "Refresh history"}</button>
       </div>
       <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>
       <p role="status" style={{ fontSize: 13 }}>{scanStatus}</p>
