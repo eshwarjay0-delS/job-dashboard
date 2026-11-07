@@ -16,7 +16,7 @@ import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
-import { filterChainsByStage } from "@/lib/submission-track"
+import { filterChainsByStage, compareChainsByStagePriority, STAGE_OPTIONS_PRIORITY } from "@/lib/submission-track"
 import type { Tracked } from "@/lib/interview-track"
 import StandingSection from "./_components/standing"
 import SubmissionFollowUp from "./_components/submission-followup"
@@ -97,7 +97,7 @@ const EVENT_DOT: Record<ChainEventKind, string> = {
 }
 
 // ── Mind map: the people who carried the profile, in order ─────────────────
-function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => void }) {
+function MindMap({ chain, onClose, target, words, canSendForYou, onSubChanged }: { chain: ApplicationChain; onClose: () => void; target?: Tracked | null; words?: { subject: string; body: string }; canSendForYou?: boolean; onSubChanged?: () => void }) {
   const [files, setFiles] = useState<HopFile[]>([])
   useEffect(() => {
     Promise.all((chain.sourceThreadIds || [chain.threadId]).map(id => fetch(`/api/gmail/chain-attachments?threadId=${encodeURIComponent(id)}&account=${encodeURIComponent(chain.accountEmail)}`, { cache: "no-store" }).then(r => r.json())))
@@ -279,6 +279,19 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
             </div>
           ))}
         </div>
+
+        {/* Follow up: the same panel as the row, inside the view — Send now
+            and the weekly scheduling, with the stage words. The panel itself
+            stays silent when there is nothing to follow up, so the heading
+            only renders when the panel will show; keep the two in step. */}
+        {target && target.phase === "waiting" && target.contact && !target.contact.recruiter && !target.theyWrote && words && onSubChanged && (
+          <div style={{ marginTop: 18 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 8 }}>
+              Follow up
+            </div>
+            <SubmissionFollowUp target={target} words={words} canSendForYou={!!canSendForYou} onChanged={onSubChanged} />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -499,9 +512,9 @@ function OverviewInner() {
       if (!c.stops.some(s => s.key !== "rtr" && s.reached)) waiting.push(c)
       else rails.push(c)
     }
-    const byActivity = (a: ApplicationChain, b: ApplicationChain) => (b.lastActivity || 0) - (a.lastActivity || 0)
-    rails.sort(byActivity)
-    waiting.sort(byActivity)
+    const byPriority = compareChainsByStagePriority
+    rails.sort(byPriority)
+    waiting.sort(byPriority)
     return { rails, waiting }
   }, [chains, stageFilter])
 
@@ -514,7 +527,10 @@ function OverviewInner() {
   // Summary first, from data already on this page only: no invented dates.
   const nextInterview = [...chains].filter(c => c.current === "interview").sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))[0] || null
 
-  if (viewing && !loading) return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")} /></>
+  if (viewing && !loading) {
+    const viewingTarget = targetFor(viewing)
+    return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")} target={viewingTarget} words={viewingTarget ? subTrack?.words[viewingTarget.id] : undefined} canSendForYou={subTrack?.canSendForYou} onSubChanged={loadSubTrack} /></>
+  }
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -525,7 +541,7 @@ function OverviewInner() {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={filter} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
-        <label>Stage <select aria-label="Filter by stage" value={stageFilter} onChange={e => setStageFilter(e.target.value as ChainStageKey | "all")}><option value="all">All stages</option>{STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select></label>
+        <label>Stage <select aria-label="Filter by stage" value={stageFilter} onChange={e => setStageFilter(e.target.value as ChainStageKey | "all")}><option value="all">All stages</option>{STAGE_OPTIONS_PRIORITY.map(k => { const s = STAGES.find(x => x.key === k)!; return <option key={k} value={k}>{s.label}</option> })}</select></label>
         <button className="btn-outline" disabled={scanning} onClick={() => setRefreshKey(k => k + 1)}>{scanning ? "Reading history…" : "Refresh history"}</button>
       </div>
       <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>

@@ -58,6 +58,30 @@ export function filterChainsByStage(chains: ApplicationChain[], stage: ChainStag
 }
 
 /**
+ * Owner priority order for the Overview "All" list (7 Nov 2026): Interview
+ * first, then With client, then Submitted, then RTR, then everything else
+ * (Decision, or a chain with no known stage). Within one stage, most recent
+ * activity first. The page keeps its two sections, so this orders the rows
+ * inside each section; closed Decision rows sit at the bottom of the
+ * Submission progress list, above the RTRs in Waiting to board.
+ */
+export const STAGE_PRIORITY: Record<ChainStageKey, number> = {
+  interview: 0,
+  client: 1,
+  submitted: 2,
+  rtr: 3,
+  decision: 4,
+}
+/** The Stage dropdown lists its options in the same priority order. */
+export const STAGE_OPTIONS_PRIORITY: ChainStageKey[] = ["interview", "client", "submitted", "rtr", "decision"]
+export function compareChainsByStagePriority(a: ApplicationChain, b: ApplicationChain): number {
+  const pa = STAGE_PRIORITY[a.current] ?? 4
+  const pb = STAGE_PRIORITY[b.current] ?? 4
+  if (pa !== pb) return pa - pb
+  return (b.lastActivity || 0) - (a.lastActivity || 0)
+}
+
+/**
  * Who the follow-up goes to: the person who last wrote about this submission,
  * matched to a contact with a real email address. Falls back to the contact
  * with the most mail on the chain. No emailable contact, no follow-up.

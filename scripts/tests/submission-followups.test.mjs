@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { filterChainsByStage, submissionId, submissionContact, submissionWords, submissionSendNowBlockReason, trackSubmissions } from '../../src/lib/submission-track.ts'
+import { filterChainsByStage, compareChainsByStagePriority, STAGE_OPTIONS_PRIORITY, submissionId, submissionContact, submissionWords, submissionSendNowBlockReason, trackSubmissions } from '../../src/lib/submission-track.ts'
 import { decide, noteSent, toSendForYou, dueButUnsent, effectiveHand, withHand, emptyState, followUpWords } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
@@ -57,6 +57,28 @@ test('the stage filter shows all rows, or only the rows at one stage', () => {
     assert.equal(got[0].current, stage)
   }
   assert.equal(submissionId(chains[0]), 'me@example.com:' + chains[0].threadId)
+})
+
+test('the All view orders rows by his stage priority, most recent first within a stage', () => {
+  const chains = [
+    chain({ current: 'decision', terminal: 'offer', lastActivity: NOW - 1 * DAY }),
+    chain({ current: 'rtr', lastActivity: NOW - 1 * DAY }),
+    chain({ current: 'submitted', lastActivity: NOW - 5 * DAY }),
+    chain({ current: 'client', lastActivity: NOW - 9 * DAY }),
+    chain({ current: 'interview', lastActivity: NOW - 9 * DAY }),
+    chain({ current: 'other', lastActivity: NOW - 1 * DAY }),
+  ]
+  assert.deepEqual(
+    [...chains].sort(compareChainsByStagePriority).map(c => c.current),
+    ['interview', 'client', 'submitted', 'rtr', 'decision', 'other'],
+    'Interview first, then With client, Submitted, RTR, everything else last — even when the later stages are more recent',
+  )
+  // Within one stage, most recent activity first.
+  const older = chain({ current: 'interview', lastActivity: NOW - 9 * DAY })
+  const newer = chain({ current: 'interview', lastActivity: NOW - 2 * DAY })
+  assert.deepEqual([older, newer].sort(compareChainsByStagePriority).map(c => c.lastActivity), [NOW - 2 * DAY, NOW - 9 * DAY])
+  // The dropdown lists its options in the same order.
+  assert.deepEqual(STAGE_OPTIONS_PRIORITY, ['interview', 'client', 'submitted', 'rtr', 'decision'])
 })
 
 test('each stage asks its own question, in his words', () => {
@@ -191,12 +213,17 @@ test('an armed submission rings on a ticked day, and the daily job says why it s
   assert.ok(dueButUnsent(sunday, state, SUN).some(d => d.id === id && /ring days/.test(d.reason)), 'and the hold is named, not silent')
 })
 
-test('the Overview carries the filter and the follow-up control on every row', () => {
+test('the Overview carries the filter and the follow-up control on every row, and inside the view', () => {
   const page = read('src/app/dashboard/overview/page.tsx')
   assert.ok(page.includes('aria-label="Filter by stage"'), 'stage filter dropdown')
   assert.ok(page.includes('<option value="all">All stages</option>'), 'All stages option')
+  assert.ok(page.includes('STAGE_OPTIONS_PRIORITY.map'), 'the Stage dropdown lists its options in priority order')
+  assert.ok(page.includes('compareChainsByStagePriority'), 'the rows sort by stage priority')
   assert.ok(page.includes('filterChainsByStage(chains, stageFilter)'), 'the rows are filtered by the stage')
   assert.ok(page.includes('SubmissionFollowUp'), 'per-row follow-up control')
+  assert.equal(page.split('<SubmissionFollowUp target={target}').length - 1, 2, 'the panel is on the row and inside the mind-map view')
+  assert.ok(page.includes('const viewingTarget = targetFor(viewing)'), 'the view looks up its chain target')
+  assert.ok(page.includes('target={viewingTarget}'), 'the view passes its chain target to the panel')
   assert.ok(page.includes('target && target.action !== "none" ? "Open and follow up" : "View"'), 'the thread link reads Open and follow up whenever there is something to do')
   assert.ok(page.includes('"/api/gmail/submission-track"'), 'the page reads the submission track')
   const panel = read('src/app/dashboard/overview/_components/submission-followup.tsx')
