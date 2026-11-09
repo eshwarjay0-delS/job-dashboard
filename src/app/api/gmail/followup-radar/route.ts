@@ -1,6 +1,6 @@
 import { ignoreReason, validIgnoreRule } from "@/lib/gmail-ignore"
 import { emailAddress } from "@/lib/application-evidence"
-import { radarReviewObservation } from "@/lib/followup-eligibility"
+import { radarOccurrence, radarReviewObservation } from "@/lib/followup-eligibility"
 import { getFollowupClaim } from "@/lib/followup-claims"
 import { blob } from "@/lib/storage"
 import { NextResponse } from "next/server"
@@ -69,26 +69,16 @@ export async function GET(req: Request) {
           break
         }
       }
-      // Review-only verified observation. A 'due' verdict here never grants
-      // permission to send, schedule, or claim; it only stamps this radar item
-      // as passing the shared eligibility rule on verified evidence.
-      const observation = radarReviewObservation({
-        account: t.accountEmail,
-        threadId: t.threadId,
-        sentAt,
-        lastInboundAt,
-        minWaitDays: minWait,
-        now,
-      })
-      // Review read only: whether this exact occurrence is already claimed.
+      // Review read first: whether this exact occurrence is already claimed.
       // A failed claim read never fails the radar response; it reports unknown.
+      const occurrence = radarOccurrence(t.threadId, sentAt)
       let claim: { claimed: boolean; claimedAt: number | null } | 'unknown' = 'unknown'
       try {
         const existing = await getFollowupClaim(blob, {
           userId: ctx.userId,
           account: t.accountEmail,
           thread: t.threadId,
-          occurrence: observation.occurrence,
+          occurrence,
         })
         claim = existing
           ? { claimed: true, claimedAt: existing.claimedAt }
@@ -96,6 +86,19 @@ export async function GET(req: Request) {
       } catch {
         claim = 'unknown'
       }
+      // Review-only verified observation. A 'due' verdict here never grants
+      // permission to send, schedule, or claim; it only stamps this radar item
+      // as passing the shared eligibility rule on verified evidence. A claimed
+      // occurrence reports 'duplicate', never 'due'.
+      const observation = radarReviewObservation({
+        account: t.accountEmail,
+        threadId: t.threadId,
+        sentAt,
+        lastInboundAt,
+        minWaitDays: minWait,
+        now,
+        completedOccurrences: claim !== 'unknown' && claim.claimed ? [occurrence] : [],
+      })
       radar.push({
         threadId: t.threadId,
         account: t.accountEmail,

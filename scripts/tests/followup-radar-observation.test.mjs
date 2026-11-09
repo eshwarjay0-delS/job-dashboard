@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { radarReviewObservation } from '../../src/lib/followup-eligibility.ts'
+import { radarOccurrence, radarReviewObservation } from '../../src/lib/followup-eligibility.ts'
 
 const DAY = 86_400_000
 const now = 1_800_000_000_000
@@ -56,4 +56,13 @@ test('review surface shows the verdict next to each waiting item', () => {
   assert.match(page, /Due for review/)
   const hook = readFileSync('src/lib/use-gmail-data.ts', 'utf8')
   assert.match(hook, /eligibility: string/)
+})
+
+test('a claimed occurrence reports duplicate, never due, from the same occurrence name', () => {
+  assert.equal(radarOccurrence('t1', sent), `radar:t1:${sent}`)
+  const o = radarReviewObservation(base)
+  assert.equal(o.occurrence, radarOccurrence('t1', sent))
+  assert.equal(radarReviewObservation({ ...base, completedOccurrences: [o.occurrence] }).eligibility, 'duplicate')
+  assert.equal(radarReviewObservation({ ...base, completedOccurrences: ['radar:t1:other'] }).eligibility, 'due')
+  assert.equal(radarReviewObservation({ ...base, completedOccurrences: [] }).eligibility, 'due')
 })
