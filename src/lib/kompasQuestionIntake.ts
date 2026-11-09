@@ -13,7 +13,7 @@ const FRESH = /^(?:what|why|how|when|where|which|who|can you|could you|would you
 const CONT_WORD = /^(?:and|or|but|for|with|without|that|which|to|of|in|on|about|including|plus|then|because|if|when|where|while|until|from|into|by|using|across|during|after|before)\b/i
 const DANGLING = /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should|me|us|you|how|what|why|when|where|which|who)\s*$/i
 const STOP = new Set("what how why when where which who tell walk have has can could would will did does are the and but for you your yeah okay right great thanks this that those these about with from into our their them they been being just like really very also more most some any".split(" "))
-const NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|right|alright|all right|cool|sure|great|nice|bye|goodbye|good morning|good afternoon)[.!?]*$/i
+const NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|right|alright|all right|cool|sure|great|nice|bye|goodbye|good morning|good afternoon|i don'?t know|i dont know|i dunno|i'?m not sure|i am not sure|no idea|not sure|i have no idea)[.!?]*$/i
 const SHORT_FOLLOW = /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how|walk me through that)(?:\s+though)?[.?!]*$/i
 
 function bareLead(text: string): string {
@@ -197,6 +197,9 @@ function bestEffortQuestion(text: string): string {
   if (/\b(?:failed|broke|happened|outage|incident|was down|went down)\b/i.test(t)) {
     return `Tell me about a time when ${t.charAt(0).toLowerCase()}${t.slice(1)}.`
   }
+  // A long statement with no ask is the person talking, not a question. Turning every scrap into
+  // "Can you speak to this" answered bits that were not the question, including "I don't know".
+  if (words.length > 8 && !/\b(?:how|what|why|when|where|which|who)\b/i.test(t)) return ""
   return `Can you speak to this: ${t}?`
 }
 

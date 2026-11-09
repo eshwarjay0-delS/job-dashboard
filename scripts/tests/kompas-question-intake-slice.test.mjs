@@ -125,9 +125,9 @@ test("(g) a free-form fragment with no question syntax still becomes a question"
   assert.match(out[0], /\?|time when/i)
   assert.match(out[0], /certificate rotation failed/i)
   const paragraph = intakeQuestions(["The team pages one person for every noisy alert and the queue never clears."])
-  assert.equal(paragraph.length, 1)
-  assert.match(paragraph[0], /\?/)
-  assert.match(paragraph[0], /noisy alert/)
+  assert.equal(paragraph.length, 0, "a long statement with no ask is not a question")
+  assert.equal(intakeQuestions(["I don't know"]).length, 0)
+  assert.equal(intakeQuestions(["I dunno"]).length, 0)
 })
 
 test("(h) dictation repairs keep Kubernetes, PKI, Terraform, STAR, and a few more mishearings", () => {
