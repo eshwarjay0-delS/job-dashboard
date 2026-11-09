@@ -20,7 +20,7 @@ const code = [
   slice("// ── Question intake", "// ── end question intake ──"),
   slice("function shortFollowUp(", "const armsAuto"),
   slice("function pressQuestion(", "$(\"answerBtn\")"),
-  slice("async function aiAnswer(", "$(\"screenBtn\")"),
+  slice("function frameHeardQuestion(", "$(\"screenBtn\")"),
   slice("function hasAnswer(", "\n// Takes an empty page"),
 ].join("\n");
 

@@ -133,7 +133,7 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  vm.runInContext(section('function heardAsQuestion(', '\n'),s);
  vm.runInContext(section('function shortFollowUp(', 'const armsAuto'),s);
  vm.runInContext(section('function pressQuestion(', '$("answerBtn")'),s);
- vm.runInContext(section('async function aiAnswer(', '$("screenBtn")'),s);
+ vm.runInContext(section('function frameHeardQuestion(', '$("screenBtn")'),s);
  const first=s.aiAnswer(false);await s.aiAnswer(false);assert.equal(calls,1);assert.equal(s.aiBusy,true);done();await first;assert.equal(s.aiBusy,false);
 });
 test('stalled answers stop spinning and keep a visible retry path',async()=>{

@@ -19,7 +19,7 @@ const code = [
   slice("// ── Question intake", "// ── end question intake ──"),
   slice("function shortFollowUp(", "const armsAuto"),
   slice("function pressQuestion(", "$(\"answerBtn\")"),
-  slice("async function aiAnswer(", "$(\"screenBtn\")"),
+  slice("function frameHeardQuestion(", "$(\"screenBtn\")"),
   slice("function hasAnswer(", "\n// Takes an empty page"),
 ].join("\n");
 
@@ -131,7 +131,7 @@ test("candidate speech, filler, and a repeat are not the interviewer question", 
   assert.equal(heard([
     { who: "Them", text: "and I'm going to take that one." },
     { who: "Them", text: "I'm going to take that one." },
-  ], "", ""), "and I'm going to take that one.");
+  ], "", ""), "");
 });
 
 test("an answer renders only under the question id it was requested for", () => {
