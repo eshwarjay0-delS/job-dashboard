@@ -1283,3 +1283,84 @@ html.kd #view-copilot .manual,
 html.kd #view-copilot .statusline{
   opacity:1 !important;
 }
+/* Row 1 never moves. Mic, speaker, Start, AI Answer, Capture, Auto and Follow live there.
+   Prev and Next sit in their own gutters beside the question. Chat sits on the bottom row. */
+html.kd,html.kd body,html.kd #view-copilot,html.kd #view-copilot .overlay{
+  transform:none !important;
+  filter:none !important;
+  perspective:none !important;
+  contain:none !important;
+}
+html.kd #view-copilot .overlay .bar-actions{
+  top:0 !important;
+  height:48px !important;
+  min-height:48px !important;
+  max-height:48px !important;
+  overflow:hidden !important;
+}
+html.kd #chatBtn,
+html.kd #prevBtn,
+html.kd #nextBtn,
+html.kd #cardCount,
+html.kd #view-copilot .overlay .bar-actions .asking{
+  position:fixed !important;
+  top:auto !important;
+  z-index:170 !important;
+  pointer-events:auto !important;
+}
+html.kd #chatBtn{
+  left:14px !important;
+  right:auto !important;
+  bottom:46px !important;
+  height:32px !important;
+  min-height:32px !important;
+  max-height:32px !important;
+  font-size:13px !important;
+  padding:0 12px !important;
+}
+html.kd #prevBtn{
+  left:12px !important;
+  right:auto !important;
+  top:62px !important;
+  bottom:auto !important;
+  height:32px !important;
+  min-height:32px !important;
+  max-height:32px !important;
+  font-size:13px !important;
+  padding:0 10px !important;
+}
+html.kd #nextBtn{
+  right:12px !important;
+  left:auto !important;
+  top:62px !important;
+  bottom:auto !important;
+  height:32px !important;
+  min-height:32px !important;
+  max-height:32px !important;
+  font-size:13px !important;
+  padding:0 10px !important;
+}
+html.kd #cardCount{
+  right:12px !important;
+  left:auto !important;
+  top:98px !important;
+  bottom:auto !important;
+  width:64px !important;
+  height:auto !important;
+  font-size:12px !important;
+  background:transparent !important;
+}
+html.kd #view-copilot .overlay .bar-actions .asking{
+  right:14px !important;
+  left:auto !important;
+  bottom:46px !important;
+  height:32px !important;
+  min-height:32px !important;
+  max-height:32px !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .card.q-away .q{
+  margin-left:76px !important;
+  margin-right:92px !important;
+}
+html.kd #barAsk{padding-left:96px !important;padding-right:150px !important}

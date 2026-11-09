@@ -1,3 +1,7 @@
+## 2026-11-09 — Mic through Follow stay in the top row
+
+That row stays 48px and does not move when the question or the answer is resized. Prev and Next sit beside the question. Chat sits on the bottom row.
+
 ## 2026-11-09 — The controls sit in the top row and the question stays visible
 
 Stop, AI Answer, Caption Capture and the other controls share the top row with Kompas. The question stays open. The answer fills the rest. Both stay solid.
