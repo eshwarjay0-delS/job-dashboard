@@ -1147,6 +1147,35 @@ if (window.kompasDesktop) {
   $("screenBtn").classList.remove("hidden");
   $("screenCaptureAnswerBtn")?.classList.remove("hidden");
 }
+function placeDesktopControls() {
+  if (!window.kompasDesktop) return;
+  const card = $("card");
+  const q = card?.querySelector(".q");
+  const prev = $("prevBtn");
+  const next = $("nextBtn");
+  const count = $("cardCount");
+  const chat = $("chatBtn");
+  const ask = $("barAsk");
+  const level = document.querySelector("#overlay .asking");
+  if (q && prev && next && !q.parentElement?.classList.contains("q-row")) {
+    const row = document.createElement("div");
+    row.className = "q-row";
+    q.parentElement.insertBefore(row, q);
+    const end = document.createElement("div");
+    end.className = "q-end";
+    row.append(prev, q, end);
+    end.append(next);
+    if (count) end.append(count);
+  }
+  if (ask && chat && chat.parentElement !== ask) ask.insertBefore(chat, ask.firstChild);
+  if (ask && level && level.parentElement !== ask) ask.append(level);
+}
+if (window.kompasDesktop) {
+  const runPlace = () => placeDesktopControls();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", runPlace);
+  else runPlace();
+  document.addEventListener("DOMContentLoaded", () => setTimeout(runPlace, 0));
+}
 let sysConnecting = false;
 let sysAttempt = 0;
 function syncSrc() {

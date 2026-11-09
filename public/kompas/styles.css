@@ -1366,4 +1366,45 @@ html.kd #view-copilot .card.q-away .q{
   margin-left:76px !important;
   margin-right:92px !important;
 }
-html.kd #barAsk{padding-left:96px !important;padding-right:150px !important}
+html.kd #barAsk{padding-left:8px !important;padding-right:8px !important;display:flex !important;align-items:center !important;gap:8px !important}
+html.kd #view-copilot .overlay .bar-actions{
+  position:relative !important;
+  top:auto !important;
+  left:auto !important;
+  right:auto !important;
+  width:100% !important;
+  height:48px !important;
+  min-height:48px !important;
+  max-height:48px !important;
+  flex:0 0 48px !important;
+  z-index:2 !important;
+  justify-content:center !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+}
+html.kd #view-copilot .q-row{
+  display:flex !important;
+  align-items:flex-start !important;
+  gap:8px !important;
+  width:100% !important;
+  flex:0 1 auto !important;
+  min-height:4.2em !important;
+}
+html.kd #view-copilot .q-row .q{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  margin:0 !important;
+}
+html.kd #view-copilot .q-end{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 auto}
+html.kd #view-copilot .q-row #prevBtn,
+html.kd #view-copilot .q-row #nextBtn,
+html.kd #view-copilot .q-end #cardCount,
+html.kd #barAsk #chatBtn,
+html.kd #barAsk .asking{
+  position:static !important;
+  top:auto !important;
+  left:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+  flex:0 0 auto !important;
+}

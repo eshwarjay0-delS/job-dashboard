@@ -1,3 +1,7 @@
+## 2026-11-09 — Session controls, the question, and Chat each have their own space
+
+The session buttons stay in a 48px strip. Prev and Next sit beside the question. Chat sits on the bottom row. The words are not covered.
+
 ## 2026-11-09 — The signed-in browser returns the session to the open desktop
 
 A Chrome page that already has a sign-in returns it to 127.0.0.1, and Continue in Kompas uses that same address if the browser blocks the automatic return.
