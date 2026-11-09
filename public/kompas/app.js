@@ -3157,6 +3157,7 @@ const PHRASE_FIXES = [
   [/\bsys\s+log\b/gi, "syslog"],
   [/\bsee[\s-]*em\b/gi, "SIEM"],
   [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
+  [/\bsas\s+dast\b/gi, "SAST and DAST"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -3201,6 +3202,8 @@ function heardDraft(lines, screen, answerText) {
     if (!t) continue;
     const text = String(t.text || "").replace(/\s+/g, " ").trim();
     if (!text || noise.test(text)) continue;
+    if (/\b(?:i(?:'m| am) going to (?:take that one|start with the first one)|i(?:'m| am) a newbie)\b/i.test(text)) continue;
+    if (/^(?:you\s+)?i\s+i\b/i.test(text)) continue;
     if (interviewerOn && t.who === "You") continue;   // the candidate's mic is not the interviewer question
     if (t.who === "You" && bag.size) {
       const words = text.toLowerCase().split(/[^a-z0-9+#]+/).filter(w => w.length >= 3);
@@ -4050,6 +4053,114 @@ function emptyPressReason(anyCapture, wantSys, hasThemCap, themSilent) {
   if (hasThemCap) return "Kompas hears the call audio but nothing has been transcribed yet — keep playing, then press AI Answer again.";
   return "Nothing heard yet — press Start, or type a question.";
 }
+// The question on a press: the latest interviewer chunks that are one ask, repaired and stripped.
+// No model call. Salary and the other personal-logistics stems are skipped.
+function frameHeardQuestion(chunks, opts = {}) {
+  const source = opts && opts.source ? opts.source : "Them";
+  const answered = String((opts && opts.answered) || "").replace(/\s+/g, " ").trim();
+  const gapMs = Number(opts && opts.gapMs) > 0 ? Number(opts.gapMs) : 8000;
+  const repair = (text) => (typeof fixPhrases === "function" ? fixPhrases(text) : String(text || "")).replace(/\s+/g, " ").trim();
+  const wordsOf = (text) => String(text || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").split(/\s+/).filter((w) => w.length >= 5);
+  const shares = (a, b) => { const bag = new Set(wordsOf(a)); return wordsOf(b).some((w) => bag.has(w)); };
+  const pointsBack = (text) => /\b(?:\bit\b|\bthat\b|\bthis\b|\bthem\b|\bthose\b|coming back|duplicates|building on)\b/i.test(text);
+  const dangles = (text) => /\b(?:and|or|but|to|of|for|with|about|in|on|into|from|the|a|an|your|you|how|what|why|when|where|who|which)\s*$/i.test(text);
+  const endsAsk = (text) => /\?\s*$/.test(String(text || ""));
+  const isAsk = (text) => /\?/.test(text) || /^(?:(?:alright|okay|ok|so|um+|uh+|yeah|yes|right|well|and)[, ]+)*(?:what|why|how|when|where|which|who|can|could|would|do|did|tell|describe|explain|walk)\b/i.test(text);
+  const candidate = (text) => {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return true;
+    if (/\b(?:i(?:'m| am) going to (?:take that one|start(?: with the first one)?)|i(?:'m| am) a newbie)\b/i.test(t)) return true;
+    if (/^(?:you\s+)?i\s+i\b/i.test(t)) return true;
+    if (/\b(?:my question is|i wanted to ask|i want to ask|i'd like to ask)\b/i.test(t)) return false;
+    if (/^(?:(?:and|so|yeah|yes|um+|uh+|ok(?:ay)?|well|right|got it)[, ]+)*(?:i(?:'m| am|'ll| will|'ve|'d)?\b)/i.test(t) && !/\?/.test(t)) return true;
+    if (/^(?:so the first thing|yes,\s+so\b|yeah,\s+yeah\b|i would say)\b/i.test(t)) return true;
+    return false;
+  };
+  const smallTalk = (text) => /^(?:hi|hello|hey)\b/i.test(text) || /\bthanks for (?:making|taking) the time\b/i.test(text) || /^yes, of course\b/i.test(text) || /^happy to talk\b/i.test(text);
+  const rows = [];
+  for (const raw of chunks || []) {
+    if (raw == null) continue;
+    const row = typeof raw === "string" ? { text: raw, who: source, at: 0, seq: null } : raw;
+    if (row.answered) continue;
+    if (source === "Them" && row.who === "You") continue;
+    let text = repair(String(row.text || ""));
+    text = text.replace(/\b(?:and\s+)?i(?:'m| am) going to take that one[.!]*/gi, " ").replace(/\s+/g, " ").trim();
+    if (!text || candidate(text) || smallTalk(text)) continue;
+    if (typeof isNoiseLine === "function" && isNoiseLine(text)) continue;
+    const key = text.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    const prev = rows[rows.length - 1];
+    const prevKey = prev ? prev.text.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim() : "";
+    if (key && prevKey && (key === prevKey || (key.length > 12 && prevKey.includes(key)) || (prevKey.length > 12 && key.includes(prevKey)))) continue;
+    rows.push({ text, at: Number(row.at) || 0, seq: row.seq });
+  }
+  if (!rows.length) return { question: "", skip: "noise", parts: [] };
+  let end = rows.length - 1;
+  while (end > 0) {
+    const cur = rows[end], prev = rows[end - 1];
+    const fragment = !isAsk(cur.text) && endsAsk(prev.text) && !dangles(prev.text) && !/^(?:and|or|but|to|of|for|with|about|the)\b/i.test(cur.text);
+    if (fragment) { end--; continue; }
+    break;
+  }
+  const ask = rows[end].text;
+  const priorAnswer = (prev) => {
+    if (!answered || shares(prev, ask) || pointsBack(prev) || pointsBack(ask)) return false;
+    const bag = new Set(wordsOf(answered));
+    const hit = wordsOf(prev).filter((w) => bag.has(w)).length;
+    return hit >= 2;
+  };
+  let start = end;
+  while (start > 0 && end - start < 3) {
+    const prev = rows[start - 1], cur = rows[start];
+    if (prev.at && cur.at && cur.at - prev.at > gapMs && !dangles(prev.text)) break;
+    if (endsAsk(prev.text) && !dangles(prev.text)) break;
+    if (priorAnswer(prev.text)) break;
+    if (answered && prev.text.replace(/\s+/g, " ").trim().toLowerCase() === answered.toLowerCase()) break;
+    const scene = /^(?:the|a|an|our|their|building on|in our)\b/i.test(prev.text);
+    const unfinished = !/[.?!]["']?\s*$/.test(prev.text);
+    const join = unfinished || dangles(prev.text) || /^(?:and|or|but|to|of|for|with|about|in|on|into|from|the)\b/i.test(cur.text) || shares(prev.text, ask) || pointsBack(prev.text) || pointsBack(ask) || scene;
+    if (!join) break;
+    start--;
+  }
+  const parts = rows.slice(start, end + 1).map((r) => r.text);
+  let joined = "";
+  for (const bit of parts) {
+    if (!joined) joined = bit;
+    else joined = joined.replace(/[,:\s]+$/, "") + " " + bit;
+  }
+  joined = joined.replace(/\s+/g, " ").trim();
+  joined = joined.replace(/\b([A-Za-z]+)(?:\s+\1\b)+/gi, "$1");
+  joined = joined.replace(/\biam\b/g, "IAM").replace(/\bsiem\b/gi, "SIEM").replace(/\bsast\b/gi, "SAST").replace(/\bdast\b/gi, "DAST").replace(/\bsyslog\b/gi, "syslog");
+  let t = joined.replace(/^(?:(?:alright|all right|okay|ok|so|um+|uh+|yeah|yes|right|well|got it|and)[,.]?\s+)+/i, "").replace(/\s+/g, " ").trim();
+  const embedded = t.match(/\b(?:my question is|the other thing i wanted to ask is|the thing i wanted to ask is|the real question is)\s+(.+)$/i);
+  if (embedded) t = embedded[1].replace(/\s+/g, " ").trim();
+  if (typeof cleanShownQuestion === "function") t = cleanShownQuestion(t) || t;
+  const bare = t.replace(/[?.!\s]+$/g, "").trim();
+  const logistics = (s) => {
+    const x = String(s || "");
+    if (typeof personalLogistics === "function" && personalLogistics(x)) return true;
+    return /\b(?:salary|compensation|visa status|sponsorship|h-?1b|willing to relocate|open to relocation|your address|where do you live|notice period)\b/i.test(x);
+  };
+  if (logistics(bare) || logistics(t)) return { question: "", skip: "logistics", parts };
+  const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+  let question = "";
+  if (/^(?:intro(?:duction)?|introduce(?: yourself)?)$/i.test(bare)) question = "Tell me about yourself.";
+  else if (/^(?:(?:your|my|the)\s+)?strengths?$/i.test(bare)) question = "What are your strengths?";
+  else if (/^(?:(?:your|my|a|the)\s+)?weakness(?:es)?$/i.test(bare)) question = "What is a weakness you are working on?";
+  else if (/^why (?:are you |did you |you're |you )?leav/i.test(bare) || /^why leave\b/i.test(bare)) question = "Why are you leaving your current role?";
+  else if (/^why (?:this )?(?:role|company|job|us|here)\b/i.test(bare) || /^why do you want this role\b/i.test(bare)) question = "Why do you want this role?";
+  else if (/^walk me through\b/i.test(bare)) question = "Can you walk me through " + bare.replace(/^walk me through\s*/i, "").replace(/[?.!]+$/, "") + "?";
+  else if (/^(?:what|why|how|when|where|which|who|can|could|would|do|did|tell|describe|explain)\b/i.test(t) || /\?/.test(t)) {
+    question = /[?.!]$/.test(t) ? t : t.replace(/[,:\s]+$/, "") + "?";
+    question = cap(question);
+  } else {
+    const terms = bare.split(/\s+/).map((w) => w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9+#]+$/g, "")).filter((w) => w && w.length >= 3 && !/^(and|the|your|with|for|you|can|how|what|this|that|from|into)$/i.test(w));
+    if (terms.length) question = "Can you explain your experience with " + (terms.length === 1 ? terms[0] : terms.slice(0, -1).join(" ") + " and " + terms[terms.length - 1]) + "?";
+    else question = cap(bare);
+  }
+  question = String(question || "").replace(/\s+/g, " ").replace(/\?\?+$/g, "?").trim();
+  if (!question) return { question: "", skip: "noise", parts };
+  return { question, skip: "", parts, seq: rows[start].seq };
+}
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -4166,7 +4277,26 @@ async function aiAnswer(fromAuto, options = {}) {
         showPressed(page, heardOnly ? cur.question : q);
         return await generateAnswer(heard, page, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
       }
-      // Fresh speech: same-question chunks become one whole question. Different recent chunks each get their own card.
+      // Fresh speech: the latest interviewer chunks become one question. No extra model call.
+      if (!typedText) {
+        try {
+          const framed = frameHeardQuestion(pending, { source: questionSource(), answered: (cur && cur.question) || "" });
+          if (framed && framed.skip === "logistics") {
+            answeredSeq = heardSeq; updatePending();
+            status("Personal logistics, not answered. Still listening.", "live");
+            return;
+          }
+          if (framed && framed.question) {
+            answeredSeq = heardSeq; updatePending();
+            const who = questionSource() === "You" ? "You" : "Them";
+            const heard = (framed.parts || []).map((text) => who + ": " + text).join("\n") || framed.question;
+            const card = addCard(framed.question, ["…"]);
+            card.heard = heard; card.formed = heard; card.formSeq = framed.seq != null ? framed.seq : (pending[0] && pending[0].seq);
+            showPressed(card, framed.question);
+            return await generateAnswer(heard, card, { consolidated: true, earlier: "", derived: card.question, pinned: true });
+          }
+        } catch { /* the intake below still answers one question */ }
+      }
       // A keyword with no question syntax is formed into a question and pinned, so the answer engine receives the whole ask.
       if (!typedText) {
         try {

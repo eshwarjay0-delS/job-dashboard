@@ -83,7 +83,7 @@ const PAGE = (() => {
     slice('function recentQA(', '\nfunction askingLevel('),
     slice('function shortFollowUp(', 'const armsAuto'),
     slice('function pressQuestion(', '$("answerBtn")'),
-    slice('async function aiAnswer(', '$("screenBtn")'),
+    slice('function frameHeardQuestion(', '$("screenBtn")'),
     slice('function hasAnswer(', '\n// Takes an empty page'),
     slice('function dropPage(', '\n// Copy / Export'),
   ].join('\n')

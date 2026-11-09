@@ -181,6 +181,7 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bsys\s+log\b/gi, "syslog"],
   [/\bsee[\s-]*em\b/gi, "SIEM"],
   [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
+  [/\bsas\s+dast\b/gi, "SAST and DAST"],
 ]
 
 /** The repair list, exported for the parity test. Read only. */
