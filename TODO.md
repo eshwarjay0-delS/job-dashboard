@@ -1,3 +1,7 @@
+## 2026-11-09 — One press answers one question
+
+A press no longer answers every queued question. It answers the latest interviewer question once, or re-asks the selected card when nothing new was heard. Candidate speech is kept out of that question. An answer for a different topic is not shown under the asked question. SAST, DAST, syslog, SIEM, and IAM repairs match on the page and the server. A narrow window wraps the buttons, the question can show the whole ask, and the answer is taller. Caption fonts are not OCR'd here. Not merged and not a live Windows check.
+
 ## 2026-11-09 — A ramble and I don't know are not answered
 
 A long statement with no ask is not turned into a question. I don't know on its own is left alone. The question box stays at the start of the question.

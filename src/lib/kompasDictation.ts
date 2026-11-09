@@ -173,6 +173,14 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bactive\s+die\s+rectory\b/gi, "Active Directory"],
   [/\bsale\s+point\b/gi, "SailPoint"],
   [/\bservice\s+principle(?=\s+(?:name|names|password|credential|credentials|app|application|azure|object))\b/gi, "service principal"],
+  // Mic misspellings (9 Nov 2026). Technical terms only; ordinary "I am" stays.
+  [/\bsassed\b/gi, "SAST"],
+  [/\bsast\b/gi, "SAST"],
+  [/\bdast\b/gi, "DAST"],
+  [/\bsis\s+log\b/gi, "syslog"],
+  [/\bsys\s+log\b/gi, "syslog"],
+  [/\bsee[\s-]*em\b/gi, "SIEM"],
+  [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
 ]
 
 /** The repair list, exported for the parity test. Read only. */
