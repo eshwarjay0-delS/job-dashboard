@@ -1,3 +1,7 @@
+## 2026-11-09 — A signed-in Chrome page can finish the open desktop window
+
+When Chrome already has a sign-in and the desktop did not send a loopback address, the page keeps a Continue in Kompas button. The handoff expiry is never zero.
+
 ## 2026-11-09 — Mic through Follow stay in the top row
 
 That row stays 48px and does not move when the question or the answer is resized. Prev and Next sit beside the question. Chat sits on the bottom row.

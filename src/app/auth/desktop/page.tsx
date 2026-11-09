@@ -36,8 +36,18 @@ function loopbackTarget(search: string) {
   return raw
 }
 
+// The installed desktop refuses a handoff whose expiry is missing or zero, and then
+// stays on the sign-in card. A real expiry is kept. Otherwise a positive placeholder
+// is enough for that check; the desktop session route sets the real lifetime.
+function bearerExpiresAt(session: { expires_at?: number | null }) {
+  const given = Number(session && session.expires_at)
+  if (Number.isFinite(given) && given > 0) return Math.floor(given)
+  return 3600
+}
+
 export default function DesktopSignIn() {
   const [note, setNote] = useState("Checking the sign-in already in this browser…")
+  const [continueHref, setContinueHref] = useState("")
 
   useEffect(() => {
     let gone = false
@@ -64,7 +74,7 @@ export default function DesktopSignIn() {
       // A bearer with no refresh token does not erase a stored desktop refresh.
       // The optional refresh field is omitted here on purpose: copying Chrome's
       // refresh token would put the desktop on the family two web tabs rotate.
-      const payload = JSON.stringify({ access_token: session.access_token, expires_at: session.expires_at || 0 })
+      const payload = JSON.stringify({ access_token: session.access_token, expires_at: bearerExpiresAt(session) })
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       // Prefer the isolated MarketFit handler over the legacy kompas handler,
       // which may still belong to an older application.
@@ -72,12 +82,18 @@ export default function DesktopSignIn() {
       // Repeating protocol URLs can restart the executable, trigger UAC, and
       // reopen /auth/desktop even after Chrome has authenticated. A failed
       // handoff stays visible rather than silently spawning more processes.
-      setNote("Chrome is opening MarketFit. The Google sign-in already in that browser is used, and this window continues from there.")
+      // A return to 127.0.0.1 continues the window that is already open.
+      // Without that address, Chrome will not open the app link unless the
+      // person clicks it, so the page was staying on this sentence forever.
       if (loopback && state) {
+        setNote("Kompas is signed in. This browser is handing that sign-in to the open window.")
         window.location.replace(loopback + "?state=" + encodeURIComponent(state) + "&d=" + encodeURIComponent(b64))
         return
       }
-      window.location.href = withState("marketfit-kompas://auth?d=" + b64, state)
+      const handoffUrl = withState("marketfit-kompas://auth?d=" + b64, state)
+      if (typeof setContinueHref === "function") setContinueHref(handoffUrl)
+      setNote("You are signed in. Press Continue in Kompas. The open window finishes from that click.")
+      window.location.href = handoffUrl
     }).catch(() => {
       if (!gone && !loopback) window.location.assign(login)
     })
@@ -86,7 +102,12 @@ export default function DesktopSignIn() {
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 32, fontFamily: "system-ui, sans-serif" }}>
-      <p style={{ maxWidth: 420, fontSize: 18, lineHeight: 1.5 }}>{note}</p>
+      <div style={{ maxWidth: 420, display: "grid", gap: 16 }}>
+        <p style={{ fontSize: 18, lineHeight: 1.5, margin: 0 }}>{note}</p>
+        {continueHref ? (
+          <a href={continueHref} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 18px", borderRadius: 999, background: "#16140f", color: "#fff", fontWeight: 700, textDecoration: "none" }}>Continue in Kompas</a>
+        ) : null}
+      </div>
     </main>
   )
 }
