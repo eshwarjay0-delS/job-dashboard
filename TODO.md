@@ -1,3 +1,7 @@
+## 2026-11-09 — The Kompas title is gone and the session buttons fill that row
+
+The word Kompas and the role title are hidden. The session buttons sit in that top row and shrink to fit.
+
 ## 2026-11-09 — Session controls, the question, and Chat each have their own space
 
 The session buttons stay in a 48px strip. Prev and Next sit beside the question. Chat sits on the bottom row. The words are not covered.

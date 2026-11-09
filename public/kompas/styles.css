@@ -1408,3 +1408,38 @@ html.kd #barAsk .asking{
   bottom:auto !important;
   flex:0 0 auto !important;
 }
+html.kd .kd-word,
+html.kd .kd-left .brand-dot,
+html.kd .kd-left .persona-chip,
+html.kd #exitCopilot{display:none !important}
+html.kd #view-copilot{z-index:220 !important;overflow:visible !important}
+html.kd #view-copilot .overlay{overflow:visible !important}
+html.kd #view-copilot .overlay .bar-actions{
+  position:absolute !important;
+  top:-48px !important;
+  left:8px !important;
+  right:200px !important;
+  width:auto !important;
+  height:48px !important;
+  min-height:48px !important;
+  max-height:48px !important;
+  z-index:5 !important;
+  justify-content:flex-start !important;
+  align-items:center !important;
+  flex-wrap:nowrap !important;
+  gap:4px !important;
+  padding:0 4px !important;
+  overflow:hidden !important;
+  background:transparent !important;
+}
+html.kd #view-copilot .overlay .bar-actions .pill,
+html.kd #view-copilot .overlay .bar-actions #startBtn,
+html.kd #view-copilot .overlay .bar-actions #answerBtn,
+html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  height:32px !important;
+  max-height:32px !important;
+  font-size:12px !important;
+  padding:0 8px !important;
+}
