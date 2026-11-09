@@ -1,3 +1,7 @@
+## 2026-11-09 — The controls sit in the top row and the question stays visible
+
+Stop, AI Answer, Caption Capture and the other controls share the top row with Kompas. The question stays open. The answer fills the rest. Both stay solid.
+
 ## 2026-11-06 — Only the corner tips are rounded, and the answer box stays solid
 
 The window corners are 28px. The question and answer sit on solid paper so nothing behind them shows through.

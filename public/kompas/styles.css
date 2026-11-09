@@ -1127,11 +1127,12 @@ html.kd .kd-bar{
   font-size:13px !important;
 }
 html.kd .kd-left{flex:0 0 auto !important}
+html.kd #view-copilot{transform:none !important}
 html.kd #view-copilot .overlay .bar-actions{
   position:fixed !important;
   top:0 !important;
-  left:108px !important;
-  right:8px !important;
+  left:200px !important;
+  right:250px !important;
   z-index:140 !important;
   flex:0 0 48px !important;
   height:48px !important;
@@ -1141,11 +1142,11 @@ html.kd #view-copilot .overlay .bar-actions{
   align-items:center !important;
   justify-content:flex-start !important;
   gap:4px !important;
-  padding:0 6px !important;
-  overflow:visible !important;
+  padding:0 4px !important;
+  overflow:hidden !important;
   background:transparent !important;
   pointer-events:none !important;
-  font-size:11px !important;
+  font-size:12px !important;
 }
 html.kd #view-copilot .overlay .bar-actions>*{pointer-events:auto !important}
 html.kd #view-copilot .overlay .bar-actions .pill,
@@ -1155,18 +1156,18 @@ html.kd #view-copilot .overlay .bar-actions .live-select,
 html.kd #view-copilot .overlay .bar-actions .card-count,
 html.kd #view-copilot .overlay .bar-actions #micBtn,
 html.kd #view-copilot .overlay .bar-actions #sysBtn{
-  height:22px !important;
-  min-height:22px !important;
-  max-height:22px !important;
-  font-size:11px !important;
-  padding:0 7px !important;
+  height:28px !important;
+  min-height:28px !important;
+  max-height:28px !important;
+  font-size:12px !important;
+  padding:0 8px !important;
   flex:0 1 auto !important;
 }
 html.kd #view-copilot .overlay .bar-actions #micBtn,
 html.kd #view-copilot .overlay .bar-actions #sysBtn{
-  width:22px !important;
-  min-width:22px !important;
-  flex:0 0 22px !important;
+  width:28px !important;
+  min-width:28px !important;
+  flex:0 0 28px !important;
   padding:0 !important;
 }
 html.kd #view-copilot .overlay .bar-actions #startBtn,
@@ -1179,8 +1180,20 @@ html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
   padding:0 12px !important;
   flex:0 0 auto !important;
 }
-html.kd #view-copilot .overlay .bar-actions .asking{flex:0 1 auto !important;height:22px !important;font-size:11px !important}
-html.kd #view-copilot .overlay .bar-actions .asking .live-select{height:22px !important;max-height:22px !important;max-width:7rem !important;font-size:11px !important;padding:0 6px !important}
+html.kd #view-copilot .overlay .bar-actions .asking{flex:0 1 auto !important;height:28px !important;font-size:12px !important}
+html.kd #view-copilot .overlay .bar-actions .asking .live-select{height:28px !important;max-height:28px !important;max-width:8rem !important;font-size:12px !important;padding:0 8px !important}
+html.kd #view-copilot .card.q-away .q,
+html.kd #view-copilot .q{
+  display:flex !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  max-height:34% !important;
+  min-height:4.2em !important;
+  margin-bottom:12px !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  pointer-events:auto !important;
+}
 html.kd #view-copilot .a-head,
 html.kd #view-copilot .bar-ask,
 html.kd #view-copilot .statusline{
