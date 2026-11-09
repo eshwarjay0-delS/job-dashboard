@@ -419,11 +419,10 @@ const ASKS =
 // Asks that do not open like a question (the page's ASK_PHRASE in public/kompas/app.js is the same list).
 const ASK_PHRASE = /\b(?:my question is|the (?:real |other |next |last |main |follow[- ]?up )?question is|(?:i )?wanted to ask|i want to ask|i'd like to ask|let me ask|what i want to (?:know|understand)|(?:the )?thing i'm trying to get at|the follow[- ]?up is|part (?:one|two|three) is)\b/i
 
-/** Speaker-aware: any Them: line is a question; otherwise needs ? or an ask-pattern. */
+/** A line is a question when it asks, from the mic or from computer audio. A Them label alone is not an ask. */
 export function plainlyNoQuestion(heard: string): boolean {
   const lines = String(heard || "").split("\n").filter((l) => l.trim())
   if (!lines.length) return true
-  if (lines.some((l) => /^Them:/.test(l))) return false
   return !lines.some((l) => {
     const t = l.replace(/^(You|Them):\s*/, "")
     // Each sentence of a segment, and asks that do not open like a question ("Got it. My question is how you'd

@@ -1935,6 +1935,10 @@ function repairBadge(r) {
 // 5. heardDraft shows what landed, and a greeting does not become the question.
 function dictateStep(cap, rms, now, vad) {
   const V = vad || { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 };
+  // Computer audio stays loud between sentences (the 4x tap plus a noise bed), so the
+  // microphone's 1100 ms silence never arrives and the question is cut at 28 seconds.
+  // A dip under the recent peak is that pause. The microphone path is unchanged.
+  const silenceMs = cap && cap.who === "Them" ? 650 : V.SILENCE_MS;
   let noise = Number(cap.noise) || 0.001, speechMs = cap.speechMs || 0, voiced = !!cap.voiced;
   let lastVoice = cap.lastVoice || 0, lastTick = cap.lastTick || 0;
   // Slice 12: the floor also learns a steady level it is stuck under. Over each 1.5 s the quietest level is kept; when even
@@ -1948,14 +1952,17 @@ function dictateStep(cap, rms, now, vad) {
   const scream = rms >= 0.08 || (noise > 0.008 && rms > noise * 6);
   if (scream && noise > rms * 0.2) noise = Math.max(0.001, rms * 0.12);
   const threshold = Math.max(0.003, noise * 2.5);
-  const speaking = scream || rms > threshold;
+  const prevPeak = Number.isFinite(cap.peak) ? cap.peak : rms;
+  cap.peak = Math.max(rms, prevPeak * 0.985);
+  const dipped = cap.who === "Them" && cap.peak > 0.012 && rms < cap.peak * 0.4 && !scream;
+  const speaking = !dipped && (scream || rms > threshold);
   if (!speaking && rms < threshold * 0.7) noise = noise * 0.995 + rms * 0.005;
   const dt = lastTick ? Math.min(speaking ? 400 : 100, Math.max(0, now - lastTick)) : 20;
   lastTick = now;
   if (speaking) { lastVoice = now; speechMs += dt; if (scream || speechMs > 120) voiced = true; }
   const segLen = now - (cap.segStart == null ? now : cap.segStart);
   let action = "listen";
-  if (voiced && now - lastVoice > V.SILENCE_MS) action = "end";
+  if (voiced && now - lastVoice > silenceMs) action = "end";
   else if (segLen > V.MAX_SEG_MS) action = voiced ? "end" : "drop";
   else if (!voiced && segLen > V.IDLE_RECYCLE_MS) action = speechMs >= 60 ? "rescue" : "drop";
   return { noise, speechMs, voiced, lastVoice, lastTick, speaking, scream, action, floorMin, floorAt };

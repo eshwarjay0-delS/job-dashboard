@@ -2,6 +2,10 @@
 
 A long statement with no ask is not turned into a question. I don't know on its own is left alone. The question box stays at the start of the question.
 
+## 2026-11-09 — Computer audio cuts a question on a pause
+
+A dip in computer audio ends the phrase the way a microphone pause does. A line from the call is a question only when it asks.
+
 ## 2026-11-09 — The Kompas title is gone and the session buttons fill that row
 
 The word Kompas and the role title are hidden. The session buttons sit in that top row and shrink to fit.
