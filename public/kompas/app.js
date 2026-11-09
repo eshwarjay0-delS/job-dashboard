@@ -1060,6 +1060,7 @@ function renderCard() {
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   $("question").textContent = draft || c.question;
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
+  const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
   const lines = answerLines(c.answer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
@@ -2280,7 +2281,7 @@ function showCaption(who, text, isInterim) {
   // Present only the latest three wrapped lines. The transcript retains the
   // complete line for the previous, proven voice-question engine.
   captionText.scrollTop = captionText.scrollHeight;
-  const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = box.scrollHeight; }
+  const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = 0; }
   const card = $("card");
   if (who === "Them" && card && card.classList.contains("q-away") && !(cards[idx] && cards[idx].streaming)) card.classList.remove("q-away");
   clearTimeout(capTimer); capTimer = setTimeout(() => { el.classList.add("hidden"); if (box) box.classList.remove("live"); }, 9000);
@@ -3315,7 +3316,7 @@ const INTAKE_FRESH = /^(?:what|why|how|when|where|which|who|can you|could you|wo
 const INTAKE_CONT = /^(?:and|or|but|for|with|without|that|which|to|of|in|on|about|including|plus|then|because|if|when|where|while|until|from|into|by|using|across|during|after|before)\b/i;
 const INTAKE_DANGLING = /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should|me|us|you|how|what|why|when|where|which|who)\s*$/i;
 const SLICE_STOP = new Set("what how why when where which who tell walk have has can could would will did does are the and but for you your yeah okay right great thanks this that those these about with from into our their them they been being just like really very also more most some any".split(" "));
-const INTAKE_NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|right|alright|all right|cool|sure|great|nice|bye|goodbye|good morning|good afternoon)[.!?]*$/i;
+const INTAKE_NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|right|alright|all right|cool|sure|great|nice|bye|goodbye|good morning|good afternoon|i don'?t know|i dont know|i dunno|i'?m not sure|i am not sure|no idea|not sure|i have no idea)[.!?]*$/i;
 const INTAKE_FOLLOW = /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how|walk me through that)(?:\s+though)?[.?!]*$/i;
 function intakeBare(text) { return String(text || "").replace(INTAKE_LEAD, "").replace(/\s+/g, " ").trim(); }
 function intakeRepair(text) { const raw = String(text || ""); return (typeof fixPhrases === "function" ? fixPhrases(raw) : raw).replace(/\s+/g, " ").trim(); }
@@ -3447,6 +3448,7 @@ function intakeBest(text) {
   if (/^(?:i|i'm|i've)\b/i.test(t) && words.length > 12 && !/\b(?:how|what|why|when|where|which|who|question)\b/i.test(t)) return "";
   if (words.length <= 3 && !/\b(?:is|are|was|were|have|has|do|does|did|failed|broke|happened)\b/i.test(t)) return "What is " + t + "?";
   if (/\b(?:failed|broke|happened|outage|incident|was down|went down)\b/i.test(t)) return "Tell me about a time when " + t.charAt(0).toLowerCase() + t.slice(1) + ".";
+  if (words.length > 8 && !/\b(?:how|what|why|when|where|which|who)\b/i.test(t)) return "";
   return "Can you speak to this: " + t + "?";
 }
 function formQuestionFromHeard(text) {

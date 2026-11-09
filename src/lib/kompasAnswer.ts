@@ -664,7 +664,7 @@ function classifyAskSentence(sentence: string): AskPart {
 }
 
 const SPOKEN_NOISE =
-  /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|uh[- ]?huh|mm+[- ]?hmm+|m+hm+|mm+|ah+|oh+|i see|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i
+  /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|uh[- ]?huh|mm+[- ]?hmm+|m+hm+|mm+|ah+|oh+|i see|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good|i don'?t know|i dont know|i dunno|i'?m not sure|i am not sure|no idea|not sure|i have no idea)[.!?]*$/i
 
 // Stress round 2, idea E of the competitor study (a rival's auto trigger fired on "yeah that's a tough one"): 13 of 15
 // interviewer acknowledgements and small-talk lines ("makes sense", "let's dive in", "I see what you mean", "give me one
@@ -677,6 +677,7 @@ const SMALL_TALK_CORE = [
   "makes (?:total |perfect )?sense", "fair enough", "good,? good", "very good", "all good", "no worries", "sounds good",
   "(?:thanks|thank you)(?: so much| for that)?", "i see(?: what you mean)?", "i hear you", "got it", "understood", "noted",
   "interesting(?: point| one)?", "(?:i )?(?:really )?like that(?: answer| idea| one| example)?", "(?:i )?appreciate (?:that|it)",
+  "i don'?t know", "i dont know", "i dunno", "i'?m not sure", "i am not sure", "no idea", "not sure", "i have no idea",
   "let'?s (?:dive in|get started|begin|start|move on|keep going|continue|jump in|jump right in)",
   "give me (?:a|one) (?:second|sec|moment|minute)", "(?:just )?(?:one|a) (?:second|sec|moment)", "hold on", "bear with me",
   "let me (?:pull up|find|check|grab|look at) (?:my|the) (?:notes|screen|list|questions|next question)",

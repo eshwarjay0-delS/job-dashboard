@@ -1,3 +1,7 @@
+## 2026-11-09 — A ramble and I don't know are not answered
+
+A long statement with no ask is not turned into a question. I don't know on its own is left alone. The question box stays at the start of the question.
+
 ## 2026-11-09 — The Kompas title is gone and the session buttons fill that row
 
 The word Kompas and the role title are hidden. The session buttons sit in that top row and shrink to fit.
