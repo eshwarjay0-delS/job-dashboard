@@ -1,3 +1,7 @@
+## 2026-11-09 — The signed-in browser returns the session to the open desktop
+
+A Chrome page that already has a sign-in returns it to 127.0.0.1, and Continue in Kompas uses that same address if the browser blocks the automatic return.
+
 ## 2026-11-09 — The session controls sit in the Kompas row
 
 Check again, AI Answer, Caption Capture, Auto and Follow are lifted off the question into the top row.

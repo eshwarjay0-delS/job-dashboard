@@ -85,12 +85,14 @@ export default function DesktopSignIn() {
       // A return to 127.0.0.1 continues the window that is already open.
       // Without that address, Chrome will not open the app link unless the
       // person clicks it, so the page was staying on this sentence forever.
+      const handoffUrl = withState("marketfit-kompas://auth?d=" + b64, state)
       if (loopback && state) {
-        setNote("Kompas is signed in. This browser is handing that sign-in to the open window.")
-        window.location.replace(loopback + "?state=" + encodeURIComponent(state) + "&d=" + encodeURIComponent(b64))
+        const back = loopback + "?state=" + encodeURIComponent(state) + "&d=" + encodeURIComponent(b64)
+        if (typeof setContinueHref === "function") setContinueHref(back)
+        setNote("You are signed in. Press Continue in Kompas if the open window does not finish on its own.")
+        window.location.replace(back)
         return
       }
-      const handoffUrl = withState("marketfit-kompas://auth?d=" + b64, state)
       if (typeof setContinueHref === "function") setContinueHref(handoffUrl)
       setNote("You are signed in. Press Continue in Kompas. The open window finishes from that click.")
       window.location.href = handoffUrl
