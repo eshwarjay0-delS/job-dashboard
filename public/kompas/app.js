@@ -552,6 +552,7 @@ function finishWizard() {
 let ledger = null;              // Water-Algorithm rotation state for the running session
 let cards = [];
 let idx = 0;
+let cardSeq = 1;
 let transcript = [];            // [{ who, text, at }]
 let transcriptionEpoch = 0;
 let transcriptionOrder = Promise.resolve();
@@ -1050,6 +1051,41 @@ function proseLines(text) {
     return { t: l, kind: "passage" };
   }).filter(Boolean);
 }
+// An answer is shown only on the card it was requested for. A stale stream keeps its own id.
+function answerForCard(card) {
+  if (!card) return "";
+  if (card.answerFor && card.qid && card.answerFor !== card.qid) return "";
+  return card.answer;
+}
+function writeAnswer(card, qid, text) {
+  if (!card || !qid || card.qid !== qid) return false;
+  card.answer = text;
+  card.answerFor = qid;
+  return true;
+}
+// The asked topic and a different named topic in the answer do not belong together.
+function answerFitsQuestion(question, answer) {
+  const topics = [
+    ["syslog", /\b(?:log aggregators?|syslog(?: relay)?)\b/i],
+    ["sast", /\bSAST\b|static application security testing/i],
+    ["dast", /\bDAST\b|dynamic application security testing/i],
+    ["remote", /\b(?:secure remote(?:[ -]access)?|remote[ -]access solution|encrypted tunnel)\b/i],
+    ["otp", /\bone-time passwords?\b|\bOTP\b/i],
+    ["siem", /\bSIEM\b/i],
+    ["iam", /\bIAM\b|identity and access management/i],
+  ];
+  const q = String(question || ""), a = String(answer || "");
+  const qHits = topics.filter(([, re]) => re.test(q)).map(([id]) => id);
+  const aHits = topics.filter(([, re]) => re.test(a)).map(([id]) => id);
+  if (!qHits.length || !aHits.length) return true;
+  return qHits.some(id => aHits.includes(id));
+}
+function stripUnaskedLogistics(question, answer) {
+  const raw = String(answer || "");
+  if (!raw || personalLogistics(question)) return raw;
+  const kept = raw.split(/(?<=[.?!])\s+/).filter(s => s && !personalLogistics(s));
+  return kept.join(" ").trim();
+}
 function renderCard() {
   const c = cards[idx]; if (!c) return;
   // Where you are in the book, and ends that look like ends (owner, 27 Oct 2026: Prev/Next "aren't working" at the first
@@ -1058,11 +1094,12 @@ function renderCard() {
   if ($("prevBtn")) $("prevBtn").disabled = idx <= 0;
   if ($("nextBtn")) $("nextBtn").disabled = idx >= cards.length - 1;
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
+  const shownAnswer = answerForCard(c);
   $("question").textContent = draft || c.question;
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
-  const lines = answerLines(c.answer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
+  const lines = answerLines(shownAnswer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
   lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
@@ -1105,7 +1142,7 @@ function animateCard() { const card = $("card"); card.style.animation = "none"; 
 const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c = $("card"); if (c) c.classList.remove("q-away"); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
-function addCard(question, answer) { const c = { question, answer }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
+function addCard(question, answer) { const c = { question, answer, qid: "q" + (cardSeq++) }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
 // A page holds a finished answer: not streaming, and more than the "…" placeholder.
 function hasAnswer(c) { const t = (typeof c.answer === "string" ? c.answer : (c.answer || []).join("\n")).trim(); return !c.streaming && t.length > 8 && !/^[.…\s]+$/.test(t); }
 // Takes an empty page out of the book. The only page stays (the live view always shows one); returns whether it went.
@@ -2279,6 +2316,8 @@ function answerAnywayLines(held, o) {
 // a tucked-away box back (never while an answer is still being written on that page); your own speech never moves it.
 function showCaption(who, text, isInterim) {
   const el = $("caption"); if (!el) return;
+  // The candidate's mic is not the interviewer question. With call audio on, it never sits under the question.
+  if (who === "You" && typeof captures !== "undefined" && captures.some(c => c && c.who === "Them" && !c.stopped)) return;
   if (who === "Them") noteThem(text);
   else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
@@ -3110,6 +3149,14 @@ const PHRASE_FIXES = [
   [/\bactive\s+die\s+rectory\b/gi, "Active Directory"],
   [/\bsale\s+point\b/gi, "SailPoint"],
   [/\bservice\s+principle(?=\s+(?:name|names|password|credential|credentials|app|application|azure|object))\b/gi, "service principal"],
+  // Mic misspellings (9 Nov 2026). Technical terms only; ordinary "I am" stays.
+  [/\bsassed\b/gi, "SAST"],
+  [/\bsast\b/gi, "SAST"],
+  [/\bdast\b/gi, "DAST"],
+  [/\bsis\s+log\b/gi, "syslog"],
+  [/\bsys\s+log\b/gi, "syslog"],
+  [/\bsee[\s-]*em\b/gi, "SIEM"],
+  [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -3148,20 +3195,29 @@ function fixTerms(text) {
 function heardDraft(lines, screen, answerText) {
   const noise = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+)[.!?]*$/i;
   const bag = new Set(String(answerText || "").toLowerCase().split(/[^a-z0-9+#]+/).filter(w => w.length >= 3));
+  const interviewerOn = (lines || []).some(t => t && t.who === "Them");
   const bits = [];
   for (const t of lines || []) {
     if (!t) continue;
     const text = String(t.text || "").replace(/\s+/g, " ").trim();
     if (!text || noise.test(text)) continue;
+    if (interviewerOn && t.who === "You") continue;   // the candidate's mic is not the interviewer question
     if (t.who === "You" && bag.size) {
       const words = text.toLowerCase().split(/[^a-z0-9+#]+/).filter(w => w.length >= 3);
       if (words.length && words.filter(w => bag.has(w)).length / words.length >= 0.5) continue;
     }
     bits.push(text);
   }
+  const fresh = [];
+  for (const text of bits) {
+    const key = text.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    const prev = fresh.length ? fresh[fresh.length - 1].toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim() : "";
+    if (key && prev && (key === prev || (key.length > 12 && prev.includes(key)) || (prev.length > 12 && key.includes(prev)))) continue;
+    fresh.push(text);
+  }
   // The Heard line is a live caption, not the record (the drawer holds every
   // line): show the last four phrases, rolling forward as new lines arrive.
-  const q = bits.slice(-4).join(" ");
+  const q = fresh.slice(-4).join(" ");
   return q.length > 600 ? "…" + q.slice(-600) : q;
 }
 // Caption capture (owner, 1 Nov 2026, titled "caption capture"): when the
@@ -3652,7 +3708,9 @@ function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries 
 async function generateAnswerRequest(question, card, opts = {}) {
   question = String(question || "").trim(); if (!question) return;
   card = card || addCard(question, ["…"]);
-  if (location.protocol === "file:") { card.answer = ["(Preview) Serve the deployed app for grounded answers."]; renderCard(); return; }
+  if (!card.qid) card.qid = "q" + (cardSeq++);
+  const qid = card.qid;
+  if (location.protocol === "file:") { writeAnswer(card, qid, ["(Preview) Serve the deployed app for grounded answers."]); renderCard(); return; }
   // One page, one request (owner, 27 Oct 2026: paging back showed earlier answers as "half ass generation or completely
   // invisible"). A new question used to abort whatever was streaming, so the page before it kept half its answer. Now
   // only this page's own earlier request is replaced; another page finishes in the background.
@@ -3669,7 +3727,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const depthKey = `${$("liveInterviewer").value}|${liveConfig().mode}|${liveConfig().length || ""}`;
   if (!directDesktop && !opts.reask && !opts.pinned && !opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions. A pinned press is a live ask.
     const hit = bookMatch(question, depthKey);
-    if (hit) { serveBook(card, hit, depthKey); return; }
+    if (hit && answerFitsQuestion(question, hit.text)) { serveBook(card, hit, depthKey); return; }
   }
   if (opts.regen && paintFromAnchors(card)) {                              // the two anchors already hold this level
     if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
@@ -3723,7 +3781,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       if (dj.derived) { derivedQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, dj.derived) : dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       derivedBy = dj.derivedBy || "ai";
       const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
-      if (hit) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
+      if (hit && answerFitsQuestion(derivedQ || card.question, hit.text)) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
     } catch (e) {
       if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; stallRetry(); } return; }
     }
@@ -3771,9 +3829,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
   // re-rendering the full card DOM on every token (was causing visible jank).
   let renderQueued = false;
   const show = (t) => {
-    if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
+    if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
     const spoken = sayAloud(t).trim();
-    card.answer = spoken ? spoken : ["…"];
+    if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
     requestAnimationFrame(() => { renderQueued = false; if (cards[idx] === card) renderCard(); });
@@ -3851,6 +3909,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
       return;
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
+    text = stripUnaskedLogistics(card.anchorQ || card.question || question, text);
+    if (!answerFitsQuestion(card.anchorQ || card.question || question, text)) {
+      card.meta = "off-topic";
+      text = "This answer did not address the question on screen. Press AI Answer to try again.";
+    }
     show(text);
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);   // the full heard question, never its last line (owner, 23 Oct)
     card.meta = `${repairBadge(meta.repair)}`;
@@ -3943,11 +4006,33 @@ function pressQuestion(typed, intake, screen) {
   if (!q && intake && intake.keywords && intake.keywords.length) q = intake.keywords.slice(0, 8).join(" ");
   return q || "";
 }
+// Candidate speech, filler, and a repeated fragment are not the interviewer question.
+function cleanShownQuestion(text) {
+  let t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  t = t.replace(/\s+(?:hello,?\s+)?i(?:'m| am) a newbie\b[\s\S]*$/i, "");
+  t = t.replace(/\s+(?:and\s+)?i(?:'m| am) going to\b[\s\S]*$/i, "");
+  t = t.replace(/\s*\bthank you\b[.!]*/gi, "");
+  const parts = t.split(/(?<=[.?!])\s+/);
+  const seen = [], kept = [];
+  for (const part of parts) {
+    const s = part.replace(/\s+/g, " ").trim();
+    if (!s) continue;
+    if (/^(?:(?:um+|uh+|yeah|yes|ok(?:ay)?|and|so)[, ]*)+$/i.test(s)) continue;
+    if (/^(?:i(?:'m| am) going to|i(?:'ll| will)|thank you|thanks\b|hello[, ]|you\s)/i.test(s) && !/\b(?:what|how|why|when|where|tell me|walk me)\b/i.test(s)) continue;
+    const key = s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    if (seen.some(prev => prev === key || (prev.length > 12 && key.length > 12 && (prev.includes(key) || key.includes(prev))))) continue;
+    seen.push(key);
+    kept.push(s);
+  }
+  return kept.join(" ").replace(/\s+/g, " ").trim();
+}
 function showPressed(card, q) {
-  if (card && q) card.question = q;
+  const shown = cleanShownQuestion(q);
+  if (card && q) card.question = shown || q;
   if (card && cards[idx] === card) renderCard();
   toTop();
-  if (q) status("Answering: " + q, "live");
+  if (card && card.question) status("Answering: " + card.question, "live");
 }
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false, aiBusySince = 0;
@@ -4091,17 +4176,21 @@ async function aiAnswer(fromAuto, options = {}) {
           const one = formed.length === 1 ? formed[0] : null;
           const formalLine = one && one.parts.length === 1 && (Q_CUE.test(one.parts[0]) || opensNewAsk(one.parts[0]));
           if (formed.length && !formalLine) {
+            // One press, one request. A backlog does not each fire. The request is the
+            // question that just finished (manual and Auto). An earlier card is re-asked
+            // only when this press heard nothing new, further down.
+            let chosen = formed.length > 1 ? [formed[formed.length - 1]] : formed;
             answeredSeq = heardSeq; updatePending();
             const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
             const earlierFormed = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
             const who = questionSource() === "You" ? "You" : "Them";
-            for (const g of formed) {
+            for (const g of chosen) {
               const spanHeard = g.parts.map(text => `${who}: ${text}`).join("\n");
               const card = addCard(g.q, ["…"]);
               card.heard = spanHeard; card.earlier = earlierFormed; card.formed = spanHeard;
-              card.formSeq = pending.length ? pending[0].seq : null;
+              card.formSeq = g.parts.length ? (pending.find(t => t.text === g.parts[0]) || pending[0] || {}).seq : null;
               showPressed(card, g.q);
-              await generateAnswer(spanHeard, card, { consolidated: true, earlier: earlierFormed, derived: g.q, pinned: true });
+              await generateAnswer(spanHeard, card, { consolidated: true, earlier: earlierFormed, derived: card.question, pinned: true });
             }
             return;
           }
@@ -4145,7 +4234,16 @@ async function aiAnswer(fromAuto, options = {}) {
       if (!heardOnly && followTyped && spans.length > 1) spans[0] = typedFollowUpQuestion(spans[0], cur.question) || spans[0];
       if (spans.length > 1) {
         const who = heardOnly ? (questionSource() === "You" ? "You" : "Them") : "You";
-        for (const span of spans) {
+        let list = spans;
+        if (heardOnly || fromAuto) {
+          const shown = String((cur && cur.question) || "").toLowerCase();
+          const hit = !fromAuto && spans.find(s => {
+            const q = String(s || "").toLowerCase();
+            return q && shown && (shown.includes(q.slice(0, 48)) || q.includes(shown.slice(0, 48)));
+          });
+          list = [hit || spans[spans.length - 1]];
+        }
+        for (const span of list) {
           const shown = heardOnly ? span : (withoutLogistics(span) || span);   // a typed compound shows only its non-logistics part
           const spanHeard = who + ": " + span;
           const card = addCard(heardOnly ? "Deriving…" : shown, ["…"]);

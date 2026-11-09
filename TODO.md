@@ -1,3 +1,7 @@
+## 2026-11-09 — One press answers one question
+
+A press no longer answers every queued question. It answers the latest interviewer question once, or re-asks the selected card when nothing new was heard. Candidate speech is kept out of that question. An answer for a different topic is not shown under the asked question. SAST, DAST, syslog, SIEM, and IAM repairs match on the page and the server. A narrow window wraps the buttons, the question can show the whole ask, and the answer is taller. Caption fonts are not OCR'd here. Not merged and not a live Windows check.
+
 ## 2026-11-09 — Ten simulated WhatsApp tailor rounds passed
 
 No resume-generation behavior changed. The extra keyword pass still runs whenever coverage is not above 95 percent, which includes 70 to 80. The repair loop still runs under 95 percent. Unevidenced job-post terms stay off the skills line. The new test sends nothing. It checks a Word file, a bad link, a timeout, a duplicate, a forged signature, and that the live site answers. This is not visible on the public pages except the signed-in Plan & Vision text.
