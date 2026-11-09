@@ -1,3 +1,7 @@
+## 2026-11-09 — The session controls sit in the Kompas row
+
+Check again, AI Answer, Caption Capture, Auto and Follow are lifted off the question into the top row.
+
 ## 2026-11-09 — A signed-in Chrome page can finish the open desktop window
 
 When Chrome already has a sign-in and the desktop did not send a loopback address, the page keeps a Continue in Kompas button. The handoff expiry is never zero.

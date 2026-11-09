@@ -1067,7 +1067,7 @@ html.kd #view-copilot{
   left:0;
   right:0;
   bottom:0;
-  overflow:hidden;
+  overflow:visible !important;
   border-radius:0 0 28px 28px !important;
 }
 html.kd .cn-card,
@@ -1128,9 +1128,10 @@ html.kd .kd-bar{
 }
 html.kd .kd-left{flex:0 0 auto !important}
 html.kd #view-copilot{transform:none !important}
+html.kd #view-copilot .overlay{overflow:visible !important}
 html.kd #view-copilot .overlay .bar-actions{
-  position:fixed !important;
-  top:0 !important;
+  position:absolute !important;
+  top:-48px !important;
   left:200px !important;
   right:250px !important;
   z-index:140 !important;
@@ -1292,11 +1293,13 @@ html.kd,html.kd body,html.kd #view-copilot,html.kd #view-copilot .overlay{
   contain:none !important;
 }
 html.kd #view-copilot .overlay .bar-actions{
-  top:0 !important;
+  position:absolute !important;
+  top:-48px !important;
   height:48px !important;
   min-height:48px !important;
   max-height:48px !important;
   overflow:hidden !important;
+  z-index:250 !important;
 }
 html.kd #chatBtn,
 html.kd #prevBtn,
