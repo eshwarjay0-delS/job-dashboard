@@ -1,3 +1,7 @@
+## 2026-11-09 — Ten simulated WhatsApp tailor rounds passed
+
+No resume-generation behavior changed. The extra keyword pass still runs whenever coverage is not above 95 percent, which includes 70 to 80. The repair loop still runs under 95 percent. Unevidenced job-post terms stay off the skills line. The new test sends nothing. It checks a Word file, a bad link, a timeout, a duplicate, a forged signature, and that the live site answers. This is not visible on the public pages except the signed-in Plan & Vision text.
+
 ## 2026-11-09 — A ramble and I don't know are not answered
 
 A long statement with no ask is not turned into a question. I don't know on its own is left alone. The question box stays at the start of the question.
