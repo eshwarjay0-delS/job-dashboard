@@ -1443,3 +1443,83 @@ html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
   font-size:12px !important;
   padding:0 8px !important;
 }
+/* The question is only as tall as its words. The answer starts under it.
+   Scrolling the answer hides the question; scrolling up brings it back.
+   Buttons keep their labels inside themselves and scroll sideways instead of painting on each other. */
+html.kd #view-copilot .overlay .bar-actions{
+  left:8px !important;
+  right:200px !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  scrollbar-width:none !important;
+}
+html.kd #view-copilot .overlay .bar-actions .pill,
+html.kd #view-copilot .overlay .bar-actions #startBtn,
+html.kd #view-copilot .overlay .bar-actions #answerBtn,
+html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn,
+html.kd #view-copilot .overlay .bar-actions #micBtn,
+html.kd #view-copilot .overlay .bar-actions #sysBtn{
+  flex:0 0 auto !important;
+  min-width:max-content !important;
+  max-width:none !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+html.kd .update-pill{
+  top:auto !important;
+  bottom:36px !important;
+  right:10px !important;
+  z-index:230 !important;
+}
+html.kd #view-copilot .overlay .content,
+html.kd.desktop-focus #view-copilot .content{
+  padding:2px 6px 0 !important;
+}
+html.kd #view-copilot .q-row{
+  min-height:0 !important;
+  height:auto !important;
+  flex:0 0 auto !important;
+  align-items:center !important;
+  margin:0 !important;
+  gap:6px !important;
+}
+html.kd #view-copilot .q,
+html.kd #view-copilot .card .q,
+html.kd #view-copilot .card .q.live,
+html.kd #view-copilot .q-row .q,
+html.desktop-focus #view-copilot .q{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  max-height:4.8em !important;
+  height:auto !important;
+  margin:0 !important;
+  padding:0 2px !important;
+  border:0 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+html.kd #view-copilot .card.q-away .q-row,
+html.kd #view-copilot .card.q-away .q,
+html.kd #view-copilot .card.q-away .q-row .q{
+  max-height:0 !important;
+  min-height:0 !important;
+  height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+  opacity:0 !important;
+  overflow:hidden !important;
+  pointer-events:none !important;
+}
+html.kd #view-copilot .a,
+html.kd #view-copilot .a-head{
+  margin:0 !important;
+  padding:0 !important;
+}
+html.kd #view-copilot .a-head{
+  margin:0 0 2px !important;
+  position:relative !important;
+  z-index:1 !important;
+  background:#fdfcf9 !important;
+}
