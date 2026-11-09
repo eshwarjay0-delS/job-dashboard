@@ -17,6 +17,11 @@ export function followupEligibility(input: {
   return input.now < input.dueAt ? 'waiting' : 'due'
 }
 
+/** Single source for the radar occurrence name: one outbound message. */
+export function radarOccurrence(threadId: string, sentAt: number): string {
+  return `radar:${threadId}:${sentAt}`
+}
+
 /**
  * Review-only observation for one follow-up radar item. The radar route calls
  * this so the review surface shows a helper-verified verdict instead of trusting
@@ -31,19 +36,20 @@ export function followupEligibility(input: {
  * never derived from a free-text automation plan (plans carry no dueAt or
  * occurrence fields, so they must not silently become schedules);
  * occurrence names the exact outbound message under review; completed
- * occurrences are empty because no claim store exists yet, so 'duplicate'
- * cannot fire until atomic claims land. That limit is intentional and
- * recorded, not hidden.
+ * occurrences come from the caller's live claim read, so a claimed
+ * occurrence reports 'duplicate' instead of 'due'. Callers without a claim
+ * store pass none and the verdict stays best-effort review only.
  */
 export function radarReviewObservation(input: {
   account: string; threadId: string; sentAt: number;
   lastInboundAt?: number; minWaitDays: number; now: number;
+  completedOccurrences?: readonly string[];
 }): {
   eligibility: 'blocked' | 'stopped' | 'duplicate' | 'waiting' | 'due';
   dueAt: number; lastSentAt: number; lastInboundAt: number | null; occurrence: string;
 } {
   const dueAt = input.sentAt + Math.max(0, input.minWaitDays) * 86_400_000
-  const occurrence = `radar:${input.threadId}:${input.sentAt}`
+  const occurrence = radarOccurrence(input.threadId, input.sentAt)
   const eligibility = followupEligibility({
     account: input.account,
     thread: input.threadId,
@@ -57,7 +63,7 @@ export function radarReviewObservation(input: {
     observedAccount: input.account,
     observedThread: input.threadId,
     occurrence,
-    completedOccurrences: [],
+    completedOccurrences: input.completedOccurrences ?? [],
   })
   return {
     eligibility,
