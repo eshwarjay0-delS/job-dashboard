@@ -2,6 +2,10 @@
 
 A long statement with no ask is not turned into a question. I don't know on its own is left alone. The question box stays at the start of the question.
 
+## 2026-11-09 — The answer sits under a short question
+
+The question is only as tall as its words. Scrolling the answer hides it, and scrolling up brings it back. The session buttons keep their own width instead of painting on each other.
+
 ## 2026-11-09 — Computer audio cuts a question on a pause
 
 A dip in computer audio ends the phrase the way a microphone pause does. A line from the call is a question only when it asks.
