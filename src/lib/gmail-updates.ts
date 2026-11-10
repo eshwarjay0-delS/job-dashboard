@@ -22,21 +22,27 @@ export async function getInboxSyncHealth(uid:string,accounts:SyncAccount[]):Prom
   return Promise.all(accounts.filter(a=>a.gmail_enabled).map(async account=>{
     const email=account.google_email.toLowerCase()
     const key=updateRoot(uid)+`cursors/${accountKey(email)}.json`
+    let raw:string|null
     try{
-      const raw=await blob.getText(key)
-      if(!raw)return {account:email,status:'never',lastSuccessAt:null}
-      const state=JSON.parse(raw) as Partial<State>|null
-      if(!state||typeof state.history!=='string'||!state.history||typeof state.checkedAt!=='number'||!Number.isFinite(state.checkedAt)||state.checkedAt<=0||(state.page!==undefined&&typeof state.page!=='string')){
-        return {account:email,status:'error',lastSuccessAt:null,issue:'Saved sync state is invalid. Refresh to retry.'}
-      }
-      return {
-        account:email,
-        status:state.page?'partial':'checked',
-        lastSuccessAt:state.checkedAt,
-        ...(state.page?{issue:'More changes remain; the next refresh continues the scan.'}:{})
-      }
+      raw=await blob.getText(key)
     }catch{
       return {account:email,status:'error',lastSuccessAt:null,issue:'Saved sync state could not be read. Refresh to retry.'}
+    }
+    if(!raw)return {account:email,status:'never',lastSuccessAt:null}
+    let state:Partial<State>|null
+    try{
+      state=JSON.parse(raw) as Partial<State>|null
+    }catch{
+      return {account:email,status:'error',lastSuccessAt:null,issue:'Saved sync state is invalid. Refresh to retry.'}
+    }
+    if(!state||typeof state.history!=='string'||!state.history||typeof state.checkedAt!=='number'||!Number.isFinite(state.checkedAt)||state.checkedAt<=0||(state.page!==undefined&&typeof state.page!=='string')){
+      return {account:email,status:'error',lastSuccessAt:null,issue:'Saved sync state is invalid. Refresh to retry.'}
+    }
+    return {
+      account:email,
+      status:state.page?'partial':'checked',
+      lastSuccessAt:state.checkedAt,
+      ...(state.page?{issue:'More changes remain; the next refresh continues the scan.'}:{})
     }
   }))
 }
