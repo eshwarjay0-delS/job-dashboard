@@ -357,3 +357,14 @@ Canonical production metadata: `job-dashboard-fawn.vercel.app` resolves to READY
 - Other open approved work remains tracked: PR #286 Poke Gmail/mobile and PR #288 contract clearance pagination have full CI/Plan/REA/baseline checks green on their audited heads but are Vercel-blocked; PR #283 voice/audio remains with the active Kompas Continuous Voice Delivery task. Do not duplicate voice edits. PR #274/#278 identity gate and PR #279 external-send gate remain owner-approval blocked.
 
 Continue: obtain fresh owner review on #287, restore authorized Vercel project/preview access, restack #289 after #287, and complete the authenticated DOCX acceptance. Then implement structured role-linked confirmations and continue the separate Gmail/mobile and contract-crawler releases.
+
+
+## 10 November 2026 — 17 October WhatsApp artifact recheck
+
+- Read-only Library search/list did not surface the previously recorded source DOCX or any generated output in this run. The prior private archive recovery remains recorded but was not re-opened; no substitute resume was used.
+- Gmail searches for matching 17 Oct Risk & Controls attachments and DOCX attachments returned no results. The connected iZap business has no connected number and zero chats; message searches for the incident terms returned zero.
+- Production Supabase `resume_documents` and `resume_import_jobs` had zero rows in the 17 Oct 22:00–23:00 UTC incident hour. The available connectors do not expose the required R2 object store or Meta delivery receipts.
+- Exact output DOCX, R2 key, webhook/request ID, Meta message ID and signed delivery/read receipt remain hard blockers. Owner reconciliation of the source identity/education/employment conflict is also required. No replay or real send was attempted.
+- PR #287 code head `fb8284d499b609667e8636c480ba1c3e8f342986` has full CI, WhatsApp recovery regression, schema and Kompas baseline green; its protected preview is blocked by the Vercel account status. The code fix is not merged or live; current master still uses global unseen terms in role repair.
+
+Continue: preserve the historical replay as blocked until the exact private artifact and delivery correlation evidence are available and the owner reconciles the conflicting facts. Keep PR #287 unmerged until the protected preview/account block is resolved. No real WhatsApp tests or messages.
