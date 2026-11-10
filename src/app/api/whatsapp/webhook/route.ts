@@ -341,7 +341,7 @@ export async function POST(request: NextRequest) {
         console.log("[whatsapp-voice] transcription", JSON.stringify({ ms: voice.elapsedMs, chars: voice.characters }))
         trace(from, { dir: "in", kind: "voice-transcribed", note: "Voice recognized" })
       }
-      await handle(from, input, session, userId, verifiedKompasAccount)
+      await handle(from, input, session, userId, verifiedKompasAccount, msgId)
     } catch (e) {
       // Most errors here are session/database/storage faults, not LLM requests.
       // A bare storage 403 used to tell customers "no AI service is on" even for
@@ -371,7 +371,7 @@ async function readablePdfText(bytes: Buffer): Promise<string> {
   }
 }
 
-async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string, verified: boolean) {
+async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string, verified: boolean, msgId: string) {
   const type = String(msg.type || "")
 
   // ── Chief approval cards (Phase 4) ─────────────────────────────────────────
@@ -1488,11 +1488,7 @@ async function tellRefinementOnce(jobId: string, from: string, message: string) 
 async function refine(from: string, replyTo: string, request: string, userId: string, msgId: string) {
   const gen = await loadGen(from, replyTo)
   if (!gen) {
-    return sendText(from, [
-      "To change a resume, swipe right on the *resume file* I sent and type what to change.",
-      "",
-      "(If that was a resume, it's no longer on file. Send the JD and resume again.)",
-    ].join("\n"))
+    return sendText(from, "I could not recover the exact resume version you replied to. No document was sent and your previous resume remains unchanged. I cannot safely apply this edit without that saved version.")
   }
   if (gen.userId !== userId) return sendText(from, "That resume version belongs to a different MarketFit identity.")
   if (request.length < 3) {
