@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { Mail, App, Interview, Step } from "@/app/dashboard/_suite/sample"
+import { gmailAccountSyncIssueMessage, type GmailAccountSyncStatus } from "@/lib/gmail-account-sync-status"
 
 // ── Shared Gmail data hook ──────────────────────────────────────────────────
 // Fetches real classified Gmail data from /api/gmail/* routes.
@@ -18,6 +19,7 @@ interface GmailData {
   drafts: Array<{ id: string; threadId: string; account: string; to: string; subject: string; snippet: string }>
   radar: Array<{ threadId: string; account: string; to: string; subject: string; snippet: string; daysWaiting: number; jobTitle: string; vendor: string; eligibility: string; dueAt: number; lastSentAt: number; lastInboundAt: number | null; claim: { claimed: boolean; claimedAt: number | null } | 'unknown' }>
   issues: Array<{ account: string; reason: string }>
+  accountSync: GmailAccountSyncStatus[]
   loading: boolean
   connected: boolean
   error: string | null
@@ -52,7 +54,7 @@ const PULSE_MS = 120_000
 type Loaded = Omit<GmailData, "loading" | "refresh" | "updatedAt">
 const EMPTY: Loaded = {
   mails: [], applications: [], interviews: [], steps: [], unfollowed: [], drafts: [], radar: [], issues: [],
-  connected: false, error: null,
+  connected: false, error: null, accountSync: [],
 }
 
 let shared: { data: Loaded; at: number } | null = null
@@ -75,6 +77,7 @@ interface Snapshot {
   drafts: GmailData["drafts"]
   radar: GmailData["radar"]
   issues: GmailData["issues"]
+  accountSync?: GmailAccountSyncStatus[]
   savedAt: number
 }
 
@@ -140,7 +143,7 @@ async function fetchAll(force: boolean): Promise<Loaded> {
 
   const [threadsRes, trackerRes, interviewsRes, stepsRes, unfollowedRes, draftsRes, radarRes] =
     await Promise.all([
-      getJSON<{ mails: Mail[]; issues?: GmailData["issues"] }>(`/api/gmail/threads?days=30&max=50${force ? "&fresh=1" : ""}`),
+      getJSON<{ mails: Mail[]; issues?: GmailData["issues"]; accountSync?: GmailAccountSyncStatus[] }>(`/api/gmail/threads?days=30&max=50${force ? "&fresh=1" : ""}`),
       getJSON<{ applications: App[] }>("/api/gmail/tracker?days=60"),
       getJSON<{ interviews: Interview[] }>("/api/gmail/interviews?days=60"),
       getJSON<{ steps: Step[] }>("/api/gmail/workflow-steps"),
@@ -152,6 +155,7 @@ async function fetchAll(force: boolean): Promise<Loaded> {
   const data: Loaded = {
     mails: threadsRes.data?.mails || [],
     issues: threadsRes.data?.issues || [],
+    accountSync: threadsRes.data?.accountSync || [],
     applications: trackerRes.data?.applications || [],
     interviews: interviewsRes.data?.interviews || [],
     steps: stepsRes.data?.steps || [],
@@ -165,13 +169,9 @@ async function fetchAll(force: boolean): Promise<Loaded> {
   // Surface the first real failure instead of showing a silent empty inbox.
   const firstErr = threadsRes.error || draftsRes.error || radarRes.error
   if (data.issues.length > 0 && data.mails.length === 0) {
-    const throttled = data.issues.some(i => /throttling|wait .* refresh/i.test(i.reason))
     data.error =
       `Couldn't read ${data.issues.length === 1 ? "this account" : "these accounts"}: ` +
-      data.issues.map(i => `${i.account} — ${i.reason}`).join(" ") +
-      (throttled
-        ? ` Just wait a couple of minutes and tap refresh.`
-        : ` Reconnect ${data.issues.length === 1 ? "it" : "them"} on the connections page, then refresh.`)
+      data.issues.map(i => `${i.account} — ${gmailAccountSyncIssueMessage(i.reason)}`).join(" ")
   } else if (firstErr && data.mails.length === 0) {
     data.error = `Couldn't read your Gmail just now: ${firstErr}. Tap refresh to retry.`
   }
@@ -181,7 +181,7 @@ async function fetchAll(force: boolean): Promise<Loaded> {
     const key = await snapshotKey()
     if (key) writeSnapshot(key, {
       mails: data.mails, applications: data.applications, interviews: data.interviews, steps: data.steps,
-      unfollowed: data.unfollowed, drafts: data.drafts, radar: data.radar, issues: data.issues, savedAt: Date.now(),
+      unfollowed: data.unfollowed, drafts: data.drafts, radar: data.radar, issues: data.issues, accountSync: data.accountSync, savedAt: Date.now(),
     })
   }
   return data
@@ -231,7 +231,7 @@ export function useGmailData(): GmailData {
           ...EMPTY, connected: true,
           mails: snap.mails, applications: snap.applications || [], interviews: snap.interviews || [],
           steps: snap.steps || [], unfollowed: snap.unfollowed || [], drafts: snap.drafts || [],
-          radar: snap.radar || [], issues: snap.issues || [],
+          radar: snap.radar || [], issues: snap.issues || [], accountSync: snap.accountSync || [],
         })
         setLoading(false)
       }

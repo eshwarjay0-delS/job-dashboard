@@ -20,10 +20,10 @@ export async function GET(req: Request) {
     const max = Math.min(Math.max(Number(url.searchParams.get("max")) || 50, 1), 100)
     const fresh = url.searchParams.get("fresh") === "1"
 
-    const { threads, issues } = await fetchClassifiedThreads(ctx.userId, { days, max }, { force: fresh })
+    const { threads, issues, accountSync } = await fetchClassifiedThreads(ctx.userId, { days, max }, { force: fresh })
     const mails = threadsToMails(threads)
 
-    return NextResponse.json({ ok: true, count: mails.length, mails, issues })
+    return NextResponse.json({ ok: true, count: mails.length, mails, issues, accountSync })
   } catch (err) {
     console.error("gmail/threads error:", err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })

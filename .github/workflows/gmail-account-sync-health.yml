@@ -1,0 +1,39 @@
+name: Gmail account sync health regression
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/gmail-account-sync-status.ts"
+      - "src/app/api/gmail/_lib.ts"
+      - "src/app/api/gmail/threads/route.ts"
+      - "src/lib/use-gmail-data.ts"
+      - "src/app/dashboard/mail/page.tsx"
+      - "scripts/tests/gmail-account-sync-health.test.mjs"
+      - ".github/workflows/gmail-account-sync-health.yml"
+  push:
+    branches:
+      - "master"
+      - "feat/gmail-account-sync-health-20261109"
+    paths:
+      - "src/lib/gmail-account-sync-status.ts"
+      - "src/app/api/gmail/_lib.ts"
+      - "src/app/api/gmail/threads/route.ts"
+      - "src/lib/use-gmail-data.ts"
+      - "src/app/dashboard/mail/page.tsx"
+      - "scripts/tests/gmail-account-sync-health.test.mjs"
+      - ".github/workflows/gmail-account-sync-health.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gmail-account-sync-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run per-account sync health regressions
+        run: node --experimental-strip-types --test scripts/tests/gmail-account-sync-health.test.mjs
