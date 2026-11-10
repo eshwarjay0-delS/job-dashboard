@@ -100,6 +100,16 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026, a versus answer stays on the two sides
+
+On master `9d2997ac`, 150 drafts had 84 pairs at Jaccard >= 0.7. The worst pair was two "explain the same incident to a director" questions: rollback scope versus lateral movement risk, and restoration speed versus reinfection risk. Architect Jaccard was 0.811 at 114 and 126 words. Both drafts used the same checklist for decision owner, business exposure, and measures.
+
+A comparison or definition that names two sides no longer takes that checklist, the shared honest line, or an approach line. Extra length uses the two side names. After, that pair is engineer 0.400 (46 and 42 words), director 0.500 (76 and 79), architect 0.500 (120 and 119). Define IDOR versus CSRF against containment versus eradication fell from director 0.810 and architect 0.793 to director 0.500 and architect 0.467.
+
+Across 150 drafts, pairs at Jaccard >= 0.7 went from 84 to 16. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0. The highest remaining pair is an architect design pair at 0.771. Offline sample stayed 15 answers, 0 failures, 16 warnings. These versus answers do not restate the shared checklist. Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10.
+
+Re-run on 10 November 2026 after rebase onto master `3e2d2359`: master still 84 pairs and this tree still 16, with the same four zeros. The two named pairs kept the ratios above. Focused suites 169 pass, 0 fail. `tsc --noEmit` clean.
+
 ## Fold log, 6 November 2026, a design answer leaves the shared close
 
 On the pair-resume tree, the worst pair was two Design questions that share the same explain list: Front Door, APIM and a private backend, versus tenant isolation across API, cache and workers. Architect Jaccard was 0.882 at 277 and 281 words, on a 281-word ceiling. Both drafts ended on "The boundary I watch" and on approach lines that do not name the design.

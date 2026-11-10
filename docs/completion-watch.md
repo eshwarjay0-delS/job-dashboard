@@ -20,6 +20,10 @@ Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the
 6. Update the journal with the exact outcome, evidence and next step. Continue independent work when another item is blocked.
 7. Before ending a turn, identify remaining approved work. If stopping because of a wall, state the failed action, evidence, missing prerequisite and exact unblock action. Do not imply work continues in this chat after the turn unless scheduled execution is actually configured.
 
+## 10 November 2026 — versus-side fold rebased
+
+Pull request 252 was rebased onto master `3e2d2359`. The offline stand-in was re-run: 150 drafts, no model. Master before the change: 84 pairs at Jaccard >= 0.7. The rebased tree: 16. Same-answer failures 0. Length failures 0. Mode gaps under 0.50: 0. Answers over the ceiling: 0. Focused suites 169 pass, 0 fail. `tsc --noEmit` clean. Live scored folds remain 0. Not a Windows session.
+
 ## Completion evidence
 
 A plan needs implementation evidence. A release needs a commit and successful deployment evidence. A user flow needs actual acceptance evidence. For resume generation this includes the baseline, JD and confirmations used, exported document, measured original requirement coverage, substantive experience review, correct identity and format, and download/delivery checks. Never invent credentials or metrics to clear a score.
