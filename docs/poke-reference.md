@@ -87,3 +87,8 @@ Production verified READY on 26 October 2026: dpl_DMKpH4wn4tDqJwjhfB9N5HMCuQXU, 
 
 
 Per-account health is shown inline in the existing Inbox Updates panel: each connected inbox exposes only its last successful cursor timestamp and one of `never`, `checked`, `partial` or `error`. A partial history page or a current refresh failure is labelled against the affected inbox. Gmail history IDs and page tokens never reach the browser. This display does not enable a background worker; visible-page refresh remains separate from scheduled ingestion and WhatsApp delivery.
+
+
+## Automated regression coverage
+
+The canonical full CI workflow runs `scripts/tests/mail-updates.test.mjs` and `scripts/tests/mail-updates-ui.test.mjs` as mocked-only tests. They cover account-scoped cursors, partial and failed refreshes, delivery reservations, no cross-account notification, selected-account preferences, visible status and truthful delivery/read labels. The tests use mocked fetch, storage and provider receipts; they do not contact Gmail or WhatsApp. Real two-inbox and narrow-mobile acceptance remains separate.

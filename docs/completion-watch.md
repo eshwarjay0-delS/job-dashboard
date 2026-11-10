@@ -390,3 +390,12 @@ PR #286 metadata repair `c5611b996ce2212e58515a92d1f595fea314e08f` passed exact-
 A separate read-only Vercel runtime-log query for the 17 Oct WhatsApp window (2026-10-17 22:00–23:00 UTC) failed with HTTP 400 because Hobby retains runtime logs for one hour. This is not proof that no historical logs existed. The exact generated DOCX/R2 object key/Meta message ID/signed delivery receipt remain missing. No replay or real WhatsApp test was performed.
 
 Continue: restore Vercel account/project HTTP availability; configure `KOMPAS_VERCEL_API_TOKEN` privately; then obtain a protected exact-head preview and re-run production HTTP checks. Separately obtain authorized R2/Meta output and signed delivery evidence plus owner reconciliation of conflicting source facts. Keep Gmail background delivery disabled and preserve the two-account/mobile acceptance gates.
+
+
+## 10 November 2026 — Gmail feature tests wired into CI; REA type error corrected
+
+The exact-head full CI run `42872275225` on `a6f51146bebba1c900bf0c9b732748b6d94af6a2` failed at Type-check with TS1117 at `src/lib/rea-register.ts(256,639)`: the newly added WhatsApp log-retention REA source object had two `label` properties. The Plan/REA schema `42872274833` and Kompas baseline `42872275226` passed on that prior head. The duplicate source label is corrected to one unique label.
+
+A second coverage gap was found: `scripts/tests/mail-updates.test.mjs` and `scripts/tests/mail-updates-ui.test.mjs` existed on PR #286 but were not referenced by any of the 14 GitHub workflows or package prebuild. The prior full CI pass therefore did not run the actual per-account cursor/delivery or Inbox Updates UI suites. The canonical `.github/workflows/ci.yml` now adds an explicit mocked-only step for both files after the WhatsApp channel safety tests. These suites mock fetch, storage, provider receipts and WhatsApp delivery; no real Gmail or WhatsApp request is sent. Exact-head CI must prove the new step passes.
+
+The production HTTP blocker remains separate: the active Voice Delivery audit reported HTTP 402 `DEPLOYMENT_DISABLED` for five canonical production endpoints even though deployment metadata remains READY. The protected preview gate also lacks the private `KOMPAS_VERCEL_API_TOKEN`. PR #286 remains unmerged; no deployment, promotion, email or WhatsApp send was attempted.
