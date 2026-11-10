@@ -264,6 +264,31 @@ REA_SESSIONS.unshift({"id":"contract-crawler-ci-manual-source-2026-11-10","title
 
 REA_SESSIONS.unshift({"id":"contract-crawler-classifier-production-release-2026-11-10","title":"Verify the classifier and resume-gap report on production","area":"applications","method":"Source and artifact analysis","state":"Deployed, verification pending","updated":"2026-11-10","request":"Continue the approved contract-only Apply crawler and report only production-backed work-type classifications.","sources":[{"label":"Production deployment","url":"https://vercel.com/qu4ntum-s-projects/job-dashboard/HX7moNfuc9WAnYg7iah4zYQBWQvC"},{"label":"Contract classifier PR","url":"https://github.com/eshwarjay0-delS/job-dashboard/pull/276"},{"label":"Gap report PR","url":"https://github.com/eshwarjay0-delS/job-dashboard/pull/282"},{"label":"Crawler research","path":"docs/research/contract-crawler-freshness-2026-11-09.md"},{"label":"Apply plan","path":"docs/apply.md"}],"steps":[{"label":"Verify production build","finding":"The canonical alias job-dashboard-fawn.vercel.app is assigned to READY production deployment dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC at exact master SHA 864cb9e906543b006ea730a8de1fa3e65b652ab9.","status":"Tested","evidence":"Independent Vercel deployment and alias lookups."},{"label":"Verify ancestry","finding":"The production SHA descends from classifier merge f7f322 and resume-gap report merge 48ca317.","status":"Tested","evidence":"GitHub compare_commits ancestry checks."},{"label":"Separate scheduled crawl from release","finding":"The 10 Nov 11:00 UTC crawl ran on old SHA a66c108 before the release; 6,818 jobs were found/upserted across 20 portals, with one Inspyr abort and eTeam absent. The first post-release crawl is still pending.","status":"Observed","evidence":"Read-only mfit_crawl_runs record cf78f4bb-5f27-4476-b28f-3efa7156b231."}],"limits":"No public API HTTP smoke succeeded from this runtime. No post-classifier crawl, manual row rewrite, Robert Half adapter or scraping request is claimed. Robert Half remains manual-only under its Terms of Use.","next":"Verify the 11 Nov 11:00 UTC run on the new production SHA, public freshness/clearance API behavior and contractTypes() classifications. Keep Robert Half manual-only. PR #284 is a CI/manual-link follow-up, not a new runtime classifier.","commits":["f7f322f242d39b12a0ade7c8d548f6f48eea79b5","48ca317b0c59215fd112d854f61dc71828f29d69","864cb9e906543b006ea730a8de1fa3e65b652ab9"]});
 
+REA_SESSIONS.unshift({
+  id: "apply-clearance-safe-pagination-2026-11-10",
+  title: "Fill contract search results after clearance filtering",
+  area: "applications",
+  method: "Source and artifact analysis",
+  state: "Implemented, verification pending",
+  updated: "2026-11-10",
+  request: "Continue the approved contract-only job search and crawler; clearance-required roles stay excluded by default, and result counts should not be silently reduced by a single over-fetch.",
+  sources: [
+    { label: "Crawler jobs API", path: "src/app/api/crawl/jobs/route.ts" },
+    { label: "Bounded page collector", path: "src/lib/crawl/search.ts" },
+    { label: "Freshness and page tests", path: "scripts/tests/crawl-freshness.test.mjs" },
+    { label: "Clearance route contract", path: "scripts/tests/apply-clearance-filter.test.mjs" },
+    { label: "Apply plan", path: "docs/apply.md" }
+  ],
+  steps: [
+    { label: "Trace result underfill", finding: "The route fetched at most four times the caller limit (capped at 100), then removed clearance roles. A clearance-heavy newest page could underfill even when later fresh eligible jobs existed.", status: "Observed", evidence: "Source review of src/app/api/crawl/jobs/route.ts." },
+    { label: "Add bounded ordered scanning", finding: "The route now pages through at most min(1,000, max(100, limit × 10)) fresh rows, stopping when the visible limit is filled or the cap/end is reached. It exposes excluded_clearance and clearance_scan_limited.", status: "Implemented", evidence: "Commits bcab029, ee5ac59 and 3aea24c on fix/crawl-clearance-pagination-20261110." },
+    { label: "Add behavior tests", finding: "Tests cover a clearance-only first page followed by eligible rows, plus a capped scan that truthfully reports underfill.", status: "Implemented", evidence: "Commits f063458 and 1fbc4d5." }
+  ],
+  limits: "The code is on an unmerged branch. No production API request, live crawl, database mutation or production deployment was performed.",
+  next: "Run exact-head crawler freshness/classifier, full CI, Plan/REA schema and Kompas baseline. After merge, require READY deployment on job-dashboard-fawn.vercel.app, API smoke and a post-release scheduled crawl before marking live.",
+  commits: ["bcab0292495de4393ecb7c9b5ab30d9d51d4bb48", "ee5ac5952f1fb06f6c969206d66224138d1972d2", "3aea24c5d55fe05698403aa62515e1982452f9d9", "f063458bfd37504e40926fd5e81fb61019126492", "1fbc4d5fa566a35e7ddd05011d0a1d807309d144"]
+});
+
 export function filterReaSessions(query:string,area:string,method:string) {
  const q=query.trim().toLowerCase()
  return REA_SESSIONS.filter(s=>(area==='all'||s.area===area)&&(method==='all'||s.method===method)&&(!q||JSON.stringify(s).toLowerCase().includes(q)))
