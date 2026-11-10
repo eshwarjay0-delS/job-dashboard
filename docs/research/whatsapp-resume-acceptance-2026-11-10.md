@@ -35,7 +35,7 @@ A source-backed regression in this PR adds `sol` and `attributes` to the generic
 
 The recovered source DOCX contains education, employment-date and credential claims that conflict with the owner-confirmed profile already available in prior conversations. The conflict affects the JD's required 5+ years and some credentials. Do not count the conflicting dates, tenure or credentials as confirmed experience, merge the two timelines, or rewrite them until the owner reconciles the source. The file is evidence of what was uploaded, not proof that every claim is current and verified.
 
-A separate Library file named `Eshwar_Resume-226.docx` is not accepted as the incident output: its hash is different, its core document timestamps predate the incident, and there is no request ID, R2 key or Meta receipt linking it to this run.
+A separate Library resume artifact is not accepted as the incident output: its document fingerprint differs, its core document timestamps predate the incident, and there is no request ID, R2 key or Meta receipt linking it to this run.
 
 ## Current policy and release state
 
@@ -47,7 +47,7 @@ The old 98% hard WhatsApp hold is superseded by the owner-approved 6 November ch
 - Incomplete, skills-only, unreadable, failed or identity-mismatched rewrites use the selected same-account resume fallback.
 - Unsupported experience, credentials, employers, dates and metrics are never invented.
 
-PR #267's DOCX body/header/footer/hyperlink identity repair is already merged in master. The current canonical production alias `job-dashboard-fawn.vercel.app` was independently verified READY at `51cb716393efb1f54cdc6173c8e6b7ee6f034241` on deployment `dpl_G92eEx6vGFhgfstAocq9jkGKm6i9`. That proves the later source is deployed, not that the historical WhatsApp run succeeded.
+PR #267's DOCX body/header/footer/hyperlink identity repair is already merged in master. The current canonical production alias `job-dashboard-fawn.vercel.app` is READY at `a66c108bff6175149c4aadd882ab11128445b8cc` on deployment `dpl_7gjdfRFeLjqcPdVC52NkaEatugKA`. Master has since advanced to `48ca317b0c59215fd112d854f61dc71828f29d69` with PR #276's contract classifier and PR #282's evidence-separated resume gap report, but that newer master is not in production because Vercel reports `build-rate-limit`. The deployed alias proves the source-boundary fix is live, not that the historical WhatsApp run succeeded.
 
 ## Remaining blockers and acceptance
 
@@ -57,7 +57,7 @@ PR #267's DOCX body/header/footer/hyperlink identity repair is already merged in
 4. The source DOCX conflicts with previously confirmed profile facts. Owner reconciliation is required before any experience/tenure claim is used.
 5. No live WhatsApp send or authenticated device test was performed. Historical delivery remains unverified.
 
-Next: keep the source-backed filter/test change in review; finish its exact-head CI. After the owner reconciles the conflicting source facts and an authorized output/trace is available, run a local exact-source replay and report raw overlap, supported coverage, unsupported requirements and document integrity separately. Do not restore the old 98% hard hold or send a real WhatsApp test without explicit authorization.
+Next: keep the conflicting source facts quarantined until owner reconciliation; obtain the exact generated output and per-run R2/webhook/Meta trace plus signed delivery/read receipt before an authorized exact-source replay. Report raw overlap, supported coverage, unsupported requirements and document integrity separately. Do not restore the old 98% hard hold or send a real WhatsApp test without explicit authorization.
 
 
 ## 10 November 2026 — source-boundary regression released
@@ -79,7 +79,7 @@ PR #278 adds `resolveRecoveryResumeContext` and passes the validated root into `
 
 The first full-CI attempt on head `a67659e11f45edcb5f717bddc639ca36336e9fc7` failed because `scripts/tests/whatsapp-recovery-durability.test.mjs` still asserted the former `job.files` argument. The assertion was corrected in commit `3782c97dea69a8632135586bdb8296ad1790c781` to verify that path resolution occurs before a fail-closed `source_outside_account` rejection and that the validated Files context/root are passed into the tailor.
 
-Current exact-head evidence: full CI `42773757901` and WhatsApp recovery regression `42773757620` are in progress; Kompas baseline `42773757574` passed. Preview deployment `dpl_Hp9we2LBxgp9bNqup8rMVEdgoM8a` is READY at the exact head, target preview only. The separate Kompas voice preview HTTP gate `42773754013` failed and remains owned by the Voice Delivery task. Production alias remains on `a66c108bff6175149c4aadd882ab11128445b8cc`; no production deployment, real model generation, R2 write or WhatsApp send occurred.
+Current exact-head evidence for PR #278: full CI `42773757901`, WhatsApp recovery regression `42773757620`, and Kompas baseline `42773757574` all completed SUCCESS. Preview deployment `dpl_Hp9we2LBxgp9bNqup8rMVEdgoM8a` is READY at the exact head, target preview only. The separate Kompas voice preview HTTP gate `42773754013` failed and remains owned by the Voice Delivery task. PR #274's identity-sensitive owner-review gate remains open; no production deployment, real model generation, R2 write or WhatsApp send occurred.
 
 Release is held: PR #274's unconditional identity guard is security/identity-sensitive, has green CI/recovery/baseline checks, but no user-authored approval for that exact behavior was found in accessible prior context. PR #278 must not ship alone before that owner-review gate is resolved. No actual handset delivery is claimed; a signed Meta delivered/read callback is required.
 
