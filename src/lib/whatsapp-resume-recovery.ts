@@ -142,8 +142,9 @@ export async function patchResumeRefinement(
     ...mutableRefinement
   } = refinementPatch
   const {
-    id: _id, jd: _jd, from: _from, userId: _userId, kind: _kind,
-    refinement: _refinement, resumePath: _resumePath,
+    id: _id, jd: _jd, jdId: _jdId, from: _from, userId: _userId, kind: _kind,
+    refinement: _refinement, resumePath: _resumePath, resumeName: _resumeName,
+    resumeFiled: _resumeFiled, files: _files,
     ...mutableJob
   } = jobPatch
   await blob.put(recoveryKey(id), JSON.stringify({
