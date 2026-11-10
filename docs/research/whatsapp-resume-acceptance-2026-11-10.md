@@ -126,3 +126,12 @@ This is source-code and helper-test evidence only. Exact-final-head CI, protecte
 A targeted Library search for the 17 Oct 17:28 Chicago WhatsApp request and generated DOCX did not surface the output. A second search restricted to DOCX files created 16–18 Oct returned other candidate resume files, but not the recorded 27,724-byte source or the generated output. The candidates were not substituted: the existing incident record documents conflicting identity, education and employment facts, and the exact source digest was not independently retrieved in this search.
 
 This is a bounded semantic search result, not proof that the file is absent from every Library folder, conversation, WhatsApp account, R2 object store or external archive. No candidate file was opened or modified, and no private document content was copied to GitHub. The exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery receipt remain the hard replay blockers.
+
+
+## 10 November 2026 — cross-source artifact recheck
+
+A read-only recheck was performed for the 17 October 2026 17:28 Chicago incident. The current Library search/list did not surface the previously recorded 27,724-byte source DOCX or any generated output. The earlier private archive recovery remains recorded in the prior handoff, but the source was not independently re-opened in this run. No candidate resume was substituted.
+
+Gmail searches for 17 October matching “Risk & Controls” attachments and all DOCX attachments returned no results. The connected iZap business had no connected WhatsApp number and zero chats; read-only searches for “Risk & Controls” and “resume” on 17 October returned no messages. A production Supabase query found zero rows in `resume_documents` and `resume_import_jobs` during 22:00–23:00 UTC (the 17:00–18:00 CDT incident hour).
+
+The available connectors do not expose the relevant Cloudflare R2 object store or Meta delivery receipts. Therefore the exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery/read receipt remain unavailable. The source/JD identity, education, employer chronology and credential conflicts remain quarantined pending owner reconciliation. No model call, resume write, R2 write, email, WhatsApp message or replay was performed.
