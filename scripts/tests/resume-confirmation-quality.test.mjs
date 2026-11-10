@@ -33,8 +33,17 @@ test('a job-description or formatting instruction is not blanket experience conf
 
 test("resume writer and role weaving use only source-supported or explicitly confirmed JD terms", () => {
   const tailor = readFileSync(new URL("../../src/lib/tailor.ts", import.meta.url), "utf8")
+  const claude = readFileSync(new URL("../../src/lib/claude.ts", import.meta.url), "utf8")
   assert.doesNotMatch(tailor, /Write every known JD term into the current role and the previous roles/)
   assert.doesNotMatch(tailor, /the candidate claims this JD skill set/)
+  assert.doesNotMatch(claude, /The candidate claims this JD skill set/)
+  assert.doesNotMatch(claude, /An older bullet that never used the word is not a reason to omit it/)
+  assert.match(claude, /same role's original evidence/)
+  assert.match(claude, /General confirmations may support the skills section/)
+  assert.match(tailor, /const profileAsk = part\.kind === "profile" \? profilePrefs : \[\]/)
+  assert.match(tailor, /draftPass\(lane, splitDraft \? \[\] : firstAsk, splitDraft \? firstAsk : \[\]\)/)
+  assert.doesNotMatch(tailor, /write EACH of these JD terms into the current and previous project bullets/)
+  assert.doesNotMatch(tailor, /Security and IAM work repeats across projects/)
   assert.match(tailor, /only source-supported jdKeywords/)
   assert.match(tailor, /const candidateEvidence = \[text, \.\.\.candidateStatements\]\.join/)
   assert.match(tailor, /coveredJdKeywords\(candidateEvidence, \[k\]\)\.has\(k\)/)
