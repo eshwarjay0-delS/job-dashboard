@@ -30,8 +30,8 @@ test('released desktop browser remains deployed with acceptance still explicit',
 test('Oct 17 WhatsApp source recovery separates deployed code from blocked historical acceptance', () => {
  const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-source-recovery-2026-11-10')
  assert.ok(entry)
- assert.equal(entry.state,'Deployed, historical verification pending')
- assert.ok(entry.steps.some(s=>s.status==='Deployed' && s.evidence.includes('dpl_7gjdfRFeLjqcPdVC52NkaEatugKA')))
+ assert.equal(entry.state,'Deployed, verification pending')
+ assert.ok(entry.steps.some(s=>s.status==='Tested' && s.evidence.includes('dpl_7gjdfRFeLjqcPdVC52NkaEatugKA')))
  assert.ok(entry.steps.some(s=>s.status==='Blocked' && s.finding.includes('generated output')))
  assert.match(entry.next,/owner reconciliation/)
  assert.match(entry.next,/signed delivery\/read receipt/)
