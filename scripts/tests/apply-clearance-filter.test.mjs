@@ -4,6 +4,7 @@ import fs from 'node:fs'
 
 const aggregate=fs.readFileSync(new URL('../../src/app/api/jobs/route.ts',import.meta.url),'utf8')
 const crawler=fs.readFileSync(new URL('../../src/app/api/crawl/jobs/route.ts',import.meta.url),'utf8')
+const applyPage=fs.readFileSync(new URL('../../src/app/dashboard/apply/page.tsx',import.meta.url),'utf8')
 
 test('both live Apply result lanes enforce the shared clearance boundary',()=>{
  assert.match(aggregate,/requiresSecurityClearance\(`\$\{j\.title\} \$\{j\.description\}`\)/)
@@ -18,4 +19,10 @@ test('crawler fills the requested limit with bounded clearance-safe pagination',
  assert.match(crawler,/excluded_clearance: excludedClearance/)
  assert.match(crawler,/clearance_scan_limited: clearanceScanLimited/)
  assert.doesNotMatch(crawler,/fetchLimit/)
+})
+
+test('Apply surfaces a bounded clearance-scan notice to the user',()=>{
+ assert.match(applyPage,/crawl\.clearance_scan_limited/)
+ assert.match(applyPage,/The clearance filter reached its safe scan limit/)
+ assert.match(applyPage,/narrow your search to see more eligible results/)
 })
