@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { readFileSync } from "node:fs"
 import assert from 'node:assert/strict'
 import { confirmedCandidateStatements, explicitlyConfirmsAllRequirements } from '../../src/lib/resume-evidence.ts'
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
@@ -27,4 +28,14 @@ test('a job-description or formatting instruction is not blanket experience conf
   for (const instruction of ['Add all keywords', 'Make this 98% match', 'Required skills: AWS, GCP']) {
     assert.equal(explicitlyConfirmsAllRequirements([instruction]), false)
   }
+})
+
+
+test("tailoring prompts and mandatory role repair stay inside confirmed experience evidence", () => {
+  const tailor = readFileSync(new URL("../../src/lib/tailor.ts", import.meta.url), "utf8")
+  assert.doesNotMatch(tailor, /Write every known JD term into the current role and the previous roles/)
+  assert.doesNotMatch(tailor, /the candidate claims this JD skill set/)
+  assert.match(tailor, /only source-supported JD terms supplied in jdKeywords/)
+  assert.match(tailor, /const missing = jdKwsPrompt\.filter/)
+  assert.match(tailor, /coveredJdKeywords\(candidateEvidence, \[k\]\)\.has\(k\)/)
 })
