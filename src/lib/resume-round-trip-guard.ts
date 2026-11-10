@@ -32,7 +32,15 @@ function normDate(d: string): string {
   if (/^(present|current|now)$/.test(s)) return 'present'
   return s
 }
-const normUrl = (u: string) => u.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[/.]+$/, '')
+function normUrl(value: string): string {
+  // Hostnames are case-insensitive; URL paths and query values are not.
+  // Preserve path/query/hash case so a changed profile or repository target fails.
+  const clean = value.trim().replace(/[.,;:!?]+$/g, '')
+  const withoutScheme = clean.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
+  const match = withoutScheme.match(/^([^/?#]+)([\s\S]*)$/)
+  if (!match) return withoutScheme.replace(/[/.]+$/, '')
+  return match[1].toLowerCase() + match[2].replace(/\/+$/, '')
+}
 const normDigits = (p: string) => { const d = p.replace(/\D/g, ''); return d.length === 11 && d[0] === '1' ? d.slice(1) : d; }
 
 export type ResumeFacts = { name: string, emails: string[], phones: string[], urls: string[], dates: string[] }
