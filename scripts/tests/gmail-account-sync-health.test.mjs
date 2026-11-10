@@ -72,7 +72,8 @@ test("Gmail API, user-scoped snapshot and inbox UI carry partial account health 
   const page = read("../../src/app/dashboard/mail/page.tsx")
 
   assert.match(shared, /readAccountSyncStatuses\(sb, userId, enabled, issues\)/)
-  assert.match(api, /const \\{ threads, issues, accountSync \\} = await fetchClassifiedThreads/)\n  assert.match(api, /mails, issues, accountSync/)
+  assert.match(api, /const \{ threads, issues, accountSync \} = await fetchClassifiedThreads/)
+  assert.match(api, /mails, issues, accountSync/)
   assert.match(hook, /accountSync: threadsRes\.data\?\.accountSync \|\| \[\]/)
   assert.match(hook, /accountSync: data\.accountSync/)
   assert.match(hook, /accountSync: snap\.accountSync \|\| \[\]/)
