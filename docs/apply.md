@@ -161,3 +161,8 @@ Verification: six simulated Electron lifecycle/isolation/navigation checks, eigh
 - Robert Half remains pending until its official response structure is captured and tested. No adapter or live vacancy is claimed.
 - The public `GET /api/crawl/jobs?limit=1` smoke remains pending because this runtime could not resolve the public Vercel hostname. Deployment control-plane status and read-only DB counts are verified; runtime API response is not.
 
+
+
+### 10 November 2026 — work-type classifier parity
+
+The crawler now uses the same `contractTypes()` evidence taxonomy as Apply when normalizing portal results. This recognizes the explicit `C2H` shorthand as contract work, keeps W2 payroll by itself as unknown (W2 alone is not proof of a contract), and avoids the previous broad `/temp/i` substring that could match words such as `template` or `attempt`. Permanent/direct-hire classification remains distinct, and explicit contract evidence takes precedence when a title also contains full-time wording. Existing rows are not rewritten by this source change; the next successful crawl reclassifies only listings it sees again.
