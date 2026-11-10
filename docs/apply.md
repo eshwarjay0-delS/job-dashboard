@@ -60,11 +60,13 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 - **Auto-apply** (opt-in, per user): once the profile is strong, one "Auto Apply" button applies to matching jobs using the saved profile + auto-tailored resumes — the same flow as manual apply, minus the clicks.
 - This only works because everything happens inside our centralized place. The database of user behavior *is* the moat.
 
-## Crawler intelligence (reverse-engineered 2026-10-17)
+## Crawler intelligence (historical notes, first mapped 2026-10-17)
+
+> The early probe notes below are historical. The current active registry, production counts, and source outages are reconciled in the 9 Nov 2026 checkpoint at the end of this document.
 
 - **Collabera**: pagination is `?q=N` (server-rendered, ~49 pages), keyword/industry/location filters as query params. Adapter crawls 5 newest pages (50 jobs).
 - **Beacon Hill**: listings are AJAX-only (FacetWP); page-1 gives the 10 newest daily. Pagination not cracked — revisit with headless rendering.
-- **TEKsystems**: Phenom embedded JSON cracked (`"jobs":[...]` with title, jobId, city/state, postedDate, applyUrl, type) — but only ~4 jobs posted; recruiter-driven, adapter skipped.
+- **TEKsystems**: Phenom embedded JSON adapter is active; the 20 Oct live probe recorded 1,081 IT jobs across 11 requests. Current registry is the source of truth.
 - **CyberSN**: JS shell — needs headless rendering, later phase.
 
 ## Jobright lessons (researched 2026-10-17, public sources)
@@ -84,7 +86,7 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 ## Build phases
 
 1. **Directory (done, 2026-10-17).** Apply tab + portal directory + smart search + chatbot tool.
-2. **Crawler v1 (shipped; migration completed 2026-10-20).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, 13 registered portal adapters, Jobs tab with contract-only default, and daily cron at 6am CDT. The owner applied `supabase/migrations/20261017_crawl_jobs.sql`; the live route then confirmed the tables existed but returned an empty index. The next acceptance step is to verify a completed crawl, fresh stored jobs and live search results. Indexed search was aligned on 2026-10-22 so a bounded set of query terms can match title, location, firm or description instead of requiring one literal phrase. The 2026-10-23 clearance boundary excludes explicit clearance requirements from both live result lanes by default and preserves unambiguous no-clearance postings.
+2. **Crawler v1 (shipped; migration completed 2026-10-20).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, contract-only default search, and daily cron at 11:00 UTC (06:00 CDT / 05:00 CST). The production-linked database had 14,164 crawler rows and 20 run records on 2026-11-09. The last completed run found/upserted 6,976 jobs across 21 registered adapters and reported one eTeam HTTP 404. This change removes eTeam from the active registry until its new official interactive `/careers` page exposes a verified public feed; it remains in the vendor directory as a manual link. The registry therefore has 20 active adapters and 10 pending/manual-only sources after release. `GET /api/crawl/jobs` now filters to `last_seen_at` within 14 days, matching the runner retirement window, so a failed source cannot leave its old records searchable indefinitely. Indexed search still matches bounded query terms across title, location, firm or description; the 2026-10-23 clearance boundary excludes explicit clearance requirements by default.
 3. **Inclusive browser (desktop).** Electron `WebContentsView` with persistent session; "Open portal" opens in-app; logins persist like Chrome.
    *Horizons explored 2026-10-21 (`docs/research/apply-horizons.md`): the inclusive browser is five surfaces, not one — (H1) desktop WebContentsView, (H2) hosted cloud live-view whose same session the apply worker can drive (inclusive browser and auto-apply become one infrastructure), (H3) our shipped autofill extension productized as the Chrome companion, (H4) mobile Custom Tabs / hosted fallback, (H5) a self-hosted open-source browser fleet (Steel) behind the same session seam. Recommended order: H3, H2 pilot, H1 in the next desktop rebuild, H5 at volume. Builds are proposed until the owner picks one.*
 4. **Resume-at-apply.** Resume picker + per-JD tailoring wired into the Apply flow.
@@ -146,3 +148,13 @@ Activity parity was repaired on 2026-10-23: a validated desktop handoff now reco
 This supersedes BrowserView and bookmarklet instructions in the historical design. Native source is canonical in eshwarjay0-delS/parfAct/desktop, not the legacy snapshot. The packager explicitly includes the new browser assets. Portal sessions can persist; this is not Chrome password-manager synchronization and a provider can expire or refuse a session. Web-only users retain their normal browser path. Hosted live-view, automatic filling inside the native view, mobile and automated submission are separate unfinished phases.
 
 Verification: six simulated Electron lifecycle/isolation/navigation checks, eight existing native auth checks, native protocol/source checks, two account-context API checks, TypeScript and the full web production build passed. Windows packaging, actual portal navigation/SSO, file upload and restart/login persistence still need release and device evidence. Source REA: docs/research/inclusive-browser-desktop.md.
+
+
+## Live crawler reconciliation — 9 November 2026
+
+- Production master before this change: `eb37c4566f6d9c1d4b4d988096a2a44066255636`; the public `job-dashboard-fawn.vercel.app` alias was independently READY on that exact SHA.
+- Read-only production database evidence: 14,164 rows in `mfit_crawl_jobs`, 20 rows in `mfit_crawl_runs`. The 9 Nov 11:00 UTC run found and upserted 6,976 jobs. Its only recorded portal error was `eteam: HTTP 404 from www.eteaminc.com`.
+- eTeam had 907 stored rows (818 active) last seen on 8 Nov. No rows are deleted by this repair. Its former `/searchjobs/api/jobs` endpoint is no longer reliable; the current official `https://www.eteaminc.com/careers` page is interactive and no public static feed has been verified. It is removed from active crawling and retained as a manual portal link plus a pending source.
+- The jobs API applies a 14-day `last_seen_at` cutoff, the same window the crawler already uses before retiring listings. Existing eTeam rows remain in storage and may appear until they age past that window; they are not silently deleted or reassigned.
+- Robert Half remains pending for a verified adapter. Its official cybersecurity search currently exposes contract/temporary roles, making it the next source candidate after its live HTML/feed structure is captured and tested.
+- This is an implementation checkpoint, not a claim that every vendor is crawled or every listing is a live vacancy. See `docs/research/contract-crawler-freshness-2026-11-09.md` for the evidence and acceptance gate.
