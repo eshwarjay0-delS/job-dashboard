@@ -1,7 +1,7 @@
 /**
- * Durable WhatsApp resume recovery. The original JD and chosen source path survive
- * serverless timeouts and session consumption; no generated draft is delivered here.
- * Never log this record: it contains a candidate's JD and sender identity.
+ * Durable WhatsApp resume recovery. Initial-JD jobs retain the original JD and chosen source;
+ * swipe-reply jobs retain the exact replied-to version, edit request and generated candidate.
+ * Never log these records: they contain a candidate's JD, sender identity and resume references.
  */
 import { blob } from "./storage"
 import { createHash } from "crypto"
