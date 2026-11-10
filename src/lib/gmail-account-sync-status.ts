@@ -50,7 +50,7 @@ function relativeAge(iso: string | null, now: number): string {
 }
 
 export function formatGmailAccountSyncStatus(status: GmailAccountSyncStatus, now = Date.now()): string {
-  if (status.status === "failed") return `Sync failed · ${relativeAge(status.lastSyncAt, now)}`
+  if (status.status === "failed") return `Sync failed · last success ${relativeAge(status.lastSyncAt, now)}`
   if (status.status === "partial") return `Partial · last success ${relativeAge(status.lastSyncAt, now)}`
   if (status.status === "synced") return `Synced ${relativeAge(status.lastSyncAt, now)}`
   return "Checked just now"
