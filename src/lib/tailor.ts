@@ -679,8 +679,11 @@ export async function runTailor(opts: {
   const repairReserve = firstDraftRepairReserveMs(TAILOR_MAX_MS)
   // The draft stops early enough that the one extra generate-then-tailor pass still has a window.
   const fullDeadline = started + TAILOR_MAX_MS
+  // Keep a small bounded window for the owner-required final DOCX score/recheck.
+  const finalAtsReserve = opts.keys.gemini ? Math.min(18_000, Math.floor(TAILOR_MAX_MS * 0.3)) : 0
+  const finalAtsDeadline = fullDeadline - finalAtsReserve
   const extraReserve = refine || !opts.keys.gemini ? 0 : extraPassReserveMs(TAILOR_MAX_MS)
-  const deadline = fullDeadline - extraReserve
+  const deadline = finalAtsDeadline - extraReserve
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
   // A full retarget is ranked on the whole resume AND on how well EACH client role shows the listed JD skills, with a
@@ -1005,7 +1008,7 @@ export async function runTailor(opts: {
   // The two pre-edit passes already ran. This is the single extra iteration, not a 70–80% special case.
   // New keywords join the constructed JD and the score. Experience rows are not added.
   // A refinement is left alone: the person's change is not a coverage climb.
-  if (best && !refine && !skillsOnly && opts.keys.gemini && coverageNeedsAnotherPass(coveragePercent(shareOf(best.afterKw))) && fullDeadline - Date.now() > 1000) {
+  if (best && !refine && !skillsOnly && opts.keys.gemini && coverageNeedsAnotherPass(coveragePercent(shareOf(best.afterKw))) && finalAtsDeadline - Date.now() > 1000) {
     const base = best
     const missing = scoreKws.filter(k => !base.afterKw.has(k))
     if (missing.length) {
@@ -1038,7 +1041,7 @@ export async function runTailor(opts: {
               ...roleScopedMissingTerms(zones.roles, view.roles.flatMap(r => r.bullets), freshUnique, coveredJdKeywords)
                 .map(({ roleIndex, terms }) => ({ role: roleIndex, skills: terms })),
             ]
-            const roundDeadline = Math.min(fullDeadline - 2000, Date.now() + Math.max(15000, fullDeadline - Date.now() - 2000))
+            const roundDeadline = Math.min(finalAtsDeadline - 2000, Date.now() + Math.max(15000, finalAtsDeadline - Date.now() - 2000))
             const worked = await workParts<typeof todo[number], Edits>({
               parts: todo, lanes, out: laneOut,
               says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
