@@ -91,4 +91,4 @@ Per-account health is shown inline in the existing Inbox Updates panel: each con
 
 ## Automated regression coverage
 
-The canonical full CI workflow runs `scripts/tests/mail-updates.test.mjs` and `scripts/tests/mail-updates-ui.test.mjs` as mocked-only tests. They cover account-scoped cursors, partial and failed refreshes, delivery reservations, no cross-account notification, selected-account preferences, visible status and truthful delivery/read labels. The tests use mocked fetch, storage and provider receipts; they do not contact Gmail or WhatsApp. Real two-inbox and narrow-mobile acceptance remains separate.
+The canonical full CI workflow is wired to run `scripts/tests/mail-updates.test.mjs` and `scripts/tests/mail-updates-ui.test.mjs` as mocked-only tests; exact-head execution and pass are still pending. They cover account-scoped cursors, partial and failed refreshes, delivery reservations, no cross-account notification, selected-account preferences, visible status and truthful delivery/read labels. The tests use mocked fetch, storage and provider receipts; they do not contact Gmail or WhatsApp. Real two-inbox and narrow-mobile acceptance remains separate.
