@@ -83,16 +83,17 @@ export function validateDossierSources(raw: unknown): DossierSource[] {
       const m = row.media
       if (!m || typeof m !== "object") return badInput("Audio transcript " + id + " needs original recording provenance.")
       const v = m as Record<string, unknown>
-      if (typeof v.filename !== "string" || v.filename.length < 1 || v.filename.length > 180 ||
-          v.filename.includes("/") || v.filename.includes("\\") ||
-          /[\u0000-\u001f]/.test(v.filename) ||
-          !["m4a", "mp3", "wav", "ogg", "webm", "mp4"].some(ext => typeof v.filename === "string" && v.filename.toLowerCase().endsWith("." + ext)) ||
+      const filename = typeof v.filename === "string" ? v.filename : ""
+      if (!filename || filename.length > 180 ||
+          filename.includes("/") || filename.includes("\\") ||
+          /[\u0000-\u001f]/.test(filename) ||
+          !["m4a", "mp3", "wav", "ogg", "webm", "mp4"].some(ext => typeof v.filename === "string" && filename.toLowerCase().endsWith("." + ext)) ||
           typeof v.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(v.sha256) ||
           typeof v.durationSeconds !== "number" || !Number.isFinite(v.durationSeconds) ||
           v.durationSeconds <= 0 || v.durationSeconds > 24 * 3600 ||
           (v.transcriptStatus !== "automatic" && v.transcriptStatus !== "reviewed"))
         return badInput("Invalid audio provenance for " + id + ".")
-      media = { filename: v.filename, sha256: v.sha256,
+      media = { filename, sha256: v.sha256,
         durationSeconds: v.durationSeconds, transcriptStatus: v.transcriptStatus }
     }
     seen.add(id)
