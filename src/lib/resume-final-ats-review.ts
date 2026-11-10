@@ -5,7 +5,7 @@
  * candidate experience. The caller must intersect suggestions with independently
  * confirmed source-resume / first-person evidence before asking the writer to edit.
  */
-export type FinalAtsReviewStatus = "ok" | "invalid_response" | "skipped_no_key" | "unavailable";
+export type FinalAtsReviewStatus = "ok" | "invalid_response" | "skipped_no_key" | "unavailable" | "skipped_incomplete" | "skipped_time_budget";
 
 export interface FinalAtsReview {
   status: FinalAtsReviewStatus;
