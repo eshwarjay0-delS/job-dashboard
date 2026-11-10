@@ -349,7 +349,7 @@ REA_SESSIONS.unshift({
   "sources":[
     {"label":"Incident handoff","path":"docs/research/whatsapp-resume-acceptance-2026-11-10.md"},
     {"label":"Plan Journal","path":"src/lib/plan-vision-journal.ts"},
-    {"label":"Production tables public.resume_documents and public.resume_import_jobs","path":"public.resume_documents and public.resume_import_jobs"}
+    {"label":"Production tables public.resume_documents and public.resume_import_jobs","path":"docs/research/whatsapp-resume-acceptance-2026-11-10.md"}
   ],
   "steps":[
     {"label":"Search Library metadata","finding":"The current Library search/list did not surface the previously recorded source DOCX or any generated output. The earlier private archive recovery remains in prior context but was not re-opened in this run.","status":"Observed","evidence":"Read-only Files Library search/list, DOCX type, 16–19 Oct 2026."},
