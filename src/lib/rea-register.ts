@@ -264,6 +264,30 @@ REA_SESSIONS.unshift({"id":"contract-crawler-ci-manual-source-2026-11-10","title
 
 REA_SESSIONS.unshift({"id":"contract-crawler-classifier-production-release-2026-11-10","title":"Verify the classifier and resume-gap report on production","area":"applications","method":"Source and artifact analysis","state":"Deployed, verification pending","updated":"2026-11-10","request":"Continue the approved contract-only Apply crawler and report only production-backed work-type classifications.","sources":[{"label":"Production deployment","url":"https://vercel.com/qu4ntum-s-projects/job-dashboard/HX7moNfuc9WAnYg7iah4zYQBWQvC"},{"label":"Contract classifier PR","url":"https://github.com/eshwarjay0-delS/job-dashboard/pull/276"},{"label":"Gap report PR","url":"https://github.com/eshwarjay0-delS/job-dashboard/pull/282"},{"label":"Crawler research","path":"docs/research/contract-crawler-freshness-2026-11-09.md"},{"label":"Apply plan","path":"docs/apply.md"}],"steps":[{"label":"Verify production build","finding":"The canonical alias job-dashboard-fawn.vercel.app is assigned to READY production deployment dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC at exact master SHA 864cb9e906543b006ea730a8de1fa3e65b652ab9.","status":"Tested","evidence":"Independent Vercel deployment and alias lookups."},{"label":"Verify ancestry","finding":"The production SHA descends from classifier merge f7f322 and resume-gap report merge 48ca317.","status":"Tested","evidence":"GitHub compare_commits ancestry checks."},{"label":"Separate scheduled crawl from release","finding":"The 10 Nov 11:00 UTC crawl ran on old SHA a66c108 before the release; 6,818 jobs were found/upserted across 20 portals, with one Inspyr abort and eTeam absent. The first post-release crawl is still pending.","status":"Observed","evidence":"Read-only mfit_crawl_runs record cf78f4bb-5f27-4476-b28f-3efa7156b231."}],"limits":"No public API HTTP smoke succeeded from this runtime. No post-classifier crawl, manual row rewrite, Robert Half adapter or scraping request is claimed. Robert Half remains manual-only under its Terms of Use.","next":"Verify the 11 Nov 11:00 UTC run on the new production SHA, public freshness/clearance API behavior and contractTypes() classifications. Keep Robert Half manual-only. PR #284 is a CI/manual-link follow-up, not a new runtime classifier.","commits":["f7f322f242d39b12a0ade7c8d548f6f48eea79b5","48ca317b0c59215fd112d854f61dc71828f29d69","864cb9e906543b006ea730a8de1fa3e65b652ab9"]});
 
+REA_SESSIONS.unshift({
+  id: "resume-role-evidence-scope-2026-11-10",
+  title: "Keep JD gap repair scoped to each role's original evidence",
+  area: "resume",
+  method: "Source and artifact analysis",
+  state: "Implemented, verification pending",
+  updated: "2026-11-10",
+  request: "Continue the owner-approved factual resume/JD alignment: develop relevant JD wording only where the original role evidence or an explicit first-person confirmation supports it.",
+  sources: [
+    { label: "Resume writer", path: "src/lib/tailor.ts" },
+    { label: "Role evidence helper", path: "src/lib/resume-evidence.ts" },
+    { label: "Regression tests", path: "scripts/tests/resume-confirmation-quality.test.mjs" },
+    { label: "Product decision", path: "src/lib/plan-vision-journal.ts" }
+  ],
+  steps: [
+    { label: "Trace role gap-fill inputs", finding: "The global unseen JD terms were appended to every employer's role repair request, even when the original bullets for that role did not support those terms.", status: "Observed", evidence: "PR #287 source audit in src/lib/tailor.ts." },
+    { label: "Constrain repair to role evidence", finding: "missingRoleEvidenceTerms() returns only terms present in that role's original bullets and still absent from its current bullets. Global unseen terms remain in profile/skills repair only.", status: "Implemented", evidence: "Commits 3101ed8, 29db227 and dc7c435 on PR #287 branch." },
+    { label: "Add behavior regressions", finding: "Two direct helper tests prove Splunk and Okta remain isolated to their respective roles and unsupported Canton is not returned.", status: "Implemented", evidence: "Commit 6d2cbcabc55b8998b17de413bedb4a9b7bb0315a." }
+  ],
+  limits: "No model generation, source DOCX write, exported-DOCX review, real email or WhatsApp send. This does not prove a live ATS score or 98% match. Exact-final-head CI and authenticated document acceptance remain pending.",
+  next: "Run exact-final-head full CI, Plan/REA schema and Kompas baseline. Keep PR #287 separate from PR #279's external-send gate. Obtain the protected preview prerequisite and authorized HTTP access before authenticated original-resume/JD/confirmation export review.",
+  commits: ["3101ed8ca2791eb3e823ca69ada4cb42f0294674", "29db22728f3eaf27d505ed24b6dc0a8c3d8d4052", "dc7c435c02fc9173d292f078690a02f204b567c8", "6d2cbcabc55b8998b17de413bedb4a9b7bb0315a"]
+});
+
 export function filterReaSessions(query:string,area:string,method:string) {
  const q=query.trim().toLowerCase()
  return REA_SESSIONS.filter(s=>(area==='all'||s.area===area)&&(method==='all'||s.method===method)&&(!q||JSON.stringify(s).toLowerCase().includes(q)))
