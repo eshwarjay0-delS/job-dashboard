@@ -8,6 +8,8 @@ import CoverLetterModal from "@/components/CoverLetterModal"
 import { toast } from "sonner"
 import { tailoredFilename } from "@/lib/filename"
 import { resumeQualityNotice } from "@/lib/resume-quality"
+import ResumeGapReportPanel from "@/components/ResumeGapReportPanel"
+import { buildResumeGapReport, type ResumeGapReport } from "@/lib/resume-gap-report"
 
 const FB_CHIPS = [
   "Make bullets shorter", "More specific, less generic", "Add more keywords from the JD",
@@ -350,6 +352,7 @@ function ResultContent() {
   const [rankedCandidates, setRankedCandidates] = useState<RankedCandidate[]>([])
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null)
   const [quality, setQuality] = useState<{ status: string; minimum: number; matched: number; total: number; incomplete?: boolean } | null>(null)
+  const [gapReport, setGapReport] = useState<ResumeGapReport | null>(null)
   const qualityNotice = resumeQualityNotice(quality)
   const [kwAnalysis, setKwAnalysis] = useState<KeywordAnalysis | null>(null)
   // The honest measured JD keyword coverage (0-100) of the returned document.
@@ -454,11 +457,12 @@ function ResultContent() {
         if (Array.isArray(r.matched_on)) setMatchedOn(r.matched_on)
         if (Array.isArray(r.ranked_candidates)) setRankedCandidates(r.ranked_candidates)
         if (r.score_breakdown) setBreakdown(r.score_breakdown)
-        if (r.keyword_analysis) setKwAnalysis(r.keyword_analysis)
+        if (r.keyword_analysis) setKwAnalysis({ ...r.keyword_analysis, missing: Array.isArray(r.quality?.missing) ? r.quality.missing : r.keyword_analysis.missing })
         if (typeof r.coverage === "number") setCoverage(r.coverage)
         else if (typeof r.keyword_analysis?.coverage_after === "number") setCoverage(r.keyword_analysis.coverage_after)
         if (r.unchanged) setUnchanged(true)
         setQuality(r.quality ?? null)
+        setGapReport(buildResumeGapReport(r))
         if (r.usage && typeof r.usage.estCostUSD === "number") setReceipt(r.usage)
         if (Array.isArray(r.diff)) setDiff(r.diff)
       }
@@ -553,6 +557,7 @@ function ResultContent() {
       else setCoverage(null)
       setUnchanged(!!data.unchanged)
       setQuality(data.quality ?? null)
+      setGapReport(buildResumeGapReport(data))
       setDiff(Array.isArray(data.diff) ? data.diff : [])
       if (data.matched?.filename) setResumeName(data.matched.filename)
       if (data.matched?.category) setCategory(data.matched.category)
@@ -907,6 +912,7 @@ function ResultContent() {
               <p className="text-sm">{quality.matched}/{quality.total} JD terms covered. {qualityNotice}</p>
             </div>
           )}
+          {gapReport && <div className="mb-3"><ResumeGapReportPanel report={gapReport} /></div>}
           {(kwAnalysis || breakdown) && (
             <div className="px-6 py-5" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
               {unchanged && (
