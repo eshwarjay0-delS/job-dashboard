@@ -9,6 +9,7 @@ import type { Mail, Stage, App, Interview } from "@/app/dashboard/_suite/sample"
 
 import { emailAddress, authoredText, submissionEvidence, calendarEvidence, linkReferencedThreads, type CalendarEvidence } from "@/lib/application-evidence"
 import { turnOf, saysWaitForUs } from "@/lib/mail-reading"
+import { buildGmailAccountSyncStatus, type GmailAccountSyncStatus } from "@/lib/gmail-account-sync-status"
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
@@ -263,6 +264,22 @@ async function setSyncState(sb: Sb, userId: string, accountId: string, days: num
   if (error) throw error
 }
 
+async function readAccountSyncStatuses(
+  sb: Sb | null,
+  userId: string,
+  accounts: GwAccount[],
+  issues: AccountIssue[],
+): Promise<GmailAccountSyncStatus[]> {
+  return Promise.all(accounts.map(async acct => {
+    let stored: { last_sync_at: string | null; days_synced: number } | null = null
+    if (sb) {
+      try { stored = await getSyncState(sb, userId, acct.id) } catch { /* the live result still tells us this check ran */ }
+    }
+    const issue = issues.find(row => row.account.toLowerCase() === acct.google_email.toLowerCase()) || null
+    return buildGmailAccountSyncStatus(acct.google_email, stored, issue)
+  }))
+}
+
 // Live-fetch + classify one account's threads for a Gmail query. Throws on failure.
 async function messageEvidence(m: GmailMessage, token: string) {
   const texts: string[] = []
@@ -478,13 +495,13 @@ export async function fetchClassifiedThreads(
   userId: string,
   opts: { days?: number; max?: number; query?: string; account?: string } = {},
   extra: { force?: boolean } = {},
-): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[] }> {
+): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[]; accountSync: GmailAccountSyncStatus[] }> {
   const days = Math.min(Math.max(opts.days ?? 30, 1), TRACKING_DAYS)
   const max = Math.min(Math.max(opts.max ?? 50, 1), 300)
 
   const accounts = await listGoogleWorkspaceAccounts(userId)
   const enabled = accounts.filter(a => a.gmail_enabled && (!opts.account || a.google_email.toLowerCase() === opts.account.toLowerCase()))
-  if (enabled.length === 0) return { threads: [], issues: [] }
+  if (enabled.length === 0) return { threads: [], issues: [], accountSync: [] }
 
   // A custom Gmail query bypasses the cache (direct live fetch, old behavior).
   const customQuery = !!opts.query && opts.query !== BASE_QUERY
@@ -516,7 +533,8 @@ export async function fetchClassifiedThreads(
       const cached = await readCachedThreads(sb, userId, days)
       const threads = cached.filter(t => enabled.some(a => a.google_email.toLowerCase() === t.accountEmail.toLowerCase()))
       threads.sort((a, b) => threadLatestTs(b) - threadLatestTs(a))
-      return { threads, issues }
+      const accountSync = await readAccountSyncStatuses(sb, userId, enabled, issues)
+      return { threads, issues, accountSync }
     } catch {
       // Cache read failed — fall through to direct fetch below.
     }
@@ -557,7 +575,8 @@ export async function fetchClassifiedThreads(
   // Newest first by latest message
   allThreads.sort((a, b) => threadLatestTs(b) - threadLatestTs(a))
 
-  return { threads: allThreads, issues }
+  const accountSync = await readAccountSyncStatuses(sb, userId, enabled, issues)
+  return { threads: allThreads, issues, accountSync }
 }
 
 
