@@ -169,3 +169,60 @@ test('computer audio is opt-in; the first tap enables it for the next Start with
   assert.equal(syncs, 1, 'the control should immediately render the selected state');
   assert.equal(starts, 0, 'selecting audio before Start must not begin capture');
 });
+
+
+test('desktop Connect & start preserves the explicit microphone and computer-audio choices', () => {
+  const handlerStart = app.indexOf('$("cnStart").onclick = () => {');
+  const handlerEnd = app.indexOf('$("startBtn").addEventListener', handlerStart);
+  assert.ok(handlerStart >= 0 && handlerEnd > handlerStart, 'Connect & start handler must remain extractable');
+
+  function run(selected) {
+    const connectButton = { onclick: null };
+    const startButton = { calls: 0, click() { this.calls++; } };
+    const state = {
+      window: { kompasDesktop: { systemAudio: true } },
+      LS: { get: (_key, fallback) => fallback },
+      NO_SYS_AUDIO: false,
+      srcOn: { ...selected },
+      syncSrc() {},
+      $: id => id === 'cnStart' ? connectButton : startButton,
+    };
+    runInContext(app.slice(handlerStart, handlerEnd), createContext(state));
+    connectButton.onclick();
+    return { selected: state.srcOn, startCalls: startButton.calls };
+  }
+
+  assert.deepEqual(run({ mic: true, sys: false }), {
+    selected: { mic: true, sys: false }, startCalls: 1,
+  }, 'the desktop connect action must not silently enable computer audio');
+  assert.deepEqual(run({ mic: false, sys: true }), {
+    selected: { mic: false, sys: true }, startCalls: 1,
+  }, 'the desktop connect action must preserve a deliberate computer-audio-only choice');
+  assert.deepEqual(run({ mic: false, sys: false }), {
+    selected: { mic: false, sys: false }, startCalls: 1,
+  }, 'the desktop connect action must not silently re-enable either source');
+});
+
+test('Start refuses an all-sources-off session instead of auto-enabling recording', async () => {
+  const startAt = app.indexOf('async function start() {');
+  const stopAt = app.indexOf('async function stop(', startAt);
+  assert.ok(startAt >= 0 && stopAt > startAt, 'Start function must remain extractable');
+  const messages = [];
+  const state = {
+    srcOn: { mic: false, sys: false },
+    status: (message, kind) => messages.push({ message, kind }),
+  };
+  const context = createContext(state);
+  runInContext(app.slice(startAt, stopAt) + '\nthis.runStart = start;', context);
+  await context.runStart();
+  assert.deepEqual(messages, [{
+    message: 'Turn on the microphone or computer audio before starting.',
+    kind: 'err',
+  }]);
+  assert.equal(state.srcOn.mic, false);
+  assert.equal(state.srcOn.sys, false);
+});
+
+test('desktop connect instructions explain that computer audio is opt-in', () => {
+  assert.ok(app.includes("Turn on the speaker control to include the computer's output mix; otherwise Kompas uses the microphone only."));
+});
