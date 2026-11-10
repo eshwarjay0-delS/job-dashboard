@@ -214,3 +214,10 @@ Canonical repository: `eshwarjay0-delS/job-dashboard`. Current master is `f7f322
 - The automation inventory shows the separate WhatsApp Repair, Kompas Continuous Voice Delivery, MFit Completion Watch and MFit Safe Merge Gate tasks enabled. No separate Bible-Keeper automation is listed.
 - Do not modify the voice preview HTTP gate; run `42773754013` failed and remains with Kompas Continuous Voice Delivery.
 - Continue: verify the exact-head PR #278 full CI and recovery regression. If green, keep it held until the PR #274 owner-review gate is resolved; then coordinate a single approved release and verify production alias plus authenticated recovery. Continue independent crawler verification when the next scheduled crawl completes. Keep PR #271 draft pending two-account/mobile acceptance and owner review.
+
+
+## 10 November 2026 — exact-head follow-through
+
+- PR #278 recovery-root validation now passes exact-head full CI `42773757901`, WhatsApp recovery regression `42773757620`, and Kompas baseline `42773757574` at `3782c97dea69a8632135586bdb8296ad1790c781`. Preview `dpl_Hp9we2LBxgp9bNqup8rMVEdgoM8a` is READY at that exact head, target preview only. Production alias remains `a66c108`. No production deployment, authenticated recovery smoke or real WhatsApp send. Hold #278 until the explicit owner-review gate for identity-sensitive PR #274 is resolved; do not ship it alone.
+- PR #271 gained a source-level narrow-layout regression in `5e0a5f8487c6de0cd02c111f116e878abfdb3eaa`, pinning flex wrapping and account-to-status binding. This is not a real mobile viewport test. No new exact-head Actions run is visible for 5e0a; the earlier 0b63 head's CI/baseline success does not validate the new test. PR #271 remains DRAFT and mergeable=false, with two-account and mobile acceptance still missing.
+- The docs/Plan & Vision branch has been refreshed again with these final states. Its exact current head and CI must be checked before any merge; the preview-smoke token blocker remains.
