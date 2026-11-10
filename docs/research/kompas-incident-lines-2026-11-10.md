@@ -42,3 +42,8 @@ Relevance folds, dissection, and the desktop 10-fold: 38 pass, 0 fail. The wider
 
 ## Limits
 Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. This is the offline stand-in, not a model answer. The NIST versus OAuth pair is the next fold.
+
+
+## Superseding release record — 10 November 2026
+
+The earlier instruction to open a separate PR after pull requests 252 and 253 is superseded. The incident-lines commit `f8a5288b67b006cd9de4cdaf8e672f7ac5449495` is an ancestor of master and the READY production alias at SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`, deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`. This confirms source inclusion and deployment metadata, not reachable HTTP behavior: the canonical endpoint smoke currently returns `402 DEPLOYMENT_DISABLED`. The later unmatched-definition fold `eb37c4566f6d9c1d4b4d988096a2a44066255636` reduces the final offline 150-draft set to zero pairs at Jaccard >= 0.7. Live scored folds remain 0/50 and native Windows answers 0/10.
