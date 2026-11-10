@@ -1,7 +1,7 @@
 /* Dashboard shell
    Desktop: persistent 240px rail.
    Mobile/tablet: ordinary top bar; navigation is completely hidden until the
-   hamburger is pressed, then opens as a drawer floating over the page. */
+   hamburger is pressed, then expands below the top bar in normal flow and pushes page content down. */
 
 /* Pages that open with a greeting or a short line (Home, Inbox, Interviews, Today, Summary, Gmail accounts): the same
    header as every other page (PageIntro): the page's name, one line under it, nothing shouted above it. */
@@ -81,10 +81,8 @@
 
 /* Desktop shell */
 :root{--mf-topbar-h:64px}
-@keyframes mf-drawer-in{from{translate:-16px 0}to{translate:0 0}}
 .mf-mobile-home{display:none}
 .mf-menu-toggle{display:none}
-.mf-nav-scrim{display:none}
 .dash-sidebar{
   position:fixed!important;
   top:0!important;
@@ -204,44 +202,37 @@
   .mf-menu-toggle.is-open span:nth-child(2){opacity:0}
   .mf-menu-toggle.is-open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
 
-  /* Closed means completely absent. Open is a drawer that floats over the page, under the top bar; the page does not move.
-     The selectors carry ".mf-dashboard-shell" on purpose: the visibility guard at the end of globals.css
-     ("html body aside.dash-sidebar") forces display:flex and width:240px, and that is what left the opened menu as a
-     240px block in the page with blank space beside it (owner, 12 Oct 2026). These must out-rank it. */
+  /* Owner-approved mobile behavior: the navigation expands under the sticky top bar in normal flow and pushes the
+     page down. It must never float over, dim, or make the page inert. Keep this selector heavier than the global
+     visibility guard (html body aside.dash-sidebar), which otherwise forces the 240px desktop rail on narrow screens. */
   html body .mf-dashboard-shell aside.dash-sidebar{
-    position:fixed!important;
-    inset:var(--mf-topbar-h) auto 0 0!important;
-    width:min(300px,calc(100vw - 48px))!important;
+    position:static!important;
+    inset:auto!important;
+    width:100%!important;
     max-width:none!important;
     height:auto!important;
-    max-height:none!important;
-    display:none!important;
+    max-height:0!important;
+    display:flex!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
     overflow:hidden!important;
-    border-right:.8px solid var(--border-strong)!important;
+    border-right:0!important;
     border-bottom:0!important;
-    z-index:450!important;
+    z-index:auto!important;
+    transform:none!important;
+    box-shadow:none!important;
+    transition:max-height .22s ease,border-color .22s ease,visibility 0s linear .22s;
   }
   html body .mf-dashboard-shell aside.dash-sidebar.is-open{
-    display:flex!important;
+    max-height:calc(100vh - var(--mf-topbar-h))!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
     overscroll-behavior:contain;
-    background:var(--bg);
-    box-shadow:0 18px 44px rgba(12,11,8,.28)!important;
-    animation:mf-drawer-in .18s ease-out;
-  }
-  /* The rest of the page, dimmed. Pressing it closes the menu. */
-  .mf-nav-scrim{
-    display:block;
-    position:fixed;
-    inset:var(--mf-topbar-h) 0 0 0;
-    /* Said outright as well: a button with nothing in it need not stretch between its edges in every browser. */
-    width:100%;
-    height:calc(100% - var(--mf-topbar-h));
-    z-index:440;
-    padding:0;
-    border:0;
-    background:rgba(12,11,8,.45);
-    touch-action:none;
-    cursor:default;
+    background:var(--surface)!important;
+    border-bottom:1px solid var(--border)!important;
+    transition:max-height .22s ease,border-color .22s ease,visibility 0s linear;
   }
   .dash-sidebar .mf-sidebar-brand-row{display:none!important}
   .dash-sidebar nav{padding:12px 14px 4px!important}
