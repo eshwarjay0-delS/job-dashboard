@@ -1405,6 +1405,10 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const rankOn = tied.previous ? (bareFollow(tied.own) ? tied.previous : tied.own) : question
   let lines = rankedExperience(rankOn, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson).filter(fresh)
   if (cut.shape === "comparison" || cut.shape === "definition") lines = lines.filter((line) => lineMentionsPair(line, lead))
+  // A named incident may cite a resume line only when that line names the incident.
+  // A shared word such as access is not enough, or two incidents share the same lines.
+  const incidentAsk = lead.split(/\s+/).filter(Boolean).length >= 6 && askedPartList(question).length >= 3
+  if (incidentAsk) lines = lines.filter((line) => lineMentionsPair(line, lead))
   // r4: a three-part ask ("triage, access reviews, and HIPAA controls") spent Director's room on two lines for one part
   // and never named the third. With 2+ asked parts, the best line for each part goes first, in the asked order.
   // Failsafe: one part, or any error, keeps the ranked order.
@@ -1510,6 +1514,12 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       if (words + n <= stop) { parts.push(line); words += n }
       return
     }
+    if (incident) {
+      const line = `For ${spokenLead(part)}, I stay on ${lead}.`
+      const n = wordCount(line)
+      if (words + n <= stop) { parts.push(line); words += n }
+      return
+    }
     const templates = PART_LINES[level]
     // Round 11: a listed part was said in the interviewer's voice ("On what would you check yourself"); it is said as mine.
     const said = spokenLead(part.replace(/^(what|how|when|who|why|where|which) (would|do|will|should|did) you\s+(.+)$/i,
@@ -1545,7 +1555,13 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // The pad stays inside the last sentence so a later ladder trim cannot drop it as its own sentence.
   // The ladder may drop the last sentence to keep the mode gap. The extra words go on the
   // first sentence so the answer still clears the mode floor after that cut.
-  if ((incident || namedDesign) && parts[0] && words + 3 <= mode.maxWords) {
+  if (incident && parts[0]) {
+    const extra = " in this case, as I saw it."
+    if (words + 6 <= mode.maxWords) {
+      parts[0] = parts[0].replace(/[.]\s*$/, extra)
+      words += 6
+    }
+  } else if (namedDesign && parts[0] && words + 3 <= mode.maxWords) {
     parts[0] = parts[0].replace(/[.]\s*$/, " in this case.")
     words += 3
   }

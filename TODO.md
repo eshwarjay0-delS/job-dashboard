@@ -1,3 +1,11 @@
+## 2026-11-10 — An incident answer names that incident
+
+No new screen. A named incident keeps a resume line only when the line names that incident, and each asked part is said with the incident, not with the shared part template.
+
+**Measured on the fictional sample resume, 150 drafts, no model, on the design-pieces tree.** Before: 4 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. Audit evidence versus the leftover service account: engineer 0.478 (94 and 89 words), director 0.710 (166 and 143), architect 0.625 (254 and 223). After: 1 pair, and the same four zeros. That pair: engineer 0.128 (81 and 57), director 0.217 (131 and 108), architect 0.239 (198 and 164). The audit draft names audit evidence and not the service account. The other draft does the reverse. The one pair still at 0.708 is director, NIST CSF risk assessments versus OAuth audience validation, 54 and 58 words. Focused suites: 170 pass, 0 fail. `tsc --noEmit` clean.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. This fold is not merged until pull requests 252 and 253 are on master.
+
 ## 2026-11-06 — A design answer speaks its own pieces
 
 No new screen. A design answer speaks the pieces in the design sentence and leaves off the shared explain list.
