@@ -1,53 +1,60 @@
-# WhatsApp resume hold and DOCX identity round-trip — 10 November 2026
+# WhatsApp resume hold — exact source recovery and evidence boundary
 
-Method: source and artifact analysis. No model call, no live WhatsApp send, and no private resume or job-description content was copied into this repository.
+Updated: 10 November 2026. Method: read-only Library, Gmail, GitHub and database review plus local DOCX metadata/text inspection. No model call, real email, WhatsApp send, R2 write, or production mutation was performed.
 
 ## Recovered 17 October incident
 
-The ChatGPT Library contains the screenshot artifact `1792276118790.jpeg`, created at `2026-10-17T22:28:39Z` (5:28 PM America/Chicago). It shows the M Fit WhatsApp conversation:
+The Library screenshot `1792276118790.jpeg` was created at `2026-10-17T22:28:39Z` (5:28 PM America/Chicago). It shows the M Fit WhatsApp thread:
 
-- A job post was sent at about 5:25 PM. The visible portion describes a Security Engineering / Blockchain / Risk & Controls / Cybersecurity role, with NIST, ISO 27001, CIS Controls, COBIT, AWS, Azure and GCP. The JD is truncated in the screenshot.
-- A five-page, 28 KB Word file named `Eshwar Cyber resume).docx` was sent at about 5:25 PM.
-- At 5:28 PM the bot replied: “The rewrite did not reach your 98% coverage target after automatic repair. I have held the file.” It listed these remaining terms: `ccsp`, `cism`, `crisc`, `cisa`, `canton`, `sol`, `specialty`, `attributes`.
+- At about 5:25 PM, a Security Engineer – Risk & Controls job post and a five-page, 28 KB Word file named `Eshwar Cyber resume).docx` were submitted.
+- At 5:28 PM, the bot replied: “The rewrite did not reach your 98% coverage target after automatic repair. I have held the file.”
+- The visible missing-term list was `ccsp`, `cism`, `crisc`, `cisa`, `canton`, `sol`, `specialty`, `attributes`.
 
-This proves the observed behavior was a 98% coverage hold after automatic repair. It does **not** show the actual measured percentage, the full job description, the contents of the uploaded DOCX, the generated output, or the webhook/run trace. The screenshot alone cannot establish whether all eight terms were mandatory, whether the draft was complete, or whether any of those terms were supported by the source resume. Do not add CCSP, CISM, CRISC, CISA, Canton or SOL as candidate experience or credentials without source evidence; do not discard Canton/SOL as noise without the full JD.
+### Original resume bytes recovered
 
-The Library's resume inventory records the same filename and a profile classification, but the actual DOCX bytes were not available as a readable Library file in this run. The connected iZap business has no WhatsApp number configured and returned no matching chat or message history for the incident. The original R2 object, full JD, exported DOCX and delivery receipt therefore remain inaccessible here.
+The exact input DOCX was recovered from the Library archive `Kompas_JEshwar44_Organized_Originals.zip`, member `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`. It is 27,724 bytes and its SHA-256 is `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`, matching the resume inventory record for that exact path. This is the original source file, not a generated output.
 
-## Current policy — later owner correction, already on production
+### Full job description recovered
 
-The old 98% hard WhatsApp hold is superseded by the 6 November 2026 channel-specific delivery policy in `src/lib/whatsapp-resume-acceptance.ts` and `docs/research/whatsapp-scored-rewrite-2026-11-06.md`:
+The complete JD is present in Gmail thread `1a1464393628992f`, subject “Fwd: Looking 5+ Years || Security Engineer – Risk & Controls || Atlanta/GA (Onsite)”, received `2026-10-16T19:49:07Z`; the forwarded message is dated 17 October 2026 at 1:14 AM India time. Its title, location, contract type and opening requirements match the screenshot.
 
-- The website download gate remains strict at 95% raw job-post overlap.
-- For WhatsApp, a clean 70–94.9% raw job-post result can be delivered when supported coverage is at least 95%, the document is complete, and the other clean-pass checks hold.
-- A finished readable WhatsApp DOCX below 70% is not a clean pass, but it may still be sent with the gaps disclosed. A finished file below the supported-vocabulary floor is also labelled as a shortfall rather than being presented as a clean pass.
-- A partial/incomplete, skills-only, unreadable export, failed provider run, or missing finished document uses the already-selected same-account resume fallback. A failed identity round-trip also sends the unchanged selected resume, not the rewritten bytes.
-- Unsupported work, certifications, employers, dates, metrics and experience are never invented. Job-post-only terms must remain visibly labelled rather than being asserted as experience.
+The JD requires a bachelor's degree; 5+ years in cybersecurity, technology risk, information security, risk management or controls governance; risk assessments and control evaluations; remediation through closure; NIST, ISO 27001, CIS Controls or COBIT; AWS/Azure/GCP; IAM, secrets, encryption and key management; audit/compliance support; and analytical, problem-solving and communication skills.
 
-The current canonical production alias `job-dashboard-fawn.vercel.app` is READY at master `30bd971c97937b9dea8716b945fa3b1219b07544`, so this later policy is present in the deployed source. This is deployment evidence, not proof of an actual WhatsApp delivery on the owner's device.
+Preferred items include blockchain, smart contracts, cryptography and DLT platforms (Ethereum, Hyperledger Besu, Canton, Solana, Polygon); SSDLC/DevSecOps; vulnerability management/security testing; Archer, ServiceNow GRC and MetricStream; risk metrics/dashboards/executive reporting; CI/CD and cloud-native controls; CISSP/CISM/CRISC/CISA/CCSP; and AWS Security Specialty.
 
-## Best-match and runtime fallback are different
+## Evidence classification of the eight screenshot terms
 
-`chooseResume` selects within the chosen email profile. It uses deterministic `rankFor` ordering and falls back to that code-ranked choice when the optional AI agent returns no valid pick. The webhook's `sendClosest` sends the already-selected profile-safe resume when a rewrite cannot be used. The separate November 4 “baseline v1 runtime fallback” is still not implemented; its definition and confirmation switch remain an explicit owner design decision. Do not conflate that open baseline fallback with the existing offline code-ranked resume selection.
+- `CCSP`, `CISM`, `CRISC`, `CISA`, and `AWS Security Specialty` are certifications. The current canonical keyword pipeline intentionally excludes certifications from match targets and removes certifications absent from the source. Do not add them to raise coverage.
+- `Canton` and `Solana` are preferred blockchain platforms. The recovered source resume does not show them; they remain unsupported and must not be written as candidate experience.
+- `sol` is not a separate JD skill. The full JD says `Solana`; do not count the truncated fragment separately.
+- `attributes` does not appear in the recovered JD as a skill or qualification. It is generic extraction noise and must not hold a resume below its target.
 
-## Separate DOCX identity repair — PR #267
+A source-backed regression in this PR adds `sol` and `attributes` to the generic/non-skill filter and tests the incident's certification and preferred-platform boundaries. It does not lower evidence gates or add unsupported skills.
 
-PR #267 changes the round-trip identity check, not the 17 October coverage policy. It reads the DOCX body, section-referenced headers and footers, and external hyperlink relationship targets before comparing identity-bearing facts. It preserves name, all email addresses, phone, profile URL and employment-date checks, and uses accurate identity/contact/date fallback wording. It does not lower coverage thresholds or relax factual-evidence rules.
+## Important source conflict — owner reconciliation required
 
-Final PR head: `48836eed08233dcc532ab4a04299dd74b39475a2`.
-- Full CI `42747786078`: SUCCESS.
-- WhatsApp resume recovery regression `42747786105`: SUCCESS.
-- Kompas baseline `42747785851`: SUCCESS.
-- Vercel preview `dpl_422ZDDctJeuAfxZmrR9F5s15hax4`: READY at the exact PR head.
-- PR #267 merged as `23ec076b944519e518060f14e2ce530238e8393a`.
-- Production deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`: READY, target production. Independent deployment and alias reads confirm `job-dashboard-fawn.vercel.app` points to that exact deployment and merge SHA.
-- The optional `voice-preview-smoke` check failed in the separate voice workflow. This PR did not change Kompas voice behavior or alter any secret; the existing Kompas Continuous Voice Delivery task retains that work.
-- No real WhatsApp message or authenticated device test was performed. A public HTTP smoke could not run because external DNS resolution failed in this execution environment.
+The recovered source DOCX contains education, employment-date and credential claims that conflict with the owner-confirmed profile already available in prior conversations. The conflict affects the JD's required 5+ years and some credentials. Do not count the conflicting dates, tenure or credentials as confirmed experience, merge the two timelines, or rewrite them until the owner reconciles the source. The file is evidence of what was uploaded, not proof that every claim is current and verified.
 
-## Remaining acceptance and exact blockers
+A separate Library file named `Eshwar_Resume-226.docx` is not accepted as the incident output: its hash is different, its core document timestamps predate the incident, and there is no request ID, R2 key or Meta receipt linking it to this run.
 
-1. Exact replay of 17 October is blocked by missing original DOCX bytes, full JD, generated output and per-run trace/Meta receipt. The screenshot is the only recovered incident artifact.
-2. The connected iZap account has no WhatsApp number/chat history for this thread. An authorized R2 object/trace retrieval path or the original source bundle is required for exact replay.
-3. No live WhatsApp send was performed in this run. Real delivery acceptance remains a separate owner-authorized device test.
-4. The 6 November policy is the current production behavior. Do not restore the old 98% hard hold, lower factual evidence gates, or invent any of the listed missing terms.
+## Current policy and release state
 
+The old 98% hard WhatsApp hold is superseded by the owner-approved 6 November channel policy in `src/lib/whatsapp-resume-acceptance.ts` and `docs/research/whatsapp-scored-rewrite-2026-11-06.md`:
+
+- Web downloads retain the strict 95% raw-JD-overlap gate.
+- WhatsApp may send a completed, readable 70–94.9% raw-overlap DOCX with disclosed gaps when supported coverage is at least 95% and all clean-pass checks hold.
+- A finished readable result below 70% may be sent with gaps disclosed, but is not a clean pass.
+- Incomplete, skills-only, unreadable, failed or identity-mismatched rewrites use the selected same-account resume fallback.
+- Unsupported experience, credentials, employers, dates and metrics are never invented.
+
+PR #267's DOCX body/header/footer/hyperlink identity repair is already merged in master. The current canonical production alias `job-dashboard-fawn.vercel.app` was independently verified READY at `51cb716393efb1f54cdc6173c8e6b7ee6f034241` on deployment `dpl_G92eEx6vGFhgfstAocq9jkGKm6i9`. That proves the later source is deployed, not that the historical WhatsApp run succeeded.
+
+## Remaining blockers and acceptance
+
+1. The original DOCX and full JD are now recovered, but the generated output for this exact run is still missing.
+2. The per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt are unavailable.
+3. iZap currently has no connected WhatsApp number and returns no matching chat/message history for the incident. The original thread cannot be replayed through iZap.
+4. The source DOCX conflicts with previously confirmed profile facts. Owner reconciliation is required before any experience/tenure claim is used.
+5. No live WhatsApp send or authenticated device test was performed. Historical delivery remains unverified.
+
+Next: keep the source-backed filter/test change in review; finish its exact-head CI. After the owner reconciles the conflicting source facts and an authorized output/trace is available, run a local exact-source replay and report raw overlap, supported coverage, unsupported requirements and document integrity separately. Do not restore the old 98% hard hold or send a real WhatsApp test without explicit authorization.
