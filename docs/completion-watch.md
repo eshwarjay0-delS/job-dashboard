@@ -362,3 +362,24 @@ Continue: keep PR #289 draft and stacked until #287 receives its required owner 
 ## Coordination note — Kompas handoff
 
 The referenced docs/kompas/CHIEF_RELEVANCE_HANDOFF.md still cites an older production SHA (a66c108), while current master and Vercel alias metadata are at 11efbbfe7781592bc2fad1216f67546882a1c3ed. Kompas Continuous Voice Delivery is active and owns PR #283 / voice validation; this resume branch made no Kompas code or handoff edits to avoid parallel work. That task should reconcile the stale handoff and Plan & Vision Kompas release baseline after its current source gate is complete. The separate Bible-Keeper automation is not listed.
+
+## 10 November 2026 — resume writer prompt and final-DOCX exact-head follow-through
+
+### Evidence-bound writer
+
+- PR #287 is open at exact head `9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540b`. A second source audit found that `src/lib/claude.ts` still contained an older RULES prompt that told the model to write every JD term into experience, claimed the candidate had the whole JD skill set, and treated adjacent security/IAM stacks as transferable across employers. The split-draft `firstAsk` also reached every experience role even though the deterministic role repair was scoped.
+- The writer-only branch now aligns the RULES prompt with the source/confirmation evidence policy, removes cross-role assumptions, routes the global supported-term ask only to the profile/skills part in split mode, and keeps each experience prompt limited to its own original role evidence. It adds a source-contract regression. Commits: `b7d6d8369f03b152005792552bc9a52b3c78ef07`, `bc3ed928e003065a8c34abacbc474031a6242649`, `9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540b`.
+- Exact-head Plan/REA schema `42920485382`, Kompas baseline `42920485384`, and WhatsApp recovery regression `42920485412` passed. Full CI `42920485193` remains in progress at the migration asset closure suite. Vercel status is FAILURE/account blocked; no protected preview is available. Do not merge or deploy on partial gates.
+
+### Final-DOCX Gemini review
+
+- PR #289 exact head `96302d67f10e69d7a047660fee07e7e6c2a03f0f` passed targeted final-DOCX ATS workflow `42919904688` (9/9), WhatsApp recovery regression `42919904693` (49/49), and Plan/REA schema `42919904570` (13/13). The prior `5897a7b` head failed TypeScript because the new REA entry used unsupported enum values; commit `96302d` corrected them.
+- PR #289 remains DRAFT and stacked on old PR #287 base `21309f44921646d1d89b923cb42c9b988e5faa20`. PR #287 has advanced to `9fbff8` with overlapping `claude.ts`/`tailor.ts` prompt changes. Restack and resolve both change sets after #287's owner/preview gates; do not retarget to master to bypass approval. Full CI has not run on #289's feature-base branch.
+- Vercel project metadata reports `live:false`; public HTTP returned `402 DEPLOYMENT_DISABLED`; sandbox creation returned `402 resource_creation_blocked`; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`. No billing/access-control bypass or deployment attempt was made.
+
+### Remaining historical incident and acceptance
+
+- The 17 Oct 17:28 Chicago tailoring run is confirmed in usage telemetry, but this does not prove a final DOCX was saved or delivered. The source DOCX and matching JD were recovered privately; conflicting source education/employment/credential facts remain quarantined. The generated output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivery/read receipt remain unavailable. No exact replay or real WhatsApp send is claimed.
+- No authenticated original-resume/JD/confirmation generation, live Gemini call, real DOCX export, live 95–100% match, email or WhatsApp send has been performed.
+
+Continue: finish exact-head full CI on PR #287; keep it unmerged until owner review and the protected preview/access prerequisites are resolved. Then restack PR #289 onto the approved #287 head, preserve both prompt-isolation and final-DOCX changes, and run full CI plus the required exact-head preview before any authenticated document acceptance.
