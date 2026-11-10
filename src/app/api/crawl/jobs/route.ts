@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
-import { crawlSearchOrFilter } from "@/lib/crawl/search"
+import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, crawlSearchOrFilter } from "@/lib/crawl/search"
 import { requiresSecurityClearance } from "@/lib/contract-jobs"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   let query = service.from("mfit_crawl_jobs")
     .select("id,portal,firm,title,location,work_type,engagement,pay_range,posted_at,url,last_seen_at,description")
     .eq("active", true)
+    .gte("last_seen_at", crawlFreshnessCutoff())
     .order("last_seen_at", { ascending: false })
     .limit(fetchLimit)
 
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     jobs,
     work_type: workType,
+    freshness_days: CRAWL_FRESHNESS_DAYS,
     clearance: excludeClearance ? "excluded" : "included",
     excluded_clearance: excludeClearance ? rows.length - allowedJobs.length : 0,
   })
