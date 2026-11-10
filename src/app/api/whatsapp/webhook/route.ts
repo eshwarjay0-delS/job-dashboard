@@ -20,7 +20,7 @@
 import { NextRequest, NextResponse, after } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
-import { blob, readPath, writePath, existsPath, deletePath } from "@/lib/storage"
+import { blob, readPath, writePath, existsPath, deletePath, keyOf } from "@/lib/storage"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
@@ -48,7 +48,7 @@ import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, chosenResumeMatchesProfile, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable } from "@/lib/whatsapp-resume-acceptance"
 import { confirmedCandidateStatements } from "@/lib/resume-evidence"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { enqueueResumeRecovery, enqueueResumeRefinement, patchResumeRecovery, patchResumeRefinement, deferResumeRecovery, deferResumeRefinement, dueResumeRecoveries, dueResumeRefinements, claimResumeRefinement, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
@@ -577,7 +577,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     }
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
-    if (replyTo) return refine(from, replyTo, text, userId)
+    if (replyTo) return refine(from, replyTo, text, userId, msgId)
 
     // Short message that's not a command — reply conversationally, not robotically.
     if (text.length < 60) {
@@ -1328,9 +1328,27 @@ async function recoverResumeJobsInner(request: NextRequest, startedAt: number, p
       await deferResumeRecovery(job.id, "recovery_exception")
     }
   }
+  const refinementJobs = await dueResumeRefinements(1)
+  let refinementAttempted = 0
+  if (refinementJobs.length) {
+    const budget = recoveryTailorBudget(startedAt)
+    if (budget >= RECOVERY_MIN_TAILOR_MS) {
+      refinementAttempted++
+      await progress("running", { stage: "refinement_attempt_started", bootstrapped, due: jobs.length, refinementDue: refinementJobs.length, attempted, refinementAttempted })
+      try {
+        await processResumeRefinement(refinementJobs[0].id, { maxMs: budget })
+      } catch (error) {
+        console.error("[whatsapp] refinement recovery failed", (error as Error)?.name || "error")
+        await deferResumeRefinement(refinementJobs[0].id, "recovery_exception")
+      }
+      await progress("running", { stage: "refinement_attempt_finished", bootstrapped, due: jobs.length, refinementDue: refinementJobs.length, attempted, refinementAttempted })
+    } else {
+      await progress("running", { stage: "refinement_deferred_for_budget", bootstrapped, due: jobs.length, refinementDue: refinementJobs.length, attempted })
+    }
+  }
   // Counts only: no candidate identity, JD or resume content in logs.
-  console.info("[whatsapp] resume recovery cron", { bootstrapped, due: jobs.length, attempted, accepted, handsetConfirmed, stillPending })
-  return NextResponse.json({ bootstrapped, attempted, accepted, handsetConfirmed, stillPending, due: jobs.length })
+  console.info("[whatsapp] resume recovery cron", { bootstrapped, due: jobs.length, attempted, accepted, handsetConfirmed, stillPending, refinementDue: refinementJobs.length, refinementAttempted })
+  return NextResponse.json({ bootstrapped, attempted, accepted, handsetConfirmed, stillPending, due: jobs.length, refinementDue: refinementJobs.length, refinementAttempted })
 }
 async function emailSlots(userId: string): Promise<{ slots: string[]; sure: boolean; failed: boolean }> {
   try {
@@ -1457,7 +1475,16 @@ async function sendSaved(from: string, have: { abs: string; file: SavedFile }, j
 }
 
 // ── Swipe-reply: change a resume the bot already sent ─────────────────────────
-async function refine(from: string, replyTo: string, request: string, userId: string) {
+async function tellRefinementOnce(jobId: string, from: string, message: string) {
+  const job = await readResumeRecovery(jobId)
+  if (!job || job.toldUser) return
+  try {
+    await sendText(from, message)
+    await patchResumeRecovery(jobId, { toldUser: true })
+  } catch { /* the durable job remains available for the next recovery run */ }
+}
+
+async function refine(from: string, replyTo: string, request: string, userId: string, msgId: string) {
   const gen = await loadGen(from, replyTo)
   if (!gen) {
     return sendText(from, [
@@ -1470,111 +1497,255 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   if (request.length < 3) {
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
-  const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
-  if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
+  if (!msgId) return sendText(from, "I could not save this edit safely, so no document was sent. The original resume is unchanged.")
 
-  await sendText(from, `Updating your resume: "${clip(request, 200)}"…`)
-
-  // The role/company/location lookup is best-effort; if it came back empty the first time,
-  // retry it alongside the edit so this caption still names the job.
-  const metaPromise: Promise<Meta> = gen.meta?.role || gen.meta?.company || gen.meta?.location
-    ? Promise.resolve(gen.meta)
-    : extractJdMeta({ keys, jd: gen.jd })
-
-  // Summary and header title stay as they are (the dashboard default) unless the request
-  // is about them; skills and experience are always open to the edit.
-  const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(request)
-  const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(request)
-
-  const sendBaseline = async (why: string, baseline: Buffer, meta: Meta) => {
-    const name = await outputNameFor(baseline)
-    await deliver(from, baseline, name, closestResumeCaption(name, "the resume already chosen for this job", why), {
-      userId, jd: gen.jd, meta, changes: gen.changes || [], source: gen.source,
-    })
+  const senderRoot = path.join(VERSIONS_DIR, digits(from))
+  const originalPath = path.resolve(gen.file)
+  if (!originalPath.startsWith(path.resolve(senderRoot) + path.sep)) {
+    return sendText(from, "I could not verify the saved resume version for this edit. No document was sent.")
   }
-  let result: TailorResult
+  const source = await readPath(gen.file).catch(() => null)
+  if (!source) return sendText(from, "I could not open the exact resume version you replied to. No document was sent.")
+
+  const jobId = createHash("sha256").update(from + ":" + msgId).digest("hex")
+  const sourceHash = createHash("sha256").update(source).digest("hex")
+  const snapshotPath = path.join(senderRoot, ".refine-recovery-" + jobId + ".docx")
+  const snapshotKey = keyOf(snapshotPath)
   try {
-    result = await runTailor({
+    const created = await blob.putIfAbsent(snapshotKey, source)
+    if (!created) {
+      const existing = await readPath(snapshotPath)
+      if (!existing || createHash("sha256").update(existing).digest("hex") !== sourceHash) {
+        return sendText(from, "I could not verify the saved source copy for this edit. No document was sent.")
+      }
+    }
+    await enqueueResumeRefinement({
+      id: jobId,
+      from,
+      userId,
       jd: gen.jd,
-      keys,
-      // Scoped to THIS sender's versions, so runTailor's inside-the-folder check also
-      // guarantees a record can only ever point at the sender's own files.
-      userResumeDir: path.join(VERSIONS_DIR, digits(from)),
-      givenPath: gen.file,
-      refine: request,
-      // The reply is not just an edit instruction: a first-person experience
-      // statement in it ("I have experience with X") is candidate evidence, so
-      // the evidence gate keeps the term instead of stripping it back out.
-      // confirmedCandidateStatements admits only explicit assertions, so a
-      // plain edit ("make bullets shorter") contributes nothing here.
-      immediatePrefs: confirmedCandidateStatements([request]),
-      noCache: true, // sending the same request again should redraft, not replay the last result
-      mode: "full",
-      sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
+      jdId: createHash("sha256").update(gen.jd).digest("hex"),
+      resumePath: snapshotPath,
+      resumeName: path.basename(gen.file),
+      resumeFiled: gen.saved,
+      refinement: {
+        replyTo,
+        request,
+        sourcePath: gen.file,
+        sourceHash,
+        sourceSnapshotPath: snapshotPath,
+        idempotencyKey: jobId,
+        genSnapshot: {
+          meta: gen.meta,
+          changes: gen.changes || [],
+          source: gen.source,
+          saved: gen.saved,
+          depth: gen.depth,
+          held: gen.held,
+          createdAt: gen.createdAt,
+        },
+      },
     })
-  } catch (error) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      const timedOut = /timed out/i.test(String(error))
-      await sendBaseline(timedOut ? "The rewrite ran out of time just now." : "The rewrite stopped before it finished.", baseline, meta)
-      return
-    }
-    return sendText(from, "The rewrite stopped before it finished, and the resume already chosen for this job could not be opened. Send the job again.")
+  } catch {
+    return sendText(from, "I could not save this edit for safe recovery, so no document was sent. The original resume is unchanged.")
   }
 
-  const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
-  if (!lines) {
-    return sendText(from, `Nothing needed changing for "${clip(request, 200)}". Try naming the exact skill, section, or bullet.`)
+  await sendText(from, "Updating your resume: \"" + clip(request, 200) + "\"…")
+  try {
+    await processResumeRefinement(jobId)
+  } catch {
+    await deferResumeRefinement(jobId, "refinement_worker_error")
+    await tellRefinementOnce(jobId, from, "Your edit is saved. I could not finish it just now, so no original or partial document was sent. I will retry from the saved version.")
   }
+}
 
-  // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is not:
-  // the file this reply started from goes out instead, labelled as unchanged.
-  if (!whatsappRewriteUsable(result)) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      await sendBaseline(unfinishedRewriteWhy(result), baseline, meta)
-      return
-    }
-    return sendText(from, qualityStop(result))
-  }
-
-  const file = await blob.get(`tailored/${result.token}.docx`)
-  const meta = await metaPromise
-  const source = await readPath(gen.file)
-  if (!file) {
-    if (source) {
-      await sendBaseline("The updated Word file could not be opened.", source, meta)
-      return
-    }
-    return sendText(from, "The update generated but the file could not be read back. Please try again.")
-  }
-  if (!source) {
-    return sendText(from, "I could not verify the original resume for this update, so no file was sent.")
-  }
-  if (!(await sameResumeFacts(source, file))) {
-    await sendBaseline("The update failed identity/contact/date verification, so I sent your original resume instead.", source, meta)
+async function processResumeRefinement(jobId: string, options: { maxMs?: number } = {}) {
+  const initial = await readResumeRecovery(jobId)
+  if (!initial || initial.kind !== "refine" || initial.status !== "pending" || !initial.refinement) return
+  const maxMs = Math.min(TAILOR_BUDGET_MS, Number.isFinite(options.maxMs) ? Number(options.maxMs) : TAILOR_BUDGET_MS)
+  if (maxMs < RECOVERY_MIN_TAILOR_MS) {
+    await deferResumeRefinement(jobId, "insufficient_runtime_budget")
     return
   }
-  const changes = [...(gen.changes || []), request]
+  const job = await claimResumeRefinement(jobId)
+  if (!job || !job.refinement) return
+  const refinement = job.refinement
+
+  const sender = await resolveWhatsAppUser(job.from)
+  if (!sender.who) {
+    await deferResumeRefinement(jobId, "account_not_verified")
+    await tellRefinementOnce(jobId, job.from, "Your edit is saved, but I cannot verify the linked MarketFit account right now. No document was sent. I will retry when the account can be verified.")
+    return
+  }
+  if (sender.who.userId !== job.userId) {
+    await patchResumeRecovery(jobId, { status: "blocked", errorCode: "account_changed", processingAt: 0, processingToken: "" })
+    await tellRefinementOnce(jobId, job.from, "The linked MarketFit identity changed, so I stopped this edit. No document was sent.")
+    return
+  }
+
+  const senderRoot = path.join(VERSIONS_DIR, digits(job.from))
+  const snapshotPath = path.resolve(refinement.sourceSnapshotPath)
+  if (!snapshotPath.startsWith(path.resolve(senderRoot) + path.sep)) {
+    await patchResumeRecovery(jobId, { status: "blocked", errorCode: "source_path_invalid", processingAt: 0, processingToken: "" })
+    await tellRefinementOnce(jobId, job.from, "I could not verify the saved source version for this edit. No document was sent.")
+    return
+  }
+  const source = await readPath(refinement.sourceSnapshotPath).catch(() => null)
+  const sourceHash = source ? createHash("sha256").update(source).digest("hex") : ""
+  if (!source || sourceHash !== refinement.sourceHash) {
+    await patchResumeRecovery(jobId, { status: "blocked", errorCode: "source_hash_mismatch", processingAt: 0, processingToken: "" })
+    await tellRefinementOnce(jobId, job.from, "I could not verify the exact saved resume version for this edit. No document was sent.")
+    return
+  }
+
+  const savedGen = refinement.genSnapshot || {}
+  const gen: Gen = {
+    userId: job.userId,
+    jd: job.jd,
+    file: refinement.sourceSnapshotPath,
+    meta: (savedGen.meta || {}) as Meta,
+    changes: Array.isArray(savedGen.changes) ? savedGen.changes.map(String) : [],
+    source: typeof savedGen.source === "string" ? savedGen.source : undefined,
+    createdAt: Number(savedGen.createdAt) || job.createdAt,
+    saved: typeof savedGen.saved === "string" ? savedGen.saved : undefined,
+    depth: typeof savedGen.depth === "number" ? savedGen.depth : undefined,
+    held: !!savedGen.held,
+  }
+
+  const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(job.from) }))
+  if (!hasAnyKey(keys)) {
+    await deferResumeRefinement(jobId, "provider_unavailable")
+    await tellRefinementOnce(jobId, job.from, "Your edit is saved. Tailoring is temporarily unavailable, so no original or partial file was sent. I will retry from the saved version.")
+    return
+  }
+
+  let result: TailorResult | null = null
+  let file: Buffer | null = null
+  if (refinement.generatedPath && refinement.generatedSha256) {
+    const saved = await blob.get(refinement.generatedPath)
+    if (saved) {
+      const actualHash = createHash("sha256").update(saved).digest("hex")
+      if (actualHash !== refinement.generatedSha256) {
+        await patchResumeRecovery(jobId, { status: "blocked", errorCode: "generated_hash_mismatch", processingAt: 0, processingToken: "" })
+        await tellRefinementOnce(jobId, job.from, "I could not verify the saved updated document, so no file was sent.")
+        return
+      }
+      file = saved
+      if (refinement.resultSnapshot && typeof refinement.resultSnapshot === "object")
+        result = refinement.resultSnapshot as TailorResult
+    }
+  }
+
+  if (!result || !file) {
+    const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(refinement.request)
+    const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(refinement.request)
+    try {
+      result = await runTailor({
+        jd: job.jd,
+        keys,
+        userResumeDir: senderRoot,
+        givenPath: refinement.sourceSnapshotPath,
+        refine: refinement.request,
+        immediatePrefs: confirmedCandidateStatements([refinement.request]),
+        noCache: true,
+        mode: "full",
+        maxMs,
+        sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
+      })
+    } catch (error) {
+      const timedOut = /timed out/i.test(String(error))
+      await deferResumeRefinement(jobId, timedOut ? "tailor_timeout" : "tailor_error")
+      await tellRefinementOnce(jobId, job.from, "Your edit is saved. I could not finish it just now, so no original or partial document was sent. I will retry from the saved version.")
+      return
+    }
+    const lines = (result.diff || []).length + (result.edits?.extras || []).filter(e => (e.text || "").trim()).length
+    if (!lines) {
+      await patchResumeRefinement(jobId, { generationState: "rejected", rejectionCode: "no_changes" }, {
+        status: "blocked", errorCode: "no_changes", processingAt: 0, processingToken: "",
+      })
+      await tellRefinementOnce(jobId, job.from, "Nothing needed changing for that request. No new document was sent.")
+      return
+    }
+    const generatedPath = "tailored/" + result.token + ".docx"
+    file = await blob.get(generatedPath)
+    if (!file) {
+      await deferResumeRefinement(jobId, "generated_document_missing")
+      await tellRefinementOnce(jobId, job.from, "Your edit is saved. The updated Word file is not available yet, so no document was sent. I will retry from the saved version.")
+      return
+    }
+    const generatedSha256 = createHash("sha256").update(file).digest("hex")
+    await patchResumeRefinement(jobId, {
+      generatedPath,
+      generatedSha256,
+      resultSnapshot: JSON.parse(JSON.stringify(result)),
+      generationState: "generated",
+      rejectionCode: undefined,
+    })
+  }
+
+  const lines = (result.diff || []).length + (result.edits?.extras || []).filter(e => (e.text || "").trim()).length
+  if (!whatsappRewriteUsable(result)) {
+    const reasons = whatsappResumeRejectionReasons(result)
+    const rejectionCode = reasons.includes("unverified_jd_terms") ? "unsupported_claims_rejected"
+      : reasons.includes("draft_parts_missing") ? "incomplete_document_rejected"
+      : reasons.includes("ats_check_failed") ? "document_unreadable"
+      : "quality_rejected"
+    await patchResumeRefinement(jobId, { generationState: "rejected", rejectionCode })
+    await deferResumeRefinement(jobId, rejectionCode)
+    await tellRefinementOnce(jobId, job.from, "The updated document did not pass the existing completeness and supported-experience checks. Your edit is saved for retry. No original or partial document was sent.")
+    return
+  }
+  if (!(await sameResumeFacts(source, file))) {
+    await patchResumeRefinement(jobId, { generationState: "rejected", rejectionCode: "identity_guard_rejected" })
+    await deferResumeRefinement(jobId, "identity_guard_rejected")
+    await tellRefinementOnce(jobId, job.from, "The updated document did not pass the existing identity, contact and date checks. Your edit is saved for retry. No document was sent.")
+    return
+  }
+
+  let meta = gen.meta
+  if (!meta?.role && !meta?.company && !meta?.location) {
+    try { meta = await extractJdMeta({ keys, jd: job.jd }) } catch { /* retain the saved metadata */ }
+  }
+  const changes = [...gen.changes, refinement.request]
   const name = await outputNameFor(file)
-  await deliver(from, file, name, captionFor(name, meta, result, { request, number: changes.length, lines }), {
-    userId, jd: gen.jd, meta, changes, source: gen.source,
+  const caption = captionFor(name, meta, result, { request: refinement.request, number: changes.length, lines })
+  await patchResumeRefinement(jobId, { generationState: "ready", rejectionCode: undefined }, {
+    status: "sending", errorCode: "", processingAt: 0, processingToken: "",
   })
-  await recordWhatsAppUsage(userId, "resume_refine", result)
+
+  let wamid = ""
+  try {
+    wamid = await deliver(job.from, file, name, caption, {
+      userId: job.userId, jd: job.jd, meta, changes, source: gen.source, saved: gen.saved, depth: gen.depth,
+    }, jobId, true)
+  } catch {
+    await patchResumeRecovery(jobId, { status: "uncertain", errorCode: "delivery_ambiguous", processingAt: 0, processingToken: "" })
+    await tellRefinementOnce(jobId, job.from, "WhatsApp's delivery status is unknown. I will not send a duplicate until a signed delivery update confirms what happened.")
+    return
+  }
+  if (!wamid) {
+    await patchResumeRecovery(jobId, { status: "uncertain", errorCode: "delivery_ambiguous", processingAt: 0, processingToken: "" })
+    await tellRefinementOnce(jobId, job.from, "WhatsApp's delivery status is unknown. I will not send a duplicate until a signed delivery update confirms what happened.")
+    return
+  }
+  await markResumeDocumentAccepted(jobId, wamid)
+  await recordWhatsAppUsage(job.userId, "resume_refine", result)
+  const delivered = await readResumeRecovery(jobId)
+  if (delivered?.deliveryState === "accepted") {
+    await tellRefinementOnce(jobId, job.from, "WhatsApp accepted the updated file, but signed handset delivery is not confirmed yet. I will not send a duplicate while the status is unknown.")
+  }
 }
 
 // Send the document and keep a copy of this exact version, recorded under the sent
 // message's id, so a later swipe-reply to it can be traced back and edited.
-async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">, opaqueJobId?: string): Promise<string> {
-  const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
+async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">, opaqueJobId?: string, requireStored = false): Promise<string> {
+  const vfile = path.join(VERSIONS_DIR, digits(from), \`mwaab1xw-\${randomBytes(4).toString("hex")}.docx\`)
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
+  if (requireStored && !(await stored)) throw new Error("version_store_failed")
   let wamid = ""
   try {
-    wamid = await sendDocument(from, file, `${name}.docx`, caption, opaqueJobId)
+    wamid = await sendDocument(from, file, \`\${name}.docx\`, caption, opaqueJobId)
   } catch (e) {
     if (await stored) await deletePath(vfile)
     throw e
