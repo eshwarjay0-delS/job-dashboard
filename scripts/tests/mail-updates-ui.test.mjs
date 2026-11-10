@@ -37,7 +37,7 @@ test('inbox update controls save selected accounts, keep mobile disabled and ref
 
 test('updates route returns display-safe delivery evidence after reads and refreshes',()=>{
   const route=readFileSync(new URL('../../src/app/api/gmail/updates/route.ts',import.meta.url),'utf8')
-  assert.match(route,/getInboxSyncHealth\(ctx\.userId,ctx\.accounts\.filter\(a=>a\.gmail_enabled\)\)/);assert.match(route,/syncHealth,accounts:/);assert.match(route,/updateDeliveryReceipts\(ctx\.userId,events\.map\(event=>event\.id\)\)/)
+  assert.match(route,/getInboxSyncHealth\(ctx\.userId,ctx\.accounts\.filter\(a=>a\.gmail_enabled\)\)/);assert.match(route,/health:await getInboxSyncHealth\(ctx\.userId,ctx\.accounts\.filter\(a=>a\.gmail_enabled\)\)/);assert.match(route,/syncHealth,accounts:/);assert.match(route,/updateDeliveryReceipts\(ctx\.userId,events\.map\(event=>event\.id\)\)/)
   assert.match(route,/deliveries:await updateDeliveryReceipts/)
   assert.match(route,/deliveryEvidenceReady:waSignatureConfigured\(\)/)
 })
