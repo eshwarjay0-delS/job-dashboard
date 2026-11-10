@@ -13,9 +13,10 @@
  * THAT exact version (so replying to the newest file stacks changes) and sends the update,
  * which can be swipe-replied to again. A message that is NOT a reply is always a new JD.
  *
- * Serverless note: Vercel freezes a function once it responds, so the work CANNOT be
- * deferred — it runs inline and we answer 200 at the end. Meta retries a webhook it
- * considers failed, so every message id is de-duplicated before doing any work.
+ * Serverless note: after(work) keeps processing alive within the 300-second function limit, but a timeout can still
+ * interrupt it. Initial-JD and swipe-reply work is persisted before slow generation; the authenticated recovery route
+ * resumes only safe pending jobs. Meta retries are de-duplicated by inbound message id, and accepted/uncertain document
+ * sends wait for signed delivery reconciliation instead of being resent.
  */
 import { NextRequest, NextResponse, after } from "next/server"
 import path from "path"
@@ -1749,7 +1750,10 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   const vfile = path.join(VERSIONS_DIR, digits(from), \`mwaab1xw-\${randomBytes(4).toString("hex")}.docx\`)
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
-  if (requireStored && !(await stored)) throw new Error("version_store_failed")
+  if (requireStored && !(await stored)) {
+    await deletePath(vfile).catch(() => {})
+    throw new Error("version_store_failed")
+  }
   let wamid = ""
   try {
     wamid = await sendDocument(from, file, \`\${name}.docx\`, caption, opaqueJobId)
