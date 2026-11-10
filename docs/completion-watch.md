@@ -343,3 +343,8 @@ The broad Poke-inspired direction remains approved: up to four accounts, account
 
 ### Kompas coordination
 PR #283 and microphone/caption/audio changes remain owned by Kompas Continuous Voice Delivery; no parallel voice edits were made. The 50 actual authenticated Kompas/ChatGPT paired answers, independent human grades, and native Windows/WhatsApp/mobile session acceptance remain unverified. Do not substitute offline synthetic tests for those acceptance gates.
+
+
+### 17 October WhatsApp event — new durable evidence found, delivery still unproven
+A read-only production query found one WhatsApp resume_tailor usage event at 2026-10-17 22:28:27.372685 UTC (17:28:27 Chicago): metadata score 87, 34 calls, 205,546 input tokens, 25,331 output tokens. The score is not a verified final-DOCX ATS score. The event has no source_event_key and its metadata has no output path, request ID, Meta message ID or delivery state. There is no resume_documents or identity_audit row in the same 20-minute window, and no dedicated WhatsApp/webhook/delivery/message/R2 table in the public schema. Gmail and iZap searches did not surface the generated output or conversation; the connected iZap business has zero WhatsApp numbers. This does not prove Meta or R2 have no history.
+Continue: recover the generated DOCX or exact R2 object key, per-run request correlation, Meta message ID and signed delivered/read callback; reconcile the conflicting education/employment/credential facts with the owner before replay. No real send was attempted.
