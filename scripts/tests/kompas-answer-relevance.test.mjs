@@ -63,6 +63,9 @@ const QUESTIONS = [
   "Security identifies a critical vulnerability, but the development team disputes the finding. How would you organize the technical review so that both teams can agree on the outcome?",
 ]
 
+const YT = JSON.parse(readFileSync(new URL("./fixtures/kompas-yt-interview.json", import.meta.url), "utf8"))
+for (const row of YT.questions) QUESTIONS.push(row.q)
+
 const LPL_CLOSE = "That is going to be it for the questions. I appreciate our conversation. Thank you for taking the time out of your day to speak to me. I will speak to your editor and we will get back to you regarding the next steps."
 
 const SHEET = [

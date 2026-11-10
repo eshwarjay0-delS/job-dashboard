@@ -1,3 +1,7 @@
+## 2026-11-10 — Interview captions set the spoken shape
+
+The SOC and behavioral captions say answer first, then one example, three or four points, and close on the result. Twenty-eight of those interview questions are in the harness, and twelve candidate lines are voice fixtures. A neighbouring sheet entry is still refused. Not a live Windows check.
+
 ## 2026-11-10 — The answer stays on the question that was asked
 
 A prepared sheet entry is used only when it is the same ask. A neighbour, including syslog answered from a one-time-password entry, is not reused. The first sentence answers the question. Later sentences use spoken connectors, and a tool or employer is named only when the resume has it. Passage ranking of a saved answer that actually covers the question is unchanged. The JD-clause sheet generator is not in this change. Not a live Windows check.

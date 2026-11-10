@@ -17,6 +17,20 @@ const OBJECTS: Array<[string, RegExp]> = [
   ["tuning", /\b(?:tun(?:e|ing)|noisy)\b/i],
   ["syslog", /\b(?:syslog|log aggregator)\b/i],
   ["siem", /\b(?:\bsiem\b|splunk)\b/i],
+  ["rules", /\brules?\b/i],
+  ["onboard", /\bonboard\w*\b/i],
+  ["firewall", /\bfirewalls?\b/i],
+  ["normalization", /\bnormali[sz]\w*\b/i],
+  ["malware", /\bmalware\b/i],
+  ["sentinel", /\bsentinel\b/i],
+  ["edr", /\b(?:\bedr\b|endpoint detection)\b/i],
+  ["sql", /\bsql injection\b/i],
+  ["dns", /\bdns\b/i],
+  ["osi", /\bosi\b/i],
+  ["handshake", /\bhandshake\b/i],
+  ["encryption", /\bencrypt\w*\b/i],
+  ["playbook", /\bplaybooks?\b/i],
+  ["false-positive", /\bfalse[- ]positives?\b/i],
   ["otp", /\b(?:one-time passwords?|one time passwords?|\botp\b)\b/i],
   ["mfa", /\b(?:\bmfa\b|multi-factor|multifactor)\b/i],
   ["iam", /\b(?:\biam\b|joiner|mover|leaver|identity lifecycle)\b/i],
@@ -107,7 +121,7 @@ export function looksLikeSheetQuestion(text: string): boolean {
   return /^(?:what|how|why|who|tell me|walk me|describe|explain|can you|could you|would you|do you|have you)\b/i.test(head)
 }
 
-export const ANSWER_SHAPE = `ANSWER SHAPE: Sentence one answers the question above in plain words. No warm-up and no restating. Then the steps, first person, like one employee talking to a coworker. Name a tool only when this resume contains it. One short example only from this resume, on this same topic. Sixty to one hundred and twenty spoken words. If the resume does not cover the question, answer it directly and do not invent an employer or a tool. Microsoft Entra ID at Citi is not a source fact unless both strings are in the resume; otherwise say our identity platform and do not name Citi.`
+export const ANSWER_SHAPE = `ANSWER SHAPE: Sentence one answers the question above. No warm-up and no restating. Then one concrete example from this resume only if it is the same topic, then three or four short points. Spend the words on the action and the result, and close on the result. First person, like one employee talking to a coworker. Name a tool only when this resume contains it. Sixty to one hundred and twenty spoken words. If the resume does not cover the question, answer it directly and do not invent an employer or a tool. Microsoft Entra ID at Citi is not a source fact unless both strings are in the resume; otherwise say our identity platform and do not name Citi.`
 
 export const SIGN_OFF_LINE = "Thank you, I appreciated the conversation. I enjoyed learning more about the role, and I look forward to hearing about the next steps. Have a good rest of your day."
 

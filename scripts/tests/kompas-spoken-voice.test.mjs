@@ -3,6 +3,7 @@
 // deep-dives (So, Then, That, What I, Where) and Lens's two example answers.
 import test from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { spokenVoice, CARRY_STARTERS, VOICE_RULES } from "../../src/lib/kompasSpokenVoice.ts"
 import { SIGN_OFF_LINE } from "../../src/lib/kompasSheetMatch.ts"
 
@@ -75,6 +76,26 @@ test("ten transcript-style answers stay on the question and drop the stiff words
     assert.ok(used.length >= 1, out)
     const long = lines.filter((s) => s.split(/\s+/).length > 28)
     assert.equal(long.length, 0, long.join(" | "))
+  }
+})
+
+test("candidate lines from the SOC mocks keep their opening and do not gain a new employer", () => {
+  const yt = JSON.parse(readFileSync(new URL("./fixtures/kompas-yt-interview.json", import.meta.url), "utf8"))
+  assert.ok(yt.answers.length >= 12)
+  assert.match(VOICE_RULES, /three or four points/)
+  assert.match(VOICE_RULES, /And then/)
+  assert.match(VOICE_RULES, /For example/)
+  assert.match(VOICE_RULES, /The result/)
+  for (const row of yt.answers) {
+    const out = spokenVoice(row.a, row.q, "")
+    const first = sentences(out)[0]
+    const original = sentences(row.a)[0]
+    const words = new Set((original.toLowerCase().match(/[a-z]{5,}/g) || []))
+    assert.ok([...words].some((word) => first.toLowerCase().includes(word)), row.video + " " + first)
+    assert.doesNotMatch(out, BANNED)
+    assert.doesNotMatch(out, /\bCiti\b|Entra/)
+    const used = startersUsed(out)
+    assert.equal(new Set(used).size, used.length, out)
   }
 })
 
