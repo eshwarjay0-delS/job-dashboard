@@ -324,4 +324,22 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - Kompas Continuous Voice Delivery remains active and owns PR #283 and all microphone/caption/audio changes. No parallel voice edits were made. Native Windows/WhatsApp/mobile voice E2E and the 50 actual same-question Kompas/ChatGPT pairs with independent human scores remain unverified.
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
-Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+Superseded 10 Nov 2026 16:58 UTC: PR #285 is merged and production READY at exact SHA 11efbbfe7781592bc2fad1216f67546882a1c3ed. Continue: verify the first post-release crawl on 11 Nov 2026 at 11:00 UTC and the public crawler API when HTTP access is available. Keep WhatsApp identity/storage/send gates, Gmail two-account/mobile acceptance and native Kompas acceptance pending their exact prerequisites.
+
+
+## 10 November 2026 — PR #285 crawler gate merged and production released
+
+- PR #285 merged as 11efbbfe7781592bc2fad1216f67546882a1c3ed from exact head 42090ad0fbc68be3b8fcecf252c57c30c283cd38.
+- Exact-head full CI 42855624797, crawler freshness + contract classification regression 42855624656, Plan/REA schema 42855624735, and Kompas baseline 42855624940 all completed SUCCESS.
+- Production deployment dpl_7uEfjq1XprC48DoTFfFuiBoShPne is READY at the exact merge SHA; independent get_alias confirms job-dashboard-fawn.vercel.app points to the same deployment. The PR preview status was build-rate-limit; the normal Git-linked production deployment nevertheless completed successfully. Do not report that older preview failure as a current production blocker.
+- PR #285 adds CI coverage for src/lib/crawl/classify.ts and scripts/tests/crawl-classify.test.mjs, and keeps Robert Half's official cybersecurity search link manual-only. It does not change classifier runtime behavior or rewrite existing rows. Production now includes the earlier PR #276 contractTypes() classifier and PR #282 exported-DOCX gap report.
+- The 10 Nov 11:00 UTC crawl ran before this deployment on a66c108: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first post-release crawl is expected 11 Nov 11:00 UTC. Public HTTP smoke for /api/health and /api/crawl/jobs?limit=1 could not be reached from this runtime; no response is claimed.
+
+### WhatsApp / resume boundary
+The 17 Oct 17:28 Chicago source DOCX and matching JD are recovered privately, but the source's education/employment/credential facts conflict with owner-confirmed facts and remain quarantined. The generated output, per-run R2/webhook/Meta correlation and signed delivered/read receipt are missing. PR #273's source-boundary fix is included in current production, and the 6 Nov channel policy supersedes the old 98% hard hold; this does not prove historical replay or handset delivery. PR #274 remains owner-review-gated, #278 depends on that decision, #277 remains unapproved, and #279 remains DRAFT because it changes external-send eligibility. No real WhatsApp message or email was sent.
+
+### Gmail / Poke-inspired updates
+The broad Poke-inspired direction remains approved: up to four accounts, account+thread identity, no silent merge, selected From preservation, reconnect only the affected inbox, and mobile hamburger navigation that expands below/pushes content. PR #271's per-account sync-health card remains DRAFT/proposed; two authorized inboxes (one healthy, one partial/failed), reconnect/From preservation and narrow-mobile acceptance are missing. Foreground refresh remains 30 seconds and InboxAlertWatcher 2 minutes. The unattended worker remains disabled pending an external scheduler, CRON_SECRET, approved Meta template and explicit enablement consent. No email or WhatsApp notification was sent.
+
+### Kompas coordination
+PR #283 and microphone/caption/audio changes remain owned by Kompas Continuous Voice Delivery; no parallel voice edits were made. The 50 actual authenticated Kompas/ChatGPT paired answers, independent human grades, and native Windows/WhatsApp/mobile session acceptance remain unverified. Do not substitute offline synthetic tests for those acceptance gates.
