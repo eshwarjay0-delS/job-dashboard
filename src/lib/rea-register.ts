@@ -281,7 +281,7 @@ REA_SESSIONS.unshift({
   steps: [
     { label: "Trace role gap-fill inputs", finding: "The global unseen JD terms were appended to every employer's role repair request, even when the original bullets for that role did not support those terms.", status: "Observed", evidence: "PR #287 source audit in src/lib/tailor.ts." },
     { label: "Constrain repair to role evidence", finding: "missingRoleEvidenceTerms() returns only terms present in that role's original bullets and still absent from its current bullets. Global unseen terms remain in profile/skills repair only.", status: "Implemented", evidence: "Commits 3101ed8, 29db227 and dc7c435 on PR #287 branch." },
-    { label: "Add behavior regressions", finding: "Two direct helper tests prove Splunk and Okta remain isolated to their respective roles and unsupported Canton is not returned.", status: "Implemented", evidence: "Commit 6d2cbcabc55b8998b17de413bedb4a9b7bb0315a." }
+    { label: "Add behavior regressions", finding: "Two direct helper tests prove Splunk and Okta remain isolated to their respective roles and unsupported Canton is not returned.", status: "Implemented", evidence: "Commit 6d2cbcabc55b8998b17de413bedb4a9b7bb0315a; caller regression 13ba835eebcadfb4964d952589122277e6276119." }
   ],
   limits: "No model generation, source DOCX write, exported-DOCX review, real email or WhatsApp send. This does not prove a live ATS score or 98% match. Exact-final-head CI and authenticated document acceptance remain pending.",
   next: "Run exact-final-head full CI, Plan/REA schema and Kompas baseline. Keep PR #287 separate from PR #279's external-send gate. Obtain the protected preview prerequisite and authorized HTTP access before authenticated original-resume/JD/confirmation export review.",
