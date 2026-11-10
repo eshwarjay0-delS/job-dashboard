@@ -202,3 +202,13 @@ test('refinement recovery shares the authenticated worker budget and cannot doub
   assert.ok(queue.includes('status === "sending"'))
   assert.ok(queue.includes('status === "delivered"'))
 })
+
+test('refinement delivery requires a durable version copy before Meta is called', () => {
+  const start = webhook.indexOf('async function deliver(')
+  const end = webhook.indexOf('// What the reply says about the keywords', start)
+  assert.ok(start >= 0 && end > start)
+  const deliver = webhook.slice(start, end)
+  assert.ok(deliver.indexOf('if (requireStored && !(await stored))') < deliver.indexOf('await sendDocument('))
+  assert.ok(deliver.includes('name + ".docx"'))
+  assert.ok(deliver.includes('randomBytes(4).toString("hex")'))
+})
