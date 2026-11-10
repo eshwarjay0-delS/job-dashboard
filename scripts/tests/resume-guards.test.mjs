@@ -99,6 +99,69 @@ test('roundtrip: actual DOCX Mammoth extraction allows title edit but preserves 
   assert.ok(checkRoundTrip(originalText, (await mammoth.extractRawText({ buffer: missingDate })).value).problems.some(p => p.startsWith('date')))
 })
 
+
+async function syntheticIdentityDocx({ paragraphs, header, footer, linkTarget, splitRuns = false }) {
+  const xmlEscape = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  const para = (value, split = false) => {
+    const pieces = split ? String(value).split(/(?<=\s)/).filter(Boolean) : [String(value)]
+    return '<w:p>' + pieces.map(piece => '<w:r><w:t xml:space="preserve">' + xmlEscape(piece) + '</w:t></w:r>').join('') + '</w:p>'
+  }
+  const zip = new JSZip()
+  const refs = []
+  const rels = []
+  let body = paragraphs.map((value, index) => para(value, splitRuns && index === 0)).join('')
+  if (linkTarget) {
+    body += '<w:p><w:hyperlink r:id="rIdLink"><w:r><w:t>LinkedIn</w:t></w:r></w:hyperlink></w:p>'
+    rels.push('<Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="' + xmlEscape(linkTarget) + '" TargetMode="External"/>')
+  }
+  if (header) {
+    refs.push('<w:headerReference w:type="default" r:id="rIdHeader"/>')
+    rels.push('<Relationship Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>')
+    zip.file('word/header1.xml', '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' + para(header) + '</w:hdr>')
+  }
+  if (footer) {
+    refs.push('<w:footerReference w:type="default" r:id="rIdFooter"/>')
+    rels.push('<Relationship Id="rIdFooter" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>')
+    zip.file('word/footer1.xml', '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' + para(footer) + '</w:ftr>')
+  }
+  zip.file('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body + '<w:sectPr>' + refs.join('') + '</w:sectPr></w:body></w:document>')
+  zip.file('word/_rels/document.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + rels.join('') + '</Relationships>')
+  return zip.generateAsync({ type: 'nodebuffer' })
+}
+
+test('DOCX identity extraction includes referenced headers, footers and external hyperlink targets, and survives split runs', async () => {
+  const facts = {
+    paragraphs: ['Alex Example', 'alex.example@example.com | 555-010-1234', 'Example Corp — Jan 2020 – Present'],
+    header: 'Contact | 555-010-1234',
+    footer: 'Employment record | Jan 2020',
+    linkTarget: 'https://linkedin.com/in/alex-example',
+  }
+  const source = await syntheticIdentityDocx(facts)
+  const reformatted = await syntheticIdentityDocx({ ...facts, splitRuns: true })
+  const sourceText = await docxIdentityText(source)
+  const reformattedText = await docxIdentityText(reformatted)
+  assert.match(sourceText, /555-010-1234/)
+  assert.match(sourceText, /linkedin\.com\/in\/alex-example/)
+  assert.match(sourceText, /Jan 2020/)
+  assert.equal(checkRoundTrip(sourceText, reformattedText).ok, true)
+})
+
+test('DOCX identity extraction rejects header phone, footer date and hyperlink target mutations', async () => {
+  const facts = {
+    paragraphs: ['Alex Example', 'alex.example@example.com | 555-010-1234', 'Example Corp — Jan 2020 – Present'],
+    header: 'Contact | 555-010-1234',
+    footer: 'Employment record | Jan 2020',
+    linkTarget: 'https://linkedin.com/in/alex-example',
+  }
+  const sourceText = await docxIdentityText(await syntheticIdentityDocx(facts))
+  const changedHeader = await docxIdentityText(await syntheticIdentityDocx({ ...facts, header: 'Contact | 555-010-1235' }))
+  const changedFooter = await docxIdentityText(await syntheticIdentityDocx({ ...facts, footer: 'Employment record | Feb 2020' }))
+  const changedLink = await docxIdentityText(await syntheticIdentityDocx({ ...facts, linkTarget: 'https://linkedin.com/in/other-example' }))
+  assert.ok(checkRoundTrip(sourceText, changedHeader).problems.some(problem => problem.startsWith('phone')))
+  assert.ok(checkRoundTrip(sourceText, changedFooter).problems.some(problem => problem.startsWith('date')))
+  assert.ok(checkRoundTrip(sourceText, changedLink).problems.some(problem => problem.startsWith('url')))
+})
+
 const R = 'Built Python services, C++ engines and .NET apps. Ran CI-CD pipelines.'
 test('keywords: covered/supported/unsupported split and counts sum', () => {
   const r = buildKeywordReport({ jobTerms: ['Python', 'Docker', 'Rust', 'SQL'], resumeText: R, supportedTerms: ['docker'] })
@@ -133,9 +196,12 @@ test('keywords: Java not matched inside JavaScript', () => {
 test('WhatsApp refine: missing original and failed identity verification have distinct, accurate refusals', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
   assert.match(route, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\."\)/)
-  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*await sendBaseline\("The rewrite did not keep your name, contact details and dates, so it was not sent\.", source, meta\)/)
-  assert.doesNotMatch(route, /The update changed the resume.s contact email, so I stopped delivery/)
-  assert.doesNotMatch(route, /The update failed identity\/contact\/date verification, so I stopped delivery\. No file was sent\./)
+  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*await sendBaseline\("The update failed identity\/contact\/date verification, so I sent your original resume instead\.", source, meta\)/)
+  assert.match(route, /sendClosest\("The update failed identity\/contact\/date verification, so I sent your original resume instead\."\)/)
+  assert.doesNotMatch(route, /The rewrite did not keep your name, contact details and dates/)
+  assert.doesNotMatch(route, /failed the contact-details or employment-date preservation check/)
+  assert.match(route, /docxIdentityText\(source\)/)
+  assert.match(route, /docxIdentityText\(file\)/)
 })
 
 test('resume identity: email-only mismatch logs category without exposing addresses', () => {
