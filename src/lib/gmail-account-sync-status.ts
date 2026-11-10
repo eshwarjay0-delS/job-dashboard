@@ -29,12 +29,8 @@ export function buildGmailAccountSyncStatus(
     ? /history scan is partial|not a complete inbox inventory|counts are not complete/.test(reason) ? "partial" : "failed"
     : lastSyncAt ? "synced" : "checked"
 
-  return {
-    account,
-    status,
-    lastSyncAt,
-    daysSynced: Number.isFinite(stored?.days_synced) ? Math.max(0, stored!.days_synced) : 0,
-  }
+  const daysSynced = stored && Number.isFinite(stored.days_synced) ? Math.max(0, stored.days_synced) : 0
+  return { account, status, lastSyncAt, daysSynced }
 }
 
 function relativeAge(iso: string | null, now: number): string {
