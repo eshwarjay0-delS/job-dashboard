@@ -4,28 +4,9 @@
 // Lens named. The pass does not add an employer or a tool.
 
 import { interviewSignOff, SIGN_OFF_LINE } from "./kompasSheetMatch.ts"
+import { STYLE_OPENERS, STYLE_TRANSITIONS } from "./kompasStyleLibrary.ts"
 
-export const CARRY_STARTERS = [
-  "So",
-  "Then",
-  "And then",
-  "From there",
-  "After that",
-  "That's why",
-  "For example",
-  "The result",
-  "So I would",
-  "The first thing",
-  "That way",
-  "On top of that",
-  "What I'd check next is",
-  "Where it usually breaks is",
-  "That matters because",
-  "And the reason I trust it is",
-  "So the first thing I'd",
-  "The way I look at it",
-  "At the end of the day",
-]
+export const CARRY_STARTERS = [...new Set([...STYLE_OPENERS, ...STYLE_TRANSITIONS, "So", "Then", "So the first thing I'd", "That way", "On top of that", "What I'd check next is", "And the reason I trust it is", "At the end of the day"])]
 
 export const VOICE_RULES = `SPOKEN VOICE: Sound like one employee explaining the issue to a coworker. Plain words, one picture then the term, not a memo. Sentence one answers the exact question with no warm-up. Then a concrete example, three or four points, action and result weighted, and the last sentence is the result. Each later sentence hooks to the previous one with a carry-over starter, and the same starter is not used twice: ${CARRY_STARTERS.join("; ")}. Keep most sentences between eight and twenty words, with contractions. One shop-talk move (where it breaks, or what the check proves) and only when the resume supports it; otherwise say it as what you would usually do. End on what the check proves, not a slogan. Never write In conclusion, Furthermore, Moreover, Additionally, It is important to note, leverage, utilize, or robust. No bullets and no headings.`
 

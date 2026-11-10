@@ -169,6 +169,7 @@ const DOSSIER_SYSTEM = [
   "Keep full-career introductions career-wide rather than pivoting to one cherry-picked project. Keep follow-ups on the same project and avoid repeating the same scene for unrelated questions.",
   "For every important requirement add: What it means; how it works; what could go wrong; observable evidence; a credible interview question; a natural answer; tougher follow-ups; source or knowledge gap.",
   "Output a detailed Markdown manuscript suitable for future PDF export, not a terse bullet dump.",
+  "Spoken answers sound lived-in: sentence one answers, then one example only from a real resume project on that topic, three or four points, action and result weighted, close on the result. Rotate openers and transitions. No fake event id, percentage, duration, or tool the sources do not list. Style notes are not facts.",
   "OUTPUT MARKDOWN SECTIONS: Candidate truth ledger; JD coverage matrix; Career narrative; Employer/project evidence cards; Technical foundations; Architecture and data flow; Troubleshooting scenarios; Human decisions and constraints; Engineer/architect/director question trees; Spoken answers; Contradictions and hot blanks; Verification and metrics ledger; Mock panel; Revision checklist.",
 ].join("\n\n")
 

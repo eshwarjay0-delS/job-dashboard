@@ -23,6 +23,7 @@ import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestio
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
 import { ANSWER_SHAPE, SIGN_OFF_LINE, interviewSignOff, sheetTopicMatch } from "@/lib/kompasSheetMatch"
 import { spokenVoice, VOICE_RULES } from "@/lib/kompasSpokenVoice"
+import { stylePrompt } from "@/lib/kompasStyleLibrary"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
@@ -1248,7 +1249,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${ANSWER_SHAPE}\n\n${VOICE_RULES}\n\n${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${ANSWER_SHAPE}\n\n${VOICE_RULES}\n\n${stylePrompt(question, historyArr.length)}\n\n${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,

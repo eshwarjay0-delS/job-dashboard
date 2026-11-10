@@ -1,3 +1,7 @@
+## 2026-11-10 — A shared style library for the sheet and the live answer
+
+Openers, transitions, moves, closes, and short shape notes live in one library. The sheet and the dossier read the rules. A live answer pulls two or three notes for that question's intent, as shape only. Five tellings of one question do not open the same way. Not a live model run.
+
 ## 2026-11-10 — Lens live reds folded in
 
 A time story comes from the closest resume project, not a refusal. A quoted number, a fake event id, and an unsourced just-in-time or CI/CD claim do not stay. Moving to Texas and a two-week onsite start stop before the model. The desktop card asks for connected sentences. MFA alone and an announced takeaway are not stock lines. Not re-run on the live model.
