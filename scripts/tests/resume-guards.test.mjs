@@ -44,6 +44,13 @@ test('roundtrip: changed contact still fails even when header title changes', ()
     .replace('alex.example@example.com', 'alex.changed@example.com')
   assert.equal(checkRoundTrip(source, output).ok, false)
 })
+test('roundtrip: tab-separated title may change while the protected name stays identical', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example\tSecurity Engineer\n')
+  const output = source.replace('Alex Example\tSecurity Engineer', 'Alex Example\tIT Governance Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, true)
+  const renamed = output.replace('Alex Example\tIT Governance Consultant', 'Alexander Example\tIT Governance Consultant')
+  assert.ok(checkRoundTrip(source, renamed).problems.some(problem => problem.startsWith('name changed')))
+})
 test('roundtrip: ambiguous single-token header prefix is not silently trusted', () => {
   const source = SRC.replace('Alex Example\n', 'Alex | Example Engineer\n')
   const output = source.replace('Alex | Example Engineer', 'Alex | Cloud Consultant')
