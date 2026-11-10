@@ -130,3 +130,10 @@ The event has no source_event_key, and its only metadata keys are calls, score, 
 Additional read-only searches: Gmail returned no 17 Oct DOCX attachment, WhatsApp/MarketFit thread or resume/tailored subject. The connected iZap business has zero WhatsApp numbers and no messages in the incident window. Library semantic search surfaced the research paper, not a generated DOCX. These are scoped connector results; they do not establish that Meta or R2 have no historical record.
 
 The generated DOCX or exact R2 object key, request correlation, Meta message ID and signed delivered/read callback remain missing. The source's education/employment/credential conflicts remain quarantined pending owner reconciliation. Do not treat the score 87, 34 calls, an HTTP success, a saved source file or a new authorized test as proof that the original output was delivered. No email or WhatsApp message was sent.
+
+
+## 10 November 2026 — historical Vercel log retention check
+
+A read-only production runtime-log query was attempted for 2026-10-17 22:00–23:00 UTC, filtered to `/api/whatsapp/webhook`, to recover the missing request/output correlation. Vercel rejected the historical window with HTTP 400 and explicitly stated that the Hobby plan retains runtime logs for one hour. This is a retrieval failure due to retention, not evidence that no logs existed. No log records or request IDs were returned.
+
+The generated DOCX, exact R2 object key, request correlation, Meta message ID and signed delivered/read receipt remain unavailable. The original source's disputed education/employment/credential claims remain quarantined. No replay, R2 write, email or WhatsApp message was performed.
