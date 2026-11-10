@@ -11,6 +11,7 @@ on:
       - ".github/workflows/crawl-freshness.yml"
   push:
     branches:
+      - "master"
       - "fix/crawl-freshness-eteam-20261109"
     paths:
       - "src/lib/crawl/search.ts"
