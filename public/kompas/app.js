@@ -680,6 +680,78 @@ function twinSession(s, test) { const k = factorsKey(s); return (LS.get("session
 let book = { sid: null, items: [] };
 const BOOK_MAX = 10;
 const bookWords = (t) => new Set((String(t).toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) || []).filter(w => !FSTOP.has(w) && !/^(what|when|where|which|with|have|your|about|would|could|should|tell|explain|describe|please|there|their|this|that|some|give|walk)$/.test(w)).map(w => w.slice(0, 5)));
+const SHEET_INTRO = /\b(?:about yourself|introduce yourself|your (?:background|resume|career)|tell me about you)\b/i;
+const SHEET_WHY = /\bwhy (?:do you want|this role|our role|this position|this company|us)\b|\bwhy (?:are you|you'?re) (?:interested|here)\b/i;
+const SHEET_OBJECTS = [
+  ["authentication", /\b(?:authenticat\w*|authn|log(?:ging)? in|logins?|sign-ins?)\b/i],
+  ["authorization", /\b(?:authori[sz]\w*|authz|access controls?)\b/i],
+  ["ui", /\b(?:\bui\b|user interface|\bbuttons?\b)\b/i],
+  ["api", /\b(?:\bapis?\b|\bendpoints?\b)\b/i],
+  ["sast", /\bsast\b/i],
+  ["dast", /\bdast\b/i],
+  ["scanner", /\bscanners?\b/i],
+  ["outage", /\boutages?\b/i],
+  ["tuning", /\b(?:tun(?:e|ing)|noisy)\b/i],
+  ["syslog", /\b(?:syslog|log aggregator)\b/i],
+  ["siem", /\b(?:\bsiem\b|splunk)\b/i],
+  ["otp", /\b(?:one-time passwords?|one time passwords?|\botp\b)\b/i],
+  ["mfa", /\b(?:\bmfa\b|multi-factor|multifactor)\b/i],
+  ["iam", /\b(?:\biam\b|joiner|mover|leaver|identity lifecycle)\b/i],
+  ["remote-access", /\b(?:remote access|privileged access|\bcyberark\b|privileged session)\b/i],
+  ["phishing", /\bphishing\b/i],
+  ["ransomware", /\bransomware\b/i],
+  ["tprm", /\b(?:\btprm\b|third-party risk|vendor questionnaire)\b/i],
+  ["nist", /\b(?:\bnist\b|iso 27001)\b/i],
+  ["vulnerability", /\bvulnerabilit\w*\b/i],
+  ["threat", /\bthreats?\b/i],
+  ["pipeline", /\b(?:ci\/?cd|pipelines?)\b/i],
+  ["package", /\b(?:packages?|dependenc(?:y|ies))\b/i],
+  ["java", /\bjava\b/i],
+  ["zero-trust", /\bzero trust\b/i],
+  ["compensating", /\bcompensating controls?\b/i],
+  ["risk-acceptance", /\brisk acceptance\b/i],
+  ["least-privilege", /\bleast privilege\b/i],
+  ["soc", /\b\bsoc\b/i],
+  ["when-to-use", /\bwhen would you use\b/i],
+  ["impossible-travel", /\bimpossible-travel\b/i],
+  ["stakeholder", /\bstakeholders?\b/i],
+  ["duties", /\b(?:separate duties|separation of duties)\b/i],
+];
+const SHEET_CONTRASTS = [["ui", "api"], ["authentication", "authorization"], ["sast", "dast"], ["vulnerability", "threat"], ["mfa", "otp"]];
+function sheetObjects(value) {
+  const text = String(value || ""), found = [];
+  for (const [id, re] of SHEET_OBJECTS) if (re.test(text) && !found.includes(id)) found.push(id);
+  return found.sort();
+}
+function sheetKey(value) {
+  const text = String(value || "").trim();
+  const objects = sheetObjects(text);
+  const asked = /\b(?:difference|versus|\bvs\b|compared|across both|instead of)\b/i.test(text);
+  const contrast = [];
+  for (const [a, b] of SHEET_CONTRASTS) if (objects.includes(a) && objects.includes(b) && (asked || /\bacross both\b/i.test(text))) { contrast.push(a, b); }
+  const sides = [...new Set(contrast)].sort();
+  let intent = "direct";
+  if (SHEET_INTRO.test(text)) intent = "intro";
+  else if (SHEET_WHY.test(text)) intent = "value";
+  else if (sides.length) intent = "contrast";
+  else if (/\b(?:tell me about a time|a time (?:you|when)|something went wrong)\b/i.test(text)) intent = "story";
+  else if (/\b(?:disagree|disputes?|push(?:ed)? back|stakeholder)\b/i.test(text)) intent = "disagreement";
+  else if (/\b(?:prioriti[sz]e|which applications|triage)\b/i.test(text)) intent = "triage";
+  else if (/\b(?:incident response|ransomware|compromised|encrypted a file)\b/i.test(text)) intent = "incident";
+  else if (/\b(?:what(?:'s| is| are)|define)\b/i.test(text) && !/\bhow (?:would|do|did)\b/i.test(text)) intent = "definition";
+  else if (/\b(?:how (?:would|do|did)|walk me through|implement|handle)\b/i.test(text)) intent = "howto";
+  return { intent, objects, contrast: sides };
+}
+function sheetTopicMatch(asked, entry) {
+  const a = String(asked || "").trim(), b = String(entry || "").trim();
+  if (!a || !b) return false;
+  const left = sheetKey(a), right = sheetKey(b);
+  if (left.intent !== right.intent) return false;
+  if (left.intent === "intro" || left.intent === "value") return true;
+  if (!left.objects.length || !right.objects.length) return false;
+  if (left.objects.join("|") !== right.objects.join("|")) return false;
+  return left.contrast.join("|") === right.contrast.join("|");
+}
 function bookMatch(q, depthKey) {
   if (personalLogistics(q)) return null;                             // never a cached answer for personal logistics
   const A = bookWords(q); if (!A.size) return null;
@@ -697,7 +769,7 @@ function bookMatch(q, depthKey) {
     const sc = n / Math.max(A.size, B.size);
     if (n >= 2 && sc > bestScore) { bestScore = sc; best = it; }
   }
-  return bestScore >= 0.75 ? best : null;
+  return bestScore >= 0.75 && best && sheetTopicMatch(q, best.q) ? best : null;
 }
 async function readAnswerStream(res) {
   const txt = await res.text(); let text = "", meta = {};
@@ -3826,8 +3898,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
   card.anchorFlight = writeAnchor;
   const release = !directDesktop && window.KompasFlight ? window.KompasFlight.hold(card, writeAnchor) : () => {};
   const ctx = directDesktop ? { ledger, history: recentQA(card) } : nextContext(card, writeAnchor);
-  const retrieved = retrieve(derivedQ || plainHeard, consolidated ? 5 : 4);
-  const prep = { ...slimPrep(), questions: retrieved.length ? [] : ((current && current.prep && current.prep.questions) || []).slice(0, 30) };
+  const askedNow = String(derivedQ || question).trim();
+  const retrieved = retrieve(askedNow, consolidated ? 5 : 4)
+    .filter((it) => sheetTopicMatch(askedNow, it.q))
+    .map((it) => (`Q: ${it.q}\nA: ${(Array.isArray(it.a) ? it.a : [it.a || ""]).join(" ")}`).slice(0, 500));
+  const prep = { ...slimPrep(), questions: ((current && current.prep && current.prep.questions) || []).filter((item) => item && sheetTopicMatch(askedNow, item.q)).slice(0, 4) };
   // Smooth streaming: throttle renders to animation frames instead of
   // re-rendering the full card DOM on every token (was causing visible jank).
   let renderQueued = false;
@@ -5396,7 +5471,8 @@ function retrieve(question, k = 4) {
   // the persona file is the candidate's own prepared material for THIS job: it outranks the dossier
   return [...scores].map(([d, sc]) => { const it = indexed[d]; return [d, sc * (it.source === "persona" ? 1.6 : 1) * (it.interviewer === who ? 1.25 : 1) * (it.difficulty === diff ? 1.1 : 1)]; })
     .sort((a, b) => b[1] - a[1]).slice(0, k).filter(([, sc]) => sc > 1.2)
-    .map(([d]) => { const it = indexed[d]; return { q: it.q, a: it.a, projectId: it.projectId, tier: it.tier, source: it.source }; });
+    .map(([d]) => { const it = indexed[d]; return { q: it.q, a: it.a, projectId: it.projectId, tier: it.tier, source: it.source }; })
+    .filter((it) => sheetTopicMatch(question, it.q));
 }
 
 /* ===================== Resume + Documents (two sections) ==================

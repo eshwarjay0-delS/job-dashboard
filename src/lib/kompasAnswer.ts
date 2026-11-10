@@ -2,6 +2,7 @@ import { repairDictation } from "./kompasDictation.ts"
 import { formQuestionFromHeard } from "./kompasQuestionIntake.ts"
 import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
 import { interviewIntent } from "./kompasRelevance.ts"
+import { sheetTopicMatch, sheetTopicTerms } from "./kompasSheetMatch.ts"
 
 // Kompas answer intelligence — ported from perfACT's interview engine
 // (copilot/api/answer.js + _audiences.js), running on MarketFit's OpenRouter
@@ -1621,10 +1622,7 @@ export function pickProject(
     near.sort((a, b) => recency(ledger, b.id) - recency(ledger, a.id))
     return { id: near[0].id, reason: "term overlap, least recently used" }
   }
-  const least = projects
-    .slice()
-    .sort((a, b) => (ledger.story[a.id] || 0) - (ledger.story[b.id] || 0) || (ledger.projects[a.id] || 0) - (ledger.projects[b.id] || 0))[0]
-  return { id: least.id, reason: "least-told story" }
+  return { id: null, reason: "no topic overlap" }
 }
 
 /** Rotate concrete bottlenecks per project — never repeats until the pool is spent. */
@@ -1660,26 +1658,27 @@ export function commit(ledger: Ledger, pid: string | null, angle: string, bott: 
   if (bott && !ledger.bottlenecks.includes(bott)) ledger.bottlenecks.push(bott)
 }
 
-/** Best-matching prep question by word overlap (needs 2+) — its projectId is the routing hint. */
+/** Prepared question whose topic is this ask. Glue words do not count. Its projectId is only a hint. */
 export function matchBank(
   q: string, questions: unknown,
 ): { q: string; projectId?: string } | null {
   if (!Array.isArray(questions) || !questions.length) return null
-  const qt = new Set(ledgerWords(q))
+  const asked = sheetTopicTerms(q)
   let best: { q: string; projectId?: string } | null = null
   let bestScore = 0
   for (const raw of questions) {
     const item = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
     const iq = String(item.q ?? "")
-    if (!iq) continue
-    let ov = 0
-    for (const t of new Set(ledgerWords(iq))) if (qt.has(t)) ov++
-    if (ov > bestScore) {
-      bestScore = ov
+    if (!iq || !sheetTopicMatch(q, iq)) continue
+    const theirs = sheetTopicTerms(iq)
+    let shared = 0
+    for (const term of asked) if (theirs.has(term)) shared++
+    if (shared > bestScore || !best) {
+      bestScore = shared
       best = { q: iq, projectId: typeof item.projectId === "string" ? item.projectId : undefined }
     }
   }
-  return bestScore >= 2 ? best : null
+  return best
 }
 
 export const DERIVE_SYSTEM = `You read a live interview transcript and pull out the interviewer's most recent question.

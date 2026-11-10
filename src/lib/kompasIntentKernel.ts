@@ -39,6 +39,10 @@ function lastEmbeddedAsk(s:string):string{
  const parts=Array.from(s.matchAll(SCOPED_CLAUSE))
  for(let j=parts.length-1;j>=0;j--){
   const m=parts[j],after=s.slice((m.index||0)+m[0].length)
+  const before=s.slice(0,m.index||0).trim()
+  // "What is a syslog relay and when would you use one?" is one question.
+  // "and when/how/what" does not throw away the subject that came before it.
+  if(/\band\s*$/i.test(m[0])&&isAsk(before))continue
   if(isAsk(after)) return removeFillerHead(after)
  }
  return removeFillerHead(s)
@@ -54,7 +58,7 @@ export function questionKernel(value:string):QuestionKernel{
  if(!original)return {ask:"",setup:"",constraints:[],carryOptions:false}
  // A hypothetical opening defines the problem itself. Never trim it away
  // merely because it is followed by a short "what would you do?" clause.
- if(/^(?:suppose|imagine|assume|if|given|consider)\b/i.test(original))
+ if(/^(?:suppose|imagine|assume|if|given|consider|let'?s say)\b/i.test(original))
   return {ask:original,setup:"",constraints:[],carryOptions:false}
  const sentences=sentenceParts(original)
  let last=-1
@@ -79,7 +83,12 @@ export function questionKernel(value:string):QuestionKernel{
  while(first>0&&isAsk(lastEmbeddedAsk(sentences[first-1]))&&!RHETORICAL.test(sentences[first-1]))first--
  const firstChosen=lastEmbeddedAsk(sentences[first])
  const leading=sentences[first].endsWith(firstChosen) ? sentences[first].slice(0,-firstChosen.length).trim() : ""
- const ask=sentences.slice(first,last+1).map(lastEmbeddedAsk).join(" ").replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()
- const setup=[...sentences.slice(0,first),leading,...sentences.slice(last+1)].filter(Boolean).join(" ").trim()
+ let ask=sentences.slice(first,last+1).map(lastEmbeddedAsk).join(" ").replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()
+ let setup=[...sentences.slice(0,first),leading,...sentences.slice(last+1)].filter(Boolean).join(" ").trim()
+ // One scenario sentence immediately before the ask is the question, not a company preface.
+ // "Security identifies a finding. How would you review it?" stays one question.
+ const scenario = sentences.length === 2 && first === 1 && setup && !/^(?:we|our|i)\b/i.test(setup)
+  && /\b(?:the finding|both teams|that library|those applications|this vulnerability|the dispute|the outage|the package|the scanner)\b/i.test(ask)
+ if (scenario) { ask = `${setup} ${ask}`.replace(/\s+/g, " ").trim(); setup = "" }
  return {ask:ask||original,setup,constraints:getConstraints(setup),carryOptions:OPTION_REFERENCE.test(ask)}
 }
