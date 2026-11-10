@@ -102,3 +102,9 @@ The contract search API previously fetched at most four times the requested resu
 The route now uses `collectFilteredPages()` to scan ordered 100-row pages, stopping once the requested visible limit is filled, the query reaches the end, or a bounded per-request scan cap is reached. The cap is `min(1,000, max(100, limit × 10))`; the API reports both `excluded_clearance` and `clearance_scan_limited`, so an underfilled capped result is explicit rather than silently presented as complete. The `clearance=include` override retains the direct caller-limit path.
 
 Two executable helper tests cover a clearance-heavy first page followed by eligible jobs and a capped scan that remains underfilled. A route contract regression pins the page range, exclusion predicate and response metadata. These are mocked/source-level tests, not a live production API or crawl result. The first classifier-aware scheduled crawl remains 11 November 2026 at 11:00 UTC; it must be checked separately from this pagination change.
+
+## 10 November 2026 — current alias and next crawl
+
+The canonical alias `job-dashboard-fawn.vercel.app` is mapped to READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, exact master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. This release includes the contract classifier and PR #285 crawler regression workflow. The 10 Nov 11:00 UTC crawl ran before this release on `a66c108`; the first expected classifier-aware run is 11 Nov 2026 11:00 UTC and remains unverified.
+
+A separate public HTTP smoke returned `402 DEPLOYMENT_DISABLED` and Vercel project inspection returned 403 despite READY metadata. No public `GET /api/crawl/jobs` response is claimed. PR #288's pagination change is not merged or deployed; its exact-head crawler regression passed before the latest plan update, while full CI/schema/baseline are rerunning and the protected voice-preview gate is blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`.
