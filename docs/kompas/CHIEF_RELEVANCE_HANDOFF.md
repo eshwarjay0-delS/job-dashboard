@@ -92,3 +92,8 @@ The earlier journal next steps to open separate PRs for these folds are supersed
 PR #283 remains with Kompas Continuous Voice Delivery. Its primary full CI, baseline, cross-device, Windows x64 packaging and preview passed at head `9a0e77fad2ca0fd7fd750a85c2e02f29d62917da`, but the separate protected voice-preview smoke failed because the private `KOMPAS_VERCEL_API_TOKEN` is not configured. No voice edits were made in this continuation.
 
 The live 50-pair gate remains open. It requires the authorized private `KOMPAS_API_TOKEN`, approved original resume/JD/reference bundles, 50 identical consented Kompas/ChatGPT question pairs and independent human 0–4 scorecards. Live scored pairs remain 0/50. Native Windows, WhatsApp and mobile session/voice acceptance also remains unverified. Do not substitute offline metrics for these gates.
+
+
+## 10 November 2026 — production reachability is separate from READY metadata
+
+The four approved offline relevance folds are present in master `11efbbfe7781592bc2fad1216f67546882a1c3ed` and the Vercel control plane reports READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` on that exact SHA, with the canonical alias assigned. A separate current HTTP smoke returned `402 DEPLOYMENT_DISABLED` on the canonical endpoints and Vercel project inspection returned 403. Therefore the deployment metadata and alias assignment do not prove that the app is reachable or that live answer behavior is accepted. Do not deploy/promote while the account is disabled. The 50 real paired answers and human 0–4 review remain 0/50; Windows native, WhatsApp and mobile acceptance remain unverified. The protected preview also requires the authorized private `KOMPAS_VERCEL_API_TOKEN`.
