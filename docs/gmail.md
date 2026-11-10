@@ -204,3 +204,10 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## Mobile hamburger correction — 4 October 2026
+
+The owner rejected the squeezed desktop-sidebar treatment on mobile and required the hamburger to reveal navigation immediately below the sticky header. The panel must expand in normal document flow and push page content down; it must not float over or dim the page, make the page inert, or block background interaction. Outside pointer interaction, Escape and selecting a link close the panel; Escape returns focus to the hamburger. The desktop fixed rail remains unchanged.
+
+Implementation is isolated in PR #290 (`fix/gmail-mobile-navigation-flow-20261110`): `dashboard-shell.css`, `sidebar-nav.tsx`, and `dashboard-shell.test.mjs`. Four source-contract tests cover closed/open flow, selector priority, header/main ordering, no scrim/inert state, outside click, link closure and Escape focus. They are not a substitute for a real narrow-phone/browser acceptance test. No Gmail API sync, per-account health card, OAuth scope, scheduler or send behavior is included in this slice.
