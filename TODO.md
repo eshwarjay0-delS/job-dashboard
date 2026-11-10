@@ -1,3 +1,7 @@
+## 2026-11-10 — The answer stays on the question that was asked
+
+A prepared sheet entry is used only when it is the same ask. A neighbour, including syslog answered from a one-time-password entry, is not reused. The first sentence answers the question. Later sentences use spoken connectors, and a tool or employer is named only when the resume has it. The JD-clause sheet generator is not in this change. Not a live Windows check.
+
 ## 2026-11-09 — The latest chunks become one interviewer question
 
 AI Answer and Auto join the last chunks of one ask, strip the candidate's speech and repeats, and repair dictation before that question is shown or sent. Salary, visa, and relocation are skipped. No extra model call. Not a live Windows check.

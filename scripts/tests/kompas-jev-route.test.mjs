@@ -265,11 +265,9 @@ test("the answer route spends a generation call only on go", async () => {
     question: "Tell me about a time you handled a leaked API key and your work on Kubernetes admission controllers.",
     config: { resume, level: "director" },
   })
-  assert.equal(split.text, CONFIRM_LINE)
-  assert.equal(split.route.action, "confirm")
-  assert.equal(split.route.audience, "director")
-  assert.equal(split.meta.provider, "code")
-  assert.equal(seen.modelCalls, 0)
+  assert.equal(split.text, "I rotated the leaked API key.")
+  assert.equal(split.skipped, undefined)
+  assert.ok(seen.modelCalls >= 1, "a partial experience match still answers the question")
 
   seen.modelCalls = 0
   const streamed = await postStream({
@@ -277,9 +275,9 @@ test("the answer route spends a generation call only on go", async () => {
     config: { resume, level: "engineer" },
   })
   assert.match(streamed.type, /event-stream/)
-  assert.match(streamed.text, /I would want to confirm that/)
+  assert.doesNotMatch(streamed.text, /I would want to confirm that/)
   assert.doesNotMatch(streamed.text, /noQuestion/)
-  assert.equal(seen.modelCalls, 0)
+  assert.ok(seen.modelCalls >= 1, "a partial experience match is generated, not a spoken blank")
 
   seen.modelCalls = 0
   const covered = await postJson({
