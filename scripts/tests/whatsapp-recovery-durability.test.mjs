@@ -282,8 +282,8 @@ test("refinement jobs are isolated from the initial-JD recovery worker", async (
   const api = harness()
   await api.enqueueResumeRecovery(input(102))
   await api.enqueueResumeRefinement(refinementInput(103))
-  assert.deepEqual((await api.dueResumeRecoveries()).map(j => j.id), [id(102)])
-  assert.deepEqual((await api.dueResumeRefinements()).map(j => j.id), [id(103)])
+  assert.equal((await api.dueResumeRecoveries()).map(j => j.id).join(","), id(102))
+  assert.equal((await api.dueResumeRefinements()).map(j => j.id).join(","), id(103))
 })
 
 test("refinement claims have one winner and recover after a stale lease", async () => {
