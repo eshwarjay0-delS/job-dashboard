@@ -32,20 +32,22 @@ The current canonical production alias `job-dashboard-fawn.vercel.app` is READY 
 
 ## Separate DOCX identity repair — PR #267
 
-PR #267 changes the round-trip identity check, not the coverage policy above. It reads the DOCX body, section-referenced headers and footers, and external hyperlink relationship targets before comparing identity-bearing facts. It preserves name, email, phone, profile URL and employment-date checks, and changes the fallback copy to name identity/contact/date verification accurately. It does not lower coverage thresholds or relax factual-evidence rules.
+PR #267 changes the round-trip identity check, not the 17 October coverage policy. It reads the DOCX body, section-referenced headers and footers, and external hyperlink relationship targets before comparing identity-bearing facts. It preserves name, all email addresses, phone, profile URL and employment-date checks, and uses accurate identity/contact/date fallback wording. It does not lower coverage thresholds or relax factual-evidence rules.
 
-At head `2e3aef1e27aad56e338de301abc33b2e7179a911`:
-- Full CI `42746339652`: SUCCESS.
-- Kompas baseline `42746339783`: SUCCESS.
-- WhatsApp resume recovery regression `42746339632`: SUCCESS.
-- Vercel preview `dpl_FAmjqn4ZrZLXeQDCHs7YwTtwKPps`: READY at that exact head.
-- PR #267 is still open; no production deployment and no Meta send have been performed.
+Final PR head: `48836eed08233dcc532ab4a04299dd74b39475a2`.
+- Full CI `42747786078`: SUCCESS.
+- WhatsApp resume recovery regression `42747786105`: SUCCESS.
+- Kompas baseline `42747785851`: SUCCESS.
+- Vercel preview `dpl_422ZDDctJeuAfxZmrR9F5s15hax4`: READY at the exact PR head.
+- PR #267 merged as `23ec076b944519e518060f14e2ce530238e8393a`.
+- Production deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`: READY, target production. Independent deployment and alias reads confirm `job-dashboard-fawn.vercel.app` points to that exact deployment and merge SHA.
+- The optional `voice-preview-smoke` check failed in the separate voice workflow. This PR did not change Kompas voice behavior or alter any secret; the existing Kompas Continuous Voice Delivery task retains that work.
+- No real WhatsApp message or authenticated device test was performed. A public HTTP smoke could not run because external DNS resolution failed in this execution environment.
 
 ## Remaining acceptance and exact blockers
 
 1. Exact replay of 17 October is blocked by missing original DOCX bytes, full JD, generated output and per-run trace/Meta receipt. The screenshot is the only recovered incident artifact.
 2. The connected iZap account has no WhatsApp number/chat history for this thread. An authorized R2 object/trace retrieval path or the original source bundle is required for exact replay.
-3. The owner explicitly prohibited real WhatsApp tests in this run. No live delivery claim is made.
-4. PR #267 must be revalidated on its final documentation-inclusive head, merged only with all required checks green, then deployed from reviewed master. Production acceptance still needs a real owner-authorized device run; this automation cannot claim that interaction.
+3. No live WhatsApp send was performed in this run. Real delivery acceptance remains a separate owner-authorized device test.
+4. The 6 November policy is the current production behavior. Do not restore the old 98% hard hold, lower factual evidence gates, or invent any of the listed missing terms.
 
-Continue with the current 6 November delivery policy. Do not restore the old 98% hard hold, lower factual evidence gates, or invent any of the listed missing terms.
