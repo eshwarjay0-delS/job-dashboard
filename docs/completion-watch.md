@@ -221,3 +221,18 @@ Canonical repository: `eshwarjay0-delS/job-dashboard`. Current master is `f7f322
 - PR #278 recovery-root validation now passes exact-head full CI `42773757901`, WhatsApp recovery regression `42773757620`, and Kompas baseline `42773757574` at `3782c97dea69a8632135586bdb8296ad1790c781`. Preview `dpl_Hp9we2LBxgp9bNqup8rMVEdgoM8a` is READY at that exact head, target preview only. Production alias remains `a66c108`. No production deployment, authenticated recovery smoke or real WhatsApp send. Hold #278 until the explicit owner-review gate for identity-sensitive PR #274 is resolved; do not ship it alone.
 - PR #271 gained a source-level narrow-layout regression in `5e0a5f8487c6de0cd02c111f116e878abfdb3eaa`, pinning flex wrapping and account-to-status binding. This is not a real mobile viewport test. No new exact-head Actions run is visible for 5e0a; the earlier 0b63 head's CI/baseline success does not validate the new test. PR #271 remains DRAFT and mergeable=false, with two-account and mobile acceptance still missing.
 - The docs/Plan & Vision branch has been refreshed again with these final states. Its exact current head and CI must be checked before any merge; the preview-smoke token blocker remains.
+
+
+## 10 November 2026 — resume evidence-boundary PR #279
+
+A source audit found that the resume writer's default prompt still told the model to write every JD term into experience and to treat the candidate as claiming the full JD, while the mandatory role-weaving pass used all `scoreKws` rather than evidence-supported `jdKwsPrompt`. The Gemini-related pass could also add generated terms without confirming them against the source resume or explicit first-person confirmations.
+
+A second mismatch allowed `unverified_jd_terms` in the WhatsApp shortfall allow-list. A DOCX containing an unsupported experience claim could therefore be considered sendable by `whatsappRewriteUsable` even though `acceptableWhatsAppResume` rejected it.
+
+- Draft PR #279: https://github.com/eshwarjay0-delS/job-dashboard/pull/279
+- Head: `cc7e4ea675d808a89f4b4ea1f22711b0be7141b7`.
+- Changes: evidence-bound default prompts; mandatory role weaving restricted to `jdKwsPrompt`; Gemini-related terms filtered against the source resume plus explicit candidate confirmations; `unverified_jd_terms` removed from WhatsApp shortfall reasons so the generated DOCX falls back to the already-chosen same-account resume.
+- Preserved: the separate labelled `Job-post terms` line, 70% WhatsApp delivery-with-gaps policy and 95% supported-coverage clean-pass rule.
+- Tests added: unverified claims cannot be sent; source contract pins the writer prompt, related-term filter and role-weaving boundary.
+- Exact-head Kompas baseline `42775486253`, full CI `42775486431`, and WhatsApp recovery regression `42775486380` are IN PROGRESS. Vercel status is pending.
+- This changes WhatsApp external-send behavior. It remains DRAFT pending explicit owner review; no live model generation, resume write, email, WhatsApp send, R2 write or production deployment occurred.
