@@ -20,6 +20,7 @@ import { useRecruiters } from "../_components/recruiter-button"
 import { isMyRecruiter } from "@/lib/my-recruiters"
 import { type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
+import { formatGmailAccountSyncStatus, gmailAccountSyncIssueMessage, gmailAccountSyncStatusTone } from "@/lib/gmail-account-sync-status"
 import type { Tracked } from "@/lib/interview-track"
 
 import IgnoreControls from "./_components/ignore-controls"
@@ -227,7 +228,7 @@ export default function MailPage() {
   const [leaving, leave] = useLeaving(answer)
 
   // ── Live Gmail data ────────────────────────────────────────────────────
-  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt, interviews } = useGmailData()
+  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt, interviews, issues, accountSync } = useGmailData()
   // Submission follow-ups (7 Nov 2026): the same scheduling control as the Overview rows, on the thread in view.
   // Loaded once; a tap on the control reloads it. A thread that is not a tracked submission has no target, and
   // shows no control — the panel itself stays hidden until the recruiter's last word is answered, same as Overview.
@@ -352,6 +353,7 @@ export default function MailPage() {
   }
 
   const needsCount = needsList.length
+  const syncIssues = accountSync.filter(status => status.status === "failed" || status.status === "partial")
 
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
@@ -379,6 +381,23 @@ export default function MailPage() {
       )}
 
       <InboxUpdates />
+
+      {syncIssues.length > 0 && !error && (
+        <div className="mf-notice" role="status" aria-live="polite">
+          <p><strong>Some inboxes need attention.</strong> Mail from healthy inboxes remains available.</p>
+          {syncIssues.map(status => {
+            const issue = issues.find(row => row.account.toLowerCase() === status.account.toLowerCase())
+            return <p key={status.account}>
+              <strong>{status.account}</strong> — {gmailAccountSyncIssueMessage(issue?.reason || "")}
+              <span style={{ display: "block", fontSize: 12, opacity: 0.75 }}>{formatGmailAccountSyncStatus(status)}</span>
+            </p>
+          })}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button className="btn-outline" onClick={refresh}>Retry inbox sync</button>
+            <Link href="/dashboard/connections">Manage connected inboxes →</Link>
+          </div>
+        </div>
+      )}
 
       {error && !loading && (
         <div className="mf-notice" role="status">
@@ -408,10 +427,22 @@ export default function MailPage() {
           <MailSearchBar search={search} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />
-            {accounts.map(a => (
-              <Chip key={a.id} active={account === a.id} disabled={!a.connected} onClick={() => setAccount(a.id)}
-                label={<><span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />{a.email.split("@")[0]}{(!a.connected || (a.label && a.label !== a.email.split("@")[0])) && <span style={{ opacity: 0.6, fontWeight: 500 }}>{a.connected ? a.label : "Not connected"}</span>}</>} />
-            ))}
+            {accounts.map(a => {
+              const sync = accountSync.find(status => status.account.toLowerCase() === a.email.toLowerCase())
+              const issue = issues.find(row => row.account.toLowerCase() === a.email.toLowerCase())
+              const tone = sync ? gmailAccountSyncStatusTone(sync.status) : "muted"
+              const color = tone === "danger" ? "var(--danger, var(--accent-txt))" : tone === "warning" ? "var(--accent-txt)" : tone === "success" ? "var(--success)" : "var(--text-muted)"
+              const syncLabel = !a.connected ? "Not connected" : sync ? formatGmailAccountSyncStatus(sync) : loading ? "Checking…" : "Not checked yet"
+              const syncTitle = sync?.lastSyncAt ? "Last successful sync " + new Date(sync.lastSyncAt).toLocaleString() : issue ? gmailAccountSyncIssueMessage(issue.reason) : undefined
+              return <Chip key={a.id} active={account === a.id} disabled={!a.connected} onClick={() => setAccount(a.id)}
+                label={<>
+                  <span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />
+                  {a.email.split("@")[0]}
+                  {a.connected && a.label && a.label !== a.email.split("@")[0] && <span style={{ opacity: 0.6, fontWeight: 500 }}>{a.label}</span>}
+                  <span title={syncTitle}
+                    style={{ fontSize: 10, fontWeight: 650, color, whiteSpace: "nowrap" }}>{syncLabel}</span>
+                </>} />
+            })}
           </div>
           {/* While something is searched for, the piles step aside for one line saying what the list now is. */}
           {search.active && <SearchSummary search={search} shown={shown.length} />}
