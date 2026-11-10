@@ -169,7 +169,6 @@ async function fetchAll(force: boolean): Promise<Loaded> {
   // Surface the first real failure instead of showing a silent empty inbox.
   const firstErr = threadsRes.error || draftsRes.error || radarRes.error
   if (data.issues.length > 0 && data.mails.length === 0) {
-    const throttled = data.issues.some(i => /throttling|wait .* refresh/i.test(i.reason))
     data.error =
       `Couldn't read ${data.issues.length === 1 ? "this account" : "these accounts"}: ` +
       data.issues.map(i => `${i.account} — ${gmailAccountSyncIssueMessage(i.reason)}`).join(" ")
