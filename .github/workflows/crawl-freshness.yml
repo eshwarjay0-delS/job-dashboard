@@ -1,4 +1,4 @@
-name: Crawler freshness regression
+name: Crawler freshness and contract classification regression
 
 on:
   pull_request:
@@ -6,6 +6,8 @@ on:
       - "src/lib/crawl/search.ts"
       - "src/app/api/crawl/jobs/route.ts"
       - "src/lib/crawl/adapters.ts"
+      - "src/lib/crawl/classify.ts"
+      - "scripts/tests/crawl-classify.test.mjs"
       - "src/lib/vendorPortals.ts"
       - "scripts/tests/crawl-freshness.test.mjs"
       - ".github/workflows/crawl-freshness.yml"
@@ -17,6 +19,8 @@ on:
       - "src/lib/crawl/search.ts"
       - "src/app/api/crawl/jobs/route.ts"
       - "src/lib/crawl/adapters.ts"
+      - "src/lib/crawl/classify.ts"
+      - "scripts/tests/crawl-classify.test.mjs"
       - "src/lib/vendorPortals.ts"
       - "scripts/tests/crawl-freshness.test.mjs"
       - ".github/workflows/crawl-freshness.yml"
@@ -35,3 +39,5 @@ jobs:
           node-version: "22"
       - name: Run crawler freshness regressions
         run: node --experimental-strip-types --test scripts/tests/crawl-freshness.test.mjs
+      - name: Run contract work-type classification regressions
+        run: node --experimental-strip-types --test scripts/tests/crawl-classify.test.mjs
