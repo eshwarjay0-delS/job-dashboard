@@ -325,3 +325,13 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 10 November 2026 — approved Gmail mobile navigation split
+
+- PR #290 (`fix/gmail-mobile-navigation-flow-20261110`, head `044f62ac8bbe4607e847d6586eb48a7b71cd28db`) isolates the explicitly approved 4 Oct hamburger correction: normal-flow expansion below the sticky header, content pushed down, no overlay/scrim/inert page, outside-click and Escape closure, and focus return. Scope is three files: `src/app/dashboard/dashboard-shell.css`, `src/app/dashboard/sidebar-nav.tsx`, and `scripts/tests/dashboard-shell.test.mjs`.
+- The four source-contract tests passed on the same code in PR #286 head `b625cf9f934fdc4e4aefc2c333b830a78116521e` (full CI `42892426201`, Plan/REA `42892426238`, Kompas baseline `42892426338`). PR #290 still needs its own exact-head checks; do not transfer prior results to it.
+- PR #286 combines the mobile navigation with a separate per-account sync-health UI. No explicit user-authored approval for that specific card was found, so PR #286 is held as draft while PR #290 carries only the approved navigation change. The broader Poke multi-account direction remains approved; the 10 Oct pause of Gmail sync is preserved and not re-enabled by this mobile-only slice.
+- Current master/production metadata is READY at `11efbbfe7781592bc2fad1216f67546882a1c3ed`, but the Vercel project is marked `live:false`; the exact PR preview gate reports the account blocked. No production HTTP, deployment or real mobile acceptance is claimed.
+
+Continue: run exact-head full CI, Plan/REA schema and Kompas baseline for PR #290. Keep it unmerged until the protected preview and Vercel account block are resolved. Then perform real narrow-phone/browser acceptance and verify desktop navigation is unchanged. Keep the per-account sync-health card separate pending explicit approval.
