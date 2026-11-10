@@ -288,6 +288,27 @@ REA_SESSIONS.unshift({
   commits: ["3101ed8ca2791eb3e823ca69ada4cb42f0294674", "29db22728f3eaf27d505ed24b6dc0a8c3d8d4052", "dc7c435c02fc9173d292f078690a02f204b567c8", "6d2cbcabc55b8998b17de413bedb4a9b7bb0315a"]
 });
 
+REA_SESSIONS.unshift({
+  id: "whatsapp-resume-output-library-search-2026-11-10",
+  title: "Recheck the historical WhatsApp resume output without substituting another resume",
+  area: "resume",
+  method: "Library search",
+  state: "Blocked",
+  updated: "2026-11-10",
+  request: "Continue the approved recovery of the 17 Oct 2026 17:28 Chicago WhatsApp resume failure using only exact source and delivery evidence.",
+  sources: [
+    { label: "Historical WhatsApp resume acceptance record", path: "docs/research/whatsapp-resume-acceptance-2026-11-10.md" },
+    { label: "Library semantic search", path: "Library files.search; DOCX results only, created 2026-10-16 through 2026-10-18" }
+  ],
+  steps: [
+    { label: "Search generated output", finding: "A broad Library search for the 17 Oct Security Engineer Risk & Controls request did not surface the generated DOCX; it returned the existing research paper.", status: "Observed", evidence: "Read-only Library semantic search on 2026-11-10." },
+    { label: "Constrain source candidates by type and date", finding: "A DOCX-only search for files created 16–18 Oct returned other candidate resumes but did not surface the recorded 27,724-byte source or the generated output. Candidates were not substituted because the existing record documents conflicting identity/experience facts.", status: "Blocked", evidence: "Read-only Library search with DOCX and date filters; no candidate file was modified or treated as authoritative." }
+  ],
+  limits: "Library semantic search is not exhaustive across every chat, external WhatsApp archive, R2 bucket or account. The exact generated DOCX, per-run R2 object key, webhook/request ID, Meta message ID and signed delivery receipt remain unavailable. No private document contents or credentials were copied into GitHub.",
+  next: "Recover the exact original output and correlated R2/webhook/Meta delivery evidence from the authorized archive. Keep conflicting source facts quarantined and do not replay or send a real WhatsApp message.",
+  commits: []
+});
+
 export function filterReaSessions(query:string,area:string,method:string) {
  const q=query.trim().toLowerCase()
  return REA_SESSIONS.filter(s=>(area==='all'||s.area===area)&&(method==='all'||s.method===method)&&(!q||JSON.stringify(s).toLowerCase().includes(q)))
