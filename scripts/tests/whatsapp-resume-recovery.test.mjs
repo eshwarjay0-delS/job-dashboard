@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { acceptableWhatsAppResume } from '../../src/lib/whatsapp-resume-acceptance.ts'
 import { resumeQuality } from '../../src/lib/resume-quality.ts'
 import { retryDelayMs } from '../../src/lib/whatsapp-retry-policy.ts'
+import { resolveRecoveryResumeContext } from '../../src/lib/whatsapp-resume-recovery-path.ts'
 
 const draft = (overrides = {}) => ({
   token: 't-1', diff: [{ section: 'Experience', before: 'Old', after: 'New' }],
@@ -37,6 +38,76 @@ for (const [name, result, expected] of scenarios) {
     assert.equal(acceptableWhatsAppResume(result), expected)
   })
 }
+
+
+const recoveryRoots = {
+  userId: 'user-1',
+  userResumesRoot: '/tmp/mf/user-resumes',
+  inboxRoot: '/tmp/mf/whatsapp/inbox/123',
+}
+test('an uploaded source recovered from Files is tailored against the current user library root', () => {
+  const resumePath = '/tmp/mf/user-resumes/user-1/eshwarjay05@gmail.com/General/Eshwar_Resume.docx'
+  const context = resolveRecoveryResumeContext({ ...recoveryRoots, resumePath })
+  assert.deepEqual(context, {
+    ok: true, location: 'library',
+    userResumeDir: '/tmp/mf/user-resumes/user-1',
+    files: undefined,
+  })
+})
+test('a stale serialized Files root is replaced by the current account root', () => {
+  const resumePath = '/tmp/mf/user-resumes/user-1/eshwarjay05@gmail.com/General/Eshwar_Resume.docx'
+  const context = resolveRecoveryResumeContext({
+    ...recoveryRoots,
+    resumePath,
+    files: {
+      userDir: '/tmp/old-user-root',
+      email: 'eshwarjay05@gmail.com',
+      said: 'the selected resume',
+      depth: 0,
+      rel: 'old/resume.docx',
+      abs: '/tmp/old-user-root/old/resume.docx',
+    },
+  })
+  assert.equal(context.ok, true)
+  if (!context.ok) return
+  assert.equal(context.userResumeDir, '/tmp/mf/user-resumes/user-1')
+  assert.equal(context.files?.userDir, context.userResumeDir)
+  assert.equal(context.files?.abs, resumePath)
+  assert.equal(context.files?.rel, 'eshwarjay05@gmail.com/General/Eshwar_Resume.docx')
+  assert.equal(context.files?.depth, 2)
+})
+test('recovery rejects a different email folder, sibling account and arbitrary path', () => {
+  const wrongEmail = resolveRecoveryResumeContext({
+    ...recoveryRoots,
+    resumePath: '/tmp/mf/user-resumes/user-1/other@example.com/General/Resume.docx',
+    files: { userDir: '/tmp/mf/user-resumes/user-1', email: 'eshwarjay05@gmail.com', said: 'resume', depth: 2, rel: '', abs: '' },
+  })
+  const sibling = resolveRecoveryResumeContext({
+    ...recoveryRoots,
+    resumePath: '/tmp/mf/user-resumes/user-10/eshwarjay05@gmail.com/General/Resume.docx',
+  })
+  const arbitrary = resolveRecoveryResumeContext({
+    ...recoveryRoots,
+    resumePath: '/tmp/mf/other-account/Resume.docx',
+  })
+  assert.deepEqual(wrongEmail, { ok: false })
+  assert.deepEqual(sibling, { ok: false })
+  assert.deepEqual(arbitrary, { ok: false })
+})
+test('an inbox source remains in its sender inbox and cannot carry stale Files metadata', () => {
+  const resumePath = '/tmp/mf/whatsapp/inbox/123/upload.docx'
+  const context = resolveRecoveryResumeContext({ ...recoveryRoots, resumePath })
+  assert.deepEqual(context, {
+    ok: true, location: 'inbox',
+    userResumeDir: '/tmp/mf/whatsapp/inbox/123',
+  })
+  const staleFiles = resolveRecoveryResumeContext({
+    ...recoveryRoots,
+    resumePath,
+    files: { userDir: '/tmp/mf/user-resumes/user-1', email: 'eshwarjay05@gmail.com', said: 'resume', depth: 2, rel: '', abs: '' },
+  })
+  assert.deepEqual(staleFiles, { ok: false })
+})
 
 const retrySchedule = [300000, 600000, 1200000, 2400000, 4800000, 9600000, 19200000, 21600000, 21600000, 21600000]
 for (let i = 0; i < retrySchedule.length; i++) {
