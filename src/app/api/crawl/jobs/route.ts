@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const searchFilter = crawlSearchOrFilter(q)
   if (searchFilter) query = query.or(searchFilter)
 
-  let jobs: typeof query extends never ? never[] : any[] = []
+  let jobs: unknown[] = []
   let excludedClearance = 0
   let clearanceScanLimited = false
   if (excludeClearance) {
