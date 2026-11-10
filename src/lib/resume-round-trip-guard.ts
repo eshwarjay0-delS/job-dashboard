@@ -33,13 +33,35 @@ function normDate(d: string): string {
   return s
 }
 function normUrl(value: string): string {
-  // Hostnames are case-insensitive; URL paths and query values are not.
-  // Preserve path/query/hash case so a changed profile or repository target fails.
-  const clean = value.trim().replace(/[.,;:!?]+$/g, '')
-  const withoutScheme = clean.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
-  const match = withoutScheme.match(/^([^/?#]+)([\s\S]*)$/)
-  if (!match) return withoutScheme.replace(/[/.]+$/, '')
-  return match[1].toLowerCase() + match[2].replace(/\/+$/, '')
+  // Normalize only URL components that are formatting-only. Scheme, non-root path,
+  // query and fragment are identity-bearing and must survive the DOCX export.
+  const clean = value.trim().replace(/\.+$/g, '')
+  const match = clean.match(/^(?:(https?):\/\/)?([^/?#]+)([^?#]*)(\?[^#]*)?(#.*)?$/i)
+  if (!match) return clean
+  const [, rawScheme, rawAuthority, rawPath = '', rawQuery = '', rawFragment = ''] = match
+  const at = rawAuthority.lastIndexOf('@')
+  const userInfo = at >= 0 ? rawAuthority.slice(0, at + 1) : ''
+  const hostAndPort = at >= 0 ? rawAuthority.slice(at + 1) : rawAuthority
+  let hostname = hostAndPort
+  let port = ''
+  if (hostAndPort.startsWith('[')) {
+    const close = hostAndPort.indexOf(']')
+    if (close >= 0) {
+      hostname = hostAndPort.slice(0, close + 1)
+      port = hostAndPort.slice(close + 1)
+    }
+  } else {
+    const colon = hostAndPort.lastIndexOf(':')
+    if (colon > 0 && /^\d+$/.test(hostAndPort.slice(colon + 1))) {
+      hostname = hostAndPort.slice(0, colon)
+      port = hostAndPort.slice(colon)
+    }
+  }
+  hostname = hostname.replace(/^www\./i, '').toLowerCase()
+  const scheme = rawScheme ? `${rawScheme.toLowerCase()}://` : ''
+  // A slash on the origin root is equivalent; a trailing slash on a path is not.
+  const pathname = rawPath === '/' ? '' : rawPath
+  return `${scheme}${userInfo}${hostname}${port}${pathname}${rawQuery}${rawFragment}`
 }
 const normDigits = (p: string) => { const d = p.replace(/\D/g, ''); return d.length === 11 && d[0] === '1' ? d.slice(1) : d; }
 
