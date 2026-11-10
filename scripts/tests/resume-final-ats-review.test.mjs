@@ -35,11 +35,12 @@ test("parser accepts a bounded score and only canonical target terms", () => {
   });
 });
 
-test("parser normalizes case and punctuation but rejects out-of-range or malformed scores", () => {
+test("parser normalizes case and separators but rejects unlisted aliases and malformed scores", () => {
   assert.deepEqual(
-    parseFinalAtsReview('{"score":100,"missing":["cyber-ark"],"weak":[]}', TERMS),
-    { status: "ok", score: 100, missing: [], weak: [] },
+    parseFinalAtsReview('{"score":100,"missing":["INCIDENT-RESPONSE"],"weak":[]}', TERMS),
+    { status: "ok", score: 100, missing: ["incident response"], weak: [] },
   );
+  assert.deepEqual(parseFinalAtsReview('{"score":100,"missing":["cyber-ark"],"weak":[]}', TERMS).missing, []);
   assert.equal(parseFinalAtsReview('{"score":101,"missing":[],"weak":[]}', TERMS).status, "invalid_response");
   assert.equal(parseFinalAtsReview("not json", TERMS).status, "invalid_response");
 });
