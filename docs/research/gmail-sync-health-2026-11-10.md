@@ -21,7 +21,7 @@ This is aggregate activity only. It does not prove the user was actively using t
 - Status values: `never`, `checked`, `partial`, `error`.
 - A failed refresh preserves the previous last-success timestamp and marks only the affected account as needing attention.
 - GET remains authenticated and `private, no-store`; POST still uses the existing rate limit and cursor durability rules.
-- The UI merges health results by normalized receiving account and renders them inline.
+- The UI renders the complete account-health snapshot returned by the authenticated POST refresh. Commit 945349e replaces the earlier map-merge after exact-head UI CI showed that the health panel disappeared after refresh; exact-head full CI is still running.
 - No background scheduler, WhatsApp delivery policy, external send, Gmail OAuth scope or database schema changes.
 
 ## Tests
@@ -34,3 +34,8 @@ Mocked tests cover account-specific cursors, partial pages, invalid/unavailable 
 - Test with two authorized inboxes: one healthy and one partial/failed; verify only the affected account is marked and reconnect remains account-scoped.
 - Verify the inline status at narrow mobile widths.
 - Background refresh remains disabled pending external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement consent.
+
+
+## 10 November 2026 — refresh snapshot regression follow-up
+
+PR #286 head 9a15cb7 passed the Plan/REA schema and Kompas baseline but failed one full-CI UI assertion: after the mocked POST refresh, event/delivery rows updated while the per-account status panel was missing. The component now uses the complete health array returned by POST as the authoritative account set, preserving the previous snapshot only when the response omits health. Commit 945349e559f336aebf6d91aec282b556578e3cef contains this change. Exact-head Plan/REA 42885821426 and Kompas baseline 42885821421 passed; full CI 42885821430 remains in progress. This is not yet release evidence or real two-inbox/mobile acceptance.
