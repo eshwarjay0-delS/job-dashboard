@@ -292,7 +292,7 @@ REA_SESSIONS.unshift({
   id: "whatsapp-resume-output-library-search-2026-11-10",
   title: "Recheck the historical WhatsApp resume output without substituting another resume",
   area: "resume",
-  method: "Library search",
+  method: "Source and artifact analysis",
   state: "Blocked",
   updated: "2026-11-10",
   request: "Continue the approved recovery of the 17 Oct 2026 17:28 Chicago WhatsApp resume failure using only exact source and delivery evidence.",
