@@ -13,7 +13,7 @@ function load(file, mocks = {}, extra = '') {
   const src = readFileSync(new URL('../../' + file, import.meta.url), 'utf8') + extra
   runInNewContext(ts.transpileModule(src, { compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
     module: testModule, exports: testModule.exports, process, console, Buffer, setTimeout,
-    require: id => id in mocks ? mocks[id] : require(id),
+    require: id => id in mocks ? mocks[id] : id === '@/lib/whatsapp-resume-recovery-path' ? load('src/lib/whatsapp-resume-recovery-path.ts') : require(id),
     clearTimeout,
   })
   return testModule.exports
