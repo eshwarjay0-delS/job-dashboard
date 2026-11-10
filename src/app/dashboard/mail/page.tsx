@@ -433,12 +433,13 @@ export default function MailPage() {
               const tone = sync ? gmailAccountSyncStatusTone(sync.status) : "muted"
               const color = tone === "danger" ? "var(--danger, var(--accent-txt))" : tone === "warning" ? "var(--accent-txt)" : tone === "success" ? "var(--success)" : "var(--text-muted)"
               const syncLabel = !a.connected ? "Not connected" : sync ? formatGmailAccountSyncStatus(sync) : loading ? "Checking…" : "Not checked yet"
+              const syncTitle = sync?.lastSyncAt ? "Last successful sync " + new Date(sync.lastSyncAt).toLocaleString() : issue ? gmailAccountSyncIssueMessage(issue.reason) : undefined
               return <Chip key={a.id} active={account === a.id} disabled={!a.connected} onClick={() => setAccount(a.id)}
                 label={<>
                   <span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />
                   {a.email.split("@")[0]}
                   {a.connected && a.label && a.label !== a.email.split("@")[0] && <span style={{ opacity: 0.6, fontWeight: 500 }}>{a.label}</span>}
-                  <span title={issue ? gmailAccountSyncIssueMessage(issue.reason) : undefined}
+                  <span title={syncTitle}
                     style={{ fontSize: 10, fontWeight: 650, color, whiteSpace: "nowrap" }}>{syncLabel}</span>
                 </>} />
             })}
