@@ -36,3 +36,23 @@ test('Oct 17 WhatsApp source recovery separates deployed code from blocked histo
  assert.match(entry.next,/owner reconciliation/)
  assert.match(entry.next,/signed delivery\/read receipt/)
 })
+
+
+test('final-DOCX Gemini, source-archive, Gmail and crawler acceptance gates stay explicit', () => {
+ const gemini=REA_SESSIONS.find(s=>s.id==='resume-gemini-final-docx-ats-review-2026-11-10')
+ assert.ok(gemini)
+ assert.equal(gemini.state,'Blocked')
+ assert.match(gemini.next,/final-DOCX/)
+ const source=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-source-archive-verification-2026-11-10')
+ assert.ok(source)
+ assert.ok(source.steps.some(s=>s.status==='Tested' && s.finding.includes('27,724 bytes')))
+ assert.ok(source.steps.some(s=>s.status==='Blocked' && s.finding.includes('R2 key')))
+ const gmail=REA_SESSIONS.find(s=>s.id==='gmail-poke-background-update-2026-11-10')
+ assert.ok(gmail)
+ assert.equal(gmail.state,'Blocked')
+ assert.match(gmail.limits,/No live Gmail API call/)
+ const crawler=REA_SESSIONS.find(s=>s.id==='contract-crawler-work-type-postmerge-run-2026-11-10')
+ assert.ok(crawler)
+ assert.equal(crawler.state,'Blocked')
+ assert.match(crawler.limits,/post-classifier crawl/)
+})

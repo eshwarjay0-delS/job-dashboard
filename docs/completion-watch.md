@@ -247,3 +247,21 @@ A second mismatch allowed `unverified_jd_terms` in the WhatsApp shortfall allow-
 - Issue #152 remains OPEN: the authenticated exact-head voice preview HTTP gate needs the private `KOMPAS_VERCEL_PREVIEW_BYPASS`, which is empty. The separate PR #278 voice gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never expose secrets, bypass Vercel protection or count a skipped/failed preview gate as passed.
 - The required 50 actual authenticated same-question Kompas-versus-ChatGPT answer pairs and independent human scorecards remain unperformed. They require the authorized `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. Synthetic 50/54-fold fixtures do not satisfy this acceptance.
 - Native Windows/WhatsApp/mobile voice and session E2E remains unverified. Keep the Voice Delivery task as owner for microphone, captions, preview-gate and audio-provenance changes.
+
+
+## 10 November 2026 — continuation evidence refresh (11:56 UTC)
+
+### WhatsApp resume / factual alignment
+- The exact source file was verified inside the Library archive `Organized_Original_Resumes.zip`: `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`, 27,724 bytes, SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`. The matching JD is Gmail thread `1a1464393628992f`. The source chronology/education/credential claims conflict materially with the owner-confirmed profile and remain quarantined. The generated output, per-run R2 key, Meta message ID and signed delivery/read receipt are still missing.
+- PR #279 is at exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61`; full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS. It remains DRAFT; owner review is still required for the external-send change, and the Vercel status is build-rate-limit. Do not merge/deploy based only on green tests.
+- The owner-approved 3 Nov Gemini requirement is still unimplemented: ask Gemini exactly `Give me ATS score` on the final exported DOCX, list missing/weak JD terms, correct only source-supported/explicitly confirmed gaps, re-export and recheck. The score is diagnostic, not experience evidence.
+
+### Poke-inspired Gmail/mobile
+- Read-only production aggregates: 3 account IDs, 1,991 cached threads, 3 sync rows; latest update 2026-11-10 00:04:12 UTC. Foreground panel refresh is 30 seconds and InboxAlertWatcher is 2 minutes.
+- The unattended update worker remains disabled. It requires an external scheduler, `CRON_SECRET`, an approved Meta template and `GMAIL_UPDATES_SCHEDULER_ENABLED=true`. PR #271 remains DRAFT/mergeable=false at head 5e0a5f8; two authorized inboxes, reconnect/From-identity and narrow-mobile device acceptance are still missing. The sync-health card is proposed, not separately owner-approved. No email was sent.
+
+### Contract crawler
+- The 10 Nov 11:00 UTC crawl completed 11:01:11 UTC with 6,818 jobs found/upserted across 20 portals; one Inspyr operation aborted.
+- It ran under old production SHA a66c108, not master classifier SHA f7f322. Therefore it is not a post-classifier run. PR #276 is merged and CI/baseline green, but production Vercel status remains build-rate-limit; first post-release crawl and public API smoke remain pending.
+
+Continue: implement the approved final-DOCX Gemini ATS review as a separate evidence-bound source change after the local Next.js guide and test checkout are available. Keep scores diagnostic, never use suggestions as experience evidence, and do not send real email or WhatsApp tests.

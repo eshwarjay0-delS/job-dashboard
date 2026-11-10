@@ -166,3 +166,6 @@ Verification: six simulated Electron lifecycle/isolation/navigation checks, eigh
 ### 10 November 2026 — work-type classifier parity
 
 The crawler now uses the same `contractTypes()` evidence taxonomy as Apply when normalizing portal results. This recognizes the explicit `C2H` shorthand as contract work, keeps W2 payroll by itself as unknown (W2 alone is not proof of a contract), and avoids the previous broad `/temp/i` substring that could match words such as `template` or `attempt`. Permanent/direct-hire classification remains distinct, and explicit contract evidence takes precedence when a title also contains full-time wording. Existing rows are not rewritten by this source change; the next successful crawl reclassifies only listings it sees again.
+
+
+10 Nov 2026 scheduled-crawl update: the 11:00 UTC run found/upserted 6,818 jobs across 20 portals with one Inspyr abort. It executed under production SHA a66c108, so the master-only contract classifier change in f7f322 was not active. The first post-release crawl remains pending; no production rows were manually changed.
