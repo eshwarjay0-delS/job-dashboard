@@ -180,3 +180,12 @@ This follow-up wires `src/lib/crawl/classify.ts` and `scripts/tests/crawl-classi
 Robert Half's official Terms of Use, last updated 23 September 2026, prohibit automated retrieval, indexing, scraping and data mining without express prior written consent. The directory link is navigation only. No adapter, scheduled request, listing import or scrape is authorized without written permission or a sanctioned feed/API with explicit commercial-aggregation rights.
 
 Production acceptance remains separate from source validation: deploy only a reviewed master commit when Vercel capacity allows, then verify READY on the exact merge SHA, the canonical alias, the public 14-day/clearance API behavior, and a later completed crawl using the new classifier. No stored rows are manually rewritten.
+
+
+### 10 November 2026 — classifier release verified
+
+PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deployment `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC` is READY at that exact SHA, target production, and independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to it. Git ancestry confirms the release includes PR #276's `contractTypes()` classifier and PR #282's evidence-separated exported-DOCX gap report. PR #275 is the documentation/Plan/REA handoff; it does not change WhatsApp runtime behavior.
+
+The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
+
+The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
