@@ -120,3 +120,9 @@ The approved writer-only PR #287 was audited beyond its prompt and global keywor
 The PR branch now adds `missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredTerms)`. Each role repair receives only terms found in that role's original bullets and still absent from that role's current bullets. The global `unseen` list remains available to the separate profile/skills repair; it is no longer passed into experience-role requests. Two direct tests use separate Splunk and Okta role evidence and ensure unsupported Canton is excluded.
 
 This is source-code and helper-test evidence only. Exact-final-head CI, protected preview, authenticated original-resume/JD/confirmation generation and exported-DOCX review remain pending. No model call, DOCX write, real email or WhatsApp send occurred. The historical 17 Oct 17:28 incident still lacks its generated DOCX and per-run R2/webhook/Meta trace/receipt, and conflicting source facts remain quarantined pending owner reconciliation.
+
+## 10 November 2026 — read-only Library recheck
+
+A targeted Library search for the 17 Oct 17:28 Chicago WhatsApp request and generated DOCX did not surface the output. A second search restricted to DOCX files created 16–18 Oct returned other candidate resume files, but not the recorded 27,724-byte source or the generated output. The candidates were not substituted: the existing incident record documents conflicting identity, education and employment facts, and the exact source digest was not independently retrieved in this search.
+
+This is a bounded semantic search result, not proof that the file is absent from every Library folder, conversation, WhatsApp account, R2 object store or external archive. No candidate file was opened or modified, and no private document content was copied to GitHub. The exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery receipt remain the hard replay blockers.
