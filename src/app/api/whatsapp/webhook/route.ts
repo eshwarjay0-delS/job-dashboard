@@ -1612,13 +1612,6 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
     held: !!savedGen.held,
   }
 
-  const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(job.from) }))
-  if (!hasAnyKey(keys)) {
-    await deferResumeRefinement(jobId, "provider_unavailable")
-    await tellRefinementOnce(jobId, job.from, "Your edit is saved. Tailoring is temporarily unavailable, so no original or partial file was sent. I will retry from the saved version.")
-    return
-  }
-
   let result: TailorResult | null = null
   let file: Buffer | null = null
   if (refinement.generatedPath && refinement.generatedSha256) {
@@ -1637,6 +1630,12 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
   }
 
   if (!result || !file) {
+    const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(job.from) }))
+    if (!hasAnyKey(keys)) {
+      await deferResumeRefinement(jobId, "provider_unavailable")
+      await tellRefinementOnce(jobId, job.from, "Your edit is saved. Tailoring is temporarily unavailable, so no original or partial file was sent. I will retry from the saved version.")
+      return
+    }
     const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(refinement.request)
     const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(refinement.request)
     try {
@@ -1704,7 +1703,10 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
 
   let meta = gen.meta
   if (!meta?.role && !meta?.company && !meta?.location) {
-    try { meta = await extractJdMeta({ keys, jd: job.jd }) } catch { /* retain the saved metadata */ }
+    try {
+      const metaKeys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(job.from) }))
+      if (hasAnyKey(metaKeys)) meta = await extractJdMeta({ keys: metaKeys, jd: job.jd })
+    } catch { /* retain the saved metadata */ }
   }
   const changes = [...gen.changes, refinement.request]
   const name = await outputNameFor(file)
@@ -1718,9 +1720,14 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
     wamid = await deliver(job.from, file, name, caption, {
       userId: job.userId, jd: job.jd, meta, changes, source: gen.source, saved: gen.saved, depth: gen.depth,
     }, jobId, true)
-  } catch {
-    await patchResumeRecovery(jobId, { status: "uncertain", errorCode: "delivery_ambiguous", processingAt: 0, processingToken: "" })
-    await tellRefinementOnce(jobId, job.from, "WhatsApp's delivery status is unknown. I will not send a duplicate until a signed delivery update confirms what happened.")
+  } catch (error) {
+    if ((error as Error)?.message === "version_store_failed") {
+      await deferResumeRefinement(jobId, "version_store_failed")
+      await tellRefinementOnce(jobId, job.from, "I could not safely save the updated file, so no document was sent. Your edit is saved and I will retry.")
+    } else {
+      await patchResumeRecovery(jobId, { status: "uncertain", errorCode: "delivery_ambiguous", processingAt: 0, processingToken: "" })
+      await tellRefinementOnce(jobId, job.from, "WhatsApp's delivery status is unknown. I will not send a duplicate until a signed delivery update confirms what happened.")
+    }
     return
   }
   if (!wamid) {
