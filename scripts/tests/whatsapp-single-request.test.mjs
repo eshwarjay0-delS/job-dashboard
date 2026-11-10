@@ -36,6 +36,9 @@ test('the identity guard stays strict when the JD terms gate is off', () => {
     assert.equal(sameResumeIdentity(src, src), true)
     assert.equal(sameResumeIdentity(src, src.replace('Eshwar Jay', 'Eshwar J.')), false)
     assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('(312) 555-0142', '312-555-0142')), true)
+    assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', '01/2021')), true)
+    assert.equal(sameResumeIdentity(src, src.replace('Jan 2021 - Mar 2024', '2021-01 - 2024-03')), true)
     assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
     assert.equal(sameResumeIdentity(src, src.replace('linkedin.com/in/eshwar-jay', 'github.com/eshwar-jay')), false)
     // Host casing, scheme and a trailing slash are formatting-only; path casing is identity-bearing.
