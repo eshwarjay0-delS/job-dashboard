@@ -45,3 +45,14 @@ test('nov 5 handoff records name the 70 to 80 percent rule and close stale block
   assert.match(kompas.evidence, /90cdd1dd/)
   assert.doesNotMatch(kompas.next, /Restore runnable checkout/)
 })
+
+
+test('Oct 17 WhatsApp source-boundary release remains traceable after deployment', () => {
+  const entry = PLAN_JOURNAL.find(item => item.id === 'whatsapp-oct17-source-recovery-2026-11-10')
+  assert.ok(entry, 'Oct 17 source-recovery journal entry missing')
+  assert.match(entry.delivery, /merged and production READY/)
+  assert.match(entry.evidence, /a66c108bff6175149c4aadd882ab11128445b8cc/)
+  assert.match(entry.evidence, /dpl_7gjdfRFeLjqcPdVC52NkaEatugKA/)
+  assert.match(entry.next, /owner reconciliation/)
+  assert.match(entry.next, /Meta message ID/)
+})
