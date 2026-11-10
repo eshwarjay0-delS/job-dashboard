@@ -102,3 +102,32 @@ The current master classifier delegates work-type evidence to Apply's shared `co
 2. Verify the public jobs API still applies the 14-day cutoff and excludes clearance-required roles.
 3. When Vercel's build-rate limit clears, deploy the latest reviewed master, require READY and exact alias SHA, then recheck the classifier behavior against a fresh crawl. Do not claim the current classifier is live before that.
 4. Keep Robert Half manual-only until its official feed or permitted HTML can be captured and tested; no adapter was guessed or added.
+
+
+## 10 November 2026 — post-change crawl and Robert Half permission boundary
+
+### Post-change production run
+
+A read-only query of the production-linked MFit database found the 10 November scheduled run:
+
+- Run ID: `cf78f4bb-5f27-4476-b28f-3efa7156b231`.
+- Started `2026-11-10 11:00:24 UTC`; finished `11:01:11 UTC`.
+- 20 registered portals; eTeam is absent from the recorded portal list.
+- 6,818 jobs found and 6,818 upserted.
+- One isolated error: Inspyr returned `This operation was aborted`.
+
+This confirms the deployed eTeam retirement/20-adapter registry. It does not validate the newer work-type classifier on master: the run executed from production SHA `a66c108bff6175149c4aadd882ab11128445b8cc`, while current master is `f7f322f242d39b12a0ade7c8d548f6f48eea79b5`. The master Vercel status is still `build-rate-limit`; no deployment was attempted. A read-only post-run work-type snapshot was contract 10,444 total / 8,850 active, permanent 1,072 / 945, unknown 3,050 / 2,612; these are existing production-classifier counts, not acceptance evidence for the master classifier fix.
+
+### Robert Half — public reference and terms review
+
+The official [cybersecurity search page](https://www.roberthalf.com/us/en/jobs/all/cyber-security) currently reports 53 results and exposes page 2 through `?pagenumber=2`. Parsed job cards expose title, location, worksite, employment type, pay range, description and posted date. One opened detail page showed a card marked `onsite` while the detail text described the opportunity as fully remote; a future authorized adapter must preserve this discrepancy rather than infer a worksite from one field.
+
+The official [Terms of Use](https://www.roberthalf.com/us/en/terms), last updated 23 September 2026, state in Section 6 that robots, spiders, site-search/retrieval applications and other manual or automatic devices may not retrieve, index, scrape, data-mine or otherwise gather Site content without Robert Half's express prior written consent. Section 3 also limits the site license to personal/non-commercial use or doing business with Robert Half. This product is a commercial aggregator, so a public page or search-engine result is not permission to ingest it.
+
+**Decision:** no Robert Half adapter, scheduled request, stored listing import or scraping probe is authorized by the current evidence. Keep the vendor directory link manual-only until express written consent or a sanctioned feed/API with explicit commercial-aggregation permission is obtained. Continue the existing permitted adapters; do not guess a hidden endpoint or use a third-party scraper.
+
+### Remaining crawler acceptance
+
+- The deployed 20-adapter/eTeam change has a successful scheduled-run record.
+- Recheck `GET /api/crawl/jobs?limit=1` and its 14-day/clearance behavior when runtime HTTP access is available; this turn could not independently fetch the public endpoint.
+- Deploy the reviewed master classifier change only after Vercel's build-rate limit clears; then confirm the alias SHA and run a fresh crawl before claiming C2H/W2/sub-string classification is live.
