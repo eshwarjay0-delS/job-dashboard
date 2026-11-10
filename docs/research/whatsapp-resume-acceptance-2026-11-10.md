@@ -112,3 +112,28 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 10 November 2026 — current production ancestry rechecked
+
+The canonical production alias job-dashboard-fawn.vercel.app is independently READY at deployment dpl_7uEfjq1XprC48DoTFfFuiBoShPne, exact master SHA 11efbbfe7781592bc2fad1216f67546882a1c3ed. Git ancestry includes PR #273's source-boundary filter and PR #282's exported-DOCX gap report. PR #285 is a crawler CI/manual-directory follow-up and does not change WhatsApp runtime behavior.
+
+This release evidence does not resolve the historical 17 Oct replay: the generated DOCX, per-run R2/webhook/Meta correlation and signed handset delivery receipt remain unavailable, and the recovered source's disputed education/employment/credential claims remain quarantined pending owner reconciliation. The 6 Nov WhatsApp policy supersedes the former 98% hard hold. PR #274 remains owner-review-gated; #278 depends on that identity decision; #277 remains unapproved; #279 remains DRAFT pending review of its external-send behavior. No real WhatsApp send or email was performed.
+
+
+## 10 November 2026 — read-only production event audit
+
+A read-only query of the production MFit database recovered one usage event at 2026-10-17 22:28:27.372685 UTC (17:28:27 Chicago), with source_channel=whatsapp and feature_key=resume_tailor. Its metadata records score 87, 34 calls, 205,546 input tokens and 25,331 output tokens. This confirms that the tailoring pipeline was invoked at the reported time. The metadata score is not a verified final-DOCX ATS score.
+
+The event has no source_event_key, and its only metadata keys are calls, score, input_tokens and output_tokens. No public resume_documents or identity_audit row exists in the same 20-minute window. The production public schema has no dedicated WhatsApp, webhook, delivery, message or R2 correlation table. These gaps prevent linking the event to a particular generated file or provider message.
+
+Additional read-only searches: Gmail returned no 17 Oct DOCX attachment, WhatsApp/MarketFit thread or resume/tailored subject. The connected iZap business has zero WhatsApp numbers and no messages in the incident window. Library semantic search surfaced the research paper, not a generated DOCX. These are scoped connector results; they do not establish that Meta or R2 have no historical record.
+
+The generated DOCX or exact R2 object key, request correlation, Meta message ID and signed delivered/read callback remain missing. The source's education/employment/credential conflicts remain quarantined pending owner reconciliation. Do not treat the score 87, 34 calls, an HTTP success, a saved source file or a new authorized test as proof that the original output was delivered. No email or WhatsApp message was sent.
+
+
+## 10 November 2026 — historical Vercel log retention check
+
+A read-only production runtime-log query was attempted for 2026-10-17 22:00–23:00 UTC, filtered to `/api/whatsapp/webhook`, to recover the missing request/output correlation. Vercel rejected the historical window with HTTP 400 and explicitly stated that the Hobby plan retains runtime logs for one hour. This is a retrieval failure due to retention, not evidence that no logs existed. No log records or request IDs were returned.
+
+The generated DOCX, exact R2 object key, request correlation, Meta message ID and signed delivered/read receipt remain unavailable. The original source's disputed education/employment/credential claims remain quarantined. No replay, R2 write, email or WhatsApp message was performed.

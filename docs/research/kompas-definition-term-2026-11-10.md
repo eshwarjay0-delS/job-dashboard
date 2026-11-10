@@ -38,3 +38,8 @@ No draft in the 150 named a visa, an address, relocation, Houston, or Saint Loui
 
 ## Limits
 Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. This is the offline stand-in, not a model answer.
+
+
+## Superseding release record — 10 November 2026
+
+The definition-term commit `eb37c4566f6d9c1d4b4d988096a2a44066255636` is an ancestor of master and the READY production alias at SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`, deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`. This supersedes the earlier pending merge step. The sequential offline 150-draft set now has zero pairs at Jaccard >= 0.7, with zero same-answer, length, mode-gap-under-0.50 or ceiling failures. No live model result is implied: 50 paired Kompas/ChatGPT responses and human grading remain 0/50; Windows native answers remain 0/10. The canonical endpoint currently returns `402 DEPLOYMENT_DISABLED`, so reachable production acceptance remains pending.

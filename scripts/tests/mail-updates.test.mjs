@@ -77,15 +77,15 @@ test('concurrent delivery calls reserve each event only once',async()=>{
   const h=deliveryHarness();await Promise.all([h.mod.deliverInboxUpdates('user'),h.mod.deliverInboxUpdates('user')]);assert.equal(h.calls(),8)
 })
 
-function collectorHarness({expired=false,metadataFail=false,metadataStatus=0,incremental=false}={}) {
+function collectorHarness({expired=false,metadataFail=false,metadataStatus=0,incremental=false,partial=false}={}) {
   const rows=new Map();const events=[];const paths=[]
-  if(expired||incremental)rows.set('updates/cursors/key.json',JSON.stringify({history:'old',checkedAt:0}))
+  if(expired||incremental)rows.set('updates/cursors/key.json',JSON.stringify({history:'old',checkedAt:now-60000}))
   const mod=load('gmail-updates',{
     '@/lib/googleWorkspace':{listGoogleWorkspaceAccounts:async()=>[{id:'a',google_email:'a@example.com',gmail_enabled:true},{id:'b',google_email:'b@example.com',gmail_enabled:true}],getGoogleWorkspaceAccessToken:async(_,id)=>{assert.equal(id,'a');return 'token'}},
     '@/lib/storage':{blob:{getText:async k=>rows.get(k)||null,put:async(k,v)=>rows.set(k,v)}},
     '@/lib/mail-update-store':{accountKey:()=> 'key',updateRoot:()=> 'updates/',updatePreferences:async()=>prefs,storeUpdate:async(_,e)=>{events.push(e)}},
   },{fetch:async url=>{paths.push(url);let data
-    if(url.includes('history?'))return incremental?{ok:true,json:async()=>({historyId:'100',history:[{messagesAdded:[{message:{id:'gone',labelIds:['INBOX']}},{message:{id:'m',labelIds:['INBOX']}}]}]})}:{ok:false,status:404,json:async()=>({})}
+    if(url.includes('history?'))return incremental?{ok:true,json:async()=>({historyId:'100',...(partial?{nextPageToken:'private-page-token'}:{}),history:[{messagesAdded:[{message:{id:'gone',labelIds:['INBOX']}},{message:{id:'m',labelIds:['INBOX']}}]}]})}:{ok:false,status:404,json:async()=>({})}
     if(url.endsWith('profile'))data={historyId:'100'}
     else if(url.includes('messages?'))data={messages:metadataStatus?[{id:'gone'},{id:'m'}]:[{id:'m'}]}
     else if(url.includes('/gone?')&&metadataStatus)return {ok:false,status:metadataStatus,json:async()=>({})}
@@ -95,14 +95,14 @@ function collectorHarness({expired=false,metadataFail=false,metadataStatus=0,inc
   return {mod,rows,events,paths}
 }
 test('first sync imports only selected account and suppresses historical alerts',async()=>{
-  const h=collectorHarness();await h.mod.collectInboxUpdates('user');assert.equal(h.events.length,1);assert.equal(h.events[0].account,'a@example.com');assert.equal(h.events[0].initial,true)
+  const h=collectorHarness();const result=await h.mod.collectInboxUpdates('user');assert.equal(h.events.length,1);assert.equal(h.events[0].account,'a@example.com');assert.equal(h.events[0].initial,true);assert.equal(result.health[0].account,'a@example.com');assert.equal(result.health[0].status,'checked');assert.ok(result.health[0].lastSuccessAt)
   const calls=h.paths.length;await h.mod.collectInboxUpdates('user');assert.equal(h.paths.length,calls,'cursor throttle avoids overlapping refresh')
 })
 test('expired Gmail history recovers without blasting old messages to mobile',async()=>{
   const h=collectorHarness({expired:true});await h.mod.collectInboxUpdates('user');assert.equal(h.events[0].initial,true);assert.equal(JSON.parse(h.rows.get('updates/cursors/key.json')).history,'100')
 })
 test('failed metadata fetch does not advance durable Gmail cursor',async()=>{
-  const h=collectorHarness({metadataFail:true});const result=await h.mod.collectInboxUpdates('user');assert.equal(result.issues.length,1);assert.equal(h.rows.has('updates/cursors/key.json'),false)
+  const h=collectorHarness({metadataFail:true});const result=await h.mod.collectInboxUpdates('user');assert.equal(result.issues.length,1);assert.equal(result.health[0].status,'error');assert.equal(result.health[0].lastSuccessAt,null);assert.equal(h.rows.has('updates/cursors/key.json'),false)
 })
 
 test('a vanished message cannot pin initial or incremental sync to the same cursor',async()=>{
@@ -177,4 +177,41 @@ test('WhatsApp webhook records status callbacks instead of discarding them',()=>
   assert.ok(source.indexOf('if (statuses.length)')<source.indexOf('if (!msg) return ok()'))
   assert.match(source,/if \(!waSignatureConfigured\(\)\) return ok\(\)/)
   assert.ok(source.indexOf('if (!waSignatureConfigured()) return ok()')<source.lastIndexOf('recordUpdateProviderStatus(id, state,'))
+})
+
+
+test('per-account health identifies a partial cursor without exposing its page token',async()=>{
+  const h=collectorHarness({incremental:true,partial:true})
+  const result=await h.mod.collectInboxUpdates('user')
+  assert.equal(result.health[0].status,'partial')
+  assert.equal(result.health[0].account,'a@example.com')
+  assert.ok(result.health[0].lastSuccessAt)
+  assert.match(result.health[0].issue,/More changes remain/)
+  assert.doesNotMatch(JSON.stringify(result.health),/private-page-token/)
+})
+test('per-account health exposes only last-success timestamps and safe states',async()=>{
+  const rows=new Map([
+    ['updates/cursors/a.json',JSON.stringify({history:'private-history-a',checkedAt:now})],
+    ['updates/cursors/b.json',JSON.stringify({history:'private-history-b',page:'private-page-token',checkedAt:now-1000})],
+    ['updates/cursors/c.json','{'],
+  ])
+  const mod=load('gmail-updates',{
+    '@/lib/googleWorkspace':{listGoogleWorkspaceAccounts:async()=>[],getGoogleWorkspaceAccessToken:async()=>null},
+    '@/lib/storage':{blob:{getText:async key=>{if(key.endsWith('/d.json'))throw Error('private storage path');return rows.get(key)||null}}},
+    '@/lib/mail-update-store':{accountKey:email=>email.split('@')[0],updateRoot:()=> 'updates/',storeUpdate:async()=>{},updatePreferences:async()=>prefs},
+  })
+  const health=await mod.getInboxSyncHealth('user',[
+    {google_email:'a@example.com',gmail_enabled:true},
+    {google_email:'b@example.com',gmail_enabled:true},
+    {google_email:'c@example.com',gmail_enabled:true},
+    {google_email:'d@example.com',gmail_enabled:true},
+    {google_email:'off@example.com',gmail_enabled:false},
+  ])
+  assert.deepEqual(JSON.parse(JSON.stringify(health)),[
+    {account:'a@example.com',status:'checked',lastSuccessAt:now},
+    {account:'b@example.com',status:'partial',lastSuccessAt:now-1000,issue:'More changes remain; the next refresh continues the scan.'},
+    {account:'c@example.com',status:'error',lastSuccessAt:null,issue:'Saved sync state is invalid. Refresh to retry.'},
+    {account:'d@example.com',status:'error',lastSuccessAt:null,issue:'Saved sync state could not be read. Refresh to retry.'},
+  ])
+  assert.doesNotMatch(JSON.stringify(health),/private-history|private-page-token|private storage path/)
 })

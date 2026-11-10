@@ -1,11 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { InboxUpdate, UpdatePreferences } from '@/lib/mail-update-policy'
+import type { InboxSyncHealth, InboxUpdate, UpdatePreferences } from '@/lib/mail-update-policy'
 import type { MobileDeliveryReceipt } from '@/lib/mail-update-store'
 import './inbox-updates.css'
 
-type Snapshot = { preferences: UpdatePreferences; events: InboxUpdate[]; deliveries: Record<string,MobileDeliveryReceipt>; accounts: string[]; numbers: string[]; mobileReady: boolean; deliveryEvidenceReady: boolean; backgroundReady: boolean }
+type Snapshot = { preferences: UpdatePreferences; events: InboxUpdate[]; deliveries: Record<string,MobileDeliveryReceipt>; syncHealth: InboxSyncHealth[]; accounts: string[]; numbers: string[]; mobileReady: boolean; deliveryEvidenceReady: boolean; backgroundReady: boolean }
 const deliveryLabel=(receipt?:MobileDeliveryReceipt)=>receipt?.status==='read'?'WhatsApp alert read':receipt?.status==='delivered'?'WhatsApp alert delivered to the linked device':receipt?.status==='failed'?'WhatsApp could not deliver the alert':receipt?.status==='accepted'?'WhatsApp accepted the alert for delivery':receipt?.status==='needs_review'?'WhatsApp alert needs review; it will not retry automatically':receipt?.status==='cancelled'?'WhatsApp alert cancelled after settings changed':receipt?.status==='sending'?'WhatsApp delivery result is uncertain; it will not retry automatically':''
 async function request(method = 'GET', body?: UpdatePreferences) {
   const response = await fetch('/api/gmail/updates', { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined })
@@ -19,7 +19,6 @@ export default function InboxUpdates() {
   const [draft, setDraft] = useState<UpdatePreferences | null>(null)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
-  const [checked, setChecked] = useState<number | null>(null)
   const inFlight = useRef(false)
   const load = useCallback(async () => {
     const next: Snapshot = await request()
@@ -38,8 +37,7 @@ export default function InboxUpdates() {
     setBusy(true)
     try {
       const result = await request('POST')
-      setData(old => old ? { ...old, events: result.events, deliveries: result.deliveries || {} } : old)
-      setChecked(Date.now())
+      setData(old => old ? { ...old, events: result.events || old.events, deliveries: result.deliveries || {}, syncHealth: Array.isArray(result.health) ? result.health : old.syncHealth || [] } : old)
       const issues = (result.issues || []).map((issue: {account: string; reason: string}) => `${issue.account}: ${issue.reason}`)
       if (result.delivery?.reason) issues.push(result.delivery.reason)
       if (result.delivery?.blocked && !result.delivery?.reason) issues.push('A mobile alert needs review; it will not be sent again automatically.')
@@ -68,9 +66,16 @@ export default function InboxUpdates() {
   return <section className="inbox-updates" aria-label="Inbox updates">
     <div className="inbox-updates-heading"><div><h2>Inbox updates</h2><p>{enabled ? 'New messages from your selected inboxes. Refreshes every 30 seconds while this page is visible.' : 'Choose the inboxes you want to keep up with.'}</p></div>
       <button className="btn-outline" disabled={!enabled || busy} onClick={() => void sync()}>{busy ? 'Working…' : 'Refresh updates'}</button></div>
-    {checked ? <small>Last checked {new Date(checked).toLocaleTimeString()}</small> : null}
     {notice ? <p role="status">{notice}</p> : null}
     {!data ? <button className="btn-outline" onClick={() => void load().catch(error => setNotice(error.message))}>Load update settings</button> : null}
+    {data?.syncHealth?.length ? <div className="inbox-updates-sync-health" aria-label="Per-inbox sync status">
+      {data.syncHealth.map(item => <div className="inbox-updates-sync-health-item" key={item.account}>
+        <strong>{item.account}</strong>
+        <span>{item.status === 'never' ? 'Not synced yet' : item.status === 'partial' ? 'More changes remain' : item.status === 'error' ? 'Sync needs attention' : 'Last sync succeeded'}</span>
+        {item.lastSuccessAt ? <time dateTime={new Date(item.lastSuccessAt).toISOString()}>Last successful sync {new Date(item.lastSuccessAt).toLocaleString()}</time> : <small>No successful sync recorded</small>}
+        {item.issue ? <small role="status">{item.issue}</small> : null}
+      </div>)}
+    </div> : null}
     {data && draft ? <details><summary>Update settings</summary><form onSubmit={save}>
       <label><input type="checkbox" checked={draft.enabled} onChange={e => setDraft({ ...draft, enabled: e.target.checked })} /> Keep my inbox updates</label>
       <fieldset><legend>Connected inboxes</legend>{data.accounts.length ? data.accounts.map(account => <label key={account}><input type="checkbox" checked={draft.accounts.includes(account)} onChange={e => setDraft({ ...draft, accounts: e.target.checked ? [...draft.accounts, account] : draft.accounts.filter(a => a !== account) })} /> {account}</label>) : <p>Connect Gmail in <a href="/dashboard/connections">Connections</a> first.</p>}</fieldset>

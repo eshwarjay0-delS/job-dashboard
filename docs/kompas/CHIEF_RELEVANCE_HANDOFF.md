@@ -74,3 +74,26 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+
+## 10 November 2026 — offline relevance folds are merged and production-backed
+
+The canonical production alias `job-dashboard-fawn.vercel.app` is READY at deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, exact master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. GitHub ancestry checks confirm the four approved offline relevance folds are included:
+
+- Versus-side isolation: `901568e21bd2befea85a0747f7cc430767ee7106`.
+- Design-piece isolation: `e93c73751c77b98a88936c144c7dfa851b857f6a`.
+- Incident-specific answer isolation: `f8a5288b67b006cd9de4cdaf8e672f7ac5449495`.
+- Unmatched-definition term opener: `eb37c4566f6d9c1d4b4d988096a2a44066255636`.
+
+Across the sequential 150-draft fictional-resume offline folds, pairs at Jaccard >= 0.7 decreased from 84 to 16 to 4 to 1 to 0. The final fold measured engineer 0.000, director 0.632 and architect 0.591 for the NIST CSF versus OAuth audience-validation pair. Same-answer, length, mode-gap-under-0.50 and over-ceiling failures remained zero. This is source/fixture evidence only: no live model call, no actual candidate answers and no independent human scorecards.
+
+The earlier journal next steps to open separate PRs for these folds are superseded: the exact commits are already on master and included in the READY production SHA. PR #262 remains OPEN/mergeable=false at head `30cc94b7db156419ced5abb09e296b3fc04d0e5c` on older base `e93c737`; its preview was READY but exact-head full CI was not verified. PR #234 remains OPEN/mergeable=false at head `f0d6f04e5d6a6b295e6458bbc2dec606f47ffdab` on older base `3e2d235`; its recorded suite had 197 pass / 2 fail and no exact-head full CI. Do not blindly merge either branch.
+
+PR #283 remains with Kompas Continuous Voice Delivery. Its primary full CI, baseline, cross-device, Windows x64 packaging and preview passed at head `9a0e77fad2ca0fd7fd750a85c2e02f29d62917da`, but the separate protected voice-preview smoke failed because the private `KOMPAS_VERCEL_API_TOKEN` is not configured. No voice edits were made in this continuation.
+
+The live 50-pair gate remains open. It requires the authorized private `KOMPAS_API_TOKEN`, approved original resume/JD/reference bundles, 50 identical consented Kompas/ChatGPT question pairs and independent human 0–4 scorecards. Live scored pairs remain 0/50. Native Windows, WhatsApp and mobile session/voice acceptance also remains unverified. Do not substitute offline metrics for these gates.
+
+
+## 10 November 2026 — production reachability is separate from READY metadata
+
+The four approved offline relevance folds are present in master `11efbbfe7781592bc2fad1216f67546882a1c3ed` and the Vercel control plane reports READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` on that exact SHA, with the canonical alias assigned. A separate current HTTP smoke returned `402 DEPLOYMENT_DISABLED` on the canonical endpoints and Vercel project inspection returned 403. Therefore the deployment metadata and alias assignment do not prove that the app is reachable or that live answer behavior is accepted. Do not deploy/promote while the account is disabled. The 50 real paired answers and human 0–4 review remain 0/50; Windows native, WhatsApp and mobile acceptance remain unverified. The protected preview also requires the authorized private `KOMPAS_VERCEL_API_TOKEN`.

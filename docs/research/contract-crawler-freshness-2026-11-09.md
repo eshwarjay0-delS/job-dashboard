@@ -94,3 +94,12 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+
+## 10 November 2026 — PR #285 classifier regression gate released
+
+PR #285 merged as 11efbbfe7781592bc2fad1216f67546882a1c3ed from exact head 42090ad0fbc68be3b8fcecf252c57c30c283cd38. Exact-head full CI 42855624797, crawler regression 42855624656, Plan/REA schema 42855624735 and Kompas baseline 42855624940 all completed SUCCESS. The dedicated crawler workflow now watches src/lib/crawl/classify.ts and scripts/tests/crawl-classify.test.mjs and executes the classifier suite beside freshness checks. A directory regression keeps Robert Half's official cybersecurity search link manual-only and out of active adapters.
+
+Production deployment dpl_7uEfjq1XprC48DoTFfFuiBoShPne is READY at the exact merge SHA, target production; independent alias lookup confirms job-dashboard-fawn.vercel.app resolves to it. This production release includes PR #276's evidence-based classifier and PR #282's exported-DOCX gap report. PR #285 itself changes the test workflow, docs and directory link only; it does not alter classifier runtime or stored rows.
+
+The 10 Nov 11:00 UTC crawl ran before this deployment on a66c108, so no post-classifier run is claimed. The first scheduled run after release is expected 11 Nov 11:00 UTC. Public /api/health and /api/crawl/jobs?limit=1 HTTP smoke was inaccessible from this runtime; no HTTP response is claimed. Robert Half remains manual-only under Section 6 of its Terms of Use until express written permission or a sanctioned feed/API with explicit commercial-aggregation rights is documented.

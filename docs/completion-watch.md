@@ -324,4 +324,105 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - Kompas Continuous Voice Delivery remains active and owns PR #283 and all microphone/caption/audio changes. No parallel voice edits were made. Native Windows/WhatsApp/mobile voice E2E and the 50 actual same-question Kompas/ChatGPT pairs with independent human scores remain unverified.
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
-Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+Superseded 10 Nov 2026 16:58 UTC: PR #285 is merged and production READY at exact SHA 11efbbfe7781592bc2fad1216f67546882a1c3ed. Continue: verify the first post-release crawl on 11 Nov 2026 at 11:00 UTC and the public crawler API when HTTP access is available. Keep WhatsApp identity/storage/send gates, Gmail two-account/mobile acceptance and native Kompas acceptance pending their exact prerequisites.
+
+
+## 10 November 2026 — PR #285 crawler gate merged and production released
+
+- PR #285 merged as 11efbbfe7781592bc2fad1216f67546882a1c3ed from exact head 42090ad0fbc68be3b8fcecf252c57c30c283cd38.
+- Exact-head full CI 42855624797, crawler freshness + contract classification regression 42855624656, Plan/REA schema 42855624735, and Kompas baseline 42855624940 all completed SUCCESS.
+- Production deployment dpl_7uEfjq1XprC48DoTFfFuiBoShPne is READY at the exact merge SHA; independent get_alias confirms job-dashboard-fawn.vercel.app points to the same deployment. The PR preview status was build-rate-limit; the normal Git-linked production deployment nevertheless completed successfully. Do not report that older preview failure as a current production blocker.
+- PR #285 adds CI coverage for src/lib/crawl/classify.ts and scripts/tests/crawl-classify.test.mjs, and keeps Robert Half's official cybersecurity search link manual-only. It does not change classifier runtime behavior or rewrite existing rows. Production now includes the earlier PR #276 contractTypes() classifier and PR #282 exported-DOCX gap report.
+- The 10 Nov 11:00 UTC crawl ran before this deployment on a66c108: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first post-release crawl is expected 11 Nov 11:00 UTC. Public HTTP smoke for /api/health and /api/crawl/jobs?limit=1 could not be reached from this runtime; no response is claimed.
+
+### WhatsApp / resume boundary
+The 17 Oct 17:28 Chicago source DOCX and matching JD are recovered privately, but the source's education/employment/credential facts conflict with owner-confirmed facts and remain quarantined. The generated output, per-run R2/webhook/Meta correlation and signed delivered/read receipt are missing. PR #273's source-boundary fix is included in current production, and the 6 Nov channel policy supersedes the old 98% hard hold; this does not prove historical replay or handset delivery. PR #274 remains owner-review-gated, #278 depends on that decision, #277 remains unapproved, and #279 remains DRAFT because it changes external-send eligibility. No real WhatsApp message or email was sent.
+
+### Gmail / Poke-inspired updates
+The broad Poke-inspired direction remains approved: up to four accounts, account+thread identity, no silent merge, selected From preservation, reconnect only the affected inbox, and mobile hamburger navigation that expands below/pushes content. PR #271's per-account sync-health card remains DRAFT/proposed; two authorized inboxes (one healthy, one partial/failed), reconnect/From preservation and narrow-mobile acceptance are missing. Foreground refresh remains 30 seconds and InboxAlertWatcher 2 minutes. The unattended worker remains disabled pending an external scheduler, CRON_SECRET, approved Meta template and explicit enablement consent. No email or WhatsApp notification was sent.
+
+### Kompas coordination
+PR #283 and microphone/caption/audio changes remain owned by Kompas Continuous Voice Delivery; no parallel voice edits were made. The 50 actual authenticated Kompas/ChatGPT paired answers, independent human grades, and native Windows/WhatsApp/mobile session acceptance remain unverified. Do not substitute offline synthetic tests for those acceptance gates.
+
+
+### 17 October WhatsApp event — new durable evidence found, delivery still unproven
+A read-only production query found one WhatsApp resume_tailor usage event at 2026-10-17 22:28:27.372685 UTC (17:28:27 Chicago): metadata score 87, 34 calls, 205,546 input tokens, 25,331 output tokens. The score is not a verified final-DOCX ATS score. The event has no source_event_key and its metadata has no output path, request ID, Meta message ID or delivery state. There is no resume_documents or identity_audit row in the same 20-minute window, and no dedicated WhatsApp/webhook/delivery/message/R2 table in the public schema. Gmail and iZap searches did not surface the generated output or conversation; the connected iZap business has zero WhatsApp numbers. This does not prove Meta or R2 have no history.
+Continue: recover the generated DOCX or exact R2 object key, per-run request correlation, Meta message ID and signed delivered/read callback; reconcile the conflicting education/employment/credential facts with the owner before replay. No real send was attempted.
+
+
+### Approved mobile navigation correction — implementation on PR #286 branch
+The 4 Oct 2026 owner correction is explicit: opening the hamburger must not block or overlay content; the menu expands below the sticky top bar in normal document flow and pushes the page content down. No later user correction supersedes it. Current master had regressed to a fixed floating drawer with a dimming scrim and an inert main page. PR #286 now changes the sidebar to an in-flow expanding panel, removes the scrim/inert behavior, preserves Escape and link-close behavior, adds outside-click close and corrects aria-controls to the actual navigation element. A source regression is wired into npm prebuild. This is not merged/deployed and does not constitute real mobile-device acceptance.
+Continue: require exact-head CI, Plan/REA and Kompas checks; the separate Kompas voice preview gate currently fails because the private KOMPAS_VERCEL_API_TOKEN is not configured. Do not bypass or expose it. After release, verify the expanded panel on a real narrow viewport and confirm the main content is pushed down rather than covered.
+
+
+## 10 November 2026 — PR #286 exact-head CI repair
+
+The approved 4 Oct mobile hamburger correction remains on PR #286, not merged or deployed. Exact head `0d91049bc4cdc3cdc12752c97d223f9f56b6c570` passed Plan/REA schema `42864243131` and Kompas baseline `42864243093`, but full CI `42864244587` failed at TypeScript: the newly added Oct 17 WhatsApp evidence-audit REA record used method/state values outside the declared `ReaSession` unions. The correction changes only those metadata values to the supported `Source and artifact analysis` and `Blocked`; no navigation/runtime behavior changes. The exact-head full CI, Plan/REA schema and Kompas baseline must rerun after this commit. Vercel PR preview status is failed/build-rate-limit; do not bypass it or promote another deployment. Real narrow-mobile viewport acceptance remains pending.
+
+
+## 10 November 2026 — follow-up CI repair and Chief Relevance reconciliation
+
+PR #286 head `01e708e3127e15688903260d31adf4f736693db6` fixed the earlier REA enum TypeScript errors. Exact-head full CI `42865517839` then passed lint/typecheck and reached the test suite, where one stale assertion failed: `scripts/tests/kompas-deploy-build.test.mjs` still expected the previous `package.json` prebuild string and omitted the newly added `scripts/tests/dashboard-shell.test.mjs`. The test expectation is updated to include the new regression; all existing Webpack/build assertions remain. Exact-head full CI, Plan/REA schema and Kompas baseline must rerun on the new commit.
+
+The protected Kompas voice-preview HTTP gate `42865508885` failed closed after 17/17 synthetic resolver tests passed because `KOMPAS_VERCEL_API_TOKEN` is missing from the private workflow environment. Vercel's PR status is also failure, and a deployment lookup for the exact PR SHA returned zero preview deployments. Do not bypass protection, set/expose credentials, promote a different SHA or merge while required release checks are failed/unverified. The real narrow-mobile viewport check remains pending.
+
+Separately, the four owner-approved offline Kompas relevance folds are already merged and included in production SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`, READY deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`. Their sequential 150-draft Jaccard>=0.7 pair count moved 84 -> 16 -> 4 -> 1 -> 0; this is offline fixture evidence, not live model quality. The live 50-pair/human gate and native Windows/WhatsApp/mobile acceptance remain open as recorded in `docs/kompas/CHIEF_RELEVANCE_HANDOFF.md`.
+
+
+## 10 November 2026 — Poke-style per-account Gmail sync health
+
+The approved multi-account Gmail/mobile direction requires each inbox to show its last successful sync and partial failures. Production read-only aggregates show 3 connected accounts, 2,002 cached threads and 3 sync rows; latest sync-table write was 14:44:44 UTC and latest thread write 14:46:49 UTC on 10 Nov. Edge logs show 22 sync-table POSTs and 49 thread-table POSTs in the preceding 24 hours. These are activity counts, not evidence of a failed background worker. Source review found that `gmail-updates.ts` already persisted per-account `checkedAt` and page cursors, while the UI only displayed a local global last-checked time. PR #286 now adds inline per-account `never`/`checked`/`partial`/`error` status and last-success timestamps, preserving account isolation and hiding Gmail history IDs/page tokens. The 30-second refresh remains visible-page only; `GMAIL_UPDATES_SCHEDULER_ENABLED` remains false. No real Gmail request, email send or WhatsApp send was performed. Exact-head full CI, Plan/REA schema and Kompas baseline must pass after this change; the protected voice-preview gate still needs the private `KOMPAS_VERCEL_API_TOKEN`, and Vercel has not produced an exact-head preview. Two-account and narrow-mobile device acceptance remain pending.
+
+
+## 10 November 2026 — PR #286 exact-head TypeScript repair
+
+PR #286 head `dd617fa4a3bce9fe8f5a161607a534b5062a4693` completed full CI `42868709468`: Lint passed, but Type-check failed because the new Gmail per-account sync-health REA record omitted the required `commits` array. The exact compiler error is TS2345 at `src/lib/rea-register.ts(275,22)`. The Plan/REA schema run `42868709549` and Kompas baseline `42868709777` passed on that prior head. A metadata-only correction now adds the implementation commit to the REA record; it does not change runtime code.
+
+PR #286 remains open and unmerged. Its Vercel status is FAILURE and no exact-head preview deployment exists. The separate protected Kompas voice-preview gate still requires the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection or expose credentials. The canonical production alias remains READY on master `11efbbfe7781592bc2fad1216f67546882a1c3ed`. Exact-head full CI, Plan/REA and Kompas baseline must rerun after this fix. Two-account, per-account reconnect/From preservation and real narrow-mobile acceptance remain pending. The unattended scheduler stays disabled; no real email or WhatsApp test was sent.
+
+
+## 10 November 2026 — current Vercel HTTP disablement and historical log-retention wall
+
+A fresh production HTTP smoke performed by the separate Kompas Continuous Voice Delivery task found that the canonical alias `job-dashboard-fawn.vercel.app` returns HTTP `402 DEPLOYMENT_DISABLED` for `/kompas/version.json`, `/api/health`, `/kompas/app.js`, `/kompas/caption-focus.js` and `/kompas/caption-once.js`. Vercel deployment metadata still reports READY deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` at master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`, and the alias remains assigned, but that is not reachable-production proof. The Vercel project-inspection API returned 403 and the CLI is not installed in this environment. No deployment, promotion, rollback, billing change or credential change was attempted. The authorized Vercel account/project owner must restore HTTP availability before production acceptance.
+
+PR #286 metadata repair `c5611b996ce2212e58515a92d1f595fea314e08f` passed exact-head full CI `42870704824`, Plan/REA `42870706021` and Kompas baseline `42870704615`. The protected voice-preview gate `42870697182` failed after 17/17 synthetic resolver tests because the private `KOMPAS_VERCEL_API_TOKEN` is empty; the Vercel PR status is failure and no exact-head preview exists. PR #286 remains unmerged. The next prerequisite is both restored Vercel deployment availability and private configuration of the authorized preview token; do not bypass protection.
+
+A separate read-only Vercel runtime-log query for the 17 Oct WhatsApp window (2026-10-17 22:00–23:00 UTC) failed with HTTP 400 because Hobby retains runtime logs for one hour. This is not proof that no historical logs existed. The exact generated DOCX/R2 object key/Meta message ID/signed delivery receipt remain missing. No replay or real WhatsApp test was performed.
+
+Continue: restore Vercel account/project HTTP availability; configure `KOMPAS_VERCEL_API_TOKEN` privately; then obtain a protected exact-head preview and re-run production HTTP checks. Separately obtain authorized R2/Meta output and signed delivery evidence plus owner reconciliation of conflicting source facts. Keep Gmail background delivery disabled and preserve the two-account/mobile acceptance gates.
+
+
+## 10 November 2026 — Gmail feature tests wired into CI; REA type error corrected
+
+The exact-head full CI run `42872275225` on `a6f51146bebba1c900bf0c9b732748b6d94af6a2` failed at Type-check with TS1117 at `src/lib/rea-register.ts(256,639)`: the newly added WhatsApp log-retention REA source object had two `label` properties. The Plan/REA schema `42872274833` and Kompas baseline `42872275226` passed on that prior head. The duplicate source label is corrected to one unique label.
+
+A second coverage gap was found: `scripts/tests/mail-updates.test.mjs` and `scripts/tests/mail-updates-ui.test.mjs` existed on PR #286 but were not referenced by any of the 14 GitHub workflows or package prebuild. The prior full CI pass therefore did not run the actual per-account cursor/delivery or Inbox Updates UI suites. The canonical `.github/workflows/ci.yml` now adds an explicit mocked-only step for both files after the WhatsApp channel safety tests. These suites mock fetch, storage, provider receipts and WhatsApp delivery; no real Gmail or WhatsApp request is sent. Exact-head CI must prove the new step passes.
+
+The production HTTP blocker remains separate: the active Voice Delivery audit reported HTTP 402 `DEPLOYMENT_DISABLED` for five canonical production endpoints even though deployment metadata remains READY. The protected preview gate also lacks the private `KOMPAS_VERCEL_API_TOKEN`. PR #286 remains unmerged; no deployment, promotion, email or WhatsApp send was attempted.
+
+
+## 10 November 2026 — exact-head CI/REA typing repair for Gmail test wiring
+
+Full CI `42872834950` on `275356918157bb1b0852da94f4e7750f8d19d6f3` failed at Type-check before the new mocked Gmail tests ran. The compiler found three metadata errors: journal area `release` is outside the allowed union; REA method `Source and test analysis` is outside the allowed union; and both steps in the new Gmail CI-wiring REA record lacked required `status` and `evidence`. The earlier duplicate-label TS1117 was already corrected. Plan/REA run `42872834912` failed on the missing step evidence; Kompas baseline `42872834917` passed. The new Gmail test step was skipped because Type-check failed.
+
+The correction changes the journal area to `all`, uses the supported REA method `Source and artifact analysis`, and adds allowed step status/evidence plus the implementation commit reference. The next exact-head run must pass TypeScript, Plan/REA, Kompas baseline and the newly wired `mail-updates.test.mjs` / `mail-updates-ui.test.mjs` step before this feature is considered automated-test verified. The protected voice-preview gate still lacks the private `KOMPAS_VERCEL_API_TOKEN`; Vercel PR status is failure and the canonical production alias returns HTTP 402 `DEPLOYMENT_DISABLED`. No deploy, email or WhatsApp message was sent.
+
+
+## 10 November 2026 — final journal area enum correction
+
+Exact-head full CI `42873395900` on `0710c6fd43041b042b5104aec9b50ea1480b7e68` failed Type-check with TS2322 at `src/lib/plan-vision-journal.ts(20,56)`: the earlier REA duplicate-label repair entry still used unsupported area `release`. The REA method and step status/evidence errors were already corrected. Plan/REA `42873395916` and Kompas baseline `42873396010` passed on that head; the new Gmail mocked test step was skipped because Type-check failed. The area is corrected to the supported `all` value. Exact-head full CI must rerun and must execute the newly wired `mail-updates.test.mjs` and `mail-updates-ui.test.mjs` step before claiming test coverage.
+
+## 10 November 2026 — Poke Gmail refresh regression follow-up
+
+PR #286 remains open. Its exact head `9a15cb720d99ad102e7a3a4f2d3cd18307b167fe` passed Plan/REA schema and Kompas baseline but failed full CI `42883543108` at the mocked Inbox Updates UI assertion: the event and provider-acceptance rows updated after POST, but the per-account health panel was missing. The current branch commit `945349e559f336aebf6d91aec282b556578e3cef` applies the complete account-health array returned by POST as the authoritative snapshot rather than merging it. Exact-head Plan/REA `42885821426` and Kompas baseline `42885821421` are SUCCESS; full CI `42885821430` is IN_PROGRESS. Do not merge until it completes and the Gmail UI/cursor step passes.
+
+The production alias metadata is READY at `11efbbfe7781592bc2fad1216f67546882a1c3ed` and `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, but the separate Voice Delivery HTTP audit reports 402 `DEPLOYMENT_DISABLED` on five public endpoints. Project inspection returns 403. The protected preview gate also needs the private `KOMPAS_VERCEL_API_TOKEN`. Do not deploy/promote, expose credentials, or bypass these gates. The exact account/device acceptance remains two authorized inboxes (one healthy, one partial/failed), affected-inbox-only reconnect, selected-From preservation and real narrow-mobile viewport verification. Keep the unattended worker disabled and send no real email or WhatsApp tests.
+
+Continue: after exact-head CI on `945349e` finishes, if the Gmail tests pass, request the authorized protected preview prerequisites and continue the approved two-inbox/mobile acceptance; if blocked, continue the next scheduled contract crawler post-release verification on 11 Nov 2026 11:00 UTC and keep the 17 Oct WhatsApp output/trace and source-fact reconciliation gates open.
+
+
+## 10 November 2026 — Poke Gmail exact-head CI passed
+
+PR #286 current head `7c3da41291367792b479f980e5c83452a136b875` passes full CI `42886388540`, including job `130075704343` step 21 for the mocked per-account cursor/delivery and Inbox Updates UI suites. Plan/REA `42886388693` and Kompas baseline `42886388956` also pass. The prior `9a15cb7` UI failure is resolved by `945349e559f336aebf6d91aec282b556578e3cef`, which applies the complete POST account-health snapshot as authoritative. This is not live two-inbox or mobile acceptance.
+
+PR #286 remains open and unmerged. Vercel's exact-head status is FAILURE; the protected voice-preview gate still needs the private `KOMPAS_VERCEL_API_TOKEN`; production HTTP returns `402 DEPLOYMENT_DISABLED` despite READY metadata, and project inspection returns 403. Do not deploy, promote, bypass protection or send real email/WhatsApp. The authorized Vercel owner must restore HTTP access and configure the private token; then obtain a protected exact-head preview and perform two authorized inbox plus narrow-mobile acceptance. Keep the background scheduler disabled.

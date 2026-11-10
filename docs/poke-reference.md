@@ -84,3 +84,11 @@ Production verified READY on 26 October 2026: dpl_DMKpH4wn4tDqJwjhfB9N5HMCuQXU, 
 
 
 27 October release reconciliation: PR #85 merged as 9799d1ac1bc4a963398c54ed0898fa0c3124055c. Seventeen focused tests and TypeScript passed; retained full regression completed 1124/1124 with zero failures in 56.1 seconds. Production dpl_3kLWQEavD2PCvwGbGyfMXuVeTNS7 verified READY at exact merge SHA, target production, job-dashboard-fawn.vercel.app assigned and aliasError null. Supersedes preview/production-pending notes for the positive outbound timestamp and schedule-order guards only. Pure helper remains unintegrated; next add account-scoped verified observations to review without enabling execution. Atomic claims, explicit schedule fields and live Gmail acceptance remain pending. No email sent.
+
+
+Per-account health is shown inline in the existing Inbox Updates panel: each connected inbox exposes only its last successful cursor timestamp and one of `never`, `checked`, `partial` or `error`. A partial history page or a current refresh failure is labelled against the affected inbox. Gmail history IDs and page tokens never reach the browser. This display does not enable a background worker; visible-page refresh remains separate from scheduled ingestion and WhatsApp delivery.
+
+
+## Automated regression coverage
+
+The canonical full CI workflow is wired to run `scripts/tests/mail-updates.test.mjs` and `scripts/tests/mail-updates-ui.test.mjs` as mocked-only tests; exact-head execution and pass are still pending. They cover account-scoped cursors, partial and failed refreshes, delivery reservations, no cross-account notification, selected-account preferences, visible status and truthful delivery/read labels. The tests use mocked fetch, storage and provider receipts; they do not contact Gmail or WhatsApp. Real two-inbox and narrow-mobile acceptance remains separate.
