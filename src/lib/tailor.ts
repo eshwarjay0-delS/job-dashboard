@@ -721,7 +721,6 @@ export async function runTailor(opts: {
       for (const i of countedRoles) {
         const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
         const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
-        const supportedMissing = [...sourceTerms].filter(k => !currentTerms.has(k))
         const missing = missingRoleEvidenceTerms(sourceTerms, currentTerms, cur.required[i])
         if (!missing.length && !lacking.has(i) && !cur.partial?.pendingRoles?.includes(i)) continue
         const add = 0 // Preserve the original paragraph count and format.
