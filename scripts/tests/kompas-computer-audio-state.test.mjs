@@ -149,7 +149,7 @@ test('cancelled pending capture does not restore stale busy state', async () => 
 });
 
 test('computer audio is opt-in; the first tap enables it for the next Start without capturing early', async () => {
-  assert.match(app, /const srcOn = \\{ mic: true, sys: false \\};/,
+  assert.ok(app.includes('const srcOn = { mic: true, sys: false };'),
     'computer audio must not be preselected before the user opts in');
   const handlerStart = app.indexOf('$("sysBtn").onclick = async () => {');
   const handlerEnd = app.indexOf('// Initial source-state render', handlerStart);
