@@ -46,8 +46,17 @@ test('the identity guard stays strict when the JD terms gate is off', () => {
     assert.equal(sameResumeIdentity(repeatedDates, repeatedDates.replace('Project Beta 2021-01', 'Project Beta')), false)
     assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
     assert.equal(sameResumeIdentity(src, src.replace('linkedin.com/in/eshwar-jay', 'github.com/eshwar-jay')), false)
-    // Host casing, scheme and a trailing slash are formatting-only; path casing is identity-bearing.
-    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'https://www.LINKEDIN.com/in/eshwar-jay/')), true)
+    // Host casing, the www alias and an origin-root slash are formatting-only.
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'https://www.LINKEDIN.com/in/eshwar-jay')), true)
+    const rootUrl = src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com')
+    assert.equal(sameResumeIdentity(rootUrl, rootUrl.replace('https://linkedin.com', 'https://www.LINKEDIN.com/')), true)
+    // Scheme, non-root trailing slash, query and fragment are part of the link target.
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'http://linkedin.com/in/eshwar-jay')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com/in/eshwar-jay/')), false)
+    const queryUrl = src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com/in/eshwar-jay?redirect=/')
+    assert.equal(sameResumeIdentity(queryUrl, queryUrl.replace('?redirect=/', '?redirect=')), false)
+    const fragmentUrl = src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com/in/eshwar-jay#section/')
+    assert.equal(sameResumeIdentity(fragmentUrl, fragmentUrl.replace('#section/', '#section')), false)
     const caseSensitivePath = src.replace('https://linkedin.com/in/eshwar-jay', 'https://github.com/Eshwar/Kompas')
     assert.equal(sameResumeIdentity(caseSensitivePath, caseSensitivePath.replace('Eshwar/Kompas', 'eshwar/Kompas')), false)
     assert.equal(sameResumeIdentity(src, src + '\njayeshwar44@gmail.com'), false)
