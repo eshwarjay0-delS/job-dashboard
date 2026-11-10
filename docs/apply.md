@@ -154,9 +154,9 @@ Verification: six simulated Electron lifecycle/isolation/navigation checks, eigh
 
 - PR #266 `Exclude stale crawler listings and retire eTeam's 404 feed` merged as `30bd971c97937b9dea8716b945fa3b1219b07544` from exact head `2a88796c3cb5f2955655701f203abd2fc15605b2`.
 - Exact-head full CI `42735808768`, Crawler freshness regression `42735808764`, and Kompas baseline `42735808778` all completed SUCCESS.
-- Production deployment `dpl_AUuJFms4osu6TPYg768Ydy5ABhCT` was READY at `30bd971`. The current canonical alias `job-dashboard-fawn.vercel.app` is independently READY at descendant `23ec076b944519e518060f14e2ce530238e8393a`, deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`, which includes the crawler fix.
+- Production deployment `dpl_AUuJFms4osu6TPYg768Ydy5ABhCT` was READY at `30bd971`. The current canonical alias `job-dashboard-fawn.vercel.app` is independently READY at descendant `a66c108bff6175149c4aadd882ab11128445b8cc`, deployment `dpl_7gjdfRFeLjqcPdVC52NkaEatugKA`, which includes the crawler freshness fix. The newer classifier merge `f7f322f` is not yet on the production alias.
 - Source registry now has 20 active adapters and 10 pending/manual-only sources. eTeam is removed from active crawling, its official careers link remains manual, and all existing records are preserved. The public jobs API applies the 14-day `last_seen_at` cutoff.
-- Read-only production database snapshot: 14,164 stored rows, 12,353 active, 12,170 active within 14 days, and 183 stale active rows that the API excludes. eTeam has 907 stored/818 active rows last seen 8 Nov; they remain stored and can remain visible until the 14-day window expires.
+- Read-only production database snapshot at 2026-11-10 15:35 UTC: 14,566 stored rows, 12,407 active, 12,059 active within 14 days, and 348 stale active rows excluded by the API. eTeam has 907 stored/818 active rows, newest `last_seen_at` 8 Nov 11:01 UTC; the rows remain stored.
 - The latest completed crawl is still the pre-change 9 Nov 11:00 UTC run: 6,976 found/upserted across 21 adapters, with one eTeam HTTP 404. The first post-change scheduled crawl has not completed yet.
 - Robert Half remains pending until its official response structure is captured and tested. No adapter or live vacancy is claimed.
 - The public `GET /api/crawl/jobs?limit=1` smoke remains pending because this runtime could not resolve the public Vercel hostname. Deployment control-plane status and read-only DB counts are verified; runtime API response is not.
@@ -166,3 +166,6 @@ Verification: six simulated Electron lifecycle/isolation/navigation checks, eigh
 ### 10 November 2026 — work-type classifier parity
 
 The crawler now uses the same `contractTypes()` evidence taxonomy as Apply when normalizing portal results. This recognizes the explicit `C2H` shorthand as contract work, keeps W2 payroll by itself as unknown (W2 alone is not proof of a contract), and avoids the previous broad `/temp/i` substring that could match words such as `template` or `attempt`. Permanent/direct-hire classification remains distinct, and explicit contract evidence takes precedence when a title also contains full-time wording. Existing rows are not rewritten by this source change; the next successful crawl reclassifies only listings it sees again.
+
+
+10 Nov 2026 scheduled-crawl update: the 11:00 UTC run found/upserted 6,818 jobs across 20 portals with one Inspyr abort. It executed under production SHA a66c108, so the master-only contract classifier change in f7f322 was not active. The first post-release crawl remains pending; no production rows were manually changed.

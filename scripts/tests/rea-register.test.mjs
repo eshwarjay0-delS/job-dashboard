@@ -25,3 +25,45 @@ test('released desktop browser remains deployed with acceptance still explicit',
  assert.equal(entry.state,'Deployed, verification pending')
  assert.match(entry.limits,/real portal\/SSO\/upload\/restart acceptance pending/)
 })
+
+
+test('Oct 17 WhatsApp source recovery separates deployed code from blocked historical acceptance', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-source-recovery-2026-11-10')
+ assert.ok(entry)
+ assert.equal(entry.state,'Deployed, verification pending')
+ assert.ok(entry.steps.some(s=>s.status==='Tested' && s.evidence.includes('dpl_7gjdfRFeLjqcPdVC52NkaEatugKA')))
+ assert.ok(entry.steps.some(s=>s.status==='Blocked' && s.finding.includes('generated output')))
+ assert.match(entry.next,/owner reconciliation/)
+ assert.match(entry.next,/signed delivery\/read receipt/)
+})
+
+
+test('final-DOCX Gemini, source-archive, Gmail and crawler acceptance gates stay explicit', () => {
+ const gemini=REA_SESSIONS.find(s=>s.id==='resume-gemini-final-docx-ats-review-2026-11-10')
+ assert.ok(gemini)
+ assert.equal(gemini.state,'Blocked')
+ assert.match(gemini.next,/final-DOCX/)
+ const source=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-source-archive-verification-2026-11-10')
+ assert.ok(source)
+ assert.ok(source.steps.some(s=>s.status==='Tested' && s.finding.includes('27,724 bytes')))
+ assert.ok(source.steps.some(s=>s.status==='Blocked' && s.finding.includes('R2 key')))
+ const gmail=REA_SESSIONS.find(s=>s.id==='gmail-poke-background-update-2026-11-10')
+ assert.ok(gmail)
+ assert.equal(gmail.state,'Blocked')
+ assert.match(gmail.limits,/No live Gmail API call/)
+ const crawler=REA_SESSIONS.find(s=>s.id==='contract-crawler-work-type-postmerge-run-2026-11-10')
+ assert.ok(crawler)
+ assert.equal(crawler.state,'Blocked')
+ assert.match(crawler.limits,/post-classifier crawl/)
+})
+
+
+test('Oct 17 public REA record avoids private source locators', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'whatsapp-oct17-source-archive-verification-2026-11-10')
+ assert.ok(entry)
+ const publicRecord = JSON.stringify(entry)
+ assert.match(publicRecord, /private Library(?: resume)? archive/)
+ assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{16}\\b/i)
+ assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
+ assert.doesNotMatch(publicRecord, /\\.docx/i)
+})
