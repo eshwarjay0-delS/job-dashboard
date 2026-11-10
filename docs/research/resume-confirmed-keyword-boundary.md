@@ -75,3 +75,20 @@ Final review found a pre-existing web fact-check fail-open: unreadable source/ex
 The current implementation separates candidate confirmations from employer requirements in `candidateEvidenceInput`. `confirmedCandidateStatements` accepts first-person experience assertions and rejects editing instructions, questions, negations and JD-only requirement lists. `explicitlyConfirmsAllRequirements` recognizes the owner's explicit statement, “I have experience with all of them evenly,” while rejecting exceptions and formatting requests.
 
 The focused regression now pins both sides: the explicit blanket statement is accepted, while “Add all keywords,” “Make this 98% match,” and a bare required-skills list are not blanket experience evidence. This is a source-level guard, not a live model generation, a 98% match claim, or employer verification. The exported DOCX still needs an authenticated baseline/JD/confirmation review before quality can be accepted.
+
+
+## 10 November 2026 — close the unverified-claim delivery loophole
+
+A source audit found two contradictions against the existing confirmed-experience boundary:
+
+1. `tailor.ts`'s default writer preferences still said to write every JD term into current/previous experience and that the candidate claimed the full JD skill set, despite `forcedJdKws` and `jdKwsPrompt` already being evidence-bound.
+2. The mandatory experience-weaving pass used every `scoreKws` term instead of only `jdKwsPrompt`. The extra Gemini-related pass also admitted new generated terms without checking whether they appeared in the original resume or explicit first-person confirmations.
+3. `whatsapp-resume-acceptance.ts` included `unverified_jd_terms` in `WHATSAPP_SHORTFALL_REASONS`. As a result, a draft with an unsupported experience claim could be marked unusable by `acceptableWhatsAppResume` while still being considered sendable by `whatsappRewriteUsable`. A caption saying “confirm this” does not make a false experience claim safe inside the DOCX.
+
+The new draft fix keeps the user's separate labelled `Job-post terms` line intact, but:
+- rewrites the default prompt so only source-supported JD terms and explicit first-person confirmations can be written as experience;
+- limits mandatory role weaving to `jdKwsPrompt`, with per-role source evidence;
+- filters Gemini-related additions against the original resume plus explicit candidate confirmations before they enter the prompt or score; and
+- removes `unverified_jd_terms` from the WhatsApp shortfall allow-list, so an unverified claim uses the already-chosen same-account resume fallback rather than sending the generated DOCX.
+
+Regression coverage now checks that unverified claims are not sendable, that the default writer prompt does not turn JD requirements into candidate claims, and that generated related terms are filtered against candidate evidence. Existing 70% WhatsApp delivery-with-gaps policy and 95% supported-coverage clean-pass rule remain unchanged. This is a draft implementation only; no live model call, resume write, WhatsApp send or production release occurred. The Safe Merge Gate requires an explicit owner decision before changing external-send behavior.
