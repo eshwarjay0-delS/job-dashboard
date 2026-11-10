@@ -1749,7 +1749,7 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
 // Send the document and keep a copy of this exact version, recorded under the sent
 // message's id, so a later swipe-reply to it can be traced back and edited.
 async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">, opaqueJobId?: string, requireStored = false): Promise<string> {
-  const vfile = path.join(VERSIONS_DIR, digits(from), \`mwaab1xw-\${randomBytes(4).toString("hex")}.docx\`)
+  const vfile = path.join(VERSIONS_DIR, digits(from), Date.now().toString(36) + "-" + randomBytes(4).toString("hex") + ".docx")
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
   if (requireStored && !(await stored)) {
@@ -1758,7 +1758,7 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   }
   let wamid = ""
   try {
-    wamid = await sendDocument(from, file, \`\${name}.docx\`, caption, opaqueJobId)
+    wamid = await sendDocument(from, file, name + ".docx", caption, opaqueJobId)
   } catch (e) {
     if (await stored) await deletePath(vfile)
     throw e
