@@ -58,3 +58,19 @@ The **minimum code gate** is lint + typecheck + existing 50 cumulative relevance
 The **live quality gate** is a consented set of at least 50 real paired candidate responses from identical source materials and question conditions. Review exact intent, requested terms, evidence support, unnecessary jargon, clarity, spoken delivery, and latency separately. Factual claims not explicitly established by the resume are not "verified" merely because they sound plausible.
 
 A "chief" does not maximize technical verbosity. It learns what the person needs, selects sound evidence, gives the smallest complete answer, and knows precisely when detail is necessary. Preserve that decision priority during every later feature addition.
+
+
+## 10 November 2026 — current release and acceptance ledger
+
+Production alias `job-dashboard-fawn.vercel.app` is READY at `a66c108bff6175149c4aadd882ab11128445b8cc`. Commit ancestry confirms it includes the merged question-first/relevance chain: PR #113 (50-fold relevance discipline), PR #114 (current ask/constraints kernel), validation-only PR #115, and later answer-shape PRs #252, #253 and #258. This confirms release ancestry only; it does not establish live paired-answer quality.
+
+Open follow-up branches:
+- PR #262, “Answer the question on the card, and do not reuse a neighbouring sheet entry”, is OPEN, `mergeable=false`, based on `e93c737` rather than current master `f7f322f`. Its Vercel preview is READY, but no exact-head full CI run was found. Review and restack only after preserving the intervening #258 and master changes; then require exact full CI and the same-question live acceptance below.
+- PR #234, “Keep a coherent Kompas question window, not only the last fragment”, is OPEN, `mergeable=false`, based on older `3e2d235`. Its preview is READY, but its recorded suite had 197 pass / 2 fail and no exact-head full CI is verified. Do not treat it as released.
+- PR #270 audio-provenance type narrowing is DRAFT and belongs to the active Kompas Continuous Voice Delivery task. Keep voice, microphone, caption and audio changes with that task; do not duplicate its edits.
+
+The live 50-pair benchmark remains a hard acceptance gap. It requires the authorized private `KOMPAS_API_TOKEN`, approved original resume/JD/reference bundles, actual same-question Kompas and ChatGPT responses, and independent human 0–4 scorecards. Synthetic 50/54-fold fixtures, unit tests, source review or a READY preview are not substitutes. No real paired responses or human scores are available in this run.
+
+Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
+
+Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
