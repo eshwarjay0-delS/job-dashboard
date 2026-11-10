@@ -156,3 +156,12 @@ Continue: obtain the authorized original source bundle for exact incident replay
 ## 10 November 2026 — confirmed-experience boundary regression
 
 The resume source audit confirms that the generator receives explicit candidate statements separately from the employer's JD. Only baseline facts or explicit first-person assertions become forced experience evidence; a JD-only skill list or a formatting instruction is not a confirmation. Added a focused regression for the owner's explicit wording “I have experience with all of them evenly” and negative cases “Add all keywords”, “Make this 98% match”, and a bare required-skills list. This pins the existing boundary without changing runtime behavior. A green test is not a live 98% match or proof of a real exported resume; authenticated source-bundle review remains open.
+
+
+## 10 November 2026 — contract crawler release verified
+
+PR #266 merged as `30bd971c97937b9dea8716b945fa3b1219b07544` after full CI `42735808768`, crawler regression `42735808764`, and Kompas baseline `42735808778` all passed. Production deployment `dpl_AUuJFms4osu6TPYg768Ydy5ABhCT` was READY at that SHA; current canonical production alias is READY at descendant `23ec076b944519e518060f14e2ce530238e8393a` on `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`.
+
+The active registry has 20 adapters and 10 pending/manual-only sources. eTeam's failing feed is retired, the manual careers link remains, stored rows are preserved, and the public API filters listings older than 14 days. Read-only production counts: 14,164 stored; 12,353 active; 12,170 fresh within 14 days; 183 stale active excluded. The latest completed crawl is still the pre-change 9 Nov run (6,976 upserted, one eTeam 404); the first post-change scheduled crawl is pending. Public API HTTP smoke is unavailable because external DNS resolution failed. Robert Half remains pending until its official feed/HTML is captured and tested.
+
+Continue: verify the next scheduled crawl and public API freshness response; do not claim eTeam was skipped until a completed post-change run proves it.
