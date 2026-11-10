@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import JSZip from 'jszip'
 import mammoth from 'mammoth'
-import { checkRoundTrip, docxText } from '../../src/lib/resume-round-trip-guard.ts'
+import { checkRoundTrip, docxText, docxIdentityText } from '../../src/lib/resume-round-trip-guard.ts'
 import { buildKeywordReport } from '../../src/lib/resume-keyword-report.ts'
 
 const SRC = `Alex Example
@@ -144,6 +144,26 @@ test('DOCX identity extraction includes referenced headers, footers and external
   assert.match(sourceText, /linkedin\.com\/in\/alex-example/)
   assert.match(sourceText, /Jan 2020/)
   assert.equal(checkRoundTrip(sourceText, reformattedText).ok, true)
+})
+
+test('DOCX identity extraction rejects real name, email, phone and experience-date mutations', async () => {
+  const facts = {
+    paragraphs: ['Alex Example', 'alex.example@example.com | 555-010-1234', 'Example Corp — Jan 2020 – Present'],
+    header: 'Contact | 555-010-1234',
+    footer: 'Employment record | Jan 2020',
+    linkTarget: 'https://linkedin.com/in/alex-example',
+  }
+  const sourceText = await docxIdentityText(await syntheticIdentityDocx(facts))
+  const mutations = [
+    { changes: { paragraphs: ['Alexander Example', ...facts.paragraphs.slice(1)] }, category: 'name' },
+    { changes: { paragraphs: [facts.paragraphs[0], facts.paragraphs[1].replace('alex.example@example.com', 'other@example.com'), facts.paragraphs[2]] }, category: 'email' },
+    { changes: { paragraphs: [facts.paragraphs[0], facts.paragraphs[1].replace('555-010-1234', '555-010-1235'), facts.paragraphs[2]] }, category: 'phone' },
+    { changes: { paragraphs: [facts.paragraphs[0], facts.paragraphs[1], facts.paragraphs[2].replace('Jan 2020', 'Feb 2020')] }, category: 'date' },
+  ]
+  for (const mutation of mutations) {
+    const output = await docxIdentityText(await syntheticIdentityDocx({ ...facts, ...mutation.changes }))
+    assert.ok(checkRoundTrip(sourceText, output).problems.some(problem => problem.startsWith(mutation.category)), mutation.category)
+  }
 })
 
 test('DOCX identity extraction rejects header phone, footer date and hyperlink target mutations', async () => {
