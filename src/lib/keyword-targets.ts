@@ -16,7 +16,9 @@ const GENERIC = new Set([
   "technology", "technologies", "protocol", "protocols", "system", "systems", "solution", "solutions", "environment",
   "environments", "tool", "tools", "platform", "platforms", "team", "teams", "policy", "policies", "process", "processes",
   "standard", "standards", "service", "services", "application", "applications", "operations", "requirements",
-  "experience", "knowledge", "skills", "ability", "issues", "support", "management", "data", "security", "solutioning",
+    // 10 Nov 2026 source recovery: the 17 Oct Risk & Controls JD says "Solana", not a separate "sol" token, and uses "specialty" only inside AWS Security Specialty;
+  // "attributes" is not a JD requirement. Do not let either fragment/generic noun hold coverage.
+  "experience", "knowledge", "skills", "ability", "attribute", "attributes", "sol", "specialty", "issues", "support", "management", "data", "security", "solutioning",
   "projects", "project", "business", "stakeholders", "documentation", "enterprise", "infrastructure", "networks",
   // Seen as targets on 26 Oct 2026 (a PeopleSoft security post and a zero trust network post): words of the post's
   // sentences, not skills a recruiter searches for.

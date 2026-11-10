@@ -165,3 +165,12 @@ PR #266 merged as `30bd971c97937b9dea8716b945fa3b1219b07544` after full CI `4273
 The active registry has 20 adapters and 10 pending/manual-only sources. eTeam's failing feed is retired, the manual careers link remains, stored rows are preserved, and the public API filters listings older than 14 days. Read-only production counts: 14,164 stored; 12,353 active; 12,170 fresh within 14 days; 183 stale active excluded. The latest completed crawl is still the pre-change 9 Nov run (6,976 upserted, one eTeam 404); the first post-change scheduled crawl is pending. Public API HTTP smoke is unavailable because external DNS resolution failed. Robert Half remains pending until its official feed/HTML is captured and tested.
 
 Continue: verify the next scheduled crawl and public API freshness response; do not claim eTeam was skipped until a completed post-change run proves it.
+
+
+## 10 November 2026 — exact 17 October WhatsApp source recovered
+
+Continue: the original 27,724-byte DOCX has been recovered from the Library archive with exact SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`; the full matching Security Engineer – Risk & Controls JD is recovered from Gmail thread `1a1464393628992f`. The screenshot remains `1792276118790.jpeg` at 17 Oct 17:28 Chicago. The exact generated output and per-run R2/webhook/Meta delivery trace are still missing. iZap has no configured WhatsApp number and no matching chat history.
+
+The eight screenshot terms are not eight missing candidate skills: CCSP/CISM/CRISC/CISA/AWS Security Specialty are credentials (never add); Canton/Solana are preferred but unsupported in the source; `sol` is a fragment of `Solana`; `attributes` does not appear in the full JD. The source DOCX also conflicts with the owner-confirmed profile's education/employment/credential facts. Quarantine those claims until the owner reconciles them; do not count the JD's 5+ years as confirmed. The new source-backed filter/test PR covers only the generic fragment boundary; no 98% live match is claimed.
+
+The 6 Nov WhatsApp policy remains authoritative; do not restore the old 98% hard hold. No model call, real email, WhatsApp send, R2 write or production mutation was performed. Next: finish exact-head CI, obtain owner reconciliation and the exact output/R2/Meta trace before claiming historical replay or delivery.

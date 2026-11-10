@@ -146,3 +146,22 @@ test('Nov4 junk filter: adverbs, modifiers and prose compounds are not skills', 
   assert.equal(floor.length, 1)
   assert.ok(floor.includes('siem'))
 })
+
+
+test('17 Oct Risk & Controls JD: certification, preferred-platform and generic-fragment boundaries stay factual', () => {
+  const jd = 'Required: security risk assessments, control evaluations, remediation, NIST, ISO 27001, CIS Controls, COBIT, AWS, Azure, GCP, IAM, secrets management, encryption and key management. Preferred: blockchain, smart contracts, cryptography, Ethereum, Hyperledger Besu, Canton, Solana, Polygon, SSDLC, DevSecOps, Archer, ServiceNow GRC, MetricStream, CI/CD, CISSP, CISM, CRISC, CISA, CCSP, AWS Security Specialty.'
+  const extracted = ['risk assessments', 'control evaluations', 'NIST', 'ISO 27001', 'CIS Controls', 'COBIT', 'AWS', 'Azure', 'GCP', 'Canton', 'Solana', 'sol', 'specialty', 'CCSP', 'CISM', 'CRISC', 'CISA', 'AWS Security Specialty', 'attributes']
+  const targets = targetKeywords(extracted, [], jd)
+  for (const term of ['nist', 'iso 27001', 'cis controls', 'cobit', 'aws', 'azure', 'gcp', 'canton', 'solana']) assert.ok(targets.includes(term), 'kept JD term: ' + term)
+  for (const term of ['ccsp', 'cism', 'crisc', 'cisa', 'aws security specialty', 'sol', 'specialty', 'attributes']) assert.ok(!targets.includes(term), 'not a separate match target: ' + term)
+  assert.equal(isCertification('AWS Security Specialty'), true)
+  assert.equal(skillLike('sol'), false)
+  assert.equal(skillLike('attributes'), false)
+  assert.equal(skillLike('specialty'), false)
+
+  const source = 'Security risk assessments using NIST, ISO 27001, AWS and Azure; GRC evidence in Archer and ServiceNow GRC.'
+  const platforms = withoutUnsupportedSkills([{ idx: 7, text: 'Platforms: Canton, Solana, AWS, Azure.' }], source, ['Canton', 'Solana', 'AWS', 'Azure'])
+  assert.equal(platforms[0].text, 'Platforms: AWS, Azure.')
+  const credentials = withoutAddedCerts([{ idx: 8, text: 'Credentials: CISSP, CCSP, CISM, CRISC, CISA, AWS Security Specialty.' }], 'Credentials: CISSP, PenTest+, AZ-500.')
+  assert.equal(credentials[0].text, 'Credentials: CISSP.')
+})
