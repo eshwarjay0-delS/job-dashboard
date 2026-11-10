@@ -383,3 +383,11 @@ The referenced docs/kompas/CHIEF_RELEVANCE_HANDOFF.md still cites an older produ
 - No authenticated original-resume/JD/confirmation generation, live Gemini call, real DOCX export, live 95–100% match, email or WhatsApp send has been performed.
 
 Continue: finish exact-head full CI on PR #287; keep it unmerged until owner review and the protected preview/access prerequisites are resolved. Then restack PR #289 onto the approved #287 head, preserve both prompt-isolation and final-DOCX changes, and run full CI plus the required exact-head preview before any authenticated document acceptance.
+
+## 10 November 2026 — 17 October WhatsApp artifact recovery hard wall
+
+- Read-only Supabase audit of project `ruajlrzmxzprmmngluxy` found one `usage_events` row at `2026-10-17 22:28:27.372685Z` (17:28:27 CDT), `feature_key=resume_tailor`, `source_channel=whatsapp`, with 34 calls, score field 87, 205546 input tokens and 25331 output tokens. The score field is not independently defined as ATS percentage.
+- The event has no `source_event_key`, `r2_key`, `webhook_id` or `meta_message_id`. No `resume_documents` row was created in 22:20–22:40 UTC.
+- Vercel runtime logs for the 24-day-old interval are not retained on Hobby (API returned 400; retention is one hour). Gmail searches for DOCX/resume/MarketFit/WhatsApp on 17 Oct returned no matching threads. Library DOCX search found no uniquely correlated output. No Cloudflare R2/S3 connector is exposed here.
+- Exact source DOCX and JD are separately recovered; conflicting education/employment/credential facts remain quarantined. Output DOCX, R2 key, webhook/request ID, Meta message ID and signed delivery/read receipt are still missing.
+- Do not infer output persistence or delivery from 34 calls or score 87. Do not replay or send the historical request. The only unblock is the owner-supplied output artifact or exact R2/provider correlation record; otherwise classify the historical output/delivery as irrecoverable and use a separately authorized new request.
