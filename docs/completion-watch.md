@@ -325,3 +325,7 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+## 10 November 2026 — role-specific JD repair evidence
+
+Continue: verify the new role-level evidence helper on the exact final PR #287 head. The prior gap-fill loop sent global unseen JD terms to every employer role, even when only another role's source bullets supported them. The PR branch now filters each role's repair list against that role's original bullets and current bullets; profile/skills repair remains separate. Two direct helper tests isolate Splunk and Okta by role and reject unsupported Canton. Commits: 3101ed8, 29db227, dc7c435, 6d2cbcabc55b8998b17de413bedb4a9b7bb0315a. This is not a live model/DOCX result and does not change WhatsApp send policy. Exact-head CI, protected preview, authenticated exported-DOCX review and the historical 17 Oct output/R2/Meta trace remain pending.
