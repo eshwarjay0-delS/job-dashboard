@@ -28,7 +28,7 @@ When the user searches "software developer", the engine spiders all vendor porta
 - Modeled on how Jobright AI crawls LinkedIn and job sites into one database. We do the same for prime vendor portals.
 - Pipeline: scheduled crawler → per-site adapters → normalized job records (title, company, location, work type, rate if listed, posted date, source URL, vendor) → dedupe → full-text + faceted search (role, location, work type, remote).
 - Work-type tagging is mandatory: every job carries W2 / C2C / 1099 / C2H. Contract-only filtering is the default view.
-- Clearance-required roles are excluded by default across both the aggregated search and stored crawler lanes. Explicit `no clearance required` wording remains eligible; an internal API override does not change the default Apply experience. Evidence: `docs/research/contract-clearance-filter.md`.
+- Clearance-required roles are excluded by default across both the aggregated search and stored crawler lanes. Explicit `no clearance required` wording remains eligible; an internal API override does not change the default Apply experience. Evidence: `docs/research/contract-clearance-filter.md`. The crawler API scans ordered pages in a bounded window after clearance filtering so a cluster of clearance roles does not silently underfill results; `clearance_scan_limited` reports when the cap is reached.
 - Start with the top portals by volume; expand adapter coverage over time. Adapters are isolated per site so one site's redesign never breaks the rest.
 
 ### 2. Inclusive browser (browse without leaving)
