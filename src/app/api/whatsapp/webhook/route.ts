@@ -1683,6 +1683,11 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
     })
   }
 
+  if (!result || !file) {
+    await deferResumeRefinement(jobId, "generated_state_missing")
+    await tellRefinementOnce(jobId, job.from, "Your edit is saved, but I could not verify a complete updated document. No original or partial file was sent. I will retry from the saved version.")
+    return
+  }
   const lines = (result.diff || []).length + (result.edits?.extras || []).filter(e => (e.text || "").trim()).length
   if (!whatsappRewriteUsable(result)) {
     const reasons = whatsappResumeRejectionReasons(result)
@@ -1723,6 +1728,7 @@ async function processResumeRefinement(jobId: string, options: { maxMs?: number 
     }, jobId, true)
   } catch (error) {
     if ((error as Error)?.message === "version_store_failed") {
+      await patchResumeRecovery(jobId, { status: "pending", processingAt: 0, processingToken: "" })
       await deferResumeRefinement(jobId, "version_store_failed")
       await tellRefinementOnce(jobId, job.from, "I could not safely save the updated file, so no document was sent. Your edit is saved and I will retry.")
     } else {
