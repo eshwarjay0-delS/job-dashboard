@@ -11,10 +11,11 @@ test('both live Apply result lanes enforce the shared clearance boundary',()=>{
  assert.match(crawler,/searchParams\.get\("clearance"\) !== "include"/)
 })
 
-test('crawler exclusion happens before the caller limit is restored',()=>{
- assert.match(crawler,/fetchLimit = excludeClearance \? Math\.min\(limit \* 4, 100\) : limit/)
- assert.match(crawler,/const allowedJobs = excludeClearance/)
- assert.match(crawler,/const jobs = allowedJobs\.slice\(0, limit\)/)
- assert.match(crawler,/rows\.length - allowedJobs\.length/)
- assert.doesNotMatch(crawler,/rows\.length - jobs\.length/)
+test('crawler fills the requested limit with bounded clearance-safe pagination',()=>{
+ assert.match(crawler,/collectFilteredPages/)
+ assert.match(crawler,/query\.range\(offset, offset \+ pageSize - 1\)/)
+ assert.match(crawler,/job => requiresSecurityClearance/)
+ assert.match(crawler,/excluded_clearance: excludedClearance/)
+ assert.match(crawler,/clearance_scan_limited: clearanceScanLimited/)
+ assert.doesNotMatch(crawler,/fetchLimit/)
 })
