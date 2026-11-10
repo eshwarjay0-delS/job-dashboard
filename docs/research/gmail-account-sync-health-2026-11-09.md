@@ -33,3 +33,10 @@ Use two authorized test inboxes: one successful and one partial or failed. Confi
 The implementation was restacked onto current master `51cb716393efb1f54cdc6173c8e6b7ee6f034241` as source commit `11582106771e4f9c94f9325bd5da0108b6171f5f`. PR #271 is intentionally DRAFT. The old PR #268 exact head passed full CI `42738187227`, Kompas baseline `42738186923` and the Gmail-specific regression `42738186930`; those results do not validate the restacked head. Exact-head checks must be rerun.
 
 The separate acceptance gate remains open: two authorized connected inboxes (one healthy, one partial/failed), status and last-success timestamp isolation, recovery without changing the selected From identity, and a narrow mobile viewport. No Gmail API call, email send or WhatsApp send was performed.
+
+
+## 10 November exact-head validation update
+
+Gmail account-sync-health regression 42752094672, Kompas baseline 42752095031, and full CI 42752095028 all completed SUCCESS on exact head d4d3ac7d270f7b1d7d281a70cd558b2d424c90cd. Preview dpl_G2sX9yZEUis54yvaeoFStS6UXVnf is READY at that exact SHA. Production alias job-dashboard-fawn.vercel.app remains READY at master 51cb716393efb1f54cdc6173c8e6b7ee6f034241 on dpl_G92eEx6vGFhgfstAocq9jkGKm6i9; PR #271 is not deployed. Read-only production aggregate: 3 Gmail sync rows, 1 user, 3 connected account IDs; all 3 have a last_sync_at within 24 hours, none within the last hour. This proves persisted sync activity only, not the new status UI or a controlled partial/failure/reconnect scenario.
+
+The exact-head code gates are now complete, superseding the earlier restack note that said to rerun them. PR #271 remains DRAFT because the required authenticated test is not available here: two authorized inboxes with one healthy and one partial/failed, recovery without changing the selected From identity, and a narrow mobile viewport. No Gmail API calls, emails or WhatsApp messages were sent. Do not merge or deploy from CI alone.
