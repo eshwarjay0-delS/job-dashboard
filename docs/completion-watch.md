@@ -236,3 +236,14 @@ A second mismatch allowed `unverified_jd_terms` in the WhatsApp shortfall allow-
 - Tests added: unverified claims cannot be sent; source contract pins the writer prompt, related-term filter and role-weaving boundary.
 - Exact-head Kompas baseline `42775486253`, full CI `42775486431`, and WhatsApp recovery regression `42775486380` are IN PROGRESS. Vercel status is pending.
 - This changes WhatsApp external-send behavior. It remains DRAFT pending explicit owner review; no live model generation, resume write, email, WhatsApp send, R2 write or production deployment occurred.
+
+
+## 10 November 2026 — Kompas Chief Relevance and voice coordination
+
+- The canonical production alias `job-dashboard-fawn.vercel.app` at READY SHA `a66c108bff6175149c4aadd882ab11128445b8cc` includes merged Chief Relevance PR #113, #114, validation-only #115, and later answer-shape PRs #252, #253 and #258. This is source/release ancestry, not proof of live model quality.
+- PR #262 (answer the question on the card and avoid neighbouring sheet entries) remains OPEN and `mergeable=false`, based on `e93c73751c77b98a88936c144c7dfa851b857f6a` rather than current master `f7f322f`. Its Vercel preview is READY, but no exact-head full CI run was found. Do not merge without a careful current-master conflict review and exact full CI.
+- PR #234 (coherent question window) remains OPEN and `mergeable=false` on old base `3e2d235`; its preview is READY but its recorded suite had 197 pass / 2 fail. It is not a verified release.
+- PR #270 audio-provenance type narrowing is DRAFT and belongs to the active Kompas Continuous Voice Delivery task. Do not duplicate its edits.
+- Issue #152 remains OPEN: the authenticated exact-head voice preview HTTP gate needs the private `KOMPAS_VERCEL_PREVIEW_BYPASS`, which is empty. The separate PR #278 voice gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never expose secrets, bypass Vercel protection or count a skipped/failed preview gate as passed.
+- The required 50 actual authenticated same-question Kompas-versus-ChatGPT answer pairs and independent human scorecards remain unperformed. They require the authorized `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. Synthetic 50/54-fold fixtures do not satisfy this acceptance.
+- Native Windows/WhatsApp/mobile voice and session E2E remains unverified. Keep the Voice Delivery task as owner for microphone, captions, preview-gate and audio-provenance changes.
