@@ -8,7 +8,6 @@ import { oxford } from "./portals/oxford.ts"
 import { insightglobal } from "./portals/insightglobal.ts"
 import { inspyr } from "./portals/inspyr.ts"
 import { brooksource } from "./portals/brooksource.ts"
-import { eteam } from "./portals/eteam.ts"
 import { eliassen } from "./portals/eliassen.ts"
 import { systemone } from "./portals/systemone.ts"
 import { kore1 } from "./portals/kore1.ts"
@@ -88,12 +87,14 @@ const collabera: PortalAdapter = {
 // (scripts/tests/crawl-*.test.mjs) and was run once against the live portal on 2026-10-20.
 export const ADAPTERS: PortalAdapter[] = [
   beaconHill, collabera, teksystems, kforce, motion, everforth, oxford, insightglobal,
-  inspyr, brooksource, eteam, eliassen, systemone,
+  inspyr, brooksource, eliassen, systemone,
   kore1, kavaliro, mitchellmartin, judge, genesis10, pyramid, addison, csi,
 ]
 
 // Still to be read (a probe for each is in the REA board): IDR, Vaco, IntelliPro, Diverse Lynx, Robert Half, CyberSN,
 // Akkodis, SNI and The Fountain Group: their probes stopped on the session limit and resume when it allows.
+// eTeam is also pending again: its former /searchjobs/api/jobs feed returned HTTP 404 on 2026-11-09;
+// the current official /careers page is interactive and no compliant static feed has been verified.
 // Not read on purpose: Experis (its robots.txt disallows every crawler) and Randstad Digital (labor-certification
 // postings with no address, date or contract kind of their own).
 //
@@ -107,5 +108,5 @@ export const ADAPTERS: PortalAdapter[] = [
 // - Recruiter-driven additions (Aerotek, Actalent, Kelly Services, Spherion, Express) post thin public
 //   boards: low crawl value, directory links only until a feed is verified live.
 export const PENDING_PORTALS = [
-  "idr", "vaco", "intellipro", "diverselynx", "roberthalf", "cybersn", "akkodis", "sni", "fountain",
+  "idr", "vaco", "intellipro", "diverselynx", "roberthalf", "cybersn", "akkodis", "sni", "fountain", "eteam",
 ]
