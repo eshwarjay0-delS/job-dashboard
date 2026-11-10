@@ -18,16 +18,13 @@ export const WHATSAPP_SUPPORTED_FLOOR = 95
  * JD_TERMS_ALWAYS_ON_SKILLS=0 restores the strict under-95% clean-pass refusal. */
 export const WHATSAPP_JOB_POST_FLOOR = 70
 
-/** Coverage and added job-post terms are labelled on the WhatsApp reply.
- * They do not, by themselves, make a finished Word file unusable.
- * role_evidence_gaps is the same kind of gap: the file was edited and scored,
- * and a role is under the 98% evidence target. Missing terms stay in the caption.
- * roles_unrewritten, a missing part, and a skills-only outage are not in this
- * set. Those are unfinished, and the already-chosen library file is the backup. */
+/** A completed, readable file may be sent with measured coverage/role gaps disclosed.
+ * A new unsupported claim about the candidate's experience is not a gap: it is
+ * a factual-integrity failure and must use the already-chosen same-account file.
+ * roles_unrewritten, a missing part, and a skills-only outage are also unfinished. */
 const WHATSAPP_SHORTFALL_REASONS = new Set([
   "jd_coverage_below_floor",
   "supported_coverage_below_floor",
-  "unverified_jd_terms",
   "quality_not_deliverable",
   "role_evidence_gaps",
 ])
