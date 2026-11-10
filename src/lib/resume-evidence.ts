@@ -37,3 +37,15 @@ export function confirmedCandidateStatements(statements: readonly string[]): str
     return positive ? [positive] : []
   })
 }
+
+/** Return only JD terms supported by this specific role's original bullets and
+ * still missing from its current bullets. A globally missing term from another
+ * role must never be copied into this role's experience. */
+export function missingRoleEvidenceTerms(
+  sourceTerms: ReadonlySet<string>,
+  currentTerms: ReadonlySet<string>,
+  requiredTerms: readonly string[],
+): string[] {
+  const candidates = [...new Set([...requiredTerms, ...sourceTerms])]
+  return candidates.filter(term => sourceTerms.has(term) && !currentTerms.has(term))
+}
