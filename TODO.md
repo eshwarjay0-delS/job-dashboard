@@ -1,3 +1,7 @@
+## 2026-11-10 — Lens live reds folded in
+
+A time story comes from the closest resume project, not a refusal. A quoted number, a fake event id, and an unsourced just-in-time or CI/CD claim do not stay. Moving to Texas and a two-week onsite start stop before the model. The desktop card asks for connected sentences. MFA alone and an announced takeaway are not stock lines. Not re-run on the live model.
+
 ## 2026-11-10 — Interview captions set the spoken shape
 
 The SOC and behavioral captions say answer first, then one example, three or four points, and close on the result. Twenty-eight of those interview questions are in the harness, and twelve candidate lines are voice fixtures. A neighbouring sheet entry is still refused. Not a live Windows check.

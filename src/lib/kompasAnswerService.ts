@@ -889,6 +889,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // Salary, visa, address, relocation, availability, and notice return here, before keysFor and before any model call.
   const stripLogistics = (s: string) => serverWithoutLogistics(withoutLogistics(s))
   const skipped = question && !stripLogistics(question) ? "logistics" : undefined; if (skipped) question = ""
+  if (skipped === "logistics") {
+    const line = "I'd rather keep relocation, start dates, and onsite days for a person to answer. I won't guess citizenship or a visa."
+    if (body.stream) {
+      const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true, skipped, text: line })}\n\ndata: ${JSON.stringify({ type: "replace", text: line })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true, skipped, text: line })}\n\n`
+      return new Response(quiet, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+    }
+    return NextResponse.json({ noQuestion: true, skipped, text: line }, { headers: NO_STORE })
+  }
   if (!question) {
     const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true, skipped })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true, skipped })}\n\n`
     if (body.stream) {

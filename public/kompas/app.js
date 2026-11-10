@@ -3994,8 +3994,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
     card.streaming = false;
     if (meta.noQuestion) {
       card.streaming = false;
-      card.answer = keepOld ? prevAnswer : [];
-      card.meta = meta.skipped === "logistics" ? "Personal logistics, not answered" : "";   // owner rule 29 Oct: a quiet card says why, with no answer text
+      const deferral = meta.skipped === "logistics" && meta.text ? String(meta.text).trim() : "";
+      if (deferral) writeAnswer(card, qid, deferral);
+      else card.answer = keepOld ? prevAnswer : [];
+      card.meta = deferral ? "" : (meta.skipped === "logistics" ? "Personal logistics, not answered" : "");
       if (cards[idx] === card) renderCard();
       status(meta.skipped === "logistics" ? "Personal logistics, not answered. Still listening." : "Still listening.", "live");
       return;

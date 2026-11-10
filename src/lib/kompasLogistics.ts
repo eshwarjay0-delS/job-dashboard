@@ -8,7 +8,7 @@ import { interviewIntent } from "./kompasRelevance.ts"
 // put to the candidate. A mixed ask keeps its non-logistics part.
 const PERSONAL = new RegExp([
   String.raw`^\s*(?:notice|remote|bonus|salary|hybrid|on-?site|h-?1b|opt|ts\s*\/\s*sci|shift|weekend|overtime|citizen|clearance|sponsorship|relocation|start date|night shift|travel|visa|tn visa|w-?2|c2c|full[- ]time|contract|pto|benefits|401k|equity|ead|l-?1|hourly|day rate|(?:u\.?\s*s\.?|u\s+s)\s+citizen)[.?!]*\s*$`,
-  String.raw`\bwhen (?:can|could|would) you (?:start|join|begin)\b|\bstart date\b|\bavailable to (?:start|join|begin)\b|\b(?:two|\d+)\s+weeks'?\s+notice\b|\bnotice period\b|\bstart in (?:two|\d+) weeks\b`,
+  String.raw`\bwhen (?:can|could|would) you (?:start|join|begin)\b|\bstart date\b|\bavailable to (?:start|join|begin)\b|\b(?:two|\d+)\s+weeks'?\s+notice\b|\bnotice period\b|\bstart in (?:two|\d+) weeks\b|\b(?:willing|open|able|happy) to move\b|\bmove to (?!(?:the|a|an|our|production|cloud|next)\b)|\bonsite\b|\bin[- ]office\b|\b(?:three|two|\d+) days a week\b`,
   String.raw`(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?)\b)`,
   String.raw`\bsponsor(?:ship)?\b|\bvisa\b|\bh-?1b\b|\bgreen card\b|\bwork(?:ing)? authori[sz]ation\b|\bauthori[sz]ed to work\b|\bcitizen(?:ship)?\b|\bead\b`,
   String.raw`\b(?:expected|desired|your)\s+(?:hourly\s+|pay\s+|bill\s+)?(?:pay|rate|salary|compensation)\b(?!\s+limit)|\bwhat (?:hourly |bill |pay )?(?:rate|pay|salary|compensation) (?:are|would) you (?:looking for|expecting|expect|asking(?: for)?|targeting)\b`,
@@ -23,7 +23,7 @@ const PERSONAL = new RegExp([
 
 // Asks the classifier files elsewhere ("What is your current location?" reads as a definition)
 // but that can only mean the candidate's own terms.
-const UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b|\b(?:your|signing|annual|expected) bonus\b|\b(?:expect(?:ed)?|your) equity\b|\b401k\b|\bw-?2\b|\bc2c\b|\bcontract role\b|\b(?:hold|on) opt\b|\bopt status\b|\b(?:need an l-?1|l-?1 visa)\b|\bearliest start\b|\b(?:how much notice|notice do you need)\b|\bcity do you live\b|\btime zone are you\b|\bwork (?:est|cst|pst|mst|eastern|central|pacific|mountain) hours\b|\bwork from home\b|\bare you remote\b|\bopen to weekends\b|\bbe on[- ]?call\b|\byour shift\b|\bpto\b|\b(?:okay|ok|comfortable|fine|happy) with (?:on-?call|weekends?|nights?|night shifts?|travel(?:ing)?|relocat\w*)\b|\b(?:expected|desired|your)\s+(?:hourly\s+|pay\s+|bill\s+)?(?:pay|rate|salary|compensation)\b(?!\s+limit)|\bwhat (?:hourly |bill |pay )?(?:rate|pay|salary|compensation) (?:are|would) you (?:looking for|expecting|expect|asking(?: for)?|targeting)\b|\bi live in\b|\bi(?:'m| am) (?:based|located) in\b|\bmy address is\b/i
+const UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b|\b(?:your|signing|annual|expected) bonus\b|\b(?:expect(?:ed)?|your) equity\b|\b401k\b|\bw-?2\b|\bc2c\b|\bcontract role\b|\b(?:hold|on) opt\b|\bopt status\b|\b(?:need an l-?1|l-?1 visa)\b|\bearliest start\b|\b(?:how much notice|notice do you need)\b|\bcity do you live\b|\btime zone are you\b|\bwork (?:est|cst|pst|mst|eastern|central|pacific|mountain) hours\b|\bwork from home\b|\bare you remote\b|\bopen to weekends\b|\bbe on[- ]?call\b|\byour shift\b|\bpto\b|\b(?:okay|ok|comfortable|fine|happy) with (?:on-?call|weekends?|nights?|night shifts?|travel(?:ing)?|relocat\w*)\b|\b(?:willing|open|able|happy) to move\b|\bmove to (?!(?:the|a|an|our|production|cloud|next)\b)|\bstart in (?:two|\d+) weeks\b|\bonsite\b|\b(?:three|two|\d+) days a week\b|\b(?:expected|desired|your)\s+(?:hourly\s+|pay\s+|bill\s+)?(?:pay|rate|salary|compensation)\b(?!\s+limit)|\bwhat (?:hourly |bill |pay )?(?:rate|pay|salary|compensation) (?:are|would) you (?:looking for|expecting|expect|asking(?: for)?|targeting)\b|\bi live in\b|\bi(?:'m| am) (?:based|located) in\b|\bmy address is\b/i
 
 /** One clause is logistics only when the classifier says so and it asks about the candidate's own terms. */
 export function isLogisticsAsk(clause: string): boolean {
@@ -66,8 +66,11 @@ export function withoutLogistics(question: string): string {
 export function logisticsBackstop(question: string): string {
   const q = String(question || "")
   if (!q.trim()) return q
-  if (/\b(?:was|were|did|had)\b/i.test(q) || /\s(?:and|also|plus)\s/i.test(q)) return q
   // "How does work authorization work?" asks for the mechanism. It is not "are you authorized".
   if (/\bhow (?:does|do|did)\b[^?]{0,80}\bwork\b/i.test(q)) return q
-  return withoutLogistics(q)
+  const stripped = withoutLogistics(q)
+  if (!stripped) return ""
+  // Resume history stays. A present-tense "and" still drops a logistics clause the helper already removed.
+  if (/\b(?:was|were|did|had)\b/i.test(q)) return q
+  return stripped
 }

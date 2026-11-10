@@ -39,14 +39,14 @@ export const EVIDENCE_POLICY = "Question boundary: answer every explicit part of
 // Lens r1 (29 Oct 2026, research/notebooklm-lens-spec.md §1-§4): one source, many listeners, workbench voice.
 // Built on CALIBRATION, RELEVANCE, STORYTELLER and the audience setting above; none of them is replaced. Kept short on purpose
 // (spec §8: longer prompts slow live answers). Facts never change across lenses; only order, depth and wording do.
-export const REALISM = "REALISM (workbench voice): R1 one tradeoff: 'I would rather X than Y, because Z'. R2 your part with an ownership verb; past tense only when the sources hold it, else 'I would'. R3 name the hard part. R4 a result says how it was verified and what is still uncertain. R5 on a gap, be straight, then bridge to the closest real work. R6 a workplace story only from the sources or the user's narrative, never a dated event. NUMBERS (hard): personal achievements, SLA outcomes and before/after metrics require original candidate evidence with an attributable result; a JD, question, prior AI answer, fictional scenario or quoted benchmark is never proof. Technical identifiers (event IDs, protocol codes, versions and ports) are not outcomes. If a personal outcome figure is missing, state the bounded work and verification method without inventing a number. Never turn a target or measurement plan into an achieved result. At most one 'I would rather' or 'honestly' per answer."
+export const REALISM = "REALISM (workbench voice): R1 one tradeoff: 'I would rather X than Y, because Z'. R2 your part with an ownership verb; past tense only when the sources hold it, else 'I would'. R3 name the hard part. R4 a result says how it was verified and what is still uncertain. R5 on a gap, be straight, then bridge to the closest real work. R6 a workplace story only from the sources or the user's narrative, never a dated event. NUMBERS (hard): personal achievements, SLA outcomes and before/after metrics require original candidate evidence with an attributable result; a JD, question, prior AI answer, fictional scenario or quoted benchmark is never proof; a number the question quotes is not a source. Technical identifiers (event IDs, protocol codes, versions and ports) are not outcomes. If a personal outcome figure is missing, state the bounded work and verification method without inventing a number. Never turn a target or measurement plan into an achieved result. At most one 'I would rather' or 'honestly' per answer."
 
 /** Dossier only (written, never spoken): the marked hole a candidate fills. Lens r3 moved it out of the spoken REALISM block,
  *  because the guards' unbracket turns a spoken "[ ___ confirm ]" into a broken sentence. */
 
 /** Human intelligence layer (5 Nov 2026, research/lens-human-intelligence-note.md): teammate talk on top of R1–R6.
  *  Kept as its own block so REALISM stays under the 170-word test cap. Still sourced: no invented war stories. */
-export const PEER_VOICE = "PEER VOICE: talk like a teammate sharing real work, not a brochure. Unshy about hard ideas: plain line, one picture, then the real name. Pick the one move the question is asking for: the bottleneck, the consequence, what you would tell a teammate, what you would warn them off, or an inner check. When the sources support that move, say it; if they do not, use a habit, never a dated private battle. Do not invent a war story, a bad-advice episode, or a number to sound more human. At most one of these moves per answer."
+export const PEER_VOICE = "PEER VOICE: talk like a teammate sharing real work, not a brochure. Unshy about hard ideas: plain line, one picture, then the real name. Pick the one move the question is asking for: the bottleneck, the consequence, what you would tell a teammate, what you would warn them off, or an inner check. When the sources support that move, say it; if they do not, use a habit, never a dated private battle. Do not invent a war story, a bad-advice episode, or a number to sound more human. At most one of these moves per answer. Speak in connected sentences, not a checklist. On a tell me about a time with no sourced incident, tell it from the closest real resume project and keep every specific to that resume; never an invented incident, error code, duration, or a refusal."
 
 export const DOSSIER_NUMBERS = "In a dossier, a figure the sources do not hold is written [ ___ confirm: your actual figure ]."
 
@@ -161,6 +161,20 @@ function firstPerson(fact: string, simple: boolean): string[] {
   const parts = simple ? f.split(/(?:,| and|:) (?=(?:cut|removed|rotated|scoped|wrote|reported|tuned|block|reviewed)\b)/) : [f]
   return parts.map((p, i) => (i === 0 ? `I ${p}.` : `I also ${p}.`).replace(/^I also block/, "That blocks"))
 }
+const TIME_ASK = /\b(?:tell me about a time|describe a time|a time (?:you|when)|have you ever|walk me through (?:a|the) time)\b/i
+const INCIDENT = /\b(?:fail(?:ed|s|ure)?|broke|break|outage|went down|went wrong|locked (?:\w+ )?out|lockout|breach(?:ed)?|incident|lost|leak(?:ed)?|rollback|rolled back)\b/gi
+/** A past-incident ask the facts do not hold. The lead is the closest resume project, never a refusal. */
+export function unsourcedIncident(question: string, facts: string[] = []): string {
+  const q = String(question || "")
+  if (!TIME_ASK.test(q)) return ""
+  const asked = (q.match(INCIDENT) || []).map((w) => w.toLowerCase().split(/\s+/)[0].replace(/(?:ed|s|ure|ing)$/, ""))
+  if (!asked.length) return ""
+  const hay = facts.join(" ").toLowerCase()
+  if (asked.every((w) => hay.includes(w))) return ""
+  const closest = facts.map((f) => String(f || "").trim()).find(Boolean)
+  if (!closest) return "I would handle that as an approach, and I would not invent the incident."
+  return `The closest work I can speak to is ${closest.replace(/\.$/, "")}.`
+}
 /**
  * OFFLINE composer: the lens and realism rules applied to retrieved facts with no model. It is the stand-in the
  * lens tests measure, and a deterministic reference for what a lens changes (order, depth, wording) and keeps (the facts).
@@ -175,6 +189,8 @@ export function composeLensParts(o: { question: string; lens: LensId | "simple";
   const lens: LensId = o.lens === "simple" ? "hr" : o.lens
   const vague = String(o.question).trim().split(/\s+/).length <= 2
   const out: string[] = []
+  const hedge = unsourcedIncident(o.question, o.facts)
+  if (hedge) out.push(hedge)
   const assume = vague ? `Assuming you mean ${bare(c.term)}, ` : ""
   // Same facts for every lens; the lens only moves them (peer and architect keep resume order, the others lead with the latest line).
   const ordered = lens === "practitioner" || lens === "architect" ? o.facts : [...o.facts].reverse()

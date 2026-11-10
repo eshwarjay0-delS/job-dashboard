@@ -85,6 +85,25 @@ function shorten(sentence: string): string[] {
   return [end, right]
 }
 
+function dropStock(text: string, question: string, sources: string): string {
+  let s = String(text || "")
+  s = s.replace(/\bI would want to confirm that\b[^.?!]*[.?!]?/gi, "")
+  s = s.replace(/\b(?:The takeaway is|The key takeaway is|The key point is|The key is)\b[:,]?\s*/gi, "")
+  if (!/\bmfa\b|multi-factor|multifactor/i.test(question)) {
+    s = s.replace(/[^.?!]*\bMFA alone\b[^.?!]*[.?!]?/gi, "")
+    s = s.replace(/[^.?!]*\bmulti-factor authentication alone\b[^.?!]*[.?!]?/gi, "")
+    s = s.replace(/[^.?!]*\bjust (?:requiring |enforcing )?MFA\b[^.?!]*[.?!]?/gi, "")
+  }
+  const has = (name: string) => sources.toLowerCase().includes(name.toLowerCase())
+  if (!/\bjust-in-time\b|\bjit\b/i.test(sources)) s = s.replace(/\bjust-in-time elevation\b/gi, "the access the resume describes")
+  if (!/\bci\/?cd\b/i.test(sources)) s = s.replace(/\bintegrated[^.?!]*\bCI\/CD\b[^.?!]*/gi, "kept the work in the tools the resume names")
+  s = s.replace(/\bEvent IDs?\s*(\d+)\b/gi, (m, n) => (sources.includes(n) ? m : "the log event"))
+  s = s.replace(/\b(\d+)\s*(?:hours?|days?|minutes?)\b/gi, (m, n) => (sources.includes(n) ? m : "the window the resume shows"))
+  s = s.replace(/\b(\d+(?:\.\d+)?)\s*%/g, (m, n) => (sources.includes(n) ? m : "the change"))
+  s = s.replace(/\b(?:a quarter|three-quarters|one half)\b/gi, (m) => (sources.toLowerCase().includes(m.toLowerCase()) ? m : "part"))
+  return s
+}
+
 function scrub(sentence: string, sources: string): string {
   let s = sentence.replace(BANNED, "").replace(/\s+/g, " ").trim()
   for (const [re, to] of SWAP) s = s.replace(re, to)
@@ -101,7 +120,7 @@ function scrub(sentence: string, sources: string): string {
 /** First sentence stays the answer. Later sentences pick up a starter that has not been used. */
 export function spokenVoice(text: string, question: string, sources = ""): string {
   if (interviewSignOff(question)) return SIGN_OFF_LINE
-  const raw = sentencesOf(text).map((s) => scrub(s, sources)).filter((s) => s.split(/\s+/).length >= 3)
+  const raw = sentencesOf(dropStock(text, question, sources)).map((s) => scrub(s, sources)).filter((s) => s.split(/\s+/).length >= 3)
   if (!raw.length) return String(text || "").trim()
   const used = new Set<string>()
   const out: string[] = []

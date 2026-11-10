@@ -56,8 +56,9 @@ test("pivot text: first person, spoken hedge / written [ ___ confirm ], no digit
     assert.match(m.say, /\bI\b|\bmy\b/, m.angle)
   }
   const q = P.MOVES.find((m) => m.angle === "quarter_scope")
-  assert.match(q.say, /quarter|three-quarters/)
-  assert.doesNotMatch(q.say, /%|\d/)
+  assert.doesNotMatch(q.say, /%|\d|\bquarters?\b|three-quarters|\bhalf\b/)
+  assert.match(q.say, /never a fraction, share or percentage/)
+  assert.doesNotMatch(t, /\bquarter\b|three-quarters/)
 })
 
 test("logistics gets nothing; a mixed ask keeps its real part", () => {

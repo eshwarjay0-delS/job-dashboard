@@ -16,7 +16,7 @@ export const MOVES: Move[] = [
   { angle: "edge_case", dim: "3D", say: "edge case: the case I had to plan for, then how I handled it, or would; if my sources name none, {BLANK}" },
   { angle: "tradeoff", dim: "3D", say: "trade-off: \"I chose this over that, because ...\", and the cost of my choice in plain words" },
   { angle: "analogy", dim: "3D", analogy: true, say: "analogy: one everyday picture I would use for the idea, said once, then the real term" },
-  { angle: "quarter_scope", dim: "3D", say: "quarter of the problem: \"a quarter of my work was ..., the other three-quarters was ...\" as effort or scope, never as a percentage" },
+  { angle: "quarter_scope", dim: "3D", say: "where the effort went: which part of my work was small and which part took most of it, in words, never a fraction, share or percentage" },
   { angle: "before_after", dim: "4D", say: "before, during, after: how it was before my work, what I did, what changed after; only what the resume holds; else {BLANK}" },
   { angle: "past_lesson", dim: "4D", say: "past lesson: what I learned early and what I do now because of it, only from my sources; else what I would guard against, or {BLANK}" },
   { angle: "now_later", dim: "4D", say: "now and later: what I would do today, and what I would change as it grows" },
@@ -68,7 +68,7 @@ export function pickMoves(question: string, audience: string, ledger: string[][]
   return out
 }
 
-export const PIVOT_RULES = (blank: string) => "Woven in, never labelled; first person, the way I would say it in the room. Only my resume and the sources; an unknown is said as " + blank + "; no number the resume does not hold; quarter or three-quarters is effort or scope, never as a percentage; at most one analogy; no logistics."
+export const PIVOT_RULES = (blank: string) => "Woven in, never labelled; first person, the way I would say it in the room. Only my resume and the sources; an unknown is said as " + blank + "; no number, fraction or share the resume does not hold; at most one analogy; no logistics."
 
 /** The prompt line, or "" for a logistics ask (owner rule, 29 Oct 2026). A mixed ask is read without its logistics part. */
 // Fold 0: the candidate's own rate or pay range, which the shared helper does not reduce on this base.
