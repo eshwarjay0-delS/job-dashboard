@@ -183,3 +183,34 @@ PR #273, [Preserve Oct17 WhatsApp resume facts and filter JD fragments](https://
 Production deployment `dpl_7gjdfRFeLjqcPdVC52NkaEatugKA` is READY at the exact merge SHA, target production. Independent alias lookup confirms `job-dashboard-fawn.vercel.app` resolves to this deployment. The PR preview was rate-limited, but the post-merge production Git deployment succeeded. This is release evidence, not a live 98% resume match. No model call, real email, WhatsApp send, R2 write or production data mutation was performed. Public HTTP smoke remains unavailable because this runtime cannot resolve the production hostname.
 
 Continue: obtain owner reconciliation of the conflicting education/employment/credential facts and the exact generated DOCX plus per-run R2 key, webhook correlation ID, Meta message ID and signed delivery/read receipt. The connected iZap account has no WhatsApp number or matching incident history. Do not count the JD's 5+ years or preferred credentials/platforms as confirmed, do not restore the superseded 98% hard hold, and do not send a real WhatsApp message without explicit authorization. PR #274 is a separate identity-guard hardening change and remains under exact-head CI; do not conflate it with this Oct 17 fix.
+
+
+## 10 November 2026 — continuation ledger
+
+Canonical repository: `eshwarjay0-delS/job-dashboard`. Current master is `f7f322f242d39b12a0ade7c8d548f6f48eea79b5`. The canonical production alias `job-dashboard-fawn.vercel.app` still resolves to READY production deployment `dpl_7gjdfRFeLjqcPdVC52NkaEatugKA` at `a66c108bff6175149c4aadd882ab11128445b8cc`; do not describe later master commits as live. Current project latest deployment is a READY PR preview, not production.
+
+### WhatsApp and resume
+
+- PR #273 is deployed at production SHA `a66c108bff6175149c4aadd882ab11128445b8cc`. It removes the screenshot-only `sol`/ `specialty` fragments and generic `attributes` noise while preserving unsupported certification/platform and source-fact boundaries.
+- The historical 17 Oct 17:28 Chicago request remains unverified. The original 27,724-byte DOCX and matching JD are recovered, but the generated output, per-run R2 key, webhook correlation ID, Meta message ID and signed delivered/read receipt are unavailable. The uploaded source conflicts with owner-confirmed education/employment/credential facts; those claims stay quarantined pending owner reconciliation. The 6 Nov channel policy supersedes the old 98% hard hold.
+- PR #274 (strict identity verification independent of the JD gate) has full CI `42769788408`, WhatsApp recovery `42769788450`, and Kompas baseline `42769788641` all SUCCESS. It is security/identity-sensitive and still requires an explicit owner decision; accessible prior-context retrieval did not find a user-authored approval. The active WhatsApp Repair automation owns this concern. Do not merge/deploy on green tests alone.
+- PR #278 (recovery-root validation for the separate 9 Nov `That file is outside your resume library` error) is at exact head `3782c97dea69a8632135586bdb8296ad1790c781`. The previous full CI failed on a stale test assertion; commit `3782c97` now asserts resolver → fail-closed rejection → validated-root use. Full CI `42773757901` and WhatsApp recovery regression `42773757620` are running; Kompas baseline `42773757574` passed. Preview `dpl_Hp9we2LBxgp9bNqup8rMVEdgoM8a` is READY at this exact head, target preview only. No production deployment or real WhatsApp send. Do not ship #278 alone before #274's owner-review gate.
+- PR #277 proposes durable swipe-reply refinement recovery. It is not explicitly owner-approved; the exact-head full CI `42766800615` failed on a stale refusal-message assertion, while baseline `42766800664` and WhatsApp recovery regression `42766800642` passed. The owner must confirm the no-baseline-fallback and durable external-delivery/storage tradeoff before further implementation/merge.
+- No real WhatsApp test, model generation, R2 write or personal-data mutation was performed.
+
+### Gmail / Poke-inspired multi-account and mobile work
+
+- PR #271 implements per-account sync health, partial/failure visibility, last-success time and retry/reconnect guidance. Exact head `0b63aa641c65c5bc6455ad63348dbf3b49937ef1` has full CI `42759227881` and Kompas baseline `42759227822` SUCCESS, but the PR remains DRAFT, mergeable=false on older base `51cb716393efb1f54cdc6173c8e6b7ee6f034241`, with Vercel build-rate-limit status.
+- The broad Poke-inspired multi-account Gmail/mobile direction is requested. The exact sync-health card is not separately owner-approved in accessible prior context. Required acceptance remains two authorized test inboxes (one healthy, one partial/failed) and a narrow mobile viewport. No live Gmail API call or email send was made; do not mark the draft accepted or deploy it.
+
+### Contract job search / crawler
+
+- PR #276 merged to master as `f7f322f242d39b12a0ade7c8d548f6f48eea79b5` from exact head `335247b24f06c262107504906d62e465ef69e40a`. Full CI `42763881012` and Kompas baseline `42763880913` passed; PR-head preview status was SUCCESS.
+- The merge SHA's Vercel status is FAILURE with `build-rate-limit`; production alias remains on `a66c108`. The classifier is merged, not live. Do not submit another deployment attempt inside the current quota window.
+- The first post-change scheduled crawl is pending; the latest completed crawl remains 9 Nov 11:00 UTC (6,976 found/upserted across 21 adapters, with one eTeam 404). The public API smoke remains unavailable from this runtime. Robert Half is pending until its official feed/HTML is captured and tested.
+
+### Active coordination and next actions
+
+- The automation inventory shows the separate WhatsApp Repair, Kompas Continuous Voice Delivery, MFit Completion Watch and MFit Safe Merge Gate tasks enabled. No separate Bible-Keeper automation is listed.
+- Do not modify the voice preview HTTP gate; run `42773754013` failed and remains with Kompas Continuous Voice Delivery.
+- Continue: verify the exact-head PR #278 full CI and recovery regression. If green, keep it held until the PR #274 owner-review gate is resolved; then coordinate a single approved release and verify production alias plus authenticated recovery. Continue independent crawler verification when the next scheduled crawl completes. Keep PR #271 draft pending two-account/mobile acceptance and owner review.
