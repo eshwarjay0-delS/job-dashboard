@@ -39,7 +39,7 @@ test("resume writer and role weaving use only source-supported or explicitly con
   assert.match(tailor, /const candidateEvidence = \[text, \.\.\.candidateStatements\]\.join/)
   assert.match(tailor, /coveredJdKeywords\(candidateEvidence, \[k\]\)\.has\(k\)/)
   assert.match(tailor, /jdKwsPrompt = \[\.\.\.new Set\(\[\.\.\.jdKwsPrompt, \.\.\.freshUnique\]\)\]/)
-  assert.match(tailor, /const missing = jdKwsPrompt\.filter/)
+  assert.match(tailor, /const requiredExperienceTerms = jdKwsPrompt\.filter/)
 })
 
 test('role repair never borrows a globally missing JD term from another role', () => {
@@ -82,7 +82,7 @@ test('role-scoped final weave inputs never borrow a JD term from another employe
 
 test('final caller scopes deterministic weaving per employer and restores cross-role terms', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
-  assert.match(tailor, /for \(const role of zones\.roles\)/)
+  assert.match(tailor, /for \(const \{ roleIndex, terms \} of roleGaps\)/)
   assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, current\.edits\.bullets \|\| \[\], requiredExperienceTerms, coveredJdKeywords\)/)
   assert.match(tailor, /weaveExperienceRepresentation\(\s*\[\{ bullets: sourceBullets \}\]/)
   assert.doesNotMatch(tailor, /zones\.roles\.map\(r => \(\{ bullets: r\.bullets/)
