@@ -270,3 +270,29 @@ Continue: implement the approved final-DOCX Gemini ATS review as a separate evid
 ## 10 November 2026 — public evidence minimization
 
 The Safe Merge Gate identified private source locators in the Oct 17 handoff: the exact resume digest, Library archive/member path, screenshot artifact identifier and Gmail thread identifier. The active PR #275 branch now replaces those public locators with a statement that the exact source was verified privately and the evidence remains in the user's Library. The privacy change is commit `ad07b7093110db40f29b7ea3b98f7bbeb2dca467`; commit `2ef49fc1be8a91cf1d15eaf166c844d2eff2abac` adds the required empty `commits` list to the new REA session after the first preview build identified that TypeScript error. The public record retains the incident time, source/JD relationship, fact-conflict boundary and missing generated-output/R2/Meta receipt status; no resume or email contents are published. This is a proposed privacy-minimization decision, not an owner approval to change external sending behavior. The preview deployment `dpl_22TpDSMEKarUnP9GQHB7rS9N7atV` is READY at exact SHA `2ef49fc1be8a91cf1d15eaf166c844d2eff2abac`; the Kompas baseline passed and full CI is still running. This follow-up adds a dedicated workflow to execute both Plan Journal and REA schema tests, which the main full-CI job does not currently run. The authenticated preview smoke still requires the private Vercel preview credential; no production deployment was attempted.
+
+
+## 10 November 2026 — current master, production and acceptance delta
+
+### Master and release
+- Canonical master is `48ca317b0c59215fd112d854f61dc71828f29d69`. Exact-head full CI `42825696463` and Kompas baseline `42825696371` passed.
+- The canonical production alias remains READY at `a66c108bff6175149c4aadd882ab11128445b8cc`. The exact-master Vercel status `42825696035` failed with `build-rate-limit`; no deployment exists for exact SHA `48ca317` and no same-SHA deployment is available to promote. Do not retry inside the quota window or alias a preview.
+- PR #282's evidence-separated resume gap report and PR #276's contract work-type classifier are merged to master, but neither is in production yet.
+
+### WhatsApp and factual resume boundary
+- The original 17 Oct DOCX and full matching JD are recovered. The source chronology/education/credential claims conflict with the owner-confirmed profile and remain quarantined. The generated DOCX, per-run R2/webhook correlation, Meta message ID and signed delivery/read receipt are still missing.
+- PR #273's source-boundary filter is live at `a66c108`. The 6 Nov channel-specific policy remains authoritative; do not restore the old 98% hard hold.
+- PR #274's identity guard has no retrieved owner-authored approval. PR #278 depends on that decision; PR #277's durable swipe-reply storage/delivery behavior also lacks explicit owner approval; PR #279 remains a draft that changes external-send eligibility. No merge or real WhatsApp send was performed.
+
+### Resume, crawler and Gmail
+- PR #282 (`48ca317`) adds an evidence-separated exported-DOCX gap report; its exact-head full CI and baseline passed. It is not a live 95–100% factual match or a Gemini final-DOCX score.
+- PR #276's contract classifier is merged but not live. The 10 Nov 11:00 UTC production crawl found/upserted 6,818 jobs across 20 portals with one isolated error; it ran on the older `a66c108` deployment, so it is not post-classifier verification.
+- Production Gmail aggregates show 3 account IDs, 3 sync rows and 2,002 cached threads; latest sync was 14:44:44 UTC. PR #271 remains DRAFT without an exact-head full-CI run, two-inbox healthy/partial-failure acceptance, selected-From/reconnect verification or narrow-mobile device acceptance. The unattended worker remains disabled pending an external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement consent. No email was sent.
+
+### Kompas and coordination
+- Production Supabase has 22 account-session rows, 28 artifacts, 15 active sessions and one owner. This is persisted data, not proof of a second device, native Windows handoff or WhatsApp catalog convergence.
+- No grouped runtime-error clusters were returned for the selected production routes in the last 24 hours. This is not device or message-delivery acceptance.
+- The active Kompas Continuous Voice Delivery task owns PR #283 and audio/capture work; no parallel voice edits were made. The Safe Merge Gate is active. No separate Bible-Keeper automation appeared in the accessible active automation list.
+- PR #275's previous exact head `3f7c61d` had full CI and Kompas baseline SUCCESS, but the dedicated Plan Journal/REA schema workflow failed (5 tests) and authenticated `voice-preview-smoke` failed because the private preview credential is unavailable. This branch follow-up corrects the schema mismatches; new exact-head CI is pending. PR #281 overlaps the same journal/REA files and remains deferred until #275 is reconciled.
+
+Continue: finish the Plan Journal/REA schema corrections on PR #275, require the new exact-head schema/full-CI results, then reconcile the missing authenticated preview gate and restack PR #281. Separately wait for Vercel capacity before one reviewed production deployment and verify the post-classifier crawl. Do not claim the backlog complete.

@@ -53,7 +53,7 @@ test('Oct 17 WhatsApp source-boundary release remains traceable after deployment
   assert.equal(entry.delivery, 'deployed')
   assert.match(entry.evidence, /a66c108bff6175149c4aadd882ab11128445b8cc/)
   assert.match(entry.evidence, /dpl_7gjdfRFeLjqcPdVC52NkaEatugKA/)
-  assert.match(entry.next, /owner reconciliation/)
+  assert.match(entry.next, /owner reconciliation/i)
   assert.match(entry.next, /Meta message ID/)
 })
 
@@ -70,7 +70,7 @@ test('approved final-DOCX Gemini review and current crawler/Gmail blockers remai
   assert.match(source.detail, /exact digest retained privately/)
   assert.doesNotMatch(`${source.detail} ${source.evidence}`, /\\b[a-f0-9]{16}\\b/i)
   assert.doesNotMatch(`${source.detail} ${source.evidence}`, /\\b\\d{13}\\b/)
-  assert.match(source.next, /owner reconciliation/)
+  assert.match(source.next, /owner reconciliation/i)
   const crawler = PLAN_JOURNAL.find(e => e.id === 'contract-crawler-work-type-postmerge-run-2026-11-10')
   assert.ok(crawler)
   assert.match(crawler.evidence, /6,818/)

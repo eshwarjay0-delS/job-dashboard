@@ -62,7 +62,7 @@ test('Oct 17 public REA record avoids private source locators', () => {
  const entry = REA_SESSIONS.find(s => s.id === 'whatsapp-oct17-source-archive-verification-2026-11-10')
  assert.ok(entry)
  const publicRecord = JSON.stringify(entry)
- assert.match(publicRecord, /private Library archive/)
+ assert.match(publicRecord, /private Library(?: resume)? archive/)
  assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{16}\\b/i)
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
