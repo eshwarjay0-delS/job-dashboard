@@ -128,6 +128,19 @@ test("two incidents that share a frame do not get one answer", () => {
   assert.ok(same.failures.some((f) => /same answer for different questions/.test(f)))
 })
 
+test("two unmatched definitions do not share one director answer", () => {
+  const nist = "Define NIST CSF risk assessments. Keep it suitable for technical HR."
+  const oauth = "Define OAuth audience validation. Keep it suitable for technical HR."
+  const left = draftSpokenAnswer(nist, "director", RESUME)
+  const right = draftSpokenAnswer(oauth, "director", RESUME)
+  assert.match(left, /NIST CSF/i)
+  assert.match(right, /OAuth audience/i)
+  assert.equal(/OAuth/i.test(left), false)
+  assert.equal(/NIST/i.test(right), false)
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.7, String(ratio))
+})
+
 test("audit evidence and a leftover service account do not share one director answer", () => {
   const audit = "In that design, audit evidence disagrees with live configuration. Walk through diagnosis, competing hypotheses, safe containment and rollback."
   const account = "In that design, the attacker retains access through a service account after isolation. Walk through diagnosis, competing hypotheses, safe containment and rollback."
