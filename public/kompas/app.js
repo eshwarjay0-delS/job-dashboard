@@ -1584,11 +1584,14 @@ if (typeof window.kompasDesktop?.onAuthReady === "function") {
   });
 }
 async function start() {
+  if (!srcOn.mic && !srcOn.sys) {
+    status("Turn on the microphone or computer audio before starting.", "err");
+    return;
+  }
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
   sessionReadyUntil = 0;
   const generation = sourceGeneration.You;
   primeAudio();                       // inside the click, so the browser lets audio run
-  if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
   document.querySelector(".rec").classList.add("live");
@@ -5775,11 +5778,11 @@ function renderConnect(s) {
   const desktop = !!window.kompasDesktop;
   const app = desktop ? "desktop" : LS.get("connectApp", "web");
   document.querySelectorAll(".cn-app").forEach(b => b.classList.toggle("on", b.dataset.app === app));
-  // The desktop exe is already the decision: microphone plus the output mix. No Browser / Desktop app / Phone choice.
+  // Desktop uses the explicit microphone and computer-audio controls; no Browser / Desktop app / Phone choice.
   const steps = NO_SYS_AUDIO
     ? ["Play the call through your <b>speakers</b>, not headphones, so the microphone hears the interviewer.", "Press <b>Connect &amp; start</b>. Kompas listens through your microphone.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
     : desktop
-      ? ["Press <b>Connect &amp; start</b> and allow the microphone.", "Leave the speaker control on. Kompas hears whatever the computer is playing — the call, a video, a browser tab — as the interviewer.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
+      ? ["Press <b>Connect &amp; start</b> and allow the selected audio sources.", "Turn on the speaker control to include the computer's output mix; otherwise Kompas uses the microphone only.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
       : CONNECT_STEPS[app];
   $("cnSteps").innerHTML = steps.map(t => `<li>${t}</li>`).join("");
   $("cnApps").classList.toggle("hidden", desktop || NO_SYS_AUDIO);
@@ -6064,7 +6067,12 @@ window.__kompasCaption = onCaptionText;
 $("cnStart").onclick = () => {
   const app = window.kompasDesktop ? "desktop" : LS.get("connectApp", "web");
   if (!window.kompasDesktop && app === "desktop") { launchInstalled(current); return; }
-  srcOn.mic = true; srcOn.sys = window.kompasDesktop ? !NO_SYS_AUDIO : app !== "phone" && !NO_SYS_AUDIO; syncSrc();
+  if (!window.kompasDesktop) {
+    srcOn.mic = true;
+    srcOn.sys = app !== "phone" && !NO_SYS_AUDIO;
+  }
+  // Desktop source buttons are explicit per-source consent; Connect & start must not override them.
+  syncSrc();
   $("startBtn").click();
 };
 $("startBtn").addEventListener("click", () => {
