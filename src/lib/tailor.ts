@@ -2,7 +2,7 @@ import { roleQualityBlockers } from "./tailor-ship-on-rollback"
 import { extraPassReserveMs, firstDraftRepairReserveMs } from "./tailor-budget"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
-import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements } from "./resume-evidence"
+import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements, missingRoleEvidenceTerms } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -722,7 +722,7 @@ export async function runTailor(opts: {
         const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
         const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
         const supportedMissing = [...sourceTerms].filter(k => !currentTerms.has(k))
-        const missing = [...new Set([...cur.required[i].filter(k => !cur.roleKw[i].has(k)), ...supportedMissing, ...unseen])]
+        const missing = missingRoleEvidenceTerms(sourceTerms, currentTerms, cur.required[i])
         if (!missing.length && !lacking.has(i) && !cur.partial?.pendingRoles?.includes(i)) continue
         const add = 0 // Preserve the original paragraph count and format.
         todo.push({ role: i, skills: missing, add })
