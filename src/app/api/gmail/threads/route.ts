@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const { threads, issues } = await fetchClassifiedThreads(ctx.userId, { days, max }, { force: fresh })
     const mails = threadsToMails(threads)
 
-    return NextResponse.json({ ok: true, count: mails.length, mails, issues })
+    return NextResponse.json({ ok: true, count: mails.length, mails, issues, accountSync })
   } catch (err) {
     console.error("gmail/threads error:", err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
