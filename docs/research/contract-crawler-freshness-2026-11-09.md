@@ -74,3 +74,14 @@ The daily Vercel cron is `0 11 * * *` (11:00 UTC; 05:00 CST on 10 Nov). The late
 
 
 The 10 Nov 11:00 UTC run was verified read-only in `mfit_crawl_runs`: 6,818 found/upserted, 20 portals, one Inspyr abort. It used old production SHA `a66c108bff6175149c4aadd882ab11128445b8cc`; the classifier merge `f7f322f242d39b12a0ade7c8d548f6f48eea79b5` remains blocked from production by Vercel build-rate-limit. Do not treat this as a post-change run.
+
+
+## 10 November 2026 — restacked classifier CI and manual directory
+
+The contract classifier from PR #276 is merged on master, but the live production alias still points to the earlier eTeam-retirement build. The 10 November 11:00 UTC crawl ran on production SHA `a66c108bff6175149c4aadd882ab11128445b8cc`: 20 portals, 6,818 found/upserted, eTeam absent, one Inspyr abort. This confirms the deployed eTeam retirement, not the later `contractTypes()` classifier.
+
+The restacked branch `reconcile/crawler-ci-roberthalf-manual-20261110` (first commit `97e4f97d08bfa26d8fc0774532240a9a0d9beeb5`) adds `src/lib/crawl/classify.ts` and `scripts/tests/crawl-classify.test.mjs` to the dedicated workflow and executes both classifier and freshness suites. A directory regression pins the Robert Half Technology entry to the official cybersecurity search page while keeping it in `PENDING_PORTALS` and out of `ADAPTERS`.
+
+Robert Half's official [cybersecurity search page](https://www.roberthalf.com/us/en/jobs/all/cyber-security) is a manual navigation link only. Its [Terms of Use](https://www.roberthalf.com/us/en/terms), last updated 23 September 2026, prohibit automated retrieval, indexing, scraping and data mining without express prior written consent. No adapter, scheduled request, scraping probe or listing import is authorized until written consent or a sanctioned feed/API with explicit commercial-aggregation permission is documented.
+
+No runtime classifier code or stored rows are changed by this CI/manual-directory follow-up. Exact-head CI and merge review remain pending. Production acceptance requires READY on the exact merge SHA, the active canonical alias, public freshness/clearance API smoke, and a later completed crawl that uses the new classifier.
