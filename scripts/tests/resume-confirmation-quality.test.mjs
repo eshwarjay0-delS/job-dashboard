@@ -1,7 +1,7 @@
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { confirmedCandidateStatements, explicitlyConfirmsAllRequirements } from '../../src/lib/resume-evidence.ts'
+import { confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms } from '../../src/lib/resume-evidence.ts'
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
@@ -40,4 +40,17 @@ test("resume writer and role weaving use only source-supported or explicitly con
   assert.match(tailor, /coveredJdKeywords\(candidateEvidence, \[k\]\)\.has\(k\)/)
   assert.match(tailor, /jdKwsPrompt = \[\.\.\.new Set\(\[\.\.\.jdKwsPrompt, \.\.\.freshUnique\]\)\]/)
   assert.match(tailor, /const missing = jdKwsPrompt\.filter/)
+})
+
+test('role repair never borrows a globally missing JD term from another role', () => {
+  const required = ['Splunk', 'Okta', 'Canton']
+  assert.deepEqual(missingRoleEvidenceTerms(new Set(['Splunk']), new Set(), required), ['Splunk'])
+  assert.deepEqual(missingRoleEvidenceTerms(new Set(['Okta']), new Set(), required), ['Okta'])
+})
+
+test('role repair omits already-covered and unsupported terms', () => {
+  assert.deepEqual(
+    missingRoleEvidenceTerms(new Set(['Splunk', 'Python']), new Set(['Splunk']), ['Splunk', 'Okta', 'Canton']),
+    ['Python'],
+  )
 })
