@@ -78,3 +78,8 @@ test("duplicate and unknown model terms never escape the canonical term list", (
   assert.deepEqual(review.missing, ["SIEM"]);
   assert.deepEqual(review.weak, ["IAM"]);
 });
+test('resume plan baseline keeps escaped paragraph breaks inside its TypeScript string', () => {
+  const plan = readFileSync(new URL('../../src/lib/plan-vision.ts', import.meta.url), 'utf8')
+  assert.ok(plan.includes('no protected preview is available.\\n\\nDraft PR #289'))
+  assert.ok(!plan.includes('no protected preview is available.\n\nDraft PR #289'))
+})
