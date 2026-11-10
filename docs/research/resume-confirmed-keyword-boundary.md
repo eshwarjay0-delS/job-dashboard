@@ -84,3 +84,16 @@ A source audit found that the evidence boundary was enforced when building `jdKw
 The writer now treats the JD as target context, not candidate history. It develops only source-supported terms in roles whose original bullets support them; explicit first-person confirmations remain eligible under the existing confirmation parser. Gemini-related additions are filtered against the original resume plus explicit candidate statements before they enter the prompt or score, and the mandatory role-weaving pass uses only the evidence-supported `jdKwsPrompt`. Unsupported requirements remain gaps or separately labelled Job-post terms; they are not represented as work performed.
 
 The change is deliberately split from PR #279's separate WhatsApp external-send allow-list change. It does not change the 6 November 70% delivery-with-gaps or 95% supported-coverage clean-pass policy, and does not authorize a real send. A source-contract regression pins the prompt, generated-term filter and final role-weaving input. This is not a live model generation, a 98% match claim, or employer verification; authenticated baseline/JD/confirmation and exported-DOCX review remain required.
+
+## 10 November 2026 — second prompt-boundary audit
+
+The first evidence-boundary pass restricted the deterministic role-repair helper, but a second source audit found two earlier instructions that could still bias generation:
+
+1. The base src/lib/claude.ts RULES prompt still described the candidate as claiming the entire JD, instructed the model to write each JD term into current and previous roles, and treated adjacent security/IAM practice as transferable across employers. This contradicted the evidence-bound J1_HEADER.
+2. The split-draft firstAsk carried the global missing-term list into every part, including each employer's experience prompt. A deterministic post-pass could remove unsupported terms later, but the initial model instruction still encouraged them.
+
+The writer-only branch now aligns RULES with the source-evidence policy, removes cross-role assumptions, routes the global supported-term ask only to the profile/skills part in split mode, and keeps each experience part on its own role plan. Gap-fill wording now says each term was matched to that employer's original bullets and instructs the model to leave unsupported requirements as gaps. A source-contract regression rejects the old blanket prompt and global split-prompt leakage.
+
+Evidence: PR #287 exact head 9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540; commits b7d6d8369f03b152005792552bc9a52b3c78ef07, bc3ed928e003065a8c34abacbc474031a6242649, 9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540; full CI 42920485193 passed 46 steps; Plan/REA 42920485382, Kompas baseline 42920485384, and WhatsApp recovery 42920485412 passed.
+
+Remaining boundary: general first-person confirmations may support the skills section, but a structured employer/project-bound confirmation map is not implemented. The current experience guard conservatively requires same-role original bullet evidence; do not attribute a general skill statement to a historical employer. The 6 Nov no-exception blanket-confirmation policy remains recorded, but it must not silently become an employer-specific claim without a role binding. No authenticated model generation, DOCX export, employer verification or 98% live match is claimed.
