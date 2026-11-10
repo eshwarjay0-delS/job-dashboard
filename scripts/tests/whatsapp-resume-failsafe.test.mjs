@@ -62,6 +62,7 @@ function harness(runTailor) {
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
     '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
+    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
     '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: () => false },
