@@ -204,3 +204,14 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## Per-account sync health — 9 November 2026
+
+The approved Poke-inspired multi-account contract requires each connected inbox to keep its own identity and expose partial failures. The Gmail inbox previously showed one global "Live" check time, while the shared data hook retained per-account issues but the page did not render them when another account still returned mail.
+
+The Gmail thread response now includes an account-scoped status for every connected inbox. It reads the existing user/account mfit_gmail_sync.last_sync_at and days_synced record after the check, then reports synced, partial, failed, or checked. A partial or failed result keeps the last successful timestamp visible. A successful direct check without a persisted sync row is labeled "Checked just now", not "Synced".
+
+The signed-in Gmail snapshot keeps these statuses under the same user-specific key as its mail data. Account chips show their own status, and partial failures appear in a separate recovery notice without hiding mail from healthy inboxes. Recovery wording classifies throttling and reconnect problems without echoing raw provider response bodies. No account identities are merged, no Gmail messages are sent, and no WhatsApp notification is triggered by this UI change.
+
+Verification is synthetic and source-level only. It does not prove that two real connected inboxes have refreshed or that a mobile alert reached a device. Remaining acceptance: use two authorized test inboxes with one successful and one partial/failed sync; confirm each chip and last-success timestamp stays attached to the correct account, then verify recovery after reconnect. Full CI, production release and authenticated account acceptance remain separate gates.
