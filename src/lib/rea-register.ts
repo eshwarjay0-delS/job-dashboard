@@ -306,7 +306,7 @@ REA_SESSIONS.unshift({
   ],
   limits: "Library semantic search is not exhaustive across every chat, external WhatsApp archive, R2 bucket or account. The exact generated DOCX, per-run R2 object key, webhook/request ID, Meta message ID and signed delivery receipt remain unavailable. No private document contents or credentials were copied into GitHub.",
   next: "Recover the exact original output and correlated R2/webhook/Meta delivery evidence from the authorized archive. Keep conflicting source facts quarantined and do not replay or send a real WhatsApp message.",
-  commits: []
+  commits: ["fc21c2a83648a442c0fcc2d4fccc790a3066c7de", "0300eb0a6bf7976806f7bc454895c2e023f869a8"]
 });
 
 export function filterReaSessions(query:string,area:string,method:string) {
