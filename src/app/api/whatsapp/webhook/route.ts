@@ -33,6 +33,7 @@ import { resolveWhatsAppUser, claimNotice, textCodesWork } from "@/lib/whatsapp-
 import { claimLinkCode } from "@/lib/whatsapp-link"
 import { notRegisteredMessage, NOT_CHECKED_MESSAGE, siteOf } from "@/lib/whatsapp-who-core"
 import { sameResumeIdentity } from "@/lib/resume-identity"
+import { docxIdentityText } from "@/lib/resume-round-trip-guard"
 import { extractText } from "@/lib/docx"
 import { handleWhatsAppKompas } from "@/lib/whatsapp-kompas-channel"
 import { speechToWhatsAppText } from "@/lib/whatsapp-voice"
@@ -1054,8 +1055,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
     // The already-chosen resume is unchanged and is the file that goes out.
-    if (await sendClosest("The rewrite did not keep your name, contact details and dates, so it was not sent.")) return
-    await sayOutcome("I did not send a file because the exported draft failed the contact-details or employment-date preservation check. Your original resume and job description are saved for automatic recovery.")
+    if (await sendClosest("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
+    await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
     return;
   }
   const meta = await metaPromise
@@ -1554,7 +1555,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     return sendText(from, "I could not verify the original resume for this update, so no file was sent.")
   }
   if (!(await sameResumeFacts(source, file))) {
-    await sendBaseline("The rewrite did not keep your name, contact details and dates, so it was not sent.", source, meta)
+    await sendBaseline("The update failed identity/contact/date verification, so I sent your original resume instead.", source, meta)
     return
   }
   const changes = [...(gen.changes || []), request]
@@ -1665,7 +1666,7 @@ function resumeGapReport(result: TailorResult): string {
 // The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
 // the name, every email, phone, link and date of the source must be in the exported file unchanged, and none added.
 async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
-  const [a, b] = await Promise.all([extractText(source), extractText(file)])
+  const [a, b] = await Promise.all([docxIdentityText(source), docxIdentityText(file)])
   return sameResumeIdentity(a, b)
 }
 

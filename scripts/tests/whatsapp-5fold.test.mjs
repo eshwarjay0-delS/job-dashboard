@@ -101,6 +101,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
     '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity: () => samePerson },
+    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
     '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Eshwar_Resume.docx' },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: () => false },
@@ -147,7 +148,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
   assert.match(docs[0].body, /eshwarjay05@gmail.com/)
   assert.doesNotMatch(docs[0].body, /jayeshwar44/)
-  assert.match(docs[0].caption, /name, contact details and dates/)
+  assert.match(docs[0].caption, /identity\/contact\/date verification/)
   assert.match(docs[0].caption, /closest matching resume/)
 
   file = Buffer.from('eshwarjay05@gmail.com')

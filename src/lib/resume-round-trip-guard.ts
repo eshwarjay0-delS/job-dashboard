@@ -41,14 +41,20 @@ export type RoundTripResult = { ok: boolean, problems: string[] }
 export function extractFacts(text: string | null | undefined): ResumeFacts {
   const raw = String(text ?? '').normalize('NFC')
   // name is compared exactly (after NFC + whitespace), so a hyphen -> en dash change in a name still fails
-  const firstLine = (raw.split(/\r?\n/).find(l => l.trim()) ?? '').trim().replace(/\s+/g, ' ')
-  // Mammoth returns an entire Word paragraph as one line. A legitimate title
-  // rewrite can change "Alex Example | Engineer" to "Alex Example | Consultant"
-  // while leaving the person's name untouched. Compare only a clearly
-  // identifiable 2-5-token name prefix before a spaced header separator.
-  // If the prefix is ambiguous, retain the full-line strict comparison.
-  const prefix = firstLine.split(/\s+[|•·—–-]\s+/)[0].trim()
-  const name = /^(?:[\p{L}][\p{L}'’.-]*\s+){1,4}[\p{L}][\p{L}'’.-]*$/u.test(prefix) ? prefix : firstLine
+  const rawFirstLine = (raw.split(/\r?\n/).find(l => l.trim()) ?? '').trim()
+  const firstLine = rawFirstLine.replace(/\s+/g, ' ')
+  // Mammoth and Word can place the title in another run, after a tab, or in
+  // the same paragraph after a visible separator. Keep only a clear 2-5-token
+  // name prefix; if it is ambiguous, retain the full-line strict comparison.
+  const namePattern = /^(?:[\p{L}][\p{L}'’.-]*\s+){1,4}[\p{L}][\p{L}'’.-]*$/u
+  const cells = rawFirstLine.split(/\t+/).map(cell => cell.trim().split(/\s+[|•·—–-]\s+/)[0].trim()).filter(Boolean)
+  let tabPrefix = ''
+  for (const cell of cells) {
+    tabPrefix = [tabPrefix, cell].filter(Boolean).join(' ').replace(/\s+/g, ' ')
+    if (namePattern.test(tabPrefix)) break
+  }
+  const prefix = rawFirstLine.includes('\t') ? tabPrefix : firstLine.split(/\s+[|•·—–-]\s+/)[0].trim()
+  const name = namePattern.test(prefix) ? prefix : firstLine
   const t = raw.replace(DASH, '-')
   const emails = (t.match(EMAIL) ?? []).map(e => e.toLowerCase())
   const noEmail = t.replace(EMAIL, ' ')
@@ -94,4 +100,108 @@ export async function docxText(docx: Buffer | Uint8Array | ArrayBuffer): Promise
       .replace(/\n{2,}/g, '\n').trim()
   }))
   return textParts.filter(Boolean).join('\n') + '\n'
+}
+
+
+// Identity extraction for the actual DOCX being sent. Mammoth's extractRawText omits
+// Word headers/footers and returns hyperlink display text without external relationship
+// targets. Read the body plus only referenced header/footer parts, and append external
+// hyperlink targets so a visible label cannot hide a changed profile URL.
+type DocxRelationship = { target: string; type: string; external: boolean }
+
+function xmlAttribute(attributes: string, name: string): string {
+  const match = attributes.match(new RegExp("(?:^|\\s)" + name + "\\s*=\\s*([\"'])(.*?)\\1", "i"))
+  return match ? match[2] : ""
+}
+
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_all, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_all, dec: string) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'").replace(/&amp;/g, "&")
+}
+
+function escapeXmlText(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+function relationshipFileFor(part: string): string {
+  const slash = part.lastIndexOf("/")
+  return part.slice(0, slash + 1) + "_rels/" + part.slice(slash + 1) + ".rels"
+}
+
+function resolveRelationshipTarget(sourcePart: string, target: string): string {
+  const absolute = target.startsWith("/")
+  const segments = absolute ? [] : sourcePart.split("/").slice(0, -1)
+  for (const segment of target.replace(/^\/+/, "").split("/")) {
+    if (!segment || segment === ".") continue
+    if (segment === "..") segments.pop()
+    else segments.push(segment)
+  }
+  return segments.join("/")
+}
+
+async function readDocxRelationships(zip: JSZip, part: string): Promise<Map<string, DocxRelationship>> {
+  const file = zip.file(relationshipFileFor(part))
+  if (!file) return new Map()
+  const xml = await file.async("string")
+  const relationships = new Map<string, DocxRelationship>()
+  for (const match of xml.matchAll(/<Relationship\b([^>]*)\/?\s*>/gi)) {
+    const attributes = match[1]
+    const id = xmlAttribute(attributes, "Id")
+    const target = xmlAttribute(attributes, "Target")
+    const type = xmlAttribute(attributes, "Type")
+    if (!id || !target || !type) continue
+    relationships.set(id, {
+      target: decodeXmlEntities(target),
+      type,
+      external: /^external$/i.test(xmlAttribute(attributes, "TargetMode")),
+    })
+  }
+  return relationships
+}
+
+async function docxPartIdentityText(zip: JSZip, part: string): Promise<string> {
+  const file = zip.file(part)
+  if (!file) return ""
+  const xml = await file.async("string")
+  const relationships = await readDocxRelationships(zip, part)
+  const withTargets = xml.replace(/<w:hyperlink\b([^>]*)>([\s\S]*?)<\/w:hyperlink>/gi, (_all, attributes: string, inner: string) => {
+    const id = xmlAttribute(attributes, "r:id")
+    const relation = relationships.get(id)
+    if (!relation || !relation.external || !/\/hyperlink$/i.test(relation.type)) return inner
+    return inner + '<w:t xml:space="preserve"> ' + escapeXmlText(relation.target) + ' </w:t>'
+  })
+  return decodeXmlEntities(withTargets
+    .replace(/<w:tab\b[^>]*\/?\s*>/gi, "\t")
+    .replace(/<w:(?:br|cr)\b[^>]*\/?\s*>/gi, "\n")
+    .replace(/<\/w:p>/gi, "\n")
+    .replace(/<[^>]+>/g, ""))
+    .replace(/\n{2,}/g, "\n")
+    .trim()
+}
+
+export async function docxIdentityText(docx: Buffer | Uint8Array | ArrayBuffer): Promise<string> {
+  const zip = await JSZip.loadAsync(docx)
+  const documentPart = "word/document.xml"
+  const documentFile = zip.file(documentPart)
+  if (!documentFile) throw new Error("not a .docx: word/document.xml missing")
+  const documentXml = await documentFile.async("string")
+  const documentRelationships = await readDocxRelationships(zip, documentPart)
+  const referencedParts = new Set<string>([documentPart])
+
+  // Include only headers/footers actually referenced by a section. Old unused parts in a
+  // template must not create false positives just because they remain inside the ZIP.
+  for (const match of documentXml.matchAll(/<w:(?:header|footer)Reference\b([^>]*)\/?\s*>/gi)) {
+    const id = xmlAttribute(match[1], "r:id")
+    const relation = documentRelationships.get(id)
+    if (!relation || relation.external || !/\/(?:header|footer)$/i.test(relation.type)) continue
+    const part = resolveRelationshipTarget(documentPart, relation.target)
+    if (/^word\/(?:header|footer)\d+\.xml$/i.test(part) && zip.file(part)) referencedParts.add(part)
+  }
+
+  const parts = [documentPart, ...[...referencedParts].filter(part => part !== documentPart).sort()]
+  const textParts = await Promise.all(parts.map(part => docxPartIdentityText(zip, part)))
+  return textParts.filter(Boolean).join("\n") + "\n"
 }

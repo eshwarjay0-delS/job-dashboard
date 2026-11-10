@@ -197,6 +197,7 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
     '@/lib/plain-failure': { plainFailure: () => 'plain failure' },
     '@/lib/resume-identity': { sameResumeIdentity },
+    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
     '@/lib/docx': { extractText: async () => IDENTITY },
     '@/lib/supabase/service': { serviceClientAvailable: () => false, createServiceClient: () => { throw new Error('no service') } },
     '@/lib/keyword-targets': load('src/lib/keyword-targets.ts'),
