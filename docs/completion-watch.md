@@ -130,3 +130,8 @@ Continue approved regression-first WhatsApp reliability work while PR204 awaits 
 Before: three suites 8 pass/23 fail on current master, initially missing module errors. Loading real helpers exposed four obsolete message assertions; updated assertions still verify selected resume, missing terms, risk Needs review, refusal and successful separate risk report. After: 31/31 pass; the complete expanded CI command including library-pick passes 43/43. CI selected-email/duplicate-job step now includes these restored suites rather than leaving them outside CI. No real messages, private fixtures or production sessions used.
 
 Next: Run exact new-head CI before merging test-only maintenance; retain PR204 safety review separately and do not treat its green CI as production delivery. Original incident evidence, actual signed delivery and real Windows/50-pair acceptance remain open.
+
+
+## 10 November 2026 — audio provenance typecheck restacked safely
+
+PR #197's one-file filename-narrowing fix conflicts with current master. Created a separate safe branch from `901568e21bd2befea85a0747f7cc430767ee7106` rather than changing the original contributor branch. Reapplied the local string narrowing and retained master's existing extension-type guard plus all filename, SHA-256, duration and transcript-status checks. Source commit: `e3f43606796a2aa6914a85cb15990e7fb0dd56ec`. Plan journal commit: `2309cdee75a3f8941b8194c97eff7cb8185c372e`. A draft replacement PR and exact-head full CI are still pending. No deployment or merge was performed.
