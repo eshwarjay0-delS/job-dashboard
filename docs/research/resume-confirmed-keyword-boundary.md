@@ -92,3 +92,10 @@ The new draft fix keeps the user's separate labelled `Job-post terms` line intac
 - removes `unverified_jd_terms` from the WhatsApp shortfall allow-list, so an unverified claim uses the already-chosen same-account resume fallback rather than sending the generated DOCX.
 
 Regression coverage now checks that unverified claims are not sendable, that the default writer prompt does not turn JD requirements into candidate claims, and that generated related terms are filtered against candidate evidence. Existing 70% WhatsApp delivery-with-gaps policy and 95% supported-coverage clean-pass rule remain unchanged. This is a draft implementation only; no live model call, resume write, WhatsApp send or production release occurred. The Safe Merge Gate requires an explicit owner decision before changing external-send behavior.
+
+
+## 10 November exact-head CI reconciliation
+
+The first full-CI run for PR #279 (`42775486431`, head `cc7e4ea`) failed two cases in `scripts/tests/whatsapp-resume-failsafe.test.mjs`. Both fixtures contained `unverified_added_keywords: ['supplierninja']` and expected the generated DOCX to be sent, contradicting the new factual-integrity gate. The test-only correction commit `417ec0b` changes the first case to assert that the selected same-account source resume is sent instead of the unsupported draft. The second case now removes the unsupported claim and uses a source-backed rewording, preserving the 6 November rule that a completed low-coverage file with disclosed gaps can still be sent. This does not change the 70% WhatsApp delivery-with-gaps policy or the 95% supported-coverage clean-pass rule.
+
+The updated full CI, baseline and WhatsApp recovery regression must run on the exact new head. PR #279 remains a draft. The Safe Merge Gate requires an explicit owner decision before this external-send behavior change can merge. No live model call, real resume write, WhatsApp send or production release occurred.
