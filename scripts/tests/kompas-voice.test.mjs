@@ -12,6 +12,9 @@ function env(extra = {}) {
  state.showCaption = () => {};
  vm.createContext(state);
  vm.runInContext(section('function whisperPrompt(', '// Owner, 2026-09-30'), state);
+ // transcribe() calls this production retry policy for every non-2xx response.
+ // Include the real helper so permanent failures are not misclassified as VM ReferenceErrors.
+ vm.runInContext(section('function speechRetryDelay(', 'async function transcribe('), state);
  vm.runInContext(section('async function transcribe(', '/* ---- what was heard'), state);
  return state;
 }
@@ -41,7 +44,7 @@ test('discards a response after switching sessions', async () => {
  await p; assert.equal(s.entries.length,0);
 });
 test('failed request does not block the next phrase and reports the loss', async () => {
- let n=0; const s=env({fetch:async()=>++n===1?{ok:false,status:429,headers:{get:()=>"30"}}:{ok:true,json:async()=>({text:'Recovered phrase'})}});
+ let n=0; const s=env({fetch:async()=>++n===1?{ok:false,status:400,headers:{get:()=>null}}:{ok:true,json:async()=>({text:'Recovered phrase'})}});
  await Promise.all([s.transcribe(new Blob(['a']),'You',{final:true}),s.transcribe(new Blob(['b']),'You',{final:true})]);
  assert.equal(s.entries[0].text,'Recovered phrase'); assert.match(s.errors[0],/not transcribed/);
 });
@@ -136,11 +139,22 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  vm.runInContext(section('function frameHeardQuestion(', '$("screenBtn")'),s);
  const first=s.aiAnswer(false);await s.aiAnswer(false);assert.equal(calls,1);assert.equal(s.aiBusy,true);done();await first;assert.equal(s.aiBusy,false);
 });
-test('stalled answers stop spinning and keep a visible retry path',async()=>{
- let timeout,aborted=false;
- const ctl={abort:()=>aborted=true};const card={req:ctl,answer:['…']};
- const s=env({setTimeout:fn=>{timeout=fn;return 1;},clearTimeout:()=>{},generateAnswerRequest:()=>new Promise(()=>{}),answerCtl:ctl,cards:[card],idx:0,renderCard:()=>{}});
+test('failed answer request stops spinning and keeps a visible retry path',async()=>{
+ let aborted=false,rendered=0;
+ const ctl={abort:()=>{aborted=true;}};
+ const card={req:ctl,answer:['…'],streaming:true};
+ const s=env({
+  answerCtl:ctl,cards:[card],idx:0,
+  generateAnswerRequest:async()=>{throw new Error('request timed out');},
+  renderCard:()=>{rendered++;},
+ });
  vm.runInContext(section('async function generateAnswer(', 'async function generateAnswerRequest('),s);
- const answer=s.generateAnswer('Explain OAuth',card);timeout();await answer;
- assert.equal(aborted,true);assert.equal(card.streaming,false);assert.match(card.answer[0],/retry/);assert.equal(s.answerCtl,null);
+ // Exhaust the bounded automatic retries so this verifies the user-visible manual retry path.
+ await s.generateAnswer('Explain OAuth',card,{retries:2});
+ assert.equal(aborted,true);
+ assert.equal(card.streaming,false);
+ assert.deepEqual(card.answer,['…']);
+ assert.equal(rendered,1);
+ assert.match(s.errors.at(-1),/Press AI Answer to try again/);
+ assert.equal(s.answerCtl,null);
 });
