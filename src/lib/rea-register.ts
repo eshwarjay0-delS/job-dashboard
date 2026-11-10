@@ -298,7 +298,7 @@ REA_SESSIONS.unshift({
   request: "Continue the approved recovery of the 17 Oct 2026 17:28 Chicago WhatsApp resume failure using only exact source and delivery evidence.",
   sources: [
     { label: "Historical WhatsApp resume acceptance record", path: "docs/research/whatsapp-resume-acceptance-2026-11-10.md" },
-    { label: "Library semantic search", path: "Library files.search; DOCX results only, created 2026-10-16 through 2026-10-18" }
+    { label: "Library search evidence record", path: "docs/research/whatsapp-resume-acceptance-2026-11-10.md" }
   ],
   steps: [
     { label: "Search generated output", finding: "A broad Library search for the 17 Oct Security Engineer Risk & Controls request did not surface the generated DOCX; it returned the existing research paper.", status: "Observed", evidence: "Read-only Library semantic search on 2026-11-10." },
