@@ -60,3 +60,14 @@ PR #266 merged as `30bd971c97937b9dea8716b945fa3b1219b07544` from exact head `2a
 Read-only production snapshot after release: 14,164 stored rows; 12,353 active; 12,170 active within 14 days; 183 active rows older than 14 days. eTeam remains 907 stored/818 active rows with latest last_seen 8 Nov; they are preserved and will age out under the 14-day API filter if not refreshed. The current source registry contains 20 active adapters and 10 pending/manual-only sources.
 
 The 9 Nov 11:00 UTC crawl is still the latest completed run, and it occurred before PR #266: 6,976 jobs found/upserted across 21 adapters with one eTeam HTTP 404. The first post-change scheduled crawl has not completed, so no claim is made that eTeam was skipped by a live run. The public API smoke also remains pending because external DNS resolution failed in this execution environment. The next checks are the first scheduled post-change crawl and `GET /api/crawl/jobs?limit=1` when HTTP access is available. Robert Half remains a separate pending adapter after its official feed/HTML is captured and tested.
+
+
+## 10 November 2026 — work-type classification audit
+
+The public Apply contract is explicit: W2, C2C, 1099 and C2H are contract shapes; W2 payroll alone is not proof of a contract. The crawler's previous `classifyWorkType()` used `/temp/i` (a substring) and did not recognize the standalone `C2H` shorthand, even though `contractTypes()` already implemented the canonical evidence taxonomy.
+
+The fix delegates work-type classification to `contractTypes()`, then classifies permanent/direct-hire/full-time evidence separately. Regression cases cover C2H, C2C, 1099, temporary, temp-to-hire, contract-to-hire, W2 contract, W2-only, generic `template`/`attempt` substrings and explicit permanent-vs-contract precedence.
+
+Read-only production aggregate before this change: 10,152 contract rows (8,814 active), 1,034 permanent rows (930 active), 2,978 unknown rows (2,609 active). No existing row with a standalone C2H token was misclassified out of contract; the one title matching `template` was correctly a contract because its engagement field explicitly said `Contract`. No production rows were updated. This is a source/test change only; existing rows are reclassified when a future crawl sees them again.
+
+The daily Vercel cron is `0 11 * * *` (11:00 UTC; 05:00 CST on 10 Nov). The latest completed crawl remains the pre-change 9 Nov 11:00 UTC run. The first post-change run is still pending. Public GET smoke remains blocked by DNS resolution in this environment. Robert Half remains pending: the official cybersecurity page shows 53 results across two pages, but raw HTML is unavailable and its listed role-details sitemap returned HTTP 403; no adapter was added.
