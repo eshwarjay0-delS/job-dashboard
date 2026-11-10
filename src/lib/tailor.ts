@@ -276,8 +276,8 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "EXPERIENCE SHAPE: rewrite existing experience in place. Keep the same employers, titles, locations, and dates, the same number of bullets and paragraphs under each employer, the lead paragraph, and any Environments line. Do not add or delete experience rows. Write every known JD term into the current role and the previous roles as natural project language. An older bullet that omitted a tool is not a reason to leave that tool out. Do not park a term only on a skills line when a project bullet can carry it. Never add an employer, a date, or a contact detail.",
-        "REPRESENTATION: the candidate claims this JD skill set and will establish the details in the interview. Re-vision the existing projects so those skills read as work he already does. Security and IAM patterns repeat across projects; write them in every role that does that kind of work. Do not sound cautious or apologetic. Never add an employer, a date, a phone number, an email, a metric, or a different person's contact.",
+        "EXPERIENCE SHAPE: rewrite existing experience in place. Keep the same employers, titles, locations, and dates, the same number of bullets and paragraphs under each employer, the lead paragraph, and any Environments line. Do not add or delete experience rows. Develop only source-supported JD terms supplied in jdKeywords, and only in roles whose original bullets support them. A JD requirement alone is not evidence that the candidate performed the work. Keep unsupported requirements out of experience bullets; they may appear only in the separate labelled Job-post terms line when that disclosure is enabled. Never add an employer, a date, or a contact detail.",
+        "REPRESENTATION: the JD describes target requirements, not the candidate's history. The source resume and explicit first-person confirmations are the only evidence for experience. Do not imply the candidate has the full JD skill set. Use only source-supported jdKeywords, and place each term only in a role whose original evidence supports it. Keep unsupported requirements as gaps or as separately labelled Job-post terms to confirm; never present them as work performed. Never add an employer, a date, a phone number, an email, a metric, or a different person's contact.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const candidateInput = candidateEvidenceInput(opts.jd, immediatePrefs)
@@ -374,7 +374,7 @@ export async function runTailor(opts: {
     : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
   // The JD is target context, not evidence. Only verified terms are mandatory in
   // rewrite prompts; chasing every JD phrase caused fabricated skills and timeouts.
-  const jdKwsPrompt = [...new Set(forcedJdKws)]
+  let jdKwsPrompt = [...new Set(forcedJdKws)]
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
   const kwMatched = scoreKws.filter(k => beforeKw.has(k))
@@ -1000,10 +1000,13 @@ export async function runTailor(opts: {
           keys: opts.keys, jd, sourceResume: text, candidateInput,
           known: [...base.afterKw, ...jdGenerated], focus: missing, timeoutMs: 10000, usageSink: keywordUsage,
         })
+        const candidateEvidence = [text, ...candidateStatements].join("\n")
         const freshUnique = keywordsFromPass(extraPass)
+          .filter(k => coveredJdKeywords(candidateEvidence, [k]).has(k))
           .filter(k => !base.afterKw.has(k) && !jdGenerated.includes(k) && !scoreKws.includes(k) && !isQualificationOrJunk(k))
           .slice(0, 24)
         if (freshUnique.length) {
+          jdKwsPrompt = [...new Set([...jdKwsPrompt, ...freshUnique])]
           jd = constructJd(jd, [{ skills: freshUnique, experiences: [], points: [], bullets: [], skillLines: [], summary: "" }])
           for (const k of freshUnique) {
             if (!jdExtracted.includes(k)) jdExtracted.push(k)
@@ -1012,7 +1015,7 @@ export async function runTailor(opts: {
             if (!scoreKws.includes(k)) scoreKws.push(k)
             floorKws.add(k)
           }
-          const gapAsk = `EXTRA GENERATE-THEN-TAILOR PASS: coverage is not above 95%. Write these JD terms into the existing project bullets of the current role and the previous roles, as natural work. Do not add or remove bullets, employers, dates, or titles. Keep every Environments line. Use the exact wording: ${freshUnique.join(", ")}. Do not leave a term only on the skills line when a bullet can carry it. Do not add an employer, a date, or a contact.`
+          const gapAsk = `EXTRA GENERATE-THEN-TAILOR PASS: improve wording only with the source-supported related terms listed below. Use a term only in a role whose original evidence supports it; do not infer work from the JD or from another role. If no original bullet supports a term in a role, leave it as a gap or labelled Job-post term. Do not add or remove bullets, employers, dates, or titles. Keep every Environments line. Use the exact wording where supported: ${freshUnique.join(", ")}. Do not add an employer, a date, or a contact.`
           let gapCandidate: Pass | null = null
           if (splitDraft) {
             const view = zonesAfter(base.edits)
@@ -1106,17 +1109,17 @@ export async function runTailor(opts: {
     usedModel = plain.via
     skillsOnly = true
   }
-  // Known JD terms go into the existing project bullets before any skills-line overflow.
-  // A term already on the skills line or in the summary is still missing from the
-  // bullets, so the whole-document set is the wrong filter. Current and previous
-  // roles take turns. Employers, dates, and contact stay out of the clause.
+  // Only evidence-supported JD terms go into existing project bullets before skills-line overflow.
+  // A JD-only requirement is not candidate experience. The separately labelled
+  // Job-post terms line remains distinct from experience and must not be woven into roles.
+  // Current and previous roles take turns; each role must carry its own source evidence.
   if (best && !refine && !skillsOnly && jdGate && zones.roles.some(r => r.bullets.length)) {
     const current = best
     const bulletText = zones.roles.flatMap(r => r.bullets.map(b => {
       const edited = (current.edits.bullets || []).find(x => x.idx === b.idx)
       return edited?.text || b.text
     })).join("\n")
-    const missing = scoreKws.filter(k => !isCertification(k) && !isQualificationOrJunk(k) && !coveredJdKeywords(bulletText, [k]).has(k))
+    const missing = jdKwsPrompt.filter(k => !isCertification(k) && !isQualificationOrJunk(k) && !coveredJdKeywords(bulletText, [k]).has(k))
     if (missing.length) {
       const woven = weaveExperienceRepresentation(
         zones.roles.map(r => ({ bullets: r.bullets.map(b => ({ idx: b.idx, text: b.text })) })),
