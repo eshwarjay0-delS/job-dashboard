@@ -1,3 +1,13 @@
+## 2026-11-06 — A design answer speaks its own pieces
+
+No new screen. A design answer speaks the pieces in the design sentence and leaves off the shared explain list.
+
+**Measured on the fictional sample resume, 150 drafts, no model, on the versus-side tree.** Before: 16 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. Front Door versus tenant isolation: engineer 0.542 (89 and 89 words), director 0.651 (138 and 143), architect 0.771 (212 and 226, ceiling 281). After: 4 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 gaps under 0.50, 0 over the ceiling. That pair: engineer 0.556 (59 and 67), director 0.533 (91 and 101), architect 0.533 (143 and 159). Engineer overlap rose and stays under 0.7. The highest remaining pair is 0.710. The versus-side pair stayed at architect 0.500. Offline sample: 15 answers, 0 failures, 16 warnings. Focused suites 67 pass, 0 fail. `tsc --noEmit` clean.
+
+**Re-run on 10 Nov 2026 after restack onto master `3e2d2359`.** 150 drafts, no model. Before this change, on the versus-side tree: 16 pairs at Jaccard >= 0.7. After: 4. Same-answer failures 0. Length failures 0. Mode gaps under 0.50: 0. Answers over the ceiling: 0. Front Door versus tenant stayed engineer 0.556 (59 and 67), director 0.533 (91 and 101), architect 0.533 (143 and 159). The highest remaining pair stayed 0.710, director: audit evidence disagrees with live configuration, against the attacker retains access through a service account. Offline sample: 15 answers, 0 failures, 16 warnings. Focused suites: 169 pass, 0 fail. `tsc --noEmit` clean. The earlier 67-pass note was the original run, not this re-run.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Pull request 253 is open on the versus-side stack.
+
 ## 2026-11-06 — A versus answer stays on the two sides
 
 No new screen. A comparison or a definition that names two sides no longer fills length from the shared checklist, the shared honest line, or an approach line.

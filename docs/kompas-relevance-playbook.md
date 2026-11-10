@@ -100,6 +100,16 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 6 November 2026, a design answer speaks its own pieces
+
+On the versus-side tree, 150 drafts had 16 pairs at Jaccard >= 0.7. The worst pair was Front Door, APIM and a private backend against tenant isolation across API, cache and workers. Architect Jaccard was 0.771 at 212 and 226 words, under a 281 ceiling. Both drafts then spoke the same explain list: trust boundaries, data flow, failure isolation, rollout, and validation.
+
+A design answer now speaks only the pieces in the design sentence. The shared explain list stays off. After: engineer 0.556 (59 and 67 words), director 0.533 (91 and 101), architect 0.533 (143 and 159). Engineer overlap rose from 0.542 and stays under 0.7. The Front Door draft still names APIM. Neither draft says "data flow".
+
+Across 150 drafts, pairs at Jaccard >= 0.7 went from 16 to 4. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0. The highest remaining pair is 0.710. Offline sample stayed 15 answers, 0 failures, 16 warnings. Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10.
+
+Re-run on 10 November 2026 after restack onto master `3e2d2359`: still 4 pairs and the same four zeros. Front Door versus tenant stayed engineer 0.556, director 0.533, architect 0.533. The 0.710 director pair stayed. Focused suites 169 pass, 0 fail. `tsc --noEmit` clean.
+
 ## Fold log, 6 November 2026, a versus answer stays on the two sides
 
 On master `9d2997ac`, 150 drafts had 84 pairs at Jaccard >= 0.7. The worst pair was two "explain the same incident to a director" questions: rollback scope versus lateral movement risk, and restoration speed versus reinfection risk. Architect Jaccard was 0.811 at 114 and 126 words. Both drafts used the same checklist for decision owner, business exposure, and measures.
