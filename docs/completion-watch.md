@@ -142,3 +142,12 @@ Continue approved regression-first WhatsApp reliability work while PR204 awaits 
 Before: three suites 8 pass/23 fail on current master, initially missing module errors. Loading real helpers exposed four obsolete message assertions; updated assertions still verify selected resume, missing terms, risk Needs review, refusal and successful separate risk report. After: 31/31 pass; the complete expanded CI command including library-pick passes 43/43. CI selected-email/duplicate-job step now includes these restored suites rather than leaving them outside CI. No real messages, private fixtures or production sessions used.
 
 Next: Run exact new-head CI before merging test-only maintenance; retain PR204 safety review separately and do not treat its green CI as production delivery. Original incident evidence, actual signed delivery and real Windows/50-pair acceptance remain open.
+
+
+## 10 November 2026 — WhatsApp DOCX identity repair deployed
+
+PR #267 merged as `23ec076b944519e518060f14e2ce530238e8393a` from exact reviewed head `48836eed08233dcc532ab4a04299dd74b39475a2`. Full CI `42747786078`, WhatsApp recovery regression `42747786105`, and Kompas baseline `42747785851` all passed. The preview was READY at exact PR head. Production deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc` is READY and the canonical `job-dashboard-fawn.vercel.app` alias independently resolves to that exact merge SHA.
+
+The fix reads identity facts from the DOCX body, referenced headers/footers and external hyperlink targets before delivery; name, all emails, phone, profile URL and employment dates remain protected. It does not change the 6 Nov WhatsApp coverage policy and does not resolve the 17 Oct 98% coverage hold by itself. The original DOCX, full JD, generated output and per-run R2/Meta trace are still missing. No real WhatsApp send or device acceptance was performed; runtime HTTP smoke was unavailable because external DNS resolution failed. The optional voice-preview-smoke failure remains with the separate Kompas Voice Delivery task; no voice behavior or secret was changed.
+
+Continue: obtain the authorized original source bundle for exact incident replay, then arrange a separately approved real-device delivery acceptance. In parallel, keep the Poke-inspired Gmail per-account sync-health PR #268 as draft until it is safely restacked on current master and its separate two-account/mobile acceptance gate is met.
