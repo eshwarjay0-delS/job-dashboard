@@ -38,6 +38,10 @@ test('the identity guard stays strict when the JD terms gate is off', () => {
     assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
     assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
     assert.equal(sameResumeIdentity(src, src.replace('linkedin.com/in/eshwar-jay', 'github.com/eshwar-jay')), false)
+    // Host casing, scheme and a trailing slash are formatting-only; path casing is identity-bearing.
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'https://www.LINKEDIN.com/in/eshwar-jay/')), true)
+    const caseSensitivePath = src.replace('https://linkedin.com/in/eshwar-jay', 'https://github.com/Eshwar/Kompas')
+    assert.equal(sameResumeIdentity(caseSensitivePath, caseSensitivePath.replace('Eshwar/Kompas', 'eshwar/Kompas')), false)
     assert.equal(sameResumeIdentity(src, src + '\njayeshwar44@gmail.com'), false)
   } finally {
     if (previous === undefined) delete process.env.JD_TERMS_ALWAYS_ON_SKILLS
