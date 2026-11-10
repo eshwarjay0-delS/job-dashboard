@@ -282,7 +282,7 @@ REA_SESSIONS.unshift({
   steps: [
     { label: "Trace result underfill", finding: "The route fetched at most four times the caller limit (capped at 100), then removed clearance roles. A clearance-heavy newest page could underfill even when later fresh eligible jobs existed.", status: "Observed", evidence: "Source review of src/app/api/crawl/jobs/route.ts." },
     { label: "Add bounded ordered scanning", finding: "The route now pages through at most min(1,000, max(100, limit × 10)) fresh rows, stopping when the visible limit is filled or the cap/end is reached. It exposes excluded_clearance and clearance_scan_limited.", status: "Implemented", evidence: "Commits bcab029, ee5ac59 and 3aea24c on fix/crawl-clearance-pagination-20261110." },
-    { label: "Add behavior tests", finding: "Tests cover a clearance-only first page followed by eligible rows, plus a capped scan that truthfully reports underfill.", status: "Implemented", evidence: "Commits f063458 and 1fbc4d5." }
+    { label: "Add behavior tests", finding: "Tests cover a clearance-only first page followed by eligible rows, plus a capped scan that truthfully reports underfill.", status: "Implemented", evidence: "Commits f063458 and 1fbc4d5." },
     { label: "Surface scan cap to Apply users", finding: "The Apply search note now explains when clearance filtering reaches the bounded scan cap and advises narrowing the search.", status: "Implemented", evidence: "Apply page update 521ce804 and visible-notice regression ba5b890." }
   ],
   limits: "The code is on an unmerged branch. No production API request, live crawl, database mutation or production deployment was performed.",
