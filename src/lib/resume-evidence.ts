@@ -49,3 +49,37 @@ export function missingRoleEvidenceTerms(
   const candidates = [...new Set([...requiredTerms, ...sourceTerms])]
   return candidates.filter(term => sourceTerms.has(term) && !currentTerms.has(term))
 }
+
+
+/** Restore an edited experience bullet when it introduces a JD term that no original
+ * bullet under the same employer supports. A term found in another employer's source
+ * bullets is not transferable. Whole-bullet restoration keeps the factual source intact. */
+export function restoreUnsupportedRoleEdits<T extends { idx: number; text: string }>(
+  edits: readonly T[],
+  roles: readonly { bullets: readonly { idx: number; text: string }[] }[],
+  terms: string[],
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+): { edits: T[]; reverted: number; blockedTerms: string[] } {
+  const sourceByIdx = new Map<number, string>()
+  const allowedByIdx = new Map<number, ReadonlySet<string>>()
+  for (const role of roles) {
+    const allowed = cover(role.bullets.map(b => b.text).join("\n"), terms)
+    for (const bullet of role.bullets) {
+      sourceByIdx.set(bullet.idx, bullet.text)
+      allowedByIdx.set(bullet.idx, allowed)
+    }
+  }
+  let reverted = 0
+  const blocked = new Set<string>()
+  const guarded = edits.map(edit => {
+    const source = sourceByIdx.get(edit.idx)
+    const allowed = allowedByIdx.get(edit.idx)
+    if (source === undefined || !allowed) return { ...edit }
+    const unsupported = [...cover(edit.text, terms)].filter(term => !allowed.has(term))
+    if (!unsupported.length) return { ...edit }
+    reverted++
+    unsupported.forEach(term => blocked.add(term))
+    return { ...edit, text: source }
+  })
+  return { edits: guarded, reverted, blockedTerms: [...blocked] }
+}
