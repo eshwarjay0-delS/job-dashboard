@@ -148,7 +148,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
   assert.match(docs[0].body, /eshwarjay05@gmail.com/)
   assert.doesNotMatch(docs[0].body, /jayeshwar44/)
-  assert.match(docs[0].caption, /name, contact details and dates/)
+  assert.match(docs[0].caption, /identity\/contact\/date verification/)
   assert.match(docs[0].caption, /closest matching resume/)
 
   file = Buffer.from('eshwarjay05@gmail.com')
