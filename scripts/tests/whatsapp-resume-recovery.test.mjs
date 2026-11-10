@@ -41,21 +41,21 @@ for (const [name, result, expected] of scenarios) {
 
 
 const recoveryRoots = {
-  userId: 'user-1',
+  userId: '11111111-1111-4111-8111-111111111111',
   userResumesRoot: '/tmp/mf/user-resumes',
   inboxRoot: '/tmp/mf/whatsapp/inbox/123',
 }
 test('an uploaded source recovered from Files is tailored against the current user library root', () => {
-  const resumePath = '/tmp/mf/user-resumes/user-1/eshwarjay05@gmail.com/General/Eshwar_Resume.docx'
+  const resumePath = '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111/eshwarjay05@gmail.com/General/Eshwar_Resume.docx'
   const context = resolveRecoveryResumeContext({ ...recoveryRoots, resumePath })
   assert.deepEqual(context, {
     ok: true, location: 'library',
-    userResumeDir: '/tmp/mf/user-resumes/user-1',
+    userResumeDir: '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111',
     files: undefined,
   })
 })
 test('a stale serialized Files root is replaced by the current account root', () => {
-  const resumePath = '/tmp/mf/user-resumes/user-1/eshwarjay05@gmail.com/General/Eshwar_Resume.docx'
+  const resumePath = '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111/eshwarjay05@gmail.com/General/Eshwar_Resume.docx'
   const context = resolveRecoveryResumeContext({
     ...recoveryRoots,
     resumePath,
@@ -70,21 +70,29 @@ test('a stale serialized Files root is replaced by the current account root', ()
   })
   assert.equal(context.ok, true)
   if (!context.ok) return
-  assert.equal(context.userResumeDir, '/tmp/mf/user-resumes/user-1')
+  assert.equal(context.userResumeDir, '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111')
   assert.equal(context.files?.userDir, context.userResumeDir)
   assert.equal(context.files?.abs, resumePath)
   assert.equal(context.files?.rel, 'eshwarjay05@gmail.com/General/Eshwar_Resume.docx')
   assert.equal(context.files?.depth, 2)
 })
+test('recovery rejects an invalid user id before constructing an account root', () => {
+  const context = resolveRecoveryResumeContext({
+    ...recoveryRoots,
+    userId: '../../other-account',
+    resumePath: '/tmp/mf/user-resumes/other-account/eshwarjay05@gmail.com/General/Resume.docx',
+  })
+  assert.deepEqual(context, { ok: false })
+})
 test('recovery rejects a different email folder, sibling account and arbitrary path', () => {
   const wrongEmail = resolveRecoveryResumeContext({
     ...recoveryRoots,
-    resumePath: '/tmp/mf/user-resumes/user-1/other@example.com/General/Resume.docx',
-    files: { userDir: '/tmp/mf/user-resumes/user-1', email: 'eshwarjay05@gmail.com', said: 'resume', depth: 2, rel: '', abs: '' },
+    resumePath: '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111/other@example.com/General/Resume.docx',
+    files: { userDir: '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111', email: 'eshwarjay05@gmail.com', said: 'resume', depth: 2, rel: '', abs: '' },
   })
   const sibling = resolveRecoveryResumeContext({
     ...recoveryRoots,
-    resumePath: '/tmp/mf/user-resumes/user-10/eshwarjay05@gmail.com/General/Resume.docx',
+    resumePath: '/tmp/mf/user-resumes/11111111-1111-4111-8111-1111111111110/eshwarjay05@gmail.com/General/Resume.docx',
   })
   const arbitrary = resolveRecoveryResumeContext({
     ...recoveryRoots,
@@ -104,7 +112,7 @@ test('an inbox source remains in its sender inbox and cannot carry stale Files m
   const staleFiles = resolveRecoveryResumeContext({
     ...recoveryRoots,
     resumePath,
-    files: { userDir: '/tmp/mf/user-resumes/user-1', email: 'eshwarjay05@gmail.com', said: 'resume', depth: 2, rel: '', abs: '' },
+    files: { userDir: '/tmp/mf/user-resumes/11111111-1111-4111-8111-111111111111', email: 'eshwarjay05@gmail.com', said: 'resume', depth: 2, rel: '', abs: '' },
   })
   assert.deepEqual(staleFiles, { ok: false })
 })
