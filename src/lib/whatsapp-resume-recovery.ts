@@ -7,8 +7,38 @@ import { blob } from "./storage"
 import { createHash } from "crypto"
 import { retryDelayMs } from "./whatsapp-retry-policy"
 
+export type ResumeRefinementSnapshot = {
+  /** Original Meta message id that carried the reply-to edit. */
+  replyTo: string
+  /** Exact user edit request; immutable after enqueue. */
+  request: string
+  /** Exact generated version the user replied to. */
+  sourcePath: string
+  sourceHash: string
+  /** Durable private copy inside this sender's version directory. */
+  sourceSnapshotPath: string
+  /** Stable SHA-256 of sender + inbound Meta message id. */
+  idempotencyKey: string
+  genSnapshot: {
+    meta?: unknown
+    changes?: string[]
+    source?: string
+    saved?: string
+    depth?: number
+    held?: boolean
+    createdAt?: number
+  }
+  generatedPath?: string
+  generatedSha256?: string
+  resultSnapshot?: unknown
+  generationState?: "queued" | "generated" | "rejected" | "ready"
+  rejectionCode?: string
+}
+
 export type ResumeRecoveryJob = {
   version: 1
+  kind?: "jd" | "refine"
+  refinement?: ResumeRefinementSnapshot
   id: string
   from: string
   userId: string
@@ -21,7 +51,9 @@ export type ResumeRecoveryJob = {
     userDir: string; email: string; said: string; depth: number
     rel: string; abs: string; redo?: boolean
   }
-  status: "pending" | "sending" | "delivered" | "uncertain"
+  status: "pending" | "sending" | "delivered" | "uncertain" | "blocked"
+  processingAt?: number
+  processingToken?: string
   createdAt: number
   updatedAt: number
   attempts: number
@@ -52,11 +84,135 @@ export async function enqueueResumeRecovery(input: Omit<ResumeRecoveryJob, "vers
   return (await readResumeRecovery(input.id)) || fresh
 }
 
+export async function enqueueResumeRefinement(input: {
+  id: string
+  from: string
+  userId: string
+  jd: string
+  jdId: string
+  resumePath: string
+  resumeName?: string
+  resumeFiled?: string
+  refinement: ResumeRefinementSnapshot
+}): Promise<ResumeRecoveryJob> {
+  if (!/^[a-f0-9]{64}$/.test(input.id) ||
+      input.refinement.idempotencyKey !== input.id ||
+      !/^[a-f0-9]{64}$/.test(input.refinement.sourceHash) ||
+      input.refinement.request.trim().length < 3 ||
+      !input.refinement.replyTo || !input.refinement.sourceSnapshotPath) {
+    throw new Error("invalid_refinement_recovery_input")
+  }
+  const now = Date.now()
+  const fresh: ResumeRecoveryJob = {
+    ...input, kind: "refine", version: 1, status: "pending",
+    createdAt: now, updatedAt: now, attempts: 0, retryAt: now,
+    refinement: { ...input.refinement, generationState: "queued" },
+  }
+  await blob.putIfAbsent(recoveryKey(input.id), JSON.stringify(fresh))
+  const existing = await readResumeRecovery(input.id)
+  if (!existing || existing.kind !== "refine" ||
+      existing.from !== input.from || existing.userId !== input.userId ||
+      existing.refinement?.idempotencyKey !== input.refinement.idempotencyKey ||
+      existing.refinement?.replyTo !== input.refinement.replyTo ||
+      existing.refinement?.request !== input.refinement.request ||
+      existing.refinement?.sourceHash !== input.refinement.sourceHash ||
+      existing.refinement?.sourceSnapshotPath !== input.refinement.sourceSnapshotPath) {
+    throw new Error("refinement_idempotency_conflict")
+  }
+  return existing
+}
+
+/** Update only mutable refinement diagnostics/result fields; source identity and request remain immutable. */
+export async function patchResumeRefinement(
+  id: string,
+  refinementPatch: Partial<ResumeRefinementSnapshot>,
+  jobPatch: Partial<ResumeRecoveryJob> = {},
+): Promise<void> {
+  const job = await readResumeRecovery(id)
+  if (!job || job.kind !== "refine" || job.status === "delivered") return
+  const {
+    replyTo: _replyTo, request: _request, sourcePath: _sourcePath,
+    sourceHash: _sourceHash, sourceSnapshotPath: _sourceSnapshotPath,
+    idempotencyKey: _idempotencyKey, genSnapshot: _genSnapshot,
+    ...mutableRefinement
+  } = refinementPatch
+  const {
+    id: _id, jd: _jd, from: _from, userId: _userId, kind: _kind,
+    refinement: _refinement, resumePath: _resumePath,
+    ...mutableJob
+  } = jobPatch
+  await blob.put(recoveryKey(id), JSON.stringify({
+    ...job,
+    ...mutableJob,
+    refinement: { ...(job.refinement || {}), ...mutableRefinement },
+    updatedAt: Date.now(),
+  }))
+}
+
+export async function dueResumeRefinements(limit = 1, now = Date.now()): Promise<ResumeRecoveryJob[]> {
+  const keys = (await blob.list("whatsapp/resume-recovery")).filter(k => k.endsWith(".json"))
+  const jobs = await Promise.all(keys.map(async key => {
+    try {
+      const raw = await blob.getText(key)
+      return raw ? JSON.parse(raw) as ResumeRecoveryJob : null
+    } catch { return null }
+  }))
+  return jobs.filter((job): job is ResumeRecoveryJob =>
+    !!job && job.version === 1 && job.kind === "refine" &&
+    job.status === "pending" && job.retryAt <= now && job.createdAt <= now &&
+    !!job.refinement?.idempotencyKey,
+  ).sort((a, b) => a.retryAt - b.retryAt).slice(0, limit)
+}
+
+/** A per-attempt immutable claim makes concurrent webhook/cron workers single-winner. */
+export async function claimResumeRefinement(
+  id: string,
+  now = Date.now(),
+  leaseMs = 330_000,
+): Promise<ResumeRecoveryJob | null> {
+  const job = await readResumeRecovery(id)
+  if (!job || job.kind !== "refine" || job.status !== "pending" || job.retryAt > now) return null
+  if (job.processingAt && now - job.processingAt < leaseMs) return null
+  const attemptIndex = Math.max(0, Number(job.attempts) || 0)
+  const token = createHash("sha256").update(id + ":" + now + ":" + Math.random()).digest("hex").slice(0, 24)
+  const claimKey = "whatsapp/resume-refinement-claims/" + id + "/" + attemptIndex + ".json"
+  const claim = JSON.stringify({ at: now, token })
+  let won = await blob.putIfAbsent(claimKey, claim)
+  let claimedAttempt = attemptIndex
+  if (!won) {
+    let previous: { at?: number } | null = null
+    try { previous = JSON.parse((await blob.getText(claimKey)) || "null") } catch { previous = null }
+    if (!previous?.at || now - previous.at < leaseMs) return null
+    claimedAttempt = attemptIndex + 1
+    const nextKey = "whatsapp/resume-refinement-claims/" + id + "/" + claimedAttempt + ".json"
+    won = await blob.putIfAbsent(nextKey, claim)
+    if (!won) return null
+  }
+  const attempts = claimedAttempt + 1
+  await patchResumeRefinement(id, {}, { attempts, processingAt: now, processingToken: token })
+  return { ...job, attempts, processingAt: now, processingToken: token }
+}
+
+export async function deferResumeRefinement(id: string, code: string, now = Date.now()): Promise<void> {
+  const job = await readResumeRecovery(id)
+  if (!job || job.kind !== "refine" ||
+      job.status === "delivered" || job.status === "uncertain" ||
+      job.status === "sending" || job.status === "blocked") return
+  const attempts = Math.max(1, Number(job.attempts) || 1)
+  await patchResumeRefinement(id, { rejectionCode: code }, {
+    status: "pending",
+    retryAt: now + retryDelayMs(attempts),
+    errorCode: code,
+    processingAt: 0,
+    processingToken: "",
+  })
+}
+
 export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecoveryJob>): Promise<void> {
   const job = await readResumeRecovery(id)
   if (!job || job.status === "delivered") return
   // The immutable input is never overwritten by a stale retry.
-  const { id: _id, jd: _jd, from: _from, userId: _uid, ...updates } = patch
+  const { id: _id, jd: _jd, from: _from, userId: _uid, kind: _kind, refinement: _refinement, ...updates } = patch
   await blob.put(recoveryKey(id), JSON.stringify({ ...job, ...updates, updatedAt: Date.now() }))
 }
 
@@ -81,7 +237,7 @@ export async function hasResumeRecoveryForJD(from: string, userId: string, jd: s
       const raw = await blob.getText(key)
       existing = raw ? JSON.parse(raw) as ResumeRecoveryJob : null
     } catch { continue }
-    if (existing?.version === 1 && existing.from === from && existing.userId === userId && existing.jd === jd)
+    if (existing?.version === 1 && existing.kind !== "refine" && existing.from === from && existing.userId === userId && existing.jd === jd)
       return true
   }
   return false
@@ -97,7 +253,7 @@ export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[
     } catch { return null }
   }))
   return jobs.filter((j): j is ResumeRecoveryJob =>
-    !!j && j.version === 1 && j.status === "pending" && j.retryAt <= now &&
+    !!j && j.version === 1 && j.kind !== "refine" && j.status === "pending" && j.retryAt <= now &&
     j.createdAt <= now)
     .sort((a, b) => a.retryAt - b.retryAt).slice(0, limit)
 }
@@ -116,7 +272,7 @@ export async function markResumeDocumentAccepted(id: string, wamid: string): Pro
   if (current.status === "delivered" && current.deliveredMessageId && current.deliveredMessageId !== wamid) return false
   // Meta HTTP 200 means accepted by the API, not delivered to the handset.
   // Keep the job out of automatic resend while waiting for a signed callback.
-  await patchResumeRecovery(id, { status: "uncertain", deliveredMessageId: wamid, deliveryState: "accepted" })
+  await patchResumeRecovery(id, { status: "uncertain", deliveredMessageId: wamid, deliveryState: "accepted", processingAt: 0, processingToken: "" })
   return true
 }
 
@@ -135,6 +291,7 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
         status: state === "failed" ? "pending" : (state === "delivered" || state === "read") ? "delivered" : "uncertain",
         deliveredMessageId: wamid,
         deliveryState: state, updatedAt: Date.now(),
+        processingAt: 0, processingToken: "",
         ...(state === "failed" ? { attempts: unknown.attempts + 1, retryAt: Date.now() + retryDelayMs(unknown.attempts + 1), errorCode: "meta_delivery_failed" } : {}),
       }))
       if (state === "delivered" || state === "read")
@@ -151,7 +308,7 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
     await blob.put(recoveryKey(id), JSON.stringify({
       ...job, status: "pending", deliveryState: "failed", deliveredMessageId: wamid,
       attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: "meta_delivery_failed",
-      updatedAt: Date.now(),
+      processingAt: 0, processingToken: "", updatedAt: Date.now(),
     }))
     return
   }
@@ -161,7 +318,7 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
     // Only a signed delivered/read callback confirms handset receipt.
     // A signed sent callback still cannot justify a duplicate automatic send.
     status: state === "delivered" || state === "read" ? "delivered" : "uncertain",
-    updatedAt: Date.now() }))
+    processingAt: 0, processingToken: "", updatedAt: Date.now() }))
   if (state === "delivered" || state === "read")
     console.info("[whatsapp] resume handset delivery confirmed", { job: id.slice(0, 12), state })
 }
