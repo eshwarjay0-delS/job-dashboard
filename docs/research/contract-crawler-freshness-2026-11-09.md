@@ -85,3 +85,12 @@ The restacked branch `reconcile/crawler-ci-roberthalf-manual-20261110` (first co
 Robert Half's official [cybersecurity search page](https://www.roberthalf.com/us/en/jobs/all/cyber-security) is a manual navigation link only. Its [Terms of Use](https://www.roberthalf.com/us/en/terms), last updated 23 September 2026, prohibit automated retrieval, indexing, scraping and data mining without express prior written consent. No adapter, scheduled request, scraping probe or listing import is authorized until written consent or a sanctioned feed/API with explicit commercial-aggregation permission is documented.
 
 No runtime classifier code or stored rows are changed by this CI/manual-directory follow-up. Exact-head CI and merge review remain pending. Production acceptance requires READY on the exact merge SHA, the active canonical alias, public freshness/clearance API smoke, and a later completed crawl that uses the new classifier.
+
+
+## 10 November 2026 — classifier production release verified
+
+The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, READY at exact master SHA `864cb9e906543b006ea730a8de1fa3e65b652ab9`, target production. Independent alias lookup confirms `job-dashboard-fawn.vercel.app` resolves to that deployment. Git ancestry confirms this release includes the PR #276 `contractTypes()` classifier and PR #282 evidence-separated exported-DOCX gap report. This supersedes the earlier statement that the classifier was still blocked from production.
+
+The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
+
+PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
