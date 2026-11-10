@@ -41,7 +41,7 @@ function strings(value: unknown): string[] {
   for (const item of value) {
     if (typeof item !== "string") continue
     const clean = item.trim()
-    const key = clean.toLocaleLowerCase()
+    const key = clean.toLowerCase()
     if (!clean || seen.has(key)) continue
     seen.add(key)
     out.push(clean)
