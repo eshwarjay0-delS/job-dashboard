@@ -131,3 +131,8 @@ The official [Terms of Use](https://www.roberthalf.com/us/en/terms), last update
 - The deployed 20-adapter/eTeam change has a successful scheduled-run record.
 - Recheck `GET /api/crawl/jobs?limit=1` and its 14-day/clearance behavior when runtime HTTP access is available; this turn could not independently fetch the public endpoint.
 - Deploy the reviewed master classifier change only after Vercel's build-rate limit clears; then confirm the alias SHA and run a fresh crawl before claiming C2H/W2/sub-string classification is live.
+
+
+### Manual directory link (no ingestion)
+
+The existing `Robert Half Technology` entry in `src/lib/vendorPortals.ts` now points to the official cybersecurity search page instead of the generic jobs landing page. It is still listed in `PENDING_PORTALS`, not `ADAPTERS`. The directory note tells users the page mixes contract and permanent roles and must be filtered manually. A source regression asserts the URL, manual-only note, and absence from the active adapter registry. This is a navigation improvement only; no Robert Half request is made by the crawler.

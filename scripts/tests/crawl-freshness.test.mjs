@@ -36,3 +36,18 @@ test("eTeam is manual-only until a public feed is verified", () => {
   const vendors = read("../../src/lib/vendorPortals.ts")
   assert.match(vendors, /firm: "eTeam", url: "https:\/\/www\.eteaminc\.com\/careers"/)
 })
+
+test("Robert Half remains a manual cybersecurity directory link, not an active crawler adapter", () => {
+  const adapters = read("../../src/lib/crawl/adapters.ts")
+  const activeStart = adapters.indexOf("export const ADAPTERS: PortalAdapter[] = [")
+  const pendingStart = adapters.indexOf("export const PENDING_PORTALS = [")
+  assert.ok(activeStart >= 0, "active adapter registry exists")
+  assert.ok(pendingStart > activeStart, "pending adapter registry follows active registry")
+  const active = adapters.slice(activeStart, pendingStart)
+  const pending = adapters.slice(pendingStart)
+  assert.doesNotMatch(active, /roberthalf/i)
+  assert.match(pending, /"roberthalf"/)
+  const vendors = read("../../src/lib/vendorPortals.ts")
+  assert.ok(vendors.includes('firm: "Robert Half Technology", url: "https://www.roberthalf.com/us/en/jobs/all/cyber-security"'))
+  assert.ok(vendors.includes("manual-only until express prior written consent for automated collection"))
+})
