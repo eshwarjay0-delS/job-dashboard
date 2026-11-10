@@ -325,3 +325,13 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 10 November 2026 — explicit contract-to-hire label coverage
+
+- PR #291 (`fix/apply-right-to-hire-classification-20261110`) maps explicit `Right To Hire` and `Contract To Perm` variants to C2H, with negated cases remaining unknown. Code commit `cddd2fbbaf9d12adb6905a17d7a9baaf8fdbeaf2`; exact-head checks pending.
+- Read-only active-row evidence: 589 `Contract To Perm` rows from Insight Global; 131 `Right To Hire` rows across Genesis10, INSPYR and eTeam. INSPYR's official article confirms right-to-hire is contract-to-hire / temporary-to-permanent. Research note: `docs/research/contract-right-to-hire-classification-2026-11-10.md`.
+- 2,311 unknown Everforth rows remain unknown because the adapter provides no employment-type field. Do not infer from vendor name. The 10 Nov 11:00 UTC crawl predates this change; next scheduled validation is 11 Nov 11:00 UTC.
+- Vercel project is `live:false`; account status is blocked and the supported unpause action did not change it. No merge/deploy until protected preview access is restored. PR #288 pagination remains a separate pending slice; serialize merges and rebase after each merge.
+
+Continue: run exact-head full CI, crawler classification regression, Plan/REA schema and Kompas baseline for PR #291. Then validate the 11 Nov crawl after a legitimate release. Do not mark live or count reclassified jobs before production evidence.
