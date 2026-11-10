@@ -3,7 +3,6 @@
  * No LLM call inside queryFastDossier. Build once before interview; persist.
  */
 import type { DossierSource } from "./kompas-dossier-bots"
-import { looksLikeSheetQuestion, sheetTopicMatch } from "./kompasSheetMatch.ts"
 
 export const FAST_DOSSIER_VERSION = "kompas-fast-dossier-v1"
 const MAX_CHUNKS = 1200
@@ -128,11 +127,7 @@ export function queryFastDossier(index: FastDossierIndex, question: string, opts
     used += text.length
     out.push({ sourceId: c.sourceId, kind: c.sourceKind, evidence: c.claims, score: Math.round(score*1000)/1000, text, title: c.title })
   }
-  return out.filter((hit) => {
-    const blob = `${hit.title}\n${hit.text}`
-    if (!looksLikeSheetQuestion(hit.text) && !looksLikeSheetQuestion(hit.title)) return true
-    try { return sheetTopicMatch(question, blob) } catch { return true }
-  })
+  return out
 }
 export function formatFastDossierContext(hits: FastHit[]): string {
   if (!hits.length) return ""

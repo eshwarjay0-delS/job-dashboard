@@ -20,7 +20,6 @@ function load(path) {
   const wrapped = (name) => {
     if (name === "./storage") return { blob: {} }
     if (name === "./kompas-fast-dossier") return load("src/lib/kompas-fast-dossier.ts")
-    if (name === "./kompasSheetMatch.ts" || name === "./kompasSheetMatch") return load("src/lib/kompasSheetMatch.ts")
     if (name === "./kompas-dossier-bots") return load("src/lib/kompas-dossier-bots.ts")
     return require(name)
   }

@@ -9,7 +9,6 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { createHash } from "node:crypto"
 import { CTX, dropCoveredFigureClaims, figureContextKeys, figureMentions, mentionSupported, type FigureMention } from "./kompasFigureContext.ts"
 import { dossierItems, relatedTerms } from "./kompasDossierItems.ts"
-import { looksLikeSheetQuestion, sheetTopicMatch } from "./kompasSheetMatch.ts"
 import { dropUngroundedLogistics } from "./kompasLogisticsPhrases.ts"
 import { fuseAndRerank, hybridRetrievalOn } from "./kompasHybridRank.ts"
 
@@ -525,17 +524,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (!filled) { matched = false; missing = [] }
       }
     } catch { /* failsafe: matched unchanged */ }
-    // A prepared question-and-answer is evidence only when it is this question.
-    // A neighbour on the sheet (syslog asked, one-time password stored) is dropped.
-    const onThisQuestion = (p: Passage) => {
-      if (p.source !== "saved Q&A" && p.source !== "dossier") return true
-      if (!looksLikeSheetQuestion(p.text)) return true
-      try { return sheetTopicMatch(q, p.text) } catch { return true }
-    }
-    ranked = ranked.filter(onThisQuestion)
-    if (matched && !ranked.some((p) => p.proves === "experience" && covers(p))) matched = false
-    const closestPool = experience.filter(onThisQuestion)
-    const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, closestPool)
+    const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, experience)
     // System 3: BM25 order above stays the coverage signal. Hybrid adds dense matches, reranks the top 25,
     // then the caller slices to k (5 on the answer path). Failsafe: any error leaves the BM25 slice.
     let presented = ranked
@@ -549,7 +538,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         // The BM25/intent leader stays first (story ranking, document-first, demotion).
         // The other slots are the reranked pool, so a dense paraphrase can still enter the top 5.
         const leader = ranked[0]
-        const rest = fused.passages.filter((p) => (!leader || p.id !== leader.id) && onThisQuestion(p))
+        const rest = fused.passages.filter((p) => !leader || p.id !== leader.id)
         presented = leader ? [leader, ...rest] : rest
       } catch { presented = ranked; candidates = 0 }
     }
