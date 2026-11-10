@@ -83,3 +83,22 @@ export function restoreUnsupportedRoleEdits<T extends { idx: number; text: strin
   })
   return { edits: guarded, reverted, blockedTerms: [...blocked] }
 }
+
+
+/** Return only the missing JD terms supported by each role's own original bullets. */
+export function roleScopedMissingTerms(
+  roles: readonly { bullets: readonly { idx: number; text: string }[] }[],
+  current: readonly { idx: number; text: string }[],
+  requiredTerms: string[],
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+): { roleIndex: number; terms: string[] }[] {
+  const currentByIdx = new Map(current.map(b => [b.idx, b.text]))
+  return roles.flatMap((role, roleIndex) => {
+    const sourceText = role.bullets.map(b => b.text).join("\n")
+    const currentText = role.bullets.map(b => currentByIdx.get(b.idx) || b.text).join("\n")
+    const sourceTerms = cover(sourceText, requiredTerms)
+    const currentTerms = cover(currentText, requiredTerms)
+    const terms = missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredTerms)
+    return terms.length ? [{ roleIndex, terms }] : []
+  })
+}

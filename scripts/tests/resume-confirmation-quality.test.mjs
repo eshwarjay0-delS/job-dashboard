@@ -1,9 +1,7 @@
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
-import { weaveExperienceRepresentation } from '../../src/lib/constructed-jd.ts'
-import { coveredJdKeywords } from '../../src/lib/keywords.ts'
+import { confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
@@ -64,28 +62,28 @@ test('role gap-fill uses role-scoped evidence and never appends the global unsee
 })
 
 
-test('final experience weave assigns each JD term only to a role whose source bullets support it', () => {
+test('role-scoped final weave inputs never borrow a JD term from another employer', () => {
   const terms = ['Splunk', 'Okta', 'Canton']
-  const roleA = { bullets: [{ idx: 1, text: 'Used Splunk for SIEM alert triage' }] }
-  const roleB = { bullets: [{ idx: 2, text: 'Managed Okta access reviews' }] }
-  const currentA = [{ idx: 1, text: 'Managed SIEM alert triage' }]
-  const currentB = [{ idx: 2, text: 'Managed access reviews' }]
-  const missingA = missingRoleEvidenceTerms(coveredJdKeywords(roleA.bullets[0].text, terms), coveredJdKeywords(currentA[0].text, terms), terms)
-  const missingB = missingRoleEvidenceTerms(coveredJdKeywords(roleB.bullets[0].text, terms), coveredJdKeywords(currentB[0].text, terms), terms)
-  assert.deepEqual(missingA, ['Splunk'])
-  assert.deepEqual(missingB, ['Okta'])
-  const wovenA = weaveExperienceRepresentation([roleA], currentA, missingA)
-  const wovenB = weaveExperienceRepresentation([roleB], currentB, missingB)
-  assert.deepEqual(wovenA.placed, ['Splunk'])
-  assert.deepEqual(wovenB.placed, ['Okta'])
-  assert.ok(!wovenA.placed.includes('Okta'))
-  assert.ok(!wovenB.placed.includes('Splunk'))
+  const roles = [
+    { bullets: [{ idx: 1, text: 'Used Splunk for SIEM alert triage' }] },
+    { bullets: [{ idx: 2, text: 'Managed Okta access reviews' }] },
+  ]
+  const current = [
+    { idx: 1, text: 'Managed SIEM alert triage' },
+    { idx: 2, text: 'Managed access reviews' },
+  ]
+  const cover = (text, required) => new Set(required.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const gaps = roleScopedMissingTerms(roles, current, terms, cover)
+  assert.deepEqual(gaps, [
+    { roleIndex: 0, terms: ['Splunk'] },
+    { roleIndex: 1, terms: ['Okta'] },
+  ])
 })
 
 test('final caller scopes deterministic weaving per employer and restores cross-role terms', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
   assert.match(tailor, /for \(const role of zones\.roles\)/)
-  assert.match(tailor, /missingRoleEvidenceTerms\(sourceTerms, currentTerms, requiredExperienceTerms\)/)
+  assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, current\.edits\.bullets \|\| \[\], requiredExperienceTerms, coveredJdKeywords\)/)
   assert.match(tailor, /weaveExperienceRepresentation\(\s*\[\{ bullets: sourceBullets \}\]/)
   assert.doesNotMatch(tailor, /zones\.roles\.map\(r => \(\{ bullets: r\.bullets/)
   assert.match(tailor, /restoreUnsupportedRoleEdits\(/)
@@ -93,7 +91,7 @@ test('final caller scopes deterministic weaving per employer and restores cross-
 
 test('role-scoped generated gap pass never asks every employer for the same global terms', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
-  assert.match(tailor, /missingRoleEvidenceTerms\(sourceTerms, currentTerms, freshUnique\)/)
+  assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, view\.roles\.flatMap\(r => r\.bullets\), freshUnique, coveredJdKeywords\)/)
   assert.match(tailor, /ROLE-SPECIFIC GAP KEYWORDS: \$\{t\.skills\.join/)
   assert.doesNotMatch(tailor, /countedRoles\.map\(i => \(\{ role: i, skills: freshUnique \}\)\)/)
 })

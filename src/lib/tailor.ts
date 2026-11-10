@@ -2,7 +2,7 @@ import { roleQualityBlockers } from "./tailor-ship-on-rollback"
 import { extraPassReserveMs, firstDraftRepairReserveMs } from "./tailor-budget"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
-import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements, missingRoleEvidenceTerms, restoreUnsupportedRoleEdits } from "./resume-evidence"
+import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -174,6 +174,7 @@ function normJD(jd: string): string {
 // Version 24: full-mode bullets keep source detail (resume-verbosity). Do not replay a thinner cached draft.
 // Version 25: the two pre-edit passes are summed into the JD the tailor scores. Do not replay a draft scored on the raw post only.
 // Version 26: known JD terms are written into the existing project bullets. Do not replay a draft that only dumped them on a skills line.
+// Version 27: every experience gap and final weave is scoped to its own employer evidence.
 const CACHE_GENERATION = "27"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
@@ -1022,12 +1023,8 @@ export async function runTailor(opts: {
             const view = zonesAfter(base.edits)
             const todo = [
               ...(sec.skills !== false ? [{ role: -1, skills: freshUnique }] : []),
-              ...countedRoles.flatMap(i => {
-                const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
-                const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
-                const skills = missingRoleEvidenceTerms(sourceTerms, currentTerms, freshUnique)
-                return skills.length ? [{ role: i, skills }] : []
-              }),
+              ...roleScopedMissingTerms(zones.roles, view.roles.flatMap(r => r.bullets), freshUnique, coveredJdKeywords)
+                .map(({ roleIndex, terms }) => ({ role: roleIndex, skills: terms })),
             ]
             const roundDeadline = Math.min(fullDeadline - 2000, Date.now() + Math.max(15000, fullDeadline - Date.now() - 2000))
             const worked = await workParts<typeof todo[number], Edits>({
@@ -1125,18 +1122,15 @@ export async function runTailor(opts: {
     const currentByIdx = new Map((current.edits.bullets || []).map(b => [b.idx, b.text]))
     const wovenBullets: { idx: number; text: string }[] = []
     const requiredExperienceTerms = jdKwsPrompt.filter(k => !isCertification(k) && !isQualificationOrJunk(k))
-    for (const role of zones.roles) {
+    const roleGaps = roleScopedMissingTerms(zones.roles, current.edits.bullets || [], requiredExperienceTerms, coveredJdKeywords)
+    for (const { roleIndex, terms } of roleGaps) {
+      const role = zones.roles[roleIndex]
       const sourceBullets = role.bullets.map(b => ({ idx: b.idx, text: b.text }))
-      if (!sourceBullets.length) continue
       const currentBullets = sourceBullets.map(b => ({ idx: b.idx, text: currentByIdx.get(b.idx) || b.text }))
-      const sourceTerms = coveredJdKeywords(sourceBullets.map(b => b.text).join("\n"), jdKwsPrompt)
-      const currentTerms = coveredJdKeywords(currentBullets.map(b => b.text).join("\n"), jdKwsPrompt)
-      const missing = missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredExperienceTerms)
-      if (!missing.length) continue
       const woven = weaveExperienceRepresentation(
         [{ bullets: sourceBullets }],
         currentBullets,
-        missing.map(k => jdSpelling(k, jd)),
+        terms.map(k => jdSpelling(k, jd)),
       )
       if (woven.placed.length) {
         const before = new Map(currentBullets.map(b => [b.idx, b.text]))
