@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import test from "node:test"
-import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff } from "../../src/lib/crawl/search.ts"
+import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, collectFilteredPages } from "../../src/lib/crawl/search.ts"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 
@@ -50,4 +50,40 @@ test("Robert Half remains a manual cybersecurity directory link, not an active c
   const vendors = read("../../src/lib/vendorPortals.ts")
   assert.ok(vendors.includes('firm: "Robert Half Technology", url: "https://www.roberthalf.com/us/en/jobs/all/cyber-security"'))
   assert.ok(vendors.includes("manual-only until express prior written consent for automated collection"))
+})
+
+test("clearance filtering scans later pages until the visible limit is filled", async () => {
+  const rows = [
+    ...Array.from({ length: 100 }, (_, id) => ({ id, clearance: true })),
+    ...Array.from({ length: 10 }, (_, index) => ({ id: 100 + index, clearance: false })),
+  ]
+  const calls = []
+  const result = await collectFilteredPages(
+    async (offset, pageSize) => {
+      calls.push([offset, pageSize])
+      return rows.slice(offset, offset + pageSize)
+    },
+    10,
+    row => row.clearance,
+    { pageSize: 100, maxRows: 200 },
+  )
+  assert.deepEqual(result.items.map(row => row.id), Array.from({ length: 10 }, (_, index) => 100 + index))
+  assert.equal(result.scanned, 110)
+  assert.equal(result.excluded, 100)
+  assert.equal(result.scanLimited, false)
+  assert.deepEqual(calls, [[0, 100], [100, 100]])
+})
+
+test("clearance page scanning is bounded and reports an underfilled capped result", async () => {
+  const rows = Array.from({ length: 150 }, (_, id) => ({ id, clearance: true }))
+  const result = await collectFilteredPages(
+    async (offset, pageSize) => rows.slice(offset, offset + pageSize),
+    10,
+    row => row.clearance,
+    { pageSize: 50, maxRows: 100 },
+  )
+  assert.deepEqual(result.items, [])
+  assert.equal(result.scanned, 100)
+  assert.equal(result.excluded, 100)
+  assert.equal(result.scanLimited, true)
 })
