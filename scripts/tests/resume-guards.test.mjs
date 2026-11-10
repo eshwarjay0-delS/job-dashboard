@@ -199,31 +199,7 @@ test('visible URL sentence punctuation is formatting-only, while URL path punctu
   assert.ok(checkRoundTrip(specialSource, changedTarget).problems.some(problem => problem.startsWith('url')))
 })
 
-test('DOCX identity extraction compares complete hyperlink targets including semicolons and parentheses', async () => {
-  const facts = {
-    paragraphs: ['Alex Example', 'alex.example@example.com | 555-010-1234'],
-    linkTarget: 'https://linkedin.com/in/alex-example;team=(security)',
-  }
-  const source = await docxIdentityText(await syntheticIdentityDocx(facts))
-  const changed = await docxIdentityText(await syntheticIdentityDocx({
-    ...facts,
-    linkTarget: 'https://linkedin.com/in/alex-example;team=(sales)',
-  }))
-  assert.ok(checkRoundTrip(source, changed).problems.some(problem => problem.startsWith('url')))
-  const changedScheme = await docxIdentityText(await syntheticIdentityDocx({
-    ...facts,
-    linkTarget: 'http://linkedin.com/in/alex-example;team=(security)',
-  }))
-  assert.ok(checkRoundTrip(source, changedScheme).problems.some(problem => problem.startsWith('url')))
-})
-test('visible URL sentence punctuation is formatting-only, while URL path punctuation is preserved', () => {
-  const source = 'Alex Example\nhttps://linkedin.com/in/alex-example.'
-  const punctuationRemoved = 'Alex Example\nhttps://linkedin.com/in/alex-example'
-  assert.equal(checkRoundTrip(source, punctuationRemoved).ok, true)
-  const specialSource = 'Alex Example\nhttps://linkedin.com/in/alex-example;team=(security)'
-  const changedTarget = specialSource.replace('(security)', '(sales)')
-  assert.ok(checkRoundTrip(specialSource, changedTarget).problems.some(problem => problem.startsWith('url')))
-})
+
 
 test('DOCX identity extraction rejects header phone, footer date and hyperlink target mutations', async () => {
   const facts = {
