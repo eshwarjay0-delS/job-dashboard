@@ -203,7 +203,7 @@ test('a slow constructed-JD rewrite sends the rewritten file, not the original',
     resumePath: HOUSTON_PATH, resumeName: 'Senior IAM Business Analyst',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].body, /Documented findings after reviewing access requests/)
   assert.match(docs[0].caption, /97%/)
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].caption, /did not finish cleanly/)
