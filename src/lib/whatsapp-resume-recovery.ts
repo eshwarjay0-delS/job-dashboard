@@ -99,7 +99,8 @@ export async function enqueueResumeRefinement(input: {
       input.refinement.idempotencyKey !== input.id ||
       !/^[a-f0-9]{64}$/.test(input.refinement.sourceHash) ||
       input.refinement.request.trim().length < 3 ||
-      !input.refinement.replyTo || !input.refinement.sourceSnapshotPath) {
+      !input.refinement.replyTo || !input.refinement.sourceSnapshotPath ||
+      input.resumePath !== input.refinement.sourceSnapshotPath) {
     throw new Error("invalid_refinement_recovery_input")
   }
   const now = Date.now()
@@ -114,9 +115,13 @@ export async function enqueueResumeRefinement(input: {
       existing.from !== input.from || existing.userId !== input.userId ||
       existing.refinement?.idempotencyKey !== input.refinement.idempotencyKey ||
       existing.refinement?.replyTo !== input.refinement.replyTo ||
+      existing.jd !== input.jd || existing.jdId !== input.jdId ||
+      existing.resumePath !== input.resumePath ||
       existing.refinement?.request !== input.refinement.request ||
+      existing.refinement?.sourcePath !== input.refinement.sourcePath ||
       existing.refinement?.sourceHash !== input.refinement.sourceHash ||
-      existing.refinement?.sourceSnapshotPath !== input.refinement.sourceSnapshotPath) {
+      existing.refinement?.sourceSnapshotPath !== input.refinement.sourceSnapshotPath ||
+      JSON.stringify(existing.refinement?.genSnapshot || {}) !== JSON.stringify(input.refinement.genSnapshot || {})) {
     throw new Error("refinement_idempotency_conflict")
   }
   return existing
