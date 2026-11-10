@@ -27,6 +27,7 @@ export function resolveRecoveryResumeContext(input: {
   inboxRoot: string
   files?: RecoveryFilesContext
 }): RecoveryResumeContext {
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(input.userId)) return { ok: false }
   const within = (root: string, candidate: string) => {
     const base = path.resolve(root)
     const target = path.resolve(candidate)
