@@ -45,6 +45,6 @@ Implementation commit: `cddd2fbbaf9d12adb6905a17d7a9baaf8fdbeaf2`.
 
 ## Validation boundary
 
-The tests and build must pass on the final PR head. The next scheduled crawl is 11 November 2026 at 11:00 UTC and is the first opportunity to validate the new mapping against fresh production records. Do not claim the 720 candidate labels have been reclassified until that run is inspected.
+On code head `a9d19d889520563e873085076b953720193a69c6`, crawler classification regression `42926214089`, Plan/REA schema `42926214121` and Kompas baseline `42926214174` passed. Full CI `42926214083` failed at the shared `Verify grounded spoken streaming and original-source claims` step before Build; lint/typecheck passed. Vercel preview `42926208890` failed with Account is blocked. The crawler regression executed the new classification tests; prebuild did not run because Build was skipped. The next scheduled crawl is 11 November 2026 at 11:00 UTC and is the first opportunity to validate the new mapping against fresh production records. Do not claim the 720 candidate labels have been reclassified until that run is inspected.
 
 The Vercel project currently reports `live:false`; the protected Vercel status reports “Account is blocked”. The supported unpause action returned no state change. No production deployment, public HTTP acceptance, or post-release crawl is claimed.
