@@ -247,6 +247,19 @@ rejects("incomplete cached report rejected even with legacy deliverable status",
 rejects("unverified JD claims are rejected independently of score", {
   unverified_added_keywords: ["Unverified Product"],
 }, "unverified_jd_terms")
+
+test("unverified JD experience claims are never a deliverable shortfall", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    unverified_added_keywords: ["Unverified Product"],
+    quality_blockers: ["unverified_jd_terms"],
+  })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(gate.whatsappRewriteUsable(draft), false)
+  assert.equal(gate.deliveredWithShortfall(draft), false)
+  assert.equal(acceptableWhatsAppResume(draft), false)
+})
+
 rejects("missing role rewrite is rejected independently of score", {
   quality_blockers: ["roles_unrewritten"],
 }, "roles_unrewritten")
