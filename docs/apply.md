@@ -169,3 +169,23 @@ The crawler now uses the same `contractTypes()` evidence taxonomy as Apply when 
 
 
 10 Nov 2026 scheduled-crawl update: the 11:00 UTC run found/upserted 6,818 jobs across 20 portals with one Inspyr abort. It executed under production SHA a66c108, so the master-only contract classifier change in f7f322 was not active. The first post-release crawl remains pending; no production rows were manually changed.
+
+
+## 10 November 2026 — classifier CI and manual-source boundary
+
+The contract work-type classifier from PR #276 is merged on master as `f7f322f242d39b12a0ade7c8d548f6f48eea79b5`, but it is not production-verified: the canonical alias still serves `a66c108bff6175149c4aadd882ab11128445b8cc`. The 10 November 11:00 UTC crawl ran on that older production SHA, covered 20 portals, found/upserted 6,818 jobs, skipped eTeam, and recorded one Inspyr abort. It is not a post-classifier run.
+
+This follow-up wires `src/lib/crawl/classify.ts` and `scripts/tests/crawl-classify.test.mjs` into the dedicated crawler workflow and runs the classifier regression beside the freshness suite. It also retargets the Robert Half directory entry to the official cybersecurity search page and asserts that Robert Half remains pending/manual-only, not an active adapter.
+
+Robert Half's official Terms of Use, last updated 23 September 2026, prohibit automated retrieval, indexing, scraping and data mining without express prior written consent. The directory link is navigation only. No adapter, scheduled request, listing import or scrape is authorized without written permission or a sanctioned feed/API with explicit commercial-aggregation rights.
+
+Production acceptance remains separate from source validation: deploy only a reviewed master commit when Vercel capacity allows, then verify READY on the exact merge SHA, the canonical alias, the public 14-day/clearance API behavior, and a later completed crawl using the new classifier. No stored rows are manually rewritten.
+
+
+### 10 November 2026 — classifier release verified
+
+PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deployment `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC` is READY at that exact SHA, target production, and independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to it. Git ancestry confirms the release includes PR #276's `contractTypes()` classifier and PR #282's evidence-separated exported-DOCX gap report. PR #275 is the documentation/Plan/REA handoff; it does not change WhatsApp runtime behavior.
+
+The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
+
+The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
