@@ -1,0 +1,34 @@
+name: Plan Journal and REA schema regression
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/plan-vision-journal.ts"
+      - "src/lib/rea-register.ts"
+      - "scripts/tests/plan-journal-schema.test.mjs"
+      - "scripts/tests/rea-register.test.mjs"
+      - ".github/workflows/plan-journal-rea.yml"
+  push:
+    branches:
+      - "master"
+    paths:
+      - "src/lib/plan-vision-journal.ts"
+      - "src/lib/rea-register.ts"
+      - "scripts/tests/plan-journal-schema.test.mjs"
+      - "scripts/tests/rea-register.test.mjs"
+      - ".github/workflows/plan-journal-rea.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Plan Journal and REA schema regressions
+        run: node --experimental-strip-types --test scripts/tests/plan-journal-schema.test.mjs scripts/tests/rea-register.test.mjs
