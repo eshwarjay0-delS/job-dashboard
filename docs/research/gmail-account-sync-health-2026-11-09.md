@@ -26,3 +26,10 @@ A focused Node test and workflow cover status classification, retained last-succ
 ## Acceptance still required
 
 Use two authorized test inboxes: one successful and one partial or failed. Confirm each status and last-success timestamp remains attached to the correct inbox; reconnect the failed account and verify recovery without changing the selected From identity. Verify on a narrow mobile viewport. Mobile provider delivery remains separately dependent on the approved WhatsApp template, scheduler configuration, signed Meta callback setup and a controlled opted-in device test.
+
+
+## 10 November restack — PR #271
+
+The implementation was restacked onto current master `51cb716393efb1f54cdc6173c8e6b7ee6f034241` as source commit `11582106771e4f9c94f9325bd5da0108b6171f5f`. PR #271 is intentionally DRAFT. The old PR #268 exact head passed full CI `42738187227`, Kompas baseline `42738186923` and the Gmail-specific regression `42738186930`; those results do not validate the restacked head. Exact-head checks must be rerun.
+
+The separate acceptance gate remains open: two authorized connected inboxes (one healthy, one partial/failed), status and last-success timestamp isolation, recovery without changing the selected From identity, and a narrow mobile viewport. No Gmail API call, email send or WhatsApp send was performed.
