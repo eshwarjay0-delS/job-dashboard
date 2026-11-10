@@ -166,3 +166,12 @@ Verification: six simulated Electron lifecycle/isolation/navigation checks, eigh
 ### 10 November 2026 — work-type classifier parity
 
 The crawler now uses the same `contractTypes()` evidence taxonomy as Apply when normalizing portal results. This recognizes the explicit `C2H` shorthand as contract work, keeps W2 payroll by itself as unknown (W2 alone is not proof of a contract), and avoids the previous broad `/temp/i` substring that could match words such as `template` or `attempt`. Permanent/direct-hire classification remains distinct, and explicit contract evidence takes precedence when a title also contains full-time wording. Existing rows are not rewritten by this source change; the next successful crawl reclassifies only listings it sees again.
+
+
+### 10 November 2026 — classifier CI and release acceptance
+
+The existing crawler-specific GitHub Actions gate now watches both `src/lib/crawl/classify.ts` and `scripts/tests/crawl-classify.test.mjs`, and runs the classifier regression beside the 14-day freshness regression. This is test/CI coverage only; it does not change classification at runtime or rewrite stored rows.
+
+Current release evidence: canonical master is `f7f322f242d39b12a0ade7c8d548f6f48eea79b5`; the production alias is still READY at `a66c108bff6175149c4aadd882ab11128445b8cc`, one commit behind. GitHub reports the master Vercel status as `build-rate-limit`; no deployment retry was made. Public production `/api/health` and `/api/crawl/jobs?limit=1` both returned HTTP 200; the jobs API reported a 14-day freshness window and clearance exclusion. The latest stored crawl is still the pre-change 9 November 11:00 UTC run (21 portals, 6,976 found/upserted, one eTeam 404). The 10 November 11:00 UTC post-change run had not yet appeared in the database at this check. Do not call eTeam retirement or the classifier fully accepted until the next run is recorded and the API is rechecked.
+
+Local verification on current master: classifier regression 3/3; resume confirmation/WhatsApp acceptance/contract/identity regression group 115/115; `npm run check`, `npm run build`, and `npm run typecheck` exited successfully. Lint and build emitted existing warnings; these were not suppressed or changed.
