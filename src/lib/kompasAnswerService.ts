@@ -21,6 +21,8 @@ import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
+import { ANSWER_SHAPE, SIGN_OFF_LINE, interviewSignOff, sheetTopicMatch } from "@/lib/kompasSheetMatch"
+import { spokenVoice, VOICE_RULES } from "@/lib/kompasSpokenVoice"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
@@ -395,9 +397,13 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
   // Presentation is separate from the retrieved passage text. Unsupported detail is dropped, not guessed.
   try {
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
-    if (grounded.presentation.trim()) return { text: grounded.presentation, providerError: false }
+    if (grounded.presentation.trim()) {
+      const resume = (job.sourceDocs || []).filter((d) => d.name === "resume").map((d) => d.text).join("\n")
+      return { text: spokenVoice(grounded.presentation, job.question, resume), providerError: false }
+    }
   } catch { /* the settled answer stands */ }
-  return { text: settled.text, providerError: false }
+  const resume = (job.sourceDocs || []).filter((d) => d.name === "resume").map((d) => d.text).join("\n")
+  return { text: spokenVoice(settled.text, job.question, resume), providerError: false }
 }
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
@@ -754,6 +760,43 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }, { headers: NO_STORE })
 }
 
+/** A thank-you close is spoken as a thank-you. No resume story, no generation call. */
+function signOffResponse(stream: boolean): Response | NextResponse {
+  if (stream) {
+    const body = `data: ${JSON.stringify({ type: "meta", signOff: true })}\n\ndata: ${JSON.stringify({ type: "replace", text: SIGN_OFF_LINE })}\n\ndata: ${JSON.stringify({ type: "done", signOff: true, text: SIGN_OFF_LINE })}\n\n`
+    return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+  }
+  return NextResponse.json({
+    text: SIGN_OFF_LINE,
+    polished: false,
+    degraded: false,
+    signOff: true,
+    meta: { engine: "marketfit", provider: "code", model: "" },
+  }, { headers: NO_STORE })
+}
+
+function preparedOnThisQuestion(question: string, raw: unknown): string {
+  const items = Array.isArray(raw) ? raw : []
+  const lines: string[] = []
+  for (const item of items) {
+    let q = ""
+    let a = ""
+    if (typeof item === "string") {
+      const marked = item.match(/^Q:\s*([\s\S]*?)\nA:\s*([\s\S]*)$/)
+      q = marked ? marked[1] : item
+      a = marked ? marked[2] : ""
+    } else if (item && typeof item === "object") {
+      const row = item as Record<string, unknown>
+      q = String(row.q ?? "")
+      a = Array.isArray(row.a) ? row.a.map((part) => String(part)).join(" ") : String(row.a ?? row.answer ?? "")
+    }
+    if (!sheetTopicMatch(question, q)) continue
+    lines.push((a ? `Q: ${q}\nA: ${a}` : q).slice(0, 500))
+    if (lines.length >= 2) break
+  }
+  return lines.join("\n")
+}
+
 /** Confirm and evidence-stop use the card the page already has. No new chrome, no generation call. */
 function routeDecisionResponse(stream: boolean, lane: JevRoute): Response | NextResponse {
   if (lane.action === "confirm") {
@@ -910,10 +953,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const clearlyAsked = /^(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|suppose|imagine|assume|if|given|consider)\b/i.test(sameTurnKernel.ask)
   const originalTurnAsk = !hasSpeakerLabels && clearlyAsked ? serverWithoutLogistics(withoutLogistics(sameTurn)) || question : question
   const rediscovered = rediscoverRelevance(originalTurnAsk, history)
-  const retrievedList = Array.isArray(body.retrieved)
-    ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)
-    : []
-  const retrieved = retrievedList.slice(0, 4).join("\n")
+  const retrievedRaw = body.retrieved
 
   // perfACT's answering intelligence: classify → tier rule → length plan. (A topic-less follow-up was already glued to
   // the previous question in code by questionForAnswer.)
@@ -925,6 +965,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // Minimal intro triggers ("intro") get a canonical question so the model
   // generates a spoken self-introduction instead of echoing the trigger.
   question = canonicalQuestion(rediscovered.currentAsk || question, tier)
+  if (interviewSignOff(question)) return signOffResponse(body.stream === true)
+  const retrieved = preparedOnThisQuestion(question, retrievedRaw)
   // The question's own register decides how deep ANY level may go: a concept
   // question (define / compare / what-is) is answered abstractly, a practice
   // question (his work, a scenario, a deep example) takes the level's depth.
@@ -963,6 +1005,11 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
   }
+  if (plan.kind !== "code" && tier !== 0 && (rediscovered.intent === "scenario" || rediscovered.intent === "comparison")) {
+    plan.words = Math.min(120, Math.max(60, plan.words))
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+    plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
+  }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
   // scoped question gets a focused deep dive. (Concept questions are governed
@@ -977,7 +1024,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
   const storyMode = rediscovered.intent === "experience-story" || (rediscovered.intent === "follow-up" && tier === 3)
   const includeStoryContext = personalEvidence && storyMode && tier !== 0
-  const includeHistoryContext = rediscovered.contextRelation === "follow-up" || rediscovered.intent === "experience-story"
+  const includeHistoryContext = rediscovered.contextRelation === "follow-up"
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
   const shape = tier === 0 || !["scenario","technical-process","experience-story","follow-up"].includes(focus.intent) ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
@@ -1050,11 +1097,13 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const sourceRetrieval = retrievePassages(question, groundingDocs, answerPassageCount(), { recent: recentAnswers })
   // Route before any generation call. Logistics already returned above. Depth and audience
   // stay the values this turn already picked; the table only chooses go, confirm, or stop.
+  // A middling evidence score must not replace the question with the spoken blank.
+  // The card shows the question; the model has to answer it. confirmSurface stays false here.
   const lane = routeAnswer({
     question,
     questionClass: focus.intent,
     retrieval: sourceRetrieval,
-    confirmSurface: true,
+    confirmSurface: false,
     outOfLane: false,
     audience: level,
   })
@@ -1144,7 +1193,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. DOCUMENTS FIRST: when the attached documents cover the question (question banks, guides), their passages lead: frame the answer from that material, use dossier notes only as support, and shape delivery with the session preferences and the level/mode structure. Document material proves the material itself, never personal experience you do not have: claim personal experience only from the resume or dossier. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
     tier !== 0 && includeHistoryContext && transcript ? `Brief conversation context for this follow-up only:\n${transcript.slice(-800)}` : "",
     tier !== 0 && history && includeHistoryContext ? `Earlier conversation (only to resolve explicit references, never to supply an unrelated project or topic):\n${history}` : "",
-    includeStoryContext && retrieved ? `Retrieved notes:\n${retrieved}` : "",
+    retrieved ? `PREPARED ANSWER FOR THIS SAME QUESTION (support only; sentence one still answers the question above):\n${retrieved}` : "",
   ].filter(Boolean).join("\n\n")
 
   // The vault decides which providers this feature may use (Admin → "Which AI
@@ -1191,7 +1240,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${ANSWER_SHAPE}\n\n${VOICE_RULES}\n\n${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,

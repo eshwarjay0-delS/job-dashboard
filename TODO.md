@@ -1,3 +1,7 @@
+## 2026-11-10 — The answer stays on the question that was asked
+
+A prepared sheet entry is used only when it is the same ask. A neighbour, including syslog answered from a one-time-password entry, is not reused. The first sentence answers the question. Later sentences use spoken connectors, and a tool or employer is named only when the resume has it. Passage ranking of a saved answer that actually covers the question is unchanged. The JD-clause sheet generator is not in this change. Not a live Windows check.
+
 ## 2026-11-06 — A versus answer stays on the two sides
 
 No new screen. A comparison or a definition that names two sides no longer fills length from the shared checklist, the shared honest line, or an approach line.
