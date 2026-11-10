@@ -169,7 +169,7 @@ Continue: verify the next scheduled crawl and public API freshness response; do 
 
 ## 10 November 2026 — exact 17 October WhatsApp source recovered
 
-Continue: the original 27,724-byte DOCX has been recovered from the Library archive with exact SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`; the full matching Security Engineer – Risk & Controls JD is recovered from Gmail thread `1a1464393628992f`. The screenshot remains `1792276118790.jpeg` at 17 Oct 17:28 Chicago. The exact generated output and per-run R2/webhook/Meta delivery trace are still missing. iZap has no configured WhatsApp number and no matching chat history.
+Continue: the original 27,724-byte DOCX has been recovered from a private Library archive; its exact digest was verified locally and remains with the private artifact, not in this public repository. The full matching Security Engineer – Risk & Controls JD was recovered from the user's private inbox. The screenshot is dated 17 Oct 17:28 Chicago. The exact generated output and per-run R2/webhook/Meta delivery trace are still missing. iZap has no configured WhatsApp number and no matching chat history.
 
 The eight screenshot terms are not eight missing candidate skills: CCSP/CISM/CRISC/CISA/AWS Security Specialty are credentials (never add); Canton/Solana are preferred but unsupported in the source; `sol` is a fragment of `Solana`; `attributes` does not appear in the full JD. The source DOCX also conflicts with the owner-confirmed profile's education/employment/credential facts. Quarantine those claims until the owner reconciles them; do not count the JD's 5+ years as confirmed. The new source-backed filter/test PR covers only the generic fragment boundary; no 98% live match is claimed.
 
@@ -252,7 +252,7 @@ A second mismatch allowed `unverified_jd_terms` in the WhatsApp shortfall allow-
 ## 10 November 2026 — continuation evidence refresh (11:56 UTC)
 
 ### WhatsApp resume / factual alignment
-- The exact source file was verified inside the Library archive `Organized_Original_Resumes.zip`: `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`, 27,724 bytes, SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`. The matching JD is Gmail thread `1a1464393628992f`. The source chronology/education/credential claims conflict materially with the owner-confirmed profile and remain quarantined. The generated output, per-run R2 key, Meta message ID and signed delivery/read receipt are still missing.
+- The exact source file was verified in a private Library archive (27,724 bytes; exact digest retained privately and not published). The matching JD was recovered from the user's private inbox. The source chronology/education/credential claims conflict materially with the owner-confirmed profile and remain quarantined. The generated output, per-run R2 key, Meta message ID and signed delivery/read receipt are still missing.
 - PR #279 is at exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61`; full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS. It remains DRAFT; owner review is still required for the external-send change, and the Vercel status is build-rate-limit. Do not merge/deploy based only on green tests.
 - The owner-approved 3 Nov Gemini requirement is still unimplemented: ask Gemini exactly `Give me ATS score` on the final exported DOCX, list missing/weak JD terms, correct only source-supported/explicitly confirmed gaps, re-export and recheck. The score is diagnostic, not experience evidence.
 
@@ -265,3 +265,8 @@ A second mismatch allowed `unverified_jd_terms` in the WhatsApp shortfall allow-
 - It ran under old production SHA a66c108, not master classifier SHA f7f322. Therefore it is not a post-classifier run. PR #276 is merged and CI/baseline green, but production Vercel status remains build-rate-limit; first post-release crawl and public API smoke remain pending.
 
 Continue: implement the approved final-DOCX Gemini ATS review as a separate evidence-bound source change after the local Next.js guide and test checkout are available. Keep scores diagnostic, never use suggestions as experience evidence, and do not send real email or WhatsApp tests.
+
+
+## 10 November 2026 — public evidence minimization
+
+The Safe Merge Gate identified private source locators in the Oct 17 handoff: the exact resume digest, Library archive/member path, screenshot artifact identifier and Gmail thread identifier. The active PR #275 branch now replaces those public locators with a statement that the exact source was verified privately and the evidence remains in the user's Library. The public record retains the incident time, source/JD relationship, fact-conflict boundary and missing generated-output/R2/Meta receipt status; no resume or email contents are published. This is a proposed privacy-minimization decision, not an owner approval to change external sending behavior. Exact-head CI must rerun after this documentation update; the authenticated preview smoke still requires the private Vercel preview credential.

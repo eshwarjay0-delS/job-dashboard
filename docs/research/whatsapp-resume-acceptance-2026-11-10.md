@@ -4,19 +4,19 @@ Updated: 10 November 2026. Method: read-only Library, Gmail, GitHub and database
 
 ## Recovered 17 October incident
 
-The Library screenshot `1792276118790.jpeg` was created at `2026-10-17T22:28:39Z` (5:28 PM America/Chicago). It shows the M Fit WhatsApp thread:
+The archived Library screenshot was created at `2026-10-17T22:28:39Z` (5:28 PM America/Chicago). It shows the M Fit WhatsApp thread:
 
-- At about 5:25 PM, a Security Engineer – Risk & Controls job post and a five-page, 28 KB Word file named `Eshwar Cyber resume).docx` were submitted.
+- At about 5:25 PM, a Security Engineer – Risk & Controls job post and a five-page, 28 KB Word resume were submitted.
 - At 5:28 PM, the bot replied: “The rewrite did not reach your 98% coverage target after automatic repair. I have held the file.”
 - The visible missing-term list was `ccsp`, `cism`, `crisc`, `cisa`, `canton`, `sol`, `specialty`, `attributes`.
 
 ### Original resume bytes recovered
 
-The exact input DOCX was recovered from the Library archive `Kompas_JEshwar44_Organized_Originals.zip`, member `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`. It is 27,724 bytes and its SHA-256 is `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`, matching the resume inventory record for that exact path. This is the original source file, not a generated output.
+The exact input DOCX was recovered from a private Library archive. It is 27,724 bytes; its digest was verified locally and is retained with the private artifact, not published in this repository. This is the original source file, not a generated output.
 
 ### Full job description recovered
 
-The complete JD is present in Gmail thread `1a1464393628992f`, subject “Fwd: Looking 5+ Years || Security Engineer – Risk & Controls || Atlanta/GA (Onsite)”, received `2026-10-16T19:49:07Z`; the forwarded message is dated 17 October 2026 at 1:14 AM India time. Its title, location, contract type and opening requirements match the screenshot.
+The complete JD was recovered from the matching forwarded message in the user's private inbox. Its title, location, contract type and opening requirements match the screenshot.
 
 The JD requires a bachelor's degree; 5+ years in cybersecurity, technology risk, information security, risk management or controls governance; risk assessments and control evaluations; remediation through closure; NIST, ISO 27001, CIS Controls or COBIT; AWS/Azure/GCP; IAM, secrets, encryption and key management; audit/compliance support; and analytical, problem-solving and communication skills.
 
@@ -107,7 +107,7 @@ PR #279 head `cc7e4ea675d808a89f4b4ea1f22711b0be7141b7` has Kompas baseline `427
 
 ## 10 November 2026 — exact source archive verification and final-DOCX Gemini requirement
 
-The original 17 Oct source DOCX was independently verified inside the Library archive `Organized_Original_Resumes.zip`, member `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`: 27,724 bytes, SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`. The matching job description is Gmail thread `1a1464393628992f`. The source's education, employer chronology, experience length and credentials materially conflict with the owner-confirmed profile; keep those claims quarantined until reconciled. The generated output DOCX, per-run R2 object key, Meta message ID and signed delivery/read receipt remain unavailable, so no exact replay or delivery claim is made.
+The original 17 Oct source DOCX was independently verified in a private Library archive (27,724 bytes; exact digest retained privately and not published). The matching JD was recovered from the user's private inbox. The source's education, employer chronology, experience length and credentials materially conflict with the owner-confirmed profile; keep those claims quarantined until reconciled. The generated output DOCX, per-run R2 object key, Meta message ID and signed delivery/read receipt remain unavailable, so no exact replay or delivery claim is made.
 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
