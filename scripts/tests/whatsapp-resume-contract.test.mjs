@@ -132,6 +132,14 @@ test('Meta acceptance preserves a recoverable original instead of deleting the o
   assert.match(webhook, /await deferResumeRecovery\(job\.id, "source_missing"\)/)
 })
 
+
+test('recovery resolves a durable original against the current account root before tailoring', () => {
+  assert.match(webhook, /resolveRecoveryResumeContext/)
+  assert.match(webhook, /source_outside_account/)
+  assert.match(webhook, /recoveryContext\.files, true, recoveryContext\.userResumeDir/)
+  assert.match(webhook, /resumeRootOverride \|\|/)
+})
+
 test('recovery distinguishes Meta acceptance and signed handset confirmation', () => {
   assert.match(webhook, /let handsetConfirmed = 0/)
   assert.match(webhook, /state\?\.deliveryState === "delivered" \|\| state\?\.deliveryState === "read"/)
