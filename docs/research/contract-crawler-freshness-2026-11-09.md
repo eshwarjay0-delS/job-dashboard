@@ -1,0 +1,53 @@
+# Contract crawler freshness and eTeam source retirement — 9 November 2026
+
+## Decision
+
+Continue the approved contract-only Apply crawler, but do not keep calling a source that has failed and do not let stale records remain searchable indefinitely. The repair is deliberately non-destructive: it removes eTeam from the active fetch registry, preserves its directory link and existing rows, and applies the same 14-day freshness window already used by the crawler's retirement logic.
+
+## Production evidence before this branch
+
+- Canonical repository: `eshwarjay0-delS/job-dashboard`.
+- Production master before this change: `eb37c4566f6d9c1d4b4d988096a2a44066255636`.
+- Public alias `https://job-dashboard-fawn.vercel.app` was independently READY on that exact SHA at deployment `dpl_AJ1LuN2YDfv5kY4dFHMiCxXqmmYd`. This is the pre-change deployment, not proof that this branch is live.
+- Read-only production query on 9 November 2026: `mfit_crawl_jobs` contained 14,164 rows; `mfit_crawl_runs` contained 20 records.
+- The 9 November 11:00 UTC crawl found and upserted 6,976 jobs across 21 registered portals. Its only recorded error was `eteam: HTTP 404 from www.eteaminc.com`.
+- eTeam had 907 stored rows, 818 still marked active, with its newest `last_seen_at` at 2026-11-08 11:01:01 UTC. The other active portal records had been refreshed during the 9 November run.
+
+## Source investigation
+
+- The registered eTeam adapter called `https://www.eteaminc.com/searchjobs/api/jobs?instance=US&limit=200&page=...`. The production crawl recorded HTTP 404 from the host on 9 November.
+- The current official eTeam destination is `https://www.eteaminc.com/careers`. Its careers experience is interactive; this run did not verify a public static feed or an authorized endpoint. Do not guess a replacement API or add headless/browser automation without evidence and a separate review.
+- The vendor directory keeps eTeam as a manual link. Its former parser remains only as historical fixture coverage and is no longer registered for production crawling.
+- Robert Half's official cybersecurity search at `https://www.roberthalf.com/us/en/jobs/all/cyber-security` exposes contract/temporary results and is a promising next adapter. It remains pending until the actual response structure is captured and tested; no adapter is claimed by this change.
+
+## Implementation in this branch
+
+1. Remove eTeam from `ADAPTERS`; add it to `PENDING_PORTALS`. Keep the official careers URL in `vendorPortals.ts`.
+2. Add `crawlFreshnessCutoff()` and a fixed `CRAWL_FRESHNESS_DAYS = 14` to `src/lib/crawl/search.ts`.
+3. Add `.gte("last_seen_at", crawlFreshnessCutoff())` to `GET /api/crawl/jobs`, and return `freshness_days: 14`. This matches the 14-day unseen retirement window in `src/lib/crawl/runner.ts`.
+4. Add deterministic tests for the cutoff, API wiring, and eTeam registry/directory state. A dedicated GitHub Actions workflow runs them without credentials or external side effects.
+5. Update Apply Plan & Vision and the REA record. The concurrent Kompas Safe Merge Gate PR is editing `src/lib/plan-vision-journal.ts`; this branch intentionally does not edit that file.
+
+## Data-safety and behavior
+
+- No database rows are deleted, rewritten, or reassigned.
+- Existing eTeam records remain stored. Because they were last seen on 8 November, they may remain visible until they age beyond 14 days; after that, the search API excludes them even if the source stays unavailable.
+- The new freshness cutoff applies to all crawler search results, including `work_type=all`, while contract-only remains the default and the existing clearance exclusion remains unchanged.
+- A failed or empty portal response still does not trigger bulk retirement. The runner's existing nonzero-result guard is unchanged.
+- No real email, WhatsApp, job application, or external submission was sent.
+
+## Acceptance and release gate
+
+Status at branch creation: **built on branch; CI and deployment pending**.
+
+1. Run the new `Crawler freshness regression` workflow and the repository's full CI on the exact PR head.
+2. Review the diff and merge only if both are green and the PR remains conflict-free.
+3. Verify a READY production deployment for the exact merge SHA and independently verify `job-dashboard-fawn.vercel.app` points to it.
+4. Smoke-test `GET /api/crawl/jobs?limit=1` and confirm the response includes `freshness_days: 14`.
+5. Confirm the next scheduled crawl lists 20 active adapters and no longer calls eTeam. Do not claim this until a completed run records it.
+6. Only then consider a separate Robert Half adapter PR after a live HTML/feed capture passes.
+
+## Exact blockers
+
+- This environment could read GitHub and the production-linked Supabase database but could not create a Vercel sandbox or access runtime logs through the Vercel API (403). No local repository execution was available; the branch workflow and GitHub CI are the executable test path.
+- The original 17 October 17:28 Chicago WhatsApp screenshot, source resume, JD and generated DOCX were not retrieved by the accessible conversation/Library search. This crawler work does not resolve or claim to reproduce that WhatsApp incident.
