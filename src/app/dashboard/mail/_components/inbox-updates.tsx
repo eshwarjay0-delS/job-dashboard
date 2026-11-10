@@ -7,7 +7,6 @@ import './inbox-updates.css'
 
 type Snapshot = { preferences: UpdatePreferences; events: InboxUpdate[]; deliveries: Record<string,MobileDeliveryReceipt>; syncHealth: InboxSyncHealth[]; accounts: string[]; numbers: string[]; mobileReady: boolean; deliveryEvidenceReady: boolean; backgroundReady: boolean }
 const deliveryLabel=(receipt?:MobileDeliveryReceipt)=>receipt?.status==='read'?'WhatsApp alert read':receipt?.status==='delivered'?'WhatsApp alert delivered to the linked device':receipt?.status==='failed'?'WhatsApp could not deliver the alert':receipt?.status==='accepted'?'WhatsApp accepted the alert for delivery':receipt?.status==='needs_review'?'WhatsApp alert needs review; it will not retry automatically':receipt?.status==='cancelled'?'WhatsApp alert cancelled after settings changed':receipt?.status==='sending'?'WhatsApp delivery result is uncertain; it will not retry automatically':''
-function mergeSyncHealth(current: InboxSyncHealth[] = [], incoming: InboxSyncHealth[] = []) { const byAccount = new Map(current.map(item => [item.account.toLowerCase(), item])); for (const item of incoming) byAccount.set(item.account.toLowerCase(), item); return [...byAccount.values()] }
 async function request(method = 'GET', body?: UpdatePreferences) {
   const response = await fetch('/api/gmail/updates', { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined })
   const result = await response.json()
@@ -38,7 +37,7 @@ export default function InboxUpdates() {
     setBusy(true)
     try {
       const result = await request('POST')
-      setData(old => old ? { ...old, events: result.events, deliveries: result.deliveries || {}, syncHealth: mergeSyncHealth(old.syncHealth || [], result.health || []) } : old)
+      setData(old => old ? { ...old, events: result.events || old.events, deliveries: result.deliveries || {}, syncHealth: Array.isArray(result.health) ? result.health : old.syncHealth || [] } : old)
       const issues = (result.issues || []).map((issue: {account: string; reason: string}) => `${issue.account}: ${issue.reason}`)
       if (result.delivery?.reason) issues.push(result.delivery.reason)
       if (result.delivery?.blocked && !result.delivery?.reason) issues.push('A mobile alert needs review; it will not be sent again automatically.')
