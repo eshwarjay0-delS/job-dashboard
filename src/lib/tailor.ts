@@ -1268,7 +1268,7 @@ export async function runTailor(opts: {
           keys: { gemini: opts.keys.gemini },
           jd: opts.jd,
           docxText: exportedForReview,
-          terms: scoreKws,
+          terms: jdExtracted,
           timeoutMs: Math.min(7000, Math.max(1000, fullDeadline - Date.now() - 3000)),
           usageSink,
         })
