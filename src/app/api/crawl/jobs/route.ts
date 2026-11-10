@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
-import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, crawlSearchOrFilter } from "@/lib/crawl/search"
+import { CRAWL_FRESHNESS_DAYS, collectFilteredPages, crawlFreshnessCutoff, crawlSearchOrFilter } from "@/lib/crawl/search"
 import { requiresSecurityClearance } from "@/lib/contract-jobs"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -21,35 +21,56 @@ export async function GET(req: NextRequest) {
   const portal = (searchParams.get("portal") ?? "").trim().slice(0, 40)
   const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 20, 1), 100)
   const excludeClearance = searchParams.get("clearance") !== "include"
-  const fetchLimit = excludeClearance ? Math.min(limit * 4, 100) : limit
-
   const service = createServiceClient()
   let query = service.from("mfit_crawl_jobs")
     .select("id,portal,firm,title,location,work_type,engagement,pay_range,posted_at,url,last_seen_at,description")
     .eq("active", true)
     .gte("last_seen_at", crawlFreshnessCutoff())
     .order("last_seen_at", { ascending: false })
-    .limit(fetchLimit)
 
   if (workType !== "all") query = query.eq("work_type", workType)
   if (portal) query = query.eq("portal", portal)
   const searchFilter = crawlSearchOrFilter(q)
   if (searchFilter) query = query.or(searchFilter)
 
-  const { data, error } = await query
-  if (error) return NextResponse.json({ ok: false, jobs: [], reason: error.message })
-  const rows = data ?? []
-  const allowedJobs = excludeClearance
-    ? rows.filter(job => !requiresSecurityClearance(`${job.title || ""} ${job.description || ""}`))
-    : rows
-  const jobs = allowedJobs.slice(0, limit)
+  let jobs: typeof query extends never ? never[] : any[] = []
+  let excludedClearance = 0
+  let clearanceScanLimited = false
+  if (excludeClearance) {
+    try {
+      const scanned = await collectFilteredPages(
+        async (offset, pageSize) => {
+          const { data, error } = await query.range(offset, offset + pageSize - 1)
+          if (error) throw new Error(error.message)
+          return data ?? []
+        },
+        limit,
+        job => requiresSecurityClearance(`${job.title || ""} ${job.description || ""}`),
+        { pageSize: 100, maxRows: Math.min(1000, Math.max(100, limit * 10)) },
+      )
+      jobs = scanned.items
+      excludedClearance = scanned.excluded
+      clearanceScanLimited = scanned.scanLimited
+    } catch (error) {
+      return NextResponse.json({
+        ok: false,
+        jobs: [],
+        reason: error instanceof Error ? error.message : "crawl store query failed",
+      })
+    }
+  } else {
+    const { data, error } = await query.limit(limit)
+    if (error) return NextResponse.json({ ok: false, jobs: [], reason: error.message })
+    jobs = data ?? []
+  }
   return NextResponse.json({
     ok: true,
     jobs,
     work_type: workType,
     freshness_days: CRAWL_FRESHNESS_DAYS,
     clearance: excludeClearance ? "excluded" : "included",
-    excluded_clearance: excludeClearance ? rows.length - allowedJobs.length : 0,
+    excluded_clearance: excludedClearance,
+    clearance_scan_limited: clearanceScanLimited,
   })
 }
 
