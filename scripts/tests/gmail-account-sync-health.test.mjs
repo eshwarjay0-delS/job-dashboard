@@ -39,7 +39,7 @@ test("partial and failed accounts retain the last successful sync instead of hid
   assert.equal(formatGmailAccountSyncStatus(partial, now), "Partial · last success 2h ago")
   assert.equal(gmailAccountSyncStatusTone(partial.status), "warning")
   assert.equal(failed.status, "failed")
-  assert.equal(formatGmailAccountSyncStatus(failed, now), "Sync failed · 2h ago")
+  assert.equal(formatGmailAccountSyncStatus(failed, now), "Sync failed · last success 2h ago")
   assert.equal(gmailAccountSyncStatusTone(failed.status), "danger")
 })
 
