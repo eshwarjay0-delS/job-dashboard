@@ -5,7 +5,10 @@ import JSZip from 'jszip'
 const MON = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?'
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
-const URL_RE = /\b(?:https?:\/\/|www\.)[^\s|,;()<>]+|\b(?:linkedin\.com|github\.com|gitlab\.com)\/[^\s|,;()<>]+/gi
+const URL_RE = /\b(?:https?:\/\/|www\.)[^\s|<>]+|\b(?:linkedin\.com|github\.com|gitlab\.com)\/[^\s|<>]+/gi
+const DOCX_LINK_START = "\u001eDOCX_LINK:"
+const DOCX_LINK_END = "\u001f"
+const DOCX_LINK_RE = /\u001eDOCX_LINK:([^\u001f]*)\u001f/g
 // phones: 10-15 digits with common separators, optional +country, optional extension (ext. 27 / x27 / #27)
 const PHONE = /(?<![\w/-])((?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)|\d{2,4})[\s.-]?\d{3,4}[\s.-]?\d{3,4})(?:\s*(?:ext\.?|extension|x|#)\s*(\d{1,6}))?(?![\w/-])/gi
 // Unicode dashes (hyphen, NB hyphen, figure, en, em, minus) read as '-', so en-dash phones and ranges are seen.
@@ -32,10 +35,18 @@ function normDate(d: string): string {
   if (/^(present|current|now)$/.test(s)) return 'present'
   return s
 }
-function normUrl(value: string): string {
-  // Normalize only URL components that are formatting-only. Scheme, non-root path,
-  // query and fragment are identity-bearing and must survive the DOCX export.
-  const clean = value.trim().replace(/\.+$/g, '')
+function visibleUrlToken(value: string): string {
+  let clean = value.trim().replace(/[.,]+$/g, '')
+  while (clean.endsWith(')') &&
+    (clean.match(/\)/g)?.length ?? 0) > (clean.match(/\(/g)?.length ?? 0)) {
+    clean = clean.slice(0, -1)
+  }
+  return clean
+}
+function normUrl(value: string, visibleText = false): string {
+  // Explicit DOCX relationship targets are compared exactly; only visible text
+  // drops sentence punctuation that is not part of the clickable target.
+  const clean = visibleText ? visibleUrlToken(value) : value.trim()
   const match = clean.match(/^(?:(https?):\/\/)?([^/?#]+)([^?#]*)(\?[^#]*)?(#.*)?$/i)
   if (!match) return clean
   const [, rawScheme, rawAuthority, rawPath = '', rawQuery = '', rawFragment = ''] = match
@@ -58,10 +69,10 @@ function normUrl(value: string): string {
     }
   }
   hostname = hostname.replace(/^www\./i, '').toLowerCase()
-  const scheme = rawScheme ? `${rawScheme.toLowerCase()}://` : ''
+  const scheme = rawScheme ? rawScheme.toLowerCase() + '://' : ''
   // A slash on the origin root is equivalent; a trailing slash on a path is not.
   const pathname = rawPath === '/' ? '' : rawPath
-  return `${scheme}${userInfo}${hostname}${port}${pathname}${rawQuery}${rawFragment}`
+  return scheme + userInfo + hostname + port + pathname + rawQuery + rawFragment
 }
 const normDigits = (p: string) => { const d = p.replace(/\D/g, ''); return d.length === 11 && d[0] === '1' ? d.slice(1) : d; }
 
@@ -70,8 +81,12 @@ export type RoundTripResult = { ok: boolean, problems: string[] }
 
 export function extractFacts(text: string | null | undefined): ResumeFacts {
   const raw = String(text ?? '').normalize('NFC')
+  const linkTargets = [...raw.matchAll(DOCX_LINK_RE)].map(match => {
+    try { return decodeURIComponent(match[1]) } catch { return match[1] }
+  })
+  const visible = raw.replace(DOCX_LINK_RE, ' ')
   // name is compared exactly (after NFC + whitespace), so a hyphen -> en dash change in a name still fails
-  const rawFirstLine = (raw.split(/\r?\n/).find(l => l.trim()) ?? '').trim()
+  const rawFirstLine = (visible.split(/\r?\n/).find(l => l.trim()) ?? '').trim()
   const firstLine = rawFirstLine.replace(/\s+/g, ' ')
   // Mammoth and Word can place the title in another run, after a tab, or in
   // the same paragraph after a visible separator. Keep only a clear 2-5-token
@@ -85,13 +100,17 @@ export function extractFacts(text: string | null | undefined): ResumeFacts {
   }
   const prefix = rawFirstLine.includes('\t') ? tabPrefix : firstLine.split(/\s+[|•·—–-]\s+/)[0].trim()
   const name = namePattern.test(prefix) ? prefix : firstLine
-  const t = raw.replace(DASH, '-')
-  const emails = (t.match(EMAIL) ?? []).map(e => e.toLowerCase())
+  const t = visible.replace(DASH, '-')
+  const emailText = linkTargets.length ? t + '\n' + linkTargets.join('\n') : t
+  const emails = (emailText.match(EMAIL) ?? []).map(e => e.toLowerCase())
   const noEmail = t.replace(EMAIL, ' ')
-  const urls = (noEmail.match(URL_RE) ?? []).map(normUrl)
+  const urls = [
+    ...(noEmail.match(URL_RE) ?? []).map(url => normUrl(url, true)),
+    ...linkTargets.map(target => normUrl(target)),
+  ]
   const noUrl = noEmail.replace(URL_RE, ' ')
   const phones = [...noUrl.matchAll(PHONE)].map(m => ({ d: normDigits(m[1]), x: m[2] }))
-    .filter(p => p.d.length >= 10 && p.d.length <= 15).map(p => p.x ? `${p.d}x${p.x}` : p.d)
+    .filter(p => p.d.length >= 10 && p.d.length <= 15).map(p => p.x ? p.d + 'x' + p.x : p.d)
   const noPhone = noUrl.replace(PHONE, ' ')
   const dates = (noPhone.match(DATE) ?? []).map(normDate)
   return { name, emails, phones, urls, dates }
@@ -197,19 +216,22 @@ async function docxPartIdentityText(zip: JSZip, part: string): Promise<string> {
   if (!file) return ""
   const xml = await file.async("string")
   const relationships = await readDocxRelationships(zip, part)
+  const linkTargets: string[] = []
   const withTargets = xml.replace(/<w:hyperlink\b([^>]*)>([\s\S]*?)<\/w:hyperlink>/gi, (_all, attributes: string, inner: string) => {
     const id = xmlAttribute(attributes, "r:id")
     const relation = relationships.get(id)
-    if (!relation || !relation.external || !/\/hyperlink$/i.test(relation.type)) return inner
-    return inner + '<w:t xml:space="preserve"> ' + escapeXmlText(relation.target) + ' </w:t>'
+    if (relation && relation.external && /\/hyperlink$/i.test(relation.type)) linkTargets.push(relation.target)
+    return inner
   })
-  return decodeXmlEntities(withTargets
+  const visibleText = decodeXmlEntities(withTargets
     .replace(/<w:tab\b[^>]*\/?\s*>/gi, "\t")
     .replace(/<w:(?:br|cr)\b[^>]*\/?\s*>/gi, "\n")
     .replace(/<\/w:p>/gi, "\n")
     .replace(/<[^>]+>/g, ""))
     .replace(/\n{2,}/g, "\n")
     .trim()
+  const markers = linkTargets.map(target => DOCX_LINK_START + encodeURIComponent(target) + DOCX_LINK_END)
+  return [visibleText, ...markers].filter(Boolean).join("\n")
 }
 
 export async function docxIdentityText(docx: Buffer | Uint8Array | ArrayBuffer): Promise<string> {
