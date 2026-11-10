@@ -10,7 +10,7 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandConfirmedVocabulary, expandJdKeywords, generateRelatedMaterialTwice, generateRelatedPass, type ConfirmedVocabulary } from "./claude"
+import { adapt, expandConfirmedVocabulary, expandJdKeywords, generateRelatedMaterialTwice, generateRelatedPass, reviewFinalDocxWithGemini, type ConfirmedVocabulary } from "./claude"
 import { constructJd, coverageNeedsAnotherPass, dropInventedExperienceEdits, inventedExperienceFrame, keepEnvironmentsLabel, keywordsFromPass, labelledSkillEdit, restoreMentionedTerms, splitOverflowTerms, strengthsSummary, textHasTerm, unverifiedClaims, weaveExperienceRepresentation } from "./constructed-jd"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
@@ -26,6 +26,7 @@ import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
 import { atsCheck, type AtsResult } from "./resume-ats"
 import { docxText } from "./resume-round-trip-guard"
 import { recountExported } from "./resume-exported-recount"
+import { supportedFinalAtsGaps, unsupportedFinalAtsGaps, type FinalAtsReview } from "./resume-final-ats-review"
 
 export interface TailorResult {
   /** Receipt policy for complete evidence-checked exports; never inferred from overlap. */
@@ -35,6 +36,8 @@ export interface TailorResult {
   quality_blockers?: string[]
   /** ATS parseability of the exported DOCX, measured on its extracted text and re-parsed zones. */
   ats?: AtsResult
+  /** Gemini final-DOCX score is advisory and never changes factual evidence or deterministic coverage. */
+  gemini_ats_review?: FinalAtsReview & { supported_gaps: string[]; unsupported_gaps: string[]; correction_rounds: number; correction_status?: string }
   token: string
   score: number
   score_before: number
@@ -709,29 +712,39 @@ export async function runTailor(opts: {
   // when a role's bullets can't carry all its skills (about 3 per bullet) the pass ADDS bullets to it. Repeats while it
   // keeps helping and time allows (TAILOR_FILL_ROUNDS, default 3).
   const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 5))
-  const fillGaps = async (start: Pass): Promise<Pass> => {
+  const fillGaps = async (
+    start: Pass,
+    maxRounds = FILL_ROUNDS,
+    timeLimit = deadline,
+    focusTerms?: readonly string[],
+  ): Promise<Pass> => {
     let cur = start
-    for (let round = 0; round < FILL_ROUNDS; round++) {
-      if (deadline - Date.now() < MIN_CLIMB_MS) break
+    const rounds = Math.max(0, Math.min(FILL_ROUNDS, Math.floor(maxRounds)))
+    const focus = focusTerms?.length ? new Set(focusTerms.map(k => k.toLowerCase())) : null
+    for (let round = 0; round < rounds; round++) {
+      if (timeLimit - Date.now() < MIN_CLIMB_MS) break
       const lacking = new Set(lackingRoles(cur.edits))
       const view = zonesAfter(cur.edits)
       const todo: { role: number; skills: string[]; add: number }[] = []
-      // Repair every relevant role using the full JD set, not just skills already
-      // listed in the generated skills section. Only the source establishes evidence.
-      const unseen = forcedJdKws.filter(k => !cur.afterKw.has(k))
-      // Profile repair is essential: the first pass can omit an entire skill category.
-      if (sec.skills !== false && (unseen.length || cur.partial)) todo.push({ role: -1, skills: unseen, add: 0 })
+      // Repair only evidence-backed terms. A final Gemini review may narrow this to
+      // its exact missing/weak terms; role evidence still decides which employer may use them.
+      const unseen = forcedJdKws.filter(k => !cur.afterKw.has(k) && (!focus || focus.has(k.toLowerCase())))
+      if (sec.skills !== false && (unseen.length || (!focus && cur.partial))) todo.push({ role: -1, skills: unseen, add: 0 })
       for (const i of countedRoles) {
         const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
         const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
-        const missing = missingRoleEvidenceTerms(sourceTerms, currentTerms, cur.required[i])
-        if (!missing.length && !lacking.has(i) && !cur.partial?.pendingRoles?.includes(i)) continue
+        const requiredTerms = focus ? (focusTerms || []) : cur.required[i]
+        const missing = missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredTerms)
+        if (!missing.length && (focus || (!lacking.has(i) && !cur.partial?.pendingRoles?.includes(i)))) continue
         const add = 0 // Preserve the original paragraph count and format.
         todo.push({ role: i, skills: missing, add })
       }
       if (!todo.length) break
       // One call per role that still has a gap: asked alongside other roles, a role tended to be skipped.
-      const roundDeadline = Math.min(deadline - 2000, Date.now() + Math.max(15000, Math.floor((deadline - Date.now() - 2000) / (FILL_ROUNDS - round))))
+      const remainingRounds = Math.max(1, rounds - round)
+      const availableMs = Math.max(0, timeLimit - Date.now() - 2000)
+      const roundDeadline = Math.min(timeLimit - 2000, Date.now() + Math.floor(availableMs / remainingRounds))
+      if (roundDeadline - Date.now() < 7000) break
       const worked = await workParts<typeof todo[number], Edits>({
         parts: todo, lanes: [...lanes.slice(round % lanes.length), ...lanes.slice(0, round % lanes.length)], out: laneOut,
         says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
@@ -1212,6 +1225,128 @@ export async function runTailor(opts: {
       : /^Tailoring incomplete/.test(why) ? `${why} Please try again in a minute.`
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
+  // Owner-approved 3 Nov loop: score the actual exported DOCX with Gemini, then
+  // correct only terms independently supported by the source resume or explicit
+  // first-person confirmations. Every correction is re-exported and re-scored.
+  let geminiAtsReview: FinalAtsReview & {
+    supported_gaps: string[];
+    unsupported_gaps: string[];
+    correction_rounds: number;
+    correction_status?: string;
+  } = {
+    status: opts.keys.gemini ? "skipped_incomplete" : "skipped_no_key",
+    score: null,
+    missing: [],
+    weak: [],
+    supported_gaps: [],
+    unsupported_gaps: [],
+    correction_rounds: 0,
+    correction_status: "not_started",
+  }
+  if (!best.partial && !skillsOnly) {
+    if (!opts.keys.gemini) {
+      geminiAtsReview.correction_status = "skipped_no_gemini_key"
+    } else {
+      for (let reviewRound = 0; reviewRound <= 2; reviewRound++) {
+        const remainingMs = fullDeadline - Date.now()
+        if (remainingMs < 7500) {
+          geminiAtsReview.status = "skipped_time_budget"
+          geminiAtsReview.correction_status = "skipped_time_budget"
+          break
+        }
+        let exportedForReview = ""
+        try {
+          exportedForReview = await docxText(best.buffer)
+        } catch {
+          geminiAtsReview.status = "unavailable"
+          geminiAtsReview.correction_status = "export_text_unavailable"
+          break
+        }
+        const review = await reviewFinalDocxWithGemini({
+          keys: { gemini: opts.keys.gemini },
+          jd: opts.jd,
+          docxText: exportedForReview,
+          terms: scoreKws,
+          timeoutMs: Math.min(7000, Math.max(1000, fullDeadline - Date.now() - 3000)),
+          usageSink,
+        })
+        const supportedGaps = supportedFinalAtsGaps(review, forcedJdKws, best.afterKw)
+        const unsupportedGaps = unsupportedFinalAtsGaps(review, forcedJdKws)
+        geminiAtsReview = {
+          ...review,
+          supported_gaps: supportedGaps,
+          unsupported_gaps: unsupportedGaps,
+          correction_rounds: geminiAtsReview.correction_rounds,
+          correction_status: "not_needed",
+        }
+        if (review.status !== "ok") break
+        if (!supportedGaps.length) break
+        if (refine) {
+          geminiAtsReview.correction_status = "skipped_refinement_preservation"
+          break
+        }
+        if (reviewRound >= 2) {
+          geminiAtsReview.correction_status = "maximum_correction_rounds"
+          break
+        }
+        const repairLimit = fullDeadline - 9000
+        if (repairLimit - Date.now() < MIN_CLIMB_MS) {
+          geminiAtsReview.correction_status = "skipped_time_budget"
+          break
+        }
+        const current = best
+        let candidate = await fillGaps(current, 1, repairLimit, supportedGaps)
+        if (candidate === current) {
+          geminiAtsReview.correction_status = "no_supported_role_or_profile_gap"
+          break
+        }
+        candidate = await stripAddedCerts(candidate)
+        candidate = await restoreDroppedCertsPass(candidate)
+        const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
+        candidate = await stripUnsupportedSkills(candidate, banned)
+        if (jdGate && zones.roles.some(r => r.bullets.length)) {
+          const guarded = restoreUnsupportedRoleEdits(
+            candidate.edits.bullets || [],
+            zones.roles,
+            scoreKws.filter(k => !isCertification(k) && !isQualificationOrJunk(k)),
+            coveredJdKeywords,
+          )
+          if (guarded.reverted) {
+            const restored = await applyEdits({ ...candidate.edits, bullets: guarded.edits })
+            restored.via = candidate.via
+            restored.partial = candidate.partial
+            restored.floor = candidate.floor
+            restored.floorSummary = candidate.floorSummary
+            candidate = restored
+          }
+        }
+        if (jdGate) {
+          const cleaned = dropInventedExperienceEdits(
+            candidate.edits,
+            zones.roles.flatMap(r => r.bullets.map(b => ({ idx: b.idx, text: b.text }))),
+          )
+          if (cleaned.removed || cleaned.edits.summary !== candidate.edits.summary) {
+            const restored = await applyEdits(cleaned.edits)
+            restored.via = candidate.via
+            restored.partial = candidate.partial
+            candidate = restored
+          }
+        }
+        if (quality(candidate) <= quality(current)) {
+          geminiAtsReview.correction_status = "no_measured_improvement"
+          break
+        }
+        candidate.via = [candidate.via, "Gemini-guided evidence-only correction"].filter(Boolean).join(" + ")
+        best = candidate
+        geminiAtsReview.correction_rounds += 1
+        geminiAtsReview.correction_status = "applied"
+        usedModel = usedModel + " + Gemini-guided evidence-only correction"
+      }
+    }
+  } else {
+    geminiAtsReview.status = "skipped_incomplete"
+    geminiAtsReview.correction_status = "incomplete_or_skills_only_export"
+  }
   const { edits, buffer, notes, afterKw } = best
   const evidencePass = floorFrom ?? best
   const { claimedKw, roleKw, required, provenKw } = evidencePass
@@ -1397,24 +1532,14 @@ export async function runTailor(opts: {
     unfinished: writersUnfinished,
     unchanged: !diff.length,
   })
-  // Independent Gemini feedback on the ACTUAL exported DOCX text. This is advisory:
-  // model-suggested vocabulary never inflates the measured JD coverage or asserts
-  // experience the candidate did not supply. Keep the pass short so WhatsApp
-  // can still finish uploading within the function time budget.
-  if (opts.keys.gemini && qualityReport.missing.length && Date.now() - started < Math.max(0, (opts.maxMs || 240_000) - 18_000)) {
-    try {
-      const feedbackTerms = await expandJdKeywords({
-        keys: { gemini: opts.keys.gemini }, pref: "gemini", jd,
-        known: [...coveredScore], sourceResume: text,
-        candidateInput: immediatePrefs.join("\\n"), timeoutMs: 4500,
-      })
-      const exportedText = await extractText(buffer)
-      const suggested = feedbackTerms.filter(k => !coveredJdKeywords(exportedText, [k]).has(k)).slice(0, 16)
-      notes.push(`Gemini final-document gap feedback: ${suggested.length ? suggested.join(", ") : "no additional terms identified"}. Suggestions are not verified qualifications.`)
-    } catch {
-      notes.push("Gemini final-document feedback unavailable; deterministic DOCX coverage check still applied.")
-    }
+  if (geminiAtsReview.status === "ok") {
+    notes.push("Gemini final-DOCX ATS score: " + geminiAtsReview.score + "/100; " + geminiAtsReview.missing.length + " missing and " + geminiAtsReview.weak.length + " weak term(s). This is diagnostic only; deterministic exported-document coverage and evidence gates remain authoritative.")
+    if (geminiAtsReview.unsupported_gaps.length) notes.push("Unsupported JD gaps left unclaimed: " + geminiAtsReview.unsupported_gaps.join(", "))
+    if (geminiAtsReview.correction_rounds) notes.push("Gemini-guided evidence-only corrections applied: " + geminiAtsReview.correction_rounds + " re-export/review round(s).")
+  } else {
+    notes.push("Gemini final-DOCX ATS review " + geminiAtsReview.status + "; deterministic exported-document coverage remains authoritative.")
   }
+
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
   // Owner lock (Nov 1): a token minted with a dashboard caller id carries an owner
@@ -1433,6 +1558,7 @@ export async function runTailor(opts: {
     quality: qualityReport,
     quality_blockers: qualityBlockers,
     ats,
+    gemini_ats_review: geminiAtsReview,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
