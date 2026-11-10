@@ -71,3 +71,34 @@ The fix delegates work-type classification to `contractTypes()`, then classifies
 Read-only production aggregate before this change: 10,152 contract rows (8,814 active), 1,034 permanent rows (930 active), 2,978 unknown rows (2,609 active). No existing row with a standalone C2H token was misclassified out of contract; the one title matching `template` was correctly a contract because its engagement field explicitly said `Contract`. No production rows were updated. This is a source/test change only; existing rows are reclassified when a future crawl sees them again.
 
 The daily Vercel cron is `0 11 * * *` (11:00 UTC; 05:00 CST on 10 Nov). The latest completed crawl remains the pre-change 9 Nov 11:00 UTC run. The first post-change run is still pending. Public GET smoke remains blocked by DNS resolution in this environment. Robert Half remains pending: the official cybersecurity page shows 53 results across two pages, but raw HTML is unavailable and its listed role-details sitemap returned HTTP 403; no adapter was added.
+
+
+## 10 November 2026 — classifier CI and production handoff
+
+### Change
+
+The current master classifier delegates work-type evidence to Apply's shared `contractTypes()` taxonomy. The existing crawler-specific workflow previously watched freshness/search/adapters but did not watch `src/lib/crawl/classify.ts` or execute `scripts/tests/crawl-classify.test.mjs`. The follow-up adds both paths to the PR/push filters and runs the existing three-case classifier suite in the same workflow. No runtime classifier code or stored job row is changed by this CI follow-up.
+
+### Exact local verification
+
+- Current master: `f7f322f242d39b12a0ade7c8d548f6f48eea79b5`.
+- `node --test scripts/tests/crawl-classify.test.mjs`: 3 passed, 0 failed.
+- Resume/confirmed-experience/WhatsApp regression group: 115 passed, 0 failed.
+- `npm run typecheck`: exit 0.
+- `npm run check`: exit 0; existing ESLint warnings were emitted and not suppressed.
+- `npm run build`: exit 0; Next.js reported 10 existing dynamic-filesystem tracing warnings. This is a local sandbox build, not a Vercel deployment.
+
+### Production evidence and release boundary
+
+- `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_7gjdfRFeLjqcPdVC52NkaEatugKA`, source SHA `a66c108bff6175149c4aadd882ab11128445b8cc`.
+- Master is exactly one commit ahead of that deployment: `f7f322f242d39b12a0ade7c8d548f6f48eea79b5`.
+- GitHub's Vercel status for current master is FAILURE with `build-rate-limit`. No new production deployment was attempted and no quota/billing bypass was used.
+- Public production `GET /api/health` returned 200. `GET /api/crawl/jobs?limit=1` returned 200 with `freshness_days=14`, `clearance=excluded`, and one excluded clearance result in the response metadata.
+- Read-only production database shows the latest completed crawl is still 9 November 2026 11:00 UTC: 21 portals, 6,976 found/upserted, one eTeam HTTP 404. That run predates the deployed eTeam retirement. The first post-change scheduled run for 10 November 11:00 UTC was not yet present at this check.
+
+### Next acceptance
+
+1. Let the scheduled 10 November 11:00 UTC crawl finish; verify the run uses the 20-active-adapter registry, does not call eTeam, and records its per-adapter errors and counts.
+2. Verify the public jobs API still applies the 14-day cutoff and excludes clearance-required roles.
+3. When Vercel's build-rate limit clears, deploy the latest reviewed master, require READY and exact alias SHA, then recheck the classifier behavior against a fresh crawl. Do not claim the current classifier is live before that.
+4. Keep Robert Half manual-only until its official feed or permitted HTML can be captured and tested; no adapter was guessed or added.
