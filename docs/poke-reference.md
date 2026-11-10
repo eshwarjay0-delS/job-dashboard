@@ -84,3 +84,6 @@ Production verified READY on 26 October 2026: dpl_DMKpH4wn4tDqJwjhfB9N5HMCuQXU, 
 
 
 27 October release reconciliation: PR #85 merged as 9799d1ac1bc4a963398c54ed0898fa0c3124055c. Seventeen focused tests and TypeScript passed; retained full regression completed 1124/1124 with zero failures in 56.1 seconds. Production dpl_3kLWQEavD2PCvwGbGyfMXuVeTNS7 verified READY at exact merge SHA, target production, job-dashboard-fawn.vercel.app assigned and aliasError null. Supersedes preview/production-pending notes for the positive outbound timestamp and schedule-order guards only. Pure helper remains unintegrated; next add account-scoped verified observations to review without enabling execution. Atomic claims, explicit schedule fields and live Gmail acceptance remain pending. No email sent.
+
+
+Per-account health is shown inline in the existing Inbox Updates panel: each connected inbox exposes only its last successful cursor timestamp and one of `never`, `checked`, `partial` or `error`. A partial history page or a current refresh failure is labelled against the affected inbox. Gmail history IDs and page tokens never reach the browser. This display does not enable a background worker; visible-page refresh remains separate from scheduled ingestion and WhatsApp delivery.
