@@ -1,15 +1,16 @@
+import { contractTypes } from "../contract-jobs.ts"
 import type { WorkType } from "./types"
 
 // Work-type classification from a portal's raw employment-type string.
-// Contract-only is the product's identity, so 'contract' must be precise;
-// anything ambiguous stays 'unknown' rather than guessing wrong.
+// Keep the crawler aligned with Apply's contract evidence taxonomy (W2, C2C,
+// 1099, C2H, temporary and contract). Ambiguous W2-only and substring matches
+// stay unknown; ordinary permanent/direct-hire roles remain permanent.
 
-const CONTRACT = [/contract/i, /\bC2C\b/i, /temp/i, /\b1099\b/i]
-const PERMANENT = [/permanent/i, /direct hire/i, /direct placement/i, /full-?time(?!.*contract)/i]
+const PERMANENT = [/\bpermanent\b/i, /\bdirect hire\b/i, /\bdirect placement\b/i, /\bfull-?time\b/i]
 
 export function classifyWorkType(engagement?: string, title?: string): WorkType {
   const s = `${engagement ?? ""} ${title ?? ""}`
-  if (CONTRACT.some(re => re.test(s))) return "contract"
+  if (contractTypes(s).length > 0) return "contract"
   if (PERMANENT.some(re => re.test(s))) return "permanent"
   return "unknown"
 }
