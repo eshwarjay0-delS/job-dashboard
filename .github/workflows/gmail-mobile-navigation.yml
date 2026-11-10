@@ -1,0 +1,34 @@
+name: Gmail mobile navigation regression
+
+on:
+  push:
+    branches:
+      - master
+      - fix/gmail-mobile-navigation-flow-20261110
+    paths:
+      - 'src/app/dashboard/dashboard-shell.css'
+      - 'src/app/dashboard/sidebar-nav.tsx'
+      - 'scripts/tests/dashboard-shell.test.mjs'
+      - '.github/workflows/gmail-mobile-navigation.yml'
+  pull_request:
+    paths:
+      - 'src/app/dashboard/dashboard-shell.css'
+      - 'src/app/dashboard/sidebar-nav.tsx'
+      - 'scripts/tests/dashboard-shell.test.mjs'
+      - '.github/workflows/gmail-mobile-navigation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-navigation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run mobile navigation contract tests
+        run: node --test scripts/tests/dashboard-shell.test.mjs
