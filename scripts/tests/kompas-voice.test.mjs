@@ -153,7 +153,8 @@ test('failed answer request stops spinning and keeps a visible retry path',async
  await s.generateAnswer('Explain OAuth',card,{retries:2});
  assert.equal(aborted,true);
  assert.equal(card.streaming,false);
- assert.deepEqual(card.answer,['…']);
+ assert.equal(card.answer.length,1);
+ assert.equal(card.answer[0],'…');
  assert.equal(rendered,1);
  assert.match(s.errors.at(-1),/Press AI Answer to try again/);
  assert.equal(s.answerCtl,null);
