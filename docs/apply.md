@@ -189,3 +189,9 @@ PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deploym
 The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
 
 The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
+
+## 10 November 2026 — current production and crawler acceptance
+
+PR #285 is merged as master `11efbbfe7781592bc2fad1216f67546882a1c3ed`; deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` is READY at that exact SHA and the canonical alias resolves to it. This includes the PR #276 contract work-type classifier and PR #285's dedicated freshness/classifier workflow and manual-source boundary. The 10 Nov 11:00 UTC crawl ran before this release on `a66c108` (6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort); it is not post-classifier evidence. The first expected classifier-aware crawl is 11 Nov 2026 11:00 UTC.
+
+A separate current HTTP smoke returned `402 DEPLOYMENT_DISABLED` despite READY deployment metadata, and Vercel project inspection returned 403. Public API behavior is therefore not verified from this runtime. PR #288's bounded clearance-safe pagination remains source-only until exact-head CI, protected preview and production HTTP/API acceptance pass.
