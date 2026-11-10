@@ -77,6 +77,6 @@ test('approved final-DOCX Gemini review and current crawler/Gmail blockers remai
   assert.match(crawler.evidence, /a66c108/)
   const gmail = PLAN_JOURNAL.find(e => e.id === 'gmail-poke-background-update-2026-11-10')
   assert.ok(gmail)
-  assert.match(gmail.detail, /1,991/)
+  assert.match(gmail.detail, /2,002/)
   assert.match(gmail.next, /CRON_SECRET/)
 })
