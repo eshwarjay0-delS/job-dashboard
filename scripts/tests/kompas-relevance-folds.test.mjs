@@ -128,6 +128,19 @@ test("two incidents that share a frame do not get one answer", () => {
   assert.ok(same.failures.some((f) => /same answer for different questions/.test(f)))
 })
 
+test("audit evidence and a leftover service account do not share one director answer", () => {
+  const audit = "In that design, audit evidence disagrees with live configuration. Walk through diagnosis, competing hypotheses, safe containment and rollback."
+  const account = "In that design, the attacker retains access through a service account after isolation. Walk through diagnosis, competing hypotheses, safe containment and rollback."
+  const left = draftSpokenAnswer(audit, "director", RESUME)
+  const right = draftSpokenAnswer(account, "director", RESUME)
+  assert.match(left, /audit evidence/i)
+  assert.match(right, /service account/i)
+  assert.equal(/service account/i.test(left), false)
+  assert.equal(/audit evidence/i.test(right), false)
+  const ratio = sameAnswerRatio(left, right)
+  assert.ok(ratio < 0.7, String(ratio))
+})
+
 test("two versus explanations do not share the checklist", () => {
   const rollback = "Now explain the same incident to a director: rollback scope versus lateral movement risk. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
   const restore = "Now explain the same incident to a director: restoration speed versus reinfection risk. State decision owner, business exposure and measures you would track, without inventing achieved numbers."
