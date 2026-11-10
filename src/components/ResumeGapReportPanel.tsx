@@ -1,5 +1,3 @@
-"use client"
-
 import type { ResumeGapReport } from "@/lib/resume-gap-report"
 
 function Terms({ items, empty }: { items: string[]; empty: string }) {
