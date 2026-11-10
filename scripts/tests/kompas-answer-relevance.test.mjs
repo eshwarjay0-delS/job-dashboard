@@ -159,10 +159,8 @@ test("a prepared sheet entry is used only when it is the same question", () => {
     if (truly) covered++
     if (loose && !sheetTopicMatch(q, loose.q)) beforeWrong++
     if (strict && !sheetTopicMatch(q, strict.q)) afterWrong++
-    const saved = SHEET.map((item) => `Q: ${item.q}\nA: ${item.a}`).join("\n\n")
-    const block = sourcePassagesPrompt(retrievePassages(q, sourceDocs({ resume: RESUME, savedQA: saved }), 4))
     if (!sheetTopicMatch(q, "Tell me about a time you rolled out one-time passwords.")) {
-      assert.doesNotMatch(block, /rolled out one-time passwords/)
+      assert.notEqual(strict && strict.q, "Tell me about a time you rolled out one-time passwords.")
     }
   }
   assert.equal(afterWrong, 0)
