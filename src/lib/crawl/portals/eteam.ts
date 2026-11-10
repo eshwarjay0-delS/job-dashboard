@@ -1,10 +1,8 @@
-// eTeam: www.eteaminc.com/searchjobs is a React page reading the company's own JSON proxy on the same host
-// (/searchjobs/api/jobs). Verified 2026-10-20: no key, login or cookie; the page itself sends only page and instance, but
-// limit=200 is accepted, so the whole board (2,359 jobs) is 12 requests. robots.txt is a 404 (no rules). The list is
-// newest first and holds everything open, back to 2024, so only the newest five pages (1,000 jobs, about six weeks) are
-// read. Half the board is not technology work (material handlers, security officers): those are left out by title.
-// NOT used: /api/jobdiva/jobs?job_id=, the single-job call, which returns the client's name, bill rates and recruiter
-// ids. The job page has no JobPosting record; its address is /searchjobs/<jobid>.
+// RETIRED FROM THE ACTIVE REGISTRY 2026-11-09.
+// The former /searchjobs/api/jobs JSON proxy returned HTTP 404 in the 2026-11-09 production crawl.
+// The current official /careers page is interactive; no public static feed has been verified.
+// Keep this parser only for historical fixture coverage. Do not re-register until a compliant feed is live.
+// See docs/research/contract-crawler-freshness-2026-11-09.md.
 import type { PortalAdapter, RawJob } from "../types"
 import { clean, isTechTitle } from "../text.ts"
 

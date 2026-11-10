@@ -1,6 +1,18 @@
 const SEARCH_FIELDS = ["title", "location", "firm", "description"] as const
 const MAX_SEARCH_TERMS = 8
 
+// A source that has not been re-seen for two weeks is no longer a live search result.
+// Keep this aligned with crawl/runner.ts, which retires listings after 14 days unseen.
+export const CRAWL_FRESHNESS_DAYS = 14
+
+export function crawlFreshnessCutoff(now: number | Date = Date.now()): string {
+  const epoch = now instanceof Date ? now.getTime() : now
+  if (!Number.isFinite(epoch) || !Number.isFinite(new Date(epoch).getTime())) {
+    throw new RangeError("crawl freshness clock must be a valid timestamp")
+  }
+  return new Date(epoch - CRAWL_FRESHNESS_DAYS * 24 * 60 * 60 * 1000).toISOString()
+}
+
 /**
  * Turn a user job search into safe, distinct terms for PostgREST's raw `or`
  * filter. Keep punctuation that is meaningful in technical roles (C++, C#,
