@@ -20,3 +20,13 @@ Owner requirement, 16 October 2026: target 95–98% measured JD keyword coverage
 ## Historical WhatsApp incident reconciliation — 17 October 2026
 
 The 5:28 PM America/Chicago screenshot records the older 98% hard hold after automatic repair. The latest 6 November WhatsApp delivery policy supersedes that behavior; it does not authorize adding the missing CCSP, CISM, CRISC, CISA, Canton or SOL terms as candidate experience. The screenshot does not expose the exact score, full JD, original DOCX bytes, generated file or run trace, so the incident cannot be replayed exactly from the available artifact. See `docs/research/whatsapp-resume-acceptance-2026-11-10.md`.
+
+## Owner-approved final-DOCX Gemini review loop — 3 November 2026
+
+After every complete final DOCX export, ask Gemini with the exact first instruction "Give me ATS score". Include the original JD, canonical target-term list and text extracted from the actual exported DOCX, including header/footer text. Record Gemini's score and missing/weak terms separately from deterministic exported-byte JD coverage and structural ATS checks.
+
+Correct only gaps supported by the original source resume or explicit first-person candidate confirmations. Experience corrections remain role-specific: a tool or control evidenced in one employer's bullets must not be assigned to another employer. Re-export the DOCX, rerun deterministic coverage/ATS checks, and ask Gemini again. The implementation is bounded to at most two correction rounds and the request time budget. Incomplete/skills-only exports, missing Gemini keys, invalid responses or exhausted time budgets are recorded as skipped/unavailable; they do not turn an incomplete file into a clean pass. A refinement preserves the user's requested change and is reviewed without an automatic coverage rewrite.
+
+Gemini's score and suggestions are diagnostic only. They never establish candidate experience, change the deterministic coverage score, relax the WhatsApp delivery policy, or authorize an unsupported qualification. A unit test or model score is not a live 95–100% resume match.
+
+Implementation status, 10 November 2026: the loop is implemented in stacked branch feat/final-docx-gemini-ats-review-20261110 on top of writer-evidence PR #287. The strict prompt/parser, Gemini-only call, evidence filter, bounded role-scoped correction/re-export loop and source-contract tests are present. Exact-head CI, protected preview and authenticated DOCX/model acceptance remain pending. The branch is not merged or deployed.
