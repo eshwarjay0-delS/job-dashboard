@@ -31,7 +31,7 @@ test('skills recovery only restores candidate-supported job terms', () => {
   const finalGuard = tailor.indexOf('await stripUnsupportedSkills(candidate, banned)', floor)
   assert.ok(finalReview > floor && finalGuard > finalReview, 'the post-floor Gemini pass is a separate bounded evidence-only correction')
   const finalCorrection = tailor.slice(finalReview)
-  assert.match(finalCorrection, /const banned = scoreKws\\.filter\\(k => !forcedJdKws\\.includes\\(k\\) && !beforeKw\\.has\\(k\\)\\)/)
+  assert.ok(finalCorrection.includes("const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))"))
   assert.match(finalCorrection, /restoreUnsupportedRoleEdits/)
   assert.equal(tailor.indexOf('await stripUnsupportedSkills(', finalGuard + 1), -1, 'no unguarded skill rewrite follows the final evidence guard')
   assert.match(tailor, /unsupportedJdKws\.filter\(k => coveredJdKeywords\(best\.tailoredText, \[k\]\)/)
