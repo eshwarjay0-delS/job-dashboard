@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { Mail, App, Interview, Step } from "@/app/dashboard/_suite/sample"
-import type { GmailAccountSyncStatus } from "@/lib/gmail-account-sync-status"
+import { gmailAccountSyncIssueMessage, type GmailAccountSyncStatus } from "@/lib/gmail-account-sync-status"
 
 // ── Shared Gmail data hook ──────────────────────────────────────────────────
 // Fetches real classified Gmail data from /api/gmail/* routes.
@@ -172,10 +172,7 @@ async function fetchAll(force: boolean): Promise<Loaded> {
     const throttled = data.issues.some(i => /throttling|wait .* refresh/i.test(i.reason))
     data.error =
       `Couldn't read ${data.issues.length === 1 ? "this account" : "these accounts"}: ` +
-      data.issues.map(i => `${i.account} — ${i.reason}`).join(" ") +
-      (throttled
-        ? ` Just wait a couple of minutes and tap refresh.`
-        : ` Reconnect ${data.issues.length === 1 ? "it" : "them"} on the connections page, then refresh.`)
+      data.issues.map(i => `${i.account} — ${gmailAccountSyncIssueMessage(i.reason)}`).join(" ")
   } else if (firstErr && data.mails.length === 0) {
     data.error = `Couldn't read your Gmail just now: ${firstErr}. Tap refresh to retry.`
   }
