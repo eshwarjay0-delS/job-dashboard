@@ -609,7 +609,7 @@ export async function runTailor(opts: {
   // profile (headline, summary, skills) and one per role group for the bullets, so every role
   // gets a dedicated pass and a long reply can't run out before the older roles. Quick mode and
   // refinements stay one call. On escalation we pass the exact JD terms still missing.
-  const draftPass = async (step: Lane, extraPrefs: string[]): Promise<Pass> => {
+  const draftPass = async (step: Lane, extraPrefs: string[], profilePrefs: string[] = []): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
     const call = { keys: opts.keys, jd, zones, sections: sec, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, refine: !!refine }
     let raw: Edits
@@ -634,9 +634,10 @@ export async function runTailor(opts: {
           const rolePlan = (part.roles || []).map(i => {
             const role = zones.roles[i]
             const supported = [...coveredJdKeywords(role.bullets.map(b => b.text).join("\n"), jdKwsPrompt)]
-            return `ROLE #${i}: preserve and develop these source-supported JD skills into substantive action and purpose/result bullets: ${supported.join(", ") || "identify relevant transferable work in the source"}. Review every bullet, retaining its factual context. Use equivalent exact JD terminology where the meaning is supported. Do not turn bullets into skill lists or repeat identical points across clients.`
+            return `ROLE #${i}: preserve and develop only these JD skills supported by this role's original bullets: ${supported.join(", ") || "none identified"}. Review every bullet, retaining its factual context. Use equivalent exact JD terminology only where the meaning is supported. If no role-specific evidence exists, leave the requirement as a gap; do not add an experience claim. Do not turn bullets into skill lists or repeat identical points across clients.`
           }).join("\n")
-          return adapt({ ...call, preferences: [call.preferences, rolePlan].filter(Boolean).join("\n"), ...laneCall(lane), part: part.kind, roles: part.roles })
+          const profileAsk = part.kind === "profile" ? profilePrefs : []
+          return adapt({ ...call, preferences: [call.preferences, ...profileAsk, rolePlan].filter(Boolean).join("\n"), ...laneCall(lane), part: part.kind, roles: part.roles })
         },
         startBy: deadline - repairReserve - 6000,     // a call started later than this would not be back in time
         assembleBy: deadline - repairReserve,  // what is still running then is left behind; the draft is made of what came back
@@ -701,7 +702,7 @@ export async function runTailor(opts: {
   const injectFor = (covered: Set<string>): string[] => {
     const missing = forcedJdKws.filter(k => !covered.has(k))
     if (!missing.length) return []
-    return [`ATS COVERAGE (rewrite existing lines in place): write EACH of these JD terms into the current and previous project bullets as natural work, using the JD's exact wording. Do not leave a term only on the skills line: ${missing.join(", ")}`]
+    return [`SUPPORTED JD TERMS (source resume or explicit candidate confirmation): ${missing.join(", ")}. Use the exact JD wording in the existing skills section when accurate. Do not add a term to the summary or an employer-specific bullet unless the source or a role-specific confirmation supports it. Unsupported requirements remain gaps or separately labelled Job-post terms.`]
   }
 
   // GAP FILL (full retarget): every role must show each listed JD skill the years math requires of it, and no role may be
@@ -745,7 +746,7 @@ export async function runTailor(opts: {
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
-          const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write the missing JD terms into THIS role's existing bullets as natural project language. The older wording does not have to already name the tool. Security and IAM work repeats across projects, so say the JD skills here the way a hiring manager expects to read them. Do not add a bullet, an employer, a date, or a contact. Do not leave the term only on a skills line. Keep every JD term its bullets already carry. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write only the missing terms listed for this role into THIS role's existing bullets as natural project language. Each term was matched to this employer's original evidence. Do not infer a tool from the JD or another employer. If a term is not supported by this role, leave it as a gap. Do not add a bullet, employer, date, or contact. Keep every supported term already present. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
           return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
         },
         startBy: roundDeadline - 6000,
@@ -925,7 +926,7 @@ export async function runTailor(opts: {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       const first = await Promise.race([
-        draftPass(lane, firstAsk).catch(err => { judgeLane(laneOut, lane, err); draftErr = err; return null }),
+        draftPass(lane, splitDraft ? [] : firstAsk, splitDraft ? firstAsk : []).catch(err => { judgeLane(laneOut, lane, err); draftErr = err; return null }),
         new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining) }),
       ])
       if (!first) continue
