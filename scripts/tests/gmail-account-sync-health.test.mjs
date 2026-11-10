@@ -81,3 +81,14 @@ test("Gmail API, user-scoped snapshot and inbox UI carry partial account health 
   assert.match(page, /Some inboxes need attention/)
   assert.match(page, /Retry inbox sync/)
 })
+
+
+test("per-account status chips and recovery actions wrap on narrow layouts", () => {
+  const page = read("../../src/app/dashboard/mail/page.tsx")
+
+  // Source-level responsive contract only; this is not a real mobile viewport test.
+  assert.match(page, /display: \"flex\", gap: 8, flexWrap: \"wrap\", marginBottom: 10/)
+  assert.match(page, /display: \"flex\", alignItems: \"center\", gap: 12, flexWrap: \"wrap\"/)
+  assert.match(page, /whiteSpace: \"nowrap\"/)
+  assert.match(page, /accountSync\.find\(status => status\.account\.toLowerCase\(\) === a\.email\.toLowerCase\(\)\)/)
+})
