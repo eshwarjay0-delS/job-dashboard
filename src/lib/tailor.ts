@@ -742,8 +742,7 @@ export async function runTailor(opts: {
       if (!todo.length) break
       // One call per role that still has a gap: asked alongside other roles, a role tended to be skipped.
       const remainingRounds = Math.max(1, rounds - round)
-      const availableMs = Math.max(0, timeLimit - Date.now() - 2000)
-      const roundDeadline = Math.min(timeLimit - 2000, Date.now() + Math.floor(availableMs / remainingRounds))
+      const roundDeadline = Math.min(timeLimit - 2000, Date.now() + Math.max(15000, Math.floor((timeLimit - Date.now() - 2000) / remainingRounds)))
       if (roundDeadline - Date.now() < 7000) break
       const worked = await workParts<typeof todo[number], Edits>({
         parts: todo, lanes: [...lanes.slice(round % lanes.length), ...lanes.slice(0, round % lanes.length)], out: laneOut,
@@ -1270,16 +1269,20 @@ export async function runTailor(opts: {
           timeoutMs: Math.min(7000, Math.max(1000, fullDeadline - Date.now() - 3000)),
           usageSink,
         })
+        const previousCorrectionRounds = geminiAtsReview.correction_rounds
         const supportedGaps = supportedFinalAtsGaps(review, forcedJdKws, best.afterKw)
         const unsupportedGaps = unsupportedFinalAtsGaps(review, forcedJdKws)
         geminiAtsReview = {
           ...review,
           supported_gaps: supportedGaps,
           unsupported_gaps: unsupportedGaps,
-          correction_rounds: geminiAtsReview.correction_rounds,
-          correction_status: "not_needed",
+          correction_rounds: previousCorrectionRounds,
+          correction_status: previousCorrectionRounds ? "applied_then_rechecked" : "not_needed",
         }
-        if (review.status !== "ok") break
+        if (review.status !== "ok") {
+          if (previousCorrectionRounds) geminiAtsReview.correction_status = "re_review_failed_after_correction"
+          break
+        }
         if (!supportedGaps.length) break
         if (refine) {
           geminiAtsReview.correction_status = "skipped_refinement_preservation"
@@ -1336,8 +1339,11 @@ export async function runTailor(opts: {
           geminiAtsReview.correction_status = "no_measured_improvement"
           break
         }
+        candidate.floor = current.floor
+        candidate.floorSummary = current.floorSummary
         candidate.via = [candidate.via, "Gemini-guided evidence-only correction"].filter(Boolean).join(" + ")
         best = candidate
+        floorFrom = null
         geminiAtsReview.correction_rounds += 1
         geminiAtsReview.correction_status = "applied"
         usedModel = usedModel + " + Gemini-guided evidence-only correction"
