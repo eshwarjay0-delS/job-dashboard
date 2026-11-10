@@ -138,3 +138,18 @@ Code commits: helper 947444f3f5999cd378daffb632241c35e1c0bff8; parser status 3b4
 This is implementation evidence only. No Gemini model call, real resume DOCX export, original-resume/JD/confirmation acceptance, WhatsApp send, email send, R2 write or production mutation occurred. PR #287 remains unmerged pending its non-approving owner review and protected preview. The new branch is stacked on #287 and cannot ship independently. The canonical production alias metadata is READY on master 11efbbfe7781592bc2fad1216f67546882a1c3ed, but public HTTP returns 402 DEPLOYMENT_DISABLED; protected preview also requires the private KOMPAS_VERCEL_API_TOKEN. Do not bypass the token, billing or review gates.
 
 The 17 Oct 17:28 Chicago historical WhatsApp replay remains blocked independently: the original source and matching JD were recovered privately, but their education/employment/credential facts conflict with the owner-confirmed profile and remain quarantined. The exact generated output DOCX, per-run R2 object key, webhook/request ID, Meta message ID and signed delivery/read receipt remain unavailable. The final-DOCX loop does not establish what happened to that historical file and does not prove handset delivery.
+
+## 10 November 2026 — read-only artifact correlation audit
+
+A read-only Supabase query against the confirmed MFit project `ruajlrzmxzprmmngluxy` found exactly one matching `public.usage_events` row at **2026-10-17 22:28:27.372685Z (17:28:27 CDT)**:
+
+- `feature_key=resume_tailor`, `source_channel=whatsapp`
+- `calls=34`, `score=87`, `input_tokens=205546`, `output_tokens=25331`
+- `source_event_key` is null; metadata contains no `r2_key`, `webhook_id`, or `meta_message_id`
+- The `score` field is not independently defined as an ATS percentage and is not reported as one
+
+No `public.resume_documents` row was created between 22:20 and 22:40 UTC. This is not proof that no R2 object exists, but it confirms that the Supabase resume library did not record an output in that window.
+
+The historical Vercel runtime-log query for 22:20–22:40 UTC returned HTTP 400: the Hobby plan retains only one hour, so a 24-day-old request cannot be recovered from those logs. Gmail searches for DOCX/resume/MarketFit/WhatsApp on 17 Oct returned no matching threads. A Library DOCX search did not surface a uniquely correlated output. No Cloudflare R2/S3 connector is exposed in this runtime.
+
+**Hard wall:** the generated output DOCX, exact R2 object key, webhook/request ID, Meta message ID and signed delivery/read receipt remain unavailable. The exact source DOCX and matching JD are recovered separately; education/employment/credential conflicts remain quarantined. Do not infer delivery from 34 calls or score 87. Do not replay or send the historical request. The original output/delivery can only be retroactively verified if the owner supplies the artifact or an exact storage/provider correlation record; otherwise mark that historical artifact as irrecoverable and validate only a separately authorized new request.
