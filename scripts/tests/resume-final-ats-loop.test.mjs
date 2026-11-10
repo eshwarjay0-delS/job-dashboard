@@ -9,7 +9,7 @@ const review = readFileSync("src/lib/resume-final-ats-review.ts", "utf8");
 test("the final review reads the actual exported DOCX and runs before result scoring", () => {
   assert.match(tailor, /exportedForReview = await docxText\(best\.buffer\)/);
   assert.match(tailor, /reviewFinalDocxWithGemini\(\{/);
-  assert.match(tailor, /terms: scoreKws/);
+  assert.match(tailor, /terms: jdExtracted/);
   assert.ok(tailor.indexOf("reviewFinalDocxWithGemini({") < tailor.indexOf("const { edits, buffer, notes, afterKw } = best"));
   assert.match(tailor, /gemini_ats_review: geminiAtsReview/);
 });
