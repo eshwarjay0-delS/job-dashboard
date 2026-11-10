@@ -1174,12 +1174,13 @@ function fmtClock(ms) { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600
 function startClock() { startedAt = Date.now(); const tick = () => { $("clock").textContent = fmtClock(Date.now() - startedAt); }; tick(); clockTimer = setInterval(tick, 250); }
 function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
 
-/* ---- sources (both ON by default), theme, drawer ---- */
+/* ---- sources (microphone on; computer audio opt-in), theme, drawer ---- */
 // Computer-audio support is independent of the screen-question capture action.
 // The native Electron display handler already permits getDisplayMedia; hiding the
 // screen action on desktop made the completed screen review and answering path unreachable.
 const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
-const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
+// Computer audio stays off until the user explicitly selects it for the next Start.
+const srcOn = { mic: true, sys: false };
 if (NO_SYS_AUDIO) $("sysBtn").classList.add("hidden");
 if (window.kompasDesktop) {
   $("screenBtn").classList.remove("hidden");
