@@ -20,6 +20,10 @@ Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the
 6. Update the journal with the exact outcome, evidence and next step. Continue independent work when another item is blocked.
 7. Before ending a turn, identify remaining approved work. If stopping because of a wall, state the failed action, evidence, missing prerequisite and exact unblock action. Do not imply work continues in this chat after the turn unless scheduled execution is actually configured.
 
+## 10 November 2026 — unmatched definitions speak the term
+
+On the incident-line tree, the last pair at Jaccard >= 0.7 was director 0.708, NIST CSF versus OAuth audience validation. After the term opener: 0 pairs. Same-answer failures 0. Length failures 0. Mode gaps under 0.50: 0. Answers over the ceiling: 0. Not merged. Live scored folds remain 0.
+
 ## 10 November 2026 — incident lines name the incident
 
 On the design-pieces tree, the offline stand-in went from 4 pairs at Jaccard >= 0.7 to 1. The director audit-versus-service-account pair went from 0.710 to 0.217. Same-answer failures 0. Length failures 0. Mode gaps under 0.50: 0. Answers over the ceiling: 0. The remaining pair is a director definition at 0.708. Not merged. Live scored folds remain 0.

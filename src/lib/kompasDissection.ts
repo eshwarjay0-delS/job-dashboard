@@ -1485,7 +1485,13 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       }
     } catch { /* failsafe: the honest line below */ }
   }
-  if (!used && !pairSides) {
+  // A definition with no resume line was filled from one honest sentence and one approach
+  // sentence, so two different terms shared almost every content word.
+  const bareTerm = !used && cut.shape === "definition" && !pairSides
+  if (bareTerm) {
+    parts[0] = `I mean ${lead} when I say ${lead}.`
+    words = wordCount(parts.join(" "))
+  } else if (!used && !pairSides) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
     parts.push(honest)
     words += wordCount(honest)
@@ -1542,7 +1548,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const approach = APPROACH[level].map((make) => make(cut.shape === "personal-experience" ? "that situation" : lead)).filter((line) => fresh(line) && !parts.includes(line))
   const anchored = namedPair || namedDesign ? approach.filter((line) => line.toLowerCase().includes(lead.toLowerCase())) : approach
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
-  if (!incident && !sides && !namedDesign && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
+  if (!incident && !sides && !namedDesign && !bareTerm && !["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
     for (const line of anchored) {
       const n = wordCount(line)
       if (words >= stop) break
@@ -1580,6 +1586,15 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   if (incident || namedPair || namedDesign) {
     const extra = sides
       ? pairSideLines(sides)
+      : bareTerm
+      ? [
+          `I mean ${lead} when I say ${lead}.`,
+          `I say ${lead}, and I mean ${lead}.`,
+          `I do mean ${lead}.`,
+          `I say ${lead} again.`,
+          `I mean ${lead} here.`,
+          `I say ${lead} once more.`,
+        ]
       : namedDesign
       ? [
           `I start from ${lead}.`,

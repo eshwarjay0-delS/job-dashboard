@@ -1,3 +1,11 @@
+## 2026-11-10 — An unmatched definition speaks its own term
+
+No new screen. A definition with no resume line no longer opens on the shared business sentence or the shared honest line. It says the term.
+
+**Measured on the fictional sample resume, 150 drafts, no model, on the incident-line tree.** Before: 1 pair at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling. NIST CSF risk assessments versus OAuth audience validation: engineer 0.429 (36 and 34 words), director 0.708 (54 and 58), architect 0.690 (86 and 90). After: 0 pairs, and the same four zeros. That pair: engineer 0.000 (33 and 28), director 0.632 (50 and 46), architect 0.591 (83 and 81). The audit-versus-service-account pair stayed at director 0.217. Focused suites: 171 pass, 0 fail. `tsc --noEmit` clean.
+
+**Not verified.** Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10.
+
 ## 2026-11-10 — An incident answer names that incident
 
 No new screen. A named incident keeps a resume line only when the line names that incident, and each asked part is said with the incident, not with the shared part template.

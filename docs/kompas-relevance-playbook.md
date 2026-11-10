@@ -100,6 +100,12 @@ This session did not have `KOMPAS_EVAL_TOKEN`. No live answer was measured.
 7. Without a token, the live check is `POST /api/answer` and `POST /api/kompas/answer` returning 401, not 404, and `/api/health` returning ok. With a token, run `scripts/kompas-live-eval.mjs` and paste the failure list. Do not invent scores.
 8. Add a dated note to the top of `TODO.md` with what was tested and what was not.
 
+## Fold log, 10 November 2026, an unmatched definition speaks its own term
+
+On the incident-line tree, one pair remained at Jaccard >= 0.7: director 0.708, NIST CSF risk assessments versus OAuth audience validation. Both drafts used the same business opener and the same honest line.
+
+A definition with no matching resume line now opens on the term. After: 0 pairs at Jaccard >= 0.7. Same-answer failures 0. Length failures 0. Mode gaps under 0.50: 0. Answers over the ceiling: 0. That pair: engineer 0.000 (33 and 28 words), director 0.632 (50 and 46), architect 0.591 (83 and 81). Live scored folds remain 0 of 50.
+
 ## Fold log, 10 November 2026, an incident answer names that incident
 
 On the design-pieces tree, 150 drafts had 4 pairs at Jaccard >= 0.7. The worst was director 0.710: audit evidence disagrees with live configuration, against the attacker retaining access through a service account. Both drafts used the same part templates and resume lines that did not name the incident.
