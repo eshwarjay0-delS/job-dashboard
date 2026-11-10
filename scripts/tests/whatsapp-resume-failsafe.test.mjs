@@ -23,11 +23,11 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Eshwar Jay\neshwarjay05@gmail.com | (713) 555-0105\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const HOUSTON = 'Eshwar Jay\neshwarjay05@gmail.com | (713) 555-0105\nAnalyst, Acme  Jan 2021 - Mar 2024\nReviewed access requests. Documented findings.'
 const SAINT_LOUIS = 'Eshwar Jay\njayeshwar44@gmail.com | (314) 555-0144\nAnalyst, Acme  Jan 2019 - Jun 2022'
 const HOUSTON_PATH = '/library/eshwarjay05/easm.docx'
 const SAINT_LOUIS_PATH = '/library/jayeshwar44/grc.docx'
-const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
+const REWRITTEN = 'Eshwar Jay\neshwarjay05@gmail.com | (713) 555-0105\nAnalyst, Acme  Jan 2021 - Mar 2024\nDocumented findings after reviewing access requests.'
 
 function harness(runTailor) {
   const docs = []
@@ -109,24 +109,22 @@ const low = {
   keyword_analysis: { matched: [], added: ['supplierninja'], missing: ['soc 2', 'tprm', 'supplier', 'vendor'] },
 }
 
-test('a below-floor rewrite still delivers that Word file and names the missing terms', async () => {
+test('an unverified JD experience claim sends the selected library resume, not the draft', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
   await generate('15550021', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.match(docs[0].caption, /supplierninja/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /This file was not rewritten/)
+  assert.match(docs[0].caption, /rewrite did not finish cleanly/)
+  assert.doesNotMatch(docs[0].body, /supplier reviews|supplierninja/)
+  assert.doesNotMatch(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
   assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
-
 test('a failed or incomplete rewrite still delivers the chosen library resume', async () => {
   let mode = 'throw'
   const { generate, docs, said, filesFor } = harness(async () => {
@@ -158,10 +156,12 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
-test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
+test('a finished below-floor rewrite with a role evidence gap and no unsupported claim can send the updated file', async () => {
   const finished = {
     ...low,
     token: 'easm-scored',
+    unverified_added_keywords: [],
+    keyword_analysis: { ...low.keyword_analysis, added: [] },
     quality: { ...low.quality, incomplete: false, status: 'needs_review' },
     quality_blockers: ['role_evidence_gaps'],
     ats: { score: 92, passed: true, checks: [], issues: [] },
@@ -172,7 +172,8 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].body, /Documented findings after reviewing access requests/)
+  assert.doesNotMatch(docs[0].body, /supplier reviews|supplierninja/)
   assert.match(docs[0].caption, /30\.8%/)
   assert.match(docs[0].caption, /Skills your resume already supports: 30\.8%/)
   assert.match(docs[0].caption, /ATS parse check: 92%/)
