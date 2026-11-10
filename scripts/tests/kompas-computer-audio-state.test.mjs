@@ -155,18 +155,17 @@ test('computer audio is opt-in; the first tap enables it for the next Start with
   const handlerEnd = app.indexOf('// Initial source-state render', handlerStart);
   assert.ok(handlerStart >= 0 && handlerEnd > handlerStart, 'speaker-button handler must remain extractable');
   const button = { onclick: null };
+  let starts = 0, syncs = 0;
   const state = {
     srcOn: { mic: true, sys: false },
     running: false,
-    starts: 0,
-    syncs: 0,
     $: () => button,
-    syncSrc() { this.syncs++; },
-    startSys() { this.starts++; },
+    syncSrc() { syncs++; },
+    startSys() { starts++; },
   };
   runInContext(app.slice(handlerStart, handlerEnd), createContext(state));
   await button.onclick();
   assert.equal(state.srcOn.sys, true, 'one tap should opt into computer audio');
-  assert.equal(state.syncs, 1, 'the control should immediately render the selected state');
-  assert.equal(state.starts, 0, 'selecting audio before Start must not begin capture');
+  assert.equal(syncs, 1, 'the control should immediately render the selected state');
+  assert.equal(starts, 0, 'selecting audio before Start must not begin capture');
 });
