@@ -325,3 +325,7 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+## 10 November 2026 — clearance-safe contract search pagination
+
+Continue: validate PR for `fix/crawl-clearance-pagination-20261110`. The prior crawler jobs API fetched only four times the requested limit (capped at 100) before filtering clearance roles, so a clearance-heavy newest page could silently underfill results despite later eligible fresh jobs. The branch now scans ordered 100-row pages up to `min(1,000, max(100, limit × 10))`, stops when enough eligible results are collected, and returns `clearance_scan_limited` when the cap is reached. Tests cover a clearance-only first page followed by eligible rows and an underfilled capped scan. Commits: bcab029, ee5ac59, 3aea24c, f063458, 1fbc4d5. No production query or crawl was run. Exact-head crawler tests/full CI/Plan-REA/Kompas gates and post-merge READY alias + API smoke remain pending.
