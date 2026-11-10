@@ -296,3 +296,32 @@ The Safe Merge Gate identified private source locators in the Oct 17 handoff: th
 - PR #275 exact head `3766479ae3514e8584be856c6bb7644a5f849d1c` had full CI `42839542006` SUCCESS and Kompas baseline `42839541783` SUCCESS. The dedicated Plan Journal/REA schema workflow `42839542019` failed one assertion because the REA entry referenced `src/lib/whatsapp-resume-recovery-path.ts`, which is not on master while PR #278 remains unmerged; this commit removes that unmerged local path reference. Exact-head preview `dpl_F25p2djy16dHjBozp2p5Ap4ixVLR` is READY. The authenticated preview smoke still requires the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it. PR #281 overlaps the same journal/REA files and remains deferred until #275 is reconciled.
 
 Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275 head; keep the branch unmerged until the authenticated preview smoke gate is legitimately available. Then restack PR #281 without dropping its crawler tests/docs. Separately wait for Vercel capacity before one reviewed production deployment and verify the first post-classifier crawl. Keep PR #274/#277/#279/#271 approval gates and PR #283 with Voice Delivery. Do not claim the backlog complete.
+
+
+## 10 November 2026 — production release and restacked crawler follow-through
+
+### Master and production
+- PR #275 merged as master `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Vercel deployment `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC` is READY, target production; independent alias lookup confirms `job-dashboard-fawn.vercel.app` resolves to that deployment.
+- Git ancestry confirms production includes PR #276's `contractTypes()` contract classifier and PR #282's evidence-separated exported-DOCX gap report. PR #275 itself is the Plan/REA/WhatsApp evidence handoff and does not change WhatsApp runtime behavior.
+- The 10 Nov 11:00 UTC crawl ran before this release on `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier evidence. The first expected post-release crawl is 11 Nov 11:00 UTC. Public `/api/health` and `/api/crawl/jobs?limit=1` smoke could not be reached from this runtime.
+
+### WhatsApp and factual resume
+- The exact 17 Oct source DOCX and matching JD are recovered, but source chronology/education/credential claims conflict with owner-confirmed facts and remain quarantined. The generated DOCX, per-run R2 key, webhook correlation ID, Meta message ID and signed delivered/read receipt remain missing. No replay or real WhatsApp send is claimed.
+- PR #273's source-boundary filter is live in production. The 6 Nov channel policy remains authoritative: WhatsApp may deliver a completed readable file below 95% with gaps disclosed; 70% is the delivery-with-gaps floor and 95% supported coverage is the clean-pass criterion. The old 98% hard hold stays superseded.
+- PR #274's unconditional identity guard remains owner-review-gated; no user-authored approval for that exact behavior was retrieved. PR #277's durable storage/retry/no-baseline-fallback tradeoff also lacks explicit approval. PR #278 depends on #274 and must not ship alone. PR #279 remains DRAFT because it changes external-send eligibility. Do not merge these on green tests alone.
+- The owner-approved 3 Nov final-DOCX Gemini review is still unimplemented: ask exactly `Give me ATS score` after final export, correct only source-supported/explicitly confirmed gaps, re-export and recheck. Score is diagnostic, not experience evidence.
+
+### Poke-inspired Gmail/mobile
+- Explicit owner constraints: up to four connected accounts; account + thread identity; no silent merging; preserve selected From; reconnect only the affected inbox; responsive mobile hamburger navigation. Foreground inbox refresh is 30 seconds and InboxAlertWatcher is 2 minutes.
+- PR #271 remains DRAFT at `5e0a5f8`; no exact-head Actions run exists for its latest test-only commit. Acceptance still requires two authorized inboxes (one healthy, one partial/failed), per-account reconnect/From preservation, and narrow-mobile device verification. The broad Poke direction is approved; the specific sync-health card is not separately approved. The unattended worker stays disabled pending external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement. No email was sent.
+
+### Contract crawler
+- Production now includes the classifier, but the 10 Nov crawl predates the release. Verify the 11 Nov 11:00 UTC run, 14-day API freshness/clearance behavior and contract classifications. Do not manually rewrite rows.
+- PR #284 branch `reconcile/crawler-ci-roberthalf-manual-20261110` restacks the workflow/test/manual-directory change on current master. Previous exact head `147a40e` passed crawler regression `42853441582`, Plan/REA schema `42853441401`, Kompas baseline `42853441467` and full CI `42853441954`. The documentation refresh changes the PR head, so exact-head checks must rerun. Vercel preview status is `build-rate-limit`; do not bypass quota.
+- Robert Half's official cyber-security search page is a manual navigation link only. Its Terms of Use (23 Sep 2026, Section 6) prohibit automated robots/spiders, scraping, data mining and systematic retrieval without express prior written consent. No adapter or scrape is authorized.
+
+### Kompas coordination
+- Kompas Continuous Voice Delivery remains active and owns PR #283 and all microphone/caption/audio changes. No parallel voice edits were made. Native Windows/WhatsApp/mobile voice E2E and the 50 actual same-question Kompas/ChatGPT pairs with independent human scores remain unverified.
+- MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
+
+Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
