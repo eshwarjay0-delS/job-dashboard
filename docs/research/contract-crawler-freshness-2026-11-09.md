@@ -94,3 +94,11 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+## 10 November 2026 — bounded clearance-safe search pagination
+
+The contract search API previously fetched at most four times the requested result limit (capped at 100), then removed clearance-required rows in application code. If the newest page contained mostly clearance postings, the API could return fewer contract results while eligible fresh rows remained further down the ordered result set.
+
+The route now uses `collectFilteredPages()` to scan ordered 100-row pages, stopping once the requested visible limit is filled, the query reaches the end, or a bounded per-request scan cap is reached. The cap is `min(1,000, max(100, limit × 10))`; the API reports both `excluded_clearance` and `clearance_scan_limited`, so an underfilled capped result is explicit rather than silently presented as complete. The `clearance=include` override retains the direct caller-limit path.
+
+Two executable helper tests cover a clearance-heavy first page followed by eligible jobs and a capped scan that remains underfilled. A route contract regression pins the page range, exclusion predicate and response metadata. These are mocked/source-level tests, not a live production API or crawl result. The first classifier-aware scheduled crawl remains 11 November 2026 at 11:00 UTC; it must be checked separately from this pagination change.
