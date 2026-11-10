@@ -150,11 +150,14 @@ This supersedes BrowserView and bookmarklet instructions in the historical desig
 Verification: six simulated Electron lifecycle/isolation/navigation checks, eight existing native auth checks, native protocol/source checks, two account-context API checks, TypeScript and the full web production build passed. Windows packaging, actual portal navigation/SSO, file upload and restart/login persistence still need release and device evidence. Source REA: docs/research/inclusive-browser-desktop.md.
 
 
-## Live crawler evidence and repair in progress — 9 November 2026
+## Live crawler evidence and release — 10 November 2026
 
-- Production master before this change: `eb37c4566f6d9c1d4b4d988096a2a44066255636`; the public `job-dashboard-fawn.vercel.app` alias was independently READY on that exact SHA.
-- Read-only production database evidence: 14,164 rows in `mfit_crawl_jobs`, 20 rows in `mfit_crawl_runs`. The 9 Nov 11:00 UTC run found and upserted 6,976 jobs. Its only recorded portal error was `eteam: HTTP 404 from www.eteaminc.com`.
-- eTeam had 907 stored rows (818 active) last seen on 8 Nov. No rows are deleted by this repair. Its former `/searchjobs/api/jobs` endpoint is no longer reliable; the current official `https://www.eteaminc.com/careers` page is interactive and no public static feed has been verified. It is removed from active crawling and retained as a manual portal link plus a pending source.
-- This PR adds a 14-day `last_seen_at` cutoff to the jobs API, the same window the crawler already uses before retiring listings. It is not live until the PR is merged and the production alias is verified. Existing eTeam rows remain in storage and may appear until they age past that window; they are not silently deleted or reassigned.
-- Robert Half remains pending for a verified adapter. Its official cybersecurity search currently exposes contract/temporary roles, making it the next source candidate after its live HTML/feed structure is captured and tested.
-- This is an implementation checkpoint, not a claim that every vendor is crawled or every listing is a live vacancy. See `docs/research/contract-crawler-freshness-2026-11-09.md` for the evidence and acceptance gate.
+- PR #266 `Exclude stale crawler listings and retire eTeam's 404 feed` merged as `30bd971c97937b9dea8716b945fa3b1219b07544` from exact head `2a88796c3cb5f2955655701f203abd2fc15605b2`.
+- Exact-head full CI `42735808768`, Crawler freshness regression `42735808764`, and Kompas baseline `42735808778` all completed SUCCESS.
+- Production deployment `dpl_AUuJFms4osu6TPYg768Ydy5ABhCT` was READY at `30bd971`. The current canonical alias `job-dashboard-fawn.vercel.app` is independently READY at descendant `23ec076b944519e518060f14e2ce530238e8393a`, deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`, which includes the crawler fix.
+- Source registry now has 20 active adapters and 10 pending/manual-only sources. eTeam is removed from active crawling, its official careers link remains manual, and all existing records are preserved. The public jobs API applies the 14-day `last_seen_at` cutoff.
+- Read-only production database snapshot: 14,164 stored rows, 12,353 active, 12,170 active within 14 days, and 183 stale active rows that the API excludes. eTeam has 907 stored/818 active rows last seen 8 Nov; they remain stored and can remain visible until the 14-day window expires.
+- The latest completed crawl is still the pre-change 9 Nov 11:00 UTC run: 6,976 found/upserted across 21 adapters, with one eTeam HTTP 404. The first post-change scheduled crawl has not completed yet.
+- Robert Half remains pending until its official response structure is captured and tested. No adapter or live vacancy is claimed.
+- The public `GET /api/crawl/jobs?limit=1` smoke remains pending because this runtime could not resolve the public Vercel hostname. Deployment control-plane status and read-only DB counts are verified; runtime API response is not.
+

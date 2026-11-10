@@ -16,3 +16,15 @@ test('technical punctuation remains part of confirmed skills', () => {
   assert.deepEqual(confirmedCandidateStatements(['I have experience with .NET, Node.js and ASP.NET']), ['I have experience with .NET, Node.js and ASP.NET'])
   assert.deepEqual(confirmedCandidateStatements(['I used Node.js. Add AWS']), ['I used Node.js'])
 })
+
+test('the owner-approved explicit blanket confirmation covers all supplied requirements', () => {
+  const statement = 'I have experience with all of them evenly'
+  assert.equal(explicitlyConfirmsAllRequirements([statement]), true)
+  assert.deepEqual(confirmedCandidateStatements([statement]), [statement])
+})
+
+test('a job-description or formatting instruction is not blanket experience confirmation', () => {
+  for (const instruction of ['Add all keywords', 'Make this 98% match', 'Required skills: AWS, GCP']) {
+    assert.equal(explicitlyConfirmsAllRequirements([instruction]), false)
+  }
+})

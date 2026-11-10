@@ -142,3 +142,26 @@ Continue approved regression-first WhatsApp reliability work while PR204 awaits 
 Before: three suites 8 pass/23 fail on current master, initially missing module errors. Loading real helpers exposed four obsolete message assertions; updated assertions still verify selected resume, missing terms, risk Needs review, refusal and successful separate risk report. After: 31/31 pass; the complete expanded CI command including library-pick passes 43/43. CI selected-email/duplicate-job step now includes these restored suites rather than leaving them outside CI. No real messages, private fixtures or production sessions used.
 
 Next: Run exact new-head CI before merging test-only maintenance; retain PR204 safety review separately and do not treat its green CI as production delivery. Original incident evidence, actual signed delivery and real Windows/50-pair acceptance remain open.
+
+
+## 10 November 2026 — WhatsApp DOCX identity repair deployed
+
+PR #267 merged as `23ec076b944519e518060f14e2ce530238e8393a` from exact reviewed head `48836eed08233dcc532ab4a04299dd74b39475a2`. Full CI `42747786078`, WhatsApp recovery regression `42747786105`, and Kompas baseline `42747785851` all passed. The preview was READY at exact PR head. Production deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc` is READY and the canonical `job-dashboard-fawn.vercel.app` alias independently resolves to that exact merge SHA.
+
+The fix reads identity facts from the DOCX body, referenced headers/footers and external hyperlink targets before delivery; name, all emails, phone, profile URL and employment dates remain protected. It does not change the 6 Nov WhatsApp coverage policy and does not resolve the 17 Oct 98% coverage hold by itself. The original DOCX, full JD, generated output and per-run R2/Meta trace are still missing. No real WhatsApp send or device acceptance was performed; runtime HTTP smoke was unavailable because external DNS resolution failed. The optional voice-preview-smoke failure remains with the separate Kompas Voice Delivery task; no voice behavior or secret was changed.
+
+Continue: obtain the authorized original source bundle for exact incident replay, then arrange a separately approved real-device delivery acceptance. In parallel, keep the Poke-inspired Gmail per-account sync-health PR #268 as draft until it is safely restacked on current master and its separate two-account/mobile acceptance gate is met.
+
+
+## 10 November 2026 — confirmed-experience boundary regression
+
+The resume source audit confirms that the generator receives explicit candidate statements separately from the employer's JD. Only baseline facts or explicit first-person assertions become forced experience evidence; a JD-only skill list or a formatting instruction is not a confirmation. Added a focused regression for the owner's explicit wording “I have experience with all of them evenly” and negative cases “Add all keywords”, “Make this 98% match”, and a bare required-skills list. This pins the existing boundary without changing runtime behavior. A green test is not a live 98% match or proof of a real exported resume; authenticated source-bundle review remains open.
+
+
+## 10 November 2026 — contract crawler release verified
+
+PR #266 merged as `30bd971c97937b9dea8716b945fa3b1219b07544` after full CI `42735808768`, crawler regression `42735808764`, and Kompas baseline `42735808778` all passed. Production deployment `dpl_AUuJFms4osu6TPYg768Ydy5ABhCT` was READY at that SHA; current canonical production alias is READY at descendant `23ec076b944519e518060f14e2ce530238e8393a` on `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`.
+
+The active registry has 20 adapters and 10 pending/manual-only sources. eTeam's failing feed is retired, the manual careers link remains, stored rows are preserved, and the public API filters listings older than 14 days. Read-only production counts: 14,164 stored; 12,353 active; 12,170 fresh within 14 days; 183 stale active excluded. The latest completed crawl is still the pre-change 9 Nov run (6,976 upserted, one eTeam 404); the first post-change scheduled crawl is pending. Public API HTTP smoke is unavailable because external DNS resolution failed. Robert Half remains pending until its official feed/HTML is captured and tested.
+
+Continue: verify the next scheduled crawl and public API freshness response; do not claim eTeam was skipped until a completed post-change run proves it.

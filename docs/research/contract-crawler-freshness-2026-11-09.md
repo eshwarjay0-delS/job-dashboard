@@ -51,3 +51,12 @@ Status at branch creation: **built on branch; CI and deployment pending**.
 
 - This environment could read GitHub and the production-linked Supabase database but could not create a Vercel sandbox or access runtime logs through the Vercel API (403). No local repository execution was available; the branch workflow and GitHub CI are the executable test path.
 - The original 17 October 17:28 Chicago WhatsApp screenshot, source resume, JD and generated DOCX were not retrieved by the accessible conversation/Library search. This crawler work does not resolve or claim to reproduce that WhatsApp incident.
+
+
+## 10 November release update — supersedes the branch-creation pending status
+
+PR #266 merged as `30bd971c97937b9dea8716b945fa3b1219b07544` from exact head `2a88796c3cb5f2955655701f203abd2fc15605b2`. Full CI `42735808768`, Crawler freshness regression `42735808764`, and Kompas baseline `42735808778` all completed SUCCESS. Production deployment `dpl_AUuJFms4osu6TPYg768Ydy5ABhCT` is READY at the merge SHA. The current canonical production alias is READY at descendant `23ec076b944519e518060f14e2ce530238e8393a`, deployment `dpl_3wb2CbvvzZ98nqK7QgvnHmjXNwUc`, and includes the crawler change.
+
+Read-only production snapshot after release: 14,164 stored rows; 12,353 active; 12,170 active within 14 days; 183 active rows older than 14 days. eTeam remains 907 stored/818 active rows with latest last_seen 8 Nov; they are preserved and will age out under the 14-day API filter if not refreshed. The current source registry contains 20 active adapters and 10 pending/manual-only sources.
+
+The 9 Nov 11:00 UTC crawl is still the latest completed run, and it occurred before PR #266: 6,976 jobs found/upserted across 21 adapters with one eTeam HTTP 404. The first post-change scheduled crawl has not completed, so no claim is made that eTeam was skipped by a live run. The public API smoke also remains pending because external DNS resolution failed in this execution environment. The next checks are the first scheduled post-change crawl and `GET /api/crawl/jobs?limit=1` when HTTP access is available. Robert Half remains a separate pending adapter after its official feed/HTML is captured and tested.
