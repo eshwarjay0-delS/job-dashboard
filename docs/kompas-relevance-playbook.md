@@ -108,6 +108,8 @@ A design answer now speaks only the pieces in the design sentence. The shared ex
 
 Across 150 drafts, pairs at Jaccard >= 0.7 went from 16 to 4. Same-answer failures stayed 0. Length failures stayed 0. Mode length gaps under 0.50 stayed 0. Answers over the ceiling stayed 0. The highest remaining pair is 0.710. Offline sample stayed 15 answers, 0 failures, 16 warnings. Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10.
 
+Re-run on 10 November 2026 after restack onto master `3e2d2359`: still 4 pairs and the same four zeros. Front Door versus tenant stayed engineer 0.556, director 0.533, architect 0.533. The 0.710 director pair stayed. Focused suites 169 pass, 0 fail. `tsc --noEmit` clean.
+
 ## Fold log, 6 November 2026, a versus answer stays on the two sides
 
 On master `9d2997ac`, 150 drafts had 84 pairs at Jaccard >= 0.7. The worst pair was two "explain the same incident to a director" questions: rollback scope versus lateral movement risk, and restoration speed versus reinfection risk. Architect Jaccard was 0.811 at 114 and 126 words. Both drafts used the same checklist for decision owner, business exposure, and measures.

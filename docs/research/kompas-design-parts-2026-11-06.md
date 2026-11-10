@@ -42,5 +42,9 @@ The versus-side pair stayed at engineer 0.400, director 0.500, architect 0.500.
 
 Offline sample: 15 answers, 0 failures, 16 depth and confidence warnings. Focused suites 67 pass, 0 fail. `tsc --noEmit` clean.
 
+## Re-run after restack onto master `3e2d2359`, 10 November 2026
+
+Same stand-in, 150 drafts, no model call. `KOMPAS_EVAL_TOKEN` was unset. This tree: 4 pairs at Jaccard >= 0.7. Same-answer failures 0. Length failures 0. Mode gaps under 0.50: 0. Answers over the ceiling: 0. Front Door versus tenant stayed engineer 0.556 (59 and 67), director 0.533 (91 and 101), architect 0.533 (143 and 159). Highest remaining pair stayed 0.710, director, audit evidence versus the service-account attacker. Offline sample: 15 answers, 0 failures, 16 warnings. Focused suites: 169 pass, 0 fail. `tsc --noEmit` clean.
+
 ## Limits
 Live scored folds remain 0 of 50. Live Windows desktop answers remain 0 of 10. Not merged. Not deployed. Four pairs remain at Jaccard >= 0.7.
