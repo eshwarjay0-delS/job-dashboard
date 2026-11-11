@@ -463,3 +463,7 @@ Continue: keep PR #304 draft until protected preview access is legitimately rest
 ## 11 November 2026 — 22:29 UTC Plan/REA type-check correction
 
 The exact full CI run 43112047139 on PR #306 head 615d625e failed at Type-check, not in product code: one journal entry used area whatsapp outside the declared PlanArea union, and five new REA records used method labels outside the declared ReaMethod union. The branch now maps WhatsApp resume work to area resume and normalizes those methods to Source and artifact analysis. No product logic or acceptance threshold changed. The earlier Plan/REA schema run 43112047386 and Kompas baseline 43112047138 passed; the exact full CI must pass on the corrected head. The protected preview gate 43112043259 remains failed under Vercel project live=false. Keep #306 and stacked #307 draft; no merge or deployment.
+
+## 11 November 2026 — 22:33 UTC second Plan/REA type-check correction
+
+The next full CI run 43112515253 passed the area/method enum correction but failed Type-check on two REA records that had an unsupported top-level evidence property. Their evidence is already retained in the ordered step records, so the redundant top-level properties have been removed. This does not widen the ReaSession type or weaken validation. The Plan/REA schema run 43112515299 and Kompas baseline 43112515150 passed; the exact full CI must pass on the corrected head. The protected preview gate 43112510514 remains failed under Vercel project live=false.
