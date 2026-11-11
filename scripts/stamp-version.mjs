@@ -11,6 +11,24 @@ import { fileURLToPath } from "node:url"
 
 export const STAMP_FILES = ["../public/version.json", "../public/kompas/version.json"].map((p) => new URL(p, import.meta.url))
 
+/** Login is lifted when AUTH_DISABLED / NEXT_PUBLIC_AUTH_DISABLED is unset. */
+export function authDisabledStamp(env = process.env) {
+  const raw = env.AUTH_DISABLED ?? env.NEXT_PUBLIC_AUTH_DISABLED
+  if (raw == null || String(raw).trim() === "") return true
+  const value = String(raw).trim().toLowerCase()
+  return value !== "false" && value !== "0" && value !== "off" && value !== "no"
+}
+
+export const AUTH_FLAG_FILE = new URL("../public/kompas/auth-flag.js", import.meta.url)
+
+export function stampAuthFlag({ env = process.env, file = AUTH_FLAG_FILE, log = console.log } = {}) {
+  const disabled = authDisabledStamp(env)
+  writeFileSync(file, "window.KOMPAS_AUTH_DISABLED = " + (disabled ? "true" : "false") + ";\n")
+  log("[stamp-version] auth-flag.js KOMPAS_AUTH_DISABLED=" + disabled)
+  return disabled
+}
+
+
 function gitHead() {
   try { return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() } catch { return "" }
 }
@@ -35,6 +53,7 @@ export function stampJson(text, sha, builtAt) {
 export function stampVersion({ env = process.env, now = new Date(), files = STAMP_FILES, git = gitHead, log = console.log } = {}) {
   const sha = resolveCommit(env, git)
   if (!sha) { log("[stamp-version] no VERCEL_GIT_COMMIT_SHA (set KOMPAS_STAMP_LOCAL=1 to stamp from git), leaving version.json as is"); return null }
+  try { stampAuthFlag({ env, log }) } catch (error) { console.warn("[stamp-version] auth-flag skipped", error && error.message) }
   const builtAt = now.toISOString()
   for (const file of files) {
     try {

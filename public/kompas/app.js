@@ -120,6 +120,10 @@ let sessions = LS.get("sessions", []);
 let current = null;          // the session config the copilot is running against
 
 /* --------------------------------- auth ----------------------------------- */
+function isKompasAuthDisabled() {
+  if (typeof window !== "undefined" && typeof window.KOMPAS_AUTH_DISABLED === "boolean") return window.KOMPAS_AUTH_DISABLED;
+  return true;
+}
 $("loginBtn").onclick = () => {
   const email = $("loginEmail").value.trim();
   if (!email) { $("loginEmail").focus(); return; }
@@ -127,6 +131,7 @@ $("loginBtn").onclick = () => {
   openDashboard();
 };
 async function signOutKompas() {
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) { try { openDashboard(); } catch {} return; }
   try { if (typeof stop === "function" && running) await stop(false); } catch {}
   clearAuthLocalState();
   try { accountSessionSync?.signOutLocal(); } catch {}
@@ -767,6 +772,7 @@ function isAuthError(e) {
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
 async function tryRefreshAuth(reason) {
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return true;
   // Coalesce simultaneous prep, answer, focus and keepalive renewals.
   // The Electron shell exclusively owns its refresh family: never fall back
   // to stale webview cookies, which could revoke the desktop session.
@@ -832,11 +838,13 @@ function keepAuthAlive() {
   if (!expiresAt || expiresAt - Date.now() > 60 * 1000) return;
   void tryRefreshAuth();
 }
-try {
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
-  window.addEventListener("focus", keepAuthAlive);
-  setInterval(keepAuthAlive, 60 * 1000);
-} catch {}
+if (typeof isKompasAuthDisabled !== "function" || !isKompasAuthDisabled()) {
+  try {
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
+    window.addEventListener("focus", keepAuthAlive);
+    setInterval(keepAuthAlive, 60 * 1000);
+  } catch {}
+}
 // Silent auth (owner, 1 Nov 2026): auth UI must never appear mid-session —
 // no pill, no sign-in prompt, no auth error text in front of a meeting or
 // demo. When renewal truly fails, the session waits silently: a cheap
@@ -863,6 +871,7 @@ function healAuthSilently() {
   }
 }
 function waitForAuthSilently(retry) {
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return;
   if (retry && retry.card && !__authPendingRetries.some(r => r.card === retry.card)) __authPendingRetries.push(retry);
   if (__authWaiting) return;
   __authWaiting = true;
@@ -2385,7 +2394,7 @@ async function transcribe(blob, who, opt) {
         const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
           headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
         if (!res.ok) {
-          if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function") {
+          if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function" && !(typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled())) {
             opt.__authRetried = true;
             const renewed = await tryRefreshAuth("rejected");
             if (renewed) { retry = true; delay = 200; failure = ""; }
@@ -6670,6 +6679,7 @@ accountSessionSync = window.KompasSessionCloud?.create({
   // intentionally rejects an invalid explicit Bearer instead of falling
   // back to a different cookie-account identity.
   recoverAuth: async () => {
+    if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return true;
     if (window.kompasDesktop) {
       const verified = await window.kompasDesktop.refreshAuth?.("rejected").catch(() => false);
       return !!verified;

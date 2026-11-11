@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { streamingSttAvailability } from "@/lib/kompasStreamingStt"
+import { isAuthDisabled } from "@/lib/authDisabled"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -20,6 +21,7 @@ export async function GET() {
     version: COMMIT || "local",
     commit: COMMIT || null,
     immutable: true,
+    authDisabled: isAuthDisabled(),
     streamingStt: { enabled: streaming.enabled, reason: streaming.reason, fallback: streaming.fallback, provider: streaming.provider },
     cycle: "MarketFit's native Kompas: sessions on OpenRouter, answers blended from perfACT's answering intelligence.",
     rules: [

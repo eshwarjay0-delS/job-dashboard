@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { createRequire } from "node:module";
+import { createRequire, stripTypeScriptTypes } from "node:module";
 const require = createRequire(import.meta.url);
 const {delta,combine,create} = require("../../public/kompas/account-sync.js");
 const server = fs.readFileSync("src/app/api/kompas/account-sessions/route.ts","utf8");
@@ -223,12 +223,14 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
   const source = fs.readFileSync("src/lib/supabase/server.ts", "utf8");
   const marker = "export async function createClientFromRequest(request: NextRequest)";
   assert.ok(source.includes(marker), "request auth boundary must exist");
-  const functionSource = source.slice(source.indexOf(marker))
-    .replace(marker, "async function createClientFromRequest(request)");
+  const functionSource = stripTypeScriptTypes(source.slice(source.indexOf(marker))
+    .replace(marker, "async function createClientFromRequest(request)"));
   const ctx = {
     process: { env: {
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+      AUTH_DISABLED: "false",
+      NEXT_PUBLIC_AUTH_DISABLED: "false",
     } },
     createClient: async () => ({ identity: "cookie-account-B" }),
     createSupabaseClient: (_url, _key, options) => ({
@@ -236,6 +238,9 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
       authorization: options.global.headers.Authorization,
     }),
     stubClient: () => ({ identity: "anonymous-stub" }),
+    attachDisabledAuthFallback: (client) => client,
+    isAuthDisabled: () => false,
+    hasSupabaseAuthMaterial: () => false,
     Buffer,
   };
   vm.runInNewContext(functionSource + "\nthis.requestClient = createClientFromRequest;", ctx);
@@ -255,5 +260,6 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
       "explicit malformed Authorization cannot adopt cookie account");
   }
   assert.match(source, /if \(authorization === null\) return createClient\(\)/);
-  assert.match(source, /if \(!bearer\) return stubClient\(\)/);
+  assert.match(source, /if \(!bearer\)/);
+  assert.match(source, /stubClient\(\)/);
 });

@@ -3,7 +3,7 @@ const digits = (s: string) => s.replace(/\D/g, "")
 
 // This account is the product owner. Authorization still requires a real
 // Supabase session; this value only classifies an already authenticated user.
-const PRODUCT_OWNER_EMAIL = "eshwarjay0@gmail.com"
+export const PRODUCT_OWNER_EMAIL = "eshwarjay0@gmail.com"
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   const mine = String(email || "").trim().toLowerCase()

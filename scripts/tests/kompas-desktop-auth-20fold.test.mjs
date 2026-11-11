@@ -37,9 +37,14 @@ function requestClient(header,{configured=true}={}){
      const identity=authorization==="Bearer valid-A"?"bearer-account-A":null
      return identity?{auth:{getUser:async()=>({data:{user:{id:identity}},error:null})}}:noSession
    }}
+   if(id==="@/lib/authDisabled")return {
+     isAuthDisabled:()=>false,
+     hasSupabaseAuthMaterial:()=>false,
+     attachDisabledAuthFallback:(client)=>client,
+   }
    throw Error("Unexpected auth module: "+id)
  }
- const env=configured?{NEXT_PUBLIC_SUPABASE_URL:"https://fake.supabase.test",NEXT_PUBLIC_SUPABASE_ANON_KEY:"test-publishable-only"}:{}
+ const env=configured?{NEXT_PUBLIC_SUPABASE_URL:"https://fake.supabase.test",NEXT_PUBLIC_SUPABASE_ANON_KEY:"test-publishable-only",AUTH_DISABLED:"false",NEXT_PUBLIC_AUTH_DISABLED:"false"}:{AUTH_DISABLED:"false",NEXT_PUBLIC_AUTH_DISABLED:"false"}
  vm.runInNewContext(compiled,{module:mod,exports:mod.exports,require:stub,process:{env},Buffer,console})
  return mod.exports.createClientFromRequest({headers:{get:(key)=>key==="authorization"?header:null}})
    .then(async client=>({identity:(await client.auth.getUser()).data.user?.id||null,calls}))
