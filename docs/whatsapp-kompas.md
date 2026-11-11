@@ -58,7 +58,7 @@ The deployed PDF helper silently sampled twelve pages, potentially discarding co
 
 Validation: 47/47 focused PDF and WhatsApp Kompas tests, including a real generated PDF parsed by unpdf; TypeScript and production webpack build pass. No outbound messages or live model evaluations were sent. Full regression baseline comparison follows.
 
-Scope coordination: Kompas Continuous Voice Delivery remains enabled; this change does not edit voice/native behavior. No separately named Bible-Keeper automation was visible. The existing source of truth retains superseded decisions. Desktop session discovery/reconciliation, retention controls and real authenticated delivery acceptance remain open. Original 17 October resume failure still needs the exact input, generated document and request trace; this PDF fix does not claim to resolve that incident.
+Scope coordination: Kompas Continuous Voice Delivery is currently disabled/paused; this change does not edit voice/native behavior. No separately named Bible-Keeper automation was visible. The existing source of truth retains superseded decisions. Desktop session discovery/reconciliation, retention controls and real authenticated delivery acceptance remain open. Original 17 October resume failure still needs the exact input, generated document and request trace; this PDF fix does not claim to resolve that incident.
 
 Regression comparison: patched full suite completed 1,374 tests: 1,347 pass / 27 fail. All 27 failure names reproduce in the six affected test files on unchanged master e9b7d272 (baseline replay); no checks were skipped or weakened. The initial full baseline process exited without a summary, so only the completed targeted baseline replay is counted. Failures include a missing FIXTURES definition in the evaluation runner, outdated source-contract assertions and WhatsApp harnesses without the new channel mock. The nine PDF tests and all focused channel tests pass. These existing failures remain backlog items; the whole suite is not green. Focused ESLint also passed.
 
@@ -155,3 +155,7 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+## 11 November 2026 — voice task coordination
+
+The separate Kompas Continuous Voice Delivery automation is disabled/paused in the current automation inventory. No microphone, caption, native voice or PR #283 edits were made in this continuation. No separately named Bible-Keeper automation was visible. Native Windows/WhatsApp/mobile voice E2E and the 50 actual same-question Kompas/ChatGPT pairs with independent human scores remain unverified.
