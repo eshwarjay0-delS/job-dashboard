@@ -134,3 +134,12 @@ The 00:55 UTC current-access check searched the individual DOCX files and did no
 The matching JD remains accessible in the connected Gmail source. This establishes that the original source/JD pair can be reassembled, but it does not establish the historical generated output or delivery. The source's education, employer chronology, tenure and credential claims still conflict with owner-confirmed profile facts and remain quarantined until reconciled. The generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable. No model generation, retrospective replay, R2 write, email or WhatsApp message was performed.
 
 The 6 November channel-specific WhatsApp policy still supersedes the old 98% hard hold. Do not restore that hold, silently substitute a different resume, or send a real test message. Continue with source preservation and factual reconciliation; historical delivery remains unverified.
+
+
+## 11 November 2026 — Vercel runtime-log retention boundary
+
+A read-only Vercel runtime-log query was attempted for the exact production window `2026-10-17T22:27:00Z`–`2026-10-17T22:31:00Z` (17:27–17:31 Chicago), function source, WhatsApp keyword and error/warning/info levels. The logs API returned HTTP 400 `bad_request`: the connected Hobby plan retains only one hour of runtime logs (Pro one day; Enterprise three days without Observability Plus). This is a provider retention limitation, not evidence that the historical request produced no logs.
+
+No plan/billing change or access-control bypass was attempted. The original source DOCX is now revalidated inside the private Library archive and the matching JD is available through Gmail. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain unavailable. iZap still has no linked WhatsApp number/history. No replay, model generation, R2 write, email or WhatsApp send occurred.
+
+The incident can only be unblocked by an independently retained Vercel log export, MarketFit R2 object/log export, or Meta webhook/delivery records from an authorized source, plus owner reconciliation of the conflicting source facts. Do not upgrade billing, bypass retention/access controls, infer that no log existed, or replay/resend.
