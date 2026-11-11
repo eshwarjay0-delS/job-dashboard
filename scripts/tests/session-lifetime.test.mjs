@@ -36,11 +36,14 @@ test('Kompas never reloads or navigates merely because time passed or a deploy a
   assert.doesNotMatch(appSrc, /if \(!live\) return location\.reload\(\)/);
 });
 
-test('web dashboard renews on open, focus, visibility and a 20-minute interval without redirecting', () => {
+test('web dashboard refreshes only shortly before expiry, including on focus, and does not redirect', () => {
   assert.match(guardSrc, /supabase\.auth\.refreshSession\(\)/);
+  assert.match(guardSrc, /shouldRefreshBeforeExpiry/);
+  assert.match(guardSrc, /millisecondsUntilRefresh/);
   assert.match(guardSrc, /addEventListener\("focus", renew\)/);
   assert.match(guardSrc, /addEventListener\("visibilitychange", renew\)/);
-  assert.match(guardSrc, /20 \* 60 \* 1000/);
+  assert.doesNotMatch(guardSrc, /20 \* 60 \* 1000/);
+  assert.doesNotMatch(guardSrc, /setInterval/);
   assert.doesNotMatch(guardSrc, /location\.(?:assign|replace)|router\.(?:push|replace)/);
 });
 
@@ -59,7 +62,7 @@ test('desktop bridge is preferred for renewal and reconnect is silent, never use
 
 test('1000 desktop renewal attempts use the bridge without navigation', async () => {
   const start = appSrc.indexOf('async function tryRefreshAuth(');
-  const end = appSrc.indexOf('// Idle is where sessions used to die', start);
+  const end = appSrc.indexOf('function keepAuthAlive()', start);
   const body = appSrc.slice(start, end) + '\nthis.tryRefreshAuth = tryRefreshAuth;';
   let calls = 0;
   const context = {
@@ -81,7 +84,7 @@ test('1000 desktop renewal attempts use the bridge without navigation', async ()
 // never run, bridge or no bridge; the shell's live token keeps calls working.
 test('desktop shell without the bridge never presents the cookie token', async () => {
   const start = appSrc.indexOf('async function tryRefreshAuth(');
-  const end = appSrc.indexOf('// Idle is where sessions used to die', start);
+  const end = appSrc.indexOf('function keepAuthAlive()', start);
   const body = appSrc.slice(start, end) + '\nthis.tryRefreshAuth = tryRefreshAuth;';
   let fetches = 0;
   const context = {

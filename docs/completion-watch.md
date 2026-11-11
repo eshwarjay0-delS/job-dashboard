@@ -20,6 +20,10 @@ Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the
 6. Update the journal with the exact outcome, evidence and next step. Continue independent work when another item is blocked.
 7. Before ending a turn, identify remaining approved work. If stopping because of a wall, state the failed action, evidence, missing prerequisite and exact unblock action. Do not imply work continues in this chat after the turn unless scheduled execution is actually configured.
 
+## 11 November 2026 — Desktop sign-in
+
+Owner request: the desktop was signed out after every relaunch, and the website said authenticated before the desktop received the session. Local gates: tsc clean, baseline 92/92, auth and desktop tests 125 pass, production build exit 0. No live Google round trip. The Supabase project is still restricted. The website half ships with the master deploy. The installed exe changes when the existing Windows workflow publishes kompas-desktop-latest.
+
 ## 11 November 2026 — Supabase egress cut
 
 Eshwar approved one production deploy of the session-sync egress patch on master 5a9e7f84. git am kept author eshwarjay0-delS. The migration file is in the repo and was not applied. Local gates: tsc clean, baseline 92/92, sync/pack/auth/egress tests 74/74. Deployment id stays in the ship report, not a second master push.

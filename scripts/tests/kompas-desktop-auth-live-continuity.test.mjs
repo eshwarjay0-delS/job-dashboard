@@ -5,7 +5,7 @@ import vm from "node:vm"
 
 const src=readFileSync(new URL("../../public/kompas/app.js",import.meta.url),"utf8")
 const begin=src.indexOf("async function recoverLiveAuth()")
-const end=src.indexOf("// Idle is where sessions",begin)
+const end=src.indexOf("function keepAuthAlive()",begin)
 assert.ok(begin>0 && end>begin,"live auth recovery helper must be present")
 const code=src.slice(begin,end)
 async function run(values) {
@@ -35,10 +35,12 @@ test("auth retry is wired to live answer and prep, not only a background timer",
  assert.match(src,/recoverAnswer\("AUTH"\); waitForAuthSilently\(/)
  assert.doesNotMatch(src,/recoverAnswer\("AUTH"\); redirectToLogin\(\)/)
 })
-test("desktop renewal continues when renderer becomes backgrounded",()=>{
- const start=src.indexOf("function keepAuthAlive()"), end=src.indexOf("let __authProbeTimer",start)
- const section=src.slice(start,end)
- assert.match(section,/document\.hidden && !window\.kompasDesktop/)
- assert.match(section,/setInterval\(keepAuthAlive, 60 \* 1000\)/)
- assert.doesNotMatch(section,/__lastAuthRefresh = Date\.now\(\)/)
+test("the visible-tab tick refreshes only when the access token is close to expiring",()=>{
+ const start=src.indexOf("function keepAuthAlive()"), end=src.indexOf("let __authWaitTimer",start)
+ const section=src.slice(start, end)
+ assert.match(section,/if \(document\.hidden\) return/)
+ assert.match(section,/expiresAt - Date\.now\(\) > 60 \* 1000\) return/)
+ assert.match(section,/void tryRefreshAuth\(\)/)
+ assert.match(src,/setInterval\(keepAuthAlive, 60 \* 1000\)/)
+ assert.doesNotMatch(section,/4 \* 60 \* 1000|10 \* 60 \* 1000|AUTH_REFRESH_LIVE_MS|AUTH_REFRESH_IDLE_MS/)
 })

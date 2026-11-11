@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authGateRedirect } from "@/lib/authGate";
+import { userFromAuthClient } from "@/lib/kompasAuthSession";
 
 // The trust variable, read server-side on every gated page request: Supabase
 // getUser() verifies the token with the identity provider instead of trusting
@@ -35,8 +36,12 @@ export async function updateSession(request: NextRequest) {
   });
   let signedIn = false;
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    signedIn = !!user && !user.is_anonymous;
+    // A Supabase outage must not bounce a person who still has a valid token.
+    // userFromAuthClient keeps them when getClaims can verify it locally, and
+    // reports unreachable (rather than signed-out) when the service cannot be
+    // asked at all. A missing session is still signed out.
+    const user = await userFromAuthClient(supabase);
+    signedIn = !!(user && (user.id || user.unreachable));
   } catch {
     signedIn = false;
   }

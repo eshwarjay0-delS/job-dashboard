@@ -1,6 +1,7 @@
 "use client"
 
 import { safeAuthNext } from "@/lib/authRedirect"
+import { plainAuthError } from "@/lib/kompasAuthSession"
 import { stampLoginClock } from "@/lib/session-clock"
 import { Suspense, useState } from "react"
 import Link from "next/link"
@@ -47,7 +48,7 @@ function LoginContent() {
         },
       })
       if (error) {
-        setError(error.message)
+        setError(plainAuthError(error))
         setLoading(false)
       }
     } catch (e) {
@@ -67,7 +68,7 @@ function LoginContent() {
       if (error) throw error
       stampLoginClock()
       window.location.assign(["janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase()) ? "/dashboard/resume" : next)
-    } catch(e) { setError(e instanceof Error?e.message:"Unable to sign in") }
+    } catch(e) { setError(plainAuthError(e)) }
     finally { setLoading(false) }
   }
 
@@ -83,7 +84,7 @@ function LoginContent() {
       })
       if (error) throw error
       setError("If the email is registered, a password setup link has been sent. Check your inbox.")
-    } catch(e) { setError(e instanceof Error?e.message:"Unable to send password setup link") }
+    } catch(e) { setError(plainAuthError(e)) }
     finally { setLoading(false) }
   }
 

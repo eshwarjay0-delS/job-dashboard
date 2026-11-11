@@ -104,7 +104,10 @@ function ensureLoopback() {
       if (!arg) return;
       const payload = desktopAuth.callback([arg]);
       if (!payload) return;
-      void desktopAuth.acceptCallback(payload, pendingSession && pendingSession.ownerId || "").then(ok => {
+      const finish = payload.kind === "code"
+        ? desktopAuth.exchangeCode(payload.code, payload.state)
+        : desktopAuth.acceptCallback(payload, pendingSession && pendingSession.ownerId || "");
+      void finish.then(ok => {
         if (!ok || !desktopAuth.hasSession()) return;
         continueSignedIn();
       }).catch(() => {});
@@ -112,7 +115,33 @@ function ensureLoopback() {
   });
   return loopbackPromise;
 }
-function hideHandoff() { handoffVisible = false; paintHandoff(); }
+const SIGN_IN_POLL_MS = 2500;
+const SIGN_IN_POLL_MAX_MS = 120000;
+let signInPollTimer = null;
+function stopSignInPoll() {
+  if (signInPollTimer) clearInterval(signInPollTimer);
+  signInPollTimer = null;
+}
+function startSignInPoll(nonce) {
+  stopSignInPoll();
+  const deadline = Date.now() + SIGN_IN_POLL_MAX_MS;
+  signInPollTimer = setInterval(() => {
+    if (!handoffVisible || desktopAuth.hasSession() || Date.now() >= deadline) {
+      stopSignInPoll();
+      return;
+    }
+    void desktopAuth.pollCode(nonce).then(code => {
+      if (!code || desktopAuth.hasSession() || !handoffVisible) return null;
+      return desktopAuth.exchangeCode(code, nonce);
+    }).then(ok => {
+      if (ok && desktopAuth.hasSession()) {
+        stopSignInPoll();
+        continueSignedIn();
+      }
+    }).catch(() => {});
+  }, SIGN_IN_POLL_MS);
+}
+function hideHandoff() { handoffVisible = false; stopSignInPoll(); paintHandoff(); }
 function continueSignedIn() {
   hideHandoff();
   if (!win || win.isDestroyed()) return;
@@ -134,6 +163,7 @@ function beginChromeSignIn({ interactive = false } = {}) {
   if (!action.openChrome) return;
   chromeSignInAttempted = true;
   const state = desktopAuth.issueState();
+  startSignInPoll(state);
   // User credentials stay in the existing Chrome account. The callback is one-use
   // and must match a state this desktop issued, never an unsolicited deep link.
   // The state is only on the URL. It is not written into the window.
@@ -719,9 +749,37 @@ function wireIpc() {
   });
 }
 
+const earlyProtocolUrls = [];
+async function takeProtocolArgv(argv) {
+  const looksLikeCode = (argv || []).some(arg => typeof arg === "string" && /[?&]code=/.test(arg) && /^(?:kompas|marketfit-kompas):/i.test(arg));
+  if (!looksLikeCode) return false;
+  const callback = desktopAuth.callback(argv);
+  if (!(callback && callback.kind === "code")) return false;
+  const accepted = await desktopAuth.exchangeCode(callback.code, callback.state);
+  if (accepted && desktopAuth.hasSession()) {
+    stopSignInPoll();
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show(); bringBack(); win.focus();
+    }
+    continueSignedIn();
+  }
+  return true;
+}
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  if (app.isReady()) void takeProtocolArgv([url]);
+  else if (typeof url === "string") earlyProtocolUrls.push(url);
+});
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on("second-instance", async (_e, argv) => {
+    if (await takeProtocolArgv(argv)) {
+      if (!win) return;
+      if (win.isMinimized()) win.restore();
+      win.show(); bringBack(); win.focus();
+      return;
+    }
     const callback = desktopAuth.callback(argv);
     if (callback) {
       const accepted = await desktopAuth.acceptCallback(callback, pendingSession?.ownerId || "");
@@ -785,14 +843,30 @@ else {
     lockDownSession();
     wireIpc();
     createWindow();
+    await takeProtocolArgv(process.argv.concat(earlyProtocolUrls.splice(0)));
     // Reuse the browser login already present. On first install the shell has
     // no cookie jar, so initiate a state-bound handoff only when renewal fails.
-    const renewQuiet = () => { void desktopAuth.renew(false); };
-    void desktopAuth.renew(false).then(ok => { if (!ok && !desktopAuth.hasSession()) beginChromeSignIn(); });
+    // The next refresh is a single timer at the access-token lead or the
+    // 24-hour family window. It is not a fixed interval, and a 401 still
+    // renews through kompas:refresh-auth.
+    let desktopRefreshTimer = null;
+    const armDesktopRefresh = () => {
+      if (desktopRefreshTimer) clearTimeout(desktopRefreshTimer);
+      desktopRefreshTimer = null;
+      const delay = desktopAuth.millisecondsUntilRefresh();
+      if (delay == null || delay === 0) return;
+      desktopRefreshTimer = setTimeout(() => {
+        void desktopAuth.renew(false).finally(armDesktopRefresh);
+      }, delay);
+    };
+    const renewQuiet = () => { void desktopAuth.renew(false).finally(armDesktopRefresh); };
+    void desktopAuth.renew(false).then(ok => {
+      if (!ok && !desktopAuth.hasSession()) beginChromeSignIn();
+      armDesktopRefresh();
+    });
     const later = () => setTimeout(bringBack, 400);
     for (const ev of ["display-removed", "display-added", "display-metrics-changed"]) screen.on(ev, later);
     for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, () => { later(); renewQuiet(); });
-    setInterval(renewQuiet, 30 * 60 * 1000);
     app.on("child-process-gone", (_e, d) => { if (d.type === "GPU") later(); });
   });
   app.on("window-all-closed", () => app.quit());

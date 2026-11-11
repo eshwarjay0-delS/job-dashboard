@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_UNAVAILABLE, isAuthUnreachable, userFromAuthClient } from "@/lib/kompasAuthSession";
 import { createClientFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 // Windows app keeps. Desktop renewal is POST /api/auth/desktop-session.
 // The SSR client reads the refresh token from the session cookies, rotates
 // it, and writes the fresh pair back through setAll. The Kompas client calls
-// this when an API call meets a 401 and whenever the window regains focus,
+// this when an API call meets a 401, and only in the minute before expiry.
 // so a session that lapsed quietly while the app sat idle heals itself
 // instead of ejecting the user to the login page mid-interview.
 // A live Bearer token short-circuits first: the desktop shell injects one on
@@ -21,16 +22,34 @@ export async function POST(request: NextRequest) {
   const noStore = { "Cache-Control": "no-store" };
   try {
     const supabase = await createClientFromRequest(request);
-    const { data: first } = await supabase.auth.getUser();
-    if (first.user) {
-      return NextResponse.json({ ok: true, refreshed: false, userId: first.user.id }, { headers: noStore });
+    const first = await userFromAuthClient(supabase);
+    if (first?.unreachable) {
+      return NextResponse.json(
+        { ok: false, error: "sign_in_unavailable", message: AUTH_UNAVAILABLE },
+        { status: 503, headers: noStore },
+      );
+    }
+    if (first?.id) {
+      return NextResponse.json({ ok: true, refreshed: false, userId: first.id }, { headers: noStore });
     }
     const { data, error } = await supabase.auth.refreshSession();
+    if (error && isAuthUnreachable(error)) {
+      return NextResponse.json(
+        { ok: false, error: "sign_in_unavailable", message: AUTH_UNAVAILABLE },
+        { status: 503, headers: noStore },
+      );
+    }
     if (error || !data.session) {
       return NextResponse.json({ ok: false }, { status: 401, headers: noStore });
     }
     return NextResponse.json({ ok: true, refreshed: true, userId: data.session.user.id }, { headers: noStore });
-  } catch {
+  } catch (err) {
+    if (isAuthUnreachable(err instanceof Error ? err : { message: "fetch failed" })) {
+      return NextResponse.json(
+        { ok: false, error: "sign_in_unavailable", message: AUTH_UNAVAILABLE },
+        { status: 503, headers: noStore },
+      );
+    }
     return NextResponse.json({ ok: false }, { status: 401, headers: noStore });
   }
 }

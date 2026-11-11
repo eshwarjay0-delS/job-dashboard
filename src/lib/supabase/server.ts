@@ -21,6 +21,8 @@ function stubClient(): ServerClient {
     auth: {
       getUser: async () => ({ data: { user: null }, error: null }),
       getSession: async () => ({ data: { session: null }, error: null }),
+      getClaims: async () => ({ data: { claims: null }, error: null }),
+      signOut: async () => ({ error: null }),
     },
     from: () => chain,
   } as unknown as ServerClient;

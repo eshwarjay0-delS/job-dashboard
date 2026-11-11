@@ -10,42 +10,57 @@ import { safeAuthNext } from '../../src/lib/authRedirect.ts'
 
 const page = readFileSync(new URL('../../src/app/auth/desktop/page.tsx', import.meta.url), 'utf8')
 const helpers = stripTypeScriptTypes(page.slice(page.indexOf('function desktopState'), page.indexOf('export default')))
-const effect = page.slice(page.indexOf('let gone = false'), page.indexOf('return () => { gone = true }'))
+const effect = page.slice(page.indexOf('let gone = false'), page.indexOf('return () => { gone = true'))
 const STATE = 'Zm9yIGEgdGVzdCBvbmx5IC0gbm90IGEgcmVhbCBzdGF0ZQ' // 46 base64url characters, the shape the desktop sends
+const CODE = 'A'.repeat(43)
 
-async function visit(search, session = { access_token: 'aaa.bbb.ccc', refresh_token: 'r', expires_at: 9 }) {
+async function visit(search, session = { access_token: 'aaa.bbb.ccc', refresh_token: 'r', expires_at: 9 }, extra = {}) {
   const went = []
-  const window = { location: { search, assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
-  const context = vm.createContext({ window, document: { cookie: 'sb-x-auth-token=' + 'v'.repeat(30) }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-    createClient: () => ({ auth: { getSession: async () => ({ data: { session } }) } }) })
+  const notes = []
+  const intervals = []
+  const window = { location: { search, pathname: '/auth/desktop', assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
+  const fetch = extra.fetch || (async () => ({ ok: true, json: async () => ({ ok: true, code: CODE }) }))
+  const context = vm.createContext({
+    window, document: { cookie: 'sb-x-auth-token=' + 'v'.repeat(30) },
+    setNote: note => notes.push(note), setContinueHref: () => {}, setRetryHref: () => {},
+    btoa, unescape, encodeURIComponent, URLSearchParams, fetch, setInterval: (fn, ms) => { intervals.push(ms); return 1 }, clearInterval: () => {},
+    createClient: () => ({ auth: { getSession: async () => ({ data: { session }, error: extra.sessionError || null }) } }),
+  })
   vm.runInContext(helpers + '\n' + effect, context)
   await new Promise(resolve => setTimeout(resolve, 0))
-  assert.equal(went.length, 1)
-  return went[0]
+  return { went, notes, intervals }
 }
 
-test('the desktop link carries back the state the desktop opened the page with', async () => {
-  const link = await visit('?state=' + STATE)
-  assert.match(link, /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+test('the desktop link carries the nonce and a one-time code, not the browser access token', async () => {
+  const { went, notes } = await visit('?state=' + STATE)
+  assert.equal(went.length, 1)
+  const link = went[0]
+  assert.match(link, /^marketfit-kompas:\/\/auth\?code=[A-Za-z0-9_-]{43}&state=/)
   assert.equal(new URL(link).searchParams.get('state'), STATE)
-  assert.equal(JSON.parse(Buffer.from(new URL(link).searchParams.get('d'), 'base64url').toString()).access_token, 'aaa.bbb.ccc', 'the session itself is unchanged')
+  assert.equal(new URL(link).searchParams.get('code'), CODE)
+  assert.equal(link.includes('aaa.bbb.ccc'), false)
+  assert.equal(link.includes('refresh_token'), false)
+  assert.match(notes.at(-1), /Return to Kompas/)
+  assert.doesNotMatch(notes.at(-1), /authenticated|You are signed in/i)
 })
 
-test('a missing or malformed state is left off the link, as an older desktop expects', async () => {
+test('a missing or malformed state does not pretend the desktop is signed in', async () => {
   for (const search of ['', '?state=', '?state=short', '?state=' + 'a'.repeat(129), '?state=' + encodeURIComponent(STATE + '"><x'), '?state=' + encodeURIComponent(STATE + '&d=other')]) {
-    const link = await visit(search)
-    assert.match(link, /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+$/, search)
+    const { went, notes } = await visit(search)
+    assert.equal(went.length, 0, search)
+    assert.match(notes.at(-1), /Return to Kompas/, search)
+    assert.doesNotMatch(notes.at(-1), /authenticated|You are signed in/i, search)
   }
 })
 
 test('with no session in Chrome the state survives the sign-in page and the Google callback', async () => {
-  const login = await visit('?state=' + STATE, null)
+  const login = (await visit('?state=' + STATE, null)).went[0]
   const next = new URL(login, 'https://marketfit.test').searchParams.get('next')
   assert.equal(next, '/auth/desktop?state=' + STATE)
   assert.equal(safeAuthNext(next), '/auth/desktop?state=' + STATE, 'the login page keeps it')
   const callback = new URL('/auth/callback?next=' + encodeURIComponent(safeAuthNext(next)), 'https://marketfit.test')
   assert.equal(safeAuthNext(callback.searchParams.get('next')), '/auth/desktop?state=' + STATE, 'and so does the callback it returns through')
-  assert.equal(new URL(await visit('', null), 'https://marketfit.test').searchParams.get('next'), '/auth/desktop', 'no state, plain return as before')
+  assert.equal(new URL((await visit('', null)).went[0], 'https://marketfit.test').searchParams.get('next'), '/auth/desktop', 'no state, plain return as before')
 })
 
 test('the sign-in page passes on only a well-formed desktop state, nothing else from the query', () => {
@@ -57,73 +72,54 @@ test('the sign-in page passes on only a well-formed desktop state, nothing else 
 
 // Regression: a completed Chrome session must not repeatedly spawn the Windows
 // protocol handler, because each invocation can relaunch Kompas and trigger UAC.
-test('a silent renewal returns the bearer to this computer and never to another address', async () => {
+test('a loopback return carries the one-time code and never another address or the access token', async () => {
   const loop = 'http://127.0.0.1:17321/cb'
-  const went = []
-  const window = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(loop), assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
-  const context = vm.createContext({ window, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-    createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'aaa.bbb.ccc', expires_at: 9 } } }) } }) })
-  vm.runInContext(helpers + '\n' + effect, context)
-  await new Promise(resolve => setTimeout(resolve, 0))
+  const { went } = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop))
   assert.equal(went.length, 1)
   const back = new URL(went[0])
   assert.equal(back.origin + back.pathname, loop)
   assert.equal(back.searchParams.get('state'), STATE)
-  const handed = JSON.parse(Buffer.from(back.searchParams.get('d'), 'base64url').toString())
-  assert.equal(handed.access_token, 'aaa.bbb.ccc')
-  assert.equal(handed.expires_at, 9)
-  assert.equal(Object.hasOwn(handed, 'refresh_token'), false)
+  assert.equal(back.searchParams.get('code'), CODE)
+  assert.equal(back.searchParams.has('d'), false)
+  assert.equal(went[0].includes('aaa.bbb.ccc'), false)
   for (const bad of ['https://127.0.0.1:17321/cb', 'http://127.0.0.1:80/cb', 'http://localhost:17321/cb', 'http://evil.example/cb']) {
-    const quiet = []
-    const again = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(bad), assign: url => quiet.push(url), replace: url => quiet.push(url), set href(url) { quiet.push(url) } } }
-    vm.runInContext(helpers + '\n' + effect, vm.createContext({ window: again, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-      createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'aaa.bbb.ccc', expires_at: 9 } } }) } }) }))
-    await new Promise(resolve => setTimeout(resolve, 0))
-    assert.equal(quiet.length, 1, bad)
-    assert.ok(quiet[0].startsWith('marketfit-kompas://auth?d='), bad)
+    const quiet = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(bad))
+    assert.equal(quiet.went.length, 1, bad)
+    assert.ok(quiet.went[0].startsWith('marketfit-kompas://auth?code='), bad)
+    assert.equal(quiet.went[0].includes('aaa.bbb.ccc'), false, bad)
   }
 })
 
-test('a loopback bearer that omits refresh does not carry Chrome\'s refresh token', async () => {
+test('a loopback code does not carry Chrome\'s refresh token', async () => {
   const loop = 'http://127.0.0.1:17321/cb'
-  const went = []
-  const window = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent(loop), assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
   const session = { access_token: 'aaa.bbb.ccc', refresh_token: 'chrome-family-secret', expires_at: 9 }
-  vm.runInContext(helpers + '\n' + effect, vm.createContext({ window, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-    createClient: () => ({ auth: { getSession: async () => ({ data: { session } }) } }) }))
-  await new Promise(resolve => setTimeout(resolve, 0))
-  const handed = JSON.parse(Buffer.from(new URL(went[0]).searchParams.get('d'), 'base64url').toString())
-  assert.deepEqual(handed, { access_token: 'aaa.bbb.ccc', expires_at: 9 })
-  assert.equal(JSON.stringify(handed).includes('chrome-family-secret'), false)
+  const { went } = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop), session)
+  assert.equal(went[0].includes('chrome-family-secret'), false)
+  assert.equal(new URL(went[0]).searchParams.has('d'), false)
   assert.match(page, /does not erase a stored desktop refresh/)
 })
 
 test('a silent renewal with no Chrome session does not open a login form', async () => {
-  const went = []
-  const window = { location: { search: '?state=' + STATE + '&loopback=' + encodeURIComponent('http://127.0.0.1:17321/cb'), assign: url => went.push(url), replace: url => went.push(url), set href(url) { went.push(url) } } }
-  vm.runInContext(helpers + '\n' + effect, vm.createContext({ window, document: { cookie: '' }, setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-    createClient: () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }) }))
-  await new Promise(resolve => setTimeout(resolve, 0))
+  const { went } = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent('http://127.0.0.1:17321/cb'), null)
   assert.equal(went.length, 0)
 })
 
-test('the desktop handoff launches exactly once, with no hidden protocol retries', async () => {
-  const went = []
-  const frameSrcs = []
-  let intervalCalls = 0
-  const window = { location: { search: '?state=' + STATE, assign: url => went.push(url), set href(url) { went.push(url) } } }
-  const context = vm.createContext({ window,
-    document: { createElement: () => ({ set src(value) { frameSrcs.push(value) }, style: {} }), body: { appendChild: () => {} } },
-    setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-    setInterval: () => { intervalCalls++; return 1 },
-    createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'test-access' } } }) } }) })
-  vm.runInContext(helpers + '\n' + effect, context)
-  await new Promise(resolve => setTimeout(resolve, 0))
+test('the desktop handoff launches once and polls claim status only while this page is open', async () => {
+  const { went, intervals } = await visit('?state=' + STATE)
   assert.equal(went.length, 1)
-  assert.ok(went[0].startsWith('marketfit-kompas://auth?d='), 'single native handoff uses MarketFit scheme')
+  assert.ok(went[0].startsWith('marketfit-kompas://auth?code='))
   assert.equal(new URL(went[0]).searchParams.get('state'), STATE)
-  assert.equal(intervalCalls, 0, 'no automatic protocol retry timer')
-  assert.equal(frameSrcs.length, 0, 'no hidden protocol iframe launches')
+  assert.deepEqual(intervals, [2500])
+})
+
+test('a sign-in service error is shown as an error and never as authenticated', async () => {
+  const { went, notes, intervals } = await visit('?state=' + STATE, undefined, {
+    fetch: async () => ({ ok: false, status: 503, json: async () => ({ ok: false, error: 'sign_in_unavailable', message: 'MarketFit could not reach the sign-in service. Nothing was signed out. Return to Kompas and try again.' }) }),
+  })
+  assert.equal(went.length, 0)
+  assert.equal(intervals.length, 0)
+  assert.match(notes.at(-1), /could not reach the sign-in service/)
+  assert.doesNotMatch(notes.join(' '), /authenticated|You are signed in/i)
 })
 
 test('native desktop never launches another automatic Chrome login on reconnect', () => {
@@ -140,12 +136,13 @@ test('native desktop never launches another automatic Chrome login on reconnect'
 
 test('a first Chrome handoff keeps the loopback through Google sign-in', async () => {
   const loop = 'http://127.0.0.1:17321/cb'
-  const login = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start', null)
+  const login = (await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start', null)).went[0]
   const next = new URL(login, 'https://marketfit.test').searchParams.get('next')
   assert.equal(safeAuthNext(next), '/auth/desktop?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start')
   const back = await visit('?state=' + STATE + '&loopback=' + encodeURIComponent(loop) + '&handoff=start')
-  const returned = new URL(back)
+  const returned = new URL(back.went[0])
   assert.equal(returned.origin + returned.pathname, loop)
   assert.equal(returned.searchParams.get('state'), STATE)
-  assert.equal(JSON.parse(Buffer.from(returned.searchParams.get('d'), 'base64url').toString()).refresh_token, undefined)
+  assert.equal(returned.searchParams.get('code'), CODE)
+  assert.equal(returned.searchParams.has('d'), false)
 })

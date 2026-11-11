@@ -6,7 +6,9 @@ import vm from 'node:vm'
 import path from 'node:path'
 import { safeAuthNext } from '../../src/lib/authRedirect.ts'
 
-const source = stripTypeScriptTypes(readFileSync(new URL('../../src/lib/authBoundary.ts', import.meta.url), 'utf8'))
+const helper = stripTypeScriptTypes(readFileSync(new URL('../../src/lib/kompasAuthSession.ts', import.meta.url), 'utf8'))
+  .replace(/^import .*$/gm, '').replace(/export /g, '')
+const source = helper + '\n' + stripTypeScriptTypes(readFileSync(new URL('../../src/lib/authBoundary.ts', import.meta.url), 'utf8'))
   .replace(/^import .*$/gm, '').replace(/export /g, '')
 function boundary(result, throws = false) {
   let calls = 0

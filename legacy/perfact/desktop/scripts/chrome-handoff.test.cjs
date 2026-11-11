@@ -83,7 +83,8 @@ test("the loopback server returns the sign-in to this computer and does not echo
     assert.equal(good.status, 200);
     assert.equal(good.body.includes(STATE), false);
     assert.equal(/\bOpenir\b|\bOpening\b/.test(good.body), false);
-    assert.match(good.body, /Kompas has the sign-in/);
+    assert.match(good.body, /Return to Kompas/);
+    assert.equal(/authenticated/i.test(good.body), false);
     assert.deepEqual(seen, [{ state: STATE, d: "abcDEF_123" }]);
     const missing = await get(listener.url.replace(/\/cb$/, "/nope"));
     assert.equal(missing.status, 404);

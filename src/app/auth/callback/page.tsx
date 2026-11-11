@@ -17,6 +17,7 @@
 // server route (only ?code=) cannot. Also upserts the profile row after auth.
 
 import { safeAuthNext } from "@/lib/authRedirect"
+import { isAuthUnreachable, plainAuthError } from "@/lib/kompasAuthSession"
 import { stampLoginClock } from "@/lib/session-clock"
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
@@ -54,7 +55,11 @@ function CallbackHandler() {
           return
         }
         console.warn("[auth/callback] exchangeCodeForSession failed:", err?.message)
-        // Fall through to token_hash or error
+        if (isAuthUnreachable(err)) {
+          if (!cancelled) setError(plainAuthError(err))
+          return
+        }
+        // Fall through to token_hash or an already-stored session
       }
 
       // ── 2. OTP / token_hash flow ─────────────────────────────────────────
@@ -65,7 +70,7 @@ function CallbackHandler() {
           return
         }
         console.warn("[auth/callback] verifyOtp failed:", err?.message)
-        if (!cancelled) setError(err?.message ?? "Link verification failed")
+        if (!cancelled) setError(plainAuthError(err) || "Link verification failed")
         return
       }
 

@@ -125,7 +125,18 @@ $("loginBtn").onclick = () => {
   LS.set("user", { email });
   openDashboard();
 };
-$("logoutBtn").onclick = () => { accountSessionSync?.signOutLocal(); LS.set("user", null); show("login"); };
+async function signOutKompas() {
+  try { if (typeof stop === "function" && running) await stop(false); } catch {}
+  clearAuthLocalState();
+  try { accountSessionSync?.signOutLocal(); } catch {}
+  LS.set("user", null);
+  desktopTicketCache = null;
+  try { pendingDesktopHandoffs.clear(); } catch {}
+  try { await fetch("/api/auth/signout", { method: "POST", credentials: "same-origin", cache: "no-store" }); } catch {}
+  try { status(authErrorMessage("logout"), "live"); } catch {}
+  show("login");
+}
+$("logoutBtn").onclick = () => { void signOutKompas(); };
 
 /* ------------------------------ dashboard --------------------------------- */
 function openDashboard() {
@@ -791,12 +802,25 @@ async function recoverLiveAuth() {
   }
   return false;
 }
-// Idle is where sessions used to die: renew quietly whenever the user comes
-// back to this window, and every 20 minutes while it stays open, so the next
-// action never meets an expired token.
+// The 60-second tick only reads the access-token expiry already in this
+// browser. It calls the refresh route when that token is inside the last
+// minute and this tab is visible. A hidden tab does not call Supabase.
+function storedAccessExpiresAtMs() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const name = localStorage.key(i);
+      if (!name || !/^sb-[A-Za-z0-9]+-auth-token$/.test(name)) continue;
+      const parsed = JSON.parse(localStorage.getItem(name) || "");
+      const exp = parsed && (parsed.expires_at || (parsed.currentSession && parsed.currentSession.expires_at));
+      if (Number(exp) > 0) return Number(exp) * 1000;
+    }
+  } catch {}
+  return 0;
+}
 function keepAuthAlive() {
-  if (document.hidden && !window.kompasDesktop) return;
-  if (Date.now() - __lastAuthRefresh < 10 * 60 * 1000) return;
+  if (document.hidden) return;
+  const expiresAt = storedAccessExpiresAtMs();
+  if (!expiresAt || expiresAt - Date.now() > 60 * 1000) return;
   void tryRefreshAuth();
 }
 try {
@@ -2205,11 +2229,18 @@ async function transcribe(blob, who, opt) {
         const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
           headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
         if (!res.ok) {
-          const retryDelay = speechRetryDelay(res.status, res.headers?.get("retry-after"), attempt, !!opt.final);
-          retry = retryDelay !== null;
-          if (retry) delay = retryDelay;
-          if (res.status === 429) interimOffUntil = performance.now() + 60000;
-          failure = `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
+          if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function") {
+            opt.__authRetried = true;
+            const renewed = await tryRefreshAuth("rejected");
+            if (renewed) { retry = true; delay = 200; failure = ""; }
+            else { failure = "Your session ended. Sign in again to keep transcribing."; }
+          } else {
+            const retryDelay = speechRetryDelay(res.status, res.headers?.get("retry-after"), attempt, !!opt.final);
+            retry = retryDelay !== null;
+            if (retry) delay = retryDelay;
+            if (res.status === 429) interimOffUntil = performance.now() + 60000;
+            failure = `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
+          }
         } else {
           clean = cleanTranscript((await res.json()).text);
           if (!clean && dictationRetry(clean, opt.speechMs || 0, attempt)) {
@@ -2975,6 +3006,42 @@ function withoutLogistics(text) {
   return kept.length === parts.length ? s : kept.join(" and ").trim()
 }
 // personal-logistics parity: end
+
+function isAuthStorageKey(name) {
+  const k = String(name || "");
+  if (k === "perfact.user" || k === "perfact.desktopTicket" || k === "perfact.authHint" || k === "perfact.cloud.owner") return true;
+  if (/^sb-[A-Za-z0-9]+-auth-token(?:\.\d+)?$/.test(k)) return true;
+  if (k.startsWith("perfact.cloud.")) return true;
+  return false;
+}
+function authErrorMessage(kind) {
+  if (kind === "login") return "We could not sign you in. Check your connection and try again.";
+  if (kind === "logout") return "You have been signed out on this device.";
+  if (kind === "refresh") return "Your session could not be renewed. Sign in again if this continues.";
+  if (kind === "expired") return "Your session ended. Sign in again to keep going.";
+  if (kind === "denied") return "You do not have access to that. Sign in with the right account, or ask the owner.";
+  if (kind === "network") return "The network dropped while signing in. Check your connection and try again.";
+  return "Something went wrong with sign-in. Please try again.";
+}
+function clearAuthLocalState() {
+  const names = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const name = localStorage.key(i);
+      if (name && isAuthStorageKey(name)) names.push(name);
+    }
+  } catch {}
+  names.forEach((name) => { try { localStorage.removeItem(name); } catch {} });
+  try {
+    String(document.cookie || "").split(";").forEach((c) => {
+      const name = c.split("=")[0].trim();
+      if (/^sb-[A-Za-z0-9]+-auth-token(?:\.\d+)?$/.test(name)) {
+        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      }
+    });
+  } catch {}
+}
+
 const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {
   clearTimeout(autoTimer);

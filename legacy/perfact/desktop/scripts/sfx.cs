@@ -25,6 +25,10 @@ static class Program {
       System.Text.RegularExpressions.Regex.IsMatch(arg,
         @"^(kompas|marketfit-kompas)://auth/?\?state=[A-Za-z0-9_-]{20,128}&d=[A-Za-z0-9_-]{1,24000}$", options) ||
       System.Text.RegularExpressions.Regex.IsMatch(arg,
+        @"^(kompas|marketfit-kompas)://auth/?\?code=[A-Za-z0-9_-]{43}&state=[A-Za-z0-9_-]{20,128}$", options) ||
+      System.Text.RegularExpressions.Regex.IsMatch(arg,
+        @"^(kompas|marketfit-kompas)://auth/?\?state=[A-Za-z0-9_-]{20,128}&code=[A-Za-z0-9_-]{43}$", options) ||
+      System.Text.RegularExpressions.Regex.IsMatch(arg,
         @"^marketfit-kompas://open/?$", options);
   }
   static int SelfTestLinks() {
@@ -36,6 +40,8 @@ static class Program {
       "kompas://auth?d=abc_DEF-123&state=" + state,
       "marketfit-kompas://auth?d=abc_DEF-123&state=" + state,
       "marketfit-kompas://auth?state=" + state + "&d=abc_DEF-123",
+      "marketfit-kompas://auth?code=" + ticket + "&state=" + state,
+      "marketfit-kompas://auth?state=" + state + "&code=" + ticket,
       "kompas://open?d=abc_DEF-123",
       "marketfit-kompas://open",
     };

@@ -95,7 +95,7 @@ test('the shell calls the desktop route, remembers hide, and does not request el
   const page = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
   assert.match(client, /\/api\/auth\/desktop-session/)
   assert.doesNotMatch(client, /\/api\/auth\/refresh/)
-  assert.match(main, /if \(desktopAuth\.hasSession\(\)\) return;/)
+  assert.match(main, /if \(desktopAuth\.hasSession\(\)\) return hideHandoff\(\);/)
   assert.match(main, /checkboxLabel: "Remember this choice"/)
   assert.match(main, /rememberedTaskbar\(saved\)/)
   assert.match(main, /audio: "loopback"/)

@@ -9,7 +9,7 @@ const http = require("node:http");
 const TITLE = "Sign in with Chrome";
 const BODY = "Chrome is opening MarketFit. The Google sign-in already in that browser is used, and this window continues from there.";
 const RETRY = "Open Chrome again";
-const LOOPBACK_PAGE = "<!doctype html><meta charset=\"utf-8\"><title>MarketFit</title><p>Kompas has the sign-in. You can close this tab.</p>";
+const LOOPBACK_PAGE = "<!doctype html><meta charset=\"utf-8\"><title>MarketFit</title><p>Return to Kompas. This computer is finishing sign-in.</p>";
 
 function handoffAction({ hasSession, interactive, alreadyAttempted }) {
   if (hasSession) return { show: false, openChrome: false, silent: true };
@@ -34,6 +34,10 @@ function chromeHandoffUrl(origin, state, loopback) {
 
 function protocolArgFromLoopback(handed) {
   const state = handed && typeof handed.state === "string" ? handed.state : "";
+  const code = handed && typeof handed.code === "string" ? handed.code : "";
+  if (/^[A-Za-z0-9_-]{20,128}$/.test(state) && /^[A-Za-z0-9_-]{43}$/.test(code)) {
+    return "marketfit-kompas://auth?code=" + code + "&state=" + state;
+  }
   const d = handed && typeof handed.d === "string" ? handed.d : "";
   if (!/^[A-Za-z0-9_-]{20,128}$/.test(state)) return "";
   if (!d || d.length > 24000 || !/^[A-Za-z0-9_-]+$/.test(d)) return "";
@@ -107,6 +111,8 @@ function startChromeLoopback({ onCallback }) {
       return;
     }
     const handed = { state: url.searchParams.get("state") || "", d: url.searchParams.get("d") || "" };
+    const code = url.searchParams.get("code") || "";
+    if (code) handed.code = code;
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",

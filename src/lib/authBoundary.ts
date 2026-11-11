@@ -1,6 +1,7 @@
 // J1 authentication boundary: model output never establishes identity.
 import path from "node:path"
 import type { NextRequest } from "next/server"
+import { userFromAuthClient } from "./kompasAuthSession"
 import { createClient, createClientFromRequest } from "./supabase/server"
 
 export async function authenticatedUserId(request?: NextRequest): Promise<string | null> {
@@ -21,9 +22,9 @@ export async function authenticatedUser(request?: NextRequest): Promise<{ id: st
       }
     }
     const client = request ? await createClientFromRequest(request) : await createClient()
-    const { data, error } = await client.auth.getUser()
-    if (error || !data.user || data.user.is_anonymous) return null
-    return { id: data.user.id, email: data.user.email_confirmed_at ? data.user.email ?? null : null }
+    const user = await userFromAuthClient(client)
+    if (!user?.id) return null
+    return { id: user.id, email: user.email }
   } catch { return null }
 }
 

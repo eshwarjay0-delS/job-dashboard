@@ -1,3 +1,11 @@
+## 2026-11-11 — Desktop sign-in (no new screen until the exe is updated)
+
+No new website screen beyond the sign-in sentences. Closing Kompas no longer drops the refresh token when OS encryption is off: it is stored with safeStorage or as an encrypted file and read back on launch. Chrome hands over a short one-time code, not the access token. The page says Kompas has the sign-in only after the desktop claims that code. A sign-in service error stays an error. The flow is written in `docs/AUTH_WORKFLOW.md`.
+
+**Verified locally.** `npx tsc --noEmit` exit 0. `npm run test:baseline` 92/92. Auth, egress, and desktop tests 125 pass, 0 fail. `npm run build` exit 0.
+
+**Not verified.** A live Google sign-in. Supabase `ruajlrzmxzprmmngluxy` is restricted for egress. The installed Kompas.exe does not change until the Windows release workflow publishes `kompas-desktop-latest`. Production `/version.json` is the ship check for the website half.
+
 ## 2026-11-11 — Supabase egress cut (no new screen)
 
 No new screen. Kompas session sync asks for rows changed since the last read, saves stop echoing the session payload once the lite RPC exists, and old clients cannot full-fetch more than 6 times per 5 minutes. The page cache-busts `account-sync.js?v=20261111-egress`. The migration file is committed and was not applied to Supabase.
