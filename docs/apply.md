@@ -198,3 +198,10 @@ PR #285 merged as 11efbbfe7781592bc2fad1216f67546882a1c3ed, carrying the classif
 The latest completed crawl (10 Nov 11:00 UTC) found/upserted 6,818 listings across 20 portals before the classifier release. The next scheduled crawl is 11 Nov 2026 at 11:00 UTC; it remains pending. Do not manually rewrite stored rows. Robert Half remains a manual-only directory link because automated retrieval is not authorized.
 
 PR #288 adds bounded pagination after clearance filtering; PR #291 maps explicit Right To Hire and Contract To Perm wording to C2H while keeping negated forms unknown. Both have green exact-head crawler, schema, Kompas baseline and full-CI checks, but their shared voice-preview check and Vercel account status fail. They remain open, unmerged and not production-accepted. Do not bypass the account block or treat a passing source suite as a live search result.
+
+ 
+## 11 November 2026 — missed post-classifier crawl and production runtime
+
+The scheduled 11:00 UTC crawl did not create a new `mfit_crawl_runs` row. At 12:04 UTC, the latest database run was still 10 Nov 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, one Inspyr abort. The latest stored listing observations remained on 10 Nov.
+
+The canonical master/alias metadata match at `11efbbfe7781592bc2fad1216f67546882a1c3ed`, but the Vercel project reports `live=false` and public health/jobs endpoints have returned HTTP 402 `DEPLOYMENT_DISABLED`. A READY alias record is not proof that the daily cron or API is running. No manual crawl or database rewrite was performed. Restore authorized Vercel project availability, then verify the public health route, clearance/freshness search API and a later completed scheduled crawl using the classifier. Robert Half remains manual-only.

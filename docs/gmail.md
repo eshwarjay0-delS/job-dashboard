@@ -218,3 +218,10 @@ Per-account sync-health cards in PRs #271/#286 remain draft/proposed because no 
 ## 11 November 2026 — selected sender regression coverage
 
 PR #297 adds five test-only cases against the actual `gmail-send` route with mocked authentication, OAuth-token and network adapters. They verify selected From plus the matching OAuth account, same-inbox thread lookup before send, selected-inbox reconnect without fallback, unknown sender rejection, and disabled-account rejection. Exact-head full CI `42997343901` and Kompas baseline `42997343939` passed, including the new Gmail isolation step. No real Gmail API call or email send occurred, and no runtime behavior changed. The protected Vercel preview remains unavailable while the project/account is blocked, so PR #297 is open and unmerged. Real two-inbox healthy/partial-failure and narrow-phone acceptance remain pending; the proposed sync-health cards and unattended update worker retain their separate approval/configuration gates.
+
+ 
+## 11 November 2026 — Gmail account freshness snapshot (12:04 UTC)
+
+Read-only production state shows 3 connected-account sync rows and 3 distinct account IDs, with 2,002 cached threads. Latest sync is 10 Nov 14:44:44 UTC; latest cached-thread update is 14:46:49 UTC. No sync or thread update occurred in the last hour; all three sync rows are within 24 hours. The composite `(user_id, account_id, thread_id)` key has zero duplicate groups.
+
+This confirms persisted per-account separation only. It does not demonstrate a healthy inbox plus a partially failing inbox, live reconnect behavior, mobile delivery or email sending. PR #297's five mocked sender/thread-boundary regressions pass full CI and baseline, but the protected preview remains blocked. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement are configured. No real Gmail API call or email was sent.
