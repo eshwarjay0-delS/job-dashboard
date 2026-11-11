@@ -11,8 +11,8 @@ import { desktopResponsePolicy, levelMetrics, metricsApart } from "../../src/lib
 const SHAPES = ["intro", "personal-experience", "comparison", "scenario", "technical-deep-dive", "logistics", "follow-up", "closing", "definition", "direct", "acknowledgement", "value"]
 const RESUME = readFileSync(new URL("../../tests/fixtures/kompas-sample-resume.md", import.meta.url), "utf8")
 
-test("master prompt v1 is the file the route sends", () => {
-  const file = readFileSync(new URL("../../docs/kompas/MASTER_PROMPT_v1.md", import.meta.url), "utf8")
+test("master prompt is the file the route sends", () => {
+  const file = readFileSync(new URL(`../../docs/kompas/MASTER_PROMPT_${MASTER_PROMPT_VERSION}.md`, import.meta.url), "utf8")
   assert.match(file, new RegExp(MASTER_PROMPT_VERSION))
   assert.match(MASTER_PROMPT_TEXT, /interviewer's real question/)
   assert.match(file, /interviewer's real question/)

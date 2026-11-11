@@ -26,6 +26,7 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
+import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
@@ -341,6 +342,12 @@ type AnswerJob = {
   askedFigures: Set<string>
   factsText: string
   streamPolicy: KompasStreamPolicy
+  format?: AnswerFormat
+  controls?: AnswerControls
+  lengthPref?: string
+  resumeState?: ResumeState
+  transcriptClipped?: boolean
+  unpinned?: string
   sourceText: string
   sourceDocs: SourceDoc[]
   // Speed r6: the retrieved passages (for the per-sentence source check) and an optional Lens sourced opener.
@@ -476,6 +483,11 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
     length: { kind: job.plan.kind, secs: job.plan.secs },
     derived: job.question,
     words: job.plan.words,
+    format: job.format || "script_bullets",
+    controls: job.controls,
+    resumeState: job.resumeState,
+    transcriptClipped: !!job.transcriptClipped,
+    unpinned: job.unpinned || undefined,
   }
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -503,17 +515,34 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       }
       let gate = newGate(true)
       const opener = gate?.openerText() || ""
+      // Card title from the same call (a leading TITLE: line, never spoken) and an early partial card once the
+      // first on-screen sentence is complete, so the opening line renders before the bullets finish.
+      let titler = createTitleSplitter()
+      let titleSent = ""
+      let onScreen = ""
+      let partialSent = false
+      const visible = (t: string) => {
+        onScreen += t
+        if (partialSent) return
+        const first = firstSentence(onScreen)
+        if (first) { partialSent = true; emit({ type: "card", partial: true, title: titler.title || fallbackTitle(job.question), script: first, bullets: [], format: job.format || "script_bullets" }) }
+      }
       const show = (t: string) => {
         if (!t) return
         if (!timing.visible_first_ms) timing.visible_first_ms = Date.now() - startedAt
         emit({ type: "delta", text: t })
+        visible(t)
       }
-      const onDelta = (d: string) => {
-        if (!raw && d) timing.first_ms = Date.now() - startedAt
+      const onDelta = (d0: string) => {
+        if (d0 && !timing.first_ms) timing.first_ms = Date.now() - startedAt
+        const d = titler.push(d0)
+        if (titler.title && titler.title !== titleSent) { titleSent = titler.title; emit({ type: "title", text: titleSent }) }
+        if (!d) return
         raw += d
         if (releaseProvisionalDelta(job.streamPolicy)) {
           if (!timing.visible_first_ms && d) timing.visible_first_ms = Date.now() - startedAt
           emit({ type: "delta", text: d })
+          visible(d)
         } else if (gate) {
           for (const sentence of gate.push(d)) show(sentence + " ")
         }
@@ -528,11 +557,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             timing.lane += (timing.lane ? ">" : "") + `openrouter:${shortModel(model)}${tag}`
             try {
               const usage = await streamOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, onDelta, signal)
+              const tail = titler.flush()
+              if (tail) onDelta(tail)
               if (cutShort(usage.finish, raw, job.plan.words)) {
                 // Cut off at the ceiling a few words in: clear the card and ask again rather than serve a fragment.
                 recordLane(model, false, usage, began, 502)
                 lastErr = "openrouter 502 answer cut short at the token ceiling"
                 raw = ""
+                titler = createTitleSplitter(); onScreen = ""; partialSent = false
                 emit({ type: "replace", text: "" })
                 gate = newGate(false)
                 return "cut"
@@ -632,6 +664,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // Speed r6: an opener already on screen stays at the front of the final answer (once). It is a verbatim line from
         // the user's own experience sources, so it adds no claim the guards have not already accepted.
         if (opener) finalText = withOpener(finalText, opener)
+        if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
@@ -641,6 +674,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired, repair, groundingTimedOut: job.groundingTimedOut,
+          card: { ...toCard(finalText, job.format || "script_bullets", job.lengthPref), title: titler.title || fallbackTitle(job.question) },
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...notebookCausalFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
@@ -669,13 +703,16 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let lastErr = ""
   let servedModel = ""
   const servedProvider = "openrouter"
+  let jsonTitle = ""
   try {
     if (job.orKey) {
       const runLane = async (model: string) => {
         const began = Date.now()
         try {
           const r = await fetchOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, signal)
-          raw = r.text
+          const split = splitTitle(r.text)
+          raw = split.body
+          jsonTitle = split.title
           servedModel = model
           lastErr = ""
           recordLane(model, true, r.usage, began)
@@ -731,11 +768,18 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })
   }
   out = settled.text
+  if (job.resumeState && job.resumeState !== "grounded") out = enforceResumeState(out, job.resumeState).text
   repair = settleRepair(job, repair, out)
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
     text: out,
+    card: { ...toCard(out, job.format || "script_bullets", job.lengthPref), title: jsonTitle || fallbackTitle(job.question) },
+    title: jsonTitle || fallbackTitle(job.question),
+    controls: job.controls,
+    format: job.format || "script_bullets",
+    resumeState: job.resumeState,
+    transcriptClipped: !!job.transcriptClipped,
     polished: true,
     precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...notebookCausalFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, out).map(t => `missing-named-term:${t}`)] },
     degraded,
@@ -797,6 +841,27 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
+  // deriveOnly: the frontend asking "was that a question?" — cheapest first.
+  // Gate 1 (code): speaker-aware — no Them: line and no ask pattern = no question.
+  // Gate 2 (code): the transcript reduces to one clean question → extract verbatim.
+  // Gate 3 (model): consolidated derivation with speaker labels.
+  /** Code gates first, then the model derive with its retry and local fallback. Shared by deriveOnly and the one-hop path. */
+  async function deriveQuestion(paidKey: string, body: Record<string, unknown>, signal: AbortSignal): Promise<{ derived: string; derivedBy?: string } | { noQuestion: true }> {
+    const heard = str(body.question, 5000)
+    // Newest context, not the oldest 900 characters of the window.
+    const earlier = tailWindow(body.transcript, 4000).text
+    const clean = deriveByCode(heard, body.history, body.reask === true)
+    if (clean === null) return { noQuestion: true }
+    if (clean) return { derived: clean, derivedBy: "code" }
+    // Gap B2: a failed or timed-out model call is retried once, then formed locally; it is never a silent "no question".
+    return deriveWithFallback(async (timeoutMs) => {
+      const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
+        `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD:\n${heard}`,
+        500, AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]))
+      return text
+    }, heard)
+  }
+
   // Preflight and model derivation are the only turns that need a provider before the question is known.
   if (body.preflight === true || body.deriveOnly) {
     const keysPromise = keysFor("kompas:answer", () => resolveKeys({}))
@@ -814,27 +879,29 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
         return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
       }
     }
-    // deriveOnly: the frontend asking "was that a question?" — cheapest first.
-    // Gate 1 (code): speaker-aware — no Them: line and no ask pattern = no question.
-    // Gate 2 (code): the transcript reduces to one clean question → extract verbatim.
-    // Gate 3 (model): consolidated derivation with speaker labels.
     const paidKey = (await paidKeyNow()) as string
-    const heard = str(body.question, 5000)
-    const earlier = str(body.transcript, 900)
-    const clean = deriveByCode(heard, body.history, body.reask === true)
-    if (clean === null) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
-    // Gap B2: a failed or timed-out model call is retried once, then formed locally; it is never a silent "no question".
-    const outcome = await deriveWithFallback(async (timeoutMs) => {
-      const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
-        `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD:\n${heard}`,
-        500, AbortSignal.any([request.signal, AbortSignal.timeout(timeoutMs)]))
-      return text
-    }, heard)
+    const outcome = await deriveQuestion(paidKey, body, request.signal)
     return NextResponse.json(outcome, { headers: NO_STORE })
   }
 
+  // One hop (Parakeet report §4.2): `derive: true` on the answer request derives the question here instead of a separate
+  // deriveOnly round trip. The derived title goes out first in the stream's meta event (`derived`).
+  if (wantsInlineDerive(body)) {
+    const inlineKey = (await keysFor("kompas:answer", () => resolveKeys({}))).openrouter || resolveKeys({}).openrouter
+    if (!inlineKey) return NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
+    const outcome = await deriveQuestion(inlineKey, body, request.signal)
+    if ("noQuestion" in outcome) {
+      const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true })}\n\n`
+      if (body.stream) return new Response(quiet, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    }
+    body = { ...body, derived: outcome.derived, pinned: outcome.derivedBy === "code", derivedBy: outcome.derivedBy || "model" }
+  }
+
   const heardAll = str(body.question, 4000)
+  // A pinned title yields to a newer, different interviewer ask; placeholder sentinels never pin (Parakeet report §4.1).
+  const unpin = unpinStale({ heard: heardAll, derived: str(body.derived, 4000), pinned: body.pinned === true, again: body.again === true })
+  if (unpin.unpinned) body = { ...body, derived: unpin.derived, pinned: false }
   const asked = str(body.derived, 4000)
   // The card already shows the question when the client pins it. A ramble still
   // yields to the ask inside that line. "Okay" stays unanswered. Anything else
@@ -877,7 +944,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   let generalDossierTimedOut = false
   let bibleTimedOut = false
   let bibleTimeoutNote = ""
-  if (!resumeSrc && !docsSrc) {
+  const askedPersonal = isPersonalEvidenceQuestion(classify(question).tier, question)
+  if (!resumeSrc && !docsSrc && askedPersonal) {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       const raced = await Promise.race([
@@ -897,7 +965,12 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // prose is written under; the level controls register and depth.
   const level = answerLevel(config.level, interviewer)
   const prep = (body.prep && typeof body.prep === "object" ? body.prep : {}) as Record<string, unknown>
-  const transcript = str(body.transcript, 4000)
+  // The 90 s window is kept from its newest end; the old head-first 4,000-character clip dropped the newest speech.
+  const transcriptWindow = tailWindow(body.transcript)
+  const transcript = transcriptWindow.text
+  // Mid-call controls are read from this request's config, so a change applies to the very next card.
+  const cardControls = answerControls(config)
+  const noResumeState = resumeState({ resume: resumeSrc, documents: docsSrc, dossier: grounding, personal: askedPersonal })
   const historyArr = Array.isArray(body.history) ? body.history : []
   const history = formatInterviewHistory(historyArr)
   // An earlier ASR/turn extractor may trim constraints or attach old
@@ -1191,7 +1264,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}\n\n${TITLE_INSTRUCTION}`,
     plan,
     interviewer,
     level,
@@ -1210,6 +1283,12 @@ ${INTERVIEW}`
     askedFigures: questionFigures(question),
     factsText,
     streamPolicy: answerStreamPolicy(tier, question),
+    format: cardControls.format,
+    controls: cardControls,
+    lengthPref: cardControls.length,
+    resumeState: noResumeState,
+    transcriptClipped: transcriptWindow.clipped,
+    unpinned: unpin.unpinned,
     sourceText,
     sourceDocs: groundingDocs,
     passages: sourceRetrieval.passages,
@@ -1218,6 +1297,8 @@ ${INTERVIEW}`
     previousTurns,
     groundingTimedOut: generalDossierTimedOut || bibleTimedOut,
   }
+  // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
+  if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
 }

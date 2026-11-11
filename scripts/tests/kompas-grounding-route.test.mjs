@@ -119,7 +119,15 @@ test('missing active sources cannot make a live turn wait indefinitely for the d
   const response = await h.post({ question: 'What is a certificate?' })
   assert.equal(response.status, 200)
   assert.ok(Date.now() - began < 1200)
-  assert.equal(h.dossiers, 1)
+  // Nov 10 2026 (Parakeet report §4.2, empty-resume hard path): a knowledge question with no resume and no documents
+  // no longer waits on the general dossier at all; only a personal question consults it, still bounded at 300 ms.
+  assert.equal(h.dossiers, 0)
+  const h2 = harness({ hungDossier: true })
+  const began2 = Date.now()
+  const personal = await h2.post({ question: 'Tell me about a time you handled a certificate outage.' })
+  assert.equal(personal.status, 200)
+  assert.ok(Date.now() - began2 < 1200)
+  assert.equal(h2.dossiers, 1)
 })
 
 test('a slow remote anchor lookup yields to live generation within its deadline', async () => {
