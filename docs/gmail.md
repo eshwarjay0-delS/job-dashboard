@@ -204,3 +204,19 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## Mobile hamburger correction — 4 October 2026
+
+The owner rejected the squeezed desktop-sidebar treatment on mobile and required the hamburger to reveal navigation immediately below the sticky header. The panel must expand in normal document flow and push page content down; it must not float over or dim the page, make the page inert, or block background interaction. Outside pointer interaction, Escape and selecting a link close the panel; Escape returns focus to the hamburger. The desktop fixed rail remains unchanged.
+
+Implementation is isolated in PR #290 (`fix/gmail-mobile-navigation-flow-20261110`): `dashboard-shell.css`, `sidebar-nav.tsx`, `dashboard-shell.test.mjs`, and a `package.json` prebuild hook that runs the mobile-navigation test. Four source-contract tests cover closed/open flow, selector priority, header/main ordering, no scrim/inert state, outside click, link closure and Escape focus. They are wired into prebuild and passed in PR #286 full CI; PR #290 full CI failed before Build at a separate Kompas spoken-streaming gate, so the exact PR #290 prebuild run is pending. They are not a substitute for a real narrow-phone/browser acceptance test. No Gmail API sync, per-account health card, OAuth scope, scheduler or send behavior is included in this slice.
+
+
+### 11 November 2026 — mobile navigation prebuild regression
+
+PR #290 remains limited to the owner-approved normal-flow hamburger correction. Commit `2a93f65e27de6d505ce2e1eb1d182c28ede5485a` updates only the shared prebuild test contract: the Kompas baseline and required regression groups remain ordered and mandatory, while additive `dashboard-shell.test.mjs` and crawler tests are permitted. The earlier PR #290 full-CI run `42926125643` failed before Build in the separate voice test `scripts/tests/whatsapp-voice.test.mjs:112`; that source-order assertion belongs to Kompas Continuous Voice Delivery and was not changed here. Exact-head validation is pending. No Gmail sync, account-health card, scheduler or sending behavior is included.
+
+## 11 November 2026 — current mobile restack and account freshness
+
+The normal-flow hamburger correction is restacked in PR #306 on top of the Apply test-contract branch. This stack preserves the owner-approved behavior and wires the four source-contract tests into prebuild. The exact restack still needs full CI, Plan/REA schema, protected preview and real narrow-phone/browser acceptance. The Poke-inspired multi-account direction remains approved; the per-account sync-health card is not. Read-only sync data remains 3 accounts, 2,002 threads and latest sync 10 Nov 14:44:44 UTC. The unattended worker remains disabled until an external scheduler, CRON_SECRET, approved Meta template and explicit enablement are configured.
