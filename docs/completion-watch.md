@@ -348,3 +348,10 @@ Canonical production metadata: `job-dashboard-fawn.vercel.app` resolves to READY
 - Commits: `63d563531fe552b928a5a1fa8363e9679d119ee1`, `e69886d2c3b3c545225662eb07d85c303e10c566`, `f98953fbc75aff8af2f4daaff95d319fdc2c6a6b`. Exact-head checks are pending; no production crawl/API acceptance is claimed. Protected Vercel preview remains account-blocked.
 
 Continue: run exact-head crawler regression, full CI, Plan/REA schema and Kompas baseline on the final PR #288 head. Do not merge or deploy until all required gates and protected preview pass. Then verify the canonical READY alias, public API behavior and a post-release scheduled crawl.
+
+
+## 11 November 2026 — PR #288 exact-head CI completion
+
+PR #288 exact code/test head `b0db69d976606bc3b8a8833a7bc2310331172e2e` passed full CI `42957613778`, crawler regression `42957613731`, Plan/REA schema `42957613941` and Kompas baseline `42957613834`. The stable `last_seen_at DESC, id ASC` offset order is source/CI validated. Protected voice-preview `42957611600` remains failed because private Vercel preview credential/account access is unavailable. No merge, deployment, public API smoke or post-release crawl is claimed.
+
+Continue: restore protected Vercel preview/account access, revalidate the final docs head, then merge only through the normal path and verify the canonical READY alias, public API and first post-release scheduled crawl. Keep Robert Half manual-only.
