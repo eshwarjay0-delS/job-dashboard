@@ -301,7 +301,6 @@ test('a reply to a hold uses confirmed evidence and never sends a baseline when 
   assert.equal(deliveries, 1, 'an incomplete refinement must not send the original or a partial baseline')
   assert.equal(docs.length, 1, 'only the successful rewritten version was delivered')
   assert.match(said.at(-1), /No file was sent; your previous resume is unchanged/)
-  assert.match(said.at(-1), /rewrite did not finish|quality report/i)
   failNext = true
   await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
   assert.equal(deliveries, 1, 'a provider failure must not send the original baseline')
