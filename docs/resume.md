@@ -80,3 +80,8 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## Employer-specific experience confirmations — 11 November 2026
+
+A general statement such as “I have experience with Splunk” can support the skills section, but it does not tell the writer which employer used that tool. To add it to a historical role, state the relationship explicitly, for example “I used Splunk at Suneratech” or “In my Security Engineer role at Suneratech, I used Splunk.” The employer or role must uniquely match one entry in the selected resume. If the same employer or title appears more than once, identify both. Ambiguous or multi-employer statements stay out of role bullets. These are candidate confirmations, not independent employer verification.
