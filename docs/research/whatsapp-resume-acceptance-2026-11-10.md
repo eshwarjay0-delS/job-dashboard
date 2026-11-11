@@ -112,3 +112,26 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+## 10 November 2026 — role-level evidence boundary audit
+
+The approved writer-only PR #287 was audited beyond its prompt and global keyword list. The gap-fill loop computed each role's source-supported terms, but also appended the global `unseen` JD terms to every role's repair request. A term supported by one employer's original bullets could therefore be requested in another employer's unrelated role. The existing deterministic employer/date/contact guards do not establish that a newly inserted tool or control was actually used in that role.
+
+The PR branch now adds `missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredTerms)`. Each role repair receives only terms found in that role's original bullets and still absent from that role's current bullets. The global `unseen` list remains available to the separate profile/skills repair; it is no longer passed into experience-role requests. Two direct tests use separate Splunk and Okta role evidence and ensure unsupported Canton is excluded.
+
+This is source-code and helper-test evidence only. Exact-final-head CI, protected preview, authenticated original-resume/JD/confirmation generation and exported-DOCX review remain pending. No model call, DOCX write, real email or WhatsApp send occurred. The historical 17 Oct 17:28 incident still lacks its generated DOCX and per-run R2/webhook/Meta trace/receipt, and conflicting source facts remain quarantined pending owner reconciliation.
+
+## 10 November 2026 — read-only Library recheck
+
+A targeted Library search for the 17 Oct 17:28 Chicago WhatsApp request and generated DOCX did not surface the output. A second search restricted to DOCX files created 16–18 Oct returned other candidate resume files, but not the recorded 27,724-byte source or the generated output. The candidates were not substituted: the existing incident record documents conflicting identity, education and employment facts, and the exact source digest was not independently retrieved in this search.
+
+This is a bounded semantic search result, not proof that the file is absent from every Library folder, conversation, WhatsApp account, R2 object store or external archive. No candidate file was opened or modified, and no private document content was copied to GitHub. The exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery receipt remain the hard replay blockers.
+
+
+## 10 November 2026 — cross-source artifact recheck
+
+A read-only recheck was performed for the 17 October 2026 17:28 Chicago incident. The current Library search/list did not surface the previously recorded 27,724-byte source DOCX or any generated output. The earlier private archive recovery remains recorded in the prior handoff, but the source was not independently re-opened in this run. No candidate resume was substituted.
+
+Gmail searches for 17 October matching “Risk & Controls” attachments and all DOCX attachments returned no results. The connected iZap business had no connected WhatsApp number and zero chats; read-only searches for “Risk & Controls” and “resume” on 17 October returned no messages. A production Supabase query found zero rows in `resume_documents` and `resume_import_jobs` during 22:00–23:00 UTC (the 17:00–18:00 CDT incident hour).
+
+The available connectors do not expose the relevant Cloudflare R2 object store or Meta delivery receipts. Therefore the exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery/read receipt remain unavailable. The source/JD identity, education, employer chronology and credential conflicts remain quarantined pending owner reconciliation. No model call, resume write, R2 write, email, WhatsApp message or replay was performed.

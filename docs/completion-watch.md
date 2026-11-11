@@ -325,3 +325,56 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+## 10 November 2026 — role-specific JD repair evidence
+
+Continue: verify the new role-level evidence helper on the exact final PR #287 head. The prior gap-fill loop sent global unseen JD terms to every employer role, even when only another role's source bullets supported them. The PR branch now filters each role's repair list against that role's original bullets and current bullets; profile/skills repair remains separate. Two direct helper tests isolate Splunk and Okta by role and reject unsupported Canton. Commits: 3101ed8, 29db227, dc7c435, 6d2cbcabc55b8998b17de413bedb4a9b7bb0315a; caller regression 13ba835eebcadfb4964d952589122277e6276119. This is not a live model/DOCX result and does not change WhatsApp send policy. Exact-head CI, protected preview, authenticated exported-DOCX review and the historical 17 Oct output/R2/Meta trace remain pending.
+
+## 10 November 2026 — WhatsApp 17 Oct artifact recheck
+
+Continue: recover the exact generated DOCX and correlated R2/webhook/Meta delivery evidence for the 17 Oct 17:28 Chicago resume failure. A read-only Library search (broad query, then DOCX-only files created 16–18 Oct) did not surface the recorded 27,724-byte source or generated output; other candidate resumes were not substituted because the incident record says their identity/experience facts conflict with the owner-confirmed profile. This semantic search is not exhaustive across every chat, Library folder, WhatsApp account, R2 bucket or external archive. Missing hard evidence: exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery receipt. No document was modified and no real WhatsApp test was sent.
+
+
+## 10 November 2026 — cross-product continuation checkpoint
+
+Canonical production metadata: `job-dashboard-fawn.vercel.app` resolves to READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, exact master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. The public HTTP smoke on the separate Voice Delivery audit returned `402 DEPLOYMENT_DISABLED`, and Vercel project inspection returned 403. READY metadata is not public HTTP or UX acceptance.
+
+- PR #286, Poke-inspired per-account Gmail health + approved mobile hamburger: current head `b625cf9f934fdc4e4aefc2c333b830a78116521e`; full CI, Plan/REA and Kompas baseline pass on the audited exact head, but protected voice-preview fails because private `KOMPAS_VERCEL_API_TOKEN` is missing and Vercel status is FAILURE. Two-inbox and narrow-mobile acceptance remain open. Keep the unattended worker disabled; no real Gmail send.
+- PR #287, resume writer evidence boundary: this branch now includes role-level source isolation, direct helper and caller-use regressions, the 17 Oct artifact search record, and current production baseline. The prior REA schema failure was traced to a non-repository path in the REA source list and corrected to the research-note path; exact-head full CI/regression/schema must be rerun after the latest docs/plan update. Protected voice-preview remains blocked by the missing private token. No generated DOCX/model acceptance or WhatsApp send.
+- PR #288, bounded clearance-safe crawler pagination: current branch scans ordered pages up to `min(1,000, max(100, limit × 10))`, and reports scan truncation. The crawler regression passed before the latest Plan revision update; exact-head full CI/schema/baseline must be rechecked. Protected voice-preview and Vercel status remain failed; not merged or deployed.
+- MFit Safe Merge Gate and Kompas Continuous Voice Delivery are active. No merge is authorized while required checks are failed/unverified. No separate Bible-Keeper automation is listed. This task did not edit Kompas voice/audio behavior.
+
+## 10 November 2026 — evidence-bound writer prompt isolation
+
+- Continue: close the last global JD-to-role prompt leakage in the approved resume writer.
+- PR #287 exact head `9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540` fixes two issues found by source audit: the base `claude.ts` RULES still told the model that the candidate claimed every JD skill and to repeat adjacent security/IAM terms across employers; split-draft `firstAsk` passed the global missing-term list into every experience role.
+- The RULES prompt now requires same-role source evidence for experience bullets, removes cross-employer transfer, and treats JD terms as target context. In split mode the global supported-term ask goes only to profile/skills; each experience part receives its own role plan and gap-fill terms derived from that role's original bullets. The source-contract regression rejects the old prompt and global split leakage.
+- Commits: `b7d6d8369f03b152005792552bc9a52b3c78ef07`, `bc3ed928e003065a8c34abacbc474031a6242649`, `9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540b`.
+- Exact-head checks: full CI `42920485193` SUCCESS (46 steps); Plan/REA `42920485382` SUCCESS; Kompas baseline `42920485384` SUCCESS; WhatsApp recovery `42920485412` SUCCESS. The earlier review remains COMMENTED/non-approving; no APPROVED review exists.
+- Release remains blocked: Vercel status FAILURE, project `live:false`, public HTTP 402 `DEPLOYMENT_DISABLED`, sandbox creation 402 `resource_creation_blocked`, and protected preview token unavailable. No merge/deployment/live DOCX/model acceptance.
+- General confirmations may support skills, but structured employer/project-bound confirmation mapping is still missing; a general skill statement must not be attributed to a historical role. PR #289 final-DOCX loop remains a draft stacked on the old #287 head and requires a careful restack.
+- The 17 Oct 17:28 Chicago pipeline usage is real, but its generated DOCX, R2 key, webhook/request ID, Meta message ID and signed delivery/read receipt remain missing. Source/JD were recovered privately; conflicting education/employment/credential facts remain quarantined. No replay or real WhatsApp send.
+- Other open approved work remains tracked: PR #286 Poke Gmail/mobile and PR #288 contract clearance pagination have full CI/Plan/REA/baseline checks green on their audited heads but are Vercel-blocked; PR #283 voice/audio remains with the active Kompas Continuous Voice Delivery task. Do not duplicate voice edits. PR #274/#278 identity gate and PR #279 external-send gate remain owner-approval blocked.
+
+Continue: obtain fresh owner review on #287, restore authorized Vercel project/preview access, restack #289 after #287, and complete the authenticated DOCX acceptance. Then implement structured role-linked confirmations and continue the separate Gmail/mobile and contract-crawler releases.
+
+
+## 10 November 2026 — 17 October WhatsApp artifact recheck
+
+- Read-only Library search/list did not surface the previously recorded source DOCX or any generated output in this run. The prior private archive recovery remains recorded but was not re-opened; no substitute resume was used.
+- Gmail searches for matching 17 Oct Risk & Controls attachments and DOCX attachments returned no results. The connected iZap business has no connected number and zero chats; message searches for the incident terms returned zero.
+- Production Supabase `resume_documents` and `resume_import_jobs` had zero rows in the 17 Oct 22:00–23:00 UTC incident hour. The available connectors do not expose the required R2 object store or Meta delivery receipts.
+- Exact output DOCX, R2 key, webhook/request ID, Meta message ID and signed delivery/read receipt remain hard blockers. Owner reconciliation of the source identity/education/employment conflict is also required. No replay or real send was attempted.
+- PR #287 code head `fb8284d499b609667e8636c480ba1c3e8f342986` has full CI, WhatsApp recovery regression, schema and Kompas baseline green; its protected preview is blocked by the Vercel account status. The code fix is not merged or live; current master still uses global unseen terms in role repair.
+
+Continue: preserve the historical replay as blocked until the exact private artifact and delivery correlation evidence are available and the owner reconciles the conflicting facts. Keep PR #287 unmerged until the protected preview/account block is resolved. No real WhatsApp tests or messages.
+
+
+## 11 November 2026 — role-scoped writer review closure
+
+- PR #287 remains open at the latest documentation head `2467f0864567d60fc78e7e83223bc0312cee007e`; the exact code head `4c2870ef42525d98625fff51b18bd537353a53b7` passed full CI `42926787326`, WhatsApp recovery `42926787572`, Plan/REA schema `42926787385` and Kompas baseline `42926787329`.
+- The owner-authored review requested role-specific enforcement in the final weave and extra generate-then-tailor pass. Both now use each employer's original bullets, with a deterministic cross-role restore guard and Splunk/Okta/Canton regressions. The inline review thread was answered and resolved; this does not constitute a formal APPROVED review.
+- The new journal, REA and research-note entries record the decision and evidence. Because the Plan/REA docs changed after the green code head, exact-head full CI and schema must be rechecked on the latest documentation head before the PR is considered gate-green.
+- Release remains blocked: GitHub Vercel status says `Account is blocked`, the protected preview token is unavailable, and the canonical project reports `live:false` / public HTTP `402 DEPLOYMENT_DISABLED`. Do not merge or deploy through this wall. No authenticated model run, exported DOCX, real WhatsApp send or production acceptance is claimed.
+
+Continue: rerun full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline on the latest PR #287 documentation head. If those pass, keep it unmerged until the authorized Vercel owner restores project/preview access and the required formal review plus authenticated DOCX acceptance are completed. In parallel, preserve the #292 additive-prebuild fix and let the active Safe Merge Gate restack #291 and #290; do not duplicate those edits.
