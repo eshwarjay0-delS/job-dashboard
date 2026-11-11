@@ -335,3 +335,12 @@ Continue: after the PR #284 documentation refresh, require exact-head crawler re
 - Vercel project is `live:false`; account status is blocked and the supported unpause action did not change it. No merge/deploy until protected preview access is restored. PR #288 pagination remains a separate pending slice; serialize merges and rebase after each merge.
 
 Continue: run exact-head full CI, crawler classification regression, Plan/REA schema and Kompas baseline for PR #291. Then validate the 11 Nov crawl after a legitimate release. Do not mark live or count reclassified jobs before production evidence.
+
+
+## 11 November 2026 — contract classifier CI repair
+
+- PR #291's exact-head run 42926730839 failed at the brittle whole-string prebuild assertion in `scripts/tests/kompas-deploy-build.test.mjs:12`. The classifier's added `crawl-classify.test.mjs` was rejected even though required test groups remained.
+- Commit `4bd1c054cff4260938f0da1747e1f650d2dcebfc` replaces that assertion with an ordered required-group contract and explicit additive-file regressions for `crawl-classify.test.mjs` and `dashboard-shell.test.mjs`. No runtime classifier code or stored job rows changed.
+- Exact-head checks on the new commit are queued; no green full CI is claimed. Vercel's protected preview remains account-blocked, so PR #291 is not ready for release and no deployment is authorized.
+
+Continue: finish exact-head full CI, crawler regression, Plan/REA schema and Kompas baseline on `4bd1c054`. If a voice-owned test fails, leave it to Kompas Continuous Voice Delivery rather than editing it here. Do not merge or deploy until the protected preview is restored; then verify the 11 Nov post-release crawl and API behavior.
