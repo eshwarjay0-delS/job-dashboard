@@ -108,3 +108,12 @@ Two executable helper tests cover a clearance-heavy first page followed by eligi
 The canonical alias `job-dashboard-fawn.vercel.app` is mapped to READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, exact master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. This release includes the contract classifier and PR #285 crawler regression workflow. The 10 Nov 11:00 UTC crawl ran before this release on `a66c108`; the first expected classifier-aware run is 11 Nov 2026 11:00 UTC and remains unverified.
 
 A separate public HTTP smoke returned `402 DEPLOYMENT_DISABLED` and Vercel project inspection returned 403 despite READY metadata. No public `GET /api/crawl/jobs` response is claimed. PR #288's pagination change is not merged or deployed; its exact-head crawler regression passed before the latest plan update, while full CI/schema/baseline are rerunning and the protected voice-preview gate is blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`.
+
+
+## 11 November 2026 — deterministic ordering for clearance pagination
+
+The bounded clearance scan uses offset pagination. The route previously ordered only by `last_seen_at DESC`, but that timestamp is not unique. When several rows share the same timestamp, a database page boundary has no deterministic tie-breaker; rows could be skipped or repeated between requests.
+
+The query now uses `last_seen_at DESC, id ASC`. The crawl-jobs migration defines `id` as the UUID primary key, so this supplies a unique total order without changing freshness, clearance policy, contract classification, page size, scan cap, adapters or stored rows. `collectFilteredPages()` now documents that callers must provide a stable order. The regression test pins both order clauses and the primary-key definition.
+
+Source commits: `63d563531fe552b928a5a1fa8363e9679d119ee1`, `e69886d2c3b3c545225662eb07d85c303e10c566`, `f98953fbc75aff8af2f4daaff95d319fdc2c6a6b`. Exact-head crawler/full-CI/schema/baseline checks are pending on the final documentation head. The protected Vercel preview remains account-blocked. No production query, crawl, API smoke or database mutation was performed.
