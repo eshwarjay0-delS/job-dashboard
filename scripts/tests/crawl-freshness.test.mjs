@@ -25,6 +25,13 @@ test("crawler search API applies freshness before returning rows", () => {
   assert.match(route, /freshness_days:\s*CRAWL_FRESHNESS_DAYS/)
 })
 
+test("clearance pagination uses a stable unique tie-breaker for equal timestamps", () => {
+  const route = read("../../src/app/api/crawl/jobs/route.ts")
+  const migration = read("../../supabase/migrations/20261017_crawl_jobs.sql")
+  assert.match(route, /\.order\("last_seen_at",\s*\{\s*ascending:\s*false\s*\}\)\s*\.order\("id",\s*\{\s*ascending:\s*true\s*\}\)/)
+  assert.match(migration, /id uuid primary key/)
+})
+
 test("eTeam is manual-only until a public feed is verified", () => {
   const adapters = read("../../src/lib/crawl/adapters.ts")
   const active = adapters.match(/export const ADAPTERS: PortalAdapter\[\] = \[([\s\S]*?)\n\]/)
