@@ -105,10 +105,22 @@
     // Origin-transfer cut (10 Nov 2026): the timed poll sends the tag of its last full read; the server
     // answers 304 with no body when the account catalog is unchanged. Any other read is a full read.
     let catalogTag="", catalogTagOwner="";
+    // Supabase egress cut (11 Nov 2026): the newest updatedAt this device has applied. A conditional read
+    // sends it, and the server answers with only the rows changed since then instead of every payload.
+    let sinceMark="", sinceOwner="", lastStorageRefresh=0;
+    const STORAGE_REFRESH_MS = 15_000;
+    function noteSince(records, userId){
+      if(sinceOwner!==userId){ sinceMark=""; sinceOwner=userId; }
+      for(const r of records||[]){
+        const u=r && typeof r.updatedAt==="string" ? r.updatedAt : "";
+        if(u && (!sinceMark || Date.parse(u)>Date.parse(sinceMark))) sinceMark=u;
+      }
+    }
     let lastPollKind="", pollStopped=!!pollDisabledAtStart, pollTimer=null, currentPollMs=POLL_MS, unchangedPolls=0, lastActivity=Date.now();
     async function api(method, body, cursor = "", conditional = false) {
-      const url = "/api/kompas/account-sessions" + (cursor ? "?after=" + encodeURIComponent(cursor) : "");
       const sendTag = conditional && method==="GET" && !cursor && owner && catalogTag && catalogTagOwner===owner;
+      const sendSince = sendTag && sinceMark && sinceOwner===owner;
+      const url = "/api/kompas/account-sessions" + (cursor ? "?after=" + encodeURIComponent(cursor) : (sendSince ? "?since=" + encodeURIComponent(sinceMark) : ""));
       const request = () => fetcher(url,{method,credentials:"same-origin",headers:sendTag?{...headers(),"if-none-match":catalogTag}:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
       let response=await request();
       if(sendTag && response.status===304) return {notModified:true};
@@ -150,6 +162,22 @@
           return true;
         }
         lastPollKind="updated";
+        if(data.delta && owner && data.userId===owner){
+          // Only rows changed since this device's last read: lay them over the list it already holds.
+          local=read();
+          const rows=new Map((Array.isArray(local)?local:[]).filter(s=>s&&s.id).map(s=>[s.id,{id:s.id,session:s,deleted:false}]));
+          for(const r of data.records||[]){
+            if(!r || !r.id) continue;
+            if(r.deleted || !r.session) rows.set(r.id,{id:r.id,session:null,deleted:true});
+            else rows.set(r.id,{id:r.id,session:r.session,deleted:false});
+          }
+          noteSince(data.records,data.userId);
+          remoteWrite(combine([...rows.values()],local,pending));
+          lastCheck=Date.now();
+          syncStatus({state:importing?"importing":"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
+          if(Object.keys(pending).length) void flush();
+          return true;
+        }
         // Pull the entire account catalog, not only the first page.
         const seen = new Set((data.records || []).map(r => r.id));
         let cursor = data.nextCursor || "";
@@ -193,6 +221,7 @@
         for (const s of local) if(firstPullForOwner && !knownIds.has(s.id) && !pending[s.id]){
           const op=delta([],[s])[0];if(op)queue(op);
         }
+        noteSince(data.records,data.userId);
         remoteWrite(combine(data.records||[],local,pending));
         lastCheck=Date.now();
         syncStatus({state:importing?"importing":"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
@@ -218,7 +247,8 @@
           for (const op of group) if (snapshot[op.id]===JSON.stringify(pending[op.id])) delete pending[op.id];
           persist();
         }
-        if(!Object.keys(pending).length) void refresh();
+        // Conditional: unchanged or delta read, never a second download of every session payload.
+        if(!Object.keys(pending).length) void refresh(true);
         return !Object.keys(pending).length;
       } catch(err) {
         lastError=Date.now();
@@ -294,8 +324,8 @@
       void refresh();
       if(!pollStopped) schedulePoll(POLL_MS);
       if(typeof window!=="undefined"){
-        window.addEventListener("focus",()=>{noteActivity();void refresh();});
-        window.addEventListener("online",()=>{noteActivity();void flush().then(()=>refresh());});
+        window.addEventListener("focus",()=>{noteActivity();void refresh(true);});
+        window.addEventListener("online",()=>{noteActivity();void flush().then(()=>refresh(true));});
         window.addEventListener("pointerdown",noteActivity);
         window.addEventListener("keydown",noteActivity);
         // A sibling tab may have written a new account-scoped snapshot.
@@ -303,9 +333,13 @@
         // storage event as authority for account ownership or remote content.
         window.addEventListener("storage",(event)=>{
           if(!owner || !event.key || !event.key.startsWith(prefix+"cache."+owner))return;
-          void refresh();
+          // A live session rewrites this cache every few seconds; at most one conditional check per 15 s.
+          const now=Date.now();
+          if(now-lastStorageRefresh<STORAGE_REFRESH_MS)return;
+          lastStorageRefresh=now;
+          void refresh(true);
         });
-        document.addEventListener("visibilitychange",()=>{if(!document.hidden){noteActivity();void refresh();}});
+        document.addEventListener("visibilitychange",()=>{if(!document.hidden){noteActivity();void refresh(true);}});
       }
     }
     function stopPolling(){ pollStopped=true; clearPoll(); }

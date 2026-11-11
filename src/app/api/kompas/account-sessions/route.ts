@@ -4,7 +4,9 @@ import { createServiceClient } from "@/lib/supabase/service"
 import { checkRateLimit } from "@/lib/rateLimit"
 import {
   catalogTag,
+  checkCatalogFullReadCap,
   checkCatalogPollCap,
+  deltaSinceFloor,
   invalidateCatalogTag,
   isCatalogPollDisabled,
   rememberedCatalogTag,
@@ -23,6 +25,11 @@ const FIELDS = new Set([
   "runAt", "pausedAt", "endedAt", "endedBy", "runDeviceId", "lastActiveAt", "transcripts", "bibleSyncedAt",
   "prep", "note", "book", "site", "identity", "savedAt", "startedAt",
 ])
+let useLiteMerge = true
+function isMissingFunction(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code || ""
+  return code === "PGRST202" || code === "42883"
+}
 const json = (value: unknown, status = 200) =>
   NextResponse.json(value, { status, headers: HEADERS })
 
@@ -79,6 +86,34 @@ export async function GET(req: NextRequest) {
           const tag = catalogTag(user.id, marks)
           rememberCatalogTag(user.id, tag)
           if (inm === tag) return new NextResponse(null, { status: 304, headers: { ...HEADERS, ETag: tag } })
+          // Supabase egress cut (11 Nov 2026): a client that already holds the catalog asks only for
+          // rows changed since its last read, instead of downloading every session payload again.
+          const floor = deltaSinceFloor(req.nextUrl.searchParams.get("since"))
+          if (floor && marks.length < 100) {
+            const { data: changed, error: changedError } = await db.from("kompas_account_sessions")
+              .select("session_id,payload,deleted_at,updated_at,revision")
+              .eq("user_id", user.id).gte("updated_at", floor)
+              .order("updated_at", { ascending: true }).limit(100)
+            if (!changedError && changed && changed.length < 100) {
+              return NextResponse.json({
+                ok: true, userId: user.id, email: user.email, delta: true, nextCursor: null,
+                records: changed.map(r => ({
+                  id: r.session_id, session: r.deleted_at ? null : r.payload,
+                  deleted: !!r.deleted_at, revision: r.revision, updatedAt: r.updated_at,
+                })),
+              }, { status: 200, headers: { ...HEADERS, ETag: tag } })
+            }
+          }
+        }
+      } else {
+        // Clients from before the conditional poll (a desktop window left open for days) pulled the whole
+        // catalog every 12 s. Bound those unconditional full reads per user.
+        const full = checkCatalogFullReadCap(user.id)
+        if (!full.ok) {
+          return new NextResponse(null, {
+            status: 429,
+            headers: { ...HEADERS, "Retry-After": String(full.retryAfterSec || 60), "X-Kompas-Poll": "full-read-throttled" },
+          })
         }
       }
     }
@@ -129,9 +164,17 @@ export async function POST(req: NextRequest) {
     const db = createServiceClient()
     const records = []
     for (const o of validated) {
-      const { data, error } = await db.rpc("merge_kompas_account_session", {
-        p_user_id: user.id, p_session_id: o.id, p_patch: o.patch, p_delete: o.deleted,
-      })
+      const args = { p_user_id: user.id, p_session_id: o.id, p_patch: o.patch, p_delete: o.deleted }
+      // The _lite RPC returns the same record without the session payload, so a save no longer
+      // downloads the whole session back out of Supabase. Older databases fall back to the original.
+      let { data, error } = useLiteMerge
+        ? await db.rpc("merge_kompas_account_session_lite", args)
+        : { data: null, error: { code: "PGRST202" } as { code?: string } }
+      if (error && isMissingFunction(error)) {
+        useLiteMerge = false
+        ;({ data, error } = await db.rpc("merge_kompas_account_session", args))
+        if (data && typeof data === "object") data = { ...(data as Record<string, unknown>), session: undefined }
+      }
       if (error) throw error
       records.push(data)
     }
