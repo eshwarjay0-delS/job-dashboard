@@ -325,3 +325,71 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 11 November 2026 — additive prebuild test contract
+
+The Safe Merge Gate found that PR #291 (contract classifier) and PR #290 (approved mobile navigation) both failed the same kompas-deploy-build.test.mjs assertion before the production build. The test compared package.json's complete prebuild string to one exact historical literal. Adding a new regression file to an existing node --test group therefore failed even though the existing baseline and regression commands were preserved.
+
+The Completion Watch opened a test-only repair branch from master 11efbbfe7781592bc2fad1216f67546882a1c3ed. The revised assertion requires the Kompas baseline to remain first and all three existing resume/WhatsApp/dossier regression groups to remain under node --test in order, while permitting additive test files. It explicitly exercises the two current additions: crawl-classify.test.mjs and dashboard-shell.test.mjs.
+
+No runtime or product behavior changed. The focused Node 22 contract test passed 3/3 on the current-master, crawler-addition and mobile-addition prebuild fixtures. Exact-head full CI and Plan/REA schema remain pending. The Vercel team currently reports an account/project block and production HTTP 402 DEPLOYMENT_DISABLED; no preview, deployment, bypass or billing change was attempted. PR #291 and #290 remain unmerged until their own exact-head checks and protected preview requirements are satisfied.
+
+Continue: run this branch's exact-head CI, then restack PR #291 and PR #290 onto the shared assertion fix and rerun their full checks. Preserve their feature diffs and do not merge or deploy around the Vercel access block.
+
+
+## 11 November 2026 — Oct 17 WhatsApp source and delivery recheck
+
+The matching Security Engineer – Risk & Controls JD was retrieved read-only from the connected Gmail account. It is a contract, Atlanta onsite role; Solana is an explicitly preferred DLT platform, while “attributes” is not in the JD. JD terms are requirements, not candidate experience.
+
+The prior 10 Nov handoff records recovery of the original 27,724-byte source DOCX from a private Library archive. The current accessible Library/conversation search no longer returns that exact file; three nearby DOCX candidates were checked and their hashes differ from the recorded private digest. The generated output DOCX is still missing. Preserve the prior recovery note as historical evidence rather than overwriting it.
+
+The current iZap business has no connected WhatsApp number; webhook history, message-history sync and sending are all “never”. iZap cannot retrieve the historical chat or signed delivery receipt. No message was sent. The per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain missing. The source education/employment/tenure/credential conflicts remain quarantined until reconciled with owner-confirmed facts. The 6 Nov channel-specific WhatsApp policy supersedes the old 98% hard hold.
+
+Continue: keep the 17 Oct incident blocked; do not replay or resend until the exact source/output/provider trace and owner fact reconciliation are available. Issue #201's swipe-reply recovery gap remains a separate code-path issue, not proof that the 17 Oct initial-JD request entered refinement.
+
+
+Current review branch: PR #292 head `f29be3b81248c3ce874b5ee4e0dd40d3276df605`. Plan/REA schema `42959481416` and Kompas baseline `42959481536` passed on this exact head; full CI `42959481509` was still running at Type-check at 04:31 UTC. Earlier green CI on `68290b7` does not satisfy the latest-head gate.
+
+
+## 11 November 2026 — exact October 17 source archive recovered again
+
+A Library metadata listing located `Organized_Original_Resumes.zip`. The archive was materialized and inspected; its exact nested 17 October source DOCX is 27,724 bytes and its SHA-256 matches the private digest recorded in the 10 November recovery. The earlier 00:55 UTC direct-file search did not inspect the parent archive, so that current-access gap is superseded. No private digest or resume contents were copied into the repository.
+
+The matching Security Engineer – Risk & Controls JD remains accessible through Gmail. The source's education, employer chronology, tenure and credential facts remain quarantined because they conflict with owner-confirmed profile facts. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain missing. No model generation, historical replay, R2 write, email or WhatsApp send was performed. The 6 Nov channel-specific policy supersedes the old 98% hard hold.
+
+Continue: preserve the recovered source, keep it quarantined until owner fact reconciliation, and continue independent approved work. Do not replay or send a real WhatsApp message without the original output/provider trace and separate authorization.
+
+
+## 11 November 2026 — additive prebuild contract validated
+
+- PR #292 remains DRAFT and unmerged on the current branch. Exact head `68290b78f4f7ecef888a809ccceed5e259f79977` passed full CI `42945794561` (all 45 steps, including lint, TypeScript, Webpack build and the canonical regression chain), Plan/REA schema `42945794555`, and Kompas baseline `42945794702`. The focused Node 22 prebuild-contract test passed 3/3.
+- The brittle exact-string assertion was replaced with an ordered contract: the Kompas baseline must remain first, all existing resume/WhatsApp/dossier regression groups must remain in order, and additional approved test files are allowed. No runtime behavior or production prebuild script changed.
+- This unblocks the shared test-contract dependency for PR #291 (contract-to-hire classifier regression) and PR #290 (approved mobile hamburger regression), but neither dependent feature is thereby merged or deployed. The Safe Merge Gate owns the restack; do not duplicate its edits.
+- The Vercel commit status remains FAILURE / `Account is blocked`; the protected preview prerequisite is unavailable and canonical production HTTP is `402 DEPLOYMENT_DISABLED` despite READY deployment metadata. No preview, merge, deployment, production API acceptance, Gmail/WhatsApp action or native mobile acceptance is claimed.
+
+Continue: once the protected Vercel preview gate is legitimately restored, rerun the shared PR #292 checks on its latest docs head, then let the Safe Merge Gate restack #291 and #290 and validate each exact head. Keep the dependent PRs open until their own CI, crawler/UI, Plan/REA, Kompas and normal review gates pass.
+
+
+## 11 November 2026 — historical WhatsApp log retention wall
+
+A read-only Vercel runtime-log query for the exact 17 Oct 2026 22:27–22:31 UTC production window returned HTTP 400 `bad_request`: the connected Hobby plan retains only one hour of runtime logs (Pro one day; Enterprise three days without Observability Plus). This is not proof that no historical log existed; the requested records are unavailable through this connector's current retention window.
+
+The exact original source DOCX is revalidated in the private Library archive and the matching JD is available through Gmail, but the source facts remain quarantined pending owner reconciliation. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain missing. iZap has no linked WhatsApp number/history. No billing change, bypass, replay, R2 write, email or WhatsApp send was performed.
+
+Continue: obtain an independently retained Vercel log export or authorized MarketFit R2/Meta webhook and delivery export. Keep the incident blocked until the original output, delivery receipt and owner fact reconciliation are available.
+
+
+## 11 November 2026 — current resume delivery-policy boundary
+
+The 17 Oct source DOCX was re-opened from the nested member of the private Library archive (27,724 bytes; private digest match), and the 17:28 Chicago screenshot and matching Gmail JD were revalidated. The JD is a contract, Atlanta onsite Security Engineer – Risk & Controls role; Canton and Solana are preferred DLT platforms, and CISM/CRISC/CISA/CCSP plus AWS Security Specialty are preferred credentials. “Attributes” is not in the JD; “sol” in the screenshot is a truncated Solana token. The source education, employer chronology, tenure and credential claims conflict with the owner-confirmed profile and remain quarantined. The generated DOCX, per-run R2 key, webhook correlation, Meta message ID and signed delivery/read receipt remain missing.
+
+Current master 11efbbf implements the 6 Nov channel policy: 70% raw JD overlap and 95% supported coverage are the clean-pass thresholds; a completed readable WhatsApp file can still be sent below those thresholds with gaps disclosed. The old 98% hard hold is superseded, and the production env listing contains neither legacy strict-floor override. The route's separate sameResumeFacts check falls back to the selected original on identity/contact/date mismatch.
+
+Newly verified risk: WHATSAPP_SHORTFALL_REASONS still includes unverified_jd_terms, so a readable document with an unverified JD addition can be considered sendable. PR #279 proposes to remove that allowance and tighten the writer's evidence boundary, but it remains DRAFT and requires owner review because it changes external-send eligibility. Do not claim this is fixed or send a real test. The source remains quarantined.
+
+The historical provider wall remains: Vercel runtime logs for 17 Oct return HTTP 400 because the connected Hobby plan retains only one hour; iZap has no linked WhatsApp number, inbound webhook, history backfill or outbound send history. No replay, R2 write, email or WhatsApp send occurred. The current production control-plane alias is READY at master 11efbbf, but the last recorded public HTTP smoke returned 402 DEPLOYMENT_DISABLED; no runtime WhatsApp acceptance is claimed.
+
+Automation coordination at 04:33 UTC: MFit Completion Watch and MFit Safe Merge Gate are enabled; no separate Bible-Keeper task is listed. Kompas Continuous Voice Delivery is present but disabled in the accessible automation list, so no parallel voice edits were made. Its existing PR #283/audio ownership is preserved.
+
+Continue: keep the 17 Oct source quarantined; obtain owner fact reconciliation and an authorized generated-output/R2/Meta export; obtain owner review for PR #279; and do not replay or send until the required evidence and separate authorization exist. Continue the already-open approved resume/JD role-evidence review on PR #287 without merging through the Vercel Account blocked wall. Keep the Plan & Vision baseline wording reconciliation for PR #273/#282 after overlapping resume PRs #287/#289 are safely restacked, so concurrent edits are not overwritten.

@@ -112,3 +112,45 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 11 November 2026 — current-access recheck
+
+The matching Security Engineer – Risk & Controls JD remains accessible through the connected Gmail source. The forwarded role is contract and Atlanta onsite; its preferred DLT list includes Solana. The word "attributes" is absent from the JD. The JD describes employer requirements and does not establish candidate experience or certification status.
+
+The 10 November handoff records that the original 27,724-byte source DOCX was recovered from a private Library archive. A fresh search of the currently accessible Library and conversation files did not return that exact artifact. Three nearby candidate DOCX files were materialized for comparison; their hashes did not match the recorded private digest. Preserve the earlier recovery record as historical evidence, but treat the original file as unavailable to this run. The generated output DOCX is still unavailable.
+
+The current iZap business has no linked WhatsApp number. Read-only status at 2026-11-11T00:54:45Z reports disconnected registration and no inbound webhook, message-history backfill or outbound send history. This means iZap cannot retrieve the original bot conversation or signed delivery/read receipt. It does not prove that a different historical WhatsApp integration never existed. No message was sent.
+
+Still missing: the exact generated output, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback. The source's education, employer chronology, tenure and credential claims still conflict with owner-confirmed profile facts. Keep them quarantined until reconciled. Issue #201's swipe-reply refinement recovery gap is separate and does not prove that the 17 October initial-JD request entered that code path.
+
+The old 98% hard WhatsApp hold remains superseded by the owner-approved 6 November channel-specific policy. Do not restore it, lower factual gates, replay the historical request from a different resume, or send a real WhatsApp test. The incident remains blocked and open.
+
+
+## 11 November 2026 — exact source archive member revalidated
+
+The 00:55 UTC current-access check searched the individual DOCX files and did not inspect the parent archive. A later Library metadata listing located `Organized_Original_Resumes.zip`; after materializing that archive, its directory contained the exact nested 17 October source DOCX. The member is 27,724 bytes and its SHA-256 matches the privately recorded digest from the 10 November recovery record. This corrects the earlier conclusion that the source was unavailable to the current run: the source is now independently re-opened and verified. The private digest and document contents are not copied into this repository.
+
+The matching JD remains accessible in the connected Gmail source. This establishes that the original source/JD pair can be reassembled, but it does not establish the historical generated output or delivery. The source's education, employer chronology, tenure and credential claims still conflict with owner-confirmed profile facts and remain quarantined until reconciled. The generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable. No model generation, retrospective replay, R2 write, email or WhatsApp message was performed.
+
+The 6 November channel-specific WhatsApp policy still supersedes the old 98% hard hold. Do not restore that hold, silently substitute a different resume, or send a real test message. Continue with source preservation and factual reconciliation; historical delivery remains unverified.
+
+
+## 11 November 2026 — Vercel runtime-log retention boundary
+
+A read-only Vercel runtime-log query was attempted for the exact production window `2026-10-17T22:27:00Z`–`2026-10-17T22:31:00Z` (17:27–17:31 Chicago), function source, WhatsApp keyword and error/warning/info levels. The logs API returned HTTP 400 `bad_request`: the connected Hobby plan retains only one hour of runtime logs (Pro one day; Enterprise three days without Observability Plus). This is a provider retention limitation, not evidence that the historical request produced no logs.
+
+No plan/billing change or access-control bypass was attempted. The original source DOCX is now revalidated inside the private Library archive and the matching JD is available through Gmail. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain unavailable. iZap still has no linked WhatsApp number/history. No replay, model generation, R2 write, email or WhatsApp send occurred.
+
+The incident can only be unblocked by an independently retained Vercel log export, MarketFit R2 object/log export, or Meta webhook/delivery records from an authorized source, plus owner reconciliation of the conflicting source facts. Do not upgrade billing, bypass retention/access controls, infer that no log existed, or replay/resend.
+
+
+## 11 November 2026 — current WhatsApp policy and unsupported-claim audit
+
+The 6 Nov channel-specific delivery policy is implemented in current master 11efbbfe7781592bc2fad1216f67546882a1c3ed in src/lib/whatsapp-resume-acceptance.ts: a clean WhatsApp pass requires 70% raw job-post overlap and at least 95% resume-supported coverage; a finished readable file below that clean-pass bar can still be sent with gaps disclosed. Web downloads retain the 95% raw-overlap floor. The old 98% hard WhatsApp hold is superseded. A read-only production environment-key listing (decryption disabled) found neither legacy strict-floor override, so the default 70% band is active.
+
+The webhook separately calls sameResumeFacts on the generated DOCX and falls back to the already-selected original when name/contact/date facts do not match. That identity guard does not resolve unsupported experience claims. The current WHATSAPP_SHORTFALL_REASONS still includes unverified_jd_terms; consequently whatsappRewriteUsable can treat an unverified JD addition as a sendable shortfall. PR #279 removes this allowance and tightens evidence-bound writing, but it is DRAFT and requires owner review because it changes external-send eligibility. Do not claim that unsupported-claim delivery is blocked until that change is approved, merged and deployed. No real message or model generation was performed.
+
+The recovered screenshot confirms the old bot reply used the 98% target as a hard hold. Its missing-term list corresponds to preferred certifications (CISM, CRISC, CISA, CCSP), DLT platforms (Canton and Solana), and AWS Security Specialty. The displayed sol is a truncated Solana term; attributes is not present in the forwarded JD. The source DOCX remains quarantined because its education, employer chronology, tenure and credential claims conflict with the owner-confirmed profile. The generated output DOCX and per-run R2/Meta delivery evidence remain missing. iZap has no connected number, webhook history, message-history backfill or outbound-send evidence; Vercel's Hobby retention response prevents retrieval of the 17 Oct runtime logs.
+
+The 6 Nov coverage policy does not authorize inventing qualifications or replaying a historical request from another resume. No billing change, access bypass, R2 write, email or WhatsApp send was attempted. Keep the incident blocked pending owner fact reconciliation and an authorized generated-output/R2/Meta evidence export.
