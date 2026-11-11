@@ -239,7 +239,7 @@ test('WhatsApp refine never sends the original or a partial baseline when an upd
   assert.match(route, /const expectedRoot = filesOf\(userId\)/)
   assert.match(route, /libraryBytes\.equals\(sessionBytes\)/)
   assert.match(route, /NOT TAILORED — AI provider unavailable/)
-  assert.match(route, /sendClosest\("The update failed identity\/contact\/date verification, so I sent your original resume instead\."\)/)
+  assert.match(route, /return sendClosest\("NOT TAILORED — AI provider unavailable\.", libraryBytes\)/)
   assert.match(route, /docxIdentityText\(source\)/)
   assert.match(route, /docxIdentityText\(file\)/)
 })
