@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
-import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 import { ChevronRight, Moon, Sun } from "lucide-react"
@@ -173,7 +172,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   const [signingOut, setSigningOut] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)   // the menu button on a narrow window
-  const drawerRef = useRef<HTMLElement>(null)         // the menu itself, a drawer on a narrow window
+  const drawerRef = useRef<HTMLElement>(null)         // the expanded navigation panel on a narrow window
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
 
@@ -202,7 +201,6 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     if (signingOut) return
     setSigningOut(true)
     try {
-      if (await serverReportsAuthDisabled()) { setAccountOpen(false); return }
       const supabase = createClient()
       // The mail kept for instant pages, and that their setup is done, belong to this person: they go at sign-out.
       forgetGmailData()
@@ -216,11 +214,11 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     }
   }
 
-  // Closing the drawer from inside it (Escape, or the dimmed page) puts the keyboard back on the menu button. Left alone,
-  // the link that had it is hidden with the drawer and the keyboard is dropped at the top of the document.
+  // Closing the expanded navigation from inside it (Escape or choosing a link) returns the keyboard to the menu button.
+  // The page stays reachable while the panel is open because the panel is in normal document flow, not an overlay.
   const closeMenu = useCallback(() => {
     const el = document.activeElement as HTMLElement | null
-    const inside = !!el && (!!drawerRef.current?.contains(el) || el.classList.contains("mf-nav-scrim"))
+    const inside = !!el && !!drawerRef.current?.contains(el)
     setMenuOpen(false)
     if (inside) toggleRef.current?.focus()
   }, [])
@@ -230,17 +228,20 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMenu()
     }
-    // While the drawer is open the page under the dimming cannot be reached with Tab or read out by a screen reader.
-    const page = document.getElementById("dashboard-content")
-    page?.setAttribute("inert", "")
-    // The drawer exists only on a narrow window. Widened past it, the menu is the fixed rail again: the drawer is closed,
-    // so the page is never left unreachable behind a drawer that is no longer one.
+    // The panel expands below the sticky top bar and pushes the page down. Outside clicks close it without blocking the page.
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target || drawerRef.current?.contains(target) || toggleRef.current?.contains(target)) return
+      setMenuOpen(false)
+    }
+    // The panel exists only on a narrow window. Widened past it, the menu is the fixed desktop rail again, so close it.
     const wide = window.matchMedia("(min-width: 1025px)")
     const onWide = () => { if (wide.matches) setMenuOpen(false) }
+    document.addEventListener("pointerdown", closeOutside)
     wide.addEventListener("change", onWide)
     window.addEventListener("keydown", onKey)
     return () => {
-      page?.removeAttribute("inert")
+      document.removeEventListener("pointerdown", closeOutside)
       wide.removeEventListener("change", onWide)
       window.removeEventListener("keydown", onKey)
     }
@@ -347,8 +348,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
-    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={closeMenu} />}
-    <aside ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+    <aside id="marketfit-navigation" aria-label="MarketFit navigation" ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       background: "var(--surface)",
       display: "flex",
       flexDirection: "column",
