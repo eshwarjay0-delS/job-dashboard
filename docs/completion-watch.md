@@ -459,3 +459,7 @@ Continue: complete exact-head validation for PR #303 and #304, then reconcile th
 - The 17 Oct historical run still lacks generated DOCX, R2 key, webhook correlation ID, Meta message ID and signed delivery/read receipt. The source DOCX/JD are recovered, but conflicting education/employment/credential claims remain quarantined pending owner reconciliation. iZap has no connected WhatsApp number. No live model call, DOCX write, R2 mutation or WhatsApp send occurred.
 
 Continue: keep PR #304 draft until protected preview access is legitimately restored; then require a real authenticated completed DOCX and a fresh production error window before declaring the current WhatsApp failure fixed. Keep the 17 Oct replay blocked until its exact output/trace and owner fact reconciliation exist.
+
+## 11 November 2026 — 22:29 UTC Plan/REA type-check correction
+
+The exact full CI run 43112047139 on PR #306 head 615d625e failed at Type-check, not in product code: one journal entry used area whatsapp outside the declared PlanArea union, and five new REA records used method labels outside the declared ReaMethod union. The branch now maps WhatsApp resume work to area resume and normalizes those methods to Source and artifact analysis. No product logic or acceptance threshold changed. The earlier Plan/REA schema run 43112047386 and Kompas baseline 43112047138 passed; the exact full CI must pass on the corrected head. The protected preview gate 43112043259 remains failed under Vercel project live=false. Keep #306 and stacked #307 draft; no merge or deployment.
