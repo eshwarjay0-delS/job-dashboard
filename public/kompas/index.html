@@ -464,6 +464,15 @@
     </div>
   </div>
   <div class="overlay" id="overlay">
+    <aside id="tabPreview" class="tab-preview hidden" hidden>
+      <div class="tab-preview-stage">
+        <video id="tabPreviewVideo" muted playsinline autoplay></video>
+        <div class="tab-preview-actions">
+          <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
+          <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
+        </div>
+      </div>
+    </aside>
     <header class="bar bar-top">
       <div class="bar-left">
         <button class="icon-btn" id="exitCopilot" title="Back to sessions (saves the transcript)">←</button>
@@ -712,7 +721,7 @@
 <script src="screen-review.js"></script>
 <script src="account-sync.js?v=20261111-egress"></script>
 <script src="caption-focus.js?v=20261102-three-lines"></script>
-<script src="app.js?v=20261109-tight"></script>
+<script src="app.js?v=20261110-capture"></script>
 <script src="caption-once.js?v=20261102-pinned-caption"></script>
 <script src="desktop-focus.js"></script>
 <script src="qbank-problems.js"></script>

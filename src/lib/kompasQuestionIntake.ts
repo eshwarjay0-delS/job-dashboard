@@ -51,7 +51,11 @@ const UNFINISHED_ASK = /^(?:how|what|why|when|where|which|who|can|could|would|wi
 
 function stillOpen(text: string): boolean {
   const t = String(text || "").replace(/\s+/g, " ").trim()
-  if (!t || /[?.!…]["']?\s*$/.test(t) || !DANGLING.test(t)) return false
+  if (!t || /[?.!…]["']?\s*$/.test(t)) return false
+  // An ask that has not reached a ? or . is still being said, even when the
+  // last word is a verb such as "design" rather than a dangling article.
+  if (UNFINISHED_ASK.test(bareLead(t))) return true
+  if (!DANGLING.test(t)) return false
   // "questions for us" is finished. "How would you" is not.
   const words = t.split(/\s+/)
   if (words.length <= 4 && !UNFINISHED_ASK.test(bareLead(t))) return false
@@ -95,6 +99,11 @@ export function continuesSameQuestion(previous: string, next: string): boolean {
   if (standaloneKeyword(prev) && standaloneKeyword(nxt) && differentSubject(prev, nxt)) return false
   if (stillOpen(prev) && !opensFresh(nxt)) return true
   if (stillOpen(prev) && opensFresh(nxt) && !differentSubject(prev, nxt)) return true
+  // A mid-sentence cut often puts the "?" only on the second half, which
+  // looks like a fresh ask with new content words. If the first half never
+  // finished, and the second does not open a new interrogative, it is the
+  // same question.
+  if (stillOpen(prev) && !FRESH.test(bareLead(nxt)) && !FRESH.test(nxt)) return true
   // A finished statement in front of the ask is that question's setup, not an earlier question.
   const candidate = /^(?:i|i'm|i've|i'd|i'll|my)\b/i.test(bareLead(prev))
   if (!opensFresh(prev) && !candidate && !standaloneKeyword(prev) && opensFresh(nxt) && !/\?\s*$/.test(prev)) return true

@@ -1689,7 +1689,7 @@ HEARD is everything said since the last answer, merged and messy: fillers, cross
 FIRST derive the ONE question to answer now: centre it on what the interviewer is asking at the END of HEARD, and fold in every earlier question in HEARD that has not been answered yet, plus any constraint or context they gave. Small talk, their description of the team or role, and the candidate's own replies are context, not questions.
 
 A request with no question mark is still a question: "Pick one internal system", "Name the tool you would use", "Walk me through that". Small talk is not.
-Return ONLY the question text, in the interviewer's own words, one or two sentences. Never add topics or angles they did not ask about. If nothing in HEARD is a question for the candidate, return exactly: NO_QUESTION`
+Rewrite it as the ONE clean question the candidate should answer now. Merge adjacent question sentences that belong together (for example a story prompt plus "How did you resolve it?"). Resolve pronouns and phrases such as "this question" from HEARD and from the last 60–90 seconds of TRANSCRIPT. Drop filler, lead-ins, stutters, and the interviewer's own commentary. Keep the interviewer's meaning; do not invent a new topic or copy a span that is only a back-reference. Return ONLY that question text, one or two sentences. If nothing in HEARD is a question for the candidate, return exactly: NO_QUESTION`
 export interface ShapeDef {
   type: string; re: RegExp; tier1: boolean; noYou: boolean; unknownProduct: boolean; shape: string
 }

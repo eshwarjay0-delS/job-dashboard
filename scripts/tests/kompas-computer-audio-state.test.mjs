@@ -7,7 +7,7 @@ const app = readFileSync(new URL('../../public/kompas/app.js', import.meta.url),
 const desktop = readFileSync(new URL('../../legacy/perfact/desktop/main.js', import.meta.url), 'utf8');
 const uiStart = app.indexOf('let sysConnecting = false;');
 const uiEnd = app.indexOf('$("micBtn").onclick =', uiStart);
-const captureStart = app.indexOf('async function startSys() {');
+const captureStart = app.indexOf('// Capture policy for computer');
 const captureEnd = app.indexOf('// Silence warning', captureStart);
 assert.ok(uiStart >= 0 && uiEnd > uiStart && captureStart >= 0 && captureEnd > captureStart);
 const code = app.slice(uiStart, uiEnd) + '\n' + app.slice(captureStart, captureEnd)
@@ -54,7 +54,7 @@ test('Windows output-mix handler remains wired and requires an explicit session 
   assert.match(desktop, /setDisplayMediaRequestHandler/);
   assert.match(desktop, /audio: "loopback"/);
   assert.match(app, /if \(srcOn\.sys\) opening\.push\(startSys\(\)\)/);
-  assert.match(app, /if \(who === "Them"\) \{ displayVideo = null; sysAttempt\+\+;/);
+  assert.match(app, /if \(who === "Them"\) \{ displayVideo = null; hideTabPreview\(\); sysAttempt\+\+;/);
 });
 test('computer-audio control says ready before a session, not listening', () => {
   const { state, buttons, api } = harness(async () => available());

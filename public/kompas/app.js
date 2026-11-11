@@ -1292,7 +1292,10 @@ if (micPick) {
   };
   void fillMicPick();
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
-    navigator.mediaDevices.addEventListener("devicechange", () => { void fillMicPick(); });
+    navigator.mediaDevices.addEventListener("devicechange", () => {
+      void fillMicPick();
+      if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic();
+    });
   }
 }
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
@@ -1655,6 +1658,7 @@ function reportSources() {
 /* ---- capture: voice-activity detection per source ---- */
 let sourceGeneration = { You: 0, Them: 0 };
 let micRecoveries = 0;
+let sysRecoveries = 0;
 let captures = [];           // { who, stream, owner, rec, chunks, ... }
 // The initial speaker render reads running/captures; invoking it earlier
 // hits the lexical temporal dead zone and prevents Kompas from booting.
@@ -1724,6 +1728,95 @@ async function startMic() {
     status(message, "err");
   }
 }
+// Capture policy for computer / tab audio (2026-11-10). Mic processing
+// (echo cancellation, noise suppression, auto-gain) must never be applied to
+// the shared tab or system mix — those filters punch holes in meeting audio
+// and are a common reason computer-audio questions are missed. The picker
+// prefers a browser tab so "Also share tab audio" is available. Written for
+// Kompas; not a copy of any competitor's client.
+const SYS_AUDIO_CONSTRAINTS = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+const THEM_SILENCE_MS = 1400;
+function sysShareConstraints(desktop) {
+  // Desktop loopback is requested as audio: true so the native handler keeps serving the output mix.
+  if (desktop) return { video: true, audio: true };
+  return {
+    video: { displaySurface: "browser", width: { max: 1920 }, height: { max: 1080 }, frameRate: { max: 15 } },
+    audio: { ...SYS_AUDIO_CONSTRAINTS },
+    systemAudio: "include",
+    selfBrowserSurface: "exclude",
+    surfaceSwitching: "include",
+    preferCurrentTab: false,
+  };
+}
+function sysShareFallbackConstraints(desktop) {
+  if (desktop) return [{ video: true, audio: true }];
+  return [
+    { video: true, audio: { ...SYS_AUDIO_CONSTRAINTS }, systemAudio: "include", selfBrowserSurface: "exclude" },
+    { video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" },
+  ];
+}
+async function requestSysShare() {
+  const desktop = !!window.kompasDesktop;
+  const attempts = [sysShareConstraints(desktop), ...sysShareFallbackConstraints(desktop)];
+  let last = null;
+  for (const opts of attempts) {
+    try { return await navigator.mediaDevices.getDisplayMedia(opts); }
+    catch (error) {
+      last = error;
+      if (error && error.name === "NotAllowedError") throw error;
+    }
+  }
+  throw last;
+}
+async function applyRawAudioConstraints(stream) {
+  if (!stream || !stream.getAudioTracks) return;
+  for (const track of stream.getAudioTracks()) {
+    if (!track.applyConstraints) continue;
+    try { await track.applyConstraints(SYS_AUDIO_CONSTRAINTS); } catch {}
+  }
+}
+function showTabPreview(owner) {
+  const box = $("tabPreview");
+  const video = $("tabPreviewVideo");
+  const track = owner && owner.getVideoTracks ? owner.getVideoTracks()[0] : null;
+  if (!box || !video || !track || track.readyState !== "live") { hideTabPreview(); return; }
+  try {
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.srcObject = typeof MediaStream === "function" ? new MediaStream([track]) : owner;
+    const play = video.play && video.play();
+    if (play && typeof play.catch === "function") play.catch(() => {});
+    box.hidden = false;
+    box.classList.remove("hidden");
+  } catch { hideTabPreview(); }
+}
+function hideTabPreview() {
+  const box = $("tabPreview");
+  const video = $("tabPreviewVideo");
+  if (video) {
+    try { video.pause(); } catch {}
+    try { video.srcObject = null; } catch {}
+  }
+  if (box) { box.hidden = true; box.classList.add("hidden"); }
+}
+async function changeSharedTab() {
+  if (!running) return;
+  srcOn.sys = true;
+  await stopSource("Them");
+  srcOn.sys = true;
+  syncSrc();
+  await startSys();
+}
+$("tabPreviewChange")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void changeSharedTab(); });
+$("tabPreviewStop")?.addEventListener("click", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  srcOn.sys = false;
+  void stopSource("Them");
+  syncSrc();
+  reportSources();
+});
+
 async function startSys() {
   const generation = sourceGeneration.Them;
   if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
@@ -1739,10 +1832,9 @@ async function startSys() {
       return;
     }
     // Electron's session handler supplies the Windows output-mix loopback;
-    // browser capture instead requires an explicit audio-sharing choice.
-    const disp = window.kompasDesktop
-      ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-      : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" });
+    // the browser path prefers a meeting tab with raw (unprocessed) tab audio.
+    const disp = await requestSysShare();
+    await applyRawAudioConstraints(disp);
     const audio = disp.getAudioTracks();
     if (!audio.length) {
       disp.getTracks().forEach(track => track.stop());
@@ -1753,6 +1845,10 @@ async function startSys() {
       return;
     }
     await attachSource(new MediaStream(audio), "Them", disp, generation);
+    if (generation === sourceGeneration.Them && running && srcOn.sys && captures.some(c => c.who === "Them")) {
+      showTabPreview(disp);
+      sysRecoveries = 0;
+    }
     if (generation === sourceGeneration.Them && running && srcOn.sys && !captures.some(c => c.who === "Them")) {
       captureErrors.push("Call audio: the track was returned but could not be initialized. Retry the speaker button.");
       srcOn.sys = false;
@@ -1864,6 +1960,14 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
         setTimeout(() => { if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic(); }, 700);
         return;
       }
+      // Desktop loopback can be re-acquired without a picker, once, the way the mic is.
+      // A browser share ending must not reopen the tab picker on its own.
+      if (who === "Them" && running && window.kompasDesktop && sysRecoveries < 2) {
+        sysRecoveries++;
+        srcOn.sys = true;
+        setTimeout(() => { if (running && srcOn.sys && !captures.some(c => c.who === "Them")) void startSys(); }, 700);
+        return;
+      }
       srcOn[who === "You" ? "mic" : "sys"] = false; syncSrc();
       captureErrors.push(who === "You" ? "Microphone disconnected. Reconnect it and press the mic button." : "Call sharing ended. Press the speaker button to share audio again.");
       reportSources();
@@ -1892,7 +1996,7 @@ function stopSource(who) {
     meter(who, 0, false);
   }
   captures = captures.filter(c => c.who !== who);
-  if (who === "Them") { displayVideo = null; sysAttempt++; sysConnecting = false; syncSrc(); }
+  if (who === "Them") { displayVideo = null; hideTabPreview(); sysAttempt++; sysConnecting = false; syncSrc(); }
   return Promise.allSettled(finishing);
 }
 // Who can open a question (slice 2, 29 Oct 2026): askSource() maps each capture through roleOfSource(), so computer
@@ -1998,8 +2102,11 @@ function dictateStep(cap, rms, now, vad) {
   const V = vad || { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 };
   // Computer audio stays loud between sentences (the 4x tap plus a noise bed), so the
   // microphone's 1100 ms silence never arrives and the question is cut at 28 seconds.
-  // A dip under the recent peak is that pause. The microphone path is unchanged.
-  const silenceMs = cap && cap.who === "Them" ? 650 : V.SILENCE_MS;
+  // A dip under the recent peak is still that pause. Them also waits THEM_SILENCE_MS
+  // (1400) so a mid-question breath does not end the segment before the ask is finished.
+  // The microphone path is unchanged.
+  const themWait = typeof THEM_SILENCE_MS === "number" ? THEM_SILENCE_MS : 1400;
+  const silenceMs = cap && cap.who === "Them" ? themWait : V.SILENCE_MS;
   let noise = Number(cap.noise) || 0.001, speechMs = cap.speechMs || 0, voiced = !!cap.voiced;
   let lastVoice = cap.lastVoice || 0, lastTick = cap.lastTick || 0;
   // Slice 12: the floor also learns a steady level it is stuck under. Over each 1.5 s the quietest level is kept; when even
@@ -3473,7 +3580,9 @@ function intakeDifferent(prev, next) {
 const INTAKE_UNFINISHED = /^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|tell|walk|give|explain)\b/i;
 function intakeOpen(text) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
-  if (!t || /[?.!…]["']?\s*$/.test(t) || !INTAKE_DANGLING.test(t)) return false;
+  if (!t || /[?.!…]["']?\s*$/.test(t)) return false;
+  if (INTAKE_UNFINISHED.test(intakeBare(t))) return true;
+  if (!INTAKE_DANGLING.test(t)) return false;
   if (t.split(/\s+/).length <= 4 && !INTAKE_UNFINISHED.test(intakeBare(t))) return false;
   return true;
 }
@@ -3505,6 +3614,7 @@ function continuesSameQuestion(previous, next) {
   if (intakeKeyword(prev) && intakeKeyword(nxt) && intakeDifferent(prev, nxt)) return false;
   if (intakeOpen(prev) && !intakeOpens(nxt)) return true;
   if (intakeOpen(prev) && intakeOpens(nxt) && !intakeDifferent(prev, nxt)) return true;
+  if (intakeOpen(prev) && !INTAKE_FRESH.test(intakeBare(nxt)) && !INTAKE_FRESH.test(nxt)) return true;
   const candidate = /^(?:i|i'm|i've|i'd|i'll|my)\b/i.test(intakeBare(prev));
   if (!intakeOpens(prev) && !candidate && !intakeKeyword(prev) && intakeOpens(nxt) && !/\?\s*$/.test(prev)) return true;
   if (intakeOpens(nxt) && intakeDifferent(prev, nxt)) return false;
@@ -3657,6 +3767,40 @@ function headAndTail(text, limit) {
 const consolidatedNeedsDerive = (opts) => !!opts.consolidated && !opts.derived;   // AI Answer: match after the question is derived
 // The derive request. A re-ask tells the server so: the page being re-asked is the previous turn, and its own setup
 // must not be read as his reply to it.
+// Last 60–90 s of transcript for question resolution (default 90 s).
+const CONTEXT_WINDOW_MS = 90000;
+function recentContext(beforeSeq, now) {
+  const when = typeof now === "number" ? now : Date.now();
+  const cutoff = when - CONTEXT_WINDOW_MS;
+  const all = (transcript || []).filter(t => beforeSeq == null || t.seq < beforeSeq);
+  const stamped = all.filter(t => Number(t.at) > 0);
+  const windowed = stamped.length === all.length && all.length
+    ? all.filter(t => Number(t.at) >= cutoff)
+    : all.slice(-40);
+  const lines = (windowed.length ? windowed : all.slice(-40));
+  return lines.map(t => `${t.who}: ${t.text}`).join("\n");
+}
+const RESOLVE_THIS = /\bthis (?:kind of |sort of |type of )?question\b/i;
+const RESOLVE_FILLER = /^(?:(?:uh|um|so|like|okay|ok|right|yeah|yes|well)\s*,?\s*)+/i;
+function resolveLiveQuestion(formed, pendingTexts, contextTexts) {
+  const clean = (s) => String(s || "").replace(/^\s*(?:You(?: \((?:typed|earlier)\))?|Them(?: \(earlier\))?):\s*/i, "").replace(/\s+/g, " ").trim();
+  const pending = (pendingTexts || []).map(clean).map(s => s.replace(RESOLVE_FILLER, "").trim()).filter(Boolean);
+  const context = (contextTexts || []).map(clean).map(s => s.replace(RESOLVE_FILLER, "").trim()).filter(Boolean);
+  let q = clean(formed) || pending[pending.length - 1] || "";
+  if (pending.length >= 2) {
+    const a = pending[pending.length - 2], b = pending[pending.length - 1];
+    const follow = /^(?:how|why|what|and how|and what|can you|could you)\b/i.test(b) && b.split(/\s+/).length <= 16;
+    if (follow) q = ((/[.?!]$/.test(a) ? a : a + ".") + " " + b).replace(/\s+/g, " ").trim();
+  }
+  q = q.replace(RESOLVE_FILLER, "").trim();
+  if (q && RESOLVE_THIS.test(q)) {
+    const prior = [...context, ...pending].reverse().find(s => (/[?]/.test(s) || /^(?:tell|walk|describe|explain|how|what|why)\b/i.test(s)) && !RESOLVE_THIS.test(s));
+    if (prior && /\bconflict\b/i.test(prior)) q = q.replace(RESOLVE_THIS, "the conflict question");
+    else if (prior) q = q.replace(RESOLVE_THIS, "the question about " + prior.replace(/\?\s*$/, "").replace(/^tell me about\s+/i, ""));
+  }
+  return q;
+}
+
 function deriveBody(question, card, opts) { return { deriveOnly: true, client: BUILD, question, transcript: opts.earlier || "", history: recentQA(card), reask: !!opts.reask }; }
 // The question fields of the answer request. A question the code cut already formed is pinned, so the server answers
 // it as formed instead of cutting the heard text a second time (review of 398f299: the second cut glued his reply and
@@ -4357,10 +4501,13 @@ async function aiAnswer(fromAuto, options = {}) {
             answeredSeq = heardSeq; updatePending();
             const who = questionSource() === "You" ? "You" : "Them";
             const heard = (framed.parts || []).map((text) => who + ": " + text).join("\n") || framed.question;
-            const card = addCard(framed.question, ["…"]);
-            card.heard = heard; card.formed = heard; card.formSeq = framed.seq != null ? framed.seq : (pending[0] && pending[0].seq);
-            showPressed(card, framed.question);
-            return await generateAnswer(heard, card, { consolidated: true, earlier: "", derived: card.question, pinned: true });
+            const earlier = recentContext(framed.seq != null ? framed.seq : (pending[0] && pending[0].seq));
+            const resolved = resolveLiveQuestion(framed.question, framed.parts || pending.map(t => t.text), (earlier ? earlier.split("\n") : []).concat(framed.parts || []));
+            const shown = resolved || framed.question;
+            const card = addCard(shown, ["…"]);
+            card.heard = heard; card.earlier = earlier; card.formed = heard; card.formSeq = framed.seq != null ? framed.seq : (pending[0] && pending[0].seq);
+            showPressed(card, shown);
+            return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true });
           }
         } catch { /* the intake below still answers one question */ }
       }
@@ -4379,7 +4526,7 @@ async function aiAnswer(fromAuto, options = {}) {
             let chosen = formed.length > 1 ? [formed[formed.length - 1]] : formed;
             answeredSeq = heardSeq; updatePending();
             const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
-            const earlierFormed = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+            const earlierFormed = recentContext(cutSeq);
             const who = questionSource() === "You" ? "You" : "Them";
             for (const g of chosen) {
               const spanHeard = g.parts.map(text => `${who}: ${text}`).join("\n");
@@ -4402,7 +4549,7 @@ async function aiAnswer(fromAuto, options = {}) {
         return;
       }
       const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
-      const earlier = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+      const earlier = recentContext(cutSeq);
       if (!intake.worthy) {
         // No real question from any source, but the fragments carry real
         // keywords: tackle them into the lane instead of answering noise.
@@ -4518,12 +4665,20 @@ async function grabFrame() {
     catch (e) { if (nativeError && e && e.name !== "NotAllowedError") throw new Error((nativeError.message || String(nativeError)) + " " + (e.message || "")); throw e; }
     track = s.getVideoTracks()[0]; displayVideo = track;
   }
-  const video = document.createElement("video"); video.muted = true; video.playsInline = true;
+  const preview = typeof document !== "undefined" && document.getElementById ? document.getElementById("tabPreviewVideo") : null;
+  const reusePreview = !!(preview && preview.readyState >= 2 && preview.videoWidth && preview.srcObject);
+  const video = reusePreview ? preview : document.createElement("video");
+  const ownsVideo = video !== preview;
+  if (ownsVideo) { video.muted = true; video.playsInline = true; }
   try {
-    video.srcObject = new MediaStream([track]); await video.play();
-    if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
+    if (ownsVideo) {
+      video.srcObject = new MediaStream([track]); await video.play();
+      if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
+    } else if (video.readyState < 2) {
+      await new Promise(r => { video.onloadeddata = r; setTimeout(r, 800); });
+    }
     if (track.readyState !== "live" || video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("No readable screen frame yet. Please retry.");
-    const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1600 / w);
+    const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1920 / w);
     const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
     const context = c.getContext("2d");
     if (!context) throw new Error("Screen capture is unavailable in this browser.");
@@ -4540,8 +4695,10 @@ async function grabFrame() {
       for (let i = 0; i < pixels.length; i += step) { if (Math.abs(pixels[i] - r0) > 12 || Math.abs(pixels[i + 1] - g0) > 12 || Math.abs(pixels[i + 2] - b0) > 12) { flat = false; break; } }
     }
     if (flat) throw new Error("This window opted out of screen capture, so its content comes back blank. Running as administrator does not change that — share the window another way, or type the question.");
-    return c.toDataURL("image/jpeg", 0.72);
-  } finally { video.onloadeddata = null; video.pause(); video.srcObject = null; }
+    return c.toDataURL("image/jpeg", reusePreview ? 0.85 : 0.72);
+  } finally {
+    if (ownsVideo) { video.onloadeddata = null; video.pause(); video.srcObject = null; }
+  }
 }
 // A fresh screen stream for Screen Answer. Owner report, 27 Oct 2026: desktop 0.7 showed "Could not start video
 // source" (NotReadableError: Windows refused to start the stream for that Kompas process; the same request in a clean
