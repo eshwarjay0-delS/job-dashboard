@@ -386,3 +386,11 @@ Continue: rerun full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline 
 - Changed: `src/lib/docx.ts`, `src/lib/resume-evidence.ts`, `src/lib/tailor.ts`, `scripts/tests/resume-confirmation-quality.test.mjs`, `src/lib/plan-vision.ts`, `src/lib/plan-vision-journal.ts`, `src/lib/rea-register.ts`, `docs/research/resume-confirmed-keyword-boundary.md`, and `docs/resume.md`.
 - Pending: exact-head GitHub full CI, WhatsApp recovery regression, Plan/REA schema and Kompas baseline. The PR must remain stacked on #287 until its parent is accepted; Vercel project `live:false` / public HTTP `402 DEPLOYMENT_DISABLED` still blocks protected preview and production acceptance. Formal review and authenticated exported-DOCX review remain separate.
 - Not done: no live Gemini call, no DOCX export, no 95–100% live match, no WhatsApp send, and no historical 17 Oct delivery claim. The exact generated DOCX and R2/webhook/Meta correlation artifacts remain missing.
+
+
+## 11 November 2026 — 17 Oct WhatsApp artifact search result
+
+- Read-only Gmail search for `after:2026/10/17 before:2026/10/18 in:sent has:attachment filename:docx` returned 0; the matching received-DOCX search also returned 0. The 11 related Risk & Controls JD threads found by the connected Gmail search are dated 16 Oct, with the forwarded JD at `2026-10-16T19:49:07Z`.
+- Metadata-only ChatGPT Library listing for DOCX created on 17 Oct returned 0. The source DOCX and JD are recoverable; the exact generated DOCX is not.
+- Current production alias metadata is READY at `11efbbfe7781592bc2fad1216f67546882a1c3ed` (`dpl_7uEfjq1XprC48DoTFfFuiBoShPne`), but Vercel project `live:false` and public HTTP `402 DEPLOYMENT_DISABLED` prevent HTTP/UX acceptance. Do not equate READY metadata with reachable production.
+- Hard wall remains the exact generated output plus per-run R2 key, webhook request ID, Meta message ID and signed delivery/read receipt. Search scope is only the connected Gmail account and ChatGPT Library; it does not cover every chat, WhatsApp R2 or Meta logs.
