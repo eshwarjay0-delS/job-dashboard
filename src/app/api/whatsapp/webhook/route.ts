@@ -839,12 +839,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Assigned inside the run, after the job text is known. The outer catch can
   // still send the already-chosen resume if the run throws before a file goes out.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
-  const sendClosest = async (why: string): Promise<boolean> => {
+  const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
     if (!resumePath || !jd) return false
-    const source = await readPath(resumePath).catch(() => null)
+    const source = verifiedSource || await readPath(resumePath).catch(() => null)
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
@@ -884,7 +884,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       readPath(session.resumePath).catch(() => null),
     ])
     if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return false
-    return sendClosest("NOT TAILORED — AI provider unavailable.")
+    return sendClosest("NOT TAILORED — AI provider unavailable.", libraryBytes)
   }
   try {
     if (!hasAnyKey(keys)) {
@@ -1541,8 +1541,8 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     return sendText(from, `Nothing needed changing for "${clip(request, 200)}". Try naming the exact skill, section, or bullet.`)
   }
 
-  // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is not:
-  // the file this reply started from goes out instead, labelled as unchanged.
+  // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is never sent;
+  // the previously delivered version remains unchanged.
   if (!whatsappRewriteUsable(result)) {
     return sendText(from, `${qualityStop(result)} No file was sent; your previous resume is unchanged.`)
   }
