@@ -2690,9 +2690,13 @@ function looksComplete(text) {
 }
 function autoWaitMs(tail) {
   try {
-    if (looksComplete(tail) && isQuestionComplete(tail)) return Math.min(AUTO_QUIET_MS, MAX_AUTO_DELAY_MS);
+    // Short follow-ups ("and why") get the normal quiet wait even when a bare
+    // "why" looks dangling to isQuestionComplete. A line that still trails off
+    // keeps the long hold, capped at MAX_AUTO_DELAY_MS (session 5: 3s, not 7s).
+    // That cap is not the 1.5s intent-to-complete poll interval.
+    if (looksComplete(tail) && (shortFollowUp(tail) || isQuestionComplete(tail))) return Math.min(AUTO_QUIET_MS, MAX_AUTO_DELAY_MS);
     const t = String(tail || "").replace(/\s+/g, " ").trim();
-    const hold = Math.min(MAX_AUTO_DELAY_MS, Math.max(INTENT_COMPLETE_SILENCE_MS, MANUAL_INCOMPLETE_WAIT_MS));
+    const hold = MAX_AUTO_DELAY_MS;
     if (t && !/[?.!…]["']?$/.test(t) && DANGLING_END.test(t)) return hold;
     if (clauseStillOpen(tail) || !isQuestionComplete(tail)) return hold;
   } catch {}
