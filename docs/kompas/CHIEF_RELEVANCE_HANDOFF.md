@@ -74,3 +74,14 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+ 
+## 11 November 2026 — production availability recheck (12:04 UTC)
+
+This section supersedes the earlier 10 November paragraph that listed `a66c108bff6175149c4aadd882ab11128445b8cc` as the current production alias. Canonical master is now `11efbbfe7781592bc2fad1216f67546882a1c3ed`, including the merged question-first relevance and answer-shape ancestry. Vercel alias metadata maps `job-dashboard-fawn.vercel.app` to READY deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` at that exact SHA, but project inspection reports `live=false`; public runtime probes have returned HTTP 402 `DEPLOYMENT_DISABLED`. A READY deployment object is not evidence that the shared answer service is currently reachable.
+
+The live quality gate remains open: no 50 authenticated same-question Kompas-versus-ChatGPT response pairs or independent human 0–4 scorecards were captured. That work still requires the authorized private `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. Do not substitute the 50/54 synthetic fixtures, source tests, or READY metadata for live answer quality.
+
+The separate Kompas Continuous Voice Delivery automation is paused/disabled and retains PR #283; this continuation made no microphone, computer-audio, caption or voice-source edits. Native Windows, mobile and WhatsApp answer/voice parity remains unverified.
+
+**Continue:** after the Vercel owner restores verifiable project availability and protected preview access, run the live API smoke, capture the authorized 50 same-question pairs, and obtain independent human scores. Preserve source provenance and account isolation. No production promotion, voice behavior change or E2E completion is claimed here.

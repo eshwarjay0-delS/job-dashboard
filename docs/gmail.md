@@ -204,3 +204,24 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## 11 November 2026 — Poke-inspired account and mobile acceptance
+
+The owner-approved broad direction remains up to four connected Gmail accounts, per-account Gmail/Calendar targeting, account+thread identity, no silent cross-account merge, selected From preservation, and reconnect limited to the affected inbox. The last read-only production aggregate (10 Nov) showed 3 account IDs, 2,002 cached threads and 3 sync rows. This does not prove two-inbox partial/failure recovery or mobile acceptance.
+
+PR #290 isolates the approved 4 October mobile navigation correction: the hamburger panel expands in normal document flow below the sticky header, pushes content down, and does not overlay, dim or inert the page. Its latest exact head 7bd60f97a1b486f66ec61a018f64a9dbe5dc00a9 passed full CI 42969455798, schema 42969455846 and Kompas baseline 42969455728. The shared voice-preview gate fails and the Vercel project is blocked, so the change is not merged or production-accepted; a real narrow-phone check remains.
+
+Per-account sync-health cards in PRs #271/#286 remain draft/proposed because no separate owner approval for that UI was retrieved. Do not enable the unattended update worker without its external scheduler, CRON_SECRET, approved Meta template and explicit GMAIL_UPDATES_SCHEDULER_ENABLED=true. The scheduled Auto Reply Loop's latest run failed its configuration check and skipped its POST step; no email action occurred. No real Gmail API call, email send or WhatsApp send was made in this continuation.
+
+
+## 11 November 2026 — selected sender regression coverage
+
+PR #297 adds five test-only cases against the actual `gmail-send` route with mocked authentication, OAuth-token and network adapters. They verify selected From plus the matching OAuth account, same-inbox thread lookup before send, selected-inbox reconnect without fallback, unknown sender rejection, and disabled-account rejection. Exact-head full CI `42997343901` and Kompas baseline `42997343939` passed, including the new Gmail isolation step. No real Gmail API call or email send occurred, and no runtime behavior changed. The protected Vercel preview remains unavailable while the project/account is blocked, so PR #297 is open and unmerged. Real two-inbox healthy/partial-failure and narrow-phone acceptance remain pending; the proposed sync-health cards and unattended update worker retain their separate approval/configuration gates.
+
+ 
+## 11 November 2026 — Gmail account freshness snapshot (12:04 UTC)
+
+Read-only production state shows 3 connected-account sync rows and 3 distinct account IDs, with 2,002 cached threads. Latest sync is 10 Nov 14:44:44 UTC; latest cached-thread update is 14:46:49 UTC. No sync or thread update occurred in the last hour; all three sync rows are within 24 hours. The composite `(user_id, account_id, thread_id)` key has zero duplicate groups.
+
+This confirms persisted per-account separation only. It does not demonstrate a healthy inbox plus a partially failing inbox, live reconnect behavior, mobile delivery or email sending. PR #297's five mocked sender/thread-boundary regressions pass full CI and baseline, but the protected preview remains blocked. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement are configured. No real Gmail API call or email was sent.
