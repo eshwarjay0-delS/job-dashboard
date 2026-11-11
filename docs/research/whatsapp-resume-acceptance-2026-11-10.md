@@ -112,3 +112,16 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 11 November 2026 — current-access recheck
+
+The matching Security Engineer – Risk & Controls JD remains accessible through the connected Gmail source. The forwarded role is contract and Atlanta onsite; its preferred DLT list includes Solana. The word "attributes" is absent from the JD. The JD describes employer requirements and does not establish candidate experience or certification status.
+
+The 10 November handoff records that the original 27,724-byte source DOCX was recovered from a private Library archive. A fresh search of the currently accessible Library and conversation files did not return that exact artifact. Three nearby candidate DOCX files were materialized for comparison; their hashes did not match the recorded private digest. Preserve the earlier recovery record as historical evidence, but treat the original file as unavailable to this run. The generated output DOCX is still unavailable.
+
+The current iZap business has no linked WhatsApp number. Read-only status at 2026-11-11T00:54:45Z reports disconnected registration and no inbound webhook, message-history backfill or outbound send history. This means iZap cannot retrieve the original bot conversation or signed delivery/read receipt. It does not prove that a different historical WhatsApp integration never existed. No message was sent.
+
+Still missing: the exact generated output, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback. The source's education, employer chronology, tenure and credential claims still conflict with owner-confirmed profile facts. Keep them quarantined until reconciled. Issue #201's swipe-reply refinement recovery gap is separate and does not prove that the 17 October initial-JD request entered that code path.
+
+The old 98% hard WhatsApp hold remains superseded by the owner-approved 6 November channel-specific policy. Do not restore it, lower factual gates, replay the historical request from a different resume, or send a real WhatsApp test. The incident remains blocked and open.
