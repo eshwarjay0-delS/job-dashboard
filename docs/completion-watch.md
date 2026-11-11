@@ -450,3 +450,13 @@ Continue: complete exact-head validation for PR #303 and #304, then reconcile th
 - **Preview/access blocker:** Vercel project metadata reports live=false. The protected preview gate fails or remains queued; a job-log read timed out, so no more precise cause is claimed. No protection bypass or billing change was attempted. Production deployment metadata/alias READY does not substitute for direct public HTTP or authenticated acceptance.
 - **Still open:** exact 17 Oct generated DOCX/R2/Meta correlation evidence; actual authenticated 50-pair Kompas/ChatGPT human grading; native Windows, phone and WhatsApp acceptance; 11 Nov crawler run and public API smoke; mobile Poke-inspired UI; final DOCX Gemini review. No live 98% resume match is claimed.
 - **Continue:** await exact-head PR #303/#304/#305/#306 checks, resolve only verified failures, and merge/deploy approved code only after the protected preview gate is legitimately available. Keep production deployment, direct HTTP smoke, real device acceptance and live model quality as separate gates.
+
+## 11 November 2026 — restore the daily contract crawler schedule
+
+A read-only production query found no 11 November mfit_crawl_runs row; the latest completed run remains 10 November 11:00 UTC (6,818 found/upserted across 20 portals; one Inspyr abort). Source history shows /api/crawl/run at 0 11 * * * on parent 11efbbfe, then removed by usage-pack commit 5a9e7f8 after the 11:00 UTC run. The missed 11 November run predates that removal, so the project live=false / public HTTP restriction is a separate blocker; the removal prevents future scheduled crawls.
+
+The existing route remains protected by CRON_SECRET or the timing-safe watchdog secret, and production has an encrypted CRON_SECRET entry. This branch restores one daily 0 11 * * * entry and adds dedicated tests for schedule uniqueness, the other daily crons, authentication and service-client fail-closed behavior. No manual crawl or database mutation was performed.
+
+Vercel metadata still reports live=false; deployment metadata/alias READY is not a public API or scheduled-run acceptance. Keep the change draft until exact-head full CI and crawler regression pass, the protected preview gate is legitimately available, and the project is restored without a billing or access-control bypass. After deployment, verify the next scheduled mfit_crawl_runs row and the public jobs API separately.
+
+Continue: after this stacked schedule fix passes CI, verify production access is legitimately restored and then verify the next scheduled crawl; do not manually trigger it to manufacture evidence.
