@@ -137,3 +137,82 @@ export function resolveLiveQuestion(opts: {
   const windowTexts = context.length ? context : pending
   return resolveReferent(formed, windowTexts)
 }
+
+/** A silence press longer than this, with no new interviewer ask, must not regenerate the last topic. */
+export const SILENCE_LISTEN_MS = 20_000
+export const LISTENING_STATUS = "Listening"
+
+const CANDIDATE_WHO = /^(?:you|interviewee|candidate)$/i
+const INTERVIEWER_WHO = /^(?:them|interviewer(?:\s*\d+)?)$/i
+const ASK_CUE = /[?]|^(?:tell|walk|describe|explain|give|how|what|why|when|where|which|who|can|could|would|will|do|does|did|is there|are there)\b/i
+
+function asLabeled(line: TranscriptLine | string): { who: string; text: string } {
+  if (typeof line === "string") {
+    const m = String(line).match(/^\s*(You|Them|Interviewee|Interviewer(?:\s*\d+)?|Candidate)\s*:\s*(.*)$/i)
+    if (m) return { who: m[1], text: String(m[2] || "").replace(/\s+/g, " ").trim() }
+    return { who: "", text: stripLineLabel(line).replace(FILLER_LEAD, "").trim() }
+  }
+  return { who: String(line.who || ""), text: stripLineLabel(String(line.text || "")).replace(FILLER_LEAD, "").trim() }
+}
+
+export function isCandidateSpeech(line: TranscriptLine | string): boolean {
+  return CANDIDATE_WHO.test(asLabeled(line).who)
+}
+
+export function isInterviewerSpeech(line: TranscriptLine | string): boolean {
+  const who = asLabeled(line).who
+  return INTERVIEWER_WHO.test(who) || who === "Them"
+}
+
+function looksLikeAsk(text: string): boolean {
+  return ASK_CUE.test(String(text || "").replace(/\s+/g, " ").trim())
+}
+
+function sameQuestion(a: string, b: string): boolean {
+  const norm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim()
+  const A = norm(a), B = norm(b)
+  if (!A || !B) return false
+  return A === B || A.includes(B) || B.includes(A)
+}
+
+/**
+ * When the latest speech is the candidate's turn, keep the outstanding
+ * unanswered interviewer question instead of titling the candidate's topic
+ * (session 4 mid-candidate-answer: Stripe talk over a rate-limit strategies ask).
+ */
+export function outstandingInterviewerAsk(
+  lines: readonly (TranscriptLine | string)[] | null | undefined,
+  opts?: { lastAnswered?: string },
+): string {
+  const labeled = Array.from(lines || []).map(asLabeled).filter((l) => l.text)
+  if (!labeled.length) return ""
+  const asks = labeled.filter((l) => isInterviewerSpeech(l) && looksLikeAsk(l.text)).map((l) => l.text)
+  const unanswered = asks.filter((t) => !sameQuestion(t, opts?.lastAnswered || ""))
+  const last = labeled[labeled.length - 1]
+  if (isCandidateSpeech(last)) return unanswered.length ? unanswered[unanswered.length - 1] : ""
+  if (isInterviewerSpeech(last) && looksLikeAsk(last.text)) {
+    const recent = unanswered.slice(-2)
+    return recent.length > 1 ? mergeAdjacentAsks(recent) : (unanswered[unanswered.length - 1] || last.text)
+  }
+  return unanswered.length ? unanswered[unanswered.length - 1] : ""
+}
+
+/**
+ * A silence press with no new interviewer ask must return "Listening",
+ * not a regenerated card on the prior topic (session 4, >20 s pause).
+ */
+export function silencePressResult(opts: {
+  quietMs: number
+  lastQuestion?: string
+  newInterviewerAsks?: readonly string[]
+}): { listening: true; question: typeof LISTENING_STATUS } | { listening: false; question: string } {
+  const asks = (opts.newInterviewerAsks || [])
+    .map((s) => String(s || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((s) => !sameQuestion(s, opts.lastQuestion || ""))
+  if (Number(opts.quietMs) >= SILENCE_LISTEN_MS && asks.length === 0) {
+    return { listening: true, question: LISTENING_STATUS }
+  }
+  return { listening: false, question: asks.length ? mergeAdjacentAsks(asks) : "" }
+}
+
