@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     .eq("active", true)
     .gte("last_seen_at", crawlFreshnessCutoff())
     .order("last_seen_at", { ascending: false })
+    .order("id", { ascending: true })
 
   if (workType !== "all") query = query.eq("work_type", workType)
   if (portal) query = query.eq("portal", portal)
