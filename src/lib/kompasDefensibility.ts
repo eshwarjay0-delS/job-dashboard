@@ -3,6 +3,7 @@
 //   defensibilityPrompt(question)        appended to the model's user text
 //   defensibilityReport(question, text)  attached to the done event / JSON body (never changes the answer text)
 import { checklistPrompt, validate } from "./kompasChecklist.ts"
+import { COHERENCE_PROMPT, coherence } from "./kompasCoherence.ts"
 import { HARD_CODES } from "./kompasShipGate.ts"
 
 export type DefensibilityReport = {
@@ -14,12 +15,14 @@ export type DefensibilityReport = {
 }
 
 export function defensibilityPrompt(question: string): string {
-  return [checklistPrompt(question)].filter(Boolean).join("\n\n")
+  return [checklistPrompt(question), COHERENCE_PROMPT].filter(Boolean).join("\n\n")
 }
 
 export function defensibilityReport(question: string, answer: string): DefensibilityReport {
   const v = validate(question, answer)
   const flags = v.missed.map((m) => `checklist-missed:${m.key}`)
+  const coh = coherence(answer)
+  for (const f of coh) flags.push(f.code)
   const hardFlags = flags.filter((f) => HARD_CODES.has(f.split(":")[0]) || f.startsWith("checklist-missed"))
   return { pass: !hardFlags.length, checklist: { coverage: v.coverage, missed: v.missed.map((m) => m.text) }, flags, hardFlags }
 }
