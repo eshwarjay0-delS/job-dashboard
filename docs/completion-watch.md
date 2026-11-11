@@ -325,3 +325,29 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 10 November 2026 — explicit contract-to-hire label coverage
+
+- PR #291 (`fix/apply-right-to-hire-classification-20261110`) maps explicit `Right To Hire` and `Contract To Perm` variants to C2H, with negated cases remaining unknown. Code commit `cddd2fbbaf9d12adb6905a17d7a9baaf8fdbeaf2`; exact-head checks pending.
+- Read-only active-row evidence: 589 `Contract To Perm` rows from Insight Global; 131 `Right To Hire` rows across Genesis10, INSPYR and eTeam. INSPYR's official article confirms right-to-hire is contract-to-hire / temporary-to-permanent. Research note: `docs/research/contract-right-to-hire-classification-2026-11-10.md`.
+- 2,311 unknown Everforth rows remain unknown because the adapter provides no employment-type field. Do not infer from vendor name. The 10 Nov 11:00 UTC crawl predates this change; next scheduled validation is 11 Nov 11:00 UTC.
+- Vercel project is `live:false`; account status is blocked and the supported unpause action did not change it. No merge/deploy until protected preview access is restored. PR #288 pagination remains a separate pending slice; serialize merges and rebase after each merge.
+
+Continue: run exact-head full CI, crawler classification regression, Plan/REA schema and Kompas baseline for PR #291. Then validate the 11 Nov crawl after a legitimate release. Do not mark live or count reclassified jobs before production evidence.
+
+
+## 11 November 2026 — contract classifier CI repair
+
+- PR #291's exact-head run 42926730839 failed at the brittle whole-string prebuild assertion in `scripts/tests/kompas-deploy-build.test.mjs:12`. The classifier's added `crawl-classify.test.mjs` was rejected even though required test groups remained.
+- Commit `4bd1c054cff4260938f0da1747e1f650d2dcebfc` replaces that assertion with an ordered required-group contract and explicit additive-file regressions for `crawl-classify.test.mjs` and `dashboard-shell.test.mjs`. No runtime classifier code or stored job rows changed.
+- Exact-head checks on the new commit are queued; no green full CI is claimed. Vercel's protected preview remains account-blocked, so PR #291 is not ready for release and no deployment is authorized.
+
+Continue: finish exact-head full CI, crawler regression, Plan/REA schema and Kompas baseline on `4bd1c054`. If a voice-owned test fails, leave it to Kompas Continuous Voice Delivery rather than editing it here. Do not merge or deploy until the protected preview is restored; then verify the 11 Nov post-release crawl and API behavior.
+
+
+## 11 November 2026 — PR #291 CI completion
+
+PR #291 current head `c19380fad9a006f77e501372d13d62ee382c55df` passed full CI `42957610263`, crawler regression `42957610251`, Plan/REA schema `42957610188` and Kompas baseline `42957610184`. The additive prebuild assertion repair is source/CI validated; the C2H classifier runtime is unchanged. Protected voice-preview `42957608099` remains failed because the private Vercel preview credential/account access is unavailable. No merge, deployment or post-release crawl is claimed.
+
+Continue: restore the protected Vercel preview/account access, revalidate the exact branch head, then merge only through the normal path and verify the first post-release crawl and public API. Keep Robert Half manual-only.

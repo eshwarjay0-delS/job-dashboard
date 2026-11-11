@@ -94,3 +94,17 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+
+## 11 November 2026 — additive prebuild contract repair for PR #291
+
+The Right To Hire / Contract To Perm classifier remains unchanged. Exact-head full CI run 42926730839 failed at `scripts/tests/kompas-deploy-build.test.mjs:12` because the test compared the entire prebuild command with one fixed string. The classifier had legitimately added `crawl-classify.test.mjs`, so the assertion rejected an additive regression even though the required suites remained present.
+
+Commit `4bd1c054cff4260938f0da1747e1f650d2dcebfc` updates only that test. It now verifies that the Kompas baseline remains first, all three required regression groups remain ordered, and the crawler/mobile regression files can be added without removing existing checks. It does not change runtime classifier behavior, portal adapters, data or crawl cadence.
+
+The new exact-head checks are queued; no full-CI, crawler, schema or baseline success is claimed yet. The protected Vercel preview remains account-blocked. Do not merge or deploy until the exact-head checks and protected preview pass. The 11 Nov 11:00 UTC crawl is still the first production-data validation after a legitimate release.
+
+
+## 11 November 2026 — exact-head validation update for PR #291
+
+Current PR head `c19380fad9a006f77e501372d13d62ee382c55df` passed full CI `42957610263`, crawler regression `42957610251`, Plan/REA schema `42957610188` and Kompas baseline `42957610184`. The test-only prebuild repair is therefore source/CI validated. Protected voice-preview `42957608099` remains failed because the private Vercel preview credential/account access is unavailable. No merge, deployment or post-classifier production crawl is claimed.
