@@ -2,7 +2,7 @@ import { roleQualityBlockers } from "./tailor-ship-on-rollback"
 import { extraPassReserveMs, firstDraftRepairReserveMs } from "./tailor-budget"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
-import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from "./resume-evidence"
+import { candidateEvidenceInput, explicitlyConfirmsAllRequirements, confirmedCandidateStatements, roleScopedCandidateStatements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -175,7 +175,9 @@ function normJD(jd: string): string {
 // Version 25: the two pre-edit passes are summed into the JD the tailor scores. Do not replay a draft scored on the raw post only.
 // Version 26: known JD terms are written into the existing project bullets. Do not replay a draft that only dumped them on a skills line.
 // Version 27: every experience gap and final weave is scoped to its own employer evidence.
-const CACHE_GENERATION = "27"
+// Version 27: every experience gap and final weave is scoped to its own employer evidence.
+// Version 28: explicit employer/role confirmations support only the uniquely matched role.
+const CACHE_GENERATION = "28"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
@@ -372,6 +374,7 @@ export async function runTailor(opts: {
   // An empty or unparseable JD keyword set is not 100% coverage. Never award a perfect match on an empty denominator.
   const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 0)
   const candidateStatements = confirmedCandidateStatements(immediatePrefs)
+  const roleConfirmations = roleScopedCandidateStatements(immediatePrefs, zones.roles)
   const forcedJdKws = explicitlyConfirmsAllRequirements(immediatePrefs)
     ? jdKws
     : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
@@ -723,7 +726,7 @@ export async function runTailor(opts: {
       // Profile repair is essential: the first pass can omit an entire skill category.
       if (sec.skills !== false && (unseen.length || cur.partial)) todo.push({ role: -1, skills: unseen, add: 0 })
       for (const i of countedRoles) {
-        const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
+        const sourceTerms = coveredJdKeywords([...zones.roles[i].bullets.map(b => b.text), ...(roleConfirmations[i] || [])].join("\n"), jdKwsPrompt)
         const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
         const missing = missingRoleEvidenceTerms(sourceTerms, currentTerms, cur.required[i])
         if (!missing.length && !lacking.has(i) && !cur.partial?.pendingRoles?.includes(i)) continue
@@ -746,8 +749,9 @@ export async function runTailor(opts: {
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
+          const roleConfirmation = roleConfirmations[t.role] || []
           const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write only the missing terms listed for this role into THIS role's existing bullets as natural project language. Each term was matched to this employer's original evidence. Do not infer a tool from the JD or another employer. If a term is not supported by this role, leave it as a gap. Do not add a bullet, employer, date, or contact. Keep every supported term already present. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
-          return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
+            preferences: [...allPrefs, ask, ...(roleConfirmation.length ? ["CANDIDATE CONFIRMATION FOR THIS ROLE ONLY: " + roleConfirmation.join("; ")] : [])].join("; "),
         },
         startBy: roundDeadline - 6000,
         assembleBy: roundDeadline,
@@ -1024,7 +1028,7 @@ export async function runTailor(opts: {
             const view = zonesAfter(base.edits)
             const todo = [
               ...(sec.skills !== false ? [{ role: -1, skills: freshUnique }] : []),
-              ...roleScopedMissingTerms(zones.roles, view.roles.flatMap(r => r.bullets), freshUnique, coveredJdKeywords)
+              ...roleScopedMissingTerms(zones.roles, view.roles.flatMap(r => r.bullets), freshUnique, coveredJdKeywords, roleConfirmations)
                 .map(({ roleIndex, terms }) => ({ role: roleIndex, skills: terms })),
             ]
             const roundDeadline = Math.min(fullDeadline - 2000, Date.now() + Math.max(15000, fullDeadline - Date.now() - 2000))
@@ -1036,9 +1040,10 @@ export async function runTailor(opts: {
                   preferences: [...allPrefs, `SKILLS REPAIR (gap keywords): preserve every already-covered JD term. Write these known JD terms into the existing categories: ${t.skills.join(", ")}. Original evidence: ${text}`].join("; "),
                   jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
                 const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join(" ")
+                const roleConfirmation = roleConfirmations[t.role] || []
                 const roleGapAsk = `EXTRA GENERATE-THEN-TAILOR PASS: improve wording only with terms supported by this role's own original bullets: ${t.skills.join(", ")}. Do not use a term supported only by another role or by the JD. If it cannot be placed naturally, leave it as a gap or labelled Job-post term. Do not add or remove bullets, employers, dates, or titles. Keep every Environments line.`
                 return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
-                  preferences: [...allPrefs, `ORIGINAL ROLE EVIDENCE: ${originalEvidence}. ROLE-SPECIFIC GAP KEYWORDS: ${t.skills.join(", ")}. ${roleGapAsk}`].join("; "),
+                  preferences: [...allPrefs, ...(roleConfirmation.length ? ["CANDIDATE CONFIRMATION FOR THIS ROLE ONLY: " + roleConfirmation.join("; ")] : []), `ORIGINAL ROLE EVIDENCE: ${originalEvidence}. ROLE-SPECIFIC GAP KEYWORDS: ${t.skills.join(", ")}. ${roleGapAsk}`].join("; "),
                   jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
               },
               startBy: roundDeadline - 6000,
@@ -1123,7 +1128,7 @@ export async function runTailor(opts: {
     const currentByIdx = new Map((current.edits.bullets || []).map(b => [b.idx, b.text]))
     const wovenBullets: { idx: number; text: string }[] = []
     const requiredExperienceTerms = jdKwsPrompt.filter(k => !isCertification(k) && !isQualificationOrJunk(k))
-    const roleGaps = roleScopedMissingTerms(zones.roles, current.edits.bullets || [], requiredExperienceTerms, coveredJdKeywords)
+    const roleGaps = roleScopedMissingTerms(zones.roles, current.edits.bullets || [], requiredExperienceTerms, coveredJdKeywords, roleConfirmations)
     for (const { roleIndex, terms } of roleGaps) {
       const role = zones.roles[roleIndex]
       const sourceBullets = role.bullets.map(b => ({ idx: b.idx, text: b.text }))
@@ -1155,6 +1160,7 @@ export async function runTailor(opts: {
       zones.roles,
       scoreKws.filter(k => !isCertification(k) && !isQualificationOrJunk(k)),
       coveredJdKeywords,
+      roleConfirmations,
     )
     if (guarded.reverted) {
       const current = best
