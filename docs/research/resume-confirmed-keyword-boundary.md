@@ -106,3 +106,12 @@ The 10 Nov owner-authored PR #287 review requested that both the final determini
 The owner-authored review thread was answered with exact implementation and test evidence and resolved on 11 Nov 2026 at 02:32 UTC. This is thread resolution, not a formal APPROVED review. Exact code head `4c2870ef42525d98625fff51b18bd537353a53b7` passed full CI `42926787326`, WhatsApp recovery `42926787572`, Plan/REA schema `42926787385` and Kompas baseline `42926787329`. Subsequent Plan/REA documentation commits are on the same PR branch and require their own exact-head revalidation.
 
 Release and quality limits remain: GitHub Vercel status is FAILURE (Account is blocked), the protected preview credential is unavailable, and no authenticated original-resume/JD/confirmation generation or exported-DOCX review has been performed. No 95–100% live match, employer verification, real email/WhatsApp send or production deployment is claimed. The 17 Oct historical WhatsApp output, per-run R2/webhook/Meta correlation and signed delivery/read receipt remain missing.
+
+
+## 11 November 2026 — employer/role-scoped confirmations
+
+A general first-person confirmation may support the grouped skills/profile section, but it must not be attributed to every employer. Experience bullets can use a candidate confirmation only when the statement explicitly names the employer (for example, “I used Splunk at Suneratech” or “At Suneratech, I used Splunk”) or a uniquely matching role (for example, “In my Security Engineer role, I used Splunk”). The source DOCX parser retains stacked employer headings so the role can be matched even when the company and title occupy separate paragraphs.
+
+The scope must resolve to exactly one role. If the same employer appears on multiple roles, the statement must also identify the role; if a role title appears more than once, the employer must disambiguate it. Statements naming multiple employers, generic skill confirmations, editing instructions, negative claims and ambiguous matches do not enter role bullets. The same scoped evidence is applied to gap repair, the extra generate-then-tailor pass, deterministic final weaving and the restore guard. Cache generation 28 prevents reuse of drafts built under the previous evidence boundary.
+
+This is candidate-provided evidence, not employer verification. It does not change WhatsApp send policy, does not make a generated DOCX or delivery claim, and does not replace the separate project-bound confirmation follow-up.
