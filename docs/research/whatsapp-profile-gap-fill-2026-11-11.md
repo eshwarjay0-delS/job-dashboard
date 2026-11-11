@@ -2,7 +2,7 @@
 
 ## Production evidence
 
-The canonical production alias `job-dashboard-fawn.vercel.app` resolved to READY production deployment `dpl_F6JaLHAps4vNcwMHSdHjrPBXW2Fz`, exact master SHA `65bdf2f8cf1dd7299b8623885641400efe57bbfe`.
+At the time of the four logged errors, the canonical production alias `job-dashboard-fawn.vercel.app` resolved to READY deployment `dpl_F6JaLHAps4vNcwMHSdHjrPBXW2Fz`, exact master SHA `65bdf2f8cf1dd7299b8623885641400efe57bbfe`. After the verified 0.8.8 manifest environment update, the alias moved to READY same-SHA deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`.
 
 The aggregated 24-hour runtime-error view reported seven WhatsApp tailoring quality-gate rejections across seven users, with the latest at 2026-11-11 19:50:37 UTC. A 30-minute log read returned four concrete failures at 19:37:46, 19:43:25, 19:49:49 and 19:53:54 UTC, all on that production deployment. Their common shape was:
 
@@ -29,6 +29,6 @@ The first repair callback clears `pendingProfile` only when a profile part is ac
 
 ## Verification boundary
 
-No live model call, resume-library write, DOCX generation, email, WhatsApp send, or production data mutation was performed. The branch remains a draft and must pass exact-head full CI, WhatsApp recovery regression, Kompas baseline, the Plan/REA schema gate and the protected preview gate before any merge. The Vercel project currently reports `live:false` and the protected preview is blocked; do not bypass that access control.
+No live model call, resume-library write, DOCX generation, email, WhatsApp send, or production data mutation was performed. The code branch remains a draft and must pass exact-head full CI, WhatsApp recovery regression, Kompas baseline and the protected preview gate before any merge. The Plan/REA entry and schema check are tracked in PR #296. The Vercel project currently reports `live:false` and the protected preview is blocked; do not bypass that access control.
 
 The separate 17 October 17:28 Chicago incident remains an unresolved historical-delivery case. Its generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt are still unavailable. The original source pair remains quarantined pending owner reconciliation of conflicting factual claims. This code fix does not retroactively prove or replay that delivery.

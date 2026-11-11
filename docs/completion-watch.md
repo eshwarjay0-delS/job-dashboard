@@ -337,27 +337,3 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
-
-
-## 11 November 2026 — WhatsApp profile gap-fill and current release evidence
-
-### WhatsApp resume failures
-- The current production alias is READY at `dpl_F6JaLHAps4vNcwMHSdHjrPBXW2Fz`, exact master SHA `65bdf2f8cf1dd7299b8623885641400efe57bbfe`.
-- Runtime errors show seven tailoring quality-gate rejections in 24 hours across seven users; four detailed events occurred in the last 30 minutes. All four reported 100% literal and supported coverage but `partial:true`, `incomplete:true`, and `draft_parts_missing`. One also reported `role_evidence_gaps`. Five roles were present; no unverified additions were logged.
-- Source review found a profile-part acceptance mismatch: the first draft accepts skills, summary or headline, while both later repair paths accepted only non-empty skills. The first repair also clears pending profile state only after that part is accepted; the extra pass copied the prior partial state unchanged. PR #304 adds a shared profile predicate, pending-part resolver and focused regressions. This is a plausible source-supported explanation, not proof of every live failure; the logs do not expose the missing part index.
-- PR #304 remains DRAFT. Do not merge or deploy until exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA and protected-preview gates pass. No real WhatsApp message or live model call was sent.
-
-### Windows Kompas release
-- Canonical master `65bdf2f` published the Windows Kompas 0.8.8 asset from GitHub Actions run `43069934537` (SUCCESS). The executable is 162,239,569 bytes, SHA-256 `9a8aa9aa38175fd4aa19c987c1b3124f60db6b8eae653c1ac4fc3334bbc8642a`. The packaged runtime closure check and startup smoke passed; 55 native checks passed.
-- The Vercel desktop-version environment still advertises 0.8.7 at this check. Production auth-disable flags remain false, so the new opt-in login switch is not active and normal sign-in remains required. A manifest update/redeployment is still needed before the installed client can discover 0.8.8; no owner Windows installation or live update acceptance is claimed.
-
-### Contract crawler and Gmail
-- No 11 November crawl row exists yet. The latest production crawl is 10 November 11:00 UTC: 6,818 found/upserted, with one Inspyr operation aborted. PR #305's contract classification is not merged/live; no manual crawl or row mutation was performed.
-- Gmail aggregates remain three account IDs, three sync rows and 2,002 cached threads. Latest sync is 10 November 14:44:44 UTC; none synced in the last hour. The unattended worker remains disabled pending an external scheduler, `CRON_SECRET`, an approved Meta template and explicit enablement. No email was sent.
-
-### Coordination and release gates
-- MFit Completion Watch and Safe Merge Gate are enabled. Kompas Continuous Voice Delivery is currently disabled; no microphone, caption or audio edits were made. No separate Bible-Keeper automation was listed.
-- Vercel production deployment metadata is READY and the alias is assigned, but the project still reports `live:false` and the protected preview is blocked. Runtime logs are available for recent production requests; direct public HTTP and authenticated preview smoke remain unverified. Do not bypass protection.
-- The Plan & Vision journal/product-plan files are currently being changed by PR #303. The new runtime diagnosis is documented in this handoff and will be folded into the canonical journal after that overlapping Plan/REA edit is reconciled, rather than creating a conflicting parallel journal patch.
-
-Continue: finish exact-head validation of PR #304 and keep it draft until the protected preview gate is legitimately restored. Then deploy only the reviewed merged SHA, verify the same production alias and inspect a fresh 30-minute WhatsApp error window. Separately reconcile the 0.8.8 manifest, wait for the next real scheduled crawl, and keep Gmail worker/device acceptance gated by the recorded prerequisites.
