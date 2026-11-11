@@ -112,3 +112,21 @@ A source review traced the contractTypes call sites. The jobs API passes full de
 PR #305 current head 278d9b3fa614c7e50aebf83b80ce9ac913724bf9 now passes engagement separately, trusts an explicit structured employmentType for generic Contract labels, and requires strong employment-context phrases in free text. It strips negated Contract, W2, C2C, 1099 and Temporary labels. Regression cases cover generic contract vocabulary, explicit contract positions, structured C2C/1099/Contract/Temporary, W2 payroll alone and negative statements.
 
 Exact-head full CI 43096994492, crawler regression 43096994482 and Kompas baseline 43096994493 are queued. This is not merged or live. No manual crawl or database mutation occurred; the latest persisted crawl remains 10 Nov 11:00 UTC.
+
+## 11 November 2026 — daily Apply crawl schedule gap and source repair
+
+A read-only production audit at 22:15 UTC found that mfit_crawl_runs still had no 11 November run. Its newest row was 10 November 11:00:24.379466–11:01:11.601 UTC: 6,818 jobs found/upserted across 20 portals, with one Inspyr abort. No run row was inserted on 11 November. The 20 registered portal records remain visible in mfit_crawl_jobs; this audit did not rewrite them.
+
+The missed 11 November run and the later configuration regression are separate facts. The parent 11efbbfe still registered /api/crawl/run at 0 11 * * *. Usage-pack commit 5a9e7f84ee1d6e6095f9701bec7cc0f27a31b05a removed that entry while retaining the watchdog, Gmail crawl and WhatsApp recovery schedules. That commit was made at 13:13 UTC, after the expected 11:00 UTC run, so the removal does not explain the already-missed 11 November run; it does mean future daily crawls are no longer scheduled from the current source.
+
+The existing route remains GET /api/crawl/run, requires either a sufficiently long CRON_SECRET bearer or the timing-safe watchdog secret, refuses to run when the service client is unavailable, and delegates to runCrawl(). The production Vercel environment has a CRON_SECRET entry; its value was not decrypted or copied. No secret, manual endpoint invocation, crawl, or database write was used in this audit.
+
+This branch restores exactly one /api/crawl/run cron at 0 11 * * * and adds a dedicated source regression for the schedule, preservation of the other three daily crons, fail-closed secret checks and service-client check. The crawler workflow now runs that test. It does not change the adapter registry, crawler classifier, freshness cutoff, row-retirement behavior, or any existing database record.
+
+The 11 November Vercel project metadata still reports live=false; the production deployment metadata and alias are READY at master 65bdf2f8cf1dd7299b8623885641400efe57bbfe, but this run could not complete public HTTP smoke for /api/health or /api/crawl/jobs. The source fix is not a live crawl. Do not manually run it to manufacture acceptance. The next acceptance requires the project to be legitimately live, a READY production deployment with the restored schedule, a successful public jobs API smoke, and a later scheduled mfit_crawl_runs row recording the actual run.
+
+The production aggregate still shows 76 Right To Hire plus 68 Right to Hire rows classified as unknown (144 total, 126 active, 120 fresh within 14 days). The separate precision classifier PR #305 is still unmerged at head 278d9b3fa614c7e50aebf83b80ce9ac913724bf9; its exact-head full CI, crawler regression and Kompas baseline remain queued. Do not label those rows contract-to-hire until that approved change passes and is deployed. Contract To Perm currently has 829 stored rows already classified as contract; the separate UI mapping remains distinct.
+
+Official Vercel configuration reference: https://vercel.com/docs/project-configuration/vercel-json. The January 2026 Vercel changelog states that cron jobs now allow up to 100 entries per project on every plan: https://vercel.com/changelog/cron-jobs-now-support-100-per-project-on-every-plan. This restoration adds one daily entry; it does not increase the existing cadence or require a billing change.
+
+Status: source change prepared; exact-head CI, merge, deployment, public HTTP smoke and next scheduled run remain pending. No production mutation or outbound message was performed.
