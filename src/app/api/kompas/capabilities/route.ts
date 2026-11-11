@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { streamingSttAvailability } from "@/lib/kompasStreamingStt"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -13,11 +14,13 @@ const NO_STORE = { "Cache-Control": "no-store" }
 const COMMIT = /^[0-9a-f]{7,40}$/i.test(process.env.VERCEL_GIT_COMMIT_SHA || "") ? String(process.env.VERCEL_GIT_COMMIT_SHA).slice(0, 7).toLowerCase() : ""
 
 export async function GET() {
+  const streaming = streamingSttAvailability()
   return NextResponse.json({
     policy: "marketfit/kompas",
     version: COMMIT || "local",
     commit: COMMIT || null,
     immutable: true,
+    streamingStt: { enabled: streaming.enabled, reason: streaming.reason, fallback: streaming.fallback, provider: streaming.provider },
     cycle: "MarketFit's native Kompas: sessions on OpenRouter, answers blended from perfACT's answering intelligence.",
     rules: [
       { id: "openrouter-sessions", text: "Session answers generate on OpenRouter, not Groq." },

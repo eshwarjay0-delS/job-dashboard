@@ -51,6 +51,7 @@ async function showCapabilityVersion() {
     el.classList.remove("hidden");
     el.textContent = "Kompas " + c.version;
     el.title = (c.policy ? c.policy + ". " : "") + (c.cycle || "");
+    if (c.streamingStt && c.streamingStt.enabled) streamingSttReady = true;
   } catch {}
 }
 showCapabilityVersion();
@@ -1980,6 +1981,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   }
   captures.push(cap);
   try { startSegment(cap); } catch (error) { captureErrors.push("Audio recorder: " + (error.message || "could not start")); await stopSource(who); throw error; }
+  void maybeStartStreamingStt(cap);
 }
 function stopSource(who) {
   sourceGeneration[who]++;
@@ -3114,6 +3116,67 @@ function withoutLogistics(text) {
 }
 // personal-logistics parity: end
 
+const AUTO_THEM_SILENCE_MS = 1400;
+const AUTO_CONFIRM_NOISE = /^(?:hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening)|yeah|yes|okay|ok|right|mm-?hmm|uh-?huh)\b[.!?]*$/i;
+function confirmAutoQuestion(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t || AUTO_CONFIRM_NOISE.test(t)) return { ok: false, reason: "noise" };
+  if (!(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "no-cue" };
+  if (!/[?]$/.test(t) && t.split(/\s+/).length <= 4) return { ok: false, reason: "unfinished" };
+  if (/\b(?:and|or|but|if|when|because|the|a|an|to|of|for|with)\s*$/i.test(t) && !/[?]$/.test(t)) return { ok: false, reason: "unfinished" };
+  if (/\b(in this video|we're going to|on the channel|subscribe)\b/i.test(t) && !/\byou\b/i.test(t) && !/[?]$/.test(t)) return { ok: false, reason: "commentary" };
+  return { ok: true, reason: "cue" };
+}
+function shouldAutoAnswer(opts) {
+  if (!opts || !opts.autoOn) return { fire: false, reason: "off" };
+  if (!opts.cue) return { fire: false, reason: "no-cue" };
+  if (!Number.isFinite(Number(opts.themQuietMs)) || Number(opts.themQuietMs) < AUTO_THEM_SILENCE_MS) return { fire: false, reason: "not-quiet" };
+  if (!opts.confirmed) return { fire: false, reason: "unconfirmed" };
+  return { fire: true, reason: "ready" };
+}
+async function confirmAutoAndAnswer(tail) {
+  // Conservative: a failed or empty derive confirm must not auto-fire.
+  try {
+    const res = await fetch("/api/kompas/answer", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: String(tail || "").slice(0, 2000), transcript: typeof recentContext === "function" ? recentContext() : "" }) });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || data.noQuestion || !data.derived) return;
+    if (!autoOn || !armsAuto()) return;
+    await aiAnswer(true);
+  } catch { /* conservative: no auto answer when confirm fails */ }
+}
+let streamingSttReady = false;
+const streamingSttSessions = new Map();
+function fallbackToWhisperSlices(who, reason) {
+  const cap = captures.find(c => c.who === who);
+  if (cap) cap.streamMode = "whisper";
+  streamingSttSessions.delete(who);
+  if (reason) try { console.warn("Kompas STT fallback:", reason); } catch {}
+}
+async function startStreamingStt(cap) {
+  // Scaffolding: only runs when the server says a streaming key is configured.
+  // On any open/connect failure, the existing MediaRecorder Whisper path stays in charge.
+  if (!streamingSttReady || !cap || !cap.stream) { fallbackToWhisperSlices(cap && cap.who, "not-ready"); return false; }
+  const who = cap.who;
+  const session = { status: "connecting", attempt: 0, who };
+  streamingSttSessions.set(who, session);
+  cap.streamMode = "streaming";
+  try {
+    const res = await fetch("/api/kompas/speech/stream", { method: "GET", credentials: "same-origin", cache: "no-store" });
+    const data = res.ok ? await res.json() : null;
+    if (!data || !data.streaming) { fallbackToWhisperSlices(who, "unavailable"); return false; }
+    session.status = "live";
+    return true;
+  } catch {
+    fallbackToWhisperSlices(who, "connect-failed");
+    return false;
+  }
+}
+function maybeStartStreamingStt(cap) {
+  if (!streamingSttReady) return;
+  void startStreamingStt(cap);
+}
+
 function isAuthStorageKey(name) {
   const k = String(name || "");
   if (k === "perfact.user" || k === "perfact.desktopTicket" || k === "perfact.authHint" || k === "perfact.cloud.owner") return true;
@@ -3159,7 +3222,16 @@ function scheduleAuto() {
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
-    aiAnswer(true);
+    const themCap = captures.find(c => c.who === "Them");
+    const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
+    const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+    const confirmed = confirmAutoQuestion(tail).ok;
+    const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed });
+    if (!decision.fire) {
+      if (decision.reason === "not-quiet") autoTimer = setTimeout(fire, Math.max(200, AUTO_THEM_SILENCE_MS - themQuietMs));
+      return;
+    }
+    void confirmAutoAndAnswer(tail);
   }, wait);
 }
 // Turn gate (slice 2): each new heard line from the question source gets answer / wait / no answer needed, logged with
