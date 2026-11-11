@@ -70,10 +70,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ needsAnswer: true, question: text, source: "caption-window" }, { headers: NO_STORE })
     }
     const tasks = screenTasks(data.choices?.[0]?.message?.content)
-    if (!tasks?.length) return failure("No clear question was readable. Share the question window or type it.", 422)
+    if (tasks === null) return failure("No clear question was readable. Share the question window or type it.", 422)
+    // An empty but well-formed extraction is "no question on screen", not a
+    // hard failure: the client may fall back to the audio ask or say so.
+    ok = true
+    if (!tasks.length) {
+      return NextResponse.json({ needsAnswer: true, question: "", frameKind: "no-content" }, { headers: NO_STORE })
+    }
     // Capture never interrupts with a dialog. The page answers each Question
     // block on its own card, the same way a typed pair of questions does.
-    ok = true
     return NextResponse.json({ needsAnswer: true, question: formatScreenTasks(tasks) }, { headers: NO_STORE })
   } catch { return failure("Screen analysis was interrupted. Please retry or type the question.", 502) }
   finally { scheduleLlmRecord({ at, app: "kompas", purpose: "screen", provider: "openrouter", model, ok, status, input, output, cacheRead: 0, cacheWrite: 0, ms: Date.now() - at }) }

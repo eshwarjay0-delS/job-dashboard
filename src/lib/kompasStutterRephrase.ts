@@ -8,7 +8,7 @@
 
 const REPHRASE_MARK = /(?:^|\s)(?:well actually|actually[,:]|no[, ]+(?:wait|sorry|i mean)|sorry[, ]+(?:i mean|actually)|i mean[,]+|let me rephrase|what i meant(?: to say)?(?: is)?|or rather[,:]?|rather[,:]+)\s+/i
 
-const DANGLING_END = /\b(?:a|an|the|to|of|for|with|and|or|but|nor|about|on|in|into|onto|from|by|at|as|your|my|our|their|if|whether|because|since|how|what|why|when|where|which|who|would|could|should|can|will|handle|do|deal)\s*[,;:\u2014\u2013.…-]*$/i
+const DANGLING_END = /\b(?:a|an|the|to|of|for|with|and|or|but|nor|about|on|in|into|onto|from|by|at|as|your|my|our|their|if|whether|because|since|how|what|why|when|where|which|who|would|could|should|can|will|handle|deal)\s*[,;:\u2014\u2013.…-]*$/i
 
 export type StutterResult = {
   text: string

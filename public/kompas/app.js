@@ -5227,6 +5227,86 @@ function screenQuestionPieces(raw) {
   const parts = (headed.length > 1 ? headed : [text]).map((s) => stripScreenChrome(s)).filter(Boolean);
   return parts.length ? parts : [stripScreenChrome(text)];
 }
+function currentAudioAsk() {
+  try {
+    const src = typeof questionSource === "function" ? questionSource() : "Them";
+    const lines = typeof pendingHeard === "function" ? pendingHeard() : (typeof transcript !== "undefined" ? transcript.slice(-16) : []);
+    const win = typeof turnWindow === "function"
+      ? turnWindow(lines, src, (t) => t && t.who === src && ((typeof Q_CUE !== "undefined" && Q_CUE.test(t.text)) || (typeof opensNewAsk === "function" && opensNewAsk(t.text))))
+      : lines;
+    const text = (win || []).filter((t) => t && t.text && (!t.who || t.who === src)).map((t) => t.text).join(" ").replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    const stutter = typeof resolveStutterRephrase === "function" ? resolveStutterRephrase(text) : { text: text };
+    return String(stutter.text || text).replace(/\s+/g, " ").trim();
+  } catch { return ""; }
+}
+function classifyScreenFrame(text, kind) {
+  const raw = String(text || "").trim();
+  const declared = String(kind || "").toLowerCase();
+  const words = raw.split(/\s+/).filter(Boolean);
+  const askLead = /^(?:explain|describe|implement|write|find|return|what|which|how|why|solve|give|walk)\b/i.test(raw) || /[?]/.test(raw);
+  if (!raw) return "no-content";
+  const CODE_MARK = /\b(?:def\s+\w+\s*\(|function\s+\w+\s*\(|return\s+|for\s*\(|for\s+\w+\s+in\b|while\s*\(|#include|std::|vector\s*<|nullptr|cout\s*<<|public\s+|private\s+|class\s+\w+|const\s+\w+\s*=|let\s+\w+|var\s+\w+|int\s+\w+|void\s+\w+|i\+\+|j\+\+|if\s*\([^)]+\)\s*\{)\b/m;
+  const CODE_LINE = /^\s{0,8}(?:def |function |return |for |while |if |else |elif |#include|public |private |const |int |void |auto |class )|\w+\s*\([^;]*\)\s*\{|;\s*$/m;
+  const DIAGRAM_MARK = /[+\-|]{4,}|[┌┐└┘┬┴┼─│]|→|->\s|←|^\s*[01]\s+[01]\s+[01]\s+[01]\b|\bblocks?\s*:\s*\[.*\]/im;
+  const PROBLEM_MARK = /\b(?:given\b|example\s*\d|constraints?:|input:|output:|write (?:a |the )?function|return the|sample input|reqs\s*=|requirements\s*=|blocks\s*=\s*\[)/i;
+  if (/^(?:greeting|hello|hi there|youtube|subscribe|faces?|blank(?: document)?|no text|two faces\b|a blank)\b/i.test(raw) && !CODE_MARK.test(raw) && !PROBLEM_MARK.test(raw) && !DIAGRAM_MARK.test(raw) && !askLead) return "no-content";
+  const codeLines = raw.split(/\n/).filter((line) => CODE_LINE.test(line) || /[{};]\s*$/.test(line)).length;
+  const hasCode = CODE_MARK.test(raw) || codeLines >= 3;
+  const hasProblem = PROBLEM_MARK.test(raw);
+  const hasDiagram = declared === "diagram" || DIAGRAM_MARK.test(raw);
+  if (hasProblem && !/\b(?:def\s+\w+\s*\(|function\s+\w+\s*\()/m.test(raw)) return "problem";
+  if (hasCode && codeLines >= 2 && !(hasProblem && codeLines < 3)) return "code";
+  if (hasCode) return "code";
+  if (hasProblem) return "problem";
+  if (hasDiagram) return "diagram";
+  if (declared === "coding" && words.length >= 8) return "problem";
+  return "problem";
+}
+function routeScreenFrame(text, audioQuestion, kind) {
+  const screen = String(text || "").trim();
+  const audio = String(audioQuestion || "").replace(/\s+/g, " ").trim();
+  const frameKind = classifyScreenFrame(screen, kind);
+  const none = "No question on screen";
+  if (frameKind === "no-content") {
+    if (!audio) return { kind: frameKind, display: none, answerQuestion: none, generate: false, combinedAudio: false };
+    return { kind: frameKind, display: audio, answerQuestion: none + ". There is no interview question in the screenshot. Answer the audio question only:\n" + audio, generate: true, combinedAudio: true };
+  }
+  const brief = frameKind === "problem"
+    ? "The screen shows a problem statement. Give an approach, working code, and time and space complexity."
+    : frameKind === "code"
+      ? "The screen shows code. Transcribe the key visible lines, then review, fix, or continue that code. Do not ignore the on-screen code in favor of a generic explanation."
+      : "The screen shows a diagram. Explain the diagram and answer the ask.";
+  const parts = [brief, "On screen:\n" + screen];
+  if (audio) parts.push("Audio question:\n" + audio + "\nAddress the audio question using the screen as context.");
+  const display = screen.replace(/\s+/g, " ").trim().slice(0, 180) || audio || "On screen";
+  return { kind: frameKind, display, answerQuestion: parts.join("\n\n"), generate: true, combinedAudio: !!audio };
+}
+async function answerScreenPieces(card, pieces, audio) {
+  const session = current && current.id;
+  const routedAll = (pieces.length ? pieces : [""]).map((piece) => routeScreenFrame(piece, audio));
+  const first = routedAll[0];
+  if (!first.generate) {
+    card.question = first.display;
+    card.answer = [first.display];
+    card.screenTask = true;
+    card.frameKind = first.kind;
+    return;
+  }
+  card.question = first.display;
+  card.screenTask = true;
+  card.frameKind = first.kind;
+  await generateAnswer(first.display, card, { pinned: true, derived: first.answerQuestion, source: "screen", frameKind: first.kind });
+  for (const routed of routedAll.slice(1)) {
+    if ((current && current.id) !== session || !cards.includes(card)) return;
+    if (!routed.generate) continue;
+    const next = addCard(routed.display, ["…"]);
+    next.screenTask = true;
+    next.frameKind = routed.kind;
+    await generateAnswer(routed.display, next, { pinned: true, derived: routed.answerQuestion, source: "screen", frameKind: routed.kind });
+  }
+}
+
 async function analyseScreen() {
   if (aiBusy) { status("Still working on the last answer.", "live"); return; }
   aiBusy = true; aiBusySince = Date.now();
@@ -5259,26 +5339,27 @@ async function analyseScreen() {
           : t.question;
         return stripScreenChrome(String(formatted || "").trim());
       }).filter(Boolean);
-      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
-      card.question = pieces[0]; card.screenTask = true;
-      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
-      for (const piece of pieces.slice(1)) {
-        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
-        const next = addCard(piece, ["…"]); next.screenTask = true;
-        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      const audio = currentAudioAsk();
+      if (!pieces.length && !audio) {
+        card.question = "No question on screen"; card.answer = ["No question on screen"]; card.screenTask = true; card.frameKind = "no-content";
+        return;
       }
+      await answerScreenPieces(card, pieces, audio);
       return;
     } else if (data.needsAnswer === true) {
+      if ((data.frameKind === "no-content" || typeof data.question === "string" && !data.question.trim())) {
+        const audio = currentAudioAsk();
+        await answerScreenPieces(card, [], audio);
+        return;
+      }
       if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
       const pieces = screenQuestionPieces(data.question);
-      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
-      card.question = pieces[0]; card.screenTask = true;
-      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
-      for (const piece of pieces.slice(1)) {
-        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
-        const next = addCard(piece, ["…"]); next.screenTask = true;
-        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      const audio = currentAudioAsk();
+      if (!pieces.length && !audio) {
+        card.question = "No question on screen"; card.answer = ["No question on screen"]; card.screenTask = true; card.frameKind = "no-content";
+        return;
       }
+      await answerScreenPieces(card, pieces, audio);
       return;
     }
     if (!data.needsReview) {
