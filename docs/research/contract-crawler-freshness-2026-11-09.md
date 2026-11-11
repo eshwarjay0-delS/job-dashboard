@@ -117,3 +117,8 @@ The bounded clearance scan uses offset pagination. The route previously ordered 
 The query now uses `last_seen_at DESC, id ASC`. The crawl-jobs migration defines `id` as the UUID primary key, so this supplies a unique total order without changing freshness, clearance policy, contract classification, page size, scan cap, adapters or stored rows. `collectFilteredPages()` now documents that callers must provide a stable order. The regression test pins both order clauses and the primary-key definition.
 
 Source commits: `63d563531fe552b928a5a1fa8363e9679d119ee1`, `e69886d2c3b3c545225662eb07d85c303e10c566`, `f98953fbc75aff8af2f4daaff95d319fdc2c6a6b`. Exact-head crawler/full-CI/schema/baseline checks are pending on the final documentation head. The protected Vercel preview remains account-blocked. No production query, crawl, API smoke or database mutation was performed.
+
+
+## 11 November 2026 — exact-head CI completion for deterministic pagination
+
+PR #288 exact code/test head `b0db69d976606bc3b8a8833a7bc2310331172e2e` passed full CI `42957613778`, crawler regression `42957613731`, Plan/REA schema `42957613941` and Kompas baseline `42957613834`. The stable `last_seen_at DESC, id ASC` pagination order and regression are source/CI validated. Protected voice-preview `42957611600` remains failed because the private Vercel preview credential/account access is unavailable. No merge, deployment, live API smoke or post-release crawl is claimed.
