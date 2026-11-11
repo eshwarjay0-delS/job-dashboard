@@ -225,3 +225,10 @@ PR #297 adds five test-only cases against the actual `gmail-send` route with moc
 Read-only production state shows 3 connected-account sync rows and 3 distinct account IDs, with 2,002 cached threads. Latest sync is 10 Nov 14:44:44 UTC; latest cached-thread update is 14:46:49 UTC. No sync or thread update occurred in the last hour; all three sync rows are within 24 hours. The composite `(user_id, account_id, thread_id)` key has zero duplicate groups.
 
 This confirms persisted per-account separation only. It does not demonstrate a healthy inbox plus a partially failing inbox, live reconnect behavior, mobile delivery or email sending. PR #297's five mocked sender/thread-boundary regressions pass full CI and baseline, but the protected preview remains blocked. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement are configured. No real Gmail API call or email was sent.
+
+
+## 11 November 2026 — Supabase Auth egress restriction
+
+A production `/api/gmail/notify-rules/export` request at 20:07 UTC failed with `AuthApiError` status 402 and `exceed_egress_quota`. Supabase project metadata reports `ACTIVE_HEALTHY`; the runtime error specifically identifies a restriction on the Auth service, so this is not evidence that the entire database is down. Gmail aggregates remain three account IDs, three sync rows and 2,002 cached threads, with latest sync 10 November 14:44:44 UTC and no sync in the last hour.
+
+The exact unblock requirement is an owner billing decision: upgrade the Supabase plan or remove spend caps to restore the restricted service. No billing change, credential swap, alternate-auth workaround, manual sync or email send was attempted. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit owner enablement are all present.
