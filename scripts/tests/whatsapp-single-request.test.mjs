@@ -56,7 +56,7 @@ test('concurrent storage claims produce exactly one winner and propagate storage
 })
 test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
   const entries = new Map()
-  let providerAvailable = true
+  let providerAvailable = true, offlineMismatch = false
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
   const said = []
   const docs = []
@@ -69,7 +69,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     // These cases exercise resume tailoring; channel transport has its own acceptance suite.
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async p => Buffer.from(offlineMismatch && p.startsWith('/data/users/') ? 'other@email.com' : 'same@email.com'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable },
     '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
@@ -171,6 +171,19 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.match(docs.at(-1).caption, /AI provider unavailable/)
   assert.match(docs.at(-1).caption, /no edits were applied/)
   assert.equal(docs.at(-1).body, 'same@email.com', 'the exact selected library bytes are sent')
+
+  const beforeMismatch = docs.length
+  offlineMismatch = true
+  await generate('123', { ...offlineSession, jdId: 'offline-byte-mismatch' }, offlineUser, undefined, offlineFiles)
+  assert.equal(docs.length, beforeMismatch, 'a library/session byte mismatch must not send a fallback')
+  assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
+
+  offlineMismatch = false
+  const wrongRootFiles = { ...offlineFiles, userDir: '/data/users/some-other-account' }
+  const beforeWrongRoot = docs.length
+  await generate('123', { ...offlineSession, jdId: 'offline-root-mismatch' }, offlineUser, undefined, wrongRootFiles)
+  assert.equal(docs.length, beforeWrongRoot, 'a different account root must not send a fallback')
+  assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
 
   const beforeUnselected = docs.length
   await generate('123', { ...offlineSession, jdId: 'offline-upload' }, 'user')
