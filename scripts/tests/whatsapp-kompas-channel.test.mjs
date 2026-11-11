@@ -69,6 +69,7 @@ const module = { exports: {} }
 runInNewContext(compiled("src/lib/whatsapp-kompas-channel.ts"), {
   module, exports: module.exports,
   require: key => ({
+    "@/lib/appOrigin": { appOrigin: () => "https://marketfit.example" },
     "@/lib/storage": { blob },
     "@/lib/docx": { extractText: async bytes => bytes.toString("utf8") },
     "@/lib/pdf-text": { pdfText: async bytes => bytes.toString("utf8") },
@@ -326,6 +327,7 @@ test('shared web link identifies the same session and repeated kompas retains it
   const first = await execute(t('kompas'))
   const session = [...sessions.values()][0]
   assert.ok(first.sent[0].includes(`/dashboard/kompas/shared/${session.id}`))
+  assert.ok(first.sent[0].includes(`https://marketfit.example/dashboard/kompas/shared/${session.id}`))
   assert.match(first.sent[0], /sign in to the same account/)
   const repeat = await execute(t('kompas'))
   assert.ok(repeat.sent[0].includes(`/dashboard/kompas/shared/${session.id}`))
