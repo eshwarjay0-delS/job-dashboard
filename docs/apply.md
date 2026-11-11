@@ -195,3 +195,8 @@ The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Ha
 PR #285 is merged as master `11efbbfe7781592bc2fad1216f67546882a1c3ed`; deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` is READY at that exact SHA and the canonical alias resolves to it. This includes the PR #276 contract work-type classifier and PR #285's dedicated freshness/classifier workflow and manual-source boundary. The 10 Nov 11:00 UTC crawl ran before this release on `a66c108` (6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort); it is not post-classifier evidence. The first expected classifier-aware crawl is 11 Nov 2026 11:00 UTC.
 
 A separate current HTTP smoke returned `402 DEPLOYMENT_DISABLED` despite READY deployment metadata, and Vercel project inspection returned 403. Public API behavior is therefore not verified from this runtime. PR #288's bounded clearance-safe pagination remains source-only until exact-head CI, protected preview and production HTTP/API acceptance pass.
+
+
+### 11 November 2026 — deterministic clearance pagination order
+
+The clearance-filtered jobs API now orders by `last_seen_at DESC, id ASC` before using offsets. `id` is the crawl-jobs UUID primary key, so equal-timestamp rows have a deterministic position across pages. This prevents a paginated scan from silently skipping or repeating jobs when timestamps tie. The change does not alter the 14-day freshness window, clearance exclusion/override, result cap, work-type classification or source adapters. Exact-head CI and production acceptance remain pending.
