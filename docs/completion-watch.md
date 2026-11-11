@@ -369,3 +369,12 @@ Continue: preserve the recovered source, keep it quarantined until owner fact re
 - The Vercel commit status remains FAILURE / `Account is blocked`; the protected preview prerequisite is unavailable and canonical production HTTP is `402 DEPLOYMENT_DISABLED` despite READY deployment metadata. No preview, merge, deployment, production API acceptance, Gmail/WhatsApp action or native mobile acceptance is claimed.
 
 Continue: once the protected Vercel preview gate is legitimately restored, rerun the shared PR #292 checks on its latest docs head, then let the Safe Merge Gate restack #291 and #290 and validate each exact head. Keep the dependent PRs open until their own CI, crawler/UI, Plan/REA, Kompas and normal review gates pass.
+
+
+## 11 November 2026 — historical WhatsApp log retention wall
+
+A read-only Vercel runtime-log query for the exact 17 Oct 2026 22:27–22:31 UTC production window returned HTTP 400 `bad_request`: the connected Hobby plan retains only one hour of runtime logs (Pro one day; Enterprise three days without Observability Plus). This is not proof that no historical log existed; the requested records are unavailable through this connector's current retention window.
+
+The exact original source DOCX is revalidated in the private Library archive and the matching JD is available through Gmail, but the source facts remain quarantined pending owner reconciliation. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain missing. iZap has no linked WhatsApp number/history. No billing change, bypass, replay, R2 write, email or WhatsApp send was performed.
+
+Continue: obtain an independently retained Vercel log export or authorized MarketFit R2/Meta webhook and delivery export. Keep the incident blocked until the original output, delivery receipt and owner fact reconciliation are available.
