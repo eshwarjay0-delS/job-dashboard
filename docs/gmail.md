@@ -204,3 +204,12 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+## Multi-account and mobile acceptance snapshot — 11 November 2026
+
+The owner's 10 November Poke-inspired constraints remain: support up to four connected accounts; key every thread by user, receiving account and provider thread ID; preserve the selected From address; reconnect only the affected inbox; and keep the hamburger navigation in normal mobile document flow.
+
+Read-only production Supabase recheck at 19:10 UTC: 3 Gmail sync rows across 3 account IDs, 2,002 cached thread rows across those 3 accounts, and latest `last_sync_at` 10 November 2026 14:44:44 UTC. No newer sync is recorded (about 28 hours stale). No live Gmail API call or email send was made.
+
+PR #297 is a draft test-only selected-sender/inbox-isolation change at head `f7c7ff0c4d919f763e9bf9f3e3169134d602ffc8`; it does not change runtime behavior. PR #290 is the separate approved normal-flow mobile-navigation change, currently open and non-mergeable at head `7bd60f97a1b486f66ec61a018f64a9dbe5dc00a9`. Neither has real two-inbox or narrow-mobile device acceptance. The unattended `/api/gmail/updates/tick` worker remains disabled until an external scheduler, `CRON_SECRET`, an approved Meta template and explicit `GMAIL_UPDATES_SCHEDULER_ENABLED=true` authorization exist. Do not enable it or send test email/WhatsApp messages as part of source validation.
+
