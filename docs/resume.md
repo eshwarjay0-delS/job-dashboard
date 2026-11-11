@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **Use channel-specific acceptance, with truthful evidence.** Web downloads retain a 95% raw JD-overlap floor. WhatsApp may send a completed, readable DOCX below 95% with gaps disclosed; a clean 70–94.9% pass requires at least 95% supported coverage. A finished result below 70% is not a clean pass but may still be sent with gaps disclosed. Incomplete, skills-only, unreadable, failed or identity-mismatched rewrites use the selected same-account resume fallback. The 98% figure is an evidence target, not a hard WhatsApp send threshold. Report raw overlap, supported coverage, role completeness and final-DOCX integrity separately.
+- **Use channel-specific acceptance, with truthful evidence.** Web downloads retain a 95% raw JD-overlap floor. WhatsApp may send a completed, readable DOCX below 95% with gaps disclosed; a clean 70–94.9% pass requires at least 95% supported coverage. A finished result below 70% is not a clean pass but may still be sent with gaps disclosed. For an initial JD request with no AI provider key, only the exact selected same-account library original may be sent, explicitly labeled NOT TAILORED after verifying the authenticated library root, selected path, exact bytes and profile email; otherwise no file. For swipe-reply refinement, provider failure, partial or incomplete output, unreadable or missing DOCX, or identity/date mismatch is text-only: never send the original or partial baseline, and preserve the last delivered version. The 98% figure is an evidence target, not a hard WhatsApp send threshold. Report raw overlap, supported coverage, role completeness and final-DOCX integrity separately.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
@@ -50,7 +50,7 @@ Overall keyword overlap cannot hide thin experience coverage. Every substantive 
 
 The web result shows unfinished rewrite status separately from keyword counts, including when all terms appear. The shared quality report preserves its incomplete flag. Older saved delivered-with-gaps reports receive a general review notice without inventing a specific failure reason. No scoring or delivery threshold changes. Evidence: `docs/research/resume-incomplete-notice.md`.
 
-High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
+High keyword overlap does not make unfinished role rewrites complete. Partial or incomplete outputs are held; they never receive completed status or enter the completed-result cache. The 6 November channel policy supersedes the former 95% WhatsApp delivery floor: completed readable DOCX files below 95% may be sent with gaps disclosed; 70% raw overlap plus 95% supported coverage defines a clean pass, and a completed readable result below 70% is not a clean pass but may still be sent with gaps disclosed. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
 
 ## Skills-to-experience ordering — 22 October 2026
 
