@@ -873,7 +873,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
   }
   const sendOfflineOriginal = async (): Promise<boolean> => {
-    if (!files) return false
+    if (!files || !files.email || !files.userDir || !files.abs || !session.resumePath) return false
     const expectedRoot = filesOf(userId)
     if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return false
     const root = path.resolve(files.userDir)
