@@ -51,7 +51,8 @@ export type FilteredPageResult<T> = {
 
 /** Scan bounded ordered pages until the visible result limit is filled.
  * Filtering after a single over-fetch can underfill search when clearance roles
- * dominate the newest rows. The caller owns ordering and the exclusion rule. */
+ * dominate the newest rows. The caller owns filtering and must supply a stable total
+ * order (for example last_seen_at DESC, id ASC) before offset pagination. */
 export async function collectFilteredPages<T>(
   fetchPage: (offset: number, pageSize: number) => Promise<readonly T[]>,
   limit: number,
