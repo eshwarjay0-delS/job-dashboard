@@ -189,3 +189,16 @@ PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deploym
 The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
 
 The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
+
+
+## 10 November 2026 — explicit right-to-hire label normalization
+
+The shared `contractTypes()` classifier now treats explicit `Right To Hire` / `Right-to-Hire` and `Contract To Perm` / `Contract-to-Perm` / `Contract To Permanent` engagement labels as `C2H`. INSPYR's official employment-model article states that right-to-hire is also known as contract-to-hire or temporary-to-permanent work: https://www.inspyrsolutions.com/contract-or-full-time-it-workers-which-should-you-hire/. A current INSPYR posting also uses the “Right To Hire” label and describes the role as contract-to-hire: https://www.ihiretechnology.com/jobs/view/542706863.
+
+A read-only production aggregate found 589 active `Contract To Perm` labels (Insight Global) and 131 active `Right To Hire` labels (Genesis10 76, INSPYR 53, eTeam 2). The 10 Nov 11:00 UTC crawl predates this change. The next scheduled crawl is 11 Nov 11:00 UTC; do not claim these records were reclassified until that run is inspected.
+
+The same snapshot contained 2,311 unknown Everforth rows. Its adapter currently exposes title, location and date only, not employment-type evidence, so these remain unknown. No classification is inferred from the vendor name. PR #291 adds positive/negative regression cases and wires `crawl-classify.test.mjs` into `prebuild`. Crawler classification regression `42926214089`, Plan/REA schema `42926214121` and Kompas baseline `42926214174` passed on code head `a9d19d889520563e873085076b953720193a69c6`. Full CI `42926214083` failed before Build at the separate Kompas spoken-streaming gate; lint/typecheck passed. Vercel preview `42926208890` failed with Account is blocked. The project is `live:false`; no deployment or production acceptance is claimed.
+
+## 11 November 2026 — Right To Hire / Contract To Perm restack
+
+PR #305 restacks explicit C2H aliases on current master. Read-only production evidence: 131 active Right To Hire rows remain unknown; 589 Contract To Perm rows are generic contract; latest completed crawl is 10 Nov 11:00 UTC with 6,818 found/upserted across 20 portals and one Inspyr abort. There is no 11 Nov crawl row. Crawler regression and Kompas baseline pass on PR #305; full CI is still running. No rows were modified and no manual crawl was run. The Vercel project is live:false, so no protected preview or post-change scheduled crawl exists yet.
