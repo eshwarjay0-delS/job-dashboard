@@ -125,3 +125,12 @@ The current iZap business has no linked WhatsApp number. Read-only status at 202
 Still missing: the exact generated output, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback. The source's education, employer chronology, tenure and credential claims still conflict with owner-confirmed profile facts. Keep them quarantined until reconciled. Issue #201's swipe-reply refinement recovery gap is separate and does not prove that the 17 October initial-JD request entered that code path.
 
 The old 98% hard WhatsApp hold remains superseded by the owner-approved 6 November channel-specific policy. Do not restore it, lower factual gates, replay the historical request from a different resume, or send a real WhatsApp test. The incident remains blocked and open.
+
+
+## 11 November 2026 — exact source archive member revalidated
+
+The 00:55 UTC current-access check searched the individual DOCX files and did not inspect the parent archive. A later Library metadata listing located `Organized_Original_Resumes.zip`; after materializing that archive, its directory contained the exact nested 17 October source DOCX. The member is 27,724 bytes and its SHA-256 matches the privately recorded digest from the 10 November recovery record. This corrects the earlier conclusion that the source was unavailable to the current run: the source is now independently re-opened and verified. The private digest and document contents are not copied into this repository.
+
+The matching JD remains accessible in the connected Gmail source. This establishes that the original source/JD pair can be reassembled, but it does not establish the historical generated output or delivery. The source's education, employer chronology, tenure and credential claims still conflict with owner-confirmed profile facts and remain quarantined until reconciled. The generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable. No model generation, retrospective replay, R2 write, email or WhatsApp message was performed.
+
+The 6 November channel-specific WhatsApp policy still supersedes the old 98% hard hold. Do not restore that hold, silently substitute a different resume, or send a real test message. Continue with source preservation and factual reconciliation; historical delivery remains unverified.
