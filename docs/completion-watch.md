@@ -325,3 +325,14 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 11 November 2026 — additive prebuild test contract
+
+The Safe Merge Gate found that PR #291 (contract classifier) and PR #290 (approved mobile navigation) both failed the same kompas-deploy-build.test.mjs assertion before the production build. The test compared package.json's complete prebuild string to one exact historical literal. Adding a new regression file to an existing node --test group therefore failed even though the existing baseline and regression commands were preserved.
+
+The Completion Watch opened a test-only repair branch from master 11efbbfe7781592bc2fad1216f67546882a1c3ed. The revised assertion requires the Kompas baseline to remain first and all three existing resume/WhatsApp/dossier regression groups to remain under node --test in order, while permitting additive test files. It explicitly exercises the two current additions: crawl-classify.test.mjs and dashboard-shell.test.mjs.
+
+No runtime or product behavior changed. Exact-head full CI and Plan/REA schema are pending. The Vercel team currently reports an account/project block and production HTTP 402 DEPLOYMENT_DISABLED; no preview, deployment, bypass or billing change was attempted. PR #291 and #290 remain unmerged until their own exact-head checks and protected preview requirements are satisfied.
+
+Continue: run this branch's exact-head CI, then restack PR #291 and PR #290 onto the shared assertion fix and rerun their full checks. Preserve their feature diffs and do not merge or deploy around the Vercel access block.
