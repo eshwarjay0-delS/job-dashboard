@@ -336,3 +336,14 @@ The Completion Watch opened a test-only repair branch from master 11efbbfe778159
 No runtime or product behavior changed. The focused Node 22 contract test passed 3/3 on the current-master, crawler-addition and mobile-addition prebuild fixtures. Exact-head full CI and Plan/REA schema remain pending. The Vercel team currently reports an account/project block and production HTTP 402 DEPLOYMENT_DISABLED; no preview, deployment, bypass or billing change was attempted. PR #291 and #290 remain unmerged until their own exact-head checks and protected preview requirements are satisfied.
 
 Continue: run this branch's exact-head CI, then restack PR #291 and PR #290 onto the shared assertion fix and rerun their full checks. Preserve their feature diffs and do not merge or deploy around the Vercel access block.
+
+
+## 11 November 2026 — Oct 17 WhatsApp source and delivery recheck
+
+The matching Security Engineer – Risk & Controls JD was retrieved read-only from the connected Gmail account. It is a contract, Atlanta onsite role; Solana is an explicitly preferred DLT platform, while “attributes” is not in the JD. JD terms are requirements, not candidate experience.
+
+The prior 10 Nov handoff records recovery of the original 27,724-byte source DOCX from a private Library archive. The current accessible Library/conversation search no longer returns that exact file; three nearby DOCX candidates were checked and their hashes differ from the recorded private digest. The generated output DOCX is still missing. Preserve the prior recovery note as historical evidence rather than overwriting it.
+
+The current iZap business has no connected WhatsApp number; webhook history, message-history sync and sending are all “never”. iZap cannot retrieve the historical chat or signed delivery receipt. No message was sent. The per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain missing. The source education/employment/tenure/credential conflicts remain quarantined until reconciled with owner-confirmed facts. The 6 Nov channel-specific WhatsApp policy supersedes the old 98% hard hold.
+
+Continue: keep the 17 Oct incident blocked; do not replay or resend until the exact source/output/provider trace and owner fact reconciliation are available. Issue #201's swipe-reply recovery gap remains a separate code-path issue, not proof that the 17 Oct initial-JD request entered refinement.
