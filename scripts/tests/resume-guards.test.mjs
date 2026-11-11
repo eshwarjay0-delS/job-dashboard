@@ -220,16 +220,30 @@ test('keywords: Java not matched inside JavaScript', () => {
 // Guarded WhatsApp refine failures must never attribute a non-email mismatch to email.
 // A missing original still sends no file. An identity, contact, or date mismatch does not
 // send the rewritten bytes; it sends the already-chosen baseline and names that reason.
-test('WhatsApp refine: missing original and failed identity verification have distinct, accurate refusals', () => {
+test('WhatsApp refine never sends the original or a partial baseline when an update fails', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
-  assert.match(route, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\."\)/)
-  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*await sendBaseline\("The update failed identity\/contact\/date verification, so I sent your original resume instead\.", source, meta\)/)
+  const start = route.indexOf('async function refine(')
+  const end = route.indexOf('\\n// ──', start)
+  assert.ok(start >= 0 && end > start, 'the swipe-reply function can be isolated')
+  const refine = route.slice(start, end)
+
+  assert.match(refine, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\. Your previous resume is unchanged\."\)/)
+  assert.match(refine, /if \(!whatsappRewriteUsable\(result\)\) \{\s*return sendText\(from, `\$\{qualityStop\(result\)\} No file was sent; your previous resume is unchanged\.`\)/)
+  assert.match(refine, /catch \(error\) \{\s*const timedOut = \/timed out\/i\.test\(String\(error\)\)\s*return sendText\(from, timedOut/)
+  assert.match(refine, /if \(!file\) \{\s*return sendText\(from, "The updated Word file could not be opened\. No file was sent; your previous resume is unchanged\."\)/)
+  assert.match(refine, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*return sendText\(from, "The update failed name, contact or employment-date verification\. No file was sent; your previous resume is unchanged\."\)/)
+  assert.doesNotMatch(refine, /sendBaseline|sendClosest|deliver\(from, baseline/)
+
+  // The initial-JD path is separate: only a selected same-account library file
+  // can use the no-provider fallback, and the caption explicitly says NOT TAILORED.
+  assert.match(route, /if \(files && await sendOfflineOriginal\(\)\) return/)
+  assert.match(route, /const expectedRoot = filesOf\(userId\)/)
+  assert.match(route, /libraryBytes\.equals\(sessionBytes\)/)
+  assert.match(route, /NOT TAILORED — AI provider unavailable/)
   assert.match(route, /sendClosest\("The update failed identity\/contact\/date verification, so I sent your original resume instead\."\)/)
-  assert.doesNotMatch(route, /The rewrite did not keep your name, contact details and dates/)
-  assert.doesNotMatch(route, /failed the contact-details or employment-date preservation check/)
   assert.match(route, /docxIdentityText\(source\)/)
   assert.match(route, /docxIdentityText\(file\)/)
-})
+}))
 
 test('resume identity: email-only mismatch logs category without exposing addresses', () => {
   const identity = readFileSync(new URL('../../src/lib/resume-identity.ts', import.meta.url), 'utf8')
