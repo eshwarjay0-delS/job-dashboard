@@ -135,3 +135,14 @@ A read-only recheck was performed for the 17 October 2026 17:28 Chicago incident
 Gmail searches for 17 October matching “Risk & Controls” attachments and all DOCX attachments returned no results. The connected iZap business had no connected WhatsApp number and zero chats; read-only searches for “Risk & Controls” and “resume” on 17 October returned no messages. A production Supabase query found zero rows in `resume_documents` and `resume_import_jobs` during 22:00–23:00 UTC (the 17:00–18:00 CDT incident hour).
 
 The available connectors do not expose the relevant Cloudflare R2 object store or Meta delivery receipts. Therefore the exact generated DOCX, R2 object key, webhook/request ID, Meta message ID and signed delivery/read receipt remain unavailable. The source/JD identity, education, employer chronology and credential conflicts remain quarantined pending owner reconciliation. No model call, resume write, R2 write, email, WhatsApp message or replay was performed.
+
+
+## 11 November 2026 — connected Gmail and Library recheck
+
+The archived screenshot timestamp is `2026-10-17T22:28:39Z` (17:28:39 America/Chicago). A read-only Gmail search for `after:2026/10/17 before:2026/10/18 in:sent has:attachment filename:docx` returned **zero** threads. The matching received-attachment search for the same UTC date also returned **zero**. A separate `Risk & Controls` / `Security Engineer` search returned 11 related threads, all dated 16 October; the forwarded Risk & Controls JD thread is timestamped `2026-10-16T19:49:07Z`, the day before the failure. This confirms the JD source existed, but it does not surface the generated result or a send record.
+
+A metadata-only ChatGPT Library listing for DOCX files created between `2026-10-17T00:00:00Z` and `2026-10-18T00:00:00Z` returned **zero** items. Earlier semantic Library searches surfaced the original source DOCX, not a generated output. These negative results are limited to the connected Gmail account and ChatGPT Library; they do not establish that no WhatsApp/R2 object or Meta delivery exists.
+
+The canonical production alias metadata currently maps `job-dashboard-fawn.vercel.app` to READY deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` at master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. Separately, the Vercel project reports `live:false` and public HTTP returns `402 DEPLOYMENT_DISABLED`; deployment metadata is not proof that the application is reachable or that an authenticated WhatsApp/DOCX smoke test passed.
+
+**Exact remaining wall:** the generated DOCX for the 17:28 run, its R2 object key/metadata, the webhook request correlation ID, Meta message ID, and signed delivery/read receipt are still unavailable. The connected Gmail and Library searches cannot replace those records. Do not infer delivery, replay the request, or alter the superseded 98% hold policy. No email, WhatsApp message, R2 write, model call or production mutation was performed.
