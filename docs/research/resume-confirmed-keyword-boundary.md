@@ -75,3 +75,34 @@ Final review found a pre-existing web fact-check fail-open: unreadable source/ex
 The current implementation separates candidate confirmations from employer requirements in `candidateEvidenceInput`. `confirmedCandidateStatements` accepts first-person experience assertions and rejects editing instructions, questions, negations and JD-only requirement lists. `explicitlyConfirmsAllRequirements` recognizes the owner's explicit statement, “I have experience with all of them evenly,” while rejecting exceptions and formatting requests.
 
 The focused regression now pins both sides: the explicit blanket statement is accepted, while “Add all keywords,” “Make this 98% match,” and a bare required-skills list are not blanket experience evidence. This is a source-level guard, not a live model generation, a 98% match claim, or employer verification. The exported DOCX still needs an authenticated baseline/JD/confirmation review before quality can be accepted.
+
+
+## 10 November 2026 — keep writer and role weaving inside confirmed evidence
+
+A source audit found that the evidence boundary was enforced when building `jdKwsPrompt`, but the default writer instructions still told the model to write every JD term into experience and described the candidate as claiming the full JD skill set. The final mandatory role-weaving pass also used `scoreKws`, which includes JD-only target terms, rather than the evidence-supported `jdKwsPrompt`. The optional Gemini related-term pass could add generated terms without checking the original resume or explicit first-person confirmations.
+
+The writer now treats the JD as target context, not candidate history. It develops only source-supported terms in roles whose original bullets support them; explicit first-person confirmations remain eligible under the existing confirmation parser. Gemini-related additions are filtered against the original resume plus explicit candidate statements before they enter the prompt or score, and the mandatory role-weaving pass uses only the evidence-supported `jdKwsPrompt`. Unsupported requirements remain gaps or separately labelled Job-post terms; they are not represented as work performed.
+
+The change is deliberately split from PR #279's separate WhatsApp external-send allow-list change. It does not change the 6 November 70% delivery-with-gaps or 95% supported-coverage clean-pass policy, and does not authorize a real send. A source-contract regression pins the prompt, generated-term filter and final role-weaving input. This is not a live model generation, a 98% match claim, or employer verification; authenticated baseline/JD/confirmation and exported-DOCX review remain required.
+
+## 10 November 2026 — second prompt-boundary audit
+
+The first evidence-boundary pass restricted the deterministic role-repair helper, but a second source audit found two earlier instructions that could still bias generation:
+
+1. The base src/lib/claude.ts RULES prompt still described the candidate as claiming the entire JD, instructed the model to write each JD term into current and previous roles, and treated adjacent security/IAM practice as transferable across employers. This contradicted the evidence-bound J1_HEADER.
+2. The split-draft firstAsk carried the global missing-term list into every part, including each employer's experience prompt. A deterministic post-pass could remove unsupported terms later, but the initial model instruction still encouraged them.
+
+The writer-only branch now aligns RULES with the source-evidence policy, removes cross-role assumptions, routes the global supported-term ask only to the profile/skills part in split mode, and keeps each experience part on its own role plan. Gap-fill wording now says each term was matched to that employer's original bullets and instructs the model to leave unsupported requirements as gaps. A source-contract regression rejects the old blanket prompt and global split-prompt leakage.
+
+Evidence: PR #287 exact head 9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540; commits b7d6d8369f03b152005792552bc9a52b3c78ef07, bc3ed928e003065a8c34abacbc474031a6242649, 9fbff8ab4c6d2b9b68a268ddf237bd5e32e1540; full CI 42920485193 passed 46 steps; Plan/REA 42920485382, Kompas baseline 42920485384, and WhatsApp recovery 42920485412 passed.
+
+Remaining boundary: general first-person confirmations may support the skills section, but a structured employer/project-bound confirmation map is not implemented. The current experience guard conservatively requires same-role original bullet evidence; do not attribute a general skill statement to a historical employer. The 6 Nov no-exception blanket-confirmation policy remains recorded, but it must not silently become an employer-specific claim without a role binding. No authenticated model generation, DOCX export, employer verification or 98% live match is claimed.
+
+
+## 11 November 2026 — final caller review closure
+
+The 10 Nov owner-authored PR #287 review requested that both the final deterministic weave and the extra generate-then-tailor split pass use each employer's original bullets, with a regression proving a term present only in one role cannot be woven into another. The current branch implements that boundary in all three places: per-role fill, per-role final weave, and per-role extra-pass gap generation. A deterministic post-model guard restores any cross-role JD term that remains in an edited bullet. The direct regression uses Splunk only in role A, Okta only in role B, and unsupported Canton; caller tests pin the final weave and generated gap pass to the role-specific helper.
+
+The owner-authored review thread was answered with exact implementation and test evidence and resolved on 11 Nov 2026 at 02:32 UTC. This is thread resolution, not a formal APPROVED review. Exact code head `4c2870ef42525d98625fff51b18bd537353a53b7` passed full CI `42926787326`, WhatsApp recovery `42926787572`, Plan/REA schema `42926787385` and Kompas baseline `42926787329`. Subsequent Plan/REA documentation commits are on the same PR branch and require their own exact-head revalidation.
+
+Release and quality limits remain: GitHub Vercel status is FAILURE (Account is blocked), the protected preview credential is unavailable, and no authenticated original-resume/JD/confirmation generation or exported-DOCX review has been performed. No 95–100% live match, employer verification, real email/WhatsApp send or production deployment is claimed. The 17 Oct historical WhatsApp output, per-run R2/webhook/Meta correlation and signed delivery/read receipt remain missing.
