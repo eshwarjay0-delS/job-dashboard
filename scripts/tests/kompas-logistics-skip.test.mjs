@@ -79,7 +79,9 @@ test("the page shows a quiet one-line card for a skipped logistics ask, with no 
   const i = app.indexOf("if (meta.noQuestion) {")
   assert.ok(i > 0)
   const branch = app.slice(i, app.indexOf("return;", i))
-  assert.match(branch, /meta\.skipped === "logistics"[^\n]*Personal logistics, not answered/)
-  assert.match(branch, /status\(meta\.skipped === "logistics" \? "Personal logistics, not answered\./)
+  // noQuestion keeps a dedicated logistics branch so empty pages can still be dropped.
+  assert.match(branch, /if \(meta\.skipped === "logistics"\)/)
+  assert.match(branch, /card\.meta = "Personal logistics, not answered"/)
+  assert.match(branch, /status\("Personal logistics, not answered\. Still listening\."/)
   assert.match(branch, /card\.answer = keepOld \? prevAnswer : \[\]/, "no answer text is written")
 })

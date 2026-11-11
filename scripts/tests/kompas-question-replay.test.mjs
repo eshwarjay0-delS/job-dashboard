@@ -420,6 +420,10 @@ test("the desktop page splits and holds the same way", () => {
   assert.equal(shortFollowUp("Explain that"), true)
   assert.equal(shortFollowUp("What exactly is least privilege?"), false)
   assert.equal(ctx.repeatsPriorQuestion("What is PKI?", "What is PKI?"), true)
-  assert.match(src, /clauseStillOpen\(tail\) \? 7000 : AUTO_QUIET_MS/)
+  // Session 5 replaced the 7s open-clause ternary with autoWaitMs; the long hold is MAX_AUTO_DELAY_MS (3s).
+  assert.match(src, /function autoWaitMs\(/)
+  assert.match(src, /const wait = autoWaitMs\(tail\)/)
+  assert.match(src, /MAX_AUTO_DELAY_MS\s*=\s*3000/)
+  assert.doesNotMatch(src, /clauseStillOpen\(tail\) \? 7000 : AUTO_QUIET_MS/)
   assert.match(src, /spans.length > 1/)
 })

@@ -244,6 +244,27 @@ function containsTerm(text: string, term: string): boolean {
  * The topic part of the ask. Audience and format instructions ("Keep it suitable for technical HR",
  * "explain it to a director", "in two minutes") steer the mode, not the topic, so they are not keywords.
  */
+
+// r7: role or achievement premises the earlier since/given/as-you rule missed.
+const ROLE_PREMISE = /^\s*([Aa]s\s+(?:the\s+|a\s+|an\s+)?(?!I\b|We\b|You\b)(?:[A-Z][\w&.-]*|head|lead|leader|manager|director|founder|owner)\b[^,?]{1,100}),\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[\s\S]+)$/
+const CLAIM_PREMISE = /^\s*(you(?:'ve| have)?\s+(?:cut|scaled|led|managed|built|grew|saved|founded|ran|reduced|increased|doubled|tripled|hired|owned)\b[^,?]{3,140}),\s*(?:so|and)\s+((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[\s\S]+)$/i
+function premiseSplit(raw: string): { premise: string; ask: string } | null {
+  const m = String(raw || "").match(ROLE_PREMISE) || String(raw || "").match(CLAIM_PREMISE)
+  // "You scaled the API to a billion requests a day, so what broke?": a wh-ask of 2+ words is enough after an explicit
+  // "You <claim>, so"; a one-word ask ("so why?") keeps the whole question (failsafe).
+  const min = m && CLAIM_PREMISE.test(String(raw || "")) ? 2 : 3
+  return m && m[2].trim().split(/\s+/).length >= min ? { premise: m[1].trim(), ask: m[2].trim() } : null
+}
+/** The premise an ask leans on ("You cut cloud spend by 90 percent"), or "" when there is none. Never throws. */
+export function questionPremise(question: string): string {
+  try {
+    const raw = String(question || "")
+    const old = raw.match(/^\s*((?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120}),\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
+    if (old && old[2].trim().split(/\s+/).length >= 3) return old[1].trim()
+    return premiseSplit(raw)?.premise || ""
+  } catch { return "" }
+}
+
 export function topicOfAsk(question: string): string {
   // Stress round 2 (29 Oct 2026): "Since you led the SOC at a large bank, how big was your team?" made the premise the
   // keywords, so the prompt told the model to open on "led, SOC, large bank" - a premise the resume may not support.
@@ -279,6 +300,10 @@ export function topicOfAsk(question: string): string {
   } catch { raw = String(question || "") }
   const premise = raw.match(/^\s*(?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120},\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
   let asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
+  // r7: "As VP of Engineering at Corvid, how…" and "You cut cloud spend by 90 percent, so how
+  // did you do it?" opened on the false claim. Same failsafe: the ask left must be 3+ words.
+  const more = asked === raw ? premiseSplit(raw) : null
+  if (more) asked = more.ask
   // Round 11 (29 Oct 2026): a jargon-stuffed setup ("With zero trust, SASE and all that, how do you…", "…, you know, with
   // all the SOAR and CNAPP stuff these days?") was read as the topic, so answers opened on and repeated the buzzwords.
   // Failsafe: the ask left must be 3+ words, or the whole question is kept.
@@ -437,6 +462,8 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
       : `Mode ${level}. Aim for about ${mode.aimWords} words and never more than ${mode.maxWords}. Stop as soon as the question is answered. ${mode.voice}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
+    // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
+    questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
     "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
   ].filter(Boolean).join("\n")
 }

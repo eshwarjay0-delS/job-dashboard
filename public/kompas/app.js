@@ -4599,10 +4599,17 @@ async function generateAnswerRequest(question, card, opts = {}) {
         return generateAnswer(kept, card, { ...opts, derived: kept, pinned: true, consolidated: true, keptRetry: true });
       }
       card.streaming = false;
-      card.answer = keepOld ? prevAnswer : [];
-      card.meta = meta.skipped === "logistics" ? "Personal logistics, not answered" : "";   // owner rule 29 Oct: a quiet card says why, with no answer text
-      if (cards[idx] === card) renderCard();
-      status(meta.skipped === "logistics" ? "Personal logistics, not answered. Still listening." : "Still listening.", "live");
+      if (meta.skipped === "logistics") {
+        card.answer = keepOld ? prevAnswer : [];
+        card.meta = "Personal logistics, not answered";   // owner rule 29 Oct: a quiet card says why, with no answer text
+        if (cards[idx] === card) renderCard();
+        status("Personal logistics, not answered. Still listening.", "live");
+        return;
+      }
+      // Nothing to answer: take the empty page out of the book, or leave a single live "No question yet" card.
+      if (keepOld && prevAnswer) { card.answer = prevAnswer; if (cards[idx] === card) renderCard(); }
+      else if (!dropPage(card)) { card.answer = []; card.question = "No question yet"; if (cards[idx] === card) renderCard(); }
+      status("Still listening.", "live");
       return;
     }
     if (!text.trim() && !(card.cardLayout && formatCardAnswer(card.cardLayout))) throw new Error("The answer engine returned an empty response. Please retry.");

@@ -48,8 +48,9 @@ test("Direct short questions and faithful derivations are not rewritten",()=>{
 test("Full question persists through source, derive and SSE update, not only initial card render",()=>{
   assert.match(src,/card\.singleSpokenTurn\s*=\s*heardOnly/)
   assert.match(src,/card\.fullSpokenQuestion\s*=\s*heardOnly/)
-  assert.match(src,/derivedQ = card\.singleSpokenTurn \? preserveSpokenQuestion\(card\.fullSpokenQuestion, dj\.derived\)/)
-  assert.match(src,/displayQ = card\.singleSpokenTurn \? preserveSpokenQuestion\(card\.fullSpokenQuestion, ev\.derived\)/)
+  // One-hop stream: the derived title arrives as a title/card event, not dj.derived from a separate hop.
+  assert.match(src,/derivedQ = card\.singleSpokenTurn \? preserveSpokenQuestion\(card\.fullSpokenQuestion, title\)/)
+  assert.match(src,/card\.question = card\.singleSpokenTurn \? preserveSpokenQuestion\(card\.fullSpokenQuestion, title\)/)
   assert.match(src,/page\.singleSpokenTurn = cur\.singleSpokenTurn/)
   assert.match(src,/page\.fullSpokenQuestion = cur\.fullSpokenQuestion/)
   assert.match(src,/page\.singleSpokenTurn = c\.singleSpokenTurn/)
