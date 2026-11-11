@@ -442,14 +442,68 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
 
 // Same trigger the service uses for its coding block (CODE_ASK_Q), narrowed to an actual request for code so a
 // question that only mentions "function" in passing is not forced into a code block.
-const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test|job|dag|limiter|pipeline|method)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+// CODE_REQUEST_Q is the coarse extracted surface pattern (verb + unambiguous code noun, or a bare sql/regex/unit-test
+// phrase). asksForCode is stricter: the noun must sit within CODE_NOUN_WINDOW tokens of the verb, and ambiguous nouns
+// (job, dag, limiter, pipeline, method) count only with a nearby code context or language name.
+// "rate limiter" with no language is not an existing positive fixture (the positive is "Implement a token bucket
+// rate limiter in TypeScript."; "How would you design a rate limiter…" is already a negative because the verb is
+// design). A bare limiter therefore follows the same context rule.
+export const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+const BARE_CODE_PHRASE = /\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+const UNAMBIGUOUS_CODE_NOUN = new Set(["code", "function", "script", "query", "program", "class", "regex", "algorithm", "endpoint", "test", "api"])
+const AMBIGUOUS_CODE_NOUN = new Set(["method", "pipeline", "job", "dag", "limiter"])
+const CODE_CONTEXT = new Set([
+  "function", "class", "api", "endpoint", "script", "query", "algorithm", "sql", "python", "spark", "pyspark",
+  "airflow", "go", "golang", "java", "javascript", "typescript", "js", "ts", "regex", "code", "ruby", "rust",
+  "scala", "kotlin", "swift", "php", "bash", "shell", "perl", "lua", "r", "c", "c++", "cpp", "csharp", "c#",
+  "nodejs", "node", "haskell", "elixir", "erlang", "matlab", "powershell",
+])
+const CODE_NOUN_WINDOW = 8
+const CODE_CONTEXT_RADIUS = 4
+
+function codeAskTokens(text: string): string[] {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap((raw) => raw.replace(/^[^\w#+]+|[^\w#+]+$/g, "").split(/[-_/]/))
+    .map((t) => t.toLowerCase())
+    .filter(Boolean)
+}
+
+function requestIsCodeAsk(text: string): boolean {
+  if (BARE_CODE_PHRASE.test(text)) return true
+  const tokens = codeAskTokens(text)
+  for (let i = 0; i < tokens.length; i++) {
+    const one = tokens[i]
+    const two = tokens.slice(i, i + 2).join(" ")
+    const three = tokens.slice(i, i + 3).join(" ")
+    const four = tokens.slice(i, i + 4).join(" ")
+    let verbLen = 0
+    if (four === "show me the code" || four === "give me the code") verbLen = 4
+    else if (three === "give me code") verbLen = 3
+    else if (two === "code up") verbLen = 2
+    else if (one === "write" || one === "implement") verbLen = 1
+    if (!verbLen) continue
+    const start = i + verbLen
+    const window = tokens.slice(start, start + CODE_NOUN_WINDOW)
+    if (window.some((t) => UNAMBIGUOUS_CODE_NOUN.has(t))) return true
+    for (let j = 0; j < window.length; j++) {
+      if (!AMBIGUOUS_CODE_NOUN.has(window[j])) continue
+      const abs = start + j
+      const ctx = tokens.slice(Math.max(0, abs - CODE_CONTEXT_RADIUS), abs + 1 + CODE_CONTEXT_RADIUS)
+      if (ctx.some((t) => CODE_CONTEXT.has(t))) return true
+    }
+  }
+  return false
+}
+
 export function asksForCode(question: string): boolean {
   // r7 (#28): zero-width spaces and odd whitespace must not change a coding ask ("Wri\u200bte a Python function").
   const q = normalizeAskText(question)
   const tied = splitFollowUp(q)
   // "Can you also add unit tests?" after a coding ask is still a coding ask; any other follow-up is judged on its own words.
-  if (tied.previous) return CODE_REQUEST_Q.test(tied.own) || (CODE_REQUEST_Q.test(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
-  return CODE_REQUEST_Q.test(q)
+  if (tied.previous) return requestIsCodeAsk(tied.own) || (requestIsCodeAsk(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
+  return requestIsCodeAsk(q)
 }
 
 export function dissectionPrompt(question: string, level: AnswerLevel, sources = ""): string {
