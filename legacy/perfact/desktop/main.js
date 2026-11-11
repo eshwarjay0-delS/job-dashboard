@@ -19,6 +19,7 @@ const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net
 const path = require("path");
 const fs = require("fs");
 const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
+const { isAuthDisabled } = require("./auth-disabled.cjs");
 const { chooseCaptureSource } = require("./capture-source.cjs");
 const { rememberedTaskbar, taskbarAnswer } = require("./taskbar-choice.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
@@ -53,6 +54,10 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
 const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => app.getPath("userData"), origin: MARKETFIT_API_ORIGIN });
+// Tests may slice later functions without this require; default is no login.
+function desktopAuthDisabled() {
+  return typeof isAuthDisabled === "function" ? isAuthDisabled() : true;
+}
 let updateCheckDone = false;
 // Check the released Windows version on first visible launch, not inside the
 // user's interview or before the existing taskbar choice. A failed request is
@@ -154,6 +159,8 @@ function continueSignedIn() {
   else deliver();
 }
 function beginChromeSignIn({ interactive = false } = {}) {
+  // Login is lifted: do not open Chrome, start the claim poll, or paint the card.
+  if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return hideHandoff();
   // A stored desktop session stays up. Opening Chrome would put auth UI over a live interview.
   if (desktopAuth.hasSession()) return hideHandoff();
   const action = handoffAction({ hasSession: false, interactive, alreadyAttempted: chromeSignInAttempted });
@@ -619,9 +626,11 @@ async function serve(req) {
   const rel = url.pathname === "/" ? "/index.html" : url.pathname;
   const isMarketFitApi = activeSite === "marketfit" && /^\/api\//.test(rel);
   if (isMarketFitApi && rel !== "/api/auth/refresh-token") {
-    await desktopAuth.renew(false);
-    const token = desktopAuth.token();
-    if (token) headers.authorization = "Bearer " + token;
+    if (!(typeof desktopAuthDisabled === "function" && desktopAuthDisabled())) {
+      await desktopAuth.renew(false);
+      const token = desktopAuth.token();
+      if (token) headers.authorization = "Bearer " + token;
+    }
   }
   try {
     return await net.fetch(targetOrigin() + rel + url.search, {
@@ -715,6 +724,7 @@ function wireIpc() {
   });
   ipcMain.handle("kompas:refresh-auth", (event, reason) => {
     if (!win || event.sender.id !== win.webContents.id) throw Error("Invalid auth caller");
+    if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return true;
     // A rejected call rotates the desktop family. A quiet call renews only
     // inside the access lead or the 10–24 hour window before the 3-day expiry.
     return desktopAuth.renew(reason === "rejected" ? "rejected" : false);
@@ -848,9 +858,11 @@ else {
     // no cookie jar, so initiate a state-bound handoff only when renewal fails.
     // The next refresh is a single timer at the access-token lead or the
     // 24-hour family window. It is not a fixed interval, and a 401 still
-    // renews through kompas:refresh-auth.
+    // renews through kompas:refresh-auth. When login is lifted, skip mint,
+    // refresh, and the sign-in card — no new polling is added.
     let desktopRefreshTimer = null;
     const armDesktopRefresh = () => {
+      if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return;
       if (desktopRefreshTimer) clearTimeout(desktopRefreshTimer);
       desktopRefreshTimer = null;
       const delay = desktopAuth.millisecondsUntilRefresh();
@@ -860,13 +872,22 @@ else {
       }, delay);
     };
     const renewQuiet = () => { void desktopAuth.renew(false).finally(armDesktopRefresh); };
-    void desktopAuth.renew(false).then(ok => {
-      if (!ok && !desktopAuth.hasSession()) beginChromeSignIn();
-      armDesktopRefresh();
-    });
+    if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) {
+      hideHandoff();
+    } else {
+      void desktopAuth.renew(false).then(ok => {
+        if (!ok && !desktopAuth.hasSession()) beginChromeSignIn();
+        armDesktopRefresh();
+      });
+    }
     const later = () => setTimeout(bringBack, 400);
     for (const ev of ["display-removed", "display-added", "display-metrics-changed"]) screen.on(ev, later);
-    for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, () => { later(); renewQuiet(); });
+    for (const ev of ["resume", "unlock-screen"]) {
+      powerMonitor.on(ev, () => {
+        later();
+        if (!(typeof desktopAuthDisabled === "function" && desktopAuthDisabled())) renewQuiet();
+      });
+    }
     app.on("child-process-gone", (_e, d) => { if (d.type === "GPU") later(); });
   });
   app.on("window-all-closed", () => app.quit());

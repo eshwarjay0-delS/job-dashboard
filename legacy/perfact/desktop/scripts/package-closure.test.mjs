@@ -16,7 +16,7 @@ const PUBLISHED_1B116CE = [
 
 test("the shell package list is the require closure, including capture and taskbar", () => {
   const files = shellPackageFiles(root);
-  for (const name of ["main.js", "capture-source.cjs", "taskbar-choice.cjs", "chrome-handoff.cjs", "marketfit-auth.cjs", "desktop-handoff.cjs", "desktop-update.cjs", "preload.js", "picker-preload.js", "picker.html", "picker.js", "panel.css"]) {
+  for (const name of ["main.js", "auth-disabled.cjs", "capture-source.cjs", "taskbar-choice.cjs", "chrome-handoff.cjs", "marketfit-auth.cjs", "desktop-handoff.cjs", "desktop-update.cjs", "preload.js", "picker-preload.js", "picker.html", "picker.js", "panel.css"]) {
     assert.equal(files.includes(name), true, name);
   }
   assert.equal(files.includes("icon-256.png"), false);
@@ -25,9 +25,9 @@ test("the shell package list is the require closure, including capture and taskb
   assert.match(packageSource, /assertPackagedExe\(exe\)/);
 });
 
-test("the published 1b116ce asar list fails this gate on the two startup modules", () => {
+test("the published 1b116ce asar list fails this gate on later startup modules", () => {
   const missing = missingPackaged(PUBLISHED_1B116CE, shellPackageFiles(root));
-  assert.deepEqual(missing, ["capture-source.cjs", "taskbar-choice.cjs"]);
+  assert.deepEqual(missing, ["auth-disabled.cjs", "capture-source.cjs", "taskbar-choice.cjs"]);
 });
 
 test("a packaged asar that contains the closure passes, and a dropped module fails", () => {
