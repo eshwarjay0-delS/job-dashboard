@@ -325,3 +325,42 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 11 November 2026 — current source, release and acceptance reconciliation
+
+This section supersedes older status paragraphs above where they differ.
+
+### Canonical MFit release
+
+- Current master is 11efbbfe7781592bc2fad1216f67546882a1c3ed. PR #285 merged at this exact SHA with classifier workflow coverage and the manual-only source guard; PR #284 was superseded and closed unmerged.
+- Vercel alias metadata confirms job-dashboard-fawn.vercel.app points to READY production deployment dpl_7uEfjq1XprC48DoTFfFuiBoShPne at that exact master SHA. However, Vercel project metadata is live=false, and public /api/health plus /api/kompas/version.json return HTTP 402 DEPLOYMENT_DISABLED. Treat the deployment as READY in control-plane metadata but the service as unavailable; do not call this runtime-verified or create a duplicate build.
+- The 10 Nov 11:00 UTC crawl (6,818 found/upserted across 20 portals) predates the classifier release. The next scheduled crawl is 11 Nov 2026 at 11:00 UTC. Robert Half remains manual-only.
+
+### Highest-priority resume and WhatsApp work
+
+- PR #287 writer-only evidence-bound alignment is open at 46df4965a22dd9fb16beb83b49872caec1aa6130. Full CI 42947240757, Plan/REA schema 42947240863, Kompas baseline 42947240714 and resume regression 42947240705 pass. The shared voice-preview-smoke check fails and the Vercel commit status says Account is blocked. No merge, preview or production behavior is claimed.
+- PR #293 is a draft stacked follow-up for employer/role-scoped confirmations. Its body explicitly records that this narrower rule lacks separate owner approval; do not merge it. Preserve the already recorded narrow, no-exception blanket confirmation and do not infer that a confirmation applies to a disputed employer.
+- PR #289 is a draft stacked on #287 for the 3 Nov owner-approved final-DOCX Gemini ATS score and bounded evidence-only repair/re-export loop. It has no exact-head checks, no live Gemini review and no exported DOCX acceptance.
+- The exact 17 Oct source DOCX remains revalidated in the private archive and the matching JD is recovered, but disputed source facts remain quarantined. A targeted Library search on 11 Nov did not surface the generated output; this is not proof it is absent from every store. The iZap business currently has no linked WhatsApp number; connection, inbound history and sending are all unproven. The output DOCX, R2 object key, request correlation, Meta message ID and signed delivered/read receipt remain missing. No replay or real WhatsApp test was sent.
+- The 6 Nov channel policy supersedes the old 98% WhatsApp hard hold. Keep raw overlap, supported coverage, DOCX completeness and identity integrity distinct.
+
+### Gmail and mobile
+
+- The broad Poke direction remains approved: up to four accounts, per-account Gmail/Calendar targeting, account+thread identity, no silent merging, selected From preservation, reconnect only the affected inbox and responsive mobile navigation.
+- PR #290 contains only the approved normal-flow mobile hamburger correction. Exact head 7bd60f97a1b486f66ec61a018f64a9dbe5dc00a9 passes full CI 42969455798, schema 42969455846 and Kompas baseline 42969455728; the shared voice-preview gate fails and Vercel is account-blocked. Real phone-width acceptance remains outstanding.
+- Per-account sync-health cards in PRs #271/#286 remain draft/proposed without separate owner approval. Do not enable the unattended worker until the external scheduler, CRON_SECRET, approved Meta template and explicit enablement exist.
+- Auto Reply Loop run 42933330704 failed its configuration check and skipped the POST step. No email action occurred.
+
+### Contract crawler
+
+- PR #288 clearance-filter pagination and PR #291 explicit Right-to-Hire / Contract-to-Perm classification have green exact-head source gates (crawler regression, schema, Kompas baseline and full CI), but the shared voice-preview gate and Vercel account status fail. They remain open and are not production-accepted.
+- Do not merge or deploy these branches while required gates are failed or the Vercel account is disabled. Do not scrape Robert Half without written permission or a sanctioned feed.
+
+### Kompas coordination
+
+- The canonical Kompas voice/audio/caption work remains owned by the separate Kompas Continuous Voice Delivery workstream. Its automation record is currently disabled; PR #283 remains associated with that workstream. No parallel voice edits were made.
+- The actual 50 authenticated same-question Kompas/ChatGPT pairs, independent human scoring, and native Windows/WhatsApp/mobile acceptance remain open. Synthetic tests and READY deployment metadata do not replace them.
+- No separate Bible-Keeper automation was returned by the current task lookup. MFit Completion Watch remains enabled.
+
+Continue: verify the 11 Nov 11:00 UTC post-classifier crawl and public API only if the Vercel project becomes live. Keep PR #287 as the highest-priority resume writer fix; require restored authorized Vercel preview access before merge/deployment, then perform the authenticated original-resume/JD/confirmed-experience export review. Preserve every other open item and its separate approval gate.
