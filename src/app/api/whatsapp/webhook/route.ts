@@ -873,12 +873,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
   }
   const sendOfflineOriginal = async (): Promise<boolean> => {
-    if (!files || !files.email || !files.userDir || !files.abs || !session.resumePath) return false
+    if (!files || !files.email || !files.userDir || !files.abs || !files.rel || !session.resumePath) return false
     const expectedRoot = filesOf(userId)
     if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return false
     const root = path.resolve(files.userDir)
     const selected = path.resolve(files.abs)
-    if (!selected.startsWith(root + path.sep)) return false
+    const relative = path.normalize(files.rel)
+    if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(".." + path.sep)) return false
+    if (path.resolve(root, relative) !== selected || !selected.startsWith(root + path.sep)) return false
     const [libraryBytes, sessionBytes] = await Promise.all([
       readPath(selected).catch(() => null),
       readPath(session.resumePath).catch(() => null),
