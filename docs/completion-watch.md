@@ -344,3 +344,10 @@ Continue: run exact-head full CI, crawler classification regression, Plan/REA sc
 - Exact-head checks on the new commit are queued; no green full CI is claimed. Vercel's protected preview remains account-blocked, so PR #291 is not ready for release and no deployment is authorized.
 
 Continue: finish exact-head full CI, crawler regression, Plan/REA schema and Kompas baseline on `4bd1c054`. If a voice-owned test fails, leave it to Kompas Continuous Voice Delivery rather than editing it here. Do not merge or deploy until the protected preview is restored; then verify the 11 Nov post-release crawl and API behavior.
+
+
+## 11 November 2026 — PR #291 CI completion
+
+PR #291 current head `c19380fad9a006f77e501372d13d62ee382c55df` passed full CI `42957610263`, crawler regression `42957610251`, Plan/REA schema `42957610188` and Kompas baseline `42957610184`. The additive prebuild assertion repair is source/CI validated; the C2H classifier runtime is unchanged. Protected voice-preview `42957608099` remains failed because the private Vercel preview credential/account access is unavailable. No merge, deployment or post-release crawl is claimed.
+
+Continue: restore the protected Vercel preview/account access, revalidate the exact branch head, then merge only through the normal path and verify the first post-release crawl and public API. Keep Robert Half manual-only.
