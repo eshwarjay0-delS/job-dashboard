@@ -750,7 +750,7 @@ export async function runTailor(opts: {
           ].filter(Boolean)
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
           const roleConfirmation = roleConfirmations[t.role] || []
-          const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write only the missing terms listed for this role into THIS role's existing bullets as natural project language. Each term was matched to this employer's original evidence. Do not infer a tool from the JD or another employer. If a term is not supported by this role, leave it as a gap. Do not add a bullet, employer, date, or contact. Keep every supported term already present. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write only the missing terms listed for this role into THIS role's existing bullets as natural project language. Each term was matched to this employer's original bullets or explicit role-bound confirmation. Do not infer a tool from the JD or another employer. If a term is not supported by this role, leave it as a gap. Do not add a bullet, employer, date, or contact. Keep every supported term already present. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
             preferences: [...allPrefs, ask, ...(roleConfirmation.length ? ["CANDIDATE CONFIRMATION FOR THIS ROLE ONLY: " + roleConfirmation.join("; ")] : [])].join("; "),
         },
         startBy: roundDeadline - 6000,
@@ -1041,7 +1041,7 @@ export async function runTailor(opts: {
                   jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
                 const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join(" ")
                 const roleConfirmation = roleConfirmations[t.role] || []
-                const roleGapAsk = `EXTRA GENERATE-THEN-TAILOR PASS: improve wording only with terms supported by this role's own original bullets: ${t.skills.join(", ")}. Do not use a term supported only by another role or by the JD. If it cannot be placed naturally, leave it as a gap or labelled Job-post term. Do not add or remove bullets, employers, dates, or titles. Keep every Environments line.`
+                const roleGapAsk = `EXTRA GENERATE-THEN-TAILOR PASS: improve wording only with terms supported by this role's own original bullets or its explicit role-bound confirmation: ${t.skills.join(", ")}. Do not use a term supported only by another role or by the JD. If it cannot be placed naturally, leave it as a gap or labelled Job-post term. Do not add or remove bullets, employers, dates, or titles. Keep every Environments line.`
                 return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
                   preferences: [...allPrefs, ...(roleConfirmation.length ? ["CANDIDATE CONFIRMATION FOR THIS ROLE ONLY: " + roleConfirmation.join("; ")] : []), `ORIGINAL ROLE EVIDENCE: ${originalEvidence}. ROLE-SPECIFIC GAP KEYWORDS: ${t.skills.join(", ")}. ${roleGapAsk}`].join("; "),
                   jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
@@ -1152,8 +1152,8 @@ export async function runTailor(opts: {
     }
   }
   // Model prompts are not an enforcement boundary. Restore any experience bullet that
-  // introduces a JD term absent from every original bullet for that same employer.
-  // Explicit confirmations remain available to the skills/summary evidence paths.
+  // introduces a JD term absent from this role's original bullets or its explicit
+  // employer/role-bound confirmation. Unscoped confirmations remain skills/profile only.
   if (best && !refine && jdGate && zones.roles.some(r => r.bullets.length)) {
     const guarded = restoreUnsupportedRoleEdits(
       best.edits.bullets || [],
