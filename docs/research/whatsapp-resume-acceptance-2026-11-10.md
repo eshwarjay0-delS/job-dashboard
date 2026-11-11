@@ -127,3 +127,11 @@ The canonical MFit master is 11efbbfe7781592bc2fad1216f67546882a1c3ed. Vercel al
 PR #287 contains the approved writer-only JD/evidence boundary fix. Its exact-head full CI, Plan/REA schema, Kompas baseline and resume regression pass; the shared voice-preview gate fails and the Vercel account is blocked. The PR is open and not production-live. PR #293 is an explicitly unapproved draft for narrower employer/role-scoped confirmations. PR #289 is a draft implementation of the owner-approved 3 November final-DOCX Gemini review loop, stacked on #287, with no exact-head validation or live model call. None of these branches proves the historical output or delivery.
 
 The 6 November WhatsApp policy remains authoritative and supersedes the older 98% hard hold. No replay, new model generation, DOCX write, R2 write, email send or WhatsApp send was performed.
+
+
+
+## 11 November 2026 — 09:13 UTC WhatsApp history recheck
+
+Gmail retrieval reconfirmed the matching Security Engineer – Risk & Controls JD as a 5+ year Atlanta onsite contract role; Solana is listed among preferred DLT platforms. This is employer target context only, not proof of candidate experience or credentials.
+
+The connected iZap workspace has one business but no linked WhatsApp number, zero chats, and zero message-search hits for “Risk & Controls” on 17 October. This connector therefore cannot recover the historical bot exchange or a delivery callback. The exact source DOCX remains privately verified, but its disputed education/employer chronology/tenure/credential facts remain quarantined. The generated output DOCX, R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. No replay or outbound test was sent. A zero-result iZap search is evidence about this connected workspace only, not proof that the records do not exist in every external store.
