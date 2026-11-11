@@ -73,7 +73,7 @@ test('11 Nov WhatsApp profile-gap and Gmail Auth quota REA records remain tracea
   const whatsapp = REA_SESSIONS.find(s => s.id === 'whatsapp-profile-gap-fill-2026-11-11')
   assert.ok(whatsapp, 'WhatsApp profile-gap REA entry missing')
   assert.equal(whatsapp.state, 'Blocked')
-  assert.ok(whatsapp.steps.some(s => s.status === 'Implemented' && s.finding.includes('pending-part resolver')))
+  assert.ok(whatsapp.steps.some(s => s.status === 'Implemented' && s.finding.includes('pending-state resolver')))
   assert.ok(whatsapp.steps.some(s => s.status === 'Blocked' && s.finding.includes('No live model call')))
   assert.ok(whatsapp.sources.some(s => s.path === 'docs/research/whatsapp-profile-gap-fill-2026-11-11.md'))
 
@@ -90,12 +90,12 @@ test('11 Nov WhatsApp fallback and contract classifier REA records remain tracea
   const wa = REA_SESSIONS.find(s => s.id === 'whatsapp-fallback-boundary-tests-2026-11-11')
   assert.ok(wa)
   assert.equal(wa.state, 'Implemented, verification pending')
-  assert.ok(wa.steps.some(s => s.status === 'Pending' && s.finding.includes('exact-head')))
+  assert.ok(wa.steps.some(s => s.status === 'Pending' && s.finding.includes('queued')))
   assert.ok(wa.sources.some(s => s.path === 'scripts/tests/whatsapp-resume-contract.test.mjs'))
 
   const app = REA_SESSIONS.find(s => s.id === 'contract-classifier-precision-2026-11-11')
   assert.ok(app)
   assert.equal(app.state, 'Implemented, verification pending')
-  assert.ok(app.steps.some(s => s.status === 'Pending' && s.finding.includes('exact-head')))
+  assert.ok(app.steps.some(s => s.status === 'Pending' && s.finding.includes('queued')))
   assert.ok(app.sources.some(s => s.path === 'src/lib/contract-jobs.ts'))
 })
