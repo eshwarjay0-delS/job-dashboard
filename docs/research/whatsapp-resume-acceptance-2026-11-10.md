@@ -112,3 +112,18 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 11 November 2026 — current access and delivery check
+
+The 17 October 17:28 Chicago incident remains open. The exact original input DOCX is still verified in the private archive, and the matching Security Engineer – Risk & Controls JD was recovered from the owner's inbox. The source's education, employer chronology, experience length and credential claims remain quarantined because they conflict with owner-confirmed profile facts. Do not copy disputed facts into a new output.
+
+A targeted current Library search for the generated DOCX, the incident-specific WhatsApp output, and R2/Meta delivery references did not surface the generated output. This is a bounded search result, not proof that the file is absent from every Library folder, chat, R2 bucket or external archive. The output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable.
+
+A read-only iZap check on 11 November 2026 at 08:14:16 UTC found one business and no linked WhatsApp number. Connection state is disconnected; there is no phone number, live inbound history, Coexistence history backfill or proven outbound send. No real message was sent. This connector cannot currently retrieve the historical bot conversation or a signed delivery receipt.
+
+The canonical MFit master is 11efbbfe7781592bc2fad1216f67546882a1c3ed. Vercel alias metadata is READY at dpl_7uEfjq1XprC48DoTFfFuiBoShPne on that SHA, but the project reports live=false; public health and Kompas version requests return HTTP 402 DEPLOYMENT_DISABLED. The source is current in deployment metadata, but the runtime is unavailable for authenticated replay or delivery verification.
+
+PR #287 contains the approved writer-only JD/evidence boundary fix. Its exact-head full CI, Plan/REA schema, Kompas baseline and resume regression pass; the shared voice-preview gate fails and the Vercel account is blocked. The PR is open and not production-live. PR #293 is an explicitly unapproved draft for narrower employer/role-scoped confirmations. PR #289 is a draft implementation of the owner-approved 3 November final-DOCX Gemini review loop, stacked on #287, with no exact-head validation or live model call. None of these branches proves the historical output or delivery.
+
+The 6 November WhatsApp policy remains authoritative and supersedes the older 98% hard hold. No replay, new model generation, DOCX write, R2 write, email send or WhatsApp send was performed.
