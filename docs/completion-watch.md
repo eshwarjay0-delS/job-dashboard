@@ -378,3 +378,11 @@ Continue: preserve the historical replay as blocked until the exact private arti
 - Release remains blocked: GitHub Vercel status says `Account is blocked`, the protected preview token is unavailable, and the canonical project reports `live:false` / public HTTP `402 DEPLOYMENT_DISABLED`. Do not merge or deploy through this wall. No authenticated model run, exported DOCX, real WhatsApp send or production acceptance is claimed.
 
 Continue: rerun full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline on the latest PR #287 documentation head. If those pass, keep it unmerged until the authorized Vercel owner restores project/preview access and the required formal review plus authenticated DOCX acceptance are completed. In parallel, preserve the #292 additive-prebuild fix and let the active Safe Merge Gate restack #291 and #290; do not duplicate those edits.
+
+
+## 11 November 2026 — employer/role-bound resume confirmations
+
+- Continue: finish the approved resume evidence slice on `feat/resume-role-bound-confirmations-20261111`, stacked on the writer-only PR #287 branch. It preserves stacked employer headings, maps first-person confirmations only to a unique employer/role, keeps unscoped confirmations in skills/profile, and passes matching evidence through each role repair and deterministic guard. Cache generation is 28.
+- Changed: `src/lib/docx.ts`, `src/lib/resume-evidence.ts`, `src/lib/tailor.ts`, `scripts/tests/resume-confirmation-quality.test.mjs`, `src/lib/plan-vision.ts`, `src/lib/plan-vision-journal.ts`, `src/lib/rea-register.ts`, `docs/research/resume-confirmed-keyword-boundary.md`, and `docs/resume.md`.
+- Pending: exact-head GitHub full CI, WhatsApp recovery regression, Plan/REA schema and Kompas baseline. The PR must remain stacked on #287 until its parent is accepted; Vercel project `live:false` / public HTTP `402 DEPLOYMENT_DISABLED` still blocks protected preview and production acceptance. Formal review and authenticated exported-DOCX review remain separate.
+- Not done: no live Gemini call, no DOCX export, no 95–100% live match, no WhatsApp send, and no historical 17 Oct delivery claim. The exact generated DOCX and R2/webhook/Meta correlation artifacts remain missing.
