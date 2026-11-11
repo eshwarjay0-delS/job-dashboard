@@ -126,3 +126,25 @@ export function onSocketLost(session: StreamingController, reason: string, fatal
   session.status = "reconnecting"
   return { type: "reconnecting", attempt: session.attempt, delayMs }
 }
+
+
+/** Keyterms for a future Deepgram (or similar) live URL, from a ready-made list. */
+export function streamingKeytermsFor(terms: readonly string[] | undefined): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of terms || []) {
+    const t = String(raw || "").replace(/\s+/g, " ").trim()
+    if (!t || seen.has(t.toLowerCase())) continue
+    seen.add(t.toLowerCase())
+    out.push(t)
+    if (out.length >= 50) break
+  }
+  return out
+}
+
+/** Query string of keyterm= params for the streaming provider when the path is enabled. */
+export function streamingKeytermQuery(terms: readonly string[] | undefined): string {
+  const qs = new URLSearchParams()
+  for (const t of streamingKeytermsFor(terms)) qs.append("keyterm", t)
+  return qs.toString()
+}

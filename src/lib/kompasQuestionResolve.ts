@@ -10,6 +10,8 @@
  * any third-party client.
  */
 
+import { resolveStutterRephrase } from "./kompasStutterRephrase.ts"
+
 export const CONTEXT_WINDOW_MS = 90_000
 export const CONTEXT_WINDOW_MIN_MS = 60_000
 
@@ -139,7 +141,9 @@ export function resolveLiveQuestion(opts: {
   if (!formed && pending.length) formed = pending[pending.length - 1]
   formed = formed.replace(FILLER_LEAD, "").trim()
   const windowTexts = context.length ? context : pending
-  return resolveReferent(formed, windowTexts)
+  const resolved = resolveReferent(formed, windowTexts)
+  const stutter = resolveStutterRephrase(resolved)
+  return stutter.text || resolved
 }
 
 /** A silence press longer than this, with no new interviewer ask, must not regenerate the last topic. */

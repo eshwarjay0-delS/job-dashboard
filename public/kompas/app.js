@@ -1120,12 +1120,54 @@ function renderCard() {
   if ($("nextBtn")) $("nextBtn").disabled = idx >= cards.length - 1;
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
-  $("question").textContent = draft || c.question;
+  const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
+  const qLabel = draft || c.question;
+  $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
   const lines = answerLines(shownAnswer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
+  if (c.pivot && !hasAnchorFields(c) && !lines.length) {
+    const li = document.createElement("li");
+    li.className = "pivot";
+    li.style.fontWeight = "600";
+    li.textContent = c.pivot;
+    ul.append(li);
+  } else if (hasAnchorFields(c)) {
+    const row = (label, value) => {
+      if (!value) return;
+      const li = document.createElement("li");
+      li.className = "anchor-row";
+      const k = document.createElement("strong");
+      k.textContent = label + " ";
+      li.append(k);
+      li.append(document.createTextNode(value));
+      ul.append(li);
+    };
+    row("Stance:", clipAnchorWords(c.stance, 3));
+    row("Friction:", clipAnchorWords(c.friction, 5));
+    row("Fix:", clipAnchorWords(c.fix, 5));
+    if (c.hook) row("Hook:", clipAnchorWords(c.hook, 8));
+    const prose = String(c.prose || (typeof shownAnswer === "string" ? shownAnswer : "") || "").trim();
+    if (prose) {
+      const tog = document.createElement("li");
+      tog.className = "anchor-toggle";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = c.showProse ? "Hide full answer" : "Show full answer";
+      btn.onclick = () => { c.showProse = !c.showProse; renderCard(); };
+      tog.append(btn);
+      ul.append(tog);
+      if (c.showProse) {
+        const li = document.createElement("li");
+        li.className = "passage";
+        inline(li, prose);
+        ul.append(li);
+      }
+    }
+  } else /* bullets fallback */ if (false) {}
+  if (!hasAnchorFields(c) && !(c.pivot && !lines.length)) {
   lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
     if (kind === "code") {
@@ -1141,6 +1183,7 @@ function renderCard() {
   if (c.meta === "Personal logistics, not answered" && !lines.length) {   // the quiet card (owner, 29 Oct): one muted line, no answer text
     const li = document.createElement("li"); li.className = "skipnote"; li.style.opacity = "0.55"; li.style.fontStyle = "italic";
     li.textContent = "Personal logistics, not answered"; ul.append(li);
+  }
   }
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
@@ -1167,7 +1210,7 @@ function animateCard() { const card = $("card"); card.style.animation = "none"; 
 const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c = $("card"); if (c) c.classList.remove("q-away"); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
-function addCard(question, answer) { const c = { question, answer, qid: "q" + (cardSeq++) }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
+function addCard(question, answer) { const c = { question, answer, qid: "q" + (cardSeq++), askedAt: Date.now() }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
 // A page holds a finished answer: not streaming, and more than the "…" placeholder.
 function hasAnswer(c) { const t = (typeof c.answer === "string" ? c.answer : (c.answer || []).join("\n")).trim(); return !c.streaming && t.length > 8 && !/^[.…\s]+$/.test(t); }
 // Takes an empty page out of the book. The only page stays (the live view always shows one); returns whether it went.
@@ -2252,18 +2295,13 @@ function meter(who, rms, speaking) {
 let interimOffUntil = 0;
 let transcriptionFailedEpoch = -1;
 function whisperPrompt(opt) {
-  const SPEECH_LEXICON = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "Kubernetes", "Terraform", "STAR method", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
-  const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
-  // The terms Whisper must be able to hear lead. The previous line follows,
-  // with its commas turned into spaces so it cannot swallow the first term.
-  // The word "Vocabulary" is not sent: Whisper echoes a prompt label back as speech.
+  const profileTerms = (typeof sttVocabFromActiveProfile === "function" ? sttVocabFromActiveProfile() : []);
   const bare = !!(opt && opt.bare);
   const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").replace(/[,;]/g, " ").trim().slice(-110);
-  const core = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "Gemalto", "Fifth Third", "CyberArk", "PowerShell", "Kerberos", "SIEM", "domain controller", "MITRE ATT&CK", "Kubernetes", "Terraform", "PKI", "STAR method"];
-  const rest = SPEECH_LEXICON.filter(t => !core.includes(t));
-  return [...new Set([...core, ...(prev ? [prev] : []), ...learned, ...terms, ...rest])].join(", ").slice(0, 550);
+  // Active-profile terms only — never mix a second candidate's employers or tools.
+  return [...new Set([...profileTerms, ...(prev ? [prev] : []), ...learned])].join(", ").slice(0, 550);
 }
 // Level 4: a phrase with real speech and no words is decoded once more, without the previous line in the prompt.
 function dictationRetry(clean, speechMs, attempt) {
@@ -2643,12 +2681,15 @@ function looksComplete(text) {
 }
 function autoWaitMs(tail) {
   try {
-    if (looksComplete(tail)) return AUTO_QUIET_MS;
+    if (looksComplete(tail) && isQuestionComplete(tail)) return Math.min(AUTO_QUIET_MS, MAX_AUTO_DELAY_MS);
     const t = String(tail || "").replace(/\s+/g, " ").trim();
-    if (t && !/[?.!…]["']?$/.test(t) && DANGLING_END.test(t)) return 7000;   // trails off on "if", "and", "the"…
+    const hold = Math.min(MAX_AUTO_DELAY_MS, Math.max(INTENT_COMPLETE_SILENCE_MS, MANUAL_INCOMPLETE_WAIT_MS));
+    if (t && !/[?.!…]["']?$/.test(t) && DANGLING_END.test(t)) return hold;
+    if (clauseStillOpen(tail) || !isQuestionComplete(tail)) return hold;
   } catch {}
-  return clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
+  return Math.min(AUTO_QUIET_MS, MAX_AUTO_DELAY_MS);
 }
+
 function repeatsPriorQuestion(text, previous) {
   if (repeatsPriorQuestionV2(text, previous)) return true;
   try { return !shortFollowUp(text) && repeatsPriorQuestionV3(text, previous); } catch { return false; }   // slice 3: only ever adds a repeat
@@ -3117,23 +3158,182 @@ function withoutLogistics(text) {
 // personal-logistics parity: end
 
 const AUTO_THEM_SILENCE_MS = 1400;
+const INTENT_COMPLETE_SILENCE_MS = 1500;
+const MANUAL_INCOMPLETE_WAIT_MS = 1500;
+const MAX_AUTO_DELAY_MS = 3000;
 const AUTO_CONFIRM_NOISE = /^(?:hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening)|yeah|yes|okay|ok|right|mm-?hmm|uh-?huh)\b[.!?]*$/i;
+const STUTTER_REPHRASE = /(?:^|\s)(?:well actually|actually[,:]|no[, ]+(?:wait|sorry|i mean)|sorry[, ]+(?:i mean|actually)|i mean[,]+|let me rephrase|what i meant(?: to say)?(?: is)?|or rather[,:]?|rather[,:]+)\s+/i;
+const STUTTER_DANGLE = /\b(?:a|an|the|to|of|for|with|and|or|but|nor|about|on|in|into|onto|from|by|at|as|your|my|our|their|if|whether|because|since|how|what|why|when|where|which|who|would|could|should|can|will|handle|do|deal)\s*[,;:\u2014\u2013.…-]*$/i;
+function isIncompleteAsk(text) {
+  const x = String(text || "").replace(/\s+/g, " ").trim();
+  if (!x) return true;
+  if (/[?]$/.test(x) && x.split(/\s+/).length >= 6 && !STUTTER_DANGLE.test(x.replace(/[?]+$/, "").trim())) return false;
+  if (STUTTER_DANGLE.test(x) && !/[?]$/.test(x)) return true;
+  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give|define)\b/i.test(x) && x.split(/\s+/).length <= 5 && !/[?]$/.test(x)) return true;
+  return false;
+}
+function resolveStutterRephrase(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return { text: "", rephrased: false, incomplete: true, finalConstraint: "" };
+  const re = new RegExp(STUTTER_REPHRASE.source, "gi");
+  const cuts = [];
+  let last = 0, m;
+  while ((m = re.exec(raw))) {
+    const at = m.index + m[0].length;
+    if (at > last && at < raw.length) { cuts.push(m.index); last = at; }
+  }
+  if (!cuts.length) return { text: raw, rephrased: false, incomplete: isIncompleteAsk(raw), finalConstraint: raw };
+  const lastCut = cuts[cuts.length - 1];
+  const found = new RegExp(STUTTER_REPHRASE.source, "i").exec(raw.slice(lastCut));
+  const start = lastCut + (found ? found[0].length : 0);
+  const final = raw.slice(start).replace(/^[,.\s]+/, "").trim();
+  if (!final) return { text: raw, rephrased: true, incomplete: true, finalConstraint: "" };
+  const textOut = final.charAt(0).toUpperCase() + final.slice(1);
+  return { text: textOut, rephrased: true, incomplete: isIncompleteAsk(final), finalConstraint: textOut };
+}
+const MIC_GARBAGE_TOK = /^(?:la+|de|da|el|le|un|une|et|en|les|des|du|al|na+|hmm+|mm+|ah+|uh+|oh+|ya+|yo+|huh|tsk|pfft|nah|ooh|woo|tee|dee|doo|ba+|pa+)$/i;
+const MIC_MICRO_OK = new Set("i me my we us it ok no hi hey yo so to do if or be am is".split(" "));
+function isMicGarbage(text, confidence) {
+  const raw = String(text || "").trim();
+  if (!raw) return true;
+  const ws = raw.toLowerCase().replace(/[^a-z0-9'\s]+/g, " ").split(/\s+/).filter(Boolean);
+  if (!ws.length) return true;
+  if (ws.length <= 4 && ws.every(w => MIC_GARBAGE_TOK.test(w))) return true;
+  if (ws.length <= 3 && ws.every(w => MIC_GARBAGE_TOK.test(w) || (w.length <= 2 && !MIC_MICRO_OK.has(w)))) return true;
+  if (typeof confidence === "number" && confidence < 0.45 && ws.length <= 4 && !(typeof Q_CUE === "function" ? Q_CUE(raw) : (Q_CUE && Q_CUE.test && Q_CUE.test(raw))) && !/\?/.test(raw)) return true;
+  return false;
+}
+function isQuestionComplete(text) {
+  const stutter = resolveStutterRephrase(text);
+  if (stutter.incomplete) return false;
+  const x = stutter.text || String(text || "").replace(/\s+/g, " ").trim();
+  if (!x) return false;
+  if (/\b(?:and|or|but|if|when|because|the|a|an|to|of|for|with)\s*$/i.test(x) && !/[?]$/.test(x)) return false;
+  return !isIncompleteAsk(x);
+}
+function intentToComplete(opts) {
+  opts = opts || {};
+  const need = Math.max(INTENT_COMPLETE_SILENCE_MS, Number(opts.silenceMs) || INTENT_COMPLETE_SILENCE_MS);
+  const quiet = Number(opts.themQuietMs);
+  const stutter = resolveStutterRephrase(String(opts.text || ""));
+  const text = stutter.text || String(opts.text || "");
+  if (!Number.isFinite(quiet) || quiet < need) {
+    return { ready: false, reason: "not-quiet", waitMs: Math.min(MAX_AUTO_DELAY_MS, Math.max(0, need - (Number.isFinite(quiet) ? quiet : 0))) };
+  }
+  if (stutter.incomplete || !isQuestionComplete(text)) {
+    return { ready: false, reason: "incomplete", waitMs: Math.min(MAX_AUTO_DELAY_MS, MANUAL_INCOMPLETE_WAIT_MS) };
+  }
+  return { ready: true, reason: "complete", waitMs: 0 };
+}
+function sttVocabFromActiveProfile() {
+  const s = (typeof current !== "undefined" && current) ? current : {};
+  const p = s.prep || s;
+  const out = [], seen = new Set();
+  const add = (raw) => {
+    const x = String(raw || "").replace(/\s+/g, " ").trim();
+    if (!x || x.length < 2 || x.length > 48) return;
+    const k = x.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k); out.push(x);
+  };
+  const list = (arr) => { if (Array.isArray(arr)) arr.forEach(add); };
+  list(s.employers); list(s.companies); list(s.tools); list(s.keywords);
+  const idn = p.identity || {};
+  list(idn.employers); list(idn.companies); list(idn.tools); list(idn.keywords);
+  if (idn.name) add(idn.name);
+  if (p.persona && p.persona.role) add(p.persona.role);
+  list(p.persona && p.persona.employers); list(p.persona && p.persona.tools);
+  list(p.employers); list(p.tools);
+  (p.projects || []).forEach((proj) => {
+    if (!proj) return;
+    add(proj.name); add(proj.employer); add(proj.company);
+    list(proj.tools); list(proj.stack);
+  });
+  const blob = JSON.stringify({ identity: idn, persona: p.persona, projects: p.projects, employers: s.employers, tools: s.tools, resume: (s.resume || "").slice(0, 8000) }).toLowerCase();
+  ["CISO","CAB","DMARC","SOC","GRC","EDR","SIEM","IAM","MFA"].forEach((term) => { if (blob.includes(term.toLowerCase())) add(term); });
+  return out.slice(0, 80);
+}
+const STT_CONFUSION = [
+  ["Entra ID", [/\benter(?:\s+an?)?\s+id\b/gi, /\bentra\s*id\b/gi, /\benter\s+id\b/gi]],
+  ["ServiceNow GRC", [/\bservice\s*now\s+grc\b/gi, /\bservice\s*now\b/gi]],
+  ["Qualys VMDR", [/\bqualis\s+vmdr\b/gi, /\bquality\s+vmdr\b/gi, /\bqualys\s+vmd[er]\b/gi]],
+  ["Qualys", [/\bqualis\b/gi, /\bquallis\b/gi]],
+  ["Tanium", [/\btanny(?:\s+um)?\b/gi]],
+  ["Splunk", [/\bsplunc?k\b/gi, /\bsplank\b/gi]],
+  ["Citi", [/\bat\s+city\b/gi]],
+  ["CVS", [/\bc\.\s*v\.\s*s\.?\b/gi, /\bsee\s+v(?:ee)?\s+s\b/gi]],
+  ["DMARC", [/\bdee\s*mark\b/gi]],
+  ["CISO", [/\bsee\s*so\b/gi]]
+];
+function applySttCorrections(text) {
+  let x = String(text || "");
+  if (!x) return x;
+  const vocab = new Set(sttVocabFromActiveProfile().map(v => v.toLowerCase()));
+  if (!vocab.size) return x;
+  for (const [term, pats] of STT_CONFUSION) {
+    const key = term.toLowerCase();
+    const hit = vocab.has(key) || [...vocab].some(v => v === key.split(/\s+/)[0] || v.startsWith(key) || key.startsWith(v));
+    if (!hit) continue;
+    for (const re of pats) x = x.replace(re, term);
+  }
+  return x;
+}
+function hasAnchorFields(fields) {
+  if (!fields) return false;
+  return !!(String(fields.stance || "").trim() && String(fields.friction || "").trim() && String(fields.fix || "").trim());
+}
+function clipAnchorWords(text, max) {
+  const w = String(text || "").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean);
+  return w.slice(0, max).join(" ");
+}
+function formatElapsedShort(ms) {
+  const s = Math.floor(Math.max(0, Number(ms) || 0) / 1000);
+  const m = Math.floor(s / 60);
+  return m <= 0 ? (s + "s") : (m + ":" + String(s % 60).padStart(2, "0"));
+}
+const PIVOT_STOP = new Set("the a an and or but if like you know um uh so of to for with in on at as is was were be been this that those these it your my their do does did have has had would could can will just maybe even about from into not how what why when where which who whom whose".split(" "));
+function pivotConstraint(text, maxWords) {
+  maxWords = maxWords || 5;
+  const resolved = resolveStutterRephrase(text);
+  const src = resolved.finalConstraint || resolved.text || String(text || "");
+  const toks = src.replace(/[^A-Za-z0-9+#./\s-]+/g, " ").split(/\s+/).filter(Boolean);
+  const content = toks.filter(w => !PIVOT_STOP.has(w.toLowerCase()) && w.length > 1);
+  return (content.length ? content : toks).slice(0, maxWords).join(" ").trim();
+}
+function interruptionFlush(opts) {
+  opts = opts || {};
+  const ask = String(opts.newAsk || "").replace(/\s+/g, " ").trim();
+  const should = !!(opts.interviewerSpeaking && (opts.cardShowing || opts.candidateTalking) && ask);
+  if (!should) return { flush: false, pivot: "", resolve: false, question: ask, reason: "no-interrupt" };
+  const stutter = resolveStutterRephrase(ask);
+  const question = stutter.text || ask;
+  if (stutter.incomplete && !stutter.rephrased) return { flush: true, pivot: pivotConstraint(question), resolve: false, question, reason: "incomplete" };
+  return { flush: true, pivot: pivotConstraint(question), resolve: true, question, reason: "interrupt" };
+}
+
 function confirmAutoQuestion(text) {
-  const t = String(text || "").replace(/\s+/g, " ").trim();
+  const stutter = resolveStutterRephrase(text);
+  const t = String((stutter.text || text || "")).replace(/\s+/g, " ").trim();
   if (!t || AUTO_CONFIRM_NOISE.test(t)) return { ok: false, reason: "noise" };
+  if (/^(?:that'?s (?:really )?cool|that must feel|i'?m sure that must)\b/i.test(t) && !(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "confirmation" };
   if (!(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "no-cue" };
+  if (stutter.incomplete || !isQuestionComplete(t)) return { ok: false, reason: "unfinished" };
   if (!/[?]$/.test(t) && t.split(/\s+/).length <= 4) return { ok: false, reason: "unfinished" };
   if (/\b(?:and|or|but|if|when|because|the|a|an|to|of|for|with)\s*$/i.test(t) && !/[?]$/.test(t)) return { ok: false, reason: "unfinished" };
   if (/\b(in this video|we're going to|on the channel|subscribe)\b/i.test(t) && !/\byou\b/i.test(t) && !/[?]$/.test(t)) return { ok: false, reason: "commentary" };
-  return { ok: true, reason: "cue" };
+  return { ok: true, reason: stutter.rephrased ? "rephrased" : "cue" };
 }
 function shouldAutoAnswer(opts) {
   if (!opts || !opts.autoOn) return { fire: false, reason: "off" };
   if (!opts.cue) return { fire: false, reason: "no-cue" };
-  if (!Number.isFinite(Number(opts.themQuietMs)) || Number(opts.themQuietMs) < AUTO_THEM_SILENCE_MS) return { fire: false, reason: "not-quiet" };
+  if (opts.text != null && String(opts.text).trim()) {
+    const gate = intentToComplete({ text: opts.text, themQuietMs: opts.themQuietMs });
+    if (!gate.ready) return { fire: false, reason: gate.reason };
+  } else if (!Number.isFinite(Number(opts.themQuietMs)) || Number(opts.themQuietMs) < AUTO_THEM_SILENCE_MS) return { fire: false, reason: "not-quiet" };
   if (!opts.confirmed) return { fire: false, reason: "unconfirmed" };
   return { fire: true, reason: "ready" };
 }
+
 async function confirmAutoAndAnswer(tail) {
   // Conservative: a failed or empty derive confirm must not auto-fire.
   try {
@@ -3166,6 +3366,7 @@ async function startStreamingStt(cap) {
     const data = res.ok ? await res.json() : null;
     if (!data || !data.streaming) { fallbackToWhisperSlices(who, "unavailable"); return false; }
     session.status = "live";
+    session.keyterms = typeof sttVocabFromActiveProfile === "function" ? sttVocabFromActiveProfile() : [];
     return true;
   } catch {
     fallbackToWhisperSlices(who, "connect-failed");
@@ -3226,9 +3427,13 @@ function scheduleAuto() {
     const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
     const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
     const confirmed = confirmAutoQuestion(tail).ok;
-    const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed });
+    const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });
     if (!decision.fire) {
-      if (decision.reason === "not-quiet") autoTimer = setTimeout(fire, Math.max(200, AUTO_THEM_SILENCE_MS - themQuietMs));
+      const gate = intentToComplete({ text: tail, themQuietMs });
+      const waitMore = decision.reason === "not-quiet" || decision.reason === "incomplete"
+        ? Math.max(200, Math.min(MAX_AUTO_DELAY_MS, gate.waitMs || (AUTO_THEM_SILENCE_MS - themQuietMs)))
+        : 0;
+      if (waitMore) autoTimer = setTimeout(fire, waitMore);
       return;
     }
     void confirmAutoAndAnswer(tail);
@@ -3516,7 +3721,8 @@ function onCaptionText(text) {
   } catch {}
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
-  text = fixTerms(fixPhrases(text));
+  text = applySttCorrections(fixTerms(fixPhrases(text)));
+  if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
     if (micBleed(text, Date.now(), themLines, spokenAt)) { logDecision("drop-mic-bleed", who, text); logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
@@ -3535,7 +3741,34 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   appendDrawer(who, text, Date.now());
   showCaption(who, text, false);
   updatePending();
+  if (who === "Them" && typeof interruptionFlush === "function" && (Q_CUE.test(text) || (typeof opensNewAsk === "function" && opensNewAsk(text)))) {
+    try {
+      const cardShowing = !!(cards[idx] && typeof hasAnswer === "function" && hasAnswer(cards[idx]));
+      const candidateTalking = !!(captures.some(c => c.who === "You" && c.voiced) || (transcript.length && transcript[transcript.length-1].who === "You"));
+      const ev = interruptionFlush({ interviewerSpeaking: true, cardShowing, candidateTalking, newAsk: text });
+      if (ev.flush) applyInterruptionFlush(ev);
+    } catch {}
+  }
   if (!flushing) scheduleAuto();
+}
+function applyInterruptionFlush(ev) {
+  const cur = cards[idx];
+  if (cur) {
+    cur.flushed = true;
+    cur.streaming = false;
+    if (answerCtl && typeof answerCtl.abort === "function") { try { answerCtl.abort(); } catch {} }
+    answerCtl = null;
+  }
+  const pivot = ev.pivot || pivotConstraint(ev.question || "");
+  const page = addCard(ev.question || pivot, []);
+  page.pivot = pivot;
+  page.askedAt = Date.now();
+  page.question = ev.question || page.question;
+  renderCard();
+  status("New constraint: " + pivot, "live");
+  if (ev.resolve && ev.question && isQuestionComplete(ev.question)) {
+    if (typeof autoOn !== "undefined" && autoOn) void confirmAutoAndAnswer(ev.question);
+  }
 }
 
 /* ---- answers: streamed, grounded on the dossier ---- */
@@ -4168,7 +4401,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           const frame = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
           if (!frame.startsWith("data:")) continue;
           let ev; try { ev = JSON.parse(frame.slice(5)); } catch { continue; }
-          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { const displayQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, ev.derived) : ev.derived; card.question = displayQ; if (cards[idx] === card) { renderCard(); status("Answering: " + displayQ, "live"); } } }
+          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.stance || ev.friction || ev.fix || ev.hook || ev.prose) { if (ev.stance) card.stance = ev.stance; if (ev.friction) card.friction = ev.friction; if (ev.fix) card.fix = ev.fix; if (ev.hook) card.hook = ev.hook; if (ev.prose) card.prose = ev.prose; if (cards[idx] === card) renderCard(); } if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { const displayQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, ev.derived) : ev.derived; card.question = displayQ; if (cards[idx] === card) { renderCard(); status("Answering: " + displayQ, "live"); } } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
           else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
@@ -4632,6 +4865,24 @@ async function aiAnswer(fromAuto, options = {}) {
           return;
         }
         if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
+      } catch {}
+    }
+    if (liveResolved && typeof resolveStutterRephrase === "function") {
+      const st = resolveStutterRephrase(liveResolved);
+      if (st.text) liveResolved = st.text;
+    }
+    if (!fromAuto && !typedText && !anyway) {
+      try {
+        const tail = liveResolved || pending.filter(x => x && x.text).map(x => x.text).join(" ");
+        const themCap = captures.find(c => c.who === "Them");
+        const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : INTENT_COMPLETE_SILENCE_MS;
+        const gate = intentToComplete({ text: tail, themQuietMs });
+        if (!gate.ready && gate.reason === "incomplete") {
+          status("Waiting for the question to finish…", "live");
+          await new Promise((r) => setTimeout(r, gate.waitMs || MANUAL_INCOMPLETE_WAIT_MS));
+          try { await flushHeard(400); } catch {}
+          pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+        }
       } catch {}
     }
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
