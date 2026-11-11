@@ -807,10 +807,6 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, said)
   }
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) {
-    await deferResumeRecovery(job, "provider_unavailable")
-    return quiet ? undefined : sendText(from, "Your resume request is saved. Tailoring is unavailable; MarketFit will retry automatically.")
-  }
   // One claim per JD across workers.
   const claimKey = `whatsapp/jobs/${job}`
   const claimToken = randomBytes(6).toString("hex")
@@ -876,7 +872,33 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       return false
     }
   }
+  const sendOfflineOriginal = async (): Promise<boolean> => {
+    if (!files) return false
+    const expectedRoot = filesOf(userId)
+    if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return false
+    const root = path.resolve(files.userDir)
+    const selected = path.resolve(files.abs)
+    if (!selected.startsWith(root + path.sep)) return false
+    const [libraryBytes, sessionBytes] = await Promise.all([
+      readPath(selected).catch(() => null),
+      readPath(session.resumePath).catch(() => null),
+    ])
+    if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return false
+    return sendClosest("NOT TAILORED — AI provider unavailable.")
+  }
   try {
+    if (!hasAnyKey(keys)) {
+      failureCode = "provider_unavailable"
+      if (files && await sendOfflineOriginal()) return
+      const latest = await readResumeRecovery(job).catch(() => null)
+      const uncertain = sending || latest?.status === "sending" || latest?.status === "uncertain"
+      await sayOutcome(uncertain
+        ? "WhatsApp did not confirm the selected original resume. I will not send a duplicate; your request is saved."
+        : files
+          ? "I could not verify or send the selected same-account resume, so no file was sent. Your request is saved for retry."
+          : "AI tailoring is unavailable and no same-account library resume was selected, so no file was sent. Your request is saved for retry.")
+      return
+    }
   // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
   // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
   const cur = await loadSession(from)
@@ -1471,7 +1493,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
   const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
+  if (!hasAnyKey(keys)) return sendText(from, "AI rewriting is unavailable right now. No file was sent; your previous resume is unchanged.")
   if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
 
   await sendText(from, `Updating your resume: "${clip(request, 200)}"…`)
@@ -1487,12 +1509,6 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(request)
   const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(request)
 
-  const sendBaseline = async (why: string, baseline: Buffer, meta: Meta) => {
-    const name = await outputNameFor(baseline)
-    await deliver(from, baseline, name, closestResumeCaption(name, "the resume already chosen for this job", why), {
-      userId, jd: gen.jd, meta, changes: gen.changes || [], source: gen.source,
-    })
-  }
   let result: TailorResult
   try {
     result = await runTailor({
@@ -1514,14 +1530,10 @@ async function refine(from: string, replyTo: string, request: string, userId: st
       sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
     })
   } catch (error) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      const timedOut = /timed out/i.test(String(error))
-      await sendBaseline(timedOut ? "The rewrite ran out of time just now." : "The rewrite stopped before it finished.", baseline, meta)
-      return
-    }
-    return sendText(from, "The rewrite stopped before it finished, and the resume already chosen for this job could not be opened. Send the job again.")
+    const timedOut = /timed out/i.test(String(error))
+    return sendText(from, timedOut
+      ? "The update timed out. No file was sent; your previous resume is unchanged."
+      : "The update could not be completed. No file was sent; your previous resume is unchanged.")
   }
 
   const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
@@ -1532,31 +1544,20 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is not:
   // the file this reply started from goes out instead, labelled as unchanged.
   if (!whatsappRewriteUsable(result)) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      await sendBaseline(unfinishedRewriteWhy(result), baseline, meta)
-      return
-    }
-    return sendText(from, qualityStop(result))
+    return sendText(from, `${qualityStop(result)} No file was sent; your previous resume is unchanged.`)
   }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
   const meta = await metaPromise
   const source = await readPath(gen.file)
   if (!file) {
-    if (source) {
-      await sendBaseline("The updated Word file could not be opened.", source, meta)
-      return
-    }
-    return sendText(from, "The update generated but the file could not be read back. Please try again.")
+    return sendText(from, "The updated Word file could not be opened. No file was sent; your previous resume is unchanged.")
   }
   if (!source) {
-    return sendText(from, "I could not verify the original resume for this update, so no file was sent.")
+    return sendText(from, "I could not verify the original resume for this update, so no file was sent. Your previous resume is unchanged.")
   }
   if (!(await sameResumeFacts(source, file))) {
-    await sendBaseline("The update failed identity/contact/date verification, so I sent your original resume instead.", source, meta)
-    return
+    return sendText(from, "The update failed name, contact or employment-date verification. No file was sent; your previous resume is unchanged.")
   }
   const changes = [...(gen.changes || []), request]
   const name = await outputNameFor(file)
@@ -1697,9 +1698,12 @@ function unfinishedRewriteWhy(result: TailorResult): string {
 }
 
 function closestResumeCaption(name: string, label: string, why: string): string {
+  const notTailored = /^NOT TAILORED\\b/i.test(why)
   return [
     `*${name}*`,
-    `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
+    notTailored
+      ? `${why} This is the original resume you selected (${label}); no edits were applied.`
+      : `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
     "Reply to this file to request changes.",
   ].join("\n")
 }
