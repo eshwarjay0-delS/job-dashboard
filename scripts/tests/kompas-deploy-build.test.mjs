@@ -27,6 +27,7 @@ test('Vercel must use the same verified Webpack build mode as CI', () => {
   assert.equal(vercel.framework, 'nextjs')
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
   assertRequiredPrebuildContract(pkg.scripts.prebuild)
+  assert.ok(pkg.scripts.prebuild.includes('scripts/tests/dashboard-shell.test.mjs'), 'the approved mobile navigation regression must run in prebuild')
   assert.equal(pkg.scripts.build, 'node scripts/stamp-version.mjs && next build')
 })
 
