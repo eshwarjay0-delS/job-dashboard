@@ -377,3 +377,11 @@ This entry adds read-only evidence gathered after the earlier 08:09 UTC reconcil
 - The 6 Nov channel-specific WhatsApp policy still supersedes the old blanket 95%/98% hard hold. The Kompas Continuous Voice Delivery automation is disabled, no separate Bible-Keeper automation is listed, and no parallel voice/audio/caption edits were made.
 
 Continue: verify the first post-classifier crawl at 11 Nov 2026 11:00 UTC, then test the public API only if Vercel returns to live service. Preserve all PR approval and protected-preview gates; do not claim deployment or end-to-end acceptance from source checks alone.
+
+
+## 11 November 2026 — Gmail selected-sender regression result
+
+- PR #297 (`test(gmail): verify selected sender and inbox isolation`) is a test/CI-only slice on exact head `f7c7ff0c4d919f763e9bf9f3e3169134d602ffc8`. It executes the real `gmail-send` route under mocked auth, token and fetch adapters and covers five boundaries: selected From + matching OAuth account, same-inbox thread lookup before send, selected-account reconnect without fallback, unknown sender rejection, and disabled inbox rejection.
+- Exact-head full CI `42997343901` and Kompas baseline `42997343939` completed SUCCESS. The full CI step `Verify Gmail selected-sender and per-inbox thread isolation` completed SUCCESS. This is regression coverage, not live Gmail acceptance; no real email was sent and no runtime code changed.
+- PR #297 remains open. Vercel/protected preview is blocked because the project reports `live:false` and the private `KOMPAS_VERCEL_API_TOKEN` is unavailable in this runtime. Branch-protection requirements cannot be enumerated through the connected GitHub integration (HTTP 403), so do not bypass or assume the failed Vercel status is optional.
+- Continue: wait for legitimate preview/status restoration, then use the normal protected merge path. Afterward verify two authorized inboxes, selected From, same-inbox thread ownership, and affected-inbox-only reconnect. PR #290's mobile acceptance, sync-health approval, and unattended worker configuration remain separate.
