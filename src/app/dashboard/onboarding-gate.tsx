@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 
 // Once the server has said this person's setup is complete, it stays complete: moving between pages shows the page at
 // once. Before 14 Oct 2026 every move blanked the page to "Checking account setup…" and asked the server again (about
@@ -37,6 +38,11 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
     fetch("/api/onboarding/status", { cache: "no-store" })
       .then(async response => {
         if (response.status === 401) {
+          // Login-off must not bounce to sign-in (that would loop). Fail open.
+          if (await serverReportsAuthDisabled()) {
+            if (active) setChecked(true)
+            return
+          }
           // Back to the page that was asked for once signed in (the sign-in page checks `next` with safeAuthNext).
           router.replace(pathname && pathname !== "/dashboard" ? `/login?next=${encodeURIComponent(pathname)}` : "/login")
           return

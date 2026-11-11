@@ -116,7 +116,19 @@ test('Gemini enrichment receives baseline and explicit confirmations on both pas
   assert.deepEqual(Array.from(terms), ['guided selling', 'quote templates'])
 })
 
-test('candidate evidence keeps resume/confirmation conflicts unresolved and pursuing credentials unearned', () => {\n  const confirmation = 'I completed my degree in 2022; the uploaded resume lists a different year.'\n  const jd = 'Security Engineer requires 5+ years and prefers AWS Security Specialty.'\n  const input = candidateEvidenceInput(jd, [confirmation])\n  assert.ok(input.indexOf(confirmation) < input.indexOf('SOURCE-FACT CONFLICT RULES'))\n  assert.match(input, /do not merge, average or silently choose/)\n  assert.match(input, /mark the fact unresolved and request correction/)\n  assert.match(input, /pursuing, in progress, planned or studying for is not earned/)\n  assert.match(input, /Job-description requirements.*are never candidate evidence/)\n  assert.ok(input.indexOf('SOURCE-FACT CONFLICT RULES') < input.indexOf(jd))\n})\n\ntest('a long pasted JD cannot crowd explicit role confirmations out of either Gemini review', async () => {
+test('candidate evidence keeps resume/confirmation conflicts unresolved and pursuing credentials unearned', () => {
+  const confirmation = 'I completed my degree in 2022; the uploaded resume lists a different year.'
+  const jd = 'Security Engineer requires 5+ years and prefers AWS Security Specialty.'
+  const input = candidateEvidenceInput(jd, [confirmation])
+  assert.ok(input.indexOf(confirmation) < input.indexOf('SOURCE-FACT CONFLICT RULES'))
+  assert.match(input, /do not merge, average or silently choose/)
+  assert.match(input, /mark the fact unresolved and request correction/)
+  assert.match(input, /pursuing, in progress, planned or studying for is not earned/)
+  assert.match(input, /Job-description requirements.*are never candidate evidence/)
+  assert.ok(input.indexOf('SOURCE-FACT CONFLICT RULES') < input.indexOf(jd))
+})
+
+test('a long pasted JD cannot crowd explicit role confirmations out of either Gemini review', async () => {
   const h = harness(['guided selling'])
   const jd = 'Employer requirements. '.repeat(1000)
   const confirmation = 'I used Salesforce CPQ guided selling at Current Client only, not Earlier Client.'

@@ -74,7 +74,8 @@ test("heard-only re-presses go through the derive cut, never pinned", () => {
 
 test("timer aborts retry instead of stranding a card on a stale status", () => {
   const aborts = (src.match(/stallRetry\(\);/g) || []).length;
-  assert.ok(aborts >= 2, `derive and stream abort paths both retry (got ${aborts})`);
+  // One-hop removed the separate derive request; the stream abort path still retries.
+  assert.ok(aborts >= 1, `stream abort path retries (got ${aborts})`);
   assert.ok(!src.includes('card.meta = "superseded by the next question"'), "the misleading superseded meta is gone");
   assert.ok(src.includes('status("Answer stalled — press AI Answer to try again.", "live")'), "the give-up says plainly what to do");
 });

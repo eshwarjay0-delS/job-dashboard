@@ -12,7 +12,7 @@ function env(extra = {}) {
  state.showCaption = () => {};
  vm.createContext(state);
  vm.runInContext(section('function whisperPrompt(', '// Owner, 2026-09-30'), state);
- vm.runInContext(section('async function transcribe(', '/* ---- what was heard'), state);
+ vm.runInContext(section('function speechRetryDelay(', '/* ---- what was heard'), state);
  return state;
 }
 test('keeps short answers and rejects empty/noise-only transcripts', () => {
@@ -41,7 +41,10 @@ test('discards a response after switching sessions', async () => {
  await p; assert.equal(s.entries.length,0);
 });
 test('failed request does not block the next phrase and reports the loss', async () => {
- let n=0; const s=env({fetch:async()=>++n===1?{ok:false,status:429,headers:{get:()=>"30"}}:{ok:true,json:async()=>({text:'Recovered phrase'})}});
+ // 3e21736e honors a 429/5xx Retry-After of up to 60s, so a 30s cooldown is retried
+ // (covered by kompas-speech-429-retry.test.mjs). This test is about a failure that
+ // must not hold the next phrase: a 120s cooldown is surfaced, not retried.
+ let n=0; const s=env({fetch:async()=>++n===1?{ok:false,status:429,headers:{get:()=>"120"}}:{ok:true,json:async()=>({text:'Recovered phrase'})}});
  await Promise.all([s.transcribe(new Blob(['a']),'You',{final:true}),s.transcribe(new Blob(['b']),'You',{final:true})]);
  assert.equal(s.entries[0].text,'Recovered phrase'); assert.match(s.errors[0],/not transcribed/);
 });
@@ -127,7 +130,7 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  // the press threw inside its own try and generateAnswer was never reached (0 !== 1). Same slices and the same
  // kind of stand-ins as scripts/tests/kompas-typed-question.test.mjs; a session always holds a placeholder card.
  const box={value:''},node={classList:{add(){},remove(){},toggle(){},contains:()=>false}};
- const s=env({aiBusy:false,aiBusySince:0,autoTimer:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],cards:[{question:'Ready',answer:['…']}],idx:0,$:id=>id==='manualInput'?box:node,setChat:()=>{},logEvent:()=>{},logDecision:()=>{},renderCard:()=>{},toTop:()=>{},plainAnswer:a=>String(a),questionSource:()=>'Them',addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
+ const s=env({aiBusy:false,aiBusySince:0,autoTimer:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],answerAnywayHeld:null,pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],cards:[{question:'Ready',answer:['…']}],idx:0,$:id=>id==='manualInput'?box:node,setChat:()=>{},logEvent:()=>{},logDecision:()=>{},renderCard:()=>{},toTop:()=>{},plainAnswer:a=>String(a),questionSource:()=>'Them',recentContext:()=>'',addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
  vm.runInContext(source.slice(source.indexOf('const Q_CUE ='), source.indexOf(';', source.indexOf('const Q_CUE =')) + 1),s);
  vm.runInContext(section('// ── Question intake', '// ── end question intake ──'),s);
  vm.runInContext(section('function heardAsQuestion(', '\n'),s);

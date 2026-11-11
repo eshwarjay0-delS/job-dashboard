@@ -9,7 +9,8 @@ const issue = fs.readFileSync(path.resolve("src/app/api/kompas/desktop-handoff/r
 const redeem = fs.readFileSync(path.resolve("src/app/api/kompas/desktop-handoff/redeem/route.ts"), "utf8")
 
 test("loaded resume and JD are never placed in the Windows launcher URL", () => {
-  const code = app.slice(app.indexOf("function packSession(s) {"), app.indexOf("let lastDesktopHandoff ="))
+  const end = Math.max(app.indexOf("let lastDesktopHandoff ="), app.indexOf("let desktopTicketCache = null"))
+  const code = app.slice(app.indexOf("function packSession(s) {"), end)
   assert.ok(code.includes("function prepareDesktopSession(s)"), "ticket issue route must exist")
   assert.ok(code.includes('fetch("/api/kompas/desktop-handoff"'), "full session must go to same-origin HTTPS route")
   assert.ok(code.includes('window.location.assign(url)'), "short protocol link must use browser navigation")
@@ -21,6 +22,8 @@ test("loaded resume and JD are never placed in the Windows launcher URL", () => 
     supabaseSession: () => ({ refresh_token: "b".repeat(600), expires_at: 100 }),
     btoa: s => Buffer.from(s, "binary").toString("base64"), unescape, encodeURIComponent,
     Date, fetch() { throw Error("not called") }, window: {}, atob: s => Buffer.from(s, "base64").toString("binary"),
+    // One-hop mid-call controls live outside this slice; packSession only copies the values.
+    sessionAnswerControls(sess) { return { format: "script_bullets", length: "balanced", tone: sess.tone || "simple", star: !!sess.star }; },
   }
   vm.runInNewContext(code + "\nthis.getPack = packSession;", globals)
   const big = globals.getPack({ id: "saved", role: "Security Engineer", resume: "R".repeat(8000), jd: "J".repeat(6000) })

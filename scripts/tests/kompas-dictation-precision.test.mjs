@@ -19,7 +19,11 @@ function extract(from, to) {
 }
 
 const ctx = {
-  current: { role: "Senior SOC Analyst", jd: "Splunk CrowdStrike", resume: "", voiceVocabulary: [] },
+  current: {
+    role: "Senior SOC Analyst", jd: "Splunk CrowdStrike", resume: "",
+    // Session 5: the Whisper hint is active-profile / learned terms only, not a hardcoded second-employer core.
+    voiceVocabulary: ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "SIEM", "domain controller", "MITRE ATT&CK"],
+  },
   transcript: [{ who: "Them", text: "Can you explain how Kerberos authentication works in an enterprise network?", at: 0, seq: 1 }],
 };
 vm.createContext(ctx);
@@ -192,7 +196,7 @@ test("round 4: an empty decode of a short start is tried once more", () => {
 
 test("round 5: a long resume cannot push V-Cert out of the hint", () => {
   const saved = ctx.current;
-  ctx.current = { role: "Senior SOC Analyst", jd: "Splunk CrowdStrike", resume: Array.from({ length: 40 }, (_, i) => "Term" + i).join(" "), voiceVocabulary: [] };
+  ctx.current = { role: "Senior SOC Analyst", jd: "Splunk CrowdStrike", resume: Array.from({ length: 40 }, (_, i) => "Term" + i).join(" "), voiceVocabulary: ["V-Cert", "Venafi TPP", "PKCS#10"] };
   const p = ctx.whisperPrompt();
   ctx.current = saved;
   assert.ok(p.includes("V-Cert") && p.includes("Venafi TPP") && p.includes("PKCS#10"), p);

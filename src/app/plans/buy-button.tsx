@@ -4,6 +4,7 @@
 // plan has no price, the button is disabled and says why, so nobody clicks into an error.
 
 import { useState } from "react"
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 
 export function BuyButton({ planId, buyable }: { planId: string; buyable: boolean }) {
   const [busy, setBusy] = useState(false)
@@ -23,7 +24,10 @@ export function BuyButton({ planId, buyable }: { planId: string; buyable: boolea
     try {
       const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId }) })
       const data = await res.json().catch(() => ({})) as { url?: string; error?: string }
-      if (res.status === 401) { window.location.assign("/login?next=/plans"); return }
+      if (res.status === 401) {
+        if (await serverReportsAuthDisabled()) { setError(data.error || "Checkout could not start. Nothing was charged."); return }
+        window.location.assign("/login?next=/plans"); return
+      }
       if (res.ok && data.url) { window.location.assign(data.url); return }
       setError(data.error || "Checkout could not start. Nothing was charged.")
     } catch {

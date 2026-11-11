@@ -5,6 +5,7 @@
  * This module does not call a model.
  */
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
+import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
 import { repairDictation } from "./kompasDictation.ts"
@@ -244,6 +245,27 @@ function containsTerm(text: string, term: string): boolean {
  * The topic part of the ask. Audience and format instructions ("Keep it suitable for technical HR",
  * "explain it to a director", "in two minutes") steer the mode, not the topic, so they are not keywords.
  */
+
+// r7: role or achievement premises the earlier since/given/as-you rule missed.
+const ROLE_PREMISE = /^\s*([Aa]s\s+(?:the\s+|a\s+|an\s+)?(?!I\b|We\b|You\b)(?:[A-Z][\w&.-]*|head|lead|leader|manager|director|founder|owner)\b[^,?]{1,100}),\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[\s\S]+)$/
+const CLAIM_PREMISE = /^\s*(you(?:'ve| have)?\s+(?:cut|scaled|led|managed|built|grew|saved|founded|ran|reduced|increased|doubled|tripled|hired|owned)\b[^,?]{3,140}),\s*(?:so|and)\s+((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[\s\S]+)$/i
+function premiseSplit(raw: string): { premise: string; ask: string } | null {
+  const m = String(raw || "").match(ROLE_PREMISE) || String(raw || "").match(CLAIM_PREMISE)
+  // "You scaled the API to a billion requests a day, so what broke?": a wh-ask of 2+ words is enough after an explicit
+  // "You <claim>, so"; a one-word ask ("so why?") keeps the whole question (failsafe).
+  const min = m && CLAIM_PREMISE.test(String(raw || "")) ? 2 : 3
+  return m && m[2].trim().split(/\s+/).length >= min ? { premise: m[1].trim(), ask: m[2].trim() } : null
+}
+/** The premise an ask leans on ("You cut cloud spend by 90 percent"), or "" when there is none. Never throws. */
+export function questionPremise(question: string): string {
+  try {
+    const raw = String(question || "")
+    const old = raw.match(/^\s*((?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120}),\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
+    if (old && old[2].trim().split(/\s+/).length >= 3) return old[1].trim()
+    return premiseSplit(raw)?.premise || ""
+  } catch { return "" }
+}
+
 export function topicOfAsk(question: string): string {
   // Stress round 2 (29 Oct 2026): "Since you led the SOC at a large bank, how big was your team?" made the premise the
   // keywords, so the prompt told the model to open on "led, SOC, large bank" - a premise the resume may not support.
@@ -279,6 +301,10 @@ export function topicOfAsk(question: string): string {
   } catch { raw = String(question || "") }
   const premise = raw.match(/^\s*(?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120},\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
   let asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
+  // r7: "As VP of Engineering at Corvid, how…" and "You cut cloud spend by 90 percent, so how
+  // did you do it?" opened on the false claim. Same failsafe: the ask left must be 3+ words.
+  const more = asked === raw ? premiseSplit(raw) : null
+  if (more) asked = more.ask
   // Round 11 (29 Oct 2026): a jargon-stuffed setup ("With zero trust, SASE and all that, how do you…", "…, you know, with
   // all the SOAR and CNAPP stuff these days?") was read as the topic, so answers opened on and repeated the buzzwords.
   // Failsafe: the ask left must be 3+ words, or the whole question is kept.
@@ -416,12 +442,68 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
 
 // Same trigger the service uses for its coding block (CODE_ASK_Q), narrowed to an actual request for code so a
 // question that only mentions "function" in passing is not forced into a code block.
-const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+// CODE_REQUEST_Q is the coarse extracted surface pattern (verb + unambiguous code noun, or a bare sql/regex/unit-test
+// phrase). asksForCode is stricter: the noun must sit within CODE_NOUN_WINDOW tokens of the verb, and ambiguous nouns
+// (job, dag, limiter, pipeline, method) count only with a nearby code context or language name.
+// "rate limiter" with no language is not an existing positive fixture (the positive is "Implement a token bucket
+// rate limiter in TypeScript."; "How would you design a rate limiter…" is already a negative because the verb is
+// design). A bare limiter therefore follows the same context rule.
+export const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+const BARE_CODE_PHRASE = /\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+const UNAMBIGUOUS_CODE_NOUN = new Set(["code", "function", "script", "query", "program", "class", "regex", "algorithm", "endpoint", "test", "api"])
+const AMBIGUOUS_CODE_NOUN = new Set(["method", "pipeline", "job", "dag", "limiter"])
+const CODE_CONTEXT = new Set([
+  "function", "class", "api", "endpoint", "script", "query", "algorithm", "sql", "python", "spark", "pyspark",
+  "airflow", "go", "golang", "java", "javascript", "typescript", "js", "ts", "regex", "code", "ruby", "rust",
+  "scala", "kotlin", "swift", "php", "bash", "shell", "perl", "lua", "r", "c", "c++", "cpp", "csharp", "c#",
+  "nodejs", "node", "haskell", "elixir", "erlang", "matlab", "powershell",
+])
+const CODE_NOUN_WINDOW = 8
+const CODE_CONTEXT_RADIUS = 4
+
+function codeAskTokens(text: string): string[] {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap((raw) => raw.replace(/^[^\w#+]+|[^\w#+]+$/g, "").split(/[-_/]/))
+    .map((t) => t.toLowerCase())
+    .filter(Boolean)
+}
+
+function requestIsCodeAsk(text: string): boolean {
+  if (BARE_CODE_PHRASE.test(text)) return true
+  const tokens = codeAskTokens(text)
+  for (let i = 0; i < tokens.length; i++) {
+    const one = tokens[i]
+    const two = tokens.slice(i, i + 2).join(" ")
+    const three = tokens.slice(i, i + 3).join(" ")
+    const four = tokens.slice(i, i + 4).join(" ")
+    let verbLen = 0
+    if (four === "show me the code" || four === "give me the code") verbLen = 4
+    else if (three === "give me code") verbLen = 3
+    else if (two === "code up") verbLen = 2
+    else if (one === "write" || one === "implement") verbLen = 1
+    if (!verbLen) continue
+    const start = i + verbLen
+    const window = tokens.slice(start, start + CODE_NOUN_WINDOW)
+    if (window.some((t) => UNAMBIGUOUS_CODE_NOUN.has(t))) return true
+    for (let j = 0; j < window.length; j++) {
+      if (!AMBIGUOUS_CODE_NOUN.has(window[j])) continue
+      const abs = start + j
+      const ctx = tokens.slice(Math.max(0, abs - CODE_CONTEXT_RADIUS), abs + 1 + CODE_CONTEXT_RADIUS)
+      if (ctx.some((t) => CODE_CONTEXT.has(t))) return true
+    }
+  }
+  return false
+}
+
 export function asksForCode(question: string): boolean {
-  const tied = splitFollowUp(question)
+  // r7 (#28): zero-width spaces and odd whitespace must not change a coding ask ("Wri\u200bte a Python function").
+  const q = normalizeAskText(question)
+  const tied = splitFollowUp(q)
   // "Can you also add unit tests?" after a coding ask is still a coding ask; any other follow-up is judged on its own words.
-  if (tied.previous) return CODE_REQUEST_Q.test(tied.own) || (CODE_REQUEST_Q.test(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
-  return CODE_REQUEST_Q.test(String(question || ""))
+  if (tied.previous) return requestIsCodeAsk(tied.own) || (requestIsCodeAsk(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
+  return requestIsCodeAsk(q)
 }
 
 export function dissectionPrompt(question: string, level: AnswerLevel, sources = ""): string {
@@ -437,6 +519,8 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
       : `Mode ${level}. Aim for about ${mode.aimWords} words and never more than ${mode.maxWords}. Stop as soon as the question is answered. ${mode.voice}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
+    // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
+    questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
     "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
   ].filter(Boolean).join("\n")
 }

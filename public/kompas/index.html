@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,600&display=swap" />
-<link rel="stylesheet" href="styles.css?v=20261109-tight" />
+<link rel="stylesheet" href="styles.css?v=20261110-stream" />
 <link rel="stylesheet" href="mf-night.css" />
 <link rel="stylesheet" href="desktop-focus.css" />
 <link rel="manifest" href="manifest.json" />
@@ -415,9 +415,20 @@
           <div class="pref-list">
             <div class="pref-row"><div class="pref-t"><b>Tone</b><span>How the answers sound</span></div>
               <div class="seg compact" id="toneSeg">
-                <button data-v="professional" class="on">Professional</button>
-                <button data-v="conversational">Conversational</button>
-                <button data-v="confident">Confident</button>
+                <button data-v="simple" class="on">Simple</button>
+                <button data-v="formal">Formal</button>
+                <button data-v="professional">Professional</button>
+              </div></div>
+            <div class="pref-row"><div class="pref-t"><b>Answer format</b><span>How the next card is laid out</span></div>
+              <div class="seg compact" id="formatSeg">
+                <button data-v="script_bullets" class="on">Script + bullets</button>
+                <button data-v="full_script">Full script</button>
+                <button data-v="bullets">Bullets</button>
+              </div></div>
+            <div class="pref-row"><div class="pref-t"><b>STAR</b><span>Situation, task, action, result — off by default</span></div>
+              <div class="seg compact" id="starSeg">
+                <button data-v="off" class="on">Off</button>
+                <button data-v="on">On</button>
               </div></div>
             <div class="pref-row"><div class="pref-t"><b>Background prep</b><span>Pages prepared before the call</span></div>
               <select id="dossierSize">
@@ -464,6 +475,15 @@
     </div>
   </div>
   <div class="overlay" id="overlay">
+    <aside id="tabPreview" class="tab-preview hidden" hidden>
+      <div class="tab-preview-stage">
+        <video id="tabPreviewVideo" muted playsinline autoplay></video>
+        <div class="tab-preview-actions">
+          <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
+          <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
+        </div>
+      </div>
+    </aside>
     <header class="bar bar-top">
       <div class="bar-left">
         <button class="icon-btn" id="exitCopilot" title="Back to sessions (saves the transcript)">←</button>
@@ -536,6 +556,29 @@
         <option value="engineer" selected>Technical HR + Engineer</option>
         <option value="architect">Architect + Developer</option>
         <option value="director">Director</option>
+      </select></label>
+      <label class="asking card-prefs" title="Layout of the next answer card"><span>Format</span>
+      <select id="liveFormat" class="live-select">
+        <option value="script_bullets" selected>Script + bullets</option>
+        <option value="full_script">Full script</option>
+        <option value="bullets">Bullets</option>
+      </select></label>
+      <label class="asking card-prefs" title="Length of the next answer card"><span>Length</span>
+      <select id="liveLength" class="live-select">
+        <option value="short">Short</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="long">Long</option>
+      </select></label>
+      <label class="asking card-prefs" title="Tone of the next answer card. Simple is the default."><span>Tone</span>
+      <select id="liveTone" class="live-select">
+        <option value="simple" selected>Simple</option>
+        <option value="formal">Formal</option>
+        <option value="professional">Professional</option>
+      </select></label>
+      <label class="asking card-prefs" title="STAR structure for the next answer. Off by default."><span>STAR</span>
+      <select id="liveStar" class="live-select">
+        <option value="off" selected>Off</option>
+        <option value="on">On</option>
       </select></label>
     </div>
     <div class="live-mid">
@@ -707,12 +750,13 @@
 <script src="dossier-md.js"></script>
 <script src="correct.js"></script>
 <script src="anchor-flight.js"></script>
-<script>window.PERFACT_BUILD = "kompas-20261109-tight";</script>
+<script>window.PERFACT_BUILD = "kompas-20261110-stream";</script>
 <script src="screen-core.js"></script>
 <script src="screen-review.js"></script>
+<script src="auth-flag.js"></script>
 <script src="account-sync.js?v=20261111-egress"></script>
 <script src="caption-focus.js?v=20261102-three-lines"></script>
-<script src="app.js?v=20261109-tight"></script>
+<script src="app.js?v=20261110-stream"></script>
 <script src="caption-once.js?v=20261102-pinned-caption"></script>
 <script src="desktop-focus.js"></script>
 <script src="qbank-problems.js"></script>

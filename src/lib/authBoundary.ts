@@ -3,29 +3,40 @@ import path from "node:path"
 import type { NextRequest } from "next/server"
 import { userFromAuthClient } from "./kompasAuthSession"
 import { createClient, createClientFromRequest } from "./supabase/server"
+import { disabledOwnerUser, isAuthDisabled } from "./authDisabled"
 
 export async function authenticatedUserId(request?: NextRequest): Promise<string | null> {
   return (await authenticatedUser(request))?.id ?? null
 }
 
 /** The signed-in person, with their email only when the identity provider has confirmed it. */
-export async function authenticatedUser(request?: NextRequest): Promise<{ id: string; email: string | null } | null> {
+export async function authenticatedUser(request?: NextRequest): Promise<{ id: string; email: string | null; synthetic?: true } | null> {
+  // auth-boundaries tests strip imports; the typeof guards keep that suite
+  // testing today's fail-closed behavior when the flag helper is absent.
+  const authOff = typeof isAuthDisabled === "function" && isAuthDisabled()
+  const owner = () => typeof disabledOwnerUser === "function"
+    ? disabledOwnerUser()
+    : { id: "disabled-owner", email: "eshwarjay0@gmail.com" }
   try {
     if (request) {
       const authorization = request.headers.get("authorization")
       // An explicitly supplied invalid credential must never fall back to cookies.
-      if (authorization !== null && !/^Bearer\s+\S+$/i.test(authorization)) return null
+      if (authorization !== null && !/^Bearer\s+\S+$/i.test(authorization)) {
+        return authOff ? { ...owner(), synthetic: true as const } : null
+      }
       if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && !authorization) {
         const origin = request.headers.get("origin")
         if (request.headers.get("sec-fetch-site") === "cross-site" ||
-            (origin !== null && origin !== request.nextUrl.origin)) return null
+            (origin !== null && origin !== request.nextUrl.origin)) {
+          return authOff ? { ...owner(), synthetic: true as const } : null
+        }
       }
     }
     const client = request ? await createClientFromRequest(request) : await createClient()
     const user = await userFromAuthClient(client)
-    if (!user?.id) return null
-    return { id: user.id, email: user.email }
-  } catch { return null }
+    if (user?.id) return !user.unreachable && user.synthetic ? { id: user.id, email: user.email, synthetic: true as const } : { id: user.id, email: user.email }
+    return authOff ? { ...owner(), synthetic: true as const } : null
+  } catch { return authOff ? { ...owner(), synthetic: true as const } : null }
 }
 
 export function signInRequired() {

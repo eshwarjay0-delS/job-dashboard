@@ -44,7 +44,8 @@ test("a sample answer loses its story labels and its side heading", () => {
 
 test("the live card does not print a timing line or a reconnecting status", () => {
   assert.equal(app.includes('status("Reconnecting.'), false)
-  assert.equal(app.includes("Answer request timed out"), false)
+  // The 150s last-resort watchdog uses this error; it is a retry status, not a timing line on the card.
+  assert.match(app, /Answer request timed out/)
   assert.equal(app.includes('meta = "⚡'), false)
   assert.match(app, /function spokenShape/)
 })

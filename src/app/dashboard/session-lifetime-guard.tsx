@@ -4,12 +4,14 @@ import { useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { millisecondsUntilRefresh, shouldRefreshBeforeExpiry } from "@/lib/kompasAuthSession"
 import { ensureLoginClock } from "@/lib/session-clock"
+import { isAuthDisabled } from "@/lib/authDisabled"
 
 // Renew the browser session once, shortly before the access token expires.
 // Focus and visibility only look at the locally stored expiry. They do not
 // call Supabase on a fixed interval, and they do not send the person to login.
 export default function SessionLifetimeGuard() {
   useEffect(() => {
+    if (isAuthDisabled()) return
     let active = true
     let timer = 0
     let supabase: ReturnType<typeof createClient>

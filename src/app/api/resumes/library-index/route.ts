@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash } from "crypto"
-import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { authenticatedUser, authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { syntheticReadPageSize } from "@/lib/syntheticOwnerGuards"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { listFiles, readPath, readPathText, writePath, statPath } from "@/lib/storage"
 import { resumeEmails, CATEGORY_FOLDERS } from "@/lib/resumeOrganization"
@@ -39,8 +40,9 @@ export async function GET(request:NextRequest) {
   const refresh=request.nextUrl.searchParams.get("refresh")==="true"
   let cache:Record<string,Cached>={}
   try { cache=JSON.parse((await readPathText(cacheFile)) || "{}") } catch {}
+  const viewer=await authenticatedUser(request)
   const allPaths=(await listFiles(base).catch(() => [] as string[])).filter(p=>p.toLowerCase().endsWith(".docx"))
-  const paths=allPaths.slice(0,MAX_INDEXED)
+  const paths=allPaths.slice(0,syntheticReadPageSize(request, viewer, MAX_INDEXED))
   const next:Record<string,Cached>={}
   const errors:string[]=[]
   for(const filepath of paths) {
@@ -70,7 +72,7 @@ export async function GET(request:NextRequest) {
   if (serviceClientAvailable() && /^[0-9a-f-]{36}$/i.test(userId)) {
     try {
       const db = createServiceClient()
-      const { data: docs, error: dbError } = await db.from("resume_documents").select("id,sha256,storage_path,keywords,created_at,library_id,specialization_id").eq("user_id",userId).order("created_at",{ascending:false}).limit(1000)
+      const { data: docs, error: dbError } = await db.from("resume_documents").select("id,sha256,storage_path,keywords,created_at,library_id,specialization_id").eq("user_id",userId).order("created_at",{ascending:false}).limit(syntheticReadPageSize(request, viewer, 1000))
       if (dbError) throw dbError
       const { data: libs } = await db.from("resume_email_libraries").select("id,email").eq("user_id",userId)
       const { data: folders } = await db.from("resume_specializations").select("id,name").eq("user_id",userId)

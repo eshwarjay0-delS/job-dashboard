@@ -102,7 +102,15 @@ test("#29 realism banks: two roles, large, every kind present, deterministic seq
 // 200-sequence round fixes (offline). Each was a failure in the r7 folds before its fix.
 import { topicOfAsk, dissectionPrompt, draftSpokenAnswer, questionPremise } from "../../src/lib/kompasDissection.ts"
 test("r7 fold fix: coding asks that name a job, DAG, limiter or a language are coding asks", () => {
-  for (const q of ["Implement a token bucket rate limiter in TypeScript.", "Write a PySpark job that counts shipments per carrier per day.", "Write an Airflow DAG that runs a dbt build after a Kafka load sensor.", "Implement an LRU cache class in Python."])
+  for (const q of [
+    "Implement a token bucket rate limiter in TypeScript.",
+    "Implement a token bucket rate limiter in Go.",
+    "Write a PySpark job that counts shipments per carrier per day.",
+    "Write an Airflow DAG that runs a dbt build after a Kafka load sensor.",
+    "Implement an LRU cache class in Python.",
+    "um, write a Go function that retries a request with exponential backoff.",
+    "so, uh, write a regex to validate a shipment tracking number.",
+  ])
     assert.equal(asksForCode(q), true, q)
   for (const q of ["How would you design a rate limiter for many merchants?", "Tell me about the Airflow job that failed.", "Describe how you implemented the ledger split."])
     assert.equal(asksForCode(q), false, q)
@@ -110,6 +118,26 @@ test("r7 fold fix: coding asks that name a job, DAG, limiter or a language are c
 test("r7 fold fix: a filler before a coding instruction does not make it a greeting", () => {
   assert.notEqual(interviewIntent("um, write a Go function that retries a request with exponential backoff."), "acknowledgement")
   assert.notEqual(interviewIntent("so, uh, write a regex to validate a shipment tracking number."), "acknowledgement")
+})
+test("r7 fold fix: behavioral write/implement asks are questions, not code requests", () => {
+  // Behavioral asks stay substantive questions for interviewIntent; they just are not code requests.
+  const behavioral = [
+    "write a job description",
+    "implement a method for onboarding",
+    "build a team",
+    "design a process",
+    "write a pipeline review for the sales team",
+    "implement a hiring process",
+    "write a job posting for the sales team",
+    "design a hiring pipeline",
+    "create a process for onboarding",
+    "build a process for incident review",
+    "write a method for stakeholder communication",
+  ]
+  for (const q of behavioral) {
+    assert.equal(asksForCode(q), false, q)
+    assert.notEqual(interviewIntent(q), "acknowledgement", q)
+  }
 })
 test("r7 fold fix: a wrong premise is context, not the topic, and the prompt says not to confirm it", () => {
   assert.equal(topicOfAsk("As VP of Engineering at Corvid, how did you set the roadmap?"), "how did you set the roadmap?")

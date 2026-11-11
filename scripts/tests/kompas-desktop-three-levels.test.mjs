@@ -72,7 +72,7 @@ test('desktop offers exactly three levels and switches a pending response immedi
 test('desktop response path passes its selected level directly and bypasses two-anchor generation',()=>{
  const app=readFileSync(new URL('../../public/kompas/app.js',import.meta.url),'utf8')
  const route=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
- assert.match(app,/if \(!directDesktop && window\.KompasAnchors/)
+ assert.match(app,/if \(!inlineDerive && !directDesktop && window\.KompasAnchors/)
  assert.match(app,/if \(!directDesktop && window\.KompasJev/)
  assert.match(app,/responseCalibration: "three-level-v1"/)
  assert.match(app,/if \(!directDesktop && window\.KompasLevels && text/)

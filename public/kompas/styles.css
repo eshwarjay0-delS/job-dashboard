@@ -1094,6 +1094,17 @@ html.kd .kd-grip-ne,html.kd .kd-grip-nw,html.kd .kd-grip-se,html.kd .kd-grip-sw{
   max-width:12rem;
   font-size:13px;
 }
+#view-copilot .overlay .bar-actions .card-prefs{
+  gap:6px;
+}
+#view-copilot .overlay .bar-actions .card-prefs .live-select{
+  max-width:9.5rem;
+}
+@media (max-width:760px){
+  .bar-actions .card-prefs{flex:1 1 auto}
+  .bar-actions .card-prefs .live-select{width:100%;max-width:none;height:48px;font-size:16px}
+}
+
 
 /* The manually initiated desktop screen capture has its own visible action.
    Keep AI Answer most prominent; the single-row toolbar may scroll on narrow panels. */
@@ -1568,3 +1579,14 @@ html.kd #view-copilot #answer{
     z-index:260 !important;
   }
 }
+
+/* Live shared-tab preview (PIP-style) inside the session overlay, top-left. */
+.tab-preview{position:absolute;left:12px;top:56px;z-index:8;width:280px;background:#111;border:1px solid var(--line,#2a2a30);border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.tab-preview.hidden,[hidden].tab-preview{display:none}
+.tab-preview-stage{position:relative}
+.tab-preview video{display:block;width:100%;height:158px;object-fit:contain;background:#000}
+.tab-preview-actions{position:absolute;top:8px;left:8px;display:flex;gap:6px;flex-wrap:wrap}
+.tab-preview-action{appearance:none;border:0;border-radius:6px;background:rgba(20,20,24,.82);color:#f2f2f4;font-size:11px;line-height:1.2;cursor:pointer;padding:5px 8px}
+.tab-preview-action:hover{background:rgba(40,40,48,.92)}
+.overlay.collapsed .tab-preview{display:none}
+@media (max-width:620px){.tab-preview{width:180px;left:8px;top:48px}.tab-preview video{height:100px}}

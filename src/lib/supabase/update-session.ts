@@ -1,7 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authGateRedirect } from "@/lib/authGate";
+import { safeDisabledAuthNext } from "@/lib/authRedirect";
 import { userFromAuthClient } from "@/lib/kompasAuthSession";
+import { isAuthDisabled } from "@/lib/authDisabled";
 
 // The trust variable, read server-side on every gated page request: Supabase
 // getUser() verifies the token with the identity provider instead of trusting
@@ -17,6 +19,18 @@ import { userFromAuthClient } from "@/lib/kompasAuthSession";
 // (which authenticate themselves) and the static Kompas app at /kompas —
 // passes through untouched.
 export async function updateSession(request: NextRequest) {
+  if (isAuthDisabled()) {
+    // Treat the single owner as signed in, including /login, so every sign-in
+    // screen routes straight into the app. Do not call Supabase.
+    const redirect = authGateRedirect(
+      request.nextUrl.pathname,
+      request.nextUrl.search,
+      safeDisabledAuthNext(request.nextUrl.searchParams.get("next")),
+      true,
+    );
+    if (redirect) return NextResponse.redirect(new URL(redirect, request.url));
+    return NextResponse.next({ request });
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   // Unconfigured host (demo mode): never 500 on a missing session check.

@@ -35,7 +35,7 @@ for(const scenario of ['play error','ended track','zero dimensions','missing can
  const canvas={getContext:()=>scenario==='missing canvas'?null:{drawImage:()=>{drawn=true},getImageData:()=>({data:Uint8ClampedArray.from([0,0,0,255,255,255,255,255])})},toDataURL:()=> 'frame'}
  const ctx=vm.createContext({displayVideo:track,navigator:{mediaDevices:{getDisplayMedia:async()=>({getVideoTracks:()=>[track]})}},document:{createElement:t=>t==='video'?video:canvas},MediaStream:class{},setTimeout})
  vm.runInContext(source.slice(source.indexOf('async function grabFrame()'),source.indexOf('async function analyseScreen()')),ctx)
- if(scenario==='success'){assert.equal(await ctx.grabFrame(),'frame');assert.equal(drawn,true);assert.equal(canvas.width,1600);assert.equal(canvas.height,900)}else await assert.rejects(ctx.grabFrame())
+ if(scenario==='success'){assert.equal(await ctx.grabFrame(),'frame');assert.equal(drawn,true);assert.equal(canvas.width,1920);assert.equal(canvas.height,1080)}else await assert.rejects(ctx.grabFrame())
  assert.equal(paused,true);assert.equal(video.srcObject,null)
 })
 for(const change of ['switch session','clear cards'])test(`${change} during extraction cannot answer with a different context`,async()=>{

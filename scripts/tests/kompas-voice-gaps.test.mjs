@@ -13,8 +13,16 @@ function section(start, end) { const a = src.indexOf(start); assert.ok(a >= 0, s
 function autoCtx() {
   const ctx = { AUTO_QUIET_MS: 2200 }
   vm.createContext(ctx)
-  vm.runInContext(section("function shortFollowUp(", "function typedFollowUpQuestion(") + "\n" + section("function clauseStillOpen(", "function repeatsPriorQuestionV2(") +
-    "\nthis.wait = (t) => (typeof autoWaitMs === 'function' ? autoWaitMs(t) : (clauseStillOpen(t) ? 7000 : AUTO_QUIET_MS));", ctx)
+  // autoWaitMs lives next to looksComplete, but it also reads the session-5
+  // caps and isQuestionComplete, which are defined later. Include those so
+  // the sandbox runs the real function instead of throwing mid-wait.
+  vm.runInContext(
+    section("function shortFollowUp(", "function typedFollowUpQuestion(") + "\n" +
+    section("function clauseStillOpen(", "function repeatsPriorQuestionV2(") + "\n" +
+    section("const INTENT_COMPLETE_SILENCE_MS =", "function sttVocabFromActiveProfile(") +
+    "\nthis.wait = (t) => (typeof autoWaitMs === 'function' ? autoWaitMs(t) : (clauseStillOpen(t) ? 7000 : AUTO_QUIET_MS));\nthis.MAX_AUTO_DELAY_MS = MAX_AUTO_DELAY_MS;",
+    ctx
+  )
   return ctx
 }
 const COMPLETE = [
@@ -44,7 +52,13 @@ test("B1: a complete-looking unpunctuated question gets the 2.2 s quiet wait", (
 })
 test("B1: a question that really trails off keeps the long hold", () => {
   const ctx = autoCtx()
-  for (const q of UNFINISHED) assert.equal(ctx.wait(q), 7000, q)
+  // Session 5 (d1b90e8a) replaced the 7s open-clause wait with a 3s cap.
+  // The long hold is MAX_AUTO_DELAY_MS, not AUTO_QUIET_MS and not the 1.5s
+  // intent-to-complete poll interval.
+  const hold = ctx.MAX_AUTO_DELAY_MS
+  assert.equal(hold, 3000)
+  assert.ok(hold > ctx.AUTO_QUIET_MS)
+  for (const q of UNFINISHED) assert.equal(ctx.wait(q), hold, q)
 })
 test("B1: punctuated questions are unchanged", () => {
   const ctx = autoCtx()

@@ -29,6 +29,7 @@ function pack(pathname) {
     unescape, encodeURIComponent, Date,
     supabaseAccessToken: () => "fixture-access-token",
     supabaseSession: () => ({ refresh_token: "fixture-refresh", expires_at: 9999999999 }),
+    sessionAnswerControls: () => ({ tone: "Simple", format: "script-bullets", star: false, length: "balanced" }),
   };
   vm.runInNewContext(packing + "\nthis.packSession = packSession;", globals);
   return globals.packSession(session);

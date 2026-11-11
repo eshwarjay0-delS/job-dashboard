@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 import { ChevronRight, Moon, Sun } from "lucide-react"
@@ -201,6 +202,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     if (signingOut) return
     setSigningOut(true)
     try {
+      if (await serverReportsAuthDisabled()) { setAccountOpen(false); return }
       const supabase = createClient()
       // The mail kept for instant pages, and that their setup is done, belong to this person: they go at sign-out.
       forgetGmailData()

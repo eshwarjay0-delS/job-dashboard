@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { blob } from "@/lib/storage"
+import { isSyntheticDisabledAuthUser } from "@/lib/authDisabled"
 import { isAdminEmail } from "@/lib/owner"
 import { waDisplayNumber } from "@/lib/whatsapp"
 import { phoneStepAvailable } from "@/lib/identityStatus"
@@ -53,7 +54,7 @@ export async function loadSetup(): Promise<Loaded | null> {
     readSetup(user.id),
   ])
   const row = (profile || null) as ProfileRow | null
-  const admin = !!user.email_confirmed_at && isAdminEmail(user.email)
+  const admin = !isSyntheticDisabledAuthUser(user) && !!user.email_confirmed_at && isAdminEmail(user.email)
   // Availability changes the explanation, never the verification requirement.
   const available = row?.phone_verified || admin ? true : await phoneStepAvailable()
   let inboxes = 0

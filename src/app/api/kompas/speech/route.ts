@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { after } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
+import { rejectIfSyntheticOwnerLimited } from "@/lib/syntheticOwnerGuards"
 import { SpeechError, audioType, transcribeAudio, type SpeechCode } from "@/lib/kompasSpeech"
 import { archiveSessionChunk } from "@/lib/kompasSessionArchive"
 import { hashUserId } from "@/lib/sttLedger"
@@ -43,6 +44,8 @@ function decoded(value: string | null, max: number): string {
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return refuse("signed-out")
+  const ownerLimit = rejectIfSyntheticOwnerLimited(request, "transcribe", user)
+  if (ownerLimit) return ownerLimit
   const limited = checkRateLimit(`kompas-speech:${user.id}`, { max: 120, windowMs: 60_000 })
   if (!limited.ok) return refuse("busy", limited.retryAfterSec ?? 30)
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
+import { capSessionPayloadForSyntheticOwner, rejectIfSyntheticOwnerLimited, syntheticReadPageSize } from "@/lib/syntheticOwnerGuards"
 import { createServiceClient } from "@/lib/supabase/service"
 import { checkRateLimit } from "@/lib/rateLimit"
 import {
@@ -53,6 +54,7 @@ function safePatch(id: string, patch: unknown): Record<string, unknown> | null {
 export async function GET(req: NextRequest) {
   const user = await authenticatedUser(req)
   if (!user) return json({ ok: false, error: "Sign in to sync your sessions." }, 401)
+  const pageSize = syntheticReadPageSize(req, user, 100)
   try {
     const db = createServiceClient()
     // Cursor pagination follows the owner/session primary key; no arbitrary
@@ -81,7 +83,7 @@ export async function GET(req: NextRequest) {
         }
         const { data: marks, error: markError } = await db.from("kompas_account_sessions")
           .select("session_id,revision,updated_at,deleted_at")
-          .eq("user_id", user.id).order("session_id", { ascending: true }).limit(100)
+          .eq("user_id", user.id).order("session_id", { ascending: true }).limit(pageSize)
         if (!markError && marks) {
           const tag = catalogTag(user.id, marks)
           rememberCatalogTag(user.id, tag)
@@ -89,16 +91,16 @@ export async function GET(req: NextRequest) {
           // Supabase egress cut (11 Nov 2026): a client that already holds the catalog asks only for
           // rows changed since its last read, instead of downloading every session payload again.
           const floor = deltaSinceFloor(req.nextUrl.searchParams.get("since"))
-          if (floor && marks.length < 100) {
+          if (floor && marks.length < pageSize) {
             const { data: changed, error: changedError } = await db.from("kompas_account_sessions")
               .select("session_id,payload,deleted_at,updated_at,revision")
               .eq("user_id", user.id).gte("updated_at", floor)
-              .order("updated_at", { ascending: true }).limit(100)
-            if (!changedError && changed && changed.length < 100) {
+              .order("updated_at", { ascending: true }).limit(pageSize)
+            if (!changedError && changed && changed.length < pageSize) {
               return NextResponse.json({
                 ok: true, userId: user.id, email: user.email, delta: true, nextCursor: null,
                 records: changed.map(r => ({
-                  id: r.session_id, session: r.deleted_at ? null : r.payload,
+                  id: r.session_id, session: r.deleted_at ? null : capSessionPayloadForSyntheticOwner(req, user, r.payload),
                   deleted: !!r.deleted_at, revision: r.revision, updatedAt: r.updated_at,
                 })),
               }, { status: 200, headers: { ...HEADERS, ETag: tag } })
@@ -119,7 +121,7 @@ export async function GET(req: NextRequest) {
     }
     let query = db.from("kompas_account_sessions")
       .select("session_id,payload,deleted_at,updated_at,revision")
-      .eq("user_id", user.id).order("session_id", { ascending: true }).limit(100)
+      .eq("user_id", user.id).order("session_id", { ascending: true }).limit(pageSize)
     if (cursor) query = query.gt("session_id", cursor)
     const { data, error } = await query
     if (error) throw error
@@ -127,9 +129,9 @@ export async function GET(req: NextRequest) {
     if (etag) rememberCatalogTag(user.id, etag)
     return NextResponse.json({
       ok: true, userId: user.id, email: user.email,
-      nextCursor: (data || []).length === 100 ? data![data!.length - 1].session_id : null,
+      nextCursor: (data || []).length === pageSize ? data![data!.length - 1].session_id : null,
       records: (data || []).map(r => ({
-        id: r.session_id, session: r.deleted_at ? null : r.payload,
+        id: r.session_id, session: r.deleted_at ? null : capSessionPayloadForSyntheticOwner(req, user, r.payload),
         deleted: !!r.deleted_at, revision: r.revision, updatedAt: r.updated_at,
       })),
     }, { status: 200, headers: etag ? { ...HEADERS, ETag: etag } : HEADERS })
@@ -141,6 +143,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await authenticatedUser(req)
   if (!user) return json({ ok: false, error: "Sign in to sync your sessions." }, 401)
+  const ownerLimit = rejectIfSyntheticOwnerLimited(req, "account-sessions", user)
+  if (ownerLimit) return ownerLimit
   const limit = checkRateLimit("kompas-sessions:" + user.id, { max: 180, windowMs: 60_000 })
   if (!limit.ok) return json({ ok: false, error: "Too many session updates." }, 429)
   if (Number(req.headers.get("content-length") || 0) > 4_000_000) return json({ ok: false, error: "Session update too large." }, 413)

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { isSyntheticDisabledAuthUser } from "@/lib/authDisabled"
 import { isAdminEmail, isOwnerEmail } from "@/lib/owner"
 import { phoneStepAvailable } from "@/lib/identityStatus"
 
@@ -11,7 +12,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
 
-  if (isOwnerEmail(user.email)) {
+  if (!isSyntheticDisabledAuthUser(user) && isOwnerEmail(user.email)) {
     return NextResponse.json({
       complete: true, missing: [], resumeTo: null, durable: true,
       role: "owner", onboardingBypassed: true,
@@ -32,14 +33,14 @@ export async function GET() {
   // the identity provider has confirmed, the same test every admin route applies (src/lib/adminAccess.ts): an unconfirmed
   // address proves nothing about who is signed in. Not durable: the profile is left as it is, so removing the address from
   // ADMIN_EMAILS puts the account back on the ordinary path. Setup stays open to an admin who wants to fill it in.
-  if (user.email_confirmed_at && isAdminEmail(user.email)) {
+  if (!isSyntheticDisabledAuthUser(user) && user.email_confirmed_at && isAdminEmail(user.email)) {
     return NextResponse.json({ complete: true, missing: [], resumeTo: null, durable: false, admin: true })
   }
 
   const missing: string[] = []
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")
-  const admin = !!user.email_confirmed_at && isAdminEmail(user.email)
+  const admin = !isSyntheticDisabledAuthUser(user) && !!user.email_confirmed_at && isAdminEmail(user.email)
   // Asked only when it matters: someone already verified never triggers the probe.
   const available = profile?.phone_verified || admin ? true : await phoneStepAvailable()
   const phoneRequired = !admin

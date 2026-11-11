@@ -19,6 +19,7 @@ const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net
 const path = require("path");
 const fs = require("fs");
 const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
+const { envForcesSignIn, readServerAuthDisabled, shouldRecoverSignInFrom401 } = require("./auth-disabled.cjs");
 const { chooseCaptureSource } = require("./capture-source.cjs");
 const { rememberedTaskbar, taskbarAnswer } = require("./taskbar-choice.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
@@ -53,6 +54,28 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
 const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => app.getPath("userData"), origin: MARKETFIT_API_ORIGIN });
+// Skip sign-in only after the server says authDisabled === true, or never if
+// AUTH_DISABLED=false. Default (helpers absent in a test slice) is today's login.
+let skipSignInFromServer = false;
+let serverSaidAuthDisabled = false;
+let recoveredSignInFrom401 = false;
+function desktopAuthDisabled() {
+  if (typeof envForcesSignIn === "function" && envForcesSignIn()) return false;
+  if (recoveredSignInFrom401) return false;
+  return !!skipSignInFromServer;
+}
+function recoverSignInAfter401() {
+  // Auth-disabled mode never shows the sign-in card, including after a 401.
+  if (serverSaidAuthDisabled) return;
+  if (typeof shouldRecoverSignInFrom401 === "function" &&
+      !shouldRecoverSignInFrom401({ skipActive: skipSignInFromServer && !recoveredSignInFrom401, alreadyRecovered: recoveredSignInFrom401, serverSaidAuthDisabled })) {
+    return;
+  }
+  if (recoveredSignInFrom401 || !skipSignInFromServer) return;
+  recoveredSignInFrom401 = true;
+  skipSignInFromServer = false;
+  beginChromeSignIn({ interactive: true });
+}
 let updateCheckDone = false;
 // Check the released Windows version on first visible launch, not inside the
 // user's interview or before the existing taskbar choice. A failed request is
@@ -154,6 +177,9 @@ function continueSignedIn() {
   else deliver();
 }
 function beginChromeSignIn({ interactive = false } = {}) {
+  // Login is lifted: do not open Chrome, start the claim poll, or paint the card.
+  if (serverSaidAuthDisabled) return hideHandoff();
+  if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return hideHandoff();
   // A stored desktop session stays up. Opening Chrome would put auth UI over a live interview.
   if (desktopAuth.hasSession()) return hideHandoff();
   const action = handoffAction({ hasSession: false, interactive, alreadyAttempted: chromeSignInAttempted });
@@ -619,18 +645,24 @@ async function serve(req) {
   const rel = url.pathname === "/" ? "/index.html" : url.pathname;
   const isMarketFitApi = activeSite === "marketfit" && /^\/api\//.test(rel);
   if (isMarketFitApi && rel !== "/api/auth/refresh-token") {
-    await desktopAuth.renew(false);
-    const token = desktopAuth.token();
-    if (token) headers.authorization = "Bearer " + token;
+    if (!(typeof desktopAuthDisabled === "function" && desktopAuthDisabled())) {
+      await desktopAuth.renew(false);
+      const token = desktopAuth.token();
+      if (token) headers.authorization = "Bearer " + token;
+    }
   }
   try {
-    return await net.fetch(targetOrigin() + rel + url.search, {
+    const response = await net.fetch(targetOrigin() + rel + url.search, {
       method: req.method,
       headers,
       body: hasBody ? await req.arrayBuffer() : undefined,
       cache: "no-store",
       redirect: isMarketFitApi ? "error" : "follow",
     });
+    if (isMarketFitApi && response && response.status === 401 && typeof recoverSignInAfter401 === "function") {
+      recoverSignInAfter401();
+    }
+    return response;
   } catch (err) {
     return new Response(JSON.stringify({ error: "Kompas could not reach " + targetOrigin() + ": " + (err && err.message || err) }),
       { status: 502, headers: { "content-type": "application/json" } });
@@ -715,6 +747,7 @@ function wireIpc() {
   });
   ipcMain.handle("kompas:refresh-auth", (event, reason) => {
     if (!win || event.sender.id !== win.webContents.id) throw Error("Invalid auth caller");
+    if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return true;
     // A rejected call rotates the desktop family. A quiet call renews only
     // inside the access lead or the 10–24 hour window before the 3-day expiry.
     return desktopAuth.renew(reason === "rejected" ? "rejected" : false);
@@ -814,6 +847,11 @@ else {
     // CI startup check only. It runs after the requires above and before any
     // session file is read, so a stored sign-in is left where it is.
     if (process.env.KOMPAS_SMOKE === "1") { app.exit(0); return; }
+    // One capabilities read at startup, overlapping the taskbar prompt. No
+    // later poll, and resume does not repeat it.
+    const serverAuthSkipPromise = (typeof envForcesSignIn === "function" && envForcesSignIn())
+      ? Promise.resolve(false)
+      : readServerAuthDisabled({ origin: MARKETFIT_API_ORIGIN, fetch: (url, opts) => net.fetch(url, opts) });
     const saved = readConfig();
     const remembered = rememberedTaskbar(saved);
     if (remembered.ask) {
@@ -848,9 +886,11 @@ else {
     // no cookie jar, so initiate a state-bound handoff only when renewal fails.
     // The next refresh is a single timer at the access-token lead or the
     // 24-hour family window. It is not a fixed interval, and a 401 still
-    // renews through kompas:refresh-auth.
+    // renews through kompas:refresh-auth. When login is lifted, skip mint,
+    // refresh, and the sign-in card — no new polling is added.
     let desktopRefreshTimer = null;
     const armDesktopRefresh = () => {
+      if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return;
       if (desktopRefreshTimer) clearTimeout(desktopRefreshTimer);
       desktopRefreshTimer = null;
       const delay = desktopAuth.millisecondsUntilRefresh();
@@ -860,13 +900,24 @@ else {
       }, delay);
     };
     const renewQuiet = () => { void desktopAuth.renew(false).finally(armDesktopRefresh); };
-    void desktopAuth.renew(false).then(ok => {
-      if (!ok && !desktopAuth.hasSession()) beginChromeSignIn();
-      armDesktopRefresh();
-    });
+    skipSignInFromServer = !!(await serverAuthSkipPromise);
+    serverSaidAuthDisabled = skipSignInFromServer;
+    if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) {
+      hideHandoff();
+    } else {
+      void desktopAuth.renew(false).then(ok => {
+        if (!ok && !desktopAuth.hasSession()) beginChromeSignIn();
+        armDesktopRefresh();
+      });
+    }
     const later = () => setTimeout(bringBack, 400);
     for (const ev of ["display-removed", "display-added", "display-metrics-changed"]) screen.on(ev, later);
-    for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, () => { later(); renewQuiet(); });
+    for (const ev of ["resume", "unlock-screen"]) {
+      powerMonitor.on(ev, () => {
+        later();
+        if (!(typeof desktopAuthDisabled === "function" && desktopAuthDisabled())) renewQuiet();
+      });
+    }
     app.on("child-process-gone", (_e, d) => { if (d.type === "GPU") later(); });
   });
   app.on("window-all-closed", () => app.quit());

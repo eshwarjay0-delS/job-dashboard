@@ -23,7 +23,7 @@ test('flipping between cards never rewrites a stored answer (pages of a book)', 
   const fullB = 'A different generated answer, long enough to be a real response page of the book.';
   const cardA = { question: 'Question A', answer: fullA };
   const cardB = { question: 'Question B', answer: fullB, streaming: true };
-  const context = { window: {}, document: dom.window.document, $: id => dom.window.document.getElementById(id), cards: [cardA, cardB], idx: 0, wrapWords: () => {} };
+  const context = { window: {}, document: dom.window.document, $: id => dom.window.document.getElementById(id), cards: [cardA, cardB], idx: 0, wrapWords: () => {}, startedAt: 0, hasAnchorFields: () => false, clipAnchorWords: (t) => t };
   const start = appJs.indexOf('function unbracket'), end = appJs.indexOf('function wrapWords', start);
   vm.runInNewContext(appJs.slice(start, end), context);
   context.renderCard();              // open page A

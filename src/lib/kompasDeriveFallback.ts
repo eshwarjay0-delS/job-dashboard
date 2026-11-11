@@ -5,6 +5,7 @@
 // model, or nothing heard at all, is still "no question". Logistics is stripped later by the answer path as before.
 import { intakeQuestions } from "./kompasQuestionIntake.ts"
 import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
+import { resolveLiveQuestion } from "./kompasQuestionResolve.ts"
 
 const LABEL = /^\s*(?:You(?: \((?:typed|earlier)\))?|Them(?: \(earlier\))?):\s*/i
 
@@ -17,7 +18,8 @@ export function localDeriveFallback(heard: string): string {
     const pool = (them.length ? them : lines).map((l) => l.replace(LABEL, "").trim()).filter(Boolean)
     const formed = intakeQuestions(pool)
     const last = formed[formed.length - 1] || ""
-    if (last) return last.slice(0, 4000).trim()
+    const resolved = resolveLiveQuestion({ formed: last, pending: formed.length ? formed : pool, context: pool })
+    if (resolved) return resolved.slice(0, 4000).trim()
     const joined = pool.join(" ").replace(/\s+/g, " ").trim()
     if (!joined) return ""
     const ask = String(latestInterviewerAsk(joined) || joined).trim()

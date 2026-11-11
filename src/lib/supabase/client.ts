@@ -1,5 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { attachDisabledAuthFallback, isAuthDisabled } from "@/lib/authDisabled";
+import { softenSupabaseDataAccess } from "@/lib/supabaseRestriction";
 
 type BrowserClient = SupabaseClient;
 
@@ -38,6 +40,12 @@ function stubClient(): BrowserClient {
 export function createClient(): BrowserClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return stubClient();
-  return createBrowserClient(url, key);
+  if (!url || !key) {
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as BrowserClient;
+  }
+  const client = createBrowserClient(url, key);
+  // Browser storage may still hold a live session. Never skip the network
+  // here: attachDisabledAuthFallback keeps a valid one and only falls back
+  // to the owner when none exists.
+  return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never)) as BrowserClient;
 }

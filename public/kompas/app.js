@@ -51,6 +51,7 @@ async function showCapabilityVersion() {
     el.classList.remove("hidden");
     el.textContent = "Kompas " + c.version;
     el.title = (c.policy ? c.policy + ". " : "") + (c.cycle || "");
+    if (c.streamingStt && c.streamingStt.enabled) streamingSttReady = true;
   } catch {}
 }
 showCapabilityVersion();
@@ -119,6 +120,10 @@ let sessions = LS.get("sessions", []);
 let current = null;          // the session config the copilot is running against
 
 /* --------------------------------- auth ----------------------------------- */
+function isKompasAuthDisabled() {
+  if (typeof window !== "undefined" && typeof window.KOMPAS_AUTH_DISABLED === "boolean") return window.KOMPAS_AUTH_DISABLED;
+  return false;
+}
 $("loginBtn").onclick = () => {
   const email = $("loginEmail").value.trim();
   if (!email) { $("loginEmail").focus(); return; }
@@ -126,6 +131,7 @@ $("loginBtn").onclick = () => {
   openDashboard();
 };
 async function signOutKompas() {
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) { try { openDashboard(); } catch {} return; }
   try { if (typeof stop === "function" && running) await stop(false); } catch {}
   clearAuthLocalState();
   try { accountSessionSync?.signOutLocal(); } catch {}
@@ -388,7 +394,7 @@ function saveWizardDraft() {
   if (draft.editId) return;   // an edit writes the session on Save & continue, never the new-session draft cache
   LS.set(DRAFT_KEY, {
     jobLink: $("jobLink")?.value || "", company: $("company").value, role: $("role").value, jd: $("jd").value,
-    instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode,
+    instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode, format: draft.format, star: draft.star,
     interviewer: $("interviewerSelect")?.value, difficulty: $("difficultySelect")?.value, dossierSize: $("dossierSize")?.value,
     autoAnswer: $("autoAnswer")?.checked, saveTranscript: $("saveTranscript")?.checked,
     resumeId: selectedResumeId, docIds: [...selectedDocIds], at: Date.now(),
@@ -403,7 +409,9 @@ function applyWizardDraft() {
   if ($("instructions")) $("instructions").value = s.instructions || "";
   if (s.type) { draft.type = s.type; document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === s.type)); }
   if (s.length) { draft.length = s.length; segSet("lengthSeg", s.length); }
-  if (s.tone) { draft.tone = s.tone; segSet("toneSeg", s.tone); }
+  if (s.tone) { draft.tone = normalizeAnswerTone(s.tone); segSet("toneSeg", draft.tone); }
+  if (s.format) { draft.format = normalizeAnswerFormat(s.format); segSet("formatSeg", draft.format); }
+  if (s.star != null) { draft.star = !!sessionAnswerControls({ star: s.star }).star; segSet("starSeg", draft.star ? "on" : "off"); }
   if (s.mode) { draft.mode = s.mode; segSet("modeSeg", s.mode); if ($("interviewerSelect")) showCodingLevels($("interviewerSelect"), s.mode); }
   if (s.interviewer && $("interviewerSelect")) $("interviewerSelect").value = keptLevel(s.interviewer, s.mode);
   if (s.difficulty && $("difficultySelect")) $("difficultySelect").value = s.difficulty;
@@ -415,14 +423,14 @@ function applyWizardDraft() {
 }
 function openWizard() {
   const prev = sessions[0] || {};
-  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone || "professional", model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false };
+  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone ? normalizeAnswerTone(prev.tone) : "simple", format: prev.format ? normalizeAnswerFormat(prev.format) : "script_bullets", star: prev.star === true, model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false };
   step = 0;
   // A new session starts with a blank job. The answer preferences he already saved stay.
   ["jobLink", "company", "role", "jd", "resume"].forEach(id => { if ($(id)) $(id).value = ""; });
   if ($("instructions")) $("instructions").value = prev.instructions || "";
   $("resume")?.classList.add("hidden"); if ($("resume")) $("resume").value = "";   // paste box stays folded until asked for, and empty so a stale paste cannot override the picked resume
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === "live"));
-  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", prev.mode || "technical");
+  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("formatSeg", draft.format || "script_bullets"); segSet("starSeg", draft.star ? "on" : "off"); segSet("modeSeg", prev.mode || "technical");
   $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
   if ($("interviewerSelect")) { showCodingLevels($("interviewerSelect"), prev.mode); $("interviewerSelect").value = keptLevel(prev.interviewer, prev.mode); }
   if ($("difficultySelect")) $("difficultySelect").value = prev.difficulty || "standard";
@@ -445,13 +453,13 @@ function openWizard() {
 // nothing because the session is only written on Save & continue.
 function openEditWizard(s) {
   const stored = (LS.get("sessions", []) || []).find(v => v.id === s.id) || s;
-  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone || "professional", model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
+  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
   step = 0;
   if ($("jobLink")) $("jobLink").value = stored.jobLink || "";
   $("company").value = stored.company || ""; $("role").value = stored.role || ""; $("jd").value = stored.jd || "";
   if ($("instructions")) $("instructions").value = stored.instructions || "";
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === draft.type));
-  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", stored.mode || "technical");
+  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("formatSeg", draft.format || "script_bullets"); segSet("starSeg", draft.star ? "on" : "off"); segSet("modeSeg", stored.mode || "technical");
   draft.mode = stored.mode || "technical";
   $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
   if ($("interviewerSelect")) { showCodingLevels($("interviewerSelect"), draft.mode); $("interviewerSelect").value = keptLevel(stored.interviewer, draft.mode); }
@@ -488,6 +496,8 @@ function finishEditWizard() {
   x.language = "en";
   x.length = draft.length;
   x.tone = draft.tone;
+  x.format = draft.format || "script_bullets";
+  x.star = draft.star === true;
   x.mode = draft.mode || "technical";
   x.instructions = $("instructions").value;
   x.autoAnswer = $("autoAnswer").checked;
@@ -515,7 +525,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
   c.classList.add("on"); draft.type = c.dataset.type; saveWizardDraft();
 });
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
-["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
+["lengthSeg", "toneSeg", "formatSeg", "starSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); const key = { lengthSeg: "length", toneSeg: "tone", formatSeg: "format", starSeg: "star", modeSeg: "mode" }[id]; draft[key] = key === "star" ? b.dataset.v === "on" : b.dataset.v;
   // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
   if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "engineer", technical: "engineer", coding: "architect", final: "director" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
 // The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
@@ -540,6 +550,8 @@ function finishWizard() {
     language: "en",
     length: draft.length,
     tone: draft.tone,
+    format: draft.format || "script_bullets",
+    star: draft.star === true,
     mode: draft.mode || "technical",
     instructions: $("instructions").value,
     autoAnswer: $("autoAnswer").checked,
@@ -622,7 +634,8 @@ function cfgOf(s) { return { company: s.company, role: s.role, jd: s.jd, resume:
 function liveConfig() {
   const s = current || {};
   const who = ($("liveInterviewer") && $("liveInterviewer").value) || s.interviewer || "engineer";
-  return { ...cfgOf(s), length: s.length || "balanced", tone: s.tone, mode: s.mode || "technical", interviewer: who, difficulty: s.difficulty || "standard" };
+  const controls = typeof readLiveAnswerControls === "function" ? readLiveAnswerControls() : sessionAnswerControls(s);
+  return { ...cfgOf(s), ...controls, mode: s.mode || "technical", interviewer: who, difficulty: s.difficulty || "standard" };
 }
 // Where a session stands (runAt, pausedAt, endedAt, endedBy) is changed only by the lifecycle code (life = true), and its list of
 // transcripts only by the code that stores one. Any other save keeps what the store holds, so an object read earlier (the session
@@ -654,6 +667,7 @@ function launchCopilot(s, opts = {}) {
   idx = 0;
   $("ovTitle").textContent = "Kompas";
   if ($("liveInterviewer")) { showCodingLevels($("liveInterviewer"), s.mode); $("liveInterviewer").value = keptLevel(s.interviewer, s.mode); }
+  syncLiveAnswerControls(s);
   renderDepth();
   resetLiveState();
   setAuto(s.autoMode === true);          // default OFF: nothing answers until you press AI Answer
@@ -758,6 +772,7 @@ function isAuthError(e) {
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
 async function tryRefreshAuth(reason) {
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return true;
   // Coalesce simultaneous prep, answer, focus and keepalive renewals.
   // The Electron shell exclusively owns its refresh family: never fall back
   // to stale webview cookies, which could revoke the desktop session.
@@ -823,11 +838,13 @@ function keepAuthAlive() {
   if (!expiresAt || expiresAt - Date.now() > 60 * 1000) return;
   void tryRefreshAuth();
 }
-try {
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
-  window.addEventListener("focus", keepAuthAlive);
-  setInterval(keepAuthAlive, 60 * 1000);
-} catch {}
+if (typeof isKompasAuthDisabled !== "function" || !isKompasAuthDisabled()) {
+  try {
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
+    window.addEventListener("focus", keepAuthAlive);
+    setInterval(keepAuthAlive, 60 * 1000);
+  } catch {}
+}
 // Silent auth (owner, 1 Nov 2026): auth UI must never appear mid-session —
 // no pill, no sign-in prompt, no auth error text in front of a meeting or
 // demo. When renewal truly fails, the session waits silently: a cheap
@@ -854,6 +871,7 @@ function healAuthSilently() {
   }
 }
 function waitForAuthSilently(retry) {
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return;
   if (retry && retry.card && !__authPendingRetries.some(r => r.card === retry.card)) __authPendingRetries.push(retry);
   if (__authWaiting) return;
   __authWaiting = true;
@@ -1119,12 +1137,54 @@ function renderCard() {
   if ($("nextBtn")) $("nextBtn").disabled = idx >= cards.length - 1;
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
-  $("question").textContent = draft || c.question;
+  const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
+  const qLabel = draft || c.question;
+  $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
   const lines = answerLines(shownAnswer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
+  if (c.pivot && !hasAnchorFields(c) && !lines.length) {
+    const li = document.createElement("li");
+    li.className = "pivot";
+    li.style.fontWeight = "600";
+    li.textContent = c.pivot;
+    ul.append(li);
+  } else if (hasAnchorFields(c)) {
+    const row = (label, value) => {
+      if (!value) return;
+      const li = document.createElement("li");
+      li.className = "anchor-row";
+      const k = document.createElement("strong");
+      k.textContent = label + " ";
+      li.append(k);
+      li.append(document.createTextNode(value));
+      ul.append(li);
+    };
+    row("Stance:", clipAnchorWords(c.stance, 3));
+    row("Friction:", clipAnchorWords(c.friction, 5));
+    row("Fix:", clipAnchorWords(c.fix, 5));
+    if (c.hook) row("Hook:", clipAnchorWords(c.hook, 8));
+    const prose = String(c.prose || (typeof shownAnswer === "string" ? shownAnswer : "") || "").trim();
+    if (prose) {
+      const tog = document.createElement("li");
+      tog.className = "anchor-toggle";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = c.showProse ? "Hide full answer" : "Show full answer";
+      btn.onclick = () => { c.showProse = !c.showProse; renderCard(); };
+      tog.append(btn);
+      ul.append(tog);
+      if (c.showProse) {
+        const li = document.createElement("li");
+        li.className = "passage";
+        inline(li, prose);
+        ul.append(li);
+      }
+    }
+  } else /* bullets fallback */ if (false) {}
+  if (!hasAnchorFields(c) && !(c.pivot && !lines.length)) {
   lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
     if (kind === "code") {
@@ -1140,6 +1200,7 @@ function renderCard() {
   if (c.meta === "Personal logistics, not answered" && !lines.length) {   // the quiet card (owner, 29 Oct): one muted line, no answer text
     const li = document.createElement("li"); li.className = "skipnote"; li.style.opacity = "0.55"; li.style.fontStyle = "italic";
     li.textContent = "Personal logistics, not answered"; ul.append(li);
+  }
   }
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
@@ -1166,7 +1227,7 @@ function animateCard() { const card = $("card"); card.style.animation = "none"; 
 const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c = $("card"); if (c) c.classList.remove("q-away"); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
-function addCard(question, answer) { const c = { question, answer, qid: "q" + (cardSeq++) }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
+function addCard(question, answer) { const c = { question, answer, qid: "q" + (cardSeq++), askedAt: Date.now() }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
 // A page holds a finished answer: not streaming, and more than the "…" placeholder.
 function hasAnswer(c) { const t = (typeof c.answer === "string" ? c.answer : (c.answer || []).join("\n")).trim(); return !c.streaming && t.length > 8 && !/^[.…\s]+$/.test(t); }
 // Takes an empty page out of the book. The only page stays (the live view always shows one); returns whether it went.
@@ -1292,7 +1353,10 @@ if (micPick) {
   };
   void fillMicPick();
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
-    navigator.mediaDevices.addEventListener("devicechange", () => { void fillMicPick(); });
+    navigator.mediaDevices.addEventListener("devicechange", () => {
+      void fillMicPick();
+      if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic();
+    });
   }
 }
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
@@ -1500,6 +1564,7 @@ function audienceChanged() {
   regenerateForAudience();
 }
 $("liveInterviewer").onchange = () => audienceChanged();
+["liveFormat", "liveLength", "liveTone", "liveStar"].forEach(id => { const el = $(id); if (el) el.onchange = () => persistLiveAnswerControls(); });
 function stepInterviewer(dir) {
   const sel = $("liveInterviewer");
   let i = LADDER.indexOf(sel.value);
@@ -1655,6 +1720,7 @@ function reportSources() {
 /* ---- capture: voice-activity detection per source ---- */
 let sourceGeneration = { You: 0, Them: 0 };
 let micRecoveries = 0;
+let sysRecoveries = 0;
 let captures = [];           // { who, stream, owner, rec, chunks, ... }
 // The initial speaker render reads running/captures; invoking it earlier
 // hits the lexical temporal dead zone and prevents Kompas from booting.
@@ -1724,6 +1790,95 @@ async function startMic() {
     status(message, "err");
   }
 }
+// Capture policy for computer / tab audio (2026-11-10). Mic processing
+// (echo cancellation, noise suppression, auto-gain) must never be applied to
+// the shared tab or system mix — those filters punch holes in meeting audio
+// and are a common reason computer-audio questions are missed. The picker
+// prefers a browser tab so "Also share tab audio" is available. Written for
+// Kompas; not a copy of any competitor's client.
+const SYS_AUDIO_CONSTRAINTS = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+const THEM_SILENCE_MS = 1400;
+function sysShareConstraints(desktop) {
+  // Desktop loopback is requested as audio: true so the native handler keeps serving the output mix.
+  if (desktop) return { video: true, audio: true };
+  return {
+    video: { displaySurface: "browser", width: { max: 1920 }, height: { max: 1080 }, frameRate: { max: 15 } },
+    audio: { ...SYS_AUDIO_CONSTRAINTS },
+    systemAudio: "include",
+    selfBrowserSurface: "exclude",
+    surfaceSwitching: "include",
+    preferCurrentTab: false,
+  };
+}
+function sysShareFallbackConstraints(desktop) {
+  if (desktop) return [{ video: true, audio: true }];
+  return [
+    { video: true, audio: { ...SYS_AUDIO_CONSTRAINTS }, systemAudio: "include", selfBrowserSurface: "exclude" },
+    { video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" },
+  ];
+}
+async function requestSysShare() {
+  const desktop = !!window.kompasDesktop;
+  const attempts = [sysShareConstraints(desktop), ...sysShareFallbackConstraints(desktop)];
+  let last = null;
+  for (const opts of attempts) {
+    try { return await navigator.mediaDevices.getDisplayMedia(opts); }
+    catch (error) {
+      last = error;
+      if (error && error.name === "NotAllowedError") throw error;
+    }
+  }
+  throw last;
+}
+async function applyRawAudioConstraints(stream) {
+  if (!stream || !stream.getAudioTracks) return;
+  for (const track of stream.getAudioTracks()) {
+    if (!track.applyConstraints) continue;
+    try { await track.applyConstraints(SYS_AUDIO_CONSTRAINTS); } catch {}
+  }
+}
+function showTabPreview(owner) {
+  const box = $("tabPreview");
+  const video = $("tabPreviewVideo");
+  const track = owner && owner.getVideoTracks ? owner.getVideoTracks()[0] : null;
+  if (!box || !video || !track || track.readyState !== "live") { hideTabPreview(); return; }
+  try {
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.srcObject = typeof MediaStream === "function" ? new MediaStream([track]) : owner;
+    const play = video.play && video.play();
+    if (play && typeof play.catch === "function") play.catch(() => {});
+    box.hidden = false;
+    box.classList.remove("hidden");
+  } catch { hideTabPreview(); }
+}
+function hideTabPreview() {
+  const box = $("tabPreview");
+  const video = $("tabPreviewVideo");
+  if (video) {
+    try { video.pause(); } catch {}
+    try { video.srcObject = null; } catch {}
+  }
+  if (box) { box.hidden = true; box.classList.add("hidden"); }
+}
+async function changeSharedTab() {
+  if (!running) return;
+  srcOn.sys = true;
+  await stopSource("Them");
+  srcOn.sys = true;
+  syncSrc();
+  await startSys();
+}
+$("tabPreviewChange")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void changeSharedTab(); });
+$("tabPreviewStop")?.addEventListener("click", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  srcOn.sys = false;
+  void stopSource("Them");
+  syncSrc();
+  reportSources();
+});
+
 async function startSys() {
   const generation = sourceGeneration.Them;
   if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
@@ -1739,10 +1894,9 @@ async function startSys() {
       return;
     }
     // Electron's session handler supplies the Windows output-mix loopback;
-    // browser capture instead requires an explicit audio-sharing choice.
-    const disp = window.kompasDesktop
-      ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-      : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" });
+    // the browser path prefers a meeting tab with raw (unprocessed) tab audio.
+    const disp = await requestSysShare();
+    await applyRawAudioConstraints(disp);
     const audio = disp.getAudioTracks();
     if (!audio.length) {
       disp.getTracks().forEach(track => track.stop());
@@ -1753,6 +1907,10 @@ async function startSys() {
       return;
     }
     await attachSource(new MediaStream(audio), "Them", disp, generation);
+    if (generation === sourceGeneration.Them && running && srcOn.sys && captures.some(c => c.who === "Them")) {
+      showTabPreview(disp);
+      sysRecoveries = 0;
+    }
     if (generation === sourceGeneration.Them && running && srcOn.sys && !captures.some(c => c.who === "Them")) {
       captureErrors.push("Call audio: the track was returned but could not be initialized. Retry the speaker button.");
       srcOn.sys = false;
@@ -1864,6 +2022,14 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
         setTimeout(() => { if (running && srcOn.mic && !captures.some(c => c.who === "You")) void startMic(); }, 700);
         return;
       }
+      // Desktop loopback can be re-acquired without a picker, once, the way the mic is.
+      // A browser share ending must not reopen the tab picker on its own.
+      if (who === "Them" && running && window.kompasDesktop && sysRecoveries < 2) {
+        sysRecoveries++;
+        srcOn.sys = true;
+        setTimeout(() => { if (running && srcOn.sys && !captures.some(c => c.who === "Them")) void startSys(); }, 700);
+        return;
+      }
       srcOn[who === "You" ? "mic" : "sys"] = false; syncSrc();
       captureErrors.push(who === "You" ? "Microphone disconnected. Reconnect it and press the mic button." : "Call sharing ended. Press the speaker button to share audio again.");
       reportSources();
@@ -1876,6 +2042,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   }
   captures.push(cap);
   try { startSegment(cap); } catch (error) { captureErrors.push("Audio recorder: " + (error.message || "could not start")); await stopSource(who); throw error; }
+  void maybeStartStreamingStt(cap);
 }
 function stopSource(who) {
   sourceGeneration[who]++;
@@ -1892,7 +2059,7 @@ function stopSource(who) {
     meter(who, 0, false);
   }
   captures = captures.filter(c => c.who !== who);
-  if (who === "Them") { displayVideo = null; sysAttempt++; sysConnecting = false; syncSrc(); }
+  if (who === "Them") { displayVideo = null; hideTabPreview(); sysAttempt++; sysConnecting = false; syncSrc(); }
   return Promise.allSettled(finishing);
 }
 // Who can open a question (slice 2, 29 Oct 2026): askSource() maps each capture through roleOfSource(), so computer
@@ -1998,8 +2165,11 @@ function dictateStep(cap, rms, now, vad) {
   const V = vad || { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 };
   // Computer audio stays loud between sentences (the 4x tap plus a noise bed), so the
   // microphone's 1100 ms silence never arrives and the question is cut at 28 seconds.
-  // A dip under the recent peak is that pause. The microphone path is unchanged.
-  const silenceMs = cap && cap.who === "Them" ? 650 : V.SILENCE_MS;
+  // A dip under the recent peak is still that pause. Them also waits THEM_SILENCE_MS
+  // (1400) so a mid-question breath does not end the segment before the ask is finished.
+  // The microphone path is unchanged.
+  const themWait = typeof THEM_SILENCE_MS === "number" ? THEM_SILENCE_MS : 1400;
+  const silenceMs = cap && cap.who === "Them" ? themWait : V.SILENCE_MS;
   let noise = Number(cap.noise) || 0.001, speechMs = cap.speechMs || 0, voiced = !!cap.voiced;
   let lastVoice = cap.lastVoice || 0, lastTick = cap.lastTick || 0;
   // Slice 12: the floor also learns a steady level it is stuck under. Over each 1.5 s the quietest level is kept; when even
@@ -2143,18 +2313,13 @@ function meter(who, rms, speaking) {
 let interimOffUntil = 0;
 let transcriptionFailedEpoch = -1;
 function whisperPrompt(opt) {
-  const SPEECH_LEXICON = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "Kubernetes", "Terraform", "STAR method", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
-  const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
-  // The terms Whisper must be able to hear lead. The previous line follows,
-  // with its commas turned into spaces so it cannot swallow the first term.
-  // The word "Vocabulary" is not sent: Whisper echoes a prompt label back as speech.
+  const profileTerms = (typeof sttVocabFromActiveProfile === "function" ? sttVocabFromActiveProfile() : []);
   const bare = !!(opt && opt.bare);
   const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").replace(/[,;]/g, " ").trim().slice(-110);
-  const core = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "Gemalto", "Fifth Third", "CyberArk", "PowerShell", "Kerberos", "SIEM", "domain controller", "MITRE ATT&CK", "Kubernetes", "Terraform", "PKI", "STAR method"];
-  const rest = SPEECH_LEXICON.filter(t => !core.includes(t));
-  return [...new Set([...core, ...(prev ? [prev] : []), ...learned, ...terms, ...rest])].join(", ").slice(0, 550);
+  // Active-profile terms only — never mix a second candidate's employers or tools.
+  return [...new Set([...profileTerms, ...(prev ? [prev] : []), ...learned])].join(", ").slice(0, 550);
 }
 // Level 4: a phrase with real speech and no words is decoded once more, without the previous line in the prompt.
 function dictationRetry(clean, speechMs, attempt) {
@@ -2229,7 +2394,7 @@ async function transcribe(blob, who, opt) {
         const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
           headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
         if (!res.ok) {
-          if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function") {
+          if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function" && !(typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled())) {
             opt.__authRetried = true;
             const renewed = await tryRefreshAuth("rejected");
             if (renewed) { retry = true; delay = 200; failure = ""; }
@@ -2534,12 +2699,19 @@ function looksComplete(text) {
 }
 function autoWaitMs(tail) {
   try {
-    if (looksComplete(tail)) return AUTO_QUIET_MS;
+    // Short follow-ups ("and why") get the normal quiet wait even when a bare
+    // "why" looks dangling to isQuestionComplete. A line that still trails off
+    // keeps the long hold, capped at MAX_AUTO_DELAY_MS (session 5: 3s, not 7s).
+    // That cap is not the 1.5s intent-to-complete poll interval.
+    if (looksComplete(tail) && (shortFollowUp(tail) || isQuestionComplete(tail))) return Math.min(AUTO_QUIET_MS, MAX_AUTO_DELAY_MS);
     const t = String(tail || "").replace(/\s+/g, " ").trim();
-    if (t && !/[?.!…]["']?$/.test(t) && DANGLING_END.test(t)) return 7000;   // trails off on "if", "and", "the"…
+    const hold = MAX_AUTO_DELAY_MS;
+    if (t && !/[?.!…]["']?$/.test(t) && DANGLING_END.test(t)) return hold;
+    if (clauseStillOpen(tail) || !isQuestionComplete(tail)) return hold;
   } catch {}
-  return clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
+  return Math.min(AUTO_QUIET_MS, MAX_AUTO_DELAY_MS);
 }
+
 function repeatsPriorQuestion(text, previous) {
   if (repeatsPriorQuestionV2(text, previous)) return true;
   try { return !shortFollowUp(text) && repeatsPriorQuestionV3(text, previous); } catch { return false; }   // slice 3: only ever adds a repeat
@@ -3007,6 +3179,233 @@ function withoutLogistics(text) {
 }
 // personal-logistics parity: end
 
+const AUTO_THEM_SILENCE_MS = 1400;
+const INTENT_COMPLETE_SILENCE_MS = 1500;
+const MANUAL_INCOMPLETE_WAIT_MS = 1500;
+const MAX_AUTO_DELAY_MS = 3000;
+const AUTO_CONFIRM_NOISE = /^(?:hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening)|yeah|yes|okay|ok|right|mm-?hmm|uh-?huh)\b[.!?]*$/i;
+const STUTTER_REPHRASE = /(?:^|\s)(?:well actually|actually[,:]|no[, ]+(?:wait|sorry|i mean)|sorry[, ]+(?:i mean|actually)|i mean[,]+|let me rephrase|what i meant(?: to say)?(?: is)?|or rather[,:]?|rather[,:]+)\s+/i;
+const STUTTER_DANGLE = /\b(?:a|an|the|to|of|for|with|and|or|but|nor|about|on|in|into|onto|from|by|at|as|your|my|our|their|if|whether|because|since|how|what|why|when|where|which|who|would|could|should|can|will|handle|do|deal)\s*[,;:\u2014\u2013.…-]*$/i;
+function isIncompleteAsk(text) {
+  const x = String(text || "").replace(/\s+/g, " ").trim();
+  if (!x) return true;
+  if (/[?]$/.test(x) && x.split(/\s+/).length >= 6 && !STUTTER_DANGLE.test(x.replace(/[?]+$/, "").trim())) return false;
+  if (STUTTER_DANGLE.test(x) && !/[?]$/.test(x)) return true;
+  const words = x.split(/\s+/).filter(Boolean);
+  // Short WH/explain asks with a topical object ("Explain OAuth", "What is SAML") are complete.
+  // Still incomplete when there is no object yet ("what is", "explain how", "how would you").
+  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give|define)\b/i.test(x) && words.length <= 5 && !/[?]$/.test(x)) {
+    if (words.length <= 1) return true;
+    return /^(?:i|me|my|you|your|we|us|our|he|she|they|them|their|it|this|that|these|those|how|what|why|when|where|which|who|would|could|should|can|will|do|does|did|have|has|had|are|is|was|were|be|been|being|am|the|a|an|to|of|for|with|and|or|but|about|on|in|into|onto|from|by|at|as|if|whether|because|since|through|over|up|down|out|off|across|handle|deal)$/i.test(words[words.length - 1]);
+  }
+  return false;
+}
+function resolveStutterRephrase(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return { text: "", rephrased: false, incomplete: true, finalConstraint: "" };
+  const re = new RegExp(STUTTER_REPHRASE.source, "gi");
+  const cuts = [];
+  let last = 0, m;
+  while ((m = re.exec(raw))) {
+    const at = m.index + m[0].length;
+    if (at > last && at < raw.length) { cuts.push(m.index); last = at; }
+  }
+  if (!cuts.length) return { text: raw, rephrased: false, incomplete: isIncompleteAsk(raw), finalConstraint: raw };
+  const lastCut = cuts[cuts.length - 1];
+  const found = new RegExp(STUTTER_REPHRASE.source, "i").exec(raw.slice(lastCut));
+  const start = lastCut + (found ? found[0].length : 0);
+  const final = raw.slice(start).replace(/^[,.\s]+/, "").trim();
+  if (!final) return { text: raw, rephrased: true, incomplete: true, finalConstraint: "" };
+  const textOut = final.charAt(0).toUpperCase() + final.slice(1);
+  return { text: textOut, rephrased: true, incomplete: isIncompleteAsk(final), finalConstraint: textOut };
+}
+const MIC_GARBAGE_TOK = /^(?:la+|de|da|el|le|un|une|et|en|les|des|du|al|na+|hmm+|mm+|ah+|uh+|oh+|ya+|yo+|huh|tsk|pfft|nah|ooh|woo|tee|dee|doo|ba+|pa+)$/i;
+const MIC_MICRO_OK = new Set("i me my we us it ok no hi hey yo so to do if or be am is".split(" "));
+function isMicGarbage(text, confidence) {
+  const raw = String(text || "").trim();
+  if (!raw) return true;
+  const ws = raw.toLowerCase().replace(/[^a-z0-9'\s]+/g, " ").split(/\s+/).filter(Boolean);
+  if (!ws.length) return true;
+  if (ws.length <= 4 && ws.every(w => MIC_GARBAGE_TOK.test(w))) return true;
+  if (ws.length <= 3 && ws.every(w => MIC_GARBAGE_TOK.test(w) || (w.length <= 2 && !MIC_MICRO_OK.has(w)))) return true;
+  if (typeof confidence === "number" && confidence < 0.45 && ws.length <= 4 && !(typeof Q_CUE === "function" ? Q_CUE(raw) : (Q_CUE && Q_CUE.test && Q_CUE.test(raw))) && !/\?/.test(raw)) return true;
+  return false;
+}
+function isQuestionComplete(text) {
+  const stutter = resolveStutterRephrase(text);
+  if (stutter.incomplete) return false;
+  const x = stutter.text || String(text || "").replace(/\s+/g, " ").trim();
+  if (!x) return false;
+  if (/\b(?:and|or|but|if|when|because|the|a|an|to|of|for|with)\s*$/i.test(x) && !/[?]$/.test(x)) return false;
+  return !isIncompleteAsk(x);
+}
+function intentToComplete(opts) {
+  opts = opts || {};
+  const need = Math.max(INTENT_COMPLETE_SILENCE_MS, Number(opts.silenceMs) || INTENT_COMPLETE_SILENCE_MS);
+  const quiet = Number(opts.themQuietMs);
+  const stutter = resolveStutterRephrase(String(opts.text || ""));
+  const text = stutter.text || String(opts.text || "");
+  if (!Number.isFinite(quiet) || quiet < need) {
+    return { ready: false, reason: "not-quiet", waitMs: Math.min(MAX_AUTO_DELAY_MS, Math.max(0, need - (Number.isFinite(quiet) ? quiet : 0))) };
+  }
+  if (stutter.incomplete || !isQuestionComplete(text)) {
+    return { ready: false, reason: "incomplete", waitMs: Math.min(MAX_AUTO_DELAY_MS, MANUAL_INCOMPLETE_WAIT_MS) };
+  }
+  return { ready: true, reason: "complete", waitMs: 0 };
+}
+function sttVocabFromActiveProfile() {
+  const s = (typeof current !== "undefined" && current) ? current : {};
+  const p = s.prep || s;
+  const out = [], seen = new Set();
+  const add = (raw) => {
+    const x = String(raw || "").replace(/\s+/g, " ").trim();
+    if (!x || x.length < 2 || x.length > 48) return;
+    const k = x.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k); out.push(x);
+  };
+  const list = (arr) => { if (Array.isArray(arr)) arr.forEach(add); };
+  list(s.employers); list(s.companies); list(s.tools); list(s.keywords);
+  const idn = p.identity || {};
+  list(idn.employers); list(idn.companies); list(idn.tools); list(idn.keywords);
+  if (idn.name) add(idn.name);
+  if (p.persona && p.persona.role) add(p.persona.role);
+  list(p.persona && p.persona.employers); list(p.persona && p.persona.tools);
+  list(p.employers); list(p.tools);
+  (p.projects || []).forEach((proj) => {
+    if (!proj) return;
+    add(proj.name); add(proj.employer); add(proj.company);
+    list(proj.tools); list(proj.stack);
+  });
+  const blob = JSON.stringify({ identity: idn, persona: p.persona, projects: p.projects, employers: s.employers, tools: s.tools, resume: (s.resume || "").slice(0, 8000) }).toLowerCase();
+  ["CISO","CAB","DMARC","SOC","GRC","EDR","SIEM","IAM","MFA"].forEach((term) => { if (blob.includes(term.toLowerCase())) add(term); });
+  return out.slice(0, 80);
+}
+const STT_CONFUSION = [
+  ["Entra ID", [/\benter(?:\s+an?)?\s+id\b/gi, /\bentra\s*id\b/gi, /\benter\s+id\b/gi]],
+  ["ServiceNow GRC", [/\bservice\s*now\s+grc\b/gi, /\bservice\s*now\b/gi]],
+  ["Qualys VMDR", [/\bqualis\s+vmdr\b/gi, /\bquality\s+vmdr\b/gi, /\bqualys\s+vmd[er]\b/gi]],
+  ["Qualys", [/\bqualis\b/gi, /\bquallis\b/gi]],
+  ["Tanium", [/\btanny(?:\s+um)?\b/gi]],
+  ["Splunk", [/\bsplunc?k\b/gi, /\bsplank\b/gi]],
+  ["Citi", [/\bat\s+city\b/gi]],
+  ["CVS", [/\bc\.\s*v\.\s*s\.?\b/gi, /\bsee\s+v(?:ee)?\s+s\b/gi]],
+  ["DMARC", [/\bdee\s*mark\b/gi]],
+  ["CISO", [/\bsee\s*so\b/gi]]
+];
+function applySttCorrections(text) {
+  let x = String(text || "");
+  if (!x) return x;
+  const vocab = new Set(sttVocabFromActiveProfile().map(v => v.toLowerCase()));
+  if (!vocab.size) return x;
+  for (const [term, pats] of STT_CONFUSION) {
+    const key = term.toLowerCase();
+    const hit = vocab.has(key) || [...vocab].some(v => v === key.split(/\s+/)[0] || v.startsWith(key) || key.startsWith(v));
+    if (!hit) continue;
+    for (const re of pats) x = x.replace(re, term);
+  }
+  return x;
+}
+function hasAnchorFields(fields) {
+  if (!fields) return false;
+  return !!(String(fields.stance || "").trim() && String(fields.friction || "").trim() && String(fields.fix || "").trim());
+}
+function clipAnchorWords(text, max) {
+  const w = String(text || "").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean);
+  return w.slice(0, max).join(" ");
+}
+function formatElapsedShort(ms) {
+  const s = Math.floor(Math.max(0, Number(ms) || 0) / 1000);
+  const m = Math.floor(s / 60);
+  return m <= 0 ? (s + "s") : (m + ":" + String(s % 60).padStart(2, "0"));
+}
+const PIVOT_STOP = new Set("the a an and or but if like you know um uh so of to for with in on at as is was were be been this that those these it your my their do does did have has had would could can will just maybe even about from into not how what why when where which who whom whose".split(" "));
+function pivotConstraint(text, maxWords) {
+  maxWords = maxWords || 5;
+  const resolved = resolveStutterRephrase(text);
+  const src = resolved.finalConstraint || resolved.text || String(text || "");
+  const toks = src.replace(/[^A-Za-z0-9+#./\s-]+/g, " ").split(/\s+/).filter(Boolean);
+  const content = toks.filter(w => !PIVOT_STOP.has(w.toLowerCase()) && w.length > 1);
+  return (content.length ? content : toks).slice(0, maxWords).join(" ").trim();
+}
+function interruptionFlush(opts) {
+  opts = opts || {};
+  const ask = String(opts.newAsk || "").replace(/\s+/g, " ").trim();
+  const should = !!(opts.interviewerSpeaking && (opts.cardShowing || opts.candidateTalking) && ask);
+  if (!should) return { flush: false, pivot: "", resolve: false, question: ask, reason: "no-interrupt" };
+  const stutter = resolveStutterRephrase(ask);
+  const question = stutter.text || ask;
+  if (stutter.incomplete && !stutter.rephrased) return { flush: true, pivot: pivotConstraint(question), resolve: false, question, reason: "incomplete" };
+  return { flush: true, pivot: pivotConstraint(question), resolve: true, question, reason: "interrupt" };
+}
+
+function confirmAutoQuestion(text) {
+  const stutter = resolveStutterRephrase(text);
+  const t = String((stutter.text || text || "")).replace(/\s+/g, " ").trim();
+  if (!t || AUTO_CONFIRM_NOISE.test(t)) return { ok: false, reason: "noise" };
+  if (/^(?:that'?s (?:really )?cool|that must feel|i'?m sure that must)\b/i.test(t) && !(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "confirmation" };
+  if (!(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "no-cue" };
+  if (stutter.incomplete || !isQuestionComplete(t)) return { ok: false, reason: "unfinished" };
+  if (!/[?]$/.test(t) && t.split(/\s+/).length <= 4) return { ok: false, reason: "unfinished" };
+  if (/\b(?:and|or|but|if|when|because|the|a|an|to|of|for|with)\s*$/i.test(t) && !/[?]$/.test(t)) return { ok: false, reason: "unfinished" };
+  if (/\b(in this video|we're going to|on the channel|subscribe)\b/i.test(t) && !/\byou\b/i.test(t) && !/[?]$/.test(t)) return { ok: false, reason: "commentary" };
+  return { ok: true, reason: stutter.rephrased ? "rephrased" : "cue" };
+}
+function shouldAutoAnswer(opts) {
+  if (!opts || !opts.autoOn) return { fire: false, reason: "off" };
+  if (!opts.cue) return { fire: false, reason: "no-cue" };
+  if (opts.text != null && String(opts.text).trim()) {
+    const gate = intentToComplete({ text: opts.text, themQuietMs: opts.themQuietMs });
+    if (!gate.ready) return { fire: false, reason: gate.reason };
+  } else if (!Number.isFinite(Number(opts.themQuietMs)) || Number(opts.themQuietMs) < AUTO_THEM_SILENCE_MS) return { fire: false, reason: "not-quiet" };
+  if (!opts.confirmed) return { fire: false, reason: "unconfirmed" };
+  return { fire: true, reason: "ready" };
+}
+
+async function confirmAutoAndAnswer(tail) {
+  // Conservative: a failed or empty derive confirm must not auto-fire.
+  try {
+    const res = await fetch("/api/kompas/answer", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: String(tail || "").slice(0, 2000), transcript: typeof recentContext === "function" ? recentContext() : "" }) });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || data.noQuestion || !data.derived) return;
+    if (!autoOn || !armsAuto()) return;
+    await aiAnswer(true);
+  } catch { /* conservative: no auto answer when confirm fails */ }
+}
+let streamingSttReady = false;
+const streamingSttSessions = new Map();
+function fallbackToWhisperSlices(who, reason) {
+  const cap = captures.find(c => c.who === who);
+  if (cap) cap.streamMode = "whisper";
+  streamingSttSessions.delete(who);
+  if (reason) try { console.warn("Kompas STT fallback:", reason); } catch {}
+}
+async function startStreamingStt(cap) {
+  // Scaffolding: only runs when the server says a streaming key is configured.
+  // On any open/connect failure, the existing MediaRecorder Whisper path stays in charge.
+  if (!streamingSttReady || !cap || !cap.stream) { fallbackToWhisperSlices(cap && cap.who, "not-ready"); return false; }
+  const who = cap.who;
+  const session = { status: "connecting", attempt: 0, who };
+  streamingSttSessions.set(who, session);
+  cap.streamMode = "streaming";
+  try {
+    const res = await fetch("/api/kompas/speech/stream", { method: "GET", credentials: "same-origin", cache: "no-store" });
+    const data = res.ok ? await res.json() : null;
+    if (!data || !data.streaming) { fallbackToWhisperSlices(who, "unavailable"); return false; }
+    session.status = "live";
+    session.keyterms = typeof sttVocabFromActiveProfile === "function" ? sttVocabFromActiveProfile() : [];
+    return true;
+  } catch {
+    fallbackToWhisperSlices(who, "connect-failed");
+    return false;
+  }
+}
+function maybeStartStreamingStt(cap) {
+  if (!streamingSttReady) return;
+  void startStreamingStt(cap);
+}
+
 function isAuthStorageKey(name) {
   const k = String(name || "");
   if (k === "perfact.user" || k === "perfact.desktopTicket" || k === "perfact.authHint" || k === "perfact.cloud.owner") return true;
@@ -3052,7 +3451,20 @@ function scheduleAuto() {
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
-    aiAnswer(true);
+    const themCap = captures.find(c => c.who === "Them");
+    const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
+    const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+    const confirmed = confirmAutoQuestion(tail).ok;
+    const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });
+    if (!decision.fire) {
+      const gate = intentToComplete({ text: tail, themQuietMs });
+      const waitMore = decision.reason === "not-quiet" || decision.reason === "incomplete"
+        ? Math.max(200, Math.min(MAX_AUTO_DELAY_MS, gate.waitMs || (AUTO_THEM_SILENCE_MS - themQuietMs)))
+        : 0;
+      if (waitMore) autoTimer = setTimeout(fire, waitMore);
+      return;
+    }
+    void confirmAutoAndAnswer(tail);
   }, wait);
 }
 // Turn gate (slice 2): each new heard line from the question source gets answer / wait / no answer needed, logged with
@@ -3337,7 +3749,8 @@ function onCaptionText(text) {
   } catch {}
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
-  text = fixTerms(fixPhrases(text));
+  text = applySttCorrections(fixTerms(fixPhrases(text)));
+  if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
     if (micBleed(text, Date.now(), themLines, spokenAt)) { logDecision("drop-mic-bleed", who, text); logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
@@ -3356,7 +3769,34 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   appendDrawer(who, text, Date.now());
   showCaption(who, text, false);
   updatePending();
+  if (who === "Them" && typeof interruptionFlush === "function" && (Q_CUE.test(text) || (typeof opensNewAsk === "function" && opensNewAsk(text)))) {
+    try {
+      const cardShowing = !!(cards[idx] && typeof hasAnswer === "function" && hasAnswer(cards[idx]));
+      const candidateTalking = !!(captures.some(c => c.who === "You" && c.voiced) || (transcript.length && transcript[transcript.length-1].who === "You"));
+      const ev = interruptionFlush({ interviewerSpeaking: true, cardShowing, candidateTalking, newAsk: text });
+      if (ev.flush) applyInterruptionFlush(ev);
+    } catch {}
+  }
   if (!flushing) scheduleAuto();
+}
+function applyInterruptionFlush(ev) {
+  const cur = cards[idx];
+  if (cur) {
+    cur.flushed = true;
+    cur.streaming = false;
+    if (answerCtl && typeof answerCtl.abort === "function") { try { answerCtl.abort(); } catch {} }
+    answerCtl = null;
+  }
+  const pivot = ev.pivot || pivotConstraint(ev.question || "");
+  const page = addCard(ev.question || pivot, []);
+  page.pivot = pivot;
+  page.askedAt = Date.now();
+  page.question = ev.question || page.question;
+  renderCard();
+  status("New constraint: " + pivot, "live");
+  if (ev.resolve && ev.question && isQuestionComplete(ev.question)) {
+    if (typeof autoOn !== "undefined" && autoOn) void confirmAutoAndAnswer(ev.question);
+  }
 }
 
 /* ---- answers: streamed, grounded on the dossier ---- */
@@ -3473,7 +3913,9 @@ function intakeDifferent(prev, next) {
 const INTAKE_UNFINISHED = /^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|tell|walk|give|explain)\b/i;
 function intakeOpen(text) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
-  if (!t || /[?.!…]["']?\s*$/.test(t) || !INTAKE_DANGLING.test(t)) return false;
+  if (!t || /[?.!…]["']?\s*$/.test(t)) return false;
+  if (INTAKE_UNFINISHED.test(intakeBare(t))) return true;
+  if (!INTAKE_DANGLING.test(t)) return false;
   if (t.split(/\s+/).length <= 4 && !INTAKE_UNFINISHED.test(intakeBare(t))) return false;
   return true;
 }
@@ -3505,6 +3947,7 @@ function continuesSameQuestion(previous, next) {
   if (intakeKeyword(prev) && intakeKeyword(nxt) && intakeDifferent(prev, nxt)) return false;
   if (intakeOpen(prev) && !intakeOpens(nxt)) return true;
   if (intakeOpen(prev) && intakeOpens(nxt) && !intakeDifferent(prev, nxt)) return true;
+  if (intakeOpen(prev) && !INTAKE_FRESH.test(intakeBare(nxt)) && !INTAKE_FRESH.test(nxt)) return true;
   const candidate = /^(?:i|i'm|i've|i'd|i'll|my)\b/i.test(intakeBare(prev));
   if (!intakeOpens(prev) && !candidate && !intakeKeyword(prev) && intakeOpens(nxt) && !/\?\s*$/.test(prev)) return true;
   if (intakeOpens(nxt) && intakeDifferent(prev, nxt)) return false;
@@ -3657,11 +4100,162 @@ function headAndTail(text, limit) {
 const consolidatedNeedsDerive = (opts) => !!opts.consolidated && !opts.derived;   // AI Answer: match after the question is derived
 // The derive request. A re-ask tells the server so: the page being re-asked is the previous turn, and its own setup
 // must not be read as his reply to it.
+// Last 60–90 s of transcript for question resolution (default 90 s).
+const CONTEXT_WINDOW_MS = 90000;
+function recentContext(beforeSeq, now) {
+  const when = typeof now === "number" ? now : Date.now();
+  const cutoff = when - CONTEXT_WINDOW_MS;
+  const all = (transcript || []).filter(t => beforeSeq == null || t.seq < beforeSeq);
+  const stamped = all.filter(t => Number(t.at) > 0);
+  const windowed = stamped.length === all.length && all.length
+    ? all.filter(t => Number(t.at) >= cutoff)
+    : all.slice(-40);
+  const lines = (windowed.length ? windowed : all.slice(-40));
+  return lines.map(t => `${t.who}: ${t.text}`).join("\n");
+}
+const RESOLVE_THIS = /\bthis (?:kind of |sort of |type of )?question\b/i;
+const RESOLVE_FILLER = /^(?:(?:uh|um|so|like|okay|ok|right|yeah|yes|well)\s*,?\s*)+/i;
+function resolveLiveQuestion(formed, pendingTexts, contextTexts) {
+  const clean = (s) => String(s || "").replace(/^\s*(?:You(?: \((?:typed|earlier)\))?|Them(?: \(earlier\))?):\s*/i, "").replace(/\s+/g, " ").trim();
+  const pending = (pendingTexts || []).map(clean).map(s => s.replace(RESOLVE_FILLER, "").trim()).filter(Boolean);
+  const context = (contextTexts || []).map(clean).map(s => s.replace(RESOLVE_FILLER, "").trim()).filter(Boolean);
+  const merged = pending.length ? mergeAdjacentAsks(pending) : "";
+  const mergedBoth = pending.length >= 2 && merged && merged !== pending[pending.length - 1];
+  let q = clean(mergedBoth ? merged : formed) || merged || pending[pending.length - 1] || "";
+  q = q.replace(RESOLVE_FILLER, "").trim();
+  if (q && RESOLVE_THIS.test(q)) {
+    const prior = [...context, ...pending].reverse().find(s => (/[?]/.test(s) || /^(?:tell|walk|describe|explain|how|what|why)\b/i.test(s)) && !RESOLVE_THIS.test(s));
+    if (prior && /\bconflict\b/i.test(prior)) q = q.replace(RESOLVE_THIS, "the conflict question");
+    else if (prior) q = q.replace(RESOLVE_THIS, "the question about " + prior.replace(/\?\s*$/, "").replace(/^tell me about\s+/i, ""));
+  }
+  return q;
+}
+
+// ── Answer stream contract (one-hop derive, title / partial card / done.card) ──
+// Mid-call format, length, tone and STAR are read from the session on every request,
+// so a change applies to the next card. Simple tone and Script + bullets are the defaults; STAR is off.
+function normalizeAnswerFormat(v) {
+  const s = String(v ?? "").toLowerCase().replace(/[\s+_-]+/g, "");
+  if (/^(?:full|fullscript|script|paragraph|paragraphs|prose)$/.test(s)) return "full_script";
+  if (/^(?:bullets|bullet|bulletpoints|points)$/.test(s)) return "bullets";
+  return "script_bullets";
+}
+function normalizeAnswerTone(v) {
+  const s = String(v ?? "").toLowerCase();
+  if (s === "formal") return "formal";
+  if (s === "professional") return "professional";
+  return "simple";
+}
+function sessionAnswerControls(s) {
+  const c = s || {};
+  const len = String(c.length ?? "").toLowerCase();
+  return {
+    format: normalizeAnswerFormat(c.format),
+    length: /^(?:short|brief|concise)$/.test(len) ? "short" : /^(?:long|detailed|deep)$/.test(len) ? "long" : "balanced",
+    tone: normalizeAnswerTone(c.tone),
+    star: c.star === true || /^(?:on|true|yes|1)$/i.test(String(c.star ?? "")),
+  };
+}
+function readLiveAnswerControls() {
+  const fromUi = {
+    format: $("liveFormat") && $("liveFormat").value,
+    length: $("liveLength") && $("liveLength").value,
+    tone: $("liveTone") && $("liveTone").value,
+    star: $("liveStar") && $("liveStar").value,
+  };
+  const merged = { ...(current || {}), ...Object.fromEntries(Object.entries(fromUi).filter(([, v]) => v != null && v !== "")) };
+  return sessionAnswerControls(merged);
+}
+function syncLiveAnswerControls(s) {
+  const k = sessionAnswerControls(s || current || {});
+  if ($("liveFormat")) $("liveFormat").value = k.format;
+  if ($("liveLength")) $("liveLength").value = k.length;
+  if ($("liveTone")) $("liveTone").value = k.tone;
+  if ($("liveStar")) $("liveStar").value = k.star ? "on" : "off";
+}
+function persistLiveAnswerControls() {
+  if (!current) return sessionAnswerControls(readLiveAnswerControls());
+  const k = readLiveAnswerControls();
+  current.format = k.format;
+  current.length = k.length;
+  current.tone = k.tone;
+  current.star = k.star;
+  saveSession(current);
+  syncLiveAnswerControls(current);
+  return k;
+}
+// A separate deriveOnly hop is skipped when the answer request can derive inline.
+// Already-derived questions do not send derive: true. When they do, pinned is forced off so the server actually derives.
+function wantsInlineAnswerDerive(opts, derivedQ) {
+  // Same gate as the old separate derive hop: a consolidated press with no title yet.
+  // Pinned or already-derived questions must not send derive: true (the server would ignore a pinned derive).
+  return !!(opts && opts.consolidated && !String(derivedQ || "").trim() && !opts.pinned && !opts.deriveOnly);
+}
+function isPlaceholderTitle(t) {
+  const s = String(t ?? "").replace(/\s+/g, " ").trim();
+  return !s || /^(?:\u2026|\.{3}|preparing\b.*|ready\.?|cleared\.?|no question(?: yet)?\.?|listening\b.*|deriving the question\b.*|generating\b.*|waiting\b.*|question detected\.?|checking\b.*|thinking\b.*|answering what\b.*|from what was heard\b.*)$/i.test(s);
+}
+function formatCardAnswer(card) {
+  if (!card) return "";
+  const script = String(card.script || "").trim();
+  const bullets = Array.isArray(card.bullets) ? card.bullets.map(b => String(b || "").trim()).filter(Boolean) : [];
+  if (card.format === "full_script" || (!bullets.length && script)) return script;
+  if (card.format === "bullets" || (!script && bullets.length)) return bullets.map(b => "- " + b).join("\n");
+  return [script, ...bullets.map(b => "- " + b)].filter(Boolean).join("\n");
+}
+function applyAnswerStreamEvent(card, ev) {
+  if (!card || !ev || !ev.type) return { kind: "", title: "", text: "", noQuestion: false, card: null };
+  if (ev.type === "title") {
+    if (!ev.text || isPlaceholderTitle(ev.text)) return { kind: "", title: "", text: "", noQuestion: false, card: card.cardLayout || null };
+    return { kind: "title", title: String(ev.text).trim(), text: "", noQuestion: false, card: card.cardLayout || null };
+  }
+  if (ev.type === "card") {
+    const layout = {
+      title: ev.title && !isPlaceholderTitle(ev.title) ? String(ev.title).trim() : (card.cardLayout && card.cardLayout.title) || "",
+      script: String(ev.script || ""),
+      bullets: Array.isArray(ev.bullets) ? ev.bullets.slice() : [],
+      format: ev.format || (card.cardLayout && card.cardLayout.format) || "script_bullets",
+      partial: ev.partial === true,
+    };
+    return { kind: ev.partial ? "card-partial" : "card", title: layout.title, text: formatCardAnswer(layout), noQuestion: false, card: layout };
+  }
+  if (ev.type === "done") {
+    if (ev.card && typeof ev.card === "object") {
+      const layout = {
+        title: ev.card.title && !isPlaceholderTitle(ev.card.title) ? String(ev.card.title).trim() : (card.cardLayout && card.cardLayout.title) || "",
+        script: String(ev.card.script || ""),
+        bullets: Array.isArray(ev.card.bullets) ? ev.card.bullets.slice() : [],
+        format: ev.card.format || (card.cardLayout && card.cardLayout.format) || "script_bullets",
+        partial: false,
+      };
+      return { kind: "done-card", title: layout.title, text: formatCardAnswer(layout), noQuestion: !!ev.noQuestion, card: layout };
+    }
+    return { kind: "done", title: "", text: "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+  }
+  if (ev.type === "meta" && ev.derived && !isPlaceholderTitle(ev.derived)) {
+    return { kind: "meta-derived", title: String(ev.derived).trim(), text: "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+  }
+  if (ev.type === "meta" || ev.type === "done") return { kind: ev.type, title: "", text: "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+  return { kind: ev.type, title: "", text: ev.text || "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+}
+// ── end answer stream contract ──
+
 function deriveBody(question, card, opts) { return { deriveOnly: true, client: BUILD, question, transcript: opts.earlier || "", history: recentQA(card), reask: !!opts.reask }; }
 // The question fields of the answer request. A question the code cut already formed is pinned, so the server answers
 // it as formed instead of cutting the heard text a second time (review of 398f299: the second cut glued his reply and
 // the "You (context keywords)" label back in front of the question the model was told to answer).
 function questionFields(question, derivedQ, derivedBy, opts) { return { question, derived: derivedQ || undefined, pinned: !!opts.pinned || derivedBy === "code", again: !!opts.reask }; }
+function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
+  const inline = wantsInlineAnswerDerive(opts, derivedQ);
+  const fields = questionFields(question, derivedQ, derivedBy, opts);
+  if (inline) { fields.pinned = false; fields.derived = derivedQ || undefined; }
+  return {
+    stream: true, client: BUILD, liveModel: typeof liveModel === "function" ? (liveModel() || undefined) : undefined, consolidated: !!opts.consolidated,
+    ...(inline ? { derive: true } : {}),
+    ...fields,
+    ...(extra || {}),
+  };
+}
 function askingLevel() {
   const who = ($("liveInterviewer") && $("liveInterviewer").value) || "engineer";
   if (who !== "peer") window.__peerOf = who;
@@ -3750,27 +4344,31 @@ function serveBook(card, hit, depthKey) {
 async function generateAnswer(question, card, opts = {}) {
   if (card && card.screenTask) opts = { ...opts, source: "screen" };
   card = card || addCard(question, ["…"]);
+  let timer;
   const request = generateAnswerRequest(question, card, opts);
   const ctl = card.req;
   try {
-    await request;
+    // Last-resort watchdog after the request-level 120s hard timer and stall
+    // retries have had a chance to run. Matches the 150s aiBusy wedge. On
+    // timeout the card must stop spinning and keep a visible retry path —
+    // leaving ["…"] with only a status line hid the recovery action.
+    await Promise.race([request, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Answer request timed out")), 150000);
+    })]);
   } catch (error) {
     if (card.req !== ctl) return;
     card.req = null;
     try { ctl?.abort(); } catch {}
-    const tries = nextStallTry(opts.retries);
-    if (tries) {
-      status("Still working.", "live");
-      setTimeout(() => generateAnswer(question, card, { ...opts, retries: tries }), 800);
-      return;
-    }
+    // Request-level stallRetry already retried a stalled fetch twice. This
+    // wrapper is the last stop: do not schedule another generateAnswer here.
     card.streaming = false;
     const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
-    if (!partial) card.answer = ["…"];
-    card.meta = "";
+    if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
+    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
     if (cards[idx] === card) renderCard();
-    status("The answer did not finish. Press AI Answer to try again.", "live");
+    status(error && error.message || "The answer did not finish. Press AI Answer to try again.", "err");
   } finally {
+    clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
   }
 }
@@ -3829,38 +4427,16 @@ async function generateAnswerRequest(question, card, opts = {}) {
   // Relevance first: work out what the interviewer actually asked, THEN pull the persona-file and
   // dossier material that matches that question — not whatever words happened to be in the ramble.
   let derivedQ = opts.derived || "", derivedBy = opts.derived ? (opts.derivedBy || "kept") : "";   // regenerating: the question is already known
-  if (consolidated && !derivedQ) {
-    try {
-      const deriveTimer = setTimeout(() => { try { ctl.abort(); } catch {} }, 30000);
-      const dr = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-        body: JSON.stringify(deriveBody(question, card, opts)) });
-      const dj = await dr.json(); clearTimeout(deriveTimer);
-      if (card.req !== ctl) return;
-      if (dj.noQuestion) {
-        const kept = String(card.question || "").trim();
-        if (kept && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving|Answering what|From what was heard)/.test(kept)) {
-          derivedQ = kept;
-        } else {
-          card.streaming = false;
-          if (answerCtl === ctl) answerCtl = null;
-          if (!dropPage(card)) { card.answer = []; card.question = "No question yet"; if (cards[idx] === card) renderCard(); }   // nothing to answer: no blank page left in the book
-          status("Listening for the next question.", "live");
-          return;
-        }
-      }
-      if (dj.derived) { derivedQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, dj.derived) : dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
-      derivedBy = dj.derivedBy || "ai";
-      const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
-      if (hit && answerFitsQuestion(derivedQ || card.question, hit.text)) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
-    } catch (e) {
-      if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; stallRetry(); } return; }
-    }
-  }
+  // Derive runs on the answer request itself (`derive: true`) instead of a separate deriveOnly hop.
+  // noQuestion, the derived title, and a book match are handled from the stream below.
+  let servedBook = false;
+
+  const inlineDerive = wantsInlineAnswerDerive(opts, derivedQ);
   const qText = String(derivedQ || question).trim();
-  card.anchorQ = qText;
+  if (!inlineDerive) card.anchorQ = qText;
   if (directDesktop) responseKey = desktopResponseKey(card);
   let writeAnchor = askingLevel();
-  if (!directDesktop && window.KompasAnchors && qText.length >= 8) {
+  if (!inlineDerive && !directDesktop && window.KompasAnchors && qText.length >= 8) {
     const facts = anchorFacts();
     try {
       const pack = await Promise.race([window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id), new Promise((r) => setTimeout(() => r(null), 15000))]);   // anchors are an enhancement: never let their load hang the answer
@@ -3929,8 +4505,61 @@ async function generateAnswerRequest(question, card, opts = {}) {
   try {
     let responded = false;
     fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
+    const paintTitle = (title, fromDerived) => {
+      if (!title || isPlaceholderTitle(title) || card.req !== ctl) return false;
+      if (fromDerived) {
+        derivedQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, title) : title;
+        derivedBy = derivedBy || meta.derivedBy || "ai";
+        card.anchorQ = derivedQ;
+        const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
+        if (hit && answerFitsQuestion(derivedQ || card.question, hit.text)) {
+          servedBook = true;
+          try { ctl.abort(); } catch {}
+          if (answerCtl === ctl) answerCtl = null;
+          serveBook(card, hit, depthKey);
+          return true;
+        }
+        if (card.cardTitle && !isPlaceholderTitle(card.question)) return false;
+        card.question = derivedQ;
+      } else {
+        card.cardTitle = title;
+        card.question = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, title) : title;
+      }
+      if (cards[idx] === card) { renderCard(); status("Answering: " + card.question, "live"); }
+      return false;
+    };
+    const paintLayout = (layout) => {
+      if (!layout) return;
+      card.cardLayout = layout;
+      if (layout.title) paintTitle(layout.title, false);
+      const shown = formatCardAnswer(layout);
+      if (shown) {
+        if (!first) first = performance.now() - t0;
+        text = shown;
+        show(shown);
+      }
+    };
+    const takeEvent = (ev) => {
+      const applied = applyAnswerStreamEvent(card, ev);
+      if (ev.type === "meta") {
+        meta = { ...meta, ...ev };
+        if (ev.stance || ev.friction || ev.fix || ev.hook || ev.prose) { if (ev.stance) card.stance = ev.stance; if (ev.friction) card.friction = ev.friction; if (ev.fix) card.fix = ev.fix; if (ev.hook) card.hook = ev.hook; if (ev.prose) card.prose = ev.prose; if (cards[idx] === card) renderCard(); }
+        if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { if (paintTitle(ev.derived, true)) return "book"; }
+      } else if (ev.type === "title") {
+        if (applied.title) paintTitle(applied.title, false);
+      } else if (ev.type === "card") {
+        if (applied.card) paintLayout(applied.card);
+      } else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; if (!card.cardLayout) show(text); }
+      else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; card.cardLayout = null; show(text); }
+      else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
+      else if (ev.type === "done") {
+        meta = { ...meta, ...ev };
+        if (applied.kind === "done-card" && applied.card) paintLayout(applied.card);
+      }
+      return "";
+    };
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, ...questionFields(question, derivedQ, derivedBy, opts), transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify(answerRequestBody(question, card, opts, derivedQ, derivedBy, { transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history })) });
     responded = true; clearTimeout(fetchTimer);
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
@@ -3938,6 +4567,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
+      if (data.derived && (consolidated || opts.pinned) && !opts.derived) { if (paintTitle(data.derived, true)) { /* book served */ } }
+      if (data.title) paintTitle(data.title, false);
+      if (data.card) paintLayout({ title: data.card.title || data.title || "", script: data.card.script || "", bullets: data.card.bullets || [], format: data.card.format || "script_bullets", partial: false });
     } else {
       const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "", lastChunkAt = Date.now(), pendingRead = reader.read();
       while (true) {
@@ -3955,14 +4587,12 @@ async function generateAnswerRequest(question, card, opts = {}) {
           const frame = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
           if (!frame.startsWith("data:")) continue;
           let ev; try { ev = JSON.parse(frame.slice(5)); } catch { continue; }
-          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { const displayQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, ev.derived) : ev.derived; card.question = displayQ; if (cards[idx] === card) { renderCard(); status("Answering: " + displayQ, "live"); } } }
-          else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
-          else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
-          else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
-          else if (ev.type === "done") meta = { ...meta, ...ev };
+          if (takeEvent(ev) === "book") break;
         }
+        if (servedBook) break;
       }
     }
+    if (servedBook) return;
     if (card.req !== ctl) return;                                      // a newer request took this card over
     if (meta.error || meta.unavailable || meta.busy || meta.quiet || isUnavailableAnswer(meta, text) || providerLeak(text)) {
       recoverAnswer(meta.code || (meta.daily ? "CREDITS" : ""), meta.retryAfterMs || 1000);
@@ -3971,14 +4601,28 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
     if (meta.noQuestion) {
+      const kept = String(card.question || "").trim();
+      if (wantsInlineAnswerDerive(opts, opts.derived) && !opts.keptRetry && kept && !isPlaceholderTitle(kept) && meta.skipped !== "logistics") {
+        card.streaming = false;
+        if (answerCtl === ctl) answerCtl = null;
+        return generateAnswer(kept, card, { ...opts, derived: kept, pinned: true, consolidated: true, keptRetry: true });
+      }
       card.streaming = false;
-      card.answer = keepOld ? prevAnswer : [];
-      card.meta = meta.skipped === "logistics" ? "Personal logistics, not answered" : "";   // owner rule 29 Oct: a quiet card says why, with no answer text
-      if (cards[idx] === card) renderCard();
-      status(meta.skipped === "logistics" ? "Personal logistics, not answered. Still listening." : "Still listening.", "live");
+      if (meta.skipped === "logistics") {
+        card.answer = keepOld ? prevAnswer : [];
+        card.meta = "Personal logistics, not answered";   // owner rule 29 Oct: a quiet card says why, with no answer text
+        if (cards[idx] === card) renderCard();
+        status("Personal logistics, not answered. Still listening.", "live");
+        return;
+      }
+      // Nothing to answer: take the empty page out of the book, or leave a single live "No question yet" card.
+      if (keepOld && prevAnswer) { card.answer = prevAnswer; if (cards[idx] === card) renderCard(); }
+      else if (!dropPage(card)) { card.answer = []; card.question = "No question yet"; if (cards[idx] === card) renderCard(); }
+      status("Still listening.", "live");
       return;
     }
-    if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
+    if (!text.trim() && !(card.cardLayout && formatCardAnswer(card.cardLayout))) throw new Error("The answer engine returned an empty response. Please retry.");
+    if (!text.trim()) text = formatCardAnswer(card.cardLayout);
     text = stripUnaskedLogistics(card.anchorQ || card.question || question, text);
     if (!answerFitsQuestion(card.anchorQ || card.question || question, text)) {
       card.meta = "off-topic";
@@ -4024,7 +4668,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
+    if (servedBook) return;
     if (e && e.name === "AbortError") {
+      if (servedBook) return;
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
       stallRetry(); return;
     }
@@ -4228,6 +4874,125 @@ function frameHeardQuestion(chunks, opts = {}) {
   if (!question) return { question: "", skip: "noise", parts };
   return { question, skip: "", parts, seq: rows[start].seq };
 }
+// Live press decision (session 4): merge back-to-back interviewer asks, keep the
+// outstanding interviewer ask on a candidate/Them turn, and hold at
+// "Listening, no new question yet" instead of regenerating on silence.
+// Mic (You) is never the interviewer's ask unless the user is clearly reading
+// a question aloud. Mirrors src/lib/kompasQuestionResolve.ts; written for
+// Kompas, not a copy of any third-party client.
+const SILENCE_LISTEN_MS = 20000;
+const LISTENING_NO_QUESTION = "Listening, no new question yet";
+const RESOLVE_ASK_CUE = /[?]|^(?:tell|walk|describe|explain|give|how|what|why|when|where|which|who|can|could|would|will|do|does|did|is there|are there)\b/i;
+const SUBJECT_STOP = new Set("what when where which whom this that than them they their there then with from have been will would could should does did into about your yours were here some have been than".split(" "));
+function looksLikeCandidateAnswer(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (!s || /[?]/.test(s)) return false;
+  if (/\b(?:my question is|i wanted to ask|i want to ask|i'd like to ask)\b/i.test(s)) return false;
+  if (/^(?:(?:and|so|yeah|yes|um+|uh+|ok(?:ay)?|well|right|got it)[, ]+)*(?:i(?:'m| am|'ll| will|'ve|'d)?\b)/i.test(s)) return true;
+  if (/\b(?:i would|i'd |i will|i'm going to|i typically|my approach|i usually|i tend to)\b/i.test(s)) return true;
+  if (/^(?:when|while|if) (?:integrating|working|using|building|implementing|designing|doing|running|adding|calling)\b/i.test(s)) return true;
+  return false;
+}
+function isReadAloudQuestion(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (!s || looksLikeCandidateAnswer(s)) return false;
+  return RESOLVE_ASK_CUE.test(s);
+}
+const USER_FOLLOW_UP = /^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|say that again|more detail)\b/i;
+function isUserFollowUp(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  return !!s && (USER_FOLLOW_UP.test(s) || isReadAloudQuestion(s));
+}
+function asResolveLine(line) {
+  if (typeof line === "string") {
+    const m = String(line).match(/^\s*(You|Them|Interviewee|Interviewer(?:\s*\d+)?|Candidate)\s*:\s*(.*)$/i);
+    if (m) return { who: m[1], text: String(m[2] || "").replace(/\s+/g, " ").trim() };
+    return { who: "", text: String(line || "").replace(/\s+/g, " ").trim() };
+  }
+  return { who: String((line && line.who) || ""), text: String((line && line.text) || "").replace(/\s+/g, " ").trim() };
+}
+function isCandidateSpeech(line) { return /^(?:you|interviewee|candidate)$/i.test(asResolveLine(line).who); }
+function isInterviewerSpeech(line) { return /^(?:them|interviewer(?:\s*\d+)?)$/i.test(asResolveLine(line).who); }
+function sameResolveQuestion(a, b) {
+  const n = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const A = n(a), B = n(b);
+  return !!(A && B && (A === B || A.includes(B) || B.includes(A)));
+}
+function mergeAdjacentAsks(asks) {
+  const parts = Array.from(asks || []).map((s) => String(s || "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (!parts.length) return "";
+  if (parts.length === 1) return parts[0];
+  const a = parts[parts.length - 2], b = parts[parts.length - 1];
+  const bWords = b.split(/\s+/).length;
+  const words = (s) => new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 3 && !SUBJECT_STOP.has(w)));
+  const A = words(a), B = words(b);
+  let overlap = 0;
+  if (A.size && B.size) { for (const w of B) if (A.has(w)) overlap++; }
+  const sameSubject = !A.size || !B.size || overlap > 0;
+  const pointsBack = /\b(?:it|that|this|those|them)\b/i.test(b);
+  const followUp = /^(?:how|why|what|and how|and what|can you|could you)\b/i.test(b) && bWords <= 16 && (pointsBack || sameSubject);
+  if (followUp || (sameSubject && bWords <= 16)) {
+    const left = /[.?!]$/.test(a) ? a : a + ".";
+    return (left + " " + b).replace(/\s+/g, " ").trim();
+  }
+  return b;
+}
+function outstandingInterviewerAsk(lines, opts) {
+  const labeled = Array.from(lines || []).map(asResolveLine).filter((l) => l.text);
+  if (!labeled.length) return "";
+  const lastAnswered = opts && opts.lastAnswered || "";
+  const asks = labeled.filter((l) => isInterviewerSpeech(l) && RESOLVE_ASK_CUE.test(l.text) && !looksLikeCandidateAnswer(l.text)).map((l) => l.text)
+    .filter((s) => !sameResolveQuestion(s, lastAnswered));
+  const last = labeled[labeled.length - 1];
+  if (isCandidateSpeech(last) || looksLikeCandidateAnswer(last.text)) {
+    if (!asks.length) return "";
+    return asks.length > 1 ? mergeAdjacentAsks(asks.slice(-2)) : asks[asks.length - 1];
+  }
+  if (isInterviewerSpeech(last) && RESOLVE_ASK_CUE.test(last.text) && !looksLikeCandidateAnswer(last.text)) {
+    const recent = asks.slice(-2);
+    return recent.length > 1 ? mergeAdjacentAsks(recent) : (asks[asks.length - 1] || "");
+  }
+  return asks.length ? asks[asks.length - 1] : "";
+}
+function interviewerAsksFrom(lines, opts) {
+  const lastAnswered = opts && opts.lastAnswered || "";
+  return Array.from(lines || []).map(asResolveLine).filter((l) => l.text)
+    .filter((l) => (isInterviewerSpeech(l) && RESOLVE_ASK_CUE.test(l.text) && !looksLikeCandidateAnswer(l.text)) || (isCandidateSpeech(l) && isReadAloudQuestion(l.text)))
+    .map((l) => l.text)
+    .filter((s) => !sameResolveQuestion(s, lastAnswered));
+}
+function livePressDecision(opts) {
+  opts = opts || {};
+  if (opts.anyway || String(opts.typed || "").trim()) return { listening: false, question: "", reason: "none" };
+  // Mic-only interviews label both sides "You". Role-based listening would treat
+  // interviewer asks, "my question is…", and narrowings as candidate talk and hold.
+  // Leave those to the classic intake / re-press path. Call-audio (Them) keeps the gate.
+  if (String(opts.questionSource || "") === "You") return { listening: false, question: "", reason: "none" };
+  const pending = Array.from(opts.pending || []);
+  const recent = Array.from(opts.recent || pending);
+  const lastAnswered = opts.alreadyAnswered ? String(opts.lastQuestion || "") : "";
+  const window = recent.length ? recent : pending;
+  const lastSrc = pending.length ? pending : window;
+  const last = lastSrc.length ? asResolveLine(lastSrc[lastSrc.length - 1]) : { who: "", text: "" };
+  const candidateTurn = !!(last.text && (isCandidateSpeech(last) || looksLikeCandidateAnswer(last.text)));
+  if (candidateTurn) {
+    const userAsk = pending.some((l) => { const row = asResolveLine(l); return isCandidateSpeech(row) && isUserFollowUp(row.text) && !looksLikeCandidateAnswer(row.text); }) || (isCandidateSpeech(last) && isUserFollowUp(last.text) && !looksLikeCandidateAnswer(last.text));
+    if (userAsk) return { listening: false, question: "", reason: "none" };
+    const held = outstandingInterviewerAsk(pending.length ? window.concat(pending) : window, { lastAnswered });
+    if (held) return { listening: false, question: held, reason: "outstanding" };
+    return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" };
+  }
+  const asks = interviewerAsksFrom(pending, { lastAnswered });
+  if (asks.length >= 2) {
+    const merged = mergeAdjacentAsks(asks.slice(-2));
+    if (merged && merged !== asks[asks.length - 1]) return { listening: false, question: merged, reason: "merge" };
+  }
+  if (asks.length) return { listening: false, question: asks.length === 1 ? asks[0] : mergeAdjacentAsks(asks), reason: "ask" };
+  const pendingFollowUp = pending.some((l) => { const row = asResolveLine(l); return isUserFollowUp(row.text) && !looksLikeCandidateAnswer(row.text); });
+  if (!opts.fromAuto && opts.alreadyAnswered && !asks.length && !pendingFollowUp) return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" };
+  return { listening: false, question: "", reason: "none" };
+}
+
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -4271,10 +5036,59 @@ async function aiAnswer(fromAuto, options = {}) {
     let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
-    // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
-    let anyway = false;
-    try { const back = answerAnywayLines(answerAnywayHeld, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); } } catch {}
+    // Answer anyway (slice 2): a press right after "Nothing question-like" or
+    // "Listening, no new question yet" answers those same lines / re-asks.
+    let anyway = false, silenceAnyway = false, liveResolved = "";
+    try {
+      const held = answerAnywayHeld;
+      let back = null;
+      try { if (typeof answerAnywayLines === "function") back = answerAnywayLines(held, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); } catch {}
+      if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); }
+      else if (held && held.silenceReask && !fromAuto && !typedText && Date.now() - Number(held.at) <= 15000) {
+        const leftover = pending.length && typeof livePressDecision === "function" && livePressDecision({ pending, recent: pending, lastQuestion: "", alreadyAnswered: true }).listening;
+        if (!pending.length || leftover) {
+          anyway = true; silenceAnyway = true; pending = [];
+          logDecision("answer-anyway-silence", questionSource(), "");
+        }
+      }
+    } catch {}
     answerAnywayHeld = null;
+    if (!fromAuto && !typedText && !anyway) {
+      try {
+        const curCard = cards[idx];
+        const lastQ = curCard && curCard.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(curCard.question) ? curCard.question : "";
+        const decision = livePressDecision({
+          pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
+          lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
+          questionSource: questionSource(),
+        });
+        if (decision.listening) {
+          answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
+          status("Listening, no new question yet — press AI Answer again to answer anyway.", "live");
+          logDecision("listening-no-new-question", questionSource(), lastQ || "");
+          return;
+        }
+        if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
+      } catch {}
+    }
+    if (liveResolved && typeof resolveStutterRephrase === "function") {
+      const st = resolveStutterRephrase(liveResolved);
+      if (st.text) liveResolved = st.text;
+    }
+    if (!fromAuto && !typedText && !anyway) {
+      try {
+        const tail = liveResolved || pending.filter(x => x && x.text).map(x => x.text).join(" ");
+        const themCap = captures.find(c => c.who === "Them");
+        const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : INTENT_COMPLETE_SILENCE_MS;
+        const gate = intentToComplete({ text: tail, themQuietMs });
+        if (!gate.ready && gate.reason === "incomplete") {
+          status("Waiting for the question to finish…", "live");
+          await new Promise((r) => setTimeout(r, gate.waitMs || MANUAL_INCOMPLETE_WAIT_MS));
+          try { await flushHeard(400); } catch {}
+          pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+        }
+      } catch {}
+    }
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
       setChat(true);
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
@@ -4305,7 +5119,20 @@ async function aiAnswer(fromAuto, options = {}) {
         if (!fromAuto) { answerAnywayHeld = { lines: pending.slice(), at: Date.now() }; status("Nothing question-like in that — press AI Answer again to answer anyway.", "live"); }
         return;
       }
-      const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      if (liveResolved && !typedText) {
+        answeredSeq = heardSeq; updatePending();
+        const parts = pending.filter(t => t && t.text && (t.who !== "You" || (typeof isReadAloudQuestion === "function" && isReadAloudQuestion(t.text))));
+        const used = parts.filter(t => liveResolved.toLowerCase().includes(String(t.text || "").toLowerCase().slice(0, 48)) || String(t.text || "").toLowerCase().includes(liveResolved.toLowerCase().slice(0, 48)));
+        const heard = (used.length ? used : parts).map(t => (t.who || "Them") + ": " + t.text).join("\n") || liveResolved;
+        const earlier = typeof recentContext === "function" ? recentContext((used[0] || parts[0] || pending[0] || {}).seq) : "";
+        const shown = typeof cleanShownQuestion === "function" ? (cleanShownQuestion(liveResolved) || liveResolved) : liveResolved;
+        const card = addCard(shown, ["…"]);
+        card.heard = heard; card.earlier = earlier; card.formed = heard;
+        card.formSeq = (used[0] || parts[0] || pending[0] || {}).seq;
+        showPressed(card, shown);
+        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true });
+      }
+      const isRepress = !liveResolved && !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         // The re-ask is formed from the lines that formed the page on screen plus what was heard since, never from the
         // whole interview (baseline contract, 27 Oct 2026): with forty earlier lines and the on-screen question stripped,
@@ -4357,10 +5184,14 @@ async function aiAnswer(fromAuto, options = {}) {
             answeredSeq = heardSeq; updatePending();
             const who = questionSource() === "You" ? "You" : "Them";
             const heard = (framed.parts || []).map((text) => who + ": " + text).join("\n") || framed.question;
-            const card = addCard(framed.question, ["…"]);
-            card.heard = heard; card.formed = heard; card.formSeq = framed.seq != null ? framed.seq : (pending[0] && pending[0].seq);
-            showPressed(card, framed.question);
-            return await generateAnswer(heard, card, { consolidated: true, earlier: "", derived: card.question, pinned: true });
+            const earlier = recentContext(framed.seq != null ? framed.seq : (pending[0] && pending[0].seq));
+            const pendingAsks = typeof interviewerAsksFrom === "function" ? interviewerAsksFrom(pending, { lastAnswered: (cur && cur.question) || "" }) : (framed.parts || pending.map(t => t.text));
+            const resolved = resolveLiveQuestion(framed.question, pendingAsks.length >= 2 ? pendingAsks : (framed.parts || pending.map(t => t.text)), (earlier ? earlier.split("\n") : []).concat(framed.parts || []));
+            const shown = resolved || framed.question;
+            const card = addCard(shown, ["…"]);
+            card.heard = heard; card.earlier = earlier; card.formed = heard; card.formSeq = framed.seq != null ? framed.seq : (pending[0] && pending[0].seq);
+            showPressed(card, shown);
+            return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true });
           }
         } catch { /* the intake below still answers one question */ }
       }
@@ -4379,7 +5210,7 @@ async function aiAnswer(fromAuto, options = {}) {
             let chosen = formed.length > 1 ? [formed[formed.length - 1]] : formed;
             answeredSeq = heardSeq; updatePending();
             const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
-            const earlierFormed = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+            const earlierFormed = recentContext(cutSeq);
             const who = questionSource() === "You" ? "You" : "Them";
             for (const g of chosen) {
               const spanHeard = g.parts.map(text => `${who}: ${text}`).join("\n");
@@ -4402,7 +5233,7 @@ async function aiAnswer(fromAuto, options = {}) {
         return;
       }
       const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
-      const earlier = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+      const earlier = recentContext(cutSeq);
       if (!intake.worthy) {
         // No real question from any source, but the fragments carry real
         // keywords: tackle them into the lane instead of answering noise.
@@ -4518,12 +5349,20 @@ async function grabFrame() {
     catch (e) { if (nativeError && e && e.name !== "NotAllowedError") throw new Error((nativeError.message || String(nativeError)) + " " + (e.message || "")); throw e; }
     track = s.getVideoTracks()[0]; displayVideo = track;
   }
-  const video = document.createElement("video"); video.muted = true; video.playsInline = true;
+  const preview = typeof document !== "undefined" && document.getElementById ? document.getElementById("tabPreviewVideo") : null;
+  const reusePreview = !!(preview && preview.readyState >= 2 && preview.videoWidth && preview.srcObject);
+  const video = reusePreview ? preview : document.createElement("video");
+  const ownsVideo = video !== preview;
+  if (ownsVideo) { video.muted = true; video.playsInline = true; }
   try {
-    video.srcObject = new MediaStream([track]); await video.play();
-    if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
+    if (ownsVideo) {
+      video.srcObject = new MediaStream([track]); await video.play();
+      if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
+    } else if (video.readyState < 2) {
+      await new Promise(r => { video.onloadeddata = r; setTimeout(r, 800); });
+    }
     if (track.readyState !== "live" || video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("No readable screen frame yet. Please retry.");
-    const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1600 / w);
+    const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1920 / w);
     const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
     const context = c.getContext("2d");
     if (!context) throw new Error("Screen capture is unavailable in this browser.");
@@ -4540,8 +5379,10 @@ async function grabFrame() {
       for (let i = 0; i < pixels.length; i += step) { if (Math.abs(pixels[i] - r0) > 12 || Math.abs(pixels[i + 1] - g0) > 12 || Math.abs(pixels[i + 2] - b0) > 12) { flat = false; break; } }
     }
     if (flat) throw new Error("This window opted out of screen capture, so its content comes back blank. Running as administrator does not change that — share the window another way, or type the question.");
-    return c.toDataURL("image/jpeg", 0.72);
-  } finally { video.onloadeddata = null; video.pause(); video.srcObject = null; }
+    return c.toDataURL("image/jpeg", reusePreview ? 0.85 : 0.72);
+  } finally {
+    if (ownsVideo) { video.onloadeddata = null; video.pause(); video.srcObject = null; }
+  }
 }
 // A fresh screen stream for Screen Answer. Owner report, 27 Oct 2026: desktop 0.7 showed "Could not start video
 // source" (NotReadableError: Windows refused to start the stream for that Kompas process; the same request in a clean
@@ -4590,6 +5431,86 @@ function screenQuestionPieces(raw) {
   const parts = (headed.length > 1 ? headed : [text]).map((s) => stripScreenChrome(s)).filter(Boolean);
   return parts.length ? parts : [stripScreenChrome(text)];
 }
+function currentAudioAsk() {
+  try {
+    const src = typeof questionSource === "function" ? questionSource() : "Them";
+    const lines = typeof pendingHeard === "function" ? pendingHeard() : (typeof transcript !== "undefined" ? transcript.slice(-16) : []);
+    const win = typeof turnWindow === "function"
+      ? turnWindow(lines, src, (t) => t && t.who === src && ((typeof Q_CUE !== "undefined" && Q_CUE.test(t.text)) || (typeof opensNewAsk === "function" && opensNewAsk(t.text))))
+      : lines;
+    const text = (win || []).filter((t) => t && t.text && (!t.who || t.who === src)).map((t) => t.text).join(" ").replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    const stutter = typeof resolveStutterRephrase === "function" ? resolveStutterRephrase(text) : { text: text };
+    return String(stutter.text || text).replace(/\s+/g, " ").trim();
+  } catch { return ""; }
+}
+function classifyScreenFrame(text, kind) {
+  const raw = String(text || "").trim();
+  const declared = String(kind || "").toLowerCase();
+  const words = raw.split(/\s+/).filter(Boolean);
+  const askLead = /^(?:explain|describe|implement|write|find|return|what|which|how|why|solve|give|walk)\b/i.test(raw) || /[?]/.test(raw);
+  if (!raw) return "no-content";
+  const CODE_MARK = /\b(?:def\s+\w+\s*\(|function\s+\w+\s*\(|return\s+|for\s*\(|for\s+\w+\s+in\b|while\s*\(|#include|std::|vector\s*<|nullptr|cout\s*<<|public\s+|private\s+|class\s+\w+|const\s+\w+\s*=|let\s+\w+|var\s+\w+|int\s+\w+|void\s+\w+|i\+\+|j\+\+|if\s*\([^)]+\)\s*\{)\b/m;
+  const CODE_LINE = /^\s{0,8}(?:def |function |return |for |while |if |else |elif |#include|public |private |const |int |void |auto |class )|\w+\s*\([^;]*\)\s*\{|;\s*$/m;
+  const DIAGRAM_MARK = /[+\-|]{4,}|[┌┐└┘┬┴┼─│]|→|->\s|←|^\s*[01]\s+[01]\s+[01]\s+[01]\b|\bblocks?\s*:\s*\[.*\]/im;
+  const PROBLEM_MARK = /\b(?:given\b|example\s*\d|constraints?:|input:|output:|write (?:a |the )?function|return the|sample input|reqs\s*=|requirements\s*=|blocks\s*=\s*\[)/i;
+  if (/^(?:greeting|hello|hi there|youtube|subscribe|faces?|blank(?: document)?|no text|two faces\b|a blank)\b/i.test(raw) && !CODE_MARK.test(raw) && !PROBLEM_MARK.test(raw) && !DIAGRAM_MARK.test(raw) && !askLead) return "no-content";
+  const codeLines = raw.split(/\n/).filter((line) => CODE_LINE.test(line) || /[{};]\s*$/.test(line)).length;
+  const hasCode = CODE_MARK.test(raw) || codeLines >= 3;
+  const hasProblem = PROBLEM_MARK.test(raw);
+  const hasDiagram = declared === "diagram" || DIAGRAM_MARK.test(raw);
+  if (hasProblem && !/\b(?:def\s+\w+\s*\(|function\s+\w+\s*\()/m.test(raw)) return "problem";
+  if (hasCode && codeLines >= 2 && !(hasProblem && codeLines < 3)) return "code";
+  if (hasCode) return "code";
+  if (hasProblem) return "problem";
+  if (hasDiagram) return "diagram";
+  if (declared === "coding" && words.length >= 8) return "problem";
+  return "problem";
+}
+function routeScreenFrame(text, audioQuestion, kind) {
+  const screen = String(text || "").trim();
+  const audio = String(audioQuestion || "").replace(/\s+/g, " ").trim();
+  const frameKind = classifyScreenFrame(screen, kind);
+  const none = "No question on screen";
+  if (frameKind === "no-content") {
+    if (!audio) return { kind: frameKind, display: none, answerQuestion: none, generate: false, combinedAudio: false };
+    return { kind: frameKind, display: audio, answerQuestion: none + ". There is no interview question in the screenshot. Answer the audio question only:\n" + audio, generate: true, combinedAudio: true };
+  }
+  const brief = frameKind === "problem"
+    ? "The screen shows a problem statement. Give an approach, working code, and time and space complexity."
+    : frameKind === "code"
+      ? "The screen shows code. Transcribe the key visible lines, then review, fix, or continue that code. Do not ignore the on-screen code in favor of a generic explanation."
+      : "The screen shows a diagram. Explain the diagram and answer the ask.";
+  const parts = [brief, "On screen:\n" + screen];
+  if (audio) parts.push("Audio question:\n" + audio + "\nAddress the audio question using the screen as context.");
+  const display = screen.replace(/\s+/g, " ").trim().slice(0, 180) || audio || "On screen";
+  return { kind: frameKind, display, answerQuestion: parts.join("\n\n"), generate: true, combinedAudio: !!audio };
+}
+async function answerScreenPieces(card, pieces, audio) {
+  const session = current && current.id;
+  const routedAll = (pieces.length ? pieces : [""]).map((piece) => routeScreenFrame(piece, audio));
+  const first = routedAll[0];
+  if (!first.generate) {
+    card.question = first.display;
+    card.answer = [first.display];
+    card.screenTask = true;
+    card.frameKind = first.kind;
+    return;
+  }
+  card.question = first.display;
+  card.screenTask = true;
+  card.frameKind = first.kind;
+  await generateAnswer(first.display, card, { pinned: true, derived: first.answerQuestion, source: "screen", frameKind: first.kind });
+  for (const routed of routedAll.slice(1)) {
+    if ((current && current.id) !== session || !cards.includes(card)) return;
+    if (!routed.generate) continue;
+    const next = addCard(routed.display, ["…"]);
+    next.screenTask = true;
+    next.frameKind = routed.kind;
+    await generateAnswer(routed.display, next, { pinned: true, derived: routed.answerQuestion, source: "screen", frameKind: routed.kind });
+  }
+}
+
 async function analyseScreen() {
   if (aiBusy) { status("Still working on the last answer.", "live"); return; }
   aiBusy = true; aiBusySince = Date.now();
@@ -4622,26 +5543,27 @@ async function analyseScreen() {
           : t.question;
         return stripScreenChrome(String(formatted || "").trim());
       }).filter(Boolean);
-      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
-      card.question = pieces[0]; card.screenTask = true;
-      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
-      for (const piece of pieces.slice(1)) {
-        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
-        const next = addCard(piece, ["…"]); next.screenTask = true;
-        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      const audio = currentAudioAsk();
+      if (!pieces.length && !audio) {
+        card.question = "No question on screen"; card.answer = ["No question on screen"]; card.screenTask = true; card.frameKind = "no-content";
+        return;
       }
+      await answerScreenPieces(card, pieces, audio);
       return;
     } else if (data.needsAnswer === true) {
+      if ((data.frameKind === "no-content" || typeof data.question === "string" && !data.question.trim())) {
+        const audio = currentAudioAsk();
+        await answerScreenPieces(card, [], audio);
+        return;
+      }
       if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
       const pieces = screenQuestionPieces(data.question);
-      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
-      card.question = pieces[0]; card.screenTask = true;
-      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
-      for (const piece of pieces.slice(1)) {
-        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
-        const next = addCard(piece, ["…"]); next.screenTask = true;
-        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      const audio = currentAudioAsk();
+      if (!pieces.length && !audio) {
+        card.question = "No question on screen"; card.answer = ["No question on screen"]; card.screenTask = true; card.frameKind = "no-content";
+        return;
       }
+      await answerScreenPieces(card, pieces, audio);
       return;
     }
     if (!data.needsReview) {
@@ -5757,6 +6679,7 @@ accountSessionSync = window.KompasSessionCloud?.create({
   // intentionally rejects an invalid explicit Bearer instead of falling
   // back to a different cookie-account identity.
   recoverAuth: async () => {
+    if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return true;
     if (window.kompasDesktop) {
       const verified = await window.kompasDesktop.refreshAuth?.("rejected").catch(() => false);
       return !!verified;
@@ -5811,7 +6734,10 @@ $("importLocalSessions")?.addEventListener("click", async () => {
     void accountSessionSync.refresh();
   }
 });
-if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
+if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) {
+  const user = LS.get("user");
+  if (!user || !user.email || user.email === "you@perfact.app") LS.set("user", { email: "eshwarjay05@gmail.com" });
+} else if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
 pruneExpiredResumes();           // a resume past its 15 days is removed on launch, even if the Resume view is never opened
 openDashboard();
 accountSessionSync?.start();
@@ -5918,7 +6844,7 @@ function packSession(s) {
     jd: String(s.jd || "").slice(0, 6000), resume: String(s.resume || "").slice(0, 8000),
     documents: String(s.documents || "").slice(0, 2000), instructions: s.instructions || "",
     language: s.language || "en", interviewer: s.interviewer || "engineer", difficulty: s.difficulty || "standard",
-    tone: s.tone || "professional", mode: s.mode || "technical", length: s.length || "balanced",
+    tone: sessionAnswerControls(s).tone, format: sessionAnswerControls(s).format, star: sessionAnswerControls(s).star, mode: s.mode || "technical", length: sessionAnswerControls(s).length,
     autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
     createdAt: s.createdAt || Date.now(),
     token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated

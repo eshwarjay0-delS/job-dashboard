@@ -1,9 +1,13 @@
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { createClient } from "@/lib/supabase/client"
 
 // ── Simple Google sign-in (identity only) ────────────────────────────────────
 // Just asks for the user's name + email. No Drive permission, no scary consent.
 // This is what the login and signup pages use.
 export async function signInWithGoogle(next = "/dashboard/resume") {
+  if (await serverReportsAuthDisabled()) {
+    return { data: { provider: null, url: null }, error: { message: "Sign-in is not required." } }
+  }
   const supabase = createClient()
   return supabase.auth.signInWithOAuth({
     provider: "google",
@@ -22,6 +26,9 @@ export const GOOGLE_DRIVE_SCOPES =
   "email profile https://www.googleapis.com/auth/drive.file"
 
 export async function connectGoogleDrive() {
+  if (await serverReportsAuthDisabled()) {
+    return { data: { provider: null, url: null }, error: { message: "Sign-in is not required." } }
+  }
   const supabase = createClient()
   return supabase.auth.signInWithOAuth({
     provider: "google",

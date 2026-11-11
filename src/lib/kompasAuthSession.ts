@@ -115,7 +115,7 @@ export function userFromClaims(claims: Claims, nowSec = Math.floor(Date.now() / 
   return { id: sub, email: confirmed ? email : null, exp }
 }
 
-type UserLike = { id?: string; email?: string | null; is_anonymous?: boolean; email_confirmed_at?: string | null }
+type UserLike = { id?: string; email?: string | null; is_anonymous?: boolean; email_confirmed_at?: string | null; app_metadata?: Record<string, unknown> }
 type AuthErrorLike = { message?: string; status?: number; name?: string } | null
 
 export type AuthClientLike = {
@@ -126,7 +126,7 @@ export type AuthClientLike = {
 }
 
 export type ResolvedAuthUser =
-  | { id: string; email: string | null; unreachable: false }
+  | { id: string; email: string | null; unreachable: false; synthetic?: true }
   | { id: ""; email: null; unreachable: true }
 
 // getUser() talks to Supabase. When that call cannot reach the service, a
@@ -145,7 +145,9 @@ export async function userFromAuthClient(client: AuthClientLike, nowSec = Math.f
     error = err instanceof Error ? err : { message: "fetch failed" }
   }
   if (!error && user?.id && !user.is_anonymous) {
-    return { id: user.id, email: user.email_confirmed_at ? user.email ?? null : null, unreachable: false }
+    const resolved: ResolvedAuthUser = { id: user.id, email: user.email_confirmed_at ? user.email ?? null : null, unreachable: false }
+    if (user.app_metadata && user.app_metadata.auth_disabled_synthetic === true) resolved.synthetic = true
+    return resolved
   }
   if (!isAuthUnreachable(error)) return null
   if (typeof client.auth.getClaims === "function") {
