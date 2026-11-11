@@ -97,7 +97,7 @@ The owner-approved 4 October mobile hamburger behavior is being restacked in thi
 - Outside click and Escape close it; Escape restores focus to the hamburger; choosing a link closes it.
 - Desktop fixed rail remains unchanged.
 - The four mobile source-contract tests are wired into prebuild, and the shared prebuild test explicitly requires that wiring.
-- This branch has not yet completed its exact-head tests or a real narrow-phone/browser acceptance. It contains no Gmail sync-health card, OAuth, scheduler, email send or WhatsApp send.
+- This branch has not yet completed its exact-head tests or a real narrow-phone/browser acceptance. It contains no Gmail sync-health card, OAuth, scheduler, email send or WhatsApp send. Plan/REA documentation is now included in the stack; the protected preview remains blocked.
 
 ## Kompas coordination
 
@@ -109,4 +109,4 @@ No database writes, row reclassification, manual crawl, real model call, email s
 
 ## Continue
 
-Continue: finish exact-head full CI for PR #303, PR #304 and PR #305; fix only failures proven by those exact runs. Then finish the PR #306 mobile stack and its Plan/REA checks. Keep all branches draft/unmerged while the protected preview/account restriction remains. The owner must restore Vercel project access/serving; after that, deploy one reviewed current-master production build with auth-bypass flags false, verify exact SHA and alias, and run public HTTP plus the authorized authenticated/device acceptance. The 17 October WhatsApp incident remains blocked until the missing output/object key and signed provider receipt are recovered.
+Continue: finish exact-head full CI for PR #305, then create/run the PR #306 mobile stack and its Plan/REA checks. PRs #303 and #304 now have full CI green. Keep all branches draft/unmerged while the protected preview/account restriction remains. The owner must restore Vercel project access/serving; after that, deploy one reviewed current-master production build with auth-bypass flags false, verify exact SHA and alias, and run public HTTP plus the authorized authenticated/device acceptance. The 17 October WhatsApp incident remains blocked until the missing output/object key and signed provider receipt are recovered.
