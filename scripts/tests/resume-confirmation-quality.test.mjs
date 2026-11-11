@@ -1,7 +1,7 @@
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
+import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, roleScopedCandidateStatements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
@@ -11,6 +11,67 @@ for (const input of ['I have experience with AWS and Terraform', 'I personally d
 test('an exception cannot confirm every requirement', () => {
   assert.equal(explicitlyConfirmsAllRequirements(['I have experience with all required skills except GCP']), false)
   assert.deepEqual(confirmedCandidateStatements(['I used AWS but not GCP']), ['I used AWS'])
+})
+
+
+test('employer-bound confirmations support only the uniquely matching role', () => {
+  const roles = [
+    { role: 'Security Engineer | Jan 2023 – Aug 2023', employer: 'Suneratech', bullets: [{ idx: 1, text: 'Handled vulnerability triage' }] },
+    { role: 'Security Analyst | Sep 2021 – Dec 2022', employer: 'Cisco', bullets: [{ idx: 2, text: 'Reviewed network alerts' }] },
+  ]
+  const confirmations = roleScopedCandidateStatements([
+    'At Suneratech, I used Splunk for SIEM alert triage.',
+    'I managed Okta access reviews at Cisco.',
+    'I used Terraform.',
+    'Add Canton to my Cisco role.',
+    'At Cisco, I used Sentinel but not Okta.',
+  ], roles)
+  assert.deepEqual(confirmations, [
+    ['I used Splunk for SIEM alert triage'],
+    ['I managed Okta access reviews', 'I used Sentinel'],
+  ])
+  assert.deepEqual(confirmedCandidateStatements(['At Suneratech, I used Splunk']), ['I used Splunk'])
+})
+
+test('general confirmations never become employer-specific evidence', () => {
+  const roles = [
+    { role: 'Security Engineer', employer: 'Suneratech', bullets: [{ idx: 1, text: 'Handled vulnerability triage' }] },
+    { role: 'Security Analyst', employer: 'Cisco', bullets: [{ idx: 2, text: 'Reviewed network alerts' }] },
+  ]
+  assert.deepEqual(roleScopedCandidateStatements(['I have experience with Splunk and Okta'], roles), [[], []])
+  assert.equal(explicitlyConfirmsAllRequirements(['I have experience with all required skills at Suneratech']), false)
+  assert.match(candidateEvidenceInput('Security Engineer JD', ['At Suneratech, I used Splunk']), /uniquely matching role/)
+})
+
+test('duplicate employers or titles require enough detail to disambiguate the role', () => {
+  const roles = [
+    { role: 'Security Engineer | Jan 2023 – Aug 2023', employer: 'Suneratech', bullets: [{ idx: 1, text: 'Handled vulnerability triage' }] },
+    { role: 'Security Analyst | Sep 2021 – Dec 2022', employer: 'Suneratech', bullets: [{ idx: 2, text: 'Reviewed network alerts' }] },
+    { role: 'Security Engineer | Jan 2020 – Aug 2021', employer: 'Cisco', bullets: [{ idx: 3, text: 'Managed endpoint alerts' }] },
+  ]
+  assert.deepEqual(roleScopedCandidateStatements(['I used Splunk at Suneratech'], roles), [[], [], []])
+  assert.deepEqual(roleScopedCandidateStatements(['In my Security Analyst role at Suneratech, I used Okta'], roles), [[], ['I used Okta'], []])
+  assert.deepEqual(roleScopedCandidateStatements(['As a Security Engineer, I used Splunk'], roles), [[], [], []])
+})
+
+test('role confirmations are included in only that role repair and final guard', () => {
+  const roles = [
+    { role: 'Security Engineer', employer: 'Suneratech', bullets: [{ idx: 1, text: 'Handled vulnerability triage' }] },
+    { role: 'Security Analyst', employer: 'Cisco', bullets: [{ idx: 2, text: 'Reviewed network alerts' }] },
+  ]
+  const confirmations = [['I used Splunk for SIEM alert triage'], []]
+  const cover = (text, required) => new Set(required.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const gaps = roleScopedMissingTerms(roles, roles.flatMap(r => r.bullets), ['Splunk', 'Okta'], cover, confirmations)
+  assert.deepEqual(gaps, [{ roleIndex: 0, terms: ['Splunk'] }])
+  const guarded = restoreUnsupportedRoleEdits([
+    { idx: 1, text: 'Handled vulnerability triage with Splunk' },
+    { idx: 2, text: 'Reviewed network alerts with Splunk' },
+  ], roles, ['Splunk', 'Okta'], cover, confirmations)
+  assert.equal(guarded.reverted, 1)
+  assert.deepEqual(guarded.edits, [
+    { idx: 1, text: 'Handled vulnerability triage with Splunk' },
+    { idx: 2, text: 'Reviewed network alerts' },
+  ])
 })
 
 test('technical punctuation remains part of confirmed skills', () => {
@@ -92,15 +153,22 @@ test('role-scoped final weave inputs never borrow a JD term from another employe
 test('final caller scopes deterministic weaving per employer and restores cross-role terms', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
   assert.match(tailor, /for \(const \{ roleIndex, terms \} of roleGaps\)/)
-  assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, current\.edits\.bullets \|\| \[\], requiredExperienceTerms, coveredJdKeywords\)/)
+  assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, current\.edits\.bullets \|\| \[\], requiredExperienceTerms, coveredJdKeywords, roleConfirmations\)/)
   assert.match(tailor, /weaveExperienceRepresentation\(\s*\[\{ bullets: sourceBullets \}\]/)
   assert.doesNotMatch(tailor, /zones\.roles\.map\(r => \(\{ bullets: r\.bullets/)
   assert.match(tailor, /restoreUnsupportedRoleEdits\(/)
+  assert.match(tailor, /roleScopedCandidateStatements\(immediatePrefs, zones\.roles\)/)
+  assert.match(tailor, /restoreUnsupportedRoleEdits\([\s\S]*?coveredJdKeywords,\s*roleConfirmations/)
+  assert.match(tailor, /CACHE_GENERATION = "28"/)
+  const docx = readFileSync(new URL('../../src/lib/docx.ts', import.meta.url), 'utf8')
+  assert.match(docx, /employer\?: string/)
+  assert.match(docx, /pendingEmployer = t/)
+  assert.match(docx, /startRole\(t, true, pendingEmployer/)
 })
 
 test('role-scoped generated gap pass never asks every employer for the same global terms', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
-  assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, view\.roles\.flatMap\(r => r\.bullets\), freshUnique, coveredJdKeywords\)/)
+  assert.match(tailor, /roleScopedMissingTerms\(zones\.roles, view\.roles\.flatMap\(r => r\.bullets\), freshUnique, coveredJdKeywords, roleConfirmations\)/)
   assert.match(tailor, /ROLE-SPECIFIC GAP KEYWORDS: \$\{t\.skills\.join/)
   assert.doesNotMatch(tailor, /countedRoles\.map\(i => \(\{ role: i, skills: freshUnique \}\)\)/)
 })
