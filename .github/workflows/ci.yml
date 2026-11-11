@@ -143,6 +143,9 @@ jobs:
       - name: Verify MarketFit login visual story and media asset
         run: node --test scripts/tests/login-journey-animation.test.mjs scripts/tests/login-35s-story.test.mjs
 
+      - name: Verify Gmail selected-sender and per-inbox thread isolation
+        run: node --experimental-strip-types --test scripts/tests/gmail-send-account-isolation.test.mjs
+
       - name: Build (Webpack; retry only known intermittent Google-font URL bug)
         run: |
           # Next 16 occasionally receives a valid Google Fonts /l/font?kit URL
