@@ -163,3 +163,14 @@ test("card: model-written bullets are kept, first render needs only the opening 
   assert.equal(firstSentence("I'd isolate the host"), "")
   assert.match(SERVICE, /type: "card", partial: true/)
 })
+
+test("contract with app.js f507fc3a: keptRetry stays pinned, pinned never derives, event shapes", () => {
+  assert.match(SERVICE, /again: body\.again === true \|\| body\.keptRetry === true/)
+  assert.equal(wantsInlineDerive({ derive: true, pinned: true, keptRetry: true }), false)
+  assert.deepEqual(answerControls({ tone: "professional" }).tone, "professional")
+  assert.deepEqual(answerControls({ tone: "Simple" }).tone, "simple")
+  assert.match(SERVICE, /emit\(\{ type: "title", text: titleSent \}\)/)
+  assert.match(SERVICE, /emit\(\{ type: "card", partial: true, title: [^,]+, script: first, bullets: \[\], format: /)
+  assert.match(SERVICE, /type: "done", degraded,[^\n]*\n\s+card: \{ \.\.\.toCard\(finalText/)
+  assert.match(SERVICE, /card: \{ \.\.\.toCard\(out[^\n]*\n\s+title: jsonTitle/)
+})

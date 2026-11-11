@@ -900,7 +900,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
 
   const heardAll = str(body.question, 4000)
   // A pinned title yields to a newer, different interviewer ask; placeholder sentinels never pin (Parakeet report §4.1).
-  const unpin = unpinStale({ heard: heardAll, derived: str(body.derived, 4000), pinned: body.pinned === true, again: body.again === true })
+  const unpin = unpinStale({ heard: heardAll, derived: str(body.derived, 4000), pinned: body.pinned === true, again: body.again === true || body.keptRetry === true })   // keptRetry: the page re-sends a real title after a one-hop noQuestion; keep it pinned
   if (unpin.unpinned) body = { ...body, derived: unpin.derived, pinned: false }
   const asked = str(body.derived, 4000)
   // The card already shows the question when the client pins it. A ramble still
