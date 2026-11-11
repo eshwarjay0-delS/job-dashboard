@@ -22,12 +22,15 @@ function page({ themVoiced = false, streaming = false, collapsed = false } = {})
     setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length }, clearTimeout: () => {},
     fixTerms: (t) => t, fixPhrases: (t) => t, follow: { on: false }, transcript: [], heardSeq: 0, answerCtl: null,
     drawer: [], logged: [], heardDraft: () => '', pendingHeard: () => [], status: () => {}, updatePending: () => {}, scheduleAuto: () => {}, flushing: false,
+    // onTranscript now runs applySttCorrections plus mic-garbage/bleed gates added after this harness was written.
+    sttVocabFromActiveProfile: () => [], STT_CONFUSION: [],
+    isMicGarbage: () => false, micBleed: () => false,
   }
   ctx.logEvent = (e) => ctx.logged.push(e)
   ctx.logDecision = () => {}
   ctx.appendDrawer = (who, text) => ctx.drawer.push(who + ': ' + text)
   vm.createContext(ctx)
-  vm.runInContext(['let themLines = [];', 'let lastSourceMode = "";', app.slice(app.indexOf('function roleOfSource('), app.indexOf('const TURN_CLOSING')), stop, fnSrc('intakeWords'), fnSrc('echoShare'), fnSrc('noteThem'), fnSrc('themSpeaking'), fnSrc('echoOfThem'), fnSrc('showCaption'), fnSrc('questionSource'), fnSrc('onTranscript')].join('\n'), ctx)
+  vm.runInContext(['let themLines = [];', 'let lastSourceMode = "";', app.slice(app.indexOf('function roleOfSource('), app.indexOf('const TURN_CLOSING')), stop, fnSrc('applySttCorrections'), fnSrc('intakeWords'), fnSrc('echoShare'), fnSrc('noteThem'), fnSrc('themSpeaking'), fnSrc('echoOfThem'), fnSrc('showCaption'), fnSrc('questionSource'), fnSrc('onTranscript')].join('\n'), ctx)
   return { ctx, dom, timers, doc: dom.window.document }
 }
 

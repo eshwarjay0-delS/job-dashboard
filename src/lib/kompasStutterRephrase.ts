@@ -55,7 +55,7 @@ export function resolveStutterRephrase(text: string): StutterResult {
     const found = new RegExp(REPHRASE_MARK.source, "i").exec(raw.slice(lastCut))
     return lastCut + (found ? found[0].length : 0)
   })()
-  let final = raw.slice(startOfFinal).replace(/^[,.\s]+/, "").trim()
+  const final = raw.slice(startOfFinal).replace(/^[,.\s]+/, "").trim()
   if (!final) {
     return { text: raw, rephrased: true, incomplete: true, finalConstraint: "" }
   }

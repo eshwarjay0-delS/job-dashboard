@@ -4955,6 +4955,10 @@ function interviewerAsksFrom(lines, opts) {
 function livePressDecision(opts) {
   opts = opts || {};
   if (opts.anyway || String(opts.typed || "").trim()) return { listening: false, question: "", reason: "none" };
+  // Mic-only interviews label both sides "You". Role-based listening would treat
+  // interviewer asks, "my question is…", and narrowings as candidate talk and hold.
+  // Leave those to the classic intake / re-press path. Call-audio (Them) keeps the gate.
+  if (String(opts.questionSource || "") === "You") return { listening: false, question: "", reason: "none" };
   const pending = Array.from(opts.pending || []);
   const recent = Array.from(opts.recent || pending);
   const lastAnswered = opts.alreadyAnswered ? String(opts.lastQuestion || "") : "";
