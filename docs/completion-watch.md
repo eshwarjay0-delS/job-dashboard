@@ -335,3 +335,12 @@ Continue: after the PR #284 documentation refresh, require exact-head crawler re
 - Current master/production metadata is READY at `11efbbfe7781592bc2fad1216f67546882a1c3ed`, but the Vercel project is marked `live:false`; the exact PR preview gate reports the account blocked. No production HTTP, deployment or real mobile acceptance is claimed.
 
 Continue: run exact-head full CI, Plan/REA schema and Kompas baseline for PR #290. Keep it unmerged until the protected preview and Vercel account block are resolved. Then perform real narrow-phone/browser acceptance and verify desktop navigation is unchanged. Keep the per-account sync-health card separate pending explicit approval.
+
+
+## 11 November 2026 — mobile navigation test contract
+
+- PR #290 keeps the approved 4 Oct hamburger behavior isolated from the unapproved per-account sync-health card. Commit `2a93f65e27de6d505ce2e1eb1d182c28ede5485a` makes the prebuild assertion additive while preserving all required test groups and explicitly allowing `dashboard-shell.test.mjs`.
+- The previous exact PR #290 full-CI run `42926125643` failed before Build in `scripts/tests/whatsapp-voice.test.mjs:112`, subtest 10, due to the voice source-order assertion. This is Voice Delivery-owned; no voice code was edited. Exact-head checks after the test-only repair are pending.
+- Vercel protected preview remains account-blocked. No merge, deployment, real Gmail call or narrow-phone acceptance is claimed.
+
+Continue: finish exact-head CI, Plan/REA schema, Kompas baseline and mobile source regression on the final PR #290 head. Leave any voice failure to Kompas Continuous Voice Delivery. Keep PR #290 unmerged until the protected preview returns and real narrow-phone/browser acceptance is recorded. The separate sync-health card remains proposed.
