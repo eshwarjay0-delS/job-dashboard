@@ -1698,7 +1698,7 @@ function unfinishedRewriteWhy(result: TailorResult): string {
 }
 
 function closestResumeCaption(name: string, label: string, why: string): string {
-  const notTailored = /^NOT TAILORED\\b/i.test(why)
+  const notTailored = /^NOT TAILORED\b/i.test(why)
   return [
     `*${name}*`,
     notTailored
