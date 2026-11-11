@@ -72,7 +72,7 @@ function stripRoleDates(value: string): string {
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")
+  return [...value].map(ch => "\\^$.*+?()[]{}|/-".includes(ch) ? "\\" + ch : ch).join("")
 }
 
 function roleScopeParts(role: { role: string; employer?: string }): { employer: string; title: string } {
