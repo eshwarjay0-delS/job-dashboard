@@ -103,3 +103,12 @@ The expected daily run at 11:00 UTC is absent from the production-linked `mfit_c
 The canonical master and alias metadata still agree on `11efbbfe7781592bc2fad1216f67546882a1c3ed` / deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, but Vercel project inspection reports `live=false`. Public health and crawl endpoints have returned HTTP 402 `DEPLOYMENT_DISABLED`. The alias's READY metadata therefore does not establish an available cron runtime or successful API behavior. No crawl was manually triggered and no rows were inserted or rewritten.
 
 **Next:** the Vercel owner/account must restore project availability. Then verify `GET /api/health`, `GET /api/crawl/jobs?limit=1`, and a subsequent completed scheduled crawl on the reviewed classifier SHA. Keep Robert Half manual-only. PR #288's clearance-safe pagination and PR #291's C2H extension remain unmerged and preview-blocked; their passing source suites are not production acceptance.
+
+
+## 11 Nov 2026 — classifier precision review
+
+A source review traced the contractTypes call sites. The jobs API passes full descriptions into the classifier, so a generic contract-token match can incorrectly classify permanent roles that mention contract administration, negotiation, compliance or lifecycle management. The crawler's work-type classifier also previously concatenated engagement and title, obscuring which value was the structured employment label.
+
+PR #305 current head 278d9b3fa614c7e50aebf83b80ce9ac913724bf9 now passes engagement separately, trusts an explicit structured employmentType for generic Contract labels, and requires strong employment-context phrases in free text. It strips negated Contract, W2, C2C, 1099 and Temporary labels. Regression cases cover generic contract vocabulary, explicit contract positions, structured C2C/1099/Contract/Temporary, W2 payroll alone and negative statements.
+
+Exact-head full CI 43096994492, crawler regression 43096994482 and Kompas baseline 43096994493 are queued. This is not merged or live. No manual crawl or database mutation occurred; the latest persisted crawl remains 10 Nov 11:00 UTC.

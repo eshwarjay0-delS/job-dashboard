@@ -84,3 +84,18 @@ test('11 Nov WhatsApp profile-gap and Gmail Auth quota REA records remain tracea
   assert.ok(gmail.steps.some(s => s.status === 'Blocked' && s.finding.includes('upgrade the plan or remove spend caps')))
   assert.ok(gmail.sources.some(s => s.path === 'docs/research/gmail-supabase-egress-quota-2026-11-11.md'))
 })
+
+
+test('11 Nov WhatsApp fallback and contract classifier REA records remain traceable', () => {
+  const wa = REA_SESSIONS.find(s => s.id === 'whatsapp-fallback-boundary-tests-2026-11-11')
+  assert.ok(wa)
+  assert.equal(wa.state, 'Implemented, verification pending')
+  assert.ok(wa.steps.some(s => s.status === 'Pending' && s.finding.includes('exact-head')))
+  assert.ok(wa.sources.some(s => s.path === 'scripts/tests/whatsapp-resume-contract.test.mjs'))
+
+  const app = REA_SESSIONS.find(s => s.id === 'contract-classifier-precision-2026-11-11')
+  assert.ok(app)
+  assert.equal(app.state, 'Implemented, verification pending')
+  assert.ok(app.steps.some(s => s.status === 'Pending' && s.finding.includes('exact-head')))
+  assert.ok(app.sources.some(s => s.path === 'src/lib/contract-jobs.ts'))
+})

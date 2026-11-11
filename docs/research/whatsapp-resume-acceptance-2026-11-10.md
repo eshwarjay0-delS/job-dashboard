@@ -135,3 +135,10 @@ The 6 November WhatsApp policy remains authoritative and supersedes the older 98
 Gmail retrieval reconfirmed the matching Security Engineer – Risk & Controls JD as a 5+ year Atlanta onsite contract role; Solana is listed among preferred DLT platforms. This is employer target context only, not proof of candidate experience or credentials.
 
 The connected iZap workspace has one business but no linked WhatsApp number, zero chats, and zero message-search hits for “Risk & Controls” on 17 October. This connector therefore cannot recover the historical bot exchange or a delivery callback. The exact source DOCX remains privately verified, but its disputed education/employer chronology/tenure/credential facts remain quarantined. The generated output DOCX, R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. No replay or outbound test was sent. A zero-result iZap search is evidence about this connected workspace only, not proof that the records do not exist in every external store.
+
+
+## 11 Nov 2026 — route-level fallback boundary review
+
+The current webhook source separates the initial JD generate path from reply-to swipe refinement. The initial no-provider fallback is reachable only when a library selection is present; it verifies the authenticated user's library root, selected relative path, exact library/session bytes and selected profile email, then labels the attachment NOT TAILORED. The swipe reply routes to refine, which checks the same account, returns text only when the provider is unavailable or the rewrite is unusable, and requires sameResumeFacts before delivering a new document. It contains no sendClosest or sendOfflineOriginal fallback.
+
+PR #303 head fcee3fb6c46bd3d69bcc1565ed7fd1d5adb244cb adds two source-contract tests for these boundaries. Exact-head recovery regression 43097475896, full CI 43097475873 and Kompas baseline 43097475962 are queued. No real WhatsApp message or live model call was made. The 17 Oct generated DOCX, R2 object key, Meta correlation and signed delivery receipt remain missing.
