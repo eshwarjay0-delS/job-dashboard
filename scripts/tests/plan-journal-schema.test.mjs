@@ -80,3 +80,15 @@ test('approved final-DOCX Gemini review and current crawler/Gmail blockers remai
   assert.match(gmail.detail, /2,002/)
   assert.match(gmail.next, /CRON_SECRET/)
 })
+
+
+test('11 Nov completion-watch journal preserves the current WhatsApp and Gmail blockers', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'mfit-completion-watch-2026-11-11-2015')
+  assert.ok(entry, 'current completion-watch journal entry missing')
+  assert.equal(entry.approval, 'approved')
+  assert.equal(entry.delivery, 'in progress')
+  assert.match(entry.detail, /70% raw overlap/)
+  assert.match(entry.detail, /draft_parts_missing/)
+  assert.match(entry.detail, /exceed_egress_quota/)
+  assert.match(entry.next, /restack PR #296|Restack PR #296/i)
+})

@@ -67,3 +67,20 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
+
+
+test('11 Nov WhatsApp profile-gap and Gmail Auth quota REA records remain traceable', () => {
+  const whatsapp = REA_SESSIONS.find(s => s.id === 'whatsapp-profile-gap-fill-2026-11-11')
+  assert.ok(whatsapp, 'WhatsApp profile-gap REA entry missing')
+  assert.equal(whatsapp.state, 'Blocked')
+  assert.ok(whatsapp.steps.some(s => s.status === 'Implemented' && s.finding.includes('pending-part resolver')))
+  assert.ok(whatsapp.steps.some(s => s.status === 'Blocked' && s.finding.includes('No live model call')))
+  assert.ok(whatsapp.sources.some(s => s.path === 'docs/research/whatsapp-profile-gap-fill-2026-11-11.md'))
+
+  const gmail = REA_SESSIONS.find(s => s.id === 'gmail-supabase-auth-egress-quota-2026-11-11')
+  assert.ok(gmail, 'Gmail Supabase Auth quota REA entry missing')
+  assert.equal(gmail.state, 'Blocked')
+  assert.match(gmail.limits, /No mailbox contents/)
+  assert.ok(gmail.steps.some(s => s.status === 'Blocked' && s.finding.includes('upgrade the plan or remove spend caps')))
+  assert.ok(gmail.sources.some(s => s.path === 'docs/research/gmail-supabase-egress-quota-2026-11-11.md'))
+})
