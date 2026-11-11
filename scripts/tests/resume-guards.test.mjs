@@ -217,13 +217,12 @@ test('keywords: Java not matched inside JavaScript', () => {
   assert.deepEqual(r.covered, [])
 })
 
-// Guarded WhatsApp refine failures must never attribute a non-email mismatch to email.
-// A missing original still sends no file. An identity, contact, or date mismatch does not
-// send the rewritten bytes; it sends the already-chosen baseline and names that reason.
+// Swipe-reply failures must never send the original or a partial baseline.
+// Initial-JD offline fallback is a separate selected-library-only NOT TAILORED path.
 test('WhatsApp refine never sends the original or a partial baseline when an update fails', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
   const start = route.indexOf('async function refine(')
-  const end = route.indexOf('\\n// ──', start)
+  const end = route.indexOf('\n// ──', start)
   assert.ok(start >= 0 && end > start, 'the swipe-reply function can be isolated')
   const refine = route.slice(start, end)
 
@@ -243,7 +242,7 @@ test('WhatsApp refine never sends the original or a partial baseline when an upd
   assert.match(route, /sendClosest\("The update failed identity\/contact\/date verification, so I sent your original resume instead\."\)/)
   assert.match(route, /docxIdentityText\(source\)/)
   assert.match(route, /docxIdentityText\(file\)/)
-}))
+})
 
 test('resume identity: email-only mismatch logs category without exposing addresses', () => {
   const identity = readFileSync(new URL('../../src/lib/resume-identity.ts', import.meta.url), 'utf8')
