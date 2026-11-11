@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **Report factual match honestly.** Web downloads keep their strict 95% raw-overlap gate. For WhatsApp, a clean pass requires at least 70% raw overlap and 95% supported coverage; a completed, readable DOCX below 95% may still be delivered with gaps disclosed. Below 70% is not a clean pass, but an otherwise complete, readable file may still be sent with its gaps disclosed. Show measured coverage from the exported document without rounding up. The 98% figure remains a quality aspiration, never a hard WhatsApp send threshold.
+- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
@@ -50,7 +50,7 @@ Overall keyword overlap cannot hide thin experience coverage. Every substantive 
 
 The web result shows unfinished rewrite status separately from keyword counts, including when all terms appear. The shared quality report preserves its incomplete flag. Older saved delivered-with-gaps reports receive a general review notice without inventing a specific failure reason. No scoring or delivery threshold changes. Evidence: `docs/research/resume-incomplete-notice.md`.
 
-High keyword overlap does not make unfinished role rewrites complete. Partial or incomplete outputs are held; they never receive completed status or enter the completed-result cache. The 6 November channel rule supersedes the former 95% WhatsApp delivery floor: a completed, readable DOCX below 95% may be sent with gaps disclosed, while 70% raw overlap plus 95% supported coverage defines a clean pass. A completed readable file below 70% is not a clean pass but may still be sent with gaps disclosed. The 98% figure is a quality target, not a send gate. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md` and `docs/research/whatsapp-resume-acceptance-2026-11-10.md`.
+High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
 
 ## Skills-to-experience ordering — 22 October 2026
 
@@ -80,13 +80,3 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
-
-## WhatsApp initial offline fallback vs swipe refinement — 11 November 2026
-
-The owner-approved 6 November channel correction keeps these two flows separate:
-
-- **Initial JD request with no AI provider key:** send the exact selected same-account library original only when the authenticated user's library root, selected path, copied session bytes and single profile email all match. Caption it explicitly **NOT TAILORED** and say no edits were applied. Do not save or describe this file as a tailored result. If the account/path/identity checks fail, or no library resume was selected, send no file and retain the request for retry.
-- **Swipe-reply refinement:** if the provider fails or times out, the result is partial/incomplete, the exported DOCX is unreadable/missing, the original cannot be verified, or name/contact/employment dates do not match, send no document. Never send the original or a partial baseline as a substitute. Tell the user the previous delivered version remains unchanged.
-
-The 11 November implementation is isolated in branch `fix/whatsapp-offline-fallback-refine-no-baseline-20261111`. Tests use mocked storage and WhatsApp transport only; no real Meta message, model call, R2 write or handset delivery is claimed. The 17 October 17:28 Chicago incident still lacks its generated output DOCX and per-run R2/Meta delivery trace, so this policy fix does not recreate or close that historical incident.
-
