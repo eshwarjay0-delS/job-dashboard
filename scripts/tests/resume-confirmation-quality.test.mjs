@@ -50,6 +50,7 @@ test('duplicate employers or titles require enough detail to disambiguate the ro
     { role: 'Security Engineer | Jan 2020 – Aug 2021', employer: 'Cisco', bullets: [{ idx: 3, text: 'Managed endpoint alerts' }] },
   ]
   assert.deepEqual(roleScopedCandidateStatements(['I used Splunk at Suneratech'], roles), [[], [], []])
+  assert.deepEqual(roleScopedCandidateStatements(['I used Splunk at Suneratech and Cisco'], roles), [[], [], []])
   assert.deepEqual(roleScopedCandidateStatements(['In my Security Analyst role at Suneratech, I used Okta'], roles), [[], ['I used Okta'], []])
   assert.deepEqual(roleScopedCandidateStatements(['As a Security Engineer, I used Splunk'], roles), [[], [], []])
 })
