@@ -73,7 +73,7 @@ test('11 Nov WhatsApp profile-gap and Gmail Auth quota REA records remain tracea
   const whatsapp = REA_SESSIONS.find(s => s.id === 'whatsapp-profile-gap-fill-2026-11-11')
   assert.ok(whatsapp, 'WhatsApp profile-gap REA entry missing')
   assert.equal(whatsapp.state, 'Blocked')
-  assert.ok(whatsapp.steps.some(s => s.status === 'Implemented' && s.finding.includes('pending-state resolver')))
+  assert.ok(whatsapp.steps.some(s => s.status === 'Implemented' && s.label.includes('pending-state resolver')))
   assert.ok(whatsapp.steps.some(s => s.status === 'Blocked' && s.finding.includes('No live model call')))
   assert.ok(whatsapp.sources.some(s => s.path === 'docs/research/whatsapp-profile-gap-fill-2026-11-11.md'))
 
