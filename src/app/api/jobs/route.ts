@@ -1,5 +1,6 @@
 import { contractTypes, applicationUrl, requiresSecurityClearance } from "@/lib/contract-jobs"
 import { NextRequest, NextResponse } from "next/server"
+import { appOrigin } from "@/lib/appOrigin"
 
 // ─── Work-auth detection ──────────────────────────────────────────────────────
 function detectWorkAuth(text: string): string[] {
@@ -144,7 +145,7 @@ async function fetchRemotive(q: string, type: string): Promise<Job[]> {
     const res = await fetch(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=50`, {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(15000),
-      headers: { "User-Agent": "MarketFit/1.0 (+https://job-dashboard-fawn.vercel.app)" },
+      headers: { "User-Agent": `MarketFit/1.0 (+${appOrigin()})` },
     })
     if (!res.ok) return []
     const data = await res.json()
@@ -180,7 +181,7 @@ async function fetchArbeitnow(q: string, type: string): Promise<Job[]> {
     const res = await fetch("https://www.arbeitnow.com/api/job-board-api", {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(15000),
-      headers: { "User-Agent": "MarketFit/1.0 (+https://job-dashboard-fawn.vercel.app)" },
+      headers: { "User-Agent": `MarketFit/1.0 (+${appOrigin()})` },
     })
     if (!res.ok) return []
     const data = await res.json()

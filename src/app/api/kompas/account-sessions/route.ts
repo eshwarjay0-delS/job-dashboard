@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { createServiceClient } from "@/lib/supabase/service"
 import { checkRateLimit } from "@/lib/rateLimit"
+import {
+  catalogTag,
+  checkCatalogPollCap,
+  invalidateCatalogTag,
+  isCatalogPollDisabled,
+  rememberedCatalogTag,
+  rememberCatalogTag,
+} from "@/lib/kompasCatalogPoll"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -44,20 +52,52 @@ export async function GET(req: NextRequest) {
     // 300-session cutoff and no shifting offset when another device updates.
     const cursor = req.nextUrl.searchParams.get("after") || ""
     if (cursor && !ID_RE.test(cursor)) return json({ ok: false, error: "Invalid sync cursor." }, 400)
+    // Origin-transfer cut + hobby pack: timed polls send If-None-Match and get 304 when unchanged.
+    // KOMPAS_POLL_DISABLED and a per-user cap apply only to those conditional polls; a full read
+    // (first load, focus) still goes through. A short in-memory tag memo avoids repeat hashing.
+    if (!cursor) {
+      const inm = req.headers.get("if-none-match") || ""
+      if (inm) {
+        if (isCatalogPollDisabled()) {
+          return new NextResponse(null, { status: 429, headers: { ...HEADERS, "Retry-After": "3600", "X-Kompas-Poll": "disabled" } })
+        }
+        const cap = checkCatalogPollCap(user.id)
+        if (!cap.ok) {
+          return new NextResponse(null, {
+            status: 429,
+            headers: { ...HEADERS, "Retry-After": String(cap.retryAfterSec || 60), "X-Kompas-Poll": "throttled" },
+          })
+        }
+        const cached = rememberedCatalogTag(user.id)
+        if (cached && cached === inm) {
+          return new NextResponse(null, { status: 304, headers: { ...HEADERS, ETag: cached } })
+        }
+        const { data: marks, error: markError } = await db.from("kompas_account_sessions")
+          .select("session_id,revision,updated_at,deleted_at")
+          .eq("user_id", user.id).order("session_id", { ascending: true }).limit(100)
+        if (!markError && marks) {
+          const tag = catalogTag(user.id, marks)
+          rememberCatalogTag(user.id, tag)
+          if (inm === tag) return new NextResponse(null, { status: 304, headers: { ...HEADERS, ETag: tag } })
+        }
+      }
+    }
     let query = db.from("kompas_account_sessions")
       .select("session_id,payload,deleted_at,updated_at,revision")
       .eq("user_id", user.id).order("session_id", { ascending: true }).limit(100)
     if (cursor) query = query.gt("session_id", cursor)
     const { data, error } = await query
     if (error) throw error
-    return json({
+    const etag = !cursor && data ? catalogTag(user.id, data) : ""
+    if (etag) rememberCatalogTag(user.id, etag)
+    return NextResponse.json({
       ok: true, userId: user.id, email: user.email,
       nextCursor: (data || []).length === 100 ? data![data!.length - 1].session_id : null,
       records: (data || []).map(r => ({
         id: r.session_id, session: r.deleted_at ? null : r.payload,
         deleted: !!r.deleted_at, revision: r.revision, updatedAt: r.updated_at,
       })),
-    })
+    }, { status: 200, headers: etag ? { ...HEADERS, ETag: etag } : HEADERS })
   } catch {
     return json({ ok: false, error: "Could not read the account's Kompas sessions. Local sessions were preserved." }, 503)
   }
@@ -95,6 +135,7 @@ export async function POST(req: NextRequest) {
       if (error) throw error
       records.push(data)
     }
+    invalidateCatalogTag(user.id)
     return json({ ok: true, userId: user.id, records })
   } catch {
     return json({ ok: false, error: "Could not save sessions to the account. Updates remain queued locally." }, 503)

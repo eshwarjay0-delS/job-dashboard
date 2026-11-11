@@ -144,7 +144,9 @@ test("returns to Sessions, focus, visibility and desktop handoffs re-read the cl
   const lib=fs.readFileSync("public/kompas/account-sync.js","utf8");
   assert.match(lib,/addEventListener\("focus"/);
   assert.match(lib,/visibilitychange/);
-  assert.match(lib,/setInterval\(/);
+  assert.match(lib,/schedulePoll/);
+  assert.match(lib,/POLL_MS = 60_000/);
+  assert.match(lib,/document\.hidden|doc && doc\.hidden/);
 });
 
 

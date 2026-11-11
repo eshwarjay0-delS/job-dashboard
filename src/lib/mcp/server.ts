@@ -66,11 +66,23 @@ export function bearerClaimsOk(token: string, nowMs: number): boolean {
   } catch { return false }
 }
 
+function originOf(value: string): string {
+  const text = String(value || "").trim()
+  if (!text) return ""
+  try { return new URL(text).origin } catch { return "" }
+}
+
 function allowedOrigin(request: Request, env: Record<string, string | undefined>): boolean {
   const origin = request.headers.get("origin")
   if (origin === null) return true // desktop and server-side MCP clients send none
   const own = new URL(request.url).origin
-  const extra = (env.MCP_ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean)
+  const extra = [
+    env.MCP_ALLOWED_ORIGINS,
+    env.ALLOWED_ORIGINS,
+    env.KOMPAS_ALLOWED_ORIGINS,
+    env.NEXT_PUBLIC_APP_URL,
+    env.APP_URL,
+  ].flatMap((value) => String(value || "").split(",")).map(originOf).filter(Boolean)
   return origin === own || extra.includes(origin)
 }
 

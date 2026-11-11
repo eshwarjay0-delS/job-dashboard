@@ -1,6 +1,7 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build -- --webpack",
+  "skipMiddlewareRequestBody": true,
   "regions": [
     "iad1"
   ],
@@ -36,6 +37,42 @@
           "value": "no-store"
         }
       ]
+    },
+    {
+      "source": "/version.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/kompas/version.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/api/health",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=30, s-maxage=60, stale-while-revalidate=300"
+        }
+      ]
+    },
+    {
+      "source": "/health",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=30, s-maxage=60, stale-while-revalidate=300"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -54,16 +91,14 @@
       "schedule": "0 12 * * *"
     },
     {
-      "path": "/api/chief/watch/run",
-      "schedule": "17 4 * * *"
-    },
-    {
-      "path": "/api/crawl/run",
-      "schedule": "0 11 * * *"
-    },
-    {
       "path": "/api/whatsapp/recover",
       "schedule": "45 11 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "master": true
+    }
+  }
 }

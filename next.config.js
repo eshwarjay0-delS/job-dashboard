@@ -135,10 +135,23 @@ const nextConfig = {
             headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
           }]
         : []),
-      // API routes: no cache by default
+      // API routes: no cache by default (user data must never be cached)
       {
         source: "/api/(.*)",
         headers: [{ key: "Cache-Control", value: "no-store" }],
+      },
+      // Public stamps only. These come after the catch-alls so Cache-Control wins on these paths.
+      {
+        source: "/version.json",
+        headers: [{ key: "Cache-Control", value: "public, max-age=60, s-maxage=300, stale-while-revalidate=3600" }],
+      },
+      {
+        source: "/kompas/version.json",
+        headers: [{ key: "Cache-Control", value: "public, max-age=60, s-maxage=300, stale-while-revalidate=3600" }],
+      },
+      {
+        source: "/api/health",
+        headers: [{ key: "Cache-Control", value: "public, max-age=30, s-maxage=60, stale-while-revalidate=300" }],
       },
     ];
   },

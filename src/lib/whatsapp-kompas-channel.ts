@@ -3,6 +3,7 @@
  * Never calls Meta directly: webhook authentication, deduplication and sending stay in the caller.
  */
 import { createHash } from "node:crypto"
+import { appOrigin } from "@/lib/appOrigin"
 import { blob } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
 import { pdfText } from "@/lib/pdf-text"
@@ -25,11 +26,7 @@ type Arguments = {
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 const ids = (from: string) => from.replace(/\D/g, "")
 const sharedLink = (id: string) => {
-  let origin = "https://job-dashboard-fawn.vercel.app"
-  try {
-    const configured = new URL(process.env.NEXT_PUBLIC_APP_URL || origin)
-    if (configured.protocol === "https:" && !configured.username && !configured.password) origin = configured.origin
-  } catch { /* use the canonical deployment */ }
+  const origin = appOrigin()
   return `\nOpen this conversation on the web (sign in to the same account): ${origin}/dashboard/kompas/shared/${encodeURIComponent(id)}`
 }
 const pathFor = (owner: string, from: string) => {

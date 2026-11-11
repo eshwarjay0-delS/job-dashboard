@@ -1,3 +1,11 @@
+## 2026-11-11 — Hobby usage pack (no new screen)
+
+No new screen. Catalog polling, middleware skip, cron trim, CDN cache for public stamps, preview deploys off, and the weekly usage-guard workflow are server and static-script changes. The Kompas sidebar links are relative. The visible sidebar label does not change until the production build stamps version.json.
+
+**Verified locally before the one master push.** `npx tsc --noEmit` exit 0. `npm run test:baseline` 92/92. Pack tests 35/35. The uploaded patch was a combined diff, so the two local SHAs were not replayed with git am.
+
+**Not verified in this entry.** Production READY and the single `/api/health` plus `/version.json` probes are the ship report. Do not push a follow-up commit only to paste the deployment id. followup-hq and paravimpoke were not paused.
+
 ## 2026-11-10 — An unmatched definition speaks its own term
 
 No new screen. A definition with no resume line no longer opens on the shared business sentence or the shared honest line. It says the term.

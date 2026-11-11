@@ -81,6 +81,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|auth/callback|api/whatsapp/webhook|api/billing/stripe/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // 10 Nov 2026 origin-transfer cut: static files (scripts, styles, media, packages, fonts, models,
+    // version stamps) skip the Supabase session check; it reads cookies only and never gated their bytes.
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback|api/whatsapp/webhook|api/billing/stripe/webhook|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|avif|js|mjs|css|map|json|txt|xml|woff|woff2|ttf|mp4|webm|mp3|wav|zip|apk|exe|wasm|onnx|bin|tgz)$).*)",
   ],
 }

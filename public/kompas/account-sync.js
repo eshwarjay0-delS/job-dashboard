@@ -14,6 +14,16 @@
     "runAt","pausedAt","endedAt","endedBy","transcripts","bibleSyncedAt","note","site",
   ]);
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  const POLL_MS = 60_000;
+  const IDLE_AFTER_MS = 5 * 60_000;
+  const MAX_POLL_MS = 5 * 60_000;
+  function envPollDisabled() {
+    try {
+      if (typeof globalThis === "undefined") return false;
+      const v = globalThis.KOMPAS_POLL_DISABLED;
+      return v === true || v === 1 || v === "1" || v === "true" || v === "yes" || v === "on";
+    } catch { return false; }
+  }
   function delta(before, after) {
     const a = new Map((Array.isArray(before) ? before : []).filter(s=>s&&s.id).map(s=>[s.id,s]));
     const b = new Map((Array.isArray(after) ? after : []).filter(s=>s&&s.id).map(s=>[s.id,s]));
@@ -54,7 +64,10 @@
     return [...output.values()].sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0));
   }
   function create(opts) {
-    const {storage,fetcher,read,write,render,notify,recoverAuth} = opts;
+    const {storage,fetcher,read,write,render,notify,recoverAuth,timer,document:docOpt} = opts;
+    const doc = docOpt || (typeof document !== "undefined" ? document : undefined);
+    const clock = timer || (typeof setTimeout === "function" ? { setTimeout, clearTimeout } : { setTimeout: () => 0, clearTimeout: () => {} });
+    const pollDisabledAtStart = opts.pollDisabled === true || envPollDisabled();
     const prefix = "perfact.cloud.";
     const getJSON = (key,fallback) => { try{return JSON.parse(storage.getItem(key))||fallback;}catch{return fallback;} };
     const putJSON = (key,value) => {try{storage.setItem(key,JSON.stringify(value));return true;}catch{return false;}};
@@ -89,10 +102,21 @@
       try { write(next); local=next; persist(); render(); }
       finally { applied=false; }
     }
-    async function api(method, body, cursor = "") {
+    // Origin-transfer cut (10 Nov 2026): the timed poll sends the tag of its last full read; the server
+    // answers 304 with no body when the account catalog is unchanged. Any other read is a full read.
+    let catalogTag="", catalogTagOwner="";
+    let lastPollKind="", pollStopped=!!pollDisabledAtStart, pollTimer=null, currentPollMs=POLL_MS, unchangedPolls=0, lastActivity=Date.now();
+    async function api(method, body, cursor = "", conditional = false) {
       const url = "/api/kompas/account-sessions" + (cursor ? "?after=" + encodeURIComponent(cursor) : "");
-      const request = () => fetcher(url,{method,credentials:"same-origin",headers:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
+      const sendTag = conditional && method==="GET" && !cursor && owner && catalogTag && catalogTagOwner===owner;
+      const request = () => fetcher(url,{method,credentials:"same-origin",headers:sendTag?{...headers(),"if-none-match":catalogTag}:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
       let response=await request();
+      if(sendTag && response.status===304) return {notModified:true};
+      if(sendTag && response.status===429){
+        const ra=Number(response.headers && typeof response.headers.get==="function" && response.headers.get("retry-after"));
+        const flag=(response.headers && typeof response.headers.get==="function" && response.headers.get("x-kompas-poll")) || "";
+        return {throttled:true, retryAfterSec:Number.isFinite(ra)&&ra>0?ra:3600, pollDisabled:/disabled/i.test(String(flag))};
+      }
       // One bounded recovery, only after an explicit unauthenticated response.
       // The API rejects 401 before any mutation, so this cannot duplicate a
       // previously accepted account update. All failed operations remain queued.
@@ -100,12 +124,32 @@
       if(!response.ok) throw new Error("Session synchronization unavailable ("+response.status+").");
       const parsed=await response.json();
       if(!parsed || !parsed.ok || !parsed.userId) throw new Error("Account session response unavailable.");
+      if(method==="GET" && !cursor){
+        const tag=(response.headers && typeof response.headers.get==="function" && response.headers.get("etag")) || "";
+        catalogTag=tag; catalogTagOwner=tag?parsed.userId:"";
+      }
       return parsed;
     }
-    async function refresh() {
+    async function refresh(conditional=false) {
       if(requesting) return requesting;
       requesting=(async()=>{
-        const data=await api("GET");
+        const data=await api("GET",null,"",conditional===true);
+        if(data && data.throttled){
+          lastCheck=Date.now();
+          lastPollKind="throttled";
+          if(data.pollDisabled) pollStopped=true;
+          syncStatus({state:importing?"importing":"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
+          return data;
+        }
+        if(data && data.notModified){
+          // Nothing changed on the account since the last full read: keep the list as it is.
+          lastCheck=Date.now();
+          lastPollKind="notModified";
+          syncStatus({state:importing?"importing":"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
+          if(Object.keys(pending).length) void flush();
+          return true;
+        }
+        lastPollKind="updated";
         // Pull the entire account catalog, not only the first page.
         const seen = new Set((data.records || []).map(r => r.id));
         let cursor = data.nextCursor || "";
@@ -216,12 +260,44 @@
             message:"Your earlier sessions remain safely on this device. Account transfer could not be confirmed; retry Import local sessions."});
       }
     }
+    function noteActivity(){ lastActivity=Date.now(); if(!pollStopped && currentPollMs!==POLL_MS) schedulePoll(POLL_MS); }
+    function nextPollMs(){
+      if(pollStopped) return null;
+      const now=Date.now();
+      const idle=now-lastActivity>=IDLE_AFTER_MS;
+      let ms=POLL_MS;
+      if(unchangedPolls>=3) ms=Math.min(POLL_MS*Math.pow(2, Math.min(unchangedPolls-2, 3)), MAX_POLL_MS);
+      if(idle) ms=Math.max(ms, MAX_POLL_MS);
+      return ms;
+    }
+    function clearPoll(){ if(pollTimer!==null){ clock.clearTimeout(pollTimer); pollTimer=null; } }
+    function schedulePoll(ms){
+      if(pollStopped || ms==null){ clearPoll(); return; }
+      currentPollMs=ms;
+      clearPoll();
+      pollTimer=clock.setTimeout(pollTick, ms);
+    }
+    function pollTick(){
+      if(pollStopped) return Promise.resolve();
+      if(doc && doc.hidden){ schedulePoll(nextPollMs()); return Promise.resolve(); }
+      return Promise.resolve(refresh(true)).then((result)=>{
+        if(result && result.throttled){
+          if(result.pollDisabled) pollStopped=true;
+          schedulePoll(Math.max((result.retryAfterSec||60)*1000, POLL_MS));
+          return;
+        }
+        if(lastPollKind==="notModified") unchangedPolls+=1; else if(lastPollKind==="updated") unchangedPolls=0;
+        schedulePoll(nextPollMs());
+      });
+    }
     function start() {
       void refresh();
-      setInterval(()=>{if(typeof document==="undefined" || !document.hidden)void refresh();},12000);
+      if(!pollStopped) schedulePoll(POLL_MS);
       if(typeof window!=="undefined"){
-        window.addEventListener("focus",()=>{void refresh();});
-        window.addEventListener("online",()=>{void flush().then(()=>refresh());});
+        window.addEventListener("focus",()=>{noteActivity();void refresh();});
+        window.addEventListener("online",()=>{noteActivity();void flush().then(()=>refresh());});
+        window.addEventListener("pointerdown",noteActivity);
+        window.addEventListener("keydown",noteActivity);
         // A sibling tab may have written a new account-scoped snapshot.
         // Reconcile through the authenticated server; never trust its local
         // storage event as authority for account ownership or remote content.
@@ -229,17 +305,21 @@
           if(!owner || !event.key || !event.key.startsWith(prefix+"cache."+owner))return;
           void refresh();
         });
-        document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refresh();});
+        document.addEventListener("visibilitychange",()=>{if(!document.hidden){noteActivity();void refresh();}});
       }
     }
+    function stopPolling(){ pollStopped=true; clearPoll(); }
     function signOutLocal() {
       if(owner)persist();owner="";pending={};
       storage.removeItem(prefix+"owner"); // never show previous owner's cached sessions
       applied=true;try{write([]);render();}finally{applied=false;}
     }
-    return {start,refresh,flush,localWrite,importLegacy,signOutLocal,
+    return {start,refresh,flush,localWrite,importLegacy,signOutLocal,stopPolling,
       get owner(){return owner;},get applying(){return applied;},
-      get pendingCount(){return Object.keys(pending).length;}};
+      get pendingCount(){return Object.keys(pending).length;},
+      get pollInterval(){return currentPollMs;},
+      get pollStopped(){return pollStopped;},
+      get unchangedPolls(){return unchangedPolls;}};
   }
-  return {delta,combine,create};
+  return {delta,combine,create,POLL_MS,IDLE_AFTER_MS,MAX_POLL_MS};
 });

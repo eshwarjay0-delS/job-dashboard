@@ -1,0 +1,22 @@
+# Weekly Hobby cap guard. Schedule only (plus manual run). Does not run on
+# pull requests, so a paused team or a missing token cannot flake CI.
+name: Hobby usage guard
+
+on:
+  schedule:
+    - cron: "0 14 * * 1"
+  workflow_dispatch:
+
+jobs:
+  usage-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Health and optional Vercel usage
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL || 'https://job-dashboard-fawn.vercel.app/api/health' }}
+          VERCEL_TOKEN: ${{ secrets.KOMPAS_VERCEL_API_TOKEN || secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.KOMPAS_VERCEL_TEAM_ID || vars.KOMPAS_VERCEL_TEAM_ID }}
+        run: node scripts/hobby-usage-guard.mjs
