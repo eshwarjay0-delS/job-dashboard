@@ -122,7 +122,7 @@ jobs:
         run: node --no-warnings --experimental-strip-types --test scripts/tests/kompas-filler-leading.test.mjs
 
       - name: Verify Kompas defensibility layer (checklist, interrogation, ship gate, coherence, style, variety, scoring, families)
-        run: node --experimental-strip-types --test scripts/tests/kompas-checklist.test.mjs scripts/tests/kompas-defensibility.test.mjs scripts/tests/kompas-interrogate.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/kompas-checklist.test.mjs scripts/tests/kompas-defensibility.test.mjs scripts/tests/kompas-interrogate.test.mjs scripts/tests/kompas-ship-gate.test.mjs
 
       - name: Verify slice 5c early-release decision (design reference, flag off; not wired into the page)
         run: node --test scripts/tests/kompas-early-release.test.mjs
