@@ -350,3 +350,12 @@ Continue: keep the 17 Oct incident blocked; do not replay or resend until the ex
 
 
 Current review branch: PR #292 head `8004045e2e7efe90ac8787fceea8bb34c1d9bdf2`. Its exact-head full CI, Kompas baseline and Plan/REA schema must be checked after the latest research and journal commits; prior checks on `56dbacf` do not satisfy the latest-head gate.
+
+
+## 11 November 2026 — exact October 17 source archive recovered again
+
+A Library metadata listing located `Organized_Original_Resumes.zip`. The archive was materialized and inspected; its exact nested 17 October source DOCX is 27,724 bytes and its SHA-256 matches the private digest recorded in the 10 November recovery. The earlier 00:55 UTC direct-file search did not inspect the parent archive, so that current-access gap is superseded. No private digest or resume contents were copied into the repository.
+
+The matching Security Engineer – Risk & Controls JD remains accessible through Gmail. The source's education, employer chronology, tenure and credential facts remain quarantined because they conflict with owner-confirmed profile facts. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain missing. No model generation, historical replay, R2 write, email or WhatsApp send was performed. The 6 Nov channel-specific policy supersedes the old 98% hard hold.
+
+Continue: preserve the recovered source, keep it quarantined until owner fact reconciliation, and continue independent approved work. Do not replay or send a real WhatsApp message without the original output/provider trace and separate authorization.
