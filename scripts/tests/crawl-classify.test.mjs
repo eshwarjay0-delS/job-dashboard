@@ -42,3 +42,37 @@ test("negated right-to-hire and contract-to-perm labels do not create contract e
     assert.equal(classifyWorkType(value), "unknown", value)
   }
 })
+
+
+test("contract type requires employment evidence, not generic contract vocabulary", () => {
+  for (const value of [
+    "Contract management and contract negotiations.",
+    "Contract administrator responsible for contract review.",
+    "Vendor contract compliance and contract lifecycle management.",
+    "No contract position; direct hire.",
+    "Not a contract role; permanent full-time."
+  ]) {
+    assert.deepEqual(contractTypes(value, "Full-time"), [], value)
+  }
+  assert.deepEqual(contractTypes("Contract position for six months."), ["Contract"])
+  assert.deepEqual(contractTypes("W2 contract role."), ["W2"])
+  assert.deepEqual(contractTypes("No contract position."), [])
+})
+
+test("structured engagement labels are recognized without relying on description wording", () => {
+  assert.deepEqual(contractTypes("", "C2C"), ["C2C"])
+  assert.deepEqual(contractTypes("", "1099"), ["1099"])
+  assert.deepEqual(contractTypes("", "Contract"), ["Contract"])
+  assert.deepEqual(contractTypes("", "Temporary"), ["Temporary"])
+  assert.deepEqual(contractTypes("W2", "W2"), [])
+  assert.deepEqual(contractTypes("No W2; C2C only"), ["C2C"])
+  assert.deepEqual(contractTypes("Without 1099; W2 contract"), ["W2"])
+  assert.deepEqual(contractTypes("No temporary role"), [])
+})
+
+test("crawler passes engagement as the structured employment type", () => {
+  assert.equal(classifyWorkType("Full-time", "Contract Administrator"), "permanent")
+  assert.equal(classifyWorkType("Full-time", "Contract role"), "contract")
+  assert.equal(classifyWorkType("Full-time Contract", "Software Engineer"), "contract")
+  assert.equal(classifyWorkType("No Contract", "Software Engineer"), "unknown")
+})
