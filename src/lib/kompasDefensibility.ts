@@ -3,7 +3,8 @@
 //   defensibilityPrompt(question)        appended to the model's user text
 //   defensibilityReport(question, text)  attached to the done event / JSON body (never changes the answer text)
 import { checklistPrompt, validate } from "./kompasChecklist.ts"
-import { COHERENCE_PROMPT, coherence } from "./kompasCoherence.ts"
+import { COHERENCE_PROMPT, coherence, coherenceScore } from "./kompasCoherence.ts"
+import { RENAMED } from "./kompasHonestScore.ts"
 import { HARD_CODES } from "./kompasShipGate.ts"
 import { SPOKEN_STYLE_PROMPT, needsReasoning, reasoning, styleFindings } from "./kompasSpokenStyle.ts"
 import { VARIETY_PROMPT, screenplay } from "./kompasStoryVariety.ts"
@@ -15,6 +16,8 @@ export type DefensibilityReport = {
   /** flags that fail the answer regardless of its mean (never ship worse) */
   hardFlags: string[]
   reasoning: { n: number; missing: string[] }
+  /** honest naming: factuality-side checks are reported apart from delivery */
+  factuality: { partCoverage: number; ledgerConsistent: null; technicalCoherence: number | null }
 }
 
 export function defensibilityPrompt(question: string): string {
@@ -31,5 +34,8 @@ export function defensibilityReport(question: string, answer: string): Defensibi
   if (needsReasoning(question) && r.n < 4) flags.push("thin-reasoning")
   if (screenplay(answer).formula) flags.push("screenplay")
   const hardFlags = flags.filter((f) => HARD_CODES.has(f.split(":")[0]) || f.startsWith("checklist-missed"))
-  return { pass: !hardFlags.length, checklist: { coverage: v.coverage, missed: v.missed.map((m) => m.text) }, flags, hardFlags, reasoning: { n: r.n, missing: r.missing } }
+  return { pass: !hardFlags.length, checklist: { coverage: v.coverage, missed: v.missed.map((m) => m.text) }, flags, hardFlags, reasoning: { n: r.n, missing: r.missing }, factuality: { partCoverage: v.coverage, ledgerConsistent: null, technicalCoherence: coherenceScore(coh) } }
 }
+
+// "grounded" is reported as "ledgerConsistent" everywhere (it never meant verified).
+export const dimensionLabel = (key: string): string => RENAMED[key] || key
