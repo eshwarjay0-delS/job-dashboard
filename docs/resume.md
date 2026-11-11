@@ -36,9 +36,15 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **Measured coverage, channel-specific delivery.** Report raw JD overlap and resume-supported coverage separately. The 98% figure is a target, not a universal WhatsApp hold. Web downloads retain the 95% raw-overlap floor. WhatsApp follows the 6 Nov 2026 policy: a completed readable DOCX may be sent below 95% with gaps disclosed; 70% raw JD overlap plus at least 95% supported coverage is a clean pass, while below 70% is not a clean pass but may still be sent if the rewrite is complete and readable. This policy does not relax identity, readability, completion or factual-evidence checks.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
+
+## Channel-specific delivery — 6 November 2026
+
+The original universal 95% WhatsApp refusal and 98% hard hold are superseded for WhatsApp. Web download policy remains a 95% raw JD-overlap floor. For WhatsApp, 70% raw overlap and 95% resume-supported coverage define the clean-pass bar; a completed readable file below that bar can still be sent with its gaps named. An incomplete, skills-only, unreadable or identity-mismatched rewrite uses the already-selected same-account resume instead. The 98% target remains a quality target, not a send threshold.
+
+Factual integrity is separate from coverage. The current master still includes unverified_jd_terms in the WhatsApp shortfall-eligible reasons, so a readable result containing an unverified JD addition may still be considered sendable. PR #279 proposes to remove that allowance and tighten the writer's evidence boundary, but it remains DRAFT because it changes external-send eligibility and needs owner review. Do not claim that unsupported-claim delivery is fixed until that gate is approved, tested and deployed.
 
 ## Credential-target regression — 20 October 2026
 

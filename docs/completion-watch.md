@@ -349,7 +349,7 @@ The current iZap business has no connected WhatsApp number; webhook history, mes
 Continue: keep the 17 Oct incident blocked; do not replay or resend until the exact source/output/provider trace and owner fact reconciliation are available. Issue #201's swipe-reply recovery gap remains a separate code-path issue, not proof that the 17 Oct initial-JD request entered refinement.
 
 
-Current review branch: PR #292 head `8004045e2e7efe90ac8787fceea8bb34c1d9bdf2`. Its exact-head full CI, Kompas baseline and Plan/REA schema must be checked after the latest research and journal commits; prior checks on `56dbacf` do not satisfy the latest-head gate.
+Current review branch: PR #292 head `f29be3b81248c3ce874b5ee4e0dd40d3276df605`. Plan/REA schema `42959481416` and Kompas baseline `42959481536` passed on this exact head; full CI `42959481509` was still running at Type-check at 04:31 UTC. Earlier green CI on `68290b7` does not satisfy the latest-head gate.
 
 
 ## 11 November 2026 — exact October 17 source archive recovered again
@@ -378,3 +378,18 @@ A read-only Vercel runtime-log query for the exact 17 Oct 2026 22:27–22:31 UTC
 The exact original source DOCX is revalidated in the private Library archive and the matching JD is available through Gmail, but the source facts remain quarantined pending owner reconciliation. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain missing. iZap has no linked WhatsApp number/history. No billing change, bypass, replay, R2 write, email or WhatsApp send was performed.
 
 Continue: obtain an independently retained Vercel log export or authorized MarketFit R2/Meta webhook and delivery export. Keep the incident blocked until the original output, delivery receipt and owner fact reconciliation are available.
+
+
+## 11 November 2026 — current resume delivery-policy boundary
+
+The 17 Oct source DOCX was re-opened from the nested member of the private Library archive (27,724 bytes; private digest match), and the 17:28 Chicago screenshot and matching Gmail JD were revalidated. The JD is a contract, Atlanta onsite Security Engineer – Risk & Controls role; Canton and Solana are preferred DLT platforms, and CISM/CRISC/CISA/CCSP plus AWS Security Specialty are preferred credentials. “Attributes” is not in the JD; “sol” in the screenshot is a truncated Solana token. The source education, employer chronology, tenure and credential claims conflict with the owner-confirmed profile and remain quarantined. The generated DOCX, per-run R2 key, webhook correlation, Meta message ID and signed delivery/read receipt remain missing.
+
+Current master 11efbbf implements the 6 Nov channel policy: 70% raw JD overlap and 95% supported coverage are the clean-pass thresholds; a completed readable WhatsApp file can still be sent below those thresholds with gaps disclosed. The old 98% hard hold is superseded, and the production env listing contains neither legacy strict-floor override. The route's separate sameResumeFacts check falls back to the selected original on identity/contact/date mismatch.
+
+Newly verified risk: WHATSAPP_SHORTFALL_REASONS still includes unverified_jd_terms, so a readable document with an unverified JD addition can be considered sendable. PR #279 proposes to remove that allowance and tighten the writer's evidence boundary, but it remains DRAFT and requires owner review because it changes external-send eligibility. Do not claim this is fixed or send a real test. The source remains quarantined.
+
+The historical provider wall remains: Vercel runtime logs for 17 Oct return HTTP 400 because the connected Hobby plan retains only one hour; iZap has no linked WhatsApp number, inbound webhook, history backfill or outbound send history. No replay, R2 write, email or WhatsApp send occurred. The current production control-plane alias is READY at master 11efbbf, but the last recorded public HTTP smoke returned 402 DEPLOYMENT_DISABLED; no runtime WhatsApp acceptance is claimed.
+
+Automation coordination at 04:33 UTC: MFit Completion Watch and MFit Safe Merge Gate are enabled; no separate Bible-Keeper task is listed. Kompas Continuous Voice Delivery is present but disabled in the accessible automation list, so no parallel voice edits were made. Its existing PR #283/audio ownership is preserved.
+
+Continue: keep the 17 Oct source quarantined; obtain owner fact reconciliation and an authorized generated-output/R2/Meta export; obtain owner review for PR #279; and do not replay or send until the required evidence and separate authorization exist. Continue the already-open approved resume/JD role-evidence review on PR #287 without merging through the Vercel Account blocked wall. Keep the Plan & Vision baseline wording reconciliation for PR #273/#282 after overlapping resume PRs #287/#289 are safely restacked, so concurrent edits are not overwritten.
