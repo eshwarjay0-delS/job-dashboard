@@ -37,9 +37,10 @@ function session(typed, cards) {
     transcript: [{ seq: 1, who: "Them", text: OLD_Q }],
     cards: cards || [{ question: OLD_Q, answer: OLD_A }], idx: (cards || [1]).length - 1,
     $: (id) => (id === "manualInput" ? box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }),
-    pendingHeard: () => [], updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
+    answerAnywayHeld: null, pendingHeard: () => [], updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
     logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
     questionSource: () => "Them",
+    recentContext: () => "",
     generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts }); },
   };
   s.addCard = (q, answer) => { const card = { question: q, answer }; s.cards.push(card); s.idx = s.cards.length - 1; return card; };

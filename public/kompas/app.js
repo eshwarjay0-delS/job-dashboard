@@ -3858,12 +3858,9 @@ function resolveLiveQuestion(formed, pendingTexts, contextTexts) {
   const clean = (s) => String(s || "").replace(/^\s*(?:You(?: \((?:typed|earlier)\))?|Them(?: \(earlier\))?):\s*/i, "").replace(/\s+/g, " ").trim();
   const pending = (pendingTexts || []).map(clean).map(s => s.replace(RESOLVE_FILLER, "").trim()).filter(Boolean);
   const context = (contextTexts || []).map(clean).map(s => s.replace(RESOLVE_FILLER, "").trim()).filter(Boolean);
-  let q = clean(formed) || pending[pending.length - 1] || "";
-  if (pending.length >= 2) {
-    const a = pending[pending.length - 2], b = pending[pending.length - 1];
-    const follow = /^(?:how|why|what|and how|and what|can you|could you)\b/i.test(b) && b.split(/\s+/).length <= 16;
-    if (follow) q = ((/[.?!]$/.test(a) ? a : a + ".") + " " + b).replace(/\s+/g, " ").trim();
-  }
+  const merged = pending.length ? mergeAdjacentAsks(pending) : "";
+  const mergedBoth = pending.length >= 2 && merged && merged !== pending[pending.length - 1];
+  let q = clean(mergedBoth ? merged : formed) || merged || pending[pending.length - 1] || "";
   q = q.replace(RESOLVE_FILLER, "").trim();
   if (q && RESOLVE_THIS.test(q)) {
     const prior = [...context, ...pending].reverse().find(s => (/[?]/.test(s) || /^(?:tell|walk|describe|explain|how|what|why)\b/i.test(s)) && !RESOLVE_THIS.test(s));
@@ -4444,6 +4441,121 @@ function frameHeardQuestion(chunks, opts = {}) {
   if (!question) return { question: "", skip: "noise", parts };
   return { question, skip: "", parts, seq: rows[start].seq };
 }
+// Live press decision (session 4): merge back-to-back interviewer asks, keep the
+// outstanding interviewer ask on a candidate/Them turn, and hold at
+// "Listening, no new question yet" instead of regenerating on silence.
+// Mic (You) is never the interviewer's ask unless the user is clearly reading
+// a question aloud. Mirrors src/lib/kompasQuestionResolve.ts; written for
+// Kompas, not a copy of any third-party client.
+const SILENCE_LISTEN_MS = 20000;
+const LISTENING_NO_QUESTION = "Listening, no new question yet";
+const RESOLVE_ASK_CUE = /[?]|^(?:tell|walk|describe|explain|give|how|what|why|when|where|which|who|can|could|would|will|do|does|did|is there|are there)\b/i;
+const SUBJECT_STOP = new Set("what when where which whom this that than them they their there then with from have been will would could should does did into about your yours were here some have been than".split(" "));
+function looksLikeCandidateAnswer(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (!s || /[?]/.test(s)) return false;
+  if (/\b(?:my question is|i wanted to ask|i want to ask|i'd like to ask)\b/i.test(s)) return false;
+  if (/^(?:(?:and|so|yeah|yes|um+|uh+|ok(?:ay)?|well|right|got it)[, ]+)*(?:i(?:'m| am|'ll| will|'ve|'d)?\b)/i.test(s)) return true;
+  if (/\b(?:i would|i'd |i will|i'm going to|i typically|my approach|i usually|i tend to)\b/i.test(s)) return true;
+  if (/^(?:when|while|if) (?:integrating|working|using|building|implementing|designing|doing|running|adding|calling)\b/i.test(s)) return true;
+  return false;
+}
+function isReadAloudQuestion(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (!s || looksLikeCandidateAnswer(s)) return false;
+  return RESOLVE_ASK_CUE.test(s);
+}
+const USER_FOLLOW_UP = /^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|say that again|more detail)\b/i;
+function isUserFollowUp(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  return !!s && (USER_FOLLOW_UP.test(s) || isReadAloudQuestion(s));
+}
+function asResolveLine(line) {
+  if (typeof line === "string") {
+    const m = String(line).match(/^\s*(You|Them|Interviewee|Interviewer(?:\s*\d+)?|Candidate)\s*:\s*(.*)$/i);
+    if (m) return { who: m[1], text: String(m[2] || "").replace(/\s+/g, " ").trim() };
+    return { who: "", text: String(line || "").replace(/\s+/g, " ").trim() };
+  }
+  return { who: String((line && line.who) || ""), text: String((line && line.text) || "").replace(/\s+/g, " ").trim() };
+}
+function isCandidateSpeech(line) { return /^(?:you|interviewee|candidate)$/i.test(asResolveLine(line).who); }
+function isInterviewerSpeech(line) { return /^(?:them|interviewer(?:\s*\d+)?)$/i.test(asResolveLine(line).who); }
+function sameResolveQuestion(a, b) {
+  const n = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const A = n(a), B = n(b);
+  return !!(A && B && (A === B || A.includes(B) || B.includes(A)));
+}
+function mergeAdjacentAsks(asks) {
+  const parts = Array.from(asks || []).map((s) => String(s || "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (!parts.length) return "";
+  if (parts.length === 1) return parts[0];
+  const a = parts[parts.length - 2], b = parts[parts.length - 1];
+  const bWords = b.split(/\s+/).length;
+  const words = (s) => new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 3 && !SUBJECT_STOP.has(w)));
+  const A = words(a), B = words(b);
+  let overlap = 0;
+  if (A.size && B.size) { for (const w of B) if (A.has(w)) overlap++; }
+  const sameSubject = !A.size || !B.size || overlap > 0;
+  const pointsBack = /\b(?:it|that|this|those|them)\b/i.test(b);
+  const followUp = /^(?:how|why|what|and how|and what|can you|could you)\b/i.test(b) && bWords <= 16 && (pointsBack || sameSubject);
+  if (followUp || (sameSubject && bWords <= 16)) {
+    const left = /[.?!]$/.test(a) ? a : a + ".";
+    return (left + " " + b).replace(/\s+/g, " ").trim();
+  }
+  return b;
+}
+function outstandingInterviewerAsk(lines, opts) {
+  const labeled = Array.from(lines || []).map(asResolveLine).filter((l) => l.text);
+  if (!labeled.length) return "";
+  const lastAnswered = opts && opts.lastAnswered || "";
+  const asks = labeled.filter((l) => isInterviewerSpeech(l) && RESOLVE_ASK_CUE.test(l.text) && !looksLikeCandidateAnswer(l.text)).map((l) => l.text)
+    .filter((s) => !sameResolveQuestion(s, lastAnswered));
+  const last = labeled[labeled.length - 1];
+  if (isCandidateSpeech(last) || looksLikeCandidateAnswer(last.text)) {
+    if (!asks.length) return "";
+    return asks.length > 1 ? mergeAdjacentAsks(asks.slice(-2)) : asks[asks.length - 1];
+  }
+  if (isInterviewerSpeech(last) && RESOLVE_ASK_CUE.test(last.text) && !looksLikeCandidateAnswer(last.text)) {
+    const recent = asks.slice(-2);
+    return recent.length > 1 ? mergeAdjacentAsks(recent) : (asks[asks.length - 1] || "");
+  }
+  return asks.length ? asks[asks.length - 1] : "";
+}
+function interviewerAsksFrom(lines, opts) {
+  const lastAnswered = opts && opts.lastAnswered || "";
+  return Array.from(lines || []).map(asResolveLine).filter((l) => l.text)
+    .filter((l) => (isInterviewerSpeech(l) && RESOLVE_ASK_CUE.test(l.text) && !looksLikeCandidateAnswer(l.text)) || (isCandidateSpeech(l) && isReadAloudQuestion(l.text)))
+    .map((l) => l.text)
+    .filter((s) => !sameResolveQuestion(s, lastAnswered));
+}
+function livePressDecision(opts) {
+  opts = opts || {};
+  if (opts.anyway || String(opts.typed || "").trim()) return { listening: false, question: "", reason: "none" };
+  const pending = Array.from(opts.pending || []);
+  const recent = Array.from(opts.recent || pending);
+  const lastAnswered = opts.alreadyAnswered ? String(opts.lastQuestion || "") : "";
+  const window = recent.length ? recent : pending;
+  const lastSrc = pending.length ? pending : window;
+  const last = lastSrc.length ? asResolveLine(lastSrc[lastSrc.length - 1]) : { who: "", text: "" };
+  const candidateTurn = !!(last.text && (isCandidateSpeech(last) || looksLikeCandidateAnswer(last.text)));
+  if (candidateTurn) {
+    const userAsk = pending.some((l) => { const row = asResolveLine(l); return isCandidateSpeech(row) && isUserFollowUp(row.text) && !looksLikeCandidateAnswer(row.text); }) || (isCandidateSpeech(last) && isUserFollowUp(last.text) && !looksLikeCandidateAnswer(last.text));
+    if (userAsk) return { listening: false, question: "", reason: "none" };
+    const held = outstandingInterviewerAsk(pending.length ? window.concat(pending) : window, { lastAnswered });
+    if (held) return { listening: false, question: held, reason: "outstanding" };
+    return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" };
+  }
+  const asks = interviewerAsksFrom(pending, { lastAnswered });
+  if (asks.length >= 2) {
+    const merged = mergeAdjacentAsks(asks.slice(-2));
+    if (merged && merged !== asks[asks.length - 1]) return { listening: false, question: merged, reason: "merge" };
+  }
+  if (asks.length) return { listening: false, question: asks.length === 1 ? asks[0] : mergeAdjacentAsks(asks), reason: "ask" };
+  const pendingFollowUp = pending.some((l) => { const row = asResolveLine(l); return isUserFollowUp(row.text) && !looksLikeCandidateAnswer(row.text); });
+  if (!opts.fromAuto && opts.alreadyAnswered && !asks.length && !pendingFollowUp) return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" };
+  return { listening: false, question: "", reason: "none" };
+}
+
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -4487,10 +4599,41 @@ async function aiAnswer(fromAuto, options = {}) {
     let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
-    // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
-    let anyway = false;
-    try { const back = answerAnywayLines(answerAnywayHeld, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); } } catch {}
+    // Answer anyway (slice 2): a press right after "Nothing question-like" or
+    // "Listening, no new question yet" answers those same lines / re-asks.
+    let anyway = false, silenceAnyway = false, liveResolved = "";
+    try {
+      const held = answerAnywayHeld;
+      let back = null;
+      try { if (typeof answerAnywayLines === "function") back = answerAnywayLines(held, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); } catch {}
+      if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); }
+      else if (held && held.silenceReask && !fromAuto && !typedText && Date.now() - Number(held.at) <= 15000) {
+        const leftover = pending.length && typeof livePressDecision === "function" && livePressDecision({ pending, recent: pending, lastQuestion: "", alreadyAnswered: true }).listening;
+        if (!pending.length || leftover) {
+          anyway = true; silenceAnyway = true; pending = [];
+          logDecision("answer-anyway-silence", questionSource(), "");
+        }
+      }
+    } catch {}
     answerAnywayHeld = null;
+    if (!fromAuto && !typedText && !anyway) {
+      try {
+        const curCard = cards[idx];
+        const lastQ = curCard && curCard.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(curCard.question) ? curCard.question : "";
+        const decision = livePressDecision({
+          pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
+          lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
+          questionSource: questionSource(),
+        });
+        if (decision.listening) {
+          answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
+          status("Listening, no new question yet — press AI Answer again to answer anyway.", "live");
+          logDecision("listening-no-new-question", questionSource(), lastQ || "");
+          return;
+        }
+        if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
+      } catch {}
+    }
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
       setChat(true);
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
@@ -4521,7 +4664,20 @@ async function aiAnswer(fromAuto, options = {}) {
         if (!fromAuto) { answerAnywayHeld = { lines: pending.slice(), at: Date.now() }; status("Nothing question-like in that — press AI Answer again to answer anyway.", "live"); }
         return;
       }
-      const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      if (liveResolved && !typedText) {
+        answeredSeq = heardSeq; updatePending();
+        const parts = pending.filter(t => t && t.text && (t.who !== "You" || (typeof isReadAloudQuestion === "function" && isReadAloudQuestion(t.text))));
+        const used = parts.filter(t => liveResolved.toLowerCase().includes(String(t.text || "").toLowerCase().slice(0, 48)) || String(t.text || "").toLowerCase().includes(liveResolved.toLowerCase().slice(0, 48)));
+        const heard = (used.length ? used : parts).map(t => (t.who || "Them") + ": " + t.text).join("\n") || liveResolved;
+        const earlier = typeof recentContext === "function" ? recentContext((used[0] || parts[0] || pending[0] || {}).seq) : "";
+        const shown = typeof cleanShownQuestion === "function" ? (cleanShownQuestion(liveResolved) || liveResolved) : liveResolved;
+        const card = addCard(shown, ["…"]);
+        card.heard = heard; card.earlier = earlier; card.formed = heard;
+        card.formSeq = (used[0] || parts[0] || pending[0] || {}).seq;
+        showPressed(card, shown);
+        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true });
+      }
+      const isRepress = !liveResolved && !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         // The re-ask is formed from the lines that formed the page on screen plus what was heard since, never from the
         // whole interview (baseline contract, 27 Oct 2026): with forty earlier lines and the on-screen question stripped,
@@ -4574,7 +4730,8 @@ async function aiAnswer(fromAuto, options = {}) {
             const who = questionSource() === "You" ? "You" : "Them";
             const heard = (framed.parts || []).map((text) => who + ": " + text).join("\n") || framed.question;
             const earlier = recentContext(framed.seq != null ? framed.seq : (pending[0] && pending[0].seq));
-            const resolved = resolveLiveQuestion(framed.question, framed.parts || pending.map(t => t.text), (earlier ? earlier.split("\n") : []).concat(framed.parts || []));
+            const pendingAsks = typeof interviewerAsksFrom === "function" ? interviewerAsksFrom(pending, { lastAnswered: (cur && cur.question) || "" }) : (framed.parts || pending.map(t => t.text));
+            const resolved = resolveLiveQuestion(framed.question, pendingAsks.length >= 2 ? pendingAsks : (framed.parts || pending.map(t => t.text)), (earlier ? earlier.split("\n") : []).concat(framed.parts || []));
             const shown = resolved || framed.question;
             const card = addCard(shown, ["…"]);
             card.heard = heard; card.earlier = earlier; card.formed = heard; card.formSeq = framed.seq != null ? framed.seq : (pending[0] && pending[0].seq);

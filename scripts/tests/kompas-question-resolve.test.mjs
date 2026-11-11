@@ -9,7 +9,12 @@ import {
   resolveLiveQuestion,
   outstandingInterviewerAsk,
   silencePressResult,
+  livePressDecision,
+  looksLikeCandidateAnswer,
+  isReadAloudQuestion,
+  interviewerAsksFrom,
   LISTENING_STATUS,
+  LISTENING_NO_QUESTION,
   SILENCE_LISTEN_MS,
 } from '../../src/lib/kompasQuestionResolve.ts'
 
@@ -75,6 +80,8 @@ test('app.js ships a 90s context window and leaves heard-only formal lines unpin
   assert.match(app, /CONTEXT_WINDOW_MS\s*=\s*90_000|CONTEXT_WINDOW_MS\s*=\s*90000/)
   assert.match(app, /function recentContext\(/)
   assert.match(app, /function resolveLiveQuestion\(/)
+  assert.match(app, /function livePressDecision\(/)
+  assert.match(app, /Listening, no new question yet/)
   // Heard-only formal path still lets the server derive (pinned: !heardOnly).
   assert.match(app, /derived: heardOnly \? undefined : shownSaid, pinned: !heardOnly/)
 })
@@ -163,4 +170,84 @@ test('session 4: a candidate turn keeps the outstanding interviewer ask, not the
     { lastAnswered: 'What strategies would you use to circumvent that?' },
   )
   assert.equal(afterAnswered, '')
+})
+
+test('unrelated back-to-back "what is" asks do not merge into one question', () => {
+  const merged = mergeAdjacentAsks(['What is Kerberos?', 'What is Terraform?'])
+  assert.equal(merged, 'What is Terraform?')
+})
+
+test('a Them-channel candidate answer keeps the outstanding interviewer ask', () => {
+  const q = outstandingInterviewerAsk([
+    { who: 'Them', text: 'What strategies would you use to circumvent that?' },
+    { who: 'Them', text: 'When integrating with payment API clients like Stripe I would cache requests and batch them.' },
+  ])
+  assert.match(q, /strategies would you use to circumvent/i)
+  assert.doesNotMatch(q, /Stripe/i)
+  assert.equal(looksLikeCandidateAnswer('When integrating with payment API clients like Stripe I would cache requests and batch them.'), true)
+  assert.equal(looksLikeCandidateAnswer('When would you use an IP address for rate limiting?'), false)
+})
+
+test('mic You speech is not an interviewer ask unless it is clearly a question read aloud', () => {
+  const answer = { who: 'You', text: 'I would cache requests and batch them when talking to Stripe.' }
+  const read = { who: 'You', text: 'What strategies can a user use to handle being rate limited without malicious intent?' }
+  assert.equal(isReadAloudQuestion(answer.text), false)
+  assert.equal(isReadAloudQuestion(read.text), true)
+  assert.deepEqual(interviewerAsksFrom([
+    { who: 'Them', text: 'What strategies would you use to circumvent that?' },
+    answer,
+  ]), ['What strategies would you use to circumvent that?'])
+  assert.match(interviewerAsksFrom([
+    { who: 'Them', text: 'Okay, thanks.' },
+    read,
+  ]).join(' '), /strategies can a user use/i)
+})
+
+test('livePressDecision: silence or an already-answered ask holds Listening, no new question yet', () => {
+  const quiet = livePressDecision({
+    pending: [],
+    recent: [{ who: 'Them', text: 'Scenarios for region-specific rate limit rules' }],
+    lastQuestion: 'Scenarios for region-specific rate limit rules',
+    alreadyAnswered: true,
+  })
+  assert.equal(quiet.listening, true)
+  assert.equal(quiet.question, LISTENING_NO_QUESTION)
+  assert.equal(quiet.question, 'Listening, no new question yet')
+
+  const midCandidate = livePressDecision({
+    pending: [{ who: 'You', text: 'When integrating with payment API clients like Stripe I would cache requests.' }],
+    recent: [
+      { who: 'Them', text: 'What strategies would you use to circumvent that?' },
+      { who: 'You', text: 'When integrating with payment API clients like Stripe I would cache requests.' },
+    ],
+    lastQuestion: 'What strategies would you use to circumvent that?',
+    alreadyAnswered: true,
+  })
+  assert.equal(midCandidate.listening, true)
+
+  const unanswered = livePressDecision({
+    pending: [
+      { who: 'Them', text: 'Put yourself in the shoes of a user who has been rate limited without malicious intent. What strategies would you use to circumvent that?' },
+      { who: 'Them', text: 'When integrating with payment API clients like Stripe I would cache requests and batch them.' },
+    ],
+    alreadyAnswered: false,
+  })
+  assert.equal(unanswered.listening, false)
+  assert.equal(unanswered.reason, 'outstanding')
+  assert.match(unanswered.question, /strategies would you use to circumvent/i)
+  assert.doesNotMatch(unanswered.question, /Stripe/i)
+
+  const merged = livePressDecision({
+    pending: [
+      { who: 'Them', text: 'Will API rate limiter implementations read from the same cache?' },
+      { who: 'Them', text: 'Is there a situation to have different rate limiters for different geographies?' },
+    ],
+    alreadyAnswered: false,
+  })
+  assert.equal(merged.reason, 'merge')
+  assert.match(merged.question, /same cache/i)
+  assert.match(merged.question, /geograph/i)
+
+  const anyway = livePressDecision({ pending: [], alreadyAnswered: true, lastQuestion: 'Prior', anyway: true })
+  assert.equal(anyway.listening, false)
 })

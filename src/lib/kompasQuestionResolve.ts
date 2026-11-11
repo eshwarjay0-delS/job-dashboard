@@ -101,7 +101,8 @@ export function mergeAdjacentAsks(asks: readonly string[]): string {
   const a = parts[parts.length - 2]
   const b = parts[parts.length - 1]
   const bWords = b.split(/\s+/).length
-  const followUp = /^(?:how|why|what|and how|and what|can you|could you)\b/i.test(b) && bWords <= 16
+  const pointsBack = /\b(?:it|that|this|those|them)\b/i.test(b)
+  const followUp = /^(?:how|why|what|and how|and what|can you|could you)\b/i.test(b) && bWords <= 16 && (pointsBack || !differentSubjects(a, b))
   const sameSubject = !differentSubjects(a, b)
   if (followUp || (sameSubject && bWords <= 16)) {
     const left = /[.?!]$/.test(a) ? a : a + (a.endsWith("?") ? "" : ".")
@@ -110,8 +111,10 @@ export function mergeAdjacentAsks(asks: readonly string[]): string {
   return b
 }
 
+const SUBJECT_STOP = new Set("what when where which whom this that than them they their there then with from have been will would could should does did into about your yours were here some have been than".split(" "))
+
 function differentSubjects(a: string, b: string): boolean {
-  const words = (s: string) => new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 3))
+  const words = (s: string) => new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 3 && !SUBJECT_STOP.has(w)))
   const A = words(a), B = words(b)
   if (!A.size || !B.size) return false
   let overlap = 0
@@ -131,7 +134,8 @@ export function resolveLiveQuestion(opts: {
   const pending = (opts.pending || []).map((t) => stripLineLabel(t).replace(FILLER_LEAD, "").trim()).filter(Boolean)
   const context = (opts.context || []).map((t) => stripLineLabel(t).replace(FILLER_LEAD, "").trim()).filter(Boolean)
   const mergedPending = pending.length ? mergeAdjacentAsks(pending) : ""
-  let formed = String(opts.formed || mergedPending || "").replace(/\s+/g, " ").trim()
+  const mergedBoth = pending.length >= 2 && !!mergedPending && mergedPending !== pending[pending.length - 1]
+  let formed = String((mergedBoth ? mergedPending : opts.formed) || mergedPending || "").replace(/\s+/g, " ").trim()
   if (!formed && pending.length) formed = pending[pending.length - 1]
   formed = formed.replace(FILLER_LEAD, "").trim()
   const windowTexts = context.length ? context : pending
@@ -165,7 +169,33 @@ export function isInterviewerSpeech(line: TranscriptLine | string): boolean {
 }
 
 function looksLikeAsk(text: string): boolean {
-  return ASK_CUE.test(String(text || "").replace(/\s+/g, " ").trim())
+  const t = String(text || "").replace(/\s+/g, " ").trim()
+  return ASK_CUE.test(t) && !looksLikeCandidateAnswer(t)
+}
+
+/** Mid-answer speech (including tab-side candidate talk) must not be titled as a new question. */
+export function looksLikeCandidateAnswer(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim()
+  if (!t || /[?]/.test(t)) return false
+  if (/\b(?:my question is|i wanted to ask|i want to ask|i'?d like to ask)\b/i.test(t)) return false
+  if (/^(?:(?:and|so|yeah|yes|um+|uh+|ok(?:ay)?|well|right|got it)[, ]+)*(?:i(?:'m| am|'ll| will|'ve|'d)?\b)/i.test(t)) return true
+  if (/\b(?:i would|i'?d |i will|i'?m going to|i typically|my approach|i usually|i tend to)\b/i.test(t)) return true
+  if (/^(?:when|while|if) (?:integrating|working|using|building|implementing|designing|doing|running|adding|calling)\b/i.test(t)) return true
+  return false
+}
+
+/** Mic speech is the interviewer's ask only when the user is clearly reading a question aloud. */
+export function isReadAloudQuestion(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim()
+  if (!t || looksLikeCandidateAnswer(t)) return false
+  return looksLikeAsk(t)
+}
+
+/** A user follow-up spoken into the mic ("go deeper on that exception") is a new ask, not silence. */
+const USER_FOLLOW_UP = /^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|say that again|more detail)\b/i
+export function isUserFollowUp(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim()
+  return !!t && (USER_FOLLOW_UP.test(t) || isReadAloudQuestion(t))
 }
 
 function sameQuestion(a: string, b: string): boolean {
@@ -189,10 +219,13 @@ export function outstandingInterviewerAsk(
   const asks = labeled.filter((l) => isInterviewerSpeech(l) && looksLikeAsk(l.text)).map((l) => l.text)
   const unanswered = asks.filter((t) => !sameQuestion(t, opts?.lastAnswered || ""))
   const last = labeled[labeled.length - 1]
-  if (isCandidateSpeech(last)) return unanswered.length ? unanswered[unanswered.length - 1] : ""
+  if (isCandidateSpeech(last) || looksLikeCandidateAnswer(last.text)) {
+    if (!unanswered.length) return ""
+    return unanswered.length > 1 ? mergeAdjacentAsks(unanswered.slice(-2)) : unanswered[unanswered.length - 1]
+  }
   if (isInterviewerSpeech(last) && looksLikeAsk(last.text)) {
     const recent = unanswered.slice(-2)
-    return recent.length > 1 ? mergeAdjacentAsks(recent) : (unanswered[unanswered.length - 1] || last.text)
+    return recent.length > 1 ? mergeAdjacentAsks(recent) : (unanswered[unanswered.length - 1] || "")
   }
   return unanswered.length ? unanswered[unanswered.length - 1] : ""
 }
@@ -214,5 +247,105 @@ export function silencePressResult(opts: {
     return { listening: true, question: LISTENING_STATUS }
   }
   return { listening: false, question: asks.length ? mergeAdjacentAsks(asks) : "" }
+}
+
+export const LISTENING_NO_QUESTION = "Listening, no new question yet"
+
+function isThemChannel(line: { who: string; text: string }): boolean {
+  return isInterviewerSpeech(line) || /^(?:Them|Interviewer(?:\s*\d+)?)$/i.test(line.who)
+}
+
+/** Interviewer asks in a window. Mic (You) counts only when clearly read aloud. */
+export function interviewerAsksFrom(
+  lines: readonly (TranscriptLine | string)[] | null | undefined,
+  opts?: { lastAnswered?: string },
+): string[] {
+  return Array.from(lines || [])
+    .map(asLabeled)
+    .filter((l) => l.text)
+    .filter((l) => (isThemChannel(l) && looksLikeAsk(l.text)) || (isCandidateSpeech(l) && isReadAloudQuestion(l.text)))
+    .map((l) => l.text)
+    .filter((t) => !sameQuestion(t, opts?.lastAnswered || ""))
+}
+
+function hasNewThemSpeech(
+  pending: readonly (TranscriptLine | string)[] | null | undefined,
+): boolean {
+  return Array.from(pending || []).map(asLabeled).some((l) => l.text && isThemChannel(l))
+}
+
+export type LivePressDecision = {
+  listening: boolean
+  question: string
+  reason: "listening" | "merge" | "outstanding" | "ask" | "none"
+}
+
+/**
+ * Live manual AI Answer decision. A silence or already-answered press with no
+ * new interviewer ask holds at "Listening, no new question yet". A candidate
+ * or candidate-like Them turn keeps the outstanding interviewer ask. Adjacent
+ * interviewer asks merge into one composite question. Typed text and an
+ * "Answer anyway" override skip the hold (caller applies those).
+ */
+export function livePressDecision(opts: {
+  pending?: readonly (TranscriptLine | string)[] | null
+  recent?: readonly (TranscriptLine | string)[] | null
+  lastQuestion?: string
+  alreadyAnswered?: boolean
+  questionSource?: string
+  typed?: string
+  anyway?: boolean
+  fromAuto?: boolean
+}): LivePressDecision {
+  if (opts.anyway || String(opts.typed || "").trim()) {
+    return { listening: false, question: "", reason: "none" }
+  }
+  const pending = Array.from(opts.pending || [])
+  const recent = Array.from(opts.recent || pending)
+  const lastAnswered = opts.alreadyAnswered ? String(opts.lastQuestion || "") : ""
+  const window = recent.length ? recent : pending
+  const lastSrc = pending.length ? pending : window
+  const last = lastSrc.length ? asLabeled(lastSrc[lastSrc.length - 1]) : { who: "", text: "" }
+  const candidateTurn = !!(last.text && (isCandidateSpeech(last) || looksLikeCandidateAnswer(last.text)))
+
+  if (candidateTurn) {
+    // Mic follow-ups and clearly read-aloud questions stay on the existing press path.
+    const userAsk = pending.some((l) => {
+      const row = asLabeled(l)
+      return (isCandidateSpeech(row) || !row.who) && isUserFollowUp(row.text) && !looksLikeCandidateAnswer(row.text)
+    }) || (isCandidateSpeech(last) && isUserFollowUp(last.text) && !looksLikeCandidateAnswer(last.text))
+    if (userAsk) {
+      return { listening: false, question: "", reason: "none" }
+    }
+    const held = outstandingInterviewerAsk(pending.length ? window.concat(pending) : window, { lastAnswered })
+    if (held) return { listening: false, question: held, reason: "outstanding" }
+    if (opts.alreadyAnswered || !hasNewThemSpeech(pending) || pending.every((l) => looksLikeCandidateAnswer(asLabeled(l).text) || isCandidateSpeech(l))) {
+      return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" }
+    }
+  }
+
+  const asks = interviewerAsksFrom(pending, { lastAnswered })
+  if (asks.length >= 2) {
+    const merged = mergeAdjacentAsks(asks.slice(-2))
+    if (merged && merged !== asks[asks.length - 1]) {
+      return { listening: false, question: resolveReferent(merged, asks), reason: "merge" }
+    }
+  }
+  if (asks.length) {
+    return { listening: false, question: resolveLiveQuestion({ pending: asks, context: interviewerTexts(window.map((l) => asLabeled(l).text)) }), reason: "ask" }
+  }
+
+  const pendingFollowUp = pending.some((l) => {
+    const row = asLabeled(l)
+    return isUserFollowUp(row.text) && !looksLikeCandidateAnswer(row.text)
+  })
+  // Manual silence / already-answered: do not regenerate the last topic.
+  if (!opts.fromAuto && opts.alreadyAnswered && !asks.length && !pendingFollowUp) {
+    return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" }
+  }
+  if (!opts.fromAuto && opts.alreadyAnswered && !hasNewThemSpeech(pending) && !pendingFollowUp) {
+    return { listening: true, question: LISTENING_NO_QUESTION, reason: "listening" }
+  }
+  return { listening: false, question: "", reason: "none" }
 }
 

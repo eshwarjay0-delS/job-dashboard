@@ -32,13 +32,16 @@ function session(lines, question = SHOWN) {
   const s = {
     aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: lines.length + 1, answeredSeq: 0,
-    transcript: lines.map((text, i) => ({ seq: i + 1, who: "Them", text })),
+    transcript: lines.map((row, i) => (typeof row === "string" ? { seq: i + 1, who: "Them", text: row } : { seq: i + 1, who: row.who || "Them", text: row.text })),
     cards: [{ question, answer: OLD_A, qid: "q-shown" }], idx: 0,
     $: (id) => (id === "manualInput" ? box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, textContent: "", title: "" }),
+    answerAnywayHeld: null,
     pendingHeard() { return s.transcript.filter(t => t.seq > s.answeredSeq); },
-    updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
+    statuses: [],
+    updatePending() {}, flushHeard: async () => {}, setChat() {}, status(m, k) { s.statuses.push({ m, k }); },
     logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
     questionSource: () => "Them",
+    recentContext: () => "",
     generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts, q: card.question }); },
   };
   s.addCard = (q, answer) => { const card = { question: q, answer, qid: "q" + (s.cards.length + 1) }; s.cards.push(card); s.idx = s.cards.length - 1; return card; };
@@ -60,11 +63,15 @@ test("one press answers one question when 100 questions are queued", async () =>
   assert.equal(s.cards.filter(c => /item\d+zzzz/.test(c.question || "")).length, 1);
 });
 
-test("with nothing new queued, one press re-asks the selected card once", async () => {
+test("with nothing new queued, a manual press shows Listening and a second press answers anyway", async () => {
   const { s, asked } = session([]);
   s.transcript = [{ seq: 1, who: "Them", text: SHOWN }];
   s.answeredSeq = 1;
   s.heardSeq = 1;
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 0, "silence does not regenerate the last topic");
+  assert.match(String((s.statuses || []).map(x => x.m).join(" ")), /Listening, no new question yet/);
+  assert.ok(s.answerAnywayHeld && s.answerAnywayHeld.silenceReask);
   await s.aiAnswer(false);
   assert.equal(asked.length, 1);
   assert.equal(asked[0].q, SHOWN);
@@ -103,6 +110,43 @@ test("chunks of one question stay one request, and the next question stays apart
   assert.equal(two.asked.length, 1, "a backlog is not answered question by question on one press");
   assert.match(String(two.asked[0].q), /Terraform/);
   assert.doesNotMatch(String(two.asked[0].heard || ""), /Kerberos/);
+});
+
+
+test("a mid-candidate Them turn answers the outstanding interviewer ask, not the candidate topic", async () => {
+  const ask = "Put yourself in the shoes of a user who has been rate limited without malicious intent. What strategies would you use to circumvent that?";
+  const { s, asked } = session([
+    { who: "Them", text: ask },
+    { who: "Them", text: "When integrating with payment API clients like Stripe I would cache requests and batch them." },
+  ], "Ready");
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 1);
+  assert.match(String(asked[0].q), /strategies would you use to circumvent|rate limited without malicious intent/i);
+  assert.doesNotMatch(String(asked[0].q), /Stripe/i);
+});
+
+test("back-to-back interviewer asks merge into one composite question on a press", async () => {
+  const { s, asked } = session([
+    "Will API rate limiter implementations read from the same cache?",
+    "Is there a situation to have different rate limiters for different geographies?",
+  ], "Ready");
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 1);
+  assert.match(String(asked[0].q), /same cache/i);
+  assert.match(String(asked[0].q), /geograph/i);
+});
+
+test("mic You speech is not treated as the interviewer ask", async () => {
+  const ask = "What strategies would you use to circumvent that?";
+  const { s, asked } = session([
+    { who: "Them", text: ask },
+    { who: "You", text: "I would cache requests and batch them when talking to Stripe." },
+  ], "Ready");
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 1);
+  assert.match(String(asked[0].q), /strategies would you use to circumvent/i);
+  assert.doesNotMatch(String(asked[0].q), /Stripe/i);
+  assert.doesNotMatch(String(asked[0].heard || ""), /^You:/m);
 });
 
 function load(start, end, name) {
