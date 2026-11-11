@@ -16,7 +16,7 @@ function assertRequiredPrebuildContract(prebuild) {
   let previous = -1
   for (const group of requiredGroups) {
     const next = testCommands.findIndex((command, index) => index > previous && group.every(file => command.split(/\s+/).includes(file)))
-    assert.ok(next > previous, \`prebuild must retain the ordered required regression group: \${group.join(', ')}\`)
+    assert.ok(next > previous, `prebuild must retain the ordered required regression group: ${group.join(', ')}`)
     previous = next
   }
 }
@@ -40,7 +40,7 @@ test('prebuild permits additive regression files without dropping existing gates
   for (const file of additions) {
     const augmented = base.replace(
       'scripts/tests/whatsapp-gap-report.test.mjs',
-      \`scripts/tests/whatsapp-gap-report.test.mjs \${file}\`
+      `scripts/tests/whatsapp-gap-report.test.mjs ${file}`
     )
     assertRequiredPrebuildContract(augmented)
   }
