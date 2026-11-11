@@ -1,3 +1,11 @@
+## 2026-11-11 — Supabase egress cut (no new screen)
+
+No new screen. Kompas session sync asks for rows changed since the last read, saves stop echoing the session payload once the lite RPC exists, and old clients cannot full-fetch more than 6 times per 5 minutes. The page cache-busts `account-sync.js?v=20261111-egress`. The migration file is committed and was not applied to Supabase.
+
+**Verified locally before the one master push.** `npx tsc --noEmit` exit 0. `npm run test:baseline` 92/92. Sync, usage-pack, auth, and egress tests 74/74.
+
+**Not verified in this entry.** Production READY, one `/version.json`, and one `/api/health` are the ship report. A degraded Supabase health line is expected while the project is restricted. Do not push a follow-up commit only to paste the deployment id.
+
 ## 2026-11-11 — Hobby usage pack (no new screen)
 
 No new screen. Catalog polling, middleware skip, cron trim, CDN cache for public stamps, preview deploys off, and the weekly usage-guard workflow are server and static-script changes. The Kompas sidebar links are relative. The visible sidebar label does not change until the production build stamps version.json.
