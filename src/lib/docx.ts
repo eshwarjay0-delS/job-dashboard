@@ -23,7 +23,7 @@ export interface Zones {
   skills: { idx: number; text: string }[]
   // roles in document order — roles[0]'s job is the most recent; `current` marks it.
   // `added`: bullets a tailor already appended to the role, shown to its later passes (never parsed).
-  roles: { role: string; bullets: { idx: number; text: string }[]; current?: boolean; added?: string[] }[]
+  roles: { role: string; employer?: string; bullets: { idx: number; text: string }[]; current?: boolean; added?: string[] }[]
   // certifications / education / awards lines, grouped by their section heading.
   extras: { idx: number; text: string; section: string }[]
 }
@@ -327,9 +327,11 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
   // capture them as in-place editable lines instead of leaving them stale.
   let summaryNoHeading = false
   const skills: { idx: number; text: string }[] = []
-  type Role = { role: string; bullets: { idx: number; text: string }[]; current?: boolean }
+  type Role = { role: string; employer?: string; bullets: { idx: number; text: string }[]; current?: boolean }
   const roles: Role[] = []
   let curRole: Role | null = null
+  // Preserve a stacked company line so explicit experience confirmations can be scoped safely.
+  let pendingEmployer = ""
   let section: "summary" | "skills" | "experience" | "projects" | "other" | null = null
   let seenExpRole = false // the first EXPERIENCE role is the candidate's current job
   const extras: { idx: number; text: string; section: string }[] = []
@@ -345,10 +347,11 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
     if (stacked && (stacked.title || stacked.tagline)) header = stacked
   }
 
-  const startRole = (title: string, isExp: boolean) => {
+  const startRole = (title: string, isExp: boolean, employer?: string) => {
     const current = isExp && !seenExpRole
     if (isExp) seenExpRole = true
-    curRole = { role: title, bullets: [], current }
+    const scopedEmployer = isExp ? (employer || "").trim() : ""
+    curRole = { role: title, bullets: [], current, ...(scopedEmployer ? { employer: scopedEmployer } : {}) }
     roles.push(curRole)
   }
 
@@ -361,7 +364,10 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
     const sec = sectionHead(t, p)
     if (sec) {
       section = sec
-      if (sec === "experience" || sec === "projects") curRole = null
+      if (sec === "experience" || sec === "projects") {
+        curRole = null
+        pendingEmployer = ""
+      }
       if (sec === "other") otherLabel = t.replace(/[:•]+$/, "").trim()
       continue
     }
@@ -370,7 +376,8 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
     //    list jobs with no "Experience" heading at all).
     if (isHeading(t, p) && HAS_DATE.test(t) && !isBullet(t, p)) {
       section = "experience"
-      startRole(t, true)
+      startRole(t, true, pendingEmployer || undefined)
+      pendingEmployer = ""
       continue
     }
 
@@ -399,7 +406,8 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
       // Same whitespace-collapsed length check as looksLikeRoleTitle, and for the same
       // reason: literal-space date-alignment padding must not defeat this check.
       if (section === "experience" && !isBullet(t, p) && (looksLikeRoleTitle(t) || (HAS_DATE.test(t) && t.replace(/\s+/g, " ").trim().length <= 120))) {
-        startRole(t, true)
+        startRole(t, true, pendingEmployer || undefined)
+        pendingEmployer = ""
         continue
       }
       // Stacked employer / dated title layouts keep employer and project metadata
@@ -410,7 +418,11 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
         const nextText = next ? paraText(next).trim() : ""
         const beforeDatedTitle = next && !isBullet(nextText, next) &&
           (looksLikeRoleTitle(nextText) || (HAS_DATE.test(nextText) && nextText.replace(/\s+/g, " ").length <= 120))
-        if (/^project\s*:/i.test(t) || (beforeDatedTitle && t.length <= 160 && !/[.!?]$/.test(t))) continue
+        if (/^project\s*:/i.test(t)) continue
+        if (beforeDatedTitle && t.length <= 160 && !/[.!?]$/.test(t)) {
+          pendingEmployer = t
+          continue
+        }
       }
       // Only fall back to an implicit role when there's an actual bullet-length line to
       // hang it on. Some resumes put the company name on its OWN short paragraph before
@@ -422,7 +434,8 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
       // already consuming "current").
       const isBulletLine = isBullet(t, p) || (t.length >= 25 && t.length <= 400)
       if (isBulletLine) {
-        if (!curRole) startRole(section === "projects" ? "Projects" : "Experience", section === "experience")
+        if (!curRole) startRole(section === "projects" ? "Projects" : "Experience", section === "experience", pendingEmployer || undefined)
+        pendingEmployer = ""
         curRole!.bullets.push({ idx, text: t })
       }
     } else if (section === "other") {

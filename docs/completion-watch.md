@@ -372,9 +372,45 @@ Continue: preserve the historical replay as blocked until the exact private arti
 
 ## 11 November 2026 — role-scoped writer review closure
 
-- PR #287 remains open at the latest documentation head `2467f0864567d60fc78e7e83223bc0312cee007e`; the exact code head `4c2870ef42525d98625fff51b18bd537353a53b7` passed full CI `42926787326`, WhatsApp recovery `42926787572`, Plan/REA schema `42926787385` and Kompas baseline `42926787329`.
+- PR #287 remains open at exact current head `46df4965a22dd9fb16beb83b49872caec1aa6130`; full CI `42947240757`, WhatsApp recovery `42947240705`, Plan/REA schema `42947240863` and Kompas baseline `42947240714` all passed on that exact head. It still has no formal APPROVED review, and the protected preview is blocked.
 - The owner-authored review requested role-specific enforcement in the final weave and extra generate-then-tailor pass. Both now use each employer's original bullets, with a deterministic cross-role restore guard and Splunk/Okta/Canton regressions. The inline review thread was answered and resolved; this does not constitute a formal APPROVED review.
 - The new journal, REA and research-note entries record the decision and evidence. Because the Plan/REA docs changed after the green code head, exact-head full CI and schema must be rechecked on the latest documentation head before the PR is considered gate-green.
 - Release remains blocked: GitHub Vercel status says `Account is blocked`, the protected preview token is unavailable, and the canonical project reports `live:false` / public HTTP `402 DEPLOYMENT_DISABLED`. Do not merge or deploy through this wall. No authenticated model run, exported DOCX, real WhatsApp send or production acceptance is claimed.
 
 Continue: rerun full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline on the latest PR #287 documentation head. If those pass, keep it unmerged until the authorized Vercel owner restores project/preview access and the required formal review plus authenticated DOCX acceptance are completed. In parallel, preserve the #292 additive-prebuild fix and let the active Safe Merge Gate restack #291 and #290; do not duplicate those edits.
+
+
+## 11 November 2026 — employer/role-bound resume confirmations
+
+- PR #293 (`https://github.com/eshwarjay0-delS/job-dashboard/pull/293`) is now DRAFT and remains stacked on #287. It preserves stacked employer headings, proposes mapping first-person confirmations only to one unique employer/role, keeps unscoped confirmations in skills/profile, rejects multi-employer and ambiguous matches, and passes matching evidence through each role repair and deterministic guard. Cache generation is 28. No separate explicit owner approval for this narrower employer/role attribution rule was found, so it must not merge until approved.
+- Changed: `src/lib/docx.ts`, `src/lib/resume-evidence.ts`, `src/lib/tailor.ts`, `scripts/tests/resume-confirmation-quality.test.mjs`, `src/lib/plan-vision.ts`, `src/lib/plan-vision-journal.ts`, `src/lib/rea-register.ts`, `docs/research/resume-confirmed-keyword-boundary.md`, and `docs/resume.md`. Journal area was corrected to `resume` in `8b6d378`; the proposed approval state and exact release gates are recorded in `cf719196` / Plan & Vision revision `2026-11-11.3` (`f6e9d9a`).
+- Previous head `cf719196` passed Plan/REA schema `42967629813`; WhatsApp recovery `42967629916` was still running and full CI had not completed. After the preceding tested head `cf719196a25041fb72e48ff045707b0c11b080e5`, documentation-only commits `64c59443`, `f6e9d9aa`, `f8ec1789`, `15f8f98e`, `377ea810` and `dbcf2b18` updated the journal, Plan & Vision, completion-watch, REA and historical WhatsApp research handoff. The current PR head is recorded in PR metadata; it remains DRAFT and requires fresh exact-head checks. Do not transfer the preceding head's Plan/REA or in-progress WhatsApp result to the current docs head. Vercel project `live:false` / public HTTP `402 DEPLOYMENT_DISABLED` blocks protected preview and production acceptance. Parent #287 still lacks formal APPROVED review.
+- Not done: no live Gemini call, no DOCX export, no 95–100% live match, no WhatsApp send, and no historical 17 Oct delivery claim. The exact generated DOCX and R2/webhook/Meta correlation artifacts remain missing.
+
+
+## 11 November 2026 — 17 Oct WhatsApp artifact search result
+
+- Read-only Gmail search for `after:2026/10/17 before:2026/10/18 in:sent has:attachment filename:docx` returned 0; the matching received-DOCX search also returned 0. The 11 related Risk & Controls JD threads found by the connected Gmail search are dated 16 Oct, with the forwarded JD at `2026-10-16T19:49:07Z`.
+- Metadata-only ChatGPT Library listing for DOCX created on 17 Oct returned 0. The source DOCX and JD are recoverable; the exact generated DOCX is not.
+- Current production alias metadata is READY at `11efbbfe7781592bc2fad1216f67546882a1c3ed` (`dpl_7uEfjq1XprC48DoTFfFuiBoShPne`), but Vercel project `live:false` and public HTTP `402 DEPLOYMENT_DISABLED` prevent HTTP/UX acceptance. Do not equate READY metadata with reachable production.
+- Hard wall remains the exact generated output plus per-run R2 key, webhook request ID, Meta message ID and signed delivery/read receipt. Search scope is only the connected Gmail account and ChatGPT Library; it does not cover every chat, WhatsApp R2 or Meta logs.
+
+- Code/doc commits: `692a078e`, `fe494adc`, `adfa61cc`, `8a1e6e9b`, `bdfa01f4`, `d93c8f93`, `b9dc8cd0`, `402c1b7a`, `7291de85`, `1fbc27d2`, `1f6deb43`, plus Plan/REA and guidance updates in this stacked branch. Exact-head tests are pending after the REA schema correction.
+
+
+## 11 November 2026 — WhatsApp, crawler and approval-gate corrections
+
+- PR #288 clearance pagination: REA state was corrected to the supported `Blocked` value in `054002ff`; crawler regression `42967686386`, Plan/REA `42967686332` and Kompas baseline `42967686360` passed on that code head. Full CI `42967686438` was running. The subsequent journal update commit `f64265ff` needs a fresh exact-head check. Vercel remains Account is blocked; no production API smoke or post-release crawl.
+- PR #291 Right To Hire / Contract To Perm: REA state was corrected to `Blocked` in `3f3e4c5f`; crawler regression `42967693521`, Plan/REA `42967693565` and Kompas baseline `42967693584` passed on that code head. Full CI `42967693452` was running. The subsequent journal update commit `451cdf0b` needs a fresh exact-head check. C2H mappings are source-label based; explicit negations remain excluded and vendor-name inference remains forbidden.
+- PR #293 role-bound confirmation is proposed, not owner-approved. No real model call, DOCX export, WhatsApp send, or production deployment was performed.
+- Vercel project remains `live:false`; public HTTP returned `402 DEPLOYMENT_DISABLED`. READY deployment metadata is not public production acceptance.
+
+## 11 November 2026 — coordinated Kompas and WhatsApp task ownership
+
+- The separate **Kompas Continuous Voice Delivery** automation is disabled/paused; its latest audit completed at 2026-11-11 02:39 UTC. PR #283 remains open and unmerged at head `9a0e77fad2ca0fd7fd750a85c2e02f29d62917da`. Full CI `42841544434` (45 steps), baseline `42841544689` (92/92), cross-device `42841544818` (23/23) and Windows package `42841544525` passed. The protected voice-preview gate `42841543971` failed because `KOMPAS_VERCEL_API_TOKEN` was empty; protected HTTP verification was skipped. Vercel project remains `live:false`; production stays on master `11efbbfe`. No voice edits, merge, deployment or native Windows Live Captions acceptance were performed here. Keep voice work with that task.
+- The separate **Deploy WhatsApp Kompas Repair** automation is also disabled/paused. Its latest audit records #274 and #278 as CI-green with READY preview metadata but without formal owner approval; #278 must not ship alone. No merge, production deployment, resume rewrite or real WhatsApp resend was performed here.
+- No **Bible-Keeper** automation appeared in the accessible task list (12 tasks, no pagination cursor). Its active state therefore cannot be confirmed; do not claim it is running or duplicate a presumed audit.
+
+### PR #293 draft-head syntax correction — 11 November 2026
+
+The previous draft head `a0ed46fc06e574ac81d8ca977d476a352eea0342` failed Plan/REA run `42968477162` and WhatsApp recovery regression `42968477240` because the new REA entry had an extra opening parenthesis at `src/lib/rea-register.ts:258` (TS1005). This was a handoff-record syntax defect, not evidence that the resume writer behavior failed. It was corrected in `54023772bbf89638aa729daa25d7cfd567ffe3e2`; the current PR remains DRAFT and no exact-head workflow has run after the fix. Do not claim the correction passed until owner approval permits the PR to be marked ready and the exact-head gates complete.
