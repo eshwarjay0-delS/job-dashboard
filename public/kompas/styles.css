@@ -1094,6 +1094,17 @@ html.kd .kd-grip-ne,html.kd .kd-grip-nw,html.kd .kd-grip-se,html.kd .kd-grip-sw{
   max-width:12rem;
   font-size:13px;
 }
+#view-copilot .overlay .bar-actions .card-prefs{
+  gap:6px;
+}
+#view-copilot .overlay .bar-actions .card-prefs .live-select{
+  max-width:9.5rem;
+}
+@media (max-width:760px){
+  .bar-actions .card-prefs{flex:1 1 auto}
+  .bar-actions .card-prefs .live-select{width:100%;max-width:none;height:48px;font-size:16px}
+}
+
 
 /* The manually initiated desktop screen capture has its own visible action.
    Keep AI Answer most prominent; the single-row toolbar may scroll on narrow panels. */

@@ -389,7 +389,7 @@ function saveWizardDraft() {
   if (draft.editId) return;   // an edit writes the session on Save & continue, never the new-session draft cache
   LS.set(DRAFT_KEY, {
     jobLink: $("jobLink")?.value || "", company: $("company").value, role: $("role").value, jd: $("jd").value,
-    instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode,
+    instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode, format: draft.format, star: draft.star,
     interviewer: $("interviewerSelect")?.value, difficulty: $("difficultySelect")?.value, dossierSize: $("dossierSize")?.value,
     autoAnswer: $("autoAnswer")?.checked, saveTranscript: $("saveTranscript")?.checked,
     resumeId: selectedResumeId, docIds: [...selectedDocIds], at: Date.now(),
@@ -404,7 +404,9 @@ function applyWizardDraft() {
   if ($("instructions")) $("instructions").value = s.instructions || "";
   if (s.type) { draft.type = s.type; document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === s.type)); }
   if (s.length) { draft.length = s.length; segSet("lengthSeg", s.length); }
-  if (s.tone) { draft.tone = s.tone; segSet("toneSeg", s.tone); }
+  if (s.tone) { draft.tone = normalizeAnswerTone(s.tone); segSet("toneSeg", draft.tone); }
+  if (s.format) { draft.format = normalizeAnswerFormat(s.format); segSet("formatSeg", draft.format); }
+  if (s.star != null) { draft.star = !!sessionAnswerControls({ star: s.star }).star; segSet("starSeg", draft.star ? "on" : "off"); }
   if (s.mode) { draft.mode = s.mode; segSet("modeSeg", s.mode); if ($("interviewerSelect")) showCodingLevels($("interviewerSelect"), s.mode); }
   if (s.interviewer && $("interviewerSelect")) $("interviewerSelect").value = keptLevel(s.interviewer, s.mode);
   if (s.difficulty && $("difficultySelect")) $("difficultySelect").value = s.difficulty;
@@ -416,14 +418,14 @@ function applyWizardDraft() {
 }
 function openWizard() {
   const prev = sessions[0] || {};
-  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone || "professional", model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false };
+  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone ? normalizeAnswerTone(prev.tone) : "simple", format: prev.format ? normalizeAnswerFormat(prev.format) : "script_bullets", star: prev.star === true, model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false };
   step = 0;
   // A new session starts with a blank job. The answer preferences he already saved stay.
   ["jobLink", "company", "role", "jd", "resume"].forEach(id => { if ($(id)) $(id).value = ""; });
   if ($("instructions")) $("instructions").value = prev.instructions || "";
   $("resume")?.classList.add("hidden"); if ($("resume")) $("resume").value = "";   // paste box stays folded until asked for, and empty so a stale paste cannot override the picked resume
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === "live"));
-  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", prev.mode || "technical");
+  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("formatSeg", draft.format || "script_bullets"); segSet("starSeg", draft.star ? "on" : "off"); segSet("modeSeg", prev.mode || "technical");
   $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
   if ($("interviewerSelect")) { showCodingLevels($("interviewerSelect"), prev.mode); $("interviewerSelect").value = keptLevel(prev.interviewer, prev.mode); }
   if ($("difficultySelect")) $("difficultySelect").value = prev.difficulty || "standard";
@@ -446,13 +448,13 @@ function openWizard() {
 // nothing because the session is only written on Save & continue.
 function openEditWizard(s) {
   const stored = (LS.get("sessions", []) || []).find(v => v.id === s.id) || s;
-  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone || "professional", model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
+  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
   step = 0;
   if ($("jobLink")) $("jobLink").value = stored.jobLink || "";
   $("company").value = stored.company || ""; $("role").value = stored.role || ""; $("jd").value = stored.jd || "";
   if ($("instructions")) $("instructions").value = stored.instructions || "";
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === draft.type));
-  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", stored.mode || "technical");
+  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("formatSeg", draft.format || "script_bullets"); segSet("starSeg", draft.star ? "on" : "off"); segSet("modeSeg", stored.mode || "technical");
   draft.mode = stored.mode || "technical";
   $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
   if ($("interviewerSelect")) { showCodingLevels($("interviewerSelect"), draft.mode); $("interviewerSelect").value = keptLevel(stored.interviewer, draft.mode); }
@@ -489,6 +491,8 @@ function finishEditWizard() {
   x.language = "en";
   x.length = draft.length;
   x.tone = draft.tone;
+  x.format = draft.format || "script_bullets";
+  x.star = draft.star === true;
   x.mode = draft.mode || "technical";
   x.instructions = $("instructions").value;
   x.autoAnswer = $("autoAnswer").checked;
@@ -516,7 +520,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
   c.classList.add("on"); draft.type = c.dataset.type; saveWizardDraft();
 });
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
-["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
+["lengthSeg", "toneSeg", "formatSeg", "starSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); const key = { lengthSeg: "length", toneSeg: "tone", formatSeg: "format", starSeg: "star", modeSeg: "mode" }[id]; draft[key] = key === "star" ? b.dataset.v === "on" : b.dataset.v;
   // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
   if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "engineer", technical: "engineer", coding: "architect", final: "director" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
 // The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
@@ -541,6 +545,8 @@ function finishWizard() {
     language: "en",
     length: draft.length,
     tone: draft.tone,
+    format: draft.format || "script_bullets",
+    star: draft.star === true,
     mode: draft.mode || "technical",
     instructions: $("instructions").value,
     autoAnswer: $("autoAnswer").checked,
@@ -623,7 +629,8 @@ function cfgOf(s) { return { company: s.company, role: s.role, jd: s.jd, resume:
 function liveConfig() {
   const s = current || {};
   const who = ($("liveInterviewer") && $("liveInterviewer").value) || s.interviewer || "engineer";
-  return { ...cfgOf(s), length: s.length || "balanced", tone: s.tone, mode: s.mode || "technical", interviewer: who, difficulty: s.difficulty || "standard" };
+  const controls = typeof readLiveAnswerControls === "function" ? readLiveAnswerControls() : sessionAnswerControls(s);
+  return { ...cfgOf(s), ...controls, mode: s.mode || "technical", interviewer: who, difficulty: s.difficulty || "standard" };
 }
 // Where a session stands (runAt, pausedAt, endedAt, endedBy) is changed only by the lifecycle code (life = true), and its list of
 // transcripts only by the code that stores one. Any other save keeps what the store holds, so an object read earlier (the session
@@ -655,6 +662,7 @@ function launchCopilot(s, opts = {}) {
   idx = 0;
   $("ovTitle").textContent = "Kompas";
   if ($("liveInterviewer")) { showCodingLevels($("liveInterviewer"), s.mode); $("liveInterviewer").value = keptLevel(s.interviewer, s.mode); }
+  syncLiveAnswerControls(s);
   renderDepth();
   resetLiveState();
   setAuto(s.autoMode === true);          // default OFF: nothing answers until you press AI Answer
@@ -1547,6 +1555,7 @@ function audienceChanged() {
   regenerateForAudience();
 }
 $("liveInterviewer").onchange = () => audienceChanged();
+["liveFormat", "liveLength", "liveTone", "liveStar"].forEach(id => { const el = $(id); if (el) el.onchange = () => persistLiveAnswerControls(); });
 function stepInterviewer(dir) {
   const sel = $("liveInterviewer");
   let i = LADDER.indexOf(sel.value);
@@ -4103,11 +4112,131 @@ function resolveLiveQuestion(formed, pendingTexts, contextTexts) {
   return q;
 }
 
+// ── Answer stream contract (one-hop derive, title / partial card / done.card) ──
+// Mid-call format, length, tone and STAR are read from the session on every request,
+// so a change applies to the next card. Simple tone and Script + bullets are the defaults; STAR is off.
+function normalizeAnswerFormat(v) {
+  const s = String(v ?? "").toLowerCase().replace(/[\s+_-]+/g, "");
+  if (/^(?:full|fullscript|script|paragraph|paragraphs|prose)$/.test(s)) return "full_script";
+  if (/^(?:bullets|bullet|bulletpoints|points)$/.test(s)) return "bullets";
+  return "script_bullets";
+}
+function normalizeAnswerTone(v) {
+  const s = String(v ?? "").toLowerCase();
+  if (s === "formal") return "formal";
+  if (s === "professional") return "professional";
+  return "simple";
+}
+function sessionAnswerControls(s) {
+  const c = s || {};
+  const len = String(c.length ?? "").toLowerCase();
+  return {
+    format: normalizeAnswerFormat(c.format),
+    length: /^(?:short|brief|concise)$/.test(len) ? "short" : /^(?:long|detailed|deep)$/.test(len) ? "long" : "balanced",
+    tone: normalizeAnswerTone(c.tone),
+    star: c.star === true || /^(?:on|true|yes|1)$/i.test(String(c.star ?? "")),
+  };
+}
+function readLiveAnswerControls() {
+  const fromUi = {
+    format: $("liveFormat") && $("liveFormat").value,
+    length: $("liveLength") && $("liveLength").value,
+    tone: $("liveTone") && $("liveTone").value,
+    star: $("liveStar") && $("liveStar").value,
+  };
+  const merged = { ...(current || {}), ...Object.fromEntries(Object.entries(fromUi).filter(([, v]) => v != null && v !== "")) };
+  return sessionAnswerControls(merged);
+}
+function syncLiveAnswerControls(s) {
+  const k = sessionAnswerControls(s || current || {});
+  if ($("liveFormat")) $("liveFormat").value = k.format;
+  if ($("liveLength")) $("liveLength").value = k.length;
+  if ($("liveTone")) $("liveTone").value = k.tone;
+  if ($("liveStar")) $("liveStar").value = k.star ? "on" : "off";
+}
+function persistLiveAnswerControls() {
+  if (!current) return sessionAnswerControls(readLiveAnswerControls());
+  const k = readLiveAnswerControls();
+  current.format = k.format;
+  current.length = k.length;
+  current.tone = k.tone;
+  current.star = k.star;
+  saveSession(current);
+  syncLiveAnswerControls(current);
+  return k;
+}
+// A separate deriveOnly hop is skipped when the answer request can derive inline.
+// Already-derived questions do not send derive: true. When they do, pinned is forced off so the server actually derives.
+function wantsInlineAnswerDerive(opts, derivedQ) {
+  // Same gate as the old separate derive hop: a consolidated press with no title yet.
+  // Pinned or already-derived questions must not send derive: true (the server would ignore a pinned derive).
+  return !!(opts && opts.consolidated && !String(derivedQ || "").trim() && !opts.pinned && !opts.deriveOnly);
+}
+function isPlaceholderTitle(t) {
+  const s = String(t ?? "").replace(/\s+/g, " ").trim();
+  return !s || /^(?:\u2026|\.{3}|preparing\b.*|ready\.?|cleared\.?|no question(?: yet)?\.?|listening\b.*|deriving the question\b.*|generating\b.*|waiting\b.*|question detected\.?|checking\b.*|thinking\b.*|answering what\b.*|from what was heard\b.*)$/i.test(s);
+}
+function formatCardAnswer(card) {
+  if (!card) return "";
+  const script = String(card.script || "").trim();
+  const bullets = Array.isArray(card.bullets) ? card.bullets.map(b => String(b || "").trim()).filter(Boolean) : [];
+  if (card.format === "full_script" || (!bullets.length && script)) return script;
+  if (card.format === "bullets" || (!script && bullets.length)) return bullets.map(b => "- " + b).join("\n");
+  return [script, ...bullets.map(b => "- " + b)].filter(Boolean).join("\n");
+}
+function applyAnswerStreamEvent(card, ev) {
+  if (!card || !ev || !ev.type) return { kind: "", title: "", text: "", noQuestion: false, card: null };
+  if (ev.type === "title") {
+    if (!ev.text || isPlaceholderTitle(ev.text)) return { kind: "", title: "", text: "", noQuestion: false, card: card.cardLayout || null };
+    return { kind: "title", title: String(ev.text).trim(), text: "", noQuestion: false, card: card.cardLayout || null };
+  }
+  if (ev.type === "card") {
+    const layout = {
+      title: ev.title && !isPlaceholderTitle(ev.title) ? String(ev.title).trim() : (card.cardLayout && card.cardLayout.title) || "",
+      script: String(ev.script || ""),
+      bullets: Array.isArray(ev.bullets) ? ev.bullets.slice() : [],
+      format: ev.format || (card.cardLayout && card.cardLayout.format) || "script_bullets",
+      partial: ev.partial === true,
+    };
+    return { kind: ev.partial ? "card-partial" : "card", title: layout.title, text: formatCardAnswer(layout), noQuestion: false, card: layout };
+  }
+  if (ev.type === "done") {
+    if (ev.card && typeof ev.card === "object") {
+      const layout = {
+        title: ev.card.title && !isPlaceholderTitle(ev.card.title) ? String(ev.card.title).trim() : (card.cardLayout && card.cardLayout.title) || "",
+        script: String(ev.card.script || ""),
+        bullets: Array.isArray(ev.card.bullets) ? ev.card.bullets.slice() : [],
+        format: ev.card.format || (card.cardLayout && card.cardLayout.format) || "script_bullets",
+        partial: false,
+      };
+      return { kind: "done-card", title: layout.title, text: formatCardAnswer(layout), noQuestion: !!ev.noQuestion, card: layout };
+    }
+    return { kind: "done", title: "", text: "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+  }
+  if (ev.type === "meta" && ev.derived && !isPlaceholderTitle(ev.derived)) {
+    return { kind: "meta-derived", title: String(ev.derived).trim(), text: "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+  }
+  if (ev.type === "meta" || ev.type === "done") return { kind: ev.type, title: "", text: "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+  return { kind: ev.type, title: "", text: ev.text || "", noQuestion: !!ev.noQuestion, card: card.cardLayout || null };
+}
+// ── end answer stream contract ──
+
 function deriveBody(question, card, opts) { return { deriveOnly: true, client: BUILD, question, transcript: opts.earlier || "", history: recentQA(card), reask: !!opts.reask }; }
 // The question fields of the answer request. A question the code cut already formed is pinned, so the server answers
 // it as formed instead of cutting the heard text a second time (review of 398f299: the second cut glued his reply and
 // the "You (context keywords)" label back in front of the question the model was told to answer).
 function questionFields(question, derivedQ, derivedBy, opts) { return { question, derived: derivedQ || undefined, pinned: !!opts.pinned || derivedBy === "code", again: !!opts.reask }; }
+function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
+  const inline = wantsInlineAnswerDerive(opts, derivedQ);
+  const fields = questionFields(question, derivedQ, derivedBy, opts);
+  if (inline) { fields.pinned = false; fields.derived = derivedQ || undefined; }
+  return {
+    stream: true, client: BUILD, liveModel: typeof liveModel === "function" ? (liveModel() || undefined) : undefined, consolidated: !!opts.consolidated,
+    ...(inline ? { derive: true } : {}),
+    ...fields,
+    ...(extra || {}),
+  };
+}
 function askingLevel() {
   const who = ($("liveInterviewer") && $("liveInterviewer").value) || "engineer";
   if (who !== "peer") window.__peerOf = who;
@@ -4275,38 +4404,16 @@ async function generateAnswerRequest(question, card, opts = {}) {
   // Relevance first: work out what the interviewer actually asked, THEN pull the persona-file and
   // dossier material that matches that question — not whatever words happened to be in the ramble.
   let derivedQ = opts.derived || "", derivedBy = opts.derived ? (opts.derivedBy || "kept") : "";   // regenerating: the question is already known
-  if (consolidated && !derivedQ) {
-    try {
-      const deriveTimer = setTimeout(() => { try { ctl.abort(); } catch {} }, 30000);
-      const dr = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-        body: JSON.stringify(deriveBody(question, card, opts)) });
-      const dj = await dr.json(); clearTimeout(deriveTimer);
-      if (card.req !== ctl) return;
-      if (dj.noQuestion) {
-        const kept = String(card.question || "").trim();
-        if (kept && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving|Answering what|From what was heard)/.test(kept)) {
-          derivedQ = kept;
-        } else {
-          card.streaming = false;
-          if (answerCtl === ctl) answerCtl = null;
-          if (!dropPage(card)) { card.answer = []; card.question = "No question yet"; if (cards[idx] === card) renderCard(); }   // nothing to answer: no blank page left in the book
-          status("Listening for the next question.", "live");
-          return;
-        }
-      }
-      if (dj.derived) { derivedQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, dj.derived) : dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
-      derivedBy = dj.derivedBy || "ai";
-      const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
-      if (hit && answerFitsQuestion(derivedQ || card.question, hit.text)) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
-    } catch (e) {
-      if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; stallRetry(); } return; }
-    }
-  }
+  // Derive runs on the answer request itself (`derive: true`) instead of a separate deriveOnly hop.
+  // noQuestion, the derived title, and a book match are handled from the stream below.
+  let servedBook = false;
+
+  const inlineDerive = wantsInlineAnswerDerive(opts, derivedQ);
   const qText = String(derivedQ || question).trim();
-  card.anchorQ = qText;
+  if (!inlineDerive) card.anchorQ = qText;
   if (directDesktop) responseKey = desktopResponseKey(card);
   let writeAnchor = askingLevel();
-  if (!directDesktop && window.KompasAnchors && qText.length >= 8) {
+  if (!inlineDerive && !directDesktop && window.KompasAnchors && qText.length >= 8) {
     const facts = anchorFacts();
     try {
       const pack = await Promise.race([window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id), new Promise((r) => setTimeout(() => r(null), 15000))]);   // anchors are an enhancement: never let their load hang the answer
@@ -4375,8 +4482,61 @@ async function generateAnswerRequest(question, card, opts = {}) {
   try {
     let responded = false;
     fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
+    const paintTitle = (title, fromDerived) => {
+      if (!title || isPlaceholderTitle(title) || card.req !== ctl) return false;
+      if (fromDerived) {
+        derivedQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, title) : title;
+        derivedBy = derivedBy || meta.derivedBy || "ai";
+        card.anchorQ = derivedQ;
+        const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
+        if (hit && answerFitsQuestion(derivedQ || card.question, hit.text)) {
+          servedBook = true;
+          try { ctl.abort(); } catch {}
+          if (answerCtl === ctl) answerCtl = null;
+          serveBook(card, hit, depthKey);
+          return true;
+        }
+        if (card.cardTitle && !isPlaceholderTitle(card.question)) return false;
+        card.question = derivedQ;
+      } else {
+        card.cardTitle = title;
+        card.question = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, title) : title;
+      }
+      if (cards[idx] === card) { renderCard(); status("Answering: " + card.question, "live"); }
+      return false;
+    };
+    const paintLayout = (layout) => {
+      if (!layout) return;
+      card.cardLayout = layout;
+      if (layout.title) paintTitle(layout.title, false);
+      const shown = formatCardAnswer(layout);
+      if (shown) {
+        if (!first) first = performance.now() - t0;
+        text = shown;
+        show(shown);
+      }
+    };
+    const takeEvent = (ev) => {
+      const applied = applyAnswerStreamEvent(card, ev);
+      if (ev.type === "meta") {
+        meta = { ...meta, ...ev };
+        if (ev.stance || ev.friction || ev.fix || ev.hook || ev.prose) { if (ev.stance) card.stance = ev.stance; if (ev.friction) card.friction = ev.friction; if (ev.fix) card.fix = ev.fix; if (ev.hook) card.hook = ev.hook; if (ev.prose) card.prose = ev.prose; if (cards[idx] === card) renderCard(); }
+        if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { if (paintTitle(ev.derived, true)) return "book"; }
+      } else if (ev.type === "title") {
+        if (applied.title) paintTitle(applied.title, false);
+      } else if (ev.type === "card") {
+        if (applied.card) paintLayout(applied.card);
+      } else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; if (!card.cardLayout) show(text); }
+      else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; card.cardLayout = null; show(text); }
+      else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
+      else if (ev.type === "done") {
+        meta = { ...meta, ...ev };
+        if (applied.kind === "done-card" && applied.card) paintLayout(applied.card);
+      }
+      return "";
+    };
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, ...questionFields(question, derivedQ, derivedBy, opts), transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify(answerRequestBody(question, card, opts, derivedQ, derivedBy, { transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history })) });
     responded = true; clearTimeout(fetchTimer);
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
@@ -4384,6 +4544,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
+      if (data.derived && (consolidated || opts.pinned) && !opts.derived) { if (paintTitle(data.derived, true)) { /* book served */ } }
+      if (data.title) paintTitle(data.title, false);
+      if (data.card) paintLayout({ title: data.card.title || data.title || "", script: data.card.script || "", bullets: data.card.bullets || [], format: data.card.format || "script_bullets", partial: false });
     } else {
       const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "", lastChunkAt = Date.now(), pendingRead = reader.read();
       while (true) {
@@ -4401,14 +4564,12 @@ async function generateAnswerRequest(question, card, opts = {}) {
           const frame = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
           if (!frame.startsWith("data:")) continue;
           let ev; try { ev = JSON.parse(frame.slice(5)); } catch { continue; }
-          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.stance || ev.friction || ev.fix || ev.hook || ev.prose) { if (ev.stance) card.stance = ev.stance; if (ev.friction) card.friction = ev.friction; if (ev.fix) card.fix = ev.fix; if (ev.hook) card.hook = ev.hook; if (ev.prose) card.prose = ev.prose; if (cards[idx] === card) renderCard(); } if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { const displayQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, ev.derived) : ev.derived; card.question = displayQ; if (cards[idx] === card) { renderCard(); status("Answering: " + displayQ, "live"); } } }
-          else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
-          else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
-          else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
-          else if (ev.type === "done") meta = { ...meta, ...ev };
+          if (takeEvent(ev) === "book") break;
         }
+        if (servedBook) break;
       }
     }
+    if (servedBook) return;
     if (card.req !== ctl) return;                                      // a newer request took this card over
     if (meta.error || meta.unavailable || meta.busy || meta.quiet || isUnavailableAnswer(meta, text) || providerLeak(text)) {
       recoverAnswer(meta.code || (meta.daily ? "CREDITS" : ""), meta.retryAfterMs || 1000);
@@ -4417,6 +4578,12 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
     if (meta.noQuestion) {
+      const kept = String(card.question || "").trim();
+      if (wantsInlineAnswerDerive(opts, opts.derived) && !opts.keptRetry && kept && !isPlaceholderTitle(kept) && meta.skipped !== "logistics") {
+        card.streaming = false;
+        if (answerCtl === ctl) answerCtl = null;
+        return generateAnswer(kept, card, { ...opts, derived: kept, pinned: true, consolidated: true, keptRetry: true });
+      }
       card.streaming = false;
       card.answer = keepOld ? prevAnswer : [];
       card.meta = meta.skipped === "logistics" ? "Personal logistics, not answered" : "";   // owner rule 29 Oct: a quiet card says why, with no answer text
@@ -4424,7 +4591,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
       status(meta.skipped === "logistics" ? "Personal logistics, not answered. Still listening." : "Still listening.", "live");
       return;
     }
-    if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
+    if (!text.trim() && !(card.cardLayout && formatCardAnswer(card.cardLayout))) throw new Error("The answer engine returned an empty response. Please retry.");
+    if (!text.trim()) text = formatCardAnswer(card.cardLayout);
     text = stripUnaskedLogistics(card.anchorQ || card.question || question, text);
     if (!answerFitsQuestion(card.anchorQ || card.question || question, text)) {
       card.meta = "off-topic";
@@ -4470,7 +4638,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
+    if (servedBook) return;
     if (e && e.name === "AbortError") {
+      if (servedBook) return;
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
       stallRetry(); return;
     }
@@ -6636,7 +6806,7 @@ function packSession(s) {
     jd: String(s.jd || "").slice(0, 6000), resume: String(s.resume || "").slice(0, 8000),
     documents: String(s.documents || "").slice(0, 2000), instructions: s.instructions || "",
     language: s.language || "en", interviewer: s.interviewer || "engineer", difficulty: s.difficulty || "standard",
-    tone: s.tone || "professional", mode: s.mode || "technical", length: s.length || "balanced",
+    tone: sessionAnswerControls(s).tone, format: sessionAnswerControls(s).format, star: sessionAnswerControls(s).star, mode: s.mode || "technical", length: sessionAnswerControls(s).length,
     autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
     createdAt: s.createdAt || Date.now(),
     token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated
