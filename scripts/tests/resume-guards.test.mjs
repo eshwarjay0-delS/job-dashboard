@@ -222,7 +222,7 @@ test('keywords: Java not matched inside JavaScript', () => {
 test('WhatsApp refine never sends the original or a partial baseline when an update fails', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
   const start = route.indexOf('async function refine(')
-  const end = route.indexOf('\n// ──', start)
+  const end = route.indexOf('\nasync function deliver(', start)
   assert.ok(start >= 0 && end > start, 'the swipe-reply function can be isolated')
   const refine = route.slice(start, end)
 
