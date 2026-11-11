@@ -337,3 +337,18 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+## 11 November 2026 19:42 UTC — continuation ledger
+
+## 11 November 2026 19:42 UTC — continuation ledger
+
+Current master is `65bdf2f8cf1dd7299b8623885641400efe57bbfe`. Vercel deployment metadata `dpl_F6JaLHAps4vNcwMHSdHjrPBXW2Fz` is READY at that SHA and the canonical alias is assigned, but the project reports `live:false`, protected preview says Account is blocked, and public HTTP is 402 DEPLOYMENT_DISABLED. AUTH_DISABLED and NEXT_PUBLIC_AUTH_DISABLED now read false in project env, but those changes postdate deployment creation; do not assume the existing deployment snapshot is safe. No billing change, protection bypass or preview promotion is permitted.
+
+- **PR #303 — WhatsApp resume fallback / no-baseline swipe reply:** head `3ffd9d3aa343cc1964527b842c9ca93993c739b0`; baseline `43087903900`, Plan/REA `43087903614`, WhatsApp recovery `43087903727` SUCCESS; full CI `43087903937` still running at Webpack build. Keep draft/unmerged until exact CI and protected preview are available.
+- **PR #304 — resume role evidence:** head `e780a3476604a063eb1781da33e7d4187da132b0`; baseline `43088047846` and recovery `43088047758` SUCCESS; full CI `43088047680` still running at Webpack build. PR #293 employer/role-scoped confirmation remains unapproved.
+- **PR #305 — Right To Hire / Contract To Perm C2H:** head `6a7c946866b728a1a0ac8f7579d096a399d6b37e`; crawler regression `43088429396` and baseline `43088429572` SUCCESS; full CI `43088429576` still running at migration asset closure. Read-only production has 131 active Right To Hire rows unknown and 589 Contract To Perm rows generic contract.
+- **PR #306 stack — approved Gmail mobile navigation:** branch `fix/gmail-mobile-flow-on-contract-restack-20261111`, stacked on PR #305. Commits `b829b573`, `edffc505`, `a912a4b5`, `12cae649`, `5d8cb63f`; exact-head CI/schema pending. It contains no sync-health card, Gmail scheduler, OAuth, email or WhatsApp send.
+
+Read-only data: latest crawl 10 Nov 11:00:24–11:01:11 UTC, 6,818 found/upserted across 20 portals, one Inspyr abort; no 11 Nov crawl row. Gmail: 3 accounts, 2,002 threads, 3 sync rows, latest sync 10 Nov 14:44:44 UTC; no duplicate provider thread IDs. iZap: one business, no linked WhatsApp number, zero chats. Gmail search for DOCX attachments on 17 Oct returned no threads; the generated output/R2 key/webhook/Meta receipt remains missing. No production DB writes, manual crawl, real outbound messages or device acceptance occurred.
+
+The separate Kompas Continuous Voice Delivery automation is disabled/paused; no parallel voice/native edits were made. No separate Bible-Keeper automation was visible. Keep the unapproved Gmail sync-health card and PR #293 role-scoped confirmation feature out of the merge. Continue: finish exact-head CI for PRs #303, #304 and #305; then complete the PR #306 stack and Plan/REA schema. The owner must legitimately restore Vercel project serving/account access before protected preview, normal production deployment and authenticated/device acceptance.
