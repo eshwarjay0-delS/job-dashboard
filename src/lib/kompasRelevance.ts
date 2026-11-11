@@ -34,6 +34,9 @@ const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|field
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
 const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|(?:go|dig) deeper|go on|tell me more|why is that|why is that important|explain (?:that|this|it)|walk me through (?:that|this|it)|say that again)\b/i
 const QUESTION=/\?|^\s*(?:what|why|how|when|where|which|who|tell|describe|explain|give|walk|could|can|would|will|are|is|do|does|have|has|should)\b/i
+// r7 (#28): a coding or imperative request is an ask, even with a leading filler ("um, write a Go function…").
+// It must not fall through as an acknowledgement or greeting. Logistics and hear-me checks stay earlier.
+const IMPERATIVE_ASK=/^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:write|implement|build|design|code|create)\b/i
 
 /** The press phrase, not the quoted earlier question glued on after it. */
 function askWithoutPrior(question: string): string {
@@ -102,8 +105,8 @@ export function interviewIntent(question: string): ReplyIntent {
   if(!QUESTION.test(q) && /\b(?:tells you|asks you|disagrees with (?:you|your))\b/i.test(q)) return "scenario"
   // r5 (29 Oct 2026): "You will see X come up a lot. Tell me about Y." was read as a statement and got a line-check reply.
   // A later sentence that opens with an imperative ask (tell, describe, explain, walk, give) is a real ask.
-  const laterAsk=/[.!;]\s+(?:so,?\s+)?(?:tell me|describe|explain|walk me|give me)\b/i.test(q)
-  const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,"")) && !laterAsk
+  const laterAsk=/[.!;]\s+(?:so,?\s+)?(?:tell me|describe|explain|walk me|give me|write|implement|build|design|code|create)\b/i.test(q)
+  const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,"")) && !laterAsk && !IMPERATIVE_ASK.test(q)
   const words=q.split(/\s+/).filter(Boolean)
   const greeting=/^(?:hi|hello|hey|ok(?:ay)?|thanks|thank you|yeah|yes|no|right|great)[.!]*$/i.test(q)
   const told=ACK.test(q) || /^(?:you will|we\b|i\b|the team|our team|the first)\b/i.test(q)

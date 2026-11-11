@@ -5,6 +5,7 @@
  * This module does not call a model.
  */
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
+import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
 import { repairDictation } from "./kompasDictation.ts"
@@ -441,12 +442,14 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
 
 // Same trigger the service uses for its coding block (CODE_ASK_Q), narrowed to an actual request for code so a
 // question that only mentions "function" in passing is not forced into a code block.
-const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test|job|dag|limiter|pipeline|method)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
 export function asksForCode(question: string): boolean {
-  const tied = splitFollowUp(question)
+  // r7 (#28): zero-width spaces and odd whitespace must not change a coding ask ("Wri\u200bte a Python function").
+  const q = normalizeAskText(question)
+  const tied = splitFollowUp(q)
   // "Can you also add unit tests?" after a coding ask is still a coding ask; any other follow-up is judged on its own words.
   if (tied.previous) return CODE_REQUEST_Q.test(tied.own) || (CODE_REQUEST_Q.test(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
-  return CODE_REQUEST_Q.test(String(question || ""))
+  return CODE_REQUEST_Q.test(q)
 }
 
 export function dissectionPrompt(question: string, level: AnswerLevel, sources = ""): string {
