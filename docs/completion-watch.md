@@ -368,3 +368,13 @@ Continue: obtain fresh owner review on #287, restore authorized Vercel project/p
 - PR #287 code head `fb8284d499b609667e8636c480ba1c3e8f342986` has full CI, WhatsApp recovery regression, schema and Kompas baseline green; its protected preview is blocked by the Vercel account status. The code fix is not merged or live; current master still uses global unseen terms in role repair.
 
 Continue: preserve the historical replay as blocked until the exact private artifact and delivery correlation evidence are available and the owner reconciles the conflicting facts. Keep PR #287 unmerged until the protected preview/account block is resolved. No real WhatsApp tests or messages.
+
+
+## 11 November 2026 — role-scoped writer review closure
+
+- PR #287 remains open at the latest documentation head `2467f0864567d60fc78e7e83223bc0312cee007e`; the exact code head `4c2870ef42525d98625fff51b18bd537353a53b7` passed full CI `42926787326`, WhatsApp recovery `42926787572`, Plan/REA schema `42926787385` and Kompas baseline `42926787329`.
+- The owner-authored review requested role-specific enforcement in the final weave and extra generate-then-tailor pass. Both now use each employer's original bullets, with a deterministic cross-role restore guard and Splunk/Okta/Canton regressions. The inline review thread was answered and resolved; this does not constitute a formal APPROVED review.
+- The new journal, REA and research-note entries record the decision and evidence. Because the Plan/REA docs changed after the green code head, exact-head full CI and schema must be rechecked on the latest documentation head before the PR is considered gate-green.
+- Release remains blocked: GitHub Vercel status says `Account is blocked`, the protected preview token is unavailable, and the canonical project reports `live:false` / public HTTP `402 DEPLOYMENT_DISABLED`. Do not merge or deploy through this wall. No authenticated model run, exported DOCX, real WhatsApp send or production acceptance is claimed.
+
+Continue: rerun full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline on the latest PR #287 documentation head. If those pass, keep it unmerged until the authorized Vercel owner restores project/preview access and the required formal review plus authenticated DOCX acceptance are completed. In parallel, preserve the #292 additive-prebuild fix and let the active Safe Merge Gate restack #291 and #290; do not duplicate those edits.
