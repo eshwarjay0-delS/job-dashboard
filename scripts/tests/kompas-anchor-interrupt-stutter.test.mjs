@@ -25,6 +25,16 @@ test('stutter/rephrase keeps the final constraint and will not fire on the parti
   assert.match(live, /MFA/)
 })
 
+test('short topical asks are complete; dangling openers are not', () => {
+  assert.equal(isIncompleteAsk('Explain OAuth'), false)
+  assert.equal(isIncompleteAsk('What is SAML'), false)
+  assert.equal(isIncompleteAsk('Tell me about yourself'), false)
+  assert.equal(isIncompleteAsk('how would you handle'), true)
+  assert.equal(isIncompleteAsk('what is'), true)
+  assert.equal(isIncompleteAsk('explain how'), true)
+  assert.equal(isIncompleteAsk('how would you'), true)
+})
+
 test('anchor card is a readability layout: question, elapsed, stance/friction/fix/hook, prose toggled; bullets if fields missing', () => {
   const withFields = formatAnchorCard({
     question: 'What if a VP refuses MFA?',

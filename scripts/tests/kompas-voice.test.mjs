@@ -12,7 +12,7 @@ function env(extra = {}) {
  state.showCaption = () => {};
  vm.createContext(state);
  vm.runInContext(section('function whisperPrompt(', '// Owner, 2026-09-30'), state);
- vm.runInContext(section('async function transcribe(', '/* ---- what was heard'), state);
+ vm.runInContext(section('function speechRetryDelay(', '/* ---- what was heard'), state);
  return state;
 }
 test('keeps short answers and rejects empty/noise-only transcripts', () => {
@@ -41,7 +41,10 @@ test('discards a response after switching sessions', async () => {
  await p; assert.equal(s.entries.length,0);
 });
 test('failed request does not block the next phrase and reports the loss', async () => {
- let n=0; const s=env({fetch:async()=>++n===1?{ok:false,status:429,headers:{get:()=>"30"}}:{ok:true,json:async()=>({text:'Recovered phrase'})}});
+ // 3e21736e honors a 429/5xx Retry-After of up to 60s, so a 30s cooldown is retried
+ // (covered by kompas-speech-429-retry.test.mjs). This test is about a failure that
+ // must not hold the next phrase: a 120s cooldown is surfaced, not retried.
+ let n=0; const s=env({fetch:async()=>++n===1?{ok:false,status:429,headers:{get:()=>"120"}}:{ok:true,json:async()=>({text:'Recovered phrase'})}});
  await Promise.all([s.transcribe(new Blob(['a']),'You',{final:true}),s.transcribe(new Blob(['b']),'You',{final:true})]);
  assert.equal(s.entries[0].text,'Recovered phrase'); assert.match(s.errors[0],/not transcribed/);
 });

@@ -22,7 +22,13 @@ export function isIncompleteAsk(text: string): boolean {
   if (!t) return true
   if (/[?]$/.test(t) && t.split(/\s+/).length >= 6 && !DANGLING_END.test(t.replace(/[?]+$/, "").trim())) return false
   if (DANGLING_END.test(t) && !/[?]$/.test(t)) return true
-  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give|define)\b/i.test(t) && t.split(/\s+/).length <= 5 && !/[?]$/.test(t)) return true
+  const words = t.split(/\s+/).filter(Boolean)
+  // Short WH/explain asks with a topical object ("Explain OAuth", "What is SAML") are complete.
+  // Still incomplete when there is no object yet ("what is", "explain how", "how would you").
+  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give|define)\b/i.test(t) && words.length <= 5 && !/[?]$/.test(t)) {
+    if (words.length <= 1) return true
+    return /^(?:i|me|my|you|your|we|us|our|he|she|they|them|their|it|this|that|these|those|how|what|why|when|where|which|who|would|could|should|can|will|do|does|did|have|has|had|are|is|was|were|be|been|being|am|the|a|an|to|of|for|with|and|or|but|about|on|in|into|onto|from|by|at|as|if|whether|because|since|through|over|up|down|out|off|across|handle|deal)$/i.test(words[words.length - 1])
+  }
   return false
 }
 

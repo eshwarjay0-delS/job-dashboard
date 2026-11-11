@@ -3178,7 +3178,13 @@ function isIncompleteAsk(text) {
   if (!x) return true;
   if (/[?]$/.test(x) && x.split(/\s+/).length >= 6 && !STUTTER_DANGLE.test(x.replace(/[?]+$/, "").trim())) return false;
   if (STUTTER_DANGLE.test(x) && !/[?]$/.test(x)) return true;
-  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give|define)\b/i.test(x) && x.split(/\s+/).length <= 5 && !/[?]$/.test(x)) return true;
+  const words = x.split(/\s+/).filter(Boolean);
+  // Short WH/explain asks with a topical object ("Explain OAuth", "What is SAML") are complete.
+  // Still incomplete when there is no object yet ("what is", "explain how", "how would you").
+  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give|define)\b/i.test(x) && words.length <= 5 && !/[?]$/.test(x)) {
+    if (words.length <= 1) return true;
+    return /^(?:i|me|my|you|your|we|us|our|he|she|they|them|their|it|this|that|these|those|how|what|why|when|where|which|who|would|could|should|can|will|do|does|did|have|has|had|are|is|was|were|be|been|being|am|the|a|an|to|of|for|with|and|or|but|about|on|in|into|onto|from|by|at|as|if|whether|because|since|through|over|up|down|out|off|across|handle|deal)$/i.test(words[words.length - 1]);
+  }
   return false;
 }
 function resolveStutterRephrase(text) {
@@ -4325,27 +4331,31 @@ function serveBook(card, hit, depthKey) {
 async function generateAnswer(question, card, opts = {}) {
   if (card && card.screenTask) opts = { ...opts, source: "screen" };
   card = card || addCard(question, ["…"]);
+  let timer;
   const request = generateAnswerRequest(question, card, opts);
   const ctl = card.req;
   try {
-    await request;
+    // Last-resort watchdog after the request-level 120s hard timer and stall
+    // retries have had a chance to run. Matches the 150s aiBusy wedge. On
+    // timeout the card must stop spinning and keep a visible retry path —
+    // leaving ["…"] with only a status line hid the recovery action.
+    await Promise.race([request, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Answer request timed out")), 150000);
+    })]);
   } catch (error) {
     if (card.req !== ctl) return;
     card.req = null;
     try { ctl?.abort(); } catch {}
-    const tries = nextStallTry(opts.retries);
-    if (tries) {
-      status("Still working.", "live");
-      setTimeout(() => generateAnswer(question, card, { ...opts, retries: tries }), 800);
-      return;
-    }
+    // Request-level stallRetry already retried a stalled fetch twice. This
+    // wrapper is the last stop: do not schedule another generateAnswer here.
     card.streaming = false;
     const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
-    if (!partial) card.answer = ["…"];
-    card.meta = "";
+    if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
+    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
     if (cards[idx] === card) renderCard();
-    status("The answer did not finish. Press AI Answer to try again.", "live");
+    status(error && error.message || "The answer did not finish. Press AI Answer to try again.", "err");
   } finally {
+    clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
   }
 }
