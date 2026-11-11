@@ -6,6 +6,7 @@ import { checklistPrompt, validate } from "./kompasChecklist.ts"
 import { COHERENCE_PROMPT, coherence } from "./kompasCoherence.ts"
 import { HARD_CODES } from "./kompasShipGate.ts"
 import { SPOKEN_STYLE_PROMPT, needsReasoning, reasoning, styleFindings } from "./kompasSpokenStyle.ts"
+import { VARIETY_PROMPT, screenplay } from "./kompasStoryVariety.ts"
 
 export type DefensibilityReport = {
   pass: boolean
@@ -17,7 +18,7 @@ export type DefensibilityReport = {
 }
 
 export function defensibilityPrompt(question: string): string {
-  return [checklistPrompt(question), COHERENCE_PROMPT, SPOKEN_STYLE_PROMPT].filter(Boolean).join("\n\n")
+  return [checklistPrompt(question), COHERENCE_PROMPT, SPOKEN_STYLE_PROMPT, VARIETY_PROMPT].filter(Boolean).join("\n\n")
 }
 
 export function defensibilityReport(question: string, answer: string): DefensibilityReport {
@@ -28,6 +29,7 @@ export function defensibilityReport(question: string, answer: string): Defensibi
   for (const f of styleFindings(answer)) flags.push(f.code)
   const r = reasoning(answer)
   if (needsReasoning(question) && r.n < 4) flags.push("thin-reasoning")
+  if (screenplay(answer).formula) flags.push("screenplay")
   const hardFlags = flags.filter((f) => HARD_CODES.has(f.split(":")[0]) || f.startsWith("checklist-missed"))
   return { pass: !hardFlags.length, checklist: { coverage: v.coverage, missed: v.missed.map((m) => m.text) }, flags, hardFlags, reasoning: { n: r.n, missing: r.missing } }
 }
