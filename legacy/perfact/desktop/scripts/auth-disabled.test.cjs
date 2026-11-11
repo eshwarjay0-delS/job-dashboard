@@ -62,12 +62,14 @@ test("readServerAuthDisabled skips only on a 200 body with authDisabled true", a
   assert.ok(CAPABILITIES_TIMEOUT_MS <= 5000);
 });
 
-test("401 after skip starts the sign-in flow once", () => {
+test("401 after a server auth-disabled skip never shows the sign-in card", () => {
+  assert.equal(shouldRecoverSignInFrom401({ skipActive: true, alreadyRecovered: false, serverSaidAuthDisabled: true }), false);
   assert.equal(shouldRecoverSignInFrom401({ skipActive: true, alreadyRecovered: false }), true);
   assert.equal(shouldRecoverSignInFrom401({ skipActive: true, alreadyRecovered: true }), false);
   assert.equal(shouldRecoverSignInFrom401({ skipActive: false, alreadyRecovered: false }), false);
   const main = fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8");
   assert.match(main, /function recoverSignInAfter401\(/);
+  assert.match(main, /if \(serverSaidAuthDisabled\) return;/);
   assert.match(main, /beginChromeSignIn\(\{ interactive: true \}\)/);
   assert.match(main, /response\.status === 401 && typeof recoverSignInAfter401 === "function"/);
   assert.equal((main.match(/readServerAuthDisabled\(/g) || []).length, 1);

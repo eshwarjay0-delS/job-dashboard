@@ -30,7 +30,9 @@ function shouldSkipSignIn({ env = process.env, body = undefined, error = false }
   return authDisabledFromCapabilities(body);
 }
 
-function shouldRecoverSignInFrom401({ skipActive, alreadyRecovered } = {}) {
+function shouldRecoverSignInFrom401({ skipActive, alreadyRecovered, serverSaidAuthDisabled } = {}) {
+  // When the server said auth is disabled, never show the Chrome sign-in card.
+  if (serverSaidAuthDisabled) return false;
   return !!skipActive && !alreadyRecovered;
 }
 

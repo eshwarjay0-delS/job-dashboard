@@ -19,6 +19,7 @@ import { redirect } from "next/navigation"
 import type { NextRequest } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { verifyAdminToken } from "@/lib/adminSession"
+import { isAuthDisabled } from "@/lib/authDisabled"
 import { isAdminEmail } from "@/lib/owner"
 
 export type AdminIdentity = { by: "email"; id: string } | { by: "shared-login" }
@@ -34,11 +35,12 @@ export async function adminOf(request?: NextRequest): Promise<AdminIdentity | nu
   return isAdminEmail(user.email) ? { by: "email", id: user.id } : null
 }
 
-/** Server pages: a real admin session or the shared admin login only. The synthetic owner is sent to sign-in. */
+/** Server pages: a real admin session or the shared admin login only. The synthetic owner goes to the dashboard, never to sign-in. */
 export async function requireAdminPage(next: string): Promise<AdminIdentity> {
   const admin = await adminOf()
   if (admin) return admin
   const user = await authenticatedUser()
-  if (!user || user.synthetic) redirect(`/login?next=${next}`)
+  if (isAuthDisabled() || user?.synthetic) redirect("/dashboard")
+  if (!user) redirect(`/login?next=${next}`)
   redirect("/dashboard")
 }

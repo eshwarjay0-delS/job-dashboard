@@ -239,6 +239,7 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
     }),
     stubClient: () => ({ identity: "anonymous-stub" }),
     attachDisabledAuthFallback: (client) => client,
+    softenSupabaseDataAccess: (client) => client,
     isAuthDisabled: () => false,
     hasSupabaseAuthMaterial: () => false,
     Buffer,

@@ -31,3 +31,13 @@ export function safeAuthNext(value: string | null | undefined): string {
     return url.pathname + url.search + url.hash
   } catch { return "/dashboard" }
 }
+
+// When login is off, never send the owner into admin or the desktop Chrome
+// handoff. Admin stays behind a real session; the desktop does not sign in.
+export function safeDisabledAuthNext(value: string | null | undefined): string {
+  const next = safeAuthNext(value)
+  if (next === "/auth/desktop" || next.startsWith("/auth/desktop?")) return "/dashboard"
+  if (next === "/dashboard/admin" || next.startsWith("/dashboard/admin/")) return "/dashboard"
+  return next
+}
+

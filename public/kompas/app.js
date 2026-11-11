@@ -6734,7 +6734,10 @@ $("importLocalSessions")?.addEventListener("click", async () => {
     void accountSessionSync.refresh();
   }
 });
-if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
+if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) {
+  const user = LS.get("user");
+  if (!user || !user.email || user.email === "you@perfact.app") LS.set("user", { email: "eshwarjay05@gmail.com" });
+} else if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
 pruneExpiredResumes();           // a resume past its 15 days is removed on launch, even if the Resume view is never opened
 openDashboard();
 accountSessionSync?.start();

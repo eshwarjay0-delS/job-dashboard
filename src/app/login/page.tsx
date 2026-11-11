@@ -3,9 +3,10 @@
 import { safeAuthNext } from "@/lib/authRedirect"
 import { plainAuthError } from "@/lib/kompasAuthSession"
 import { stampLoginClock } from "@/lib/session-clock"
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { createClient } from "@/lib/supabase/client"
 import { Check } from "lucide-react"
 import MarketFitLoginStory from "./marketfit-login-story"
@@ -33,8 +34,17 @@ function LoginContent() {
   const [emailOpen,setEmailOpen]=useState(false)
   const [error,setError]=useState<string|null>(null)
 
+  useEffect(() => {
+    let gone = false
+    void serverReportsAuthDisabled().then(off => {
+      if (!gone && off) window.location.replace(next)
+    })
+    return () => { gone = true }
+  }, [next])
+
   async function signIn() {
     if (loading) return
+    if (await serverReportsAuthDisabled()) { window.location.replace(next); return }
     setLoading(true)
     setError(null)
     try {
@@ -58,6 +68,7 @@ function LoginContent() {
   }
 
   async function emailSignIn() {
+    if (await serverReportsAuthDisabled()) { window.location.replace(next); return }
     if(!["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("Password login is not enabled for this account.");return}
     if (loading) return
     setLoading(true)
@@ -73,6 +84,7 @@ function LoginContent() {
   }
 
   async function sendPasswordSetup() {
+    if (await serverReportsAuthDisabled()) { window.location.replace(next); return }
     if(!["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("Password login is not enabled for this account.");return}
     if (loading) return
     setLoading(true)
@@ -135,6 +147,7 @@ function LoginContent() {
               className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-[12px] border border-[var(--border-strong)] bg-[var(--surface)] text-[15.5px] font-semibold text-[var(--text)] shadow-[0_1px_2px_rgba(25,20,10,.06)] transition-[border-color,box-shadow,transform] hover:border-[var(--text-soft)] hover:shadow-[var(--shadow-card-hover)] active:scale-[.99] disabled:cursor-wait disabled:opacity-60">
               <GoogleIcon /> {loading ? "Opening Google…" : "Continue with Google"}
             </button>
+
 
             <div className="my-6 flex items-center gap-3 text-[13px] text-[var(--text-soft)]"><span className="h-px flex-1 bg-[var(--border)]" />or<span className="h-px flex-1 bg-[var(--border)]" /></div>
 

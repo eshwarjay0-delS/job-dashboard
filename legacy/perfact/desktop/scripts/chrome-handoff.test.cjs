@@ -120,3 +120,20 @@ function get(url) {
     }).on("error", reject);
   });
 }
+
+
+test("auth-disabled mode never paints a Skip login control or a sign-in card hook for skip", () => {
+  const html = handoff.handoffPanelInnerHtml();
+  assert.equal(html.includes("kompas-chrome-handoff-skip"), false);
+  assert.equal(handoff.visibleHandoffText(html).includes("Skip login"), false);
+  const script = handoff.handoffPaintScript("show");
+  assert.equal(script.includes("kompas-chrome-handoff-skip"), false);
+  assert.equal(script.includes("skipLogin"), false);
+  const main = fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8");
+  assert.match(main, /serverSaidAuthDisabled/);
+  assert.match(main, /if \(serverSaidAuthDisabled\) return hideHandoff\(\)/);
+  assert.match(main, /if \(serverSaidAuthDisabled\) return;/);
+  assert.doesNotMatch(main, /kompas:skip-login/);
+  const preload = fs.readFileSync(path.join(__dirname, "..", "preload.js"), "utf8");
+  assert.doesNotMatch(preload, /skipLogin/);
+});

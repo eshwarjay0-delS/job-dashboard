@@ -81,7 +81,8 @@ function fakeRequest({ ip = '203.0.113.10', cookie = '', authorization = null } 
 test('the synthetic owner is marked and is not treated as a real admin identity', () => {
   const user = disabledOwnerAsUser({ AUTH_DISABLED_USER_ID: AUTH_DISABLED_FALLBACK_USER_ID })
   assert.equal(isSyntheticDisabledAuthUser(user), true)
-  assert.equal(isSyntheticDisabledAuthUser({ id: 'real', email: 'eshwarjay0@gmail.com', email_confirmed_at: '2020-01-01T00:00:00.000Z' }), false)
+  assert.equal(user.email, 'eshwarjay05@gmail.com')
+  assert.equal(isSyntheticDisabledAuthUser({ id: 'real', email: 'eshwarjay05@gmail.com', email_confirmed_at: '2020-01-01T00:00:00.000Z' }), false)
   const adminSrc = readFileSync(new URL('../../src/lib/adminAccess.ts', import.meta.url), 'utf8')
   assert.match(adminSrc, /if \(!user \|\| user\.synthetic\) return null/)
   const ownerSrc = readFileSync(new URL('../../src/app/api/admin/owner/route.ts', import.meta.url), 'utf8')

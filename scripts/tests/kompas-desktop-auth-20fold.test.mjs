@@ -42,6 +42,7 @@ function requestClient(header,{configured=true}={}){
      hasSupabaseAuthMaterial:()=>false,
      attachDisabledAuthFallback:(client)=>client,
    }
+   if(id==="@/lib/supabaseRestriction")return { softenSupabaseDataAccess:(client)=>client }
    throw Error("Unexpected auth module: "+id)
  }
  const env=configured?{NEXT_PUBLIC_SUPABASE_URL:"https://fake.supabase.test",NEXT_PUBLIC_SUPABASE_ANON_KEY:"test-publishable-only",AUTH_DISABLED:"false",NEXT_PUBLIC_AUTH_DISABLED:"false"}:{AUTH_DISABLED:"false",NEXT_PUBLIC_AUTH_DISABLED:"false"}

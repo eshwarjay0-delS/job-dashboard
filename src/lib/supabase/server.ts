@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { attachDisabledAuthFallback, hasSupabaseAuthMaterial, isAuthDisabled } from "@/lib/authDisabled";
+import { softenSupabaseDataAccess } from "@/lib/supabaseRestriction";
 
 type ServerClient = ReturnType<typeof createServerClient>;
 
@@ -34,7 +35,7 @@ export async function createClient(): Promise<ServerClient> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    return attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() }) as ServerClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as ServerClient;
   }
 
   const cookieStore = await cookies();
@@ -56,9 +57,9 @@ export async function createClient(): Promise<ServerClient> {
       },
     },
   });
-  return attachDisabledAuthFallback(client as never, {
+  return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
     skipNetwork: !hasSupabaseAuthMaterial({ cookies: cookiesOnRequest }),
-  }) as ServerClient;
+  })) as ServerClient;
 }
 
 // Desktop and extension requests can supply their own Supabase access token.
@@ -69,20 +70,20 @@ export async function createClientFromRequest(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    return attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() }) as ServerClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as ServerClient;
   }
 
   const authorization = request.headers.get("authorization");
   if (authorization === null) return createClient();
   const bearer = authorization.match(/^Bearer\s+(\S+)$/i)?.[1];
   if (!bearer) {
-    return attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() }) as ServerClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as ServerClient;
   }
 
   const client = createSupabaseClient(url, key, {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
   });
-  return attachDisabledAuthFallback(client as never, {
+  return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
     skipNetwork: !hasSupabaseAuthMaterial({ authorization }),
-  }) as ServerClient;
+  })) as ServerClient;
 }

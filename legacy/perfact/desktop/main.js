@@ -57,6 +57,7 @@ const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDi
 // Skip sign-in only after the server says authDisabled === true, or never if
 // AUTH_DISABLED=false. Default (helpers absent in a test slice) is today's login.
 let skipSignInFromServer = false;
+let serverSaidAuthDisabled = false;
 let recoveredSignInFrom401 = false;
 function desktopAuthDisabled() {
   if (typeof envForcesSignIn === "function" && envForcesSignIn()) return false;
@@ -64,8 +65,10 @@ function desktopAuthDisabled() {
   return !!skipSignInFromServer;
 }
 function recoverSignInAfter401() {
+  // Auth-disabled mode never shows the sign-in card, including after a 401.
+  if (serverSaidAuthDisabled) return;
   if (typeof shouldRecoverSignInFrom401 === "function" &&
-      !shouldRecoverSignInFrom401({ skipActive: skipSignInFromServer && !recoveredSignInFrom401, alreadyRecovered: recoveredSignInFrom401 })) {
+      !shouldRecoverSignInFrom401({ skipActive: skipSignInFromServer && !recoveredSignInFrom401, alreadyRecovered: recoveredSignInFrom401, serverSaidAuthDisabled })) {
     return;
   }
   if (recoveredSignInFrom401 || !skipSignInFromServer) return;
@@ -175,6 +178,7 @@ function continueSignedIn() {
 }
 function beginChromeSignIn({ interactive = false } = {}) {
   // Login is lifted: do not open Chrome, start the claim poll, or paint the card.
+  if (serverSaidAuthDisabled) return hideHandoff();
   if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return hideHandoff();
   // A stored desktop session stays up. Opening Chrome would put auth UI over a live interview.
   if (desktopAuth.hasSession()) return hideHandoff();
@@ -897,6 +901,7 @@ else {
     };
     const renewQuiet = () => { void desktopAuth.renew(false).finally(armDesktopRefresh); };
     skipSignInFromServer = !!(await serverAuthSkipPromise);
+    serverSaidAuthDisabled = skipSignInFromServer;
     if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) {
       hideHandoff();
     } else {

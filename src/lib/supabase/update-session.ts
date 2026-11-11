@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authGateRedirect } from "@/lib/authGate";
+import { safeDisabledAuthNext } from "@/lib/authRedirect";
 import { userFromAuthClient } from "@/lib/kompasAuthSession";
 import { isAuthDisabled } from "@/lib/authDisabled";
 
@@ -19,12 +20,12 @@ import { isAuthDisabled } from "@/lib/authDisabled";
 // passes through untouched.
 export async function updateSession(request: NextRequest) {
   if (isAuthDisabled()) {
-    // Treat the single owner as signed in. Do not call Supabase: there is
-    // no session to refresh, and the matcher stays limited to page routes.
+    // Treat the single owner as signed in, including /login, so every sign-in
+    // screen routes straight into the app. Do not call Supabase.
     const redirect = authGateRedirect(
       request.nextUrl.pathname,
       request.nextUrl.search,
-      request.nextUrl.searchParams.get("next"),
+      safeDisabledAuthNext(request.nextUrl.searchParams.get("next")),
       true,
     );
     if (redirect) return NextResponse.redirect(new URL(redirect, request.url));

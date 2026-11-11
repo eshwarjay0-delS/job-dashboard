@@ -5,9 +5,11 @@
 // Machine-to-machine secrets (CRON_SECRET, WATCHDOG_CRON_SECRET,
 // AUTO_REPLY_CRON_SECRET, WhatsApp, Gmail crawl verification) stay required.
 // This flag only covers people signing in.
-// Same address as src/lib/owner.ts PRODUCT_OWNER_EMAIL — kept here so this
-// module stays a leaf and tests can import it directly.
-const PRODUCT_OWNER_EMAIL = "eshwarjay0@gmail.com"
+// Login-off owner is the Houston profile. Never the Saint Louis address.
+// The auth.users id is supplied only by AUTH_DISABLED_USER_ID (env), never
+// hardcoded and never looked up at runtime (no Supabase egress).
+export const LOGIN_OFF_OWNER_EMAIL = "eshwarjay05@gmail.com"
+const SAINT_LOUIS_PROFILE_EMAIL = "jayeshwar44@gmail.com"
 
 export const AUTH_DISABLED_FALLBACK_USER_ID = "00000000-0000-4000-8000-000000000001"
 
@@ -39,14 +41,23 @@ function firstWhatsAppOwnerUserId(env: Env = process.env): string {
   return ""
 }
 
-// Data in Supabase (Kompas account sessions, resumes, Gmail links, profiles)
-// is keyed by auth.users.id. Prefer an explicit id, then the user id already
-// listed beside a WhatsApp owner number. Email classifies the owner but does
-// not key those rows. Candidate profiles (Houston vs Saint Louis) stay a
-// separate picker; this identity does not choose one.
+// Data in Supabase is keyed by auth.users.id. Prefer AUTH_DISABLED_USER_ID,
+// then existing non-Supabase fallbacks (OWNER_USER_ID, a WhatsApp owner id,
+// then the built-in fallback). Email is AUTH_DISABLED_USER_EMAIL, defaulting
+// to the Houston address, then AUTH_DISABLED_EMAIL / OWNER_EMAIL. The Saint
+// Louis profile is never selected here.
+export function disabledOwnerEmail(env: Env = process.env): string {
+  for (const name of ["AUTH_DISABLED_USER_EMAIL", "AUTH_DISABLED_EMAIL", "OWNER_EMAIL"] as const) {
+    const raw = String(readFlag(env, name) ?? "").trim().toLowerCase()
+    if (raw && raw !== SAINT_LOUIS_PROFILE_EMAIL) return raw
+  }
+  return LOGIN_OFF_OWNER_EMAIL
+}
+
 export function disabledOwnerUser(env: Env = process.env): { id: string; email: string } {
-  const email = String(env.AUTH_DISABLED_EMAIL || env.OWNER_EMAIL || PRODUCT_OWNER_EMAIL).trim().toLowerCase()
-  const id = String(env.AUTH_DISABLED_USER_ID || env.OWNER_USER_ID || "").trim()
+  const email = disabledOwnerEmail(env)
+  const id = String(env.AUTH_DISABLED_USER_ID || "").trim()
+    || String(env.OWNER_USER_ID || "").trim()
     || firstWhatsAppOwnerUserId(env)
     || AUTH_DISABLED_FALLBACK_USER_ID
   return { id, email }
