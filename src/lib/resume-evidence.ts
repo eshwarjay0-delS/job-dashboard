@@ -77,7 +77,7 @@ function escapeRegExp(value: string): string {
 
 function roleScopeParts(role: { role: string; employer?: string }): { employer: string; title: string } {
   const label = stripRoleDates(role.role)
-  const pieces = label.split(/\s+(?:—|–|-)\s+|\s*\|\s*/).map(s => s.trim()).filter(Boolean)
+  const pieces = label.split(/\s+(?:—|–)\s+|\s*\|\s*/).map(s => s.trim()).filter(Boolean)
   const employer = (role.employer || (pieces.length > 1 ? pieces[0] : "")).trim()
   let title = role.employer
     ? label.replace(new RegExp("^" + escapeRegExp(role.employer) + "\\s*(?:—|–|-|\\|)?\\s*", "i"), "").trim()
@@ -126,6 +126,9 @@ export function roleScopedCandidateStatements(
   for (const raw of splitEvidenceStatements(statements)) {
     const claim = candidateClaim(raw)
     if (!claim) continue
+    const statementScope = " " + normalizeScope(raw) + " "
+    const mentionedEmployers = [...new Set(roles.map(role => normalizeScope(roleScopeParts(role).employer)).filter(employer => employer && statementScope.includes(" " + employer + " ")))]
+    if (mentionedEmployers.length > 1) continue
     const matches = roles.map((role, index) => roleScopeMatches(raw, role, roles) ? index : -1).filter(index => index >= 0)
     if (matches.length !== 1) continue
     result[matches[0]].push(claim)
