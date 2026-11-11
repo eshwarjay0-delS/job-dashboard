@@ -10,6 +10,8 @@ on:
       - "scripts/tests/crawl-classify.test.mjs"
       - "src/lib/vendorPortals.ts"
       - "scripts/tests/crawl-freshness.test.mjs"
+      - "scripts/tests/crawl-schedule.test.mjs"
+      - "vercel.json"
       - ".github/workflows/crawl-freshness.yml"
   push:
     branches:
@@ -23,6 +25,8 @@ on:
       - "scripts/tests/crawl-classify.test.mjs"
       - "src/lib/vendorPortals.ts"
       - "scripts/tests/crawl-freshness.test.mjs"
+      - "scripts/tests/crawl-schedule.test.mjs"
+      - "vercel.json"
       - ".github/workflows/crawl-freshness.yml"
   workflow_dispatch:
 
@@ -41,3 +45,5 @@ jobs:
         run: node --experimental-strip-types --test scripts/tests/crawl-freshness.test.mjs
       - name: Run contract work-type classification regressions
         run: node --experimental-strip-types --test scripts/tests/crawl-classify.test.mjs
+      - name: Run scheduled crawler configuration regressions
+        run: node --test scripts/tests/crawl-schedule.test.mjs
