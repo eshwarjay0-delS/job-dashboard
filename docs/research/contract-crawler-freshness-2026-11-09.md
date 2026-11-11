@@ -94,3 +94,7 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+## 11 November 2026 — fresh production reconciliation
+
+Read-only Supabase query confirms the latest completed run is still 10 Nov 2026 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, one Inspyr abort. No 11 Nov crawl row exists. Active rows: 8,850 contract, 2,612 unknown, 945 permanent. Explicit Contract To Perm: 589 active rows, generic contract; Right To Hire: 131 active rows, unknown. PR #305 restacks the alias classifier, with crawler regression and Kompas baseline green and full CI pending. No production rows were modified. The Vercel project reports live:false, so a post-change scheduled crawl cannot yet be observed.
