@@ -4,6 +4,7 @@
 //   defensibilityReport(question, text)  attached to the done event / JSON body (never changes the answer text)
 import { checklistPrompt, validate } from "./kompasChecklist.ts"
 import { COHERENCE_PROMPT, coherence, coherenceScore } from "./kompasCoherence.ts"
+import { FAMILY_QUESTIONS } from "./kompasQuestionFamilies.ts"
 import { RENAMED } from "./kompasHonestScore.ts"
 import { HARD_CODES } from "./kompasShipGate.ts"
 import { SPOKEN_STYLE_PROMPT, needsReasoning, reasoning, styleFindings } from "./kompasSpokenStyle.ts"
@@ -20,12 +21,14 @@ export type DefensibilityReport = {
   factuality: { partCoverage: number; ledgerConsistent: null; technicalCoherence: number | null }
 }
 
+const bankFor = (question: string) => FAMILY_QUESTIONS.find((q) => q.question.trim().toLowerCase() === String(question || "").trim().toLowerCase())?.checklist || []
+
 export function defensibilityPrompt(question: string): string {
-  return [checklistPrompt(question), COHERENCE_PROMPT, SPOKEN_STYLE_PROMPT, VARIETY_PROMPT].filter(Boolean).join("\n\n")
+  return [checklistPrompt(question, bankFor(question)), COHERENCE_PROMPT, SPOKEN_STYLE_PROMPT, VARIETY_PROMPT].filter(Boolean).join("\n\n")
 }
 
 export function defensibilityReport(question: string, answer: string): DefensibilityReport {
-  const v = validate(question, answer)
+  const v = validate(question, answer, { bank: bankFor(question) })
   const flags = v.missed.map((m) => `checklist-missed:${m.key}`)
   const coh = coherence(answer)
   for (const f of coh) flags.push(f.code)
