@@ -57,6 +57,7 @@ test('concurrent storage claims produce exactly one winner and propagate storage
 test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
   const entries = new Map()
   let providerAvailable = true, offlineMismatch = false
+  let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
   const said = []
   const docs = []
@@ -69,7 +70,14 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     // These cases exercise resume tailoring; channel transport has its own acceptance suite.
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async p => Buffer.from(offlineMismatch && p.startsWith('/data/users/') ? 'other@email.com' : 'same@email.com'), writePath: async () => {}, deletePath: async () => {} },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async p => {
+      if (offlineMismatch && p.startsWith('/data/users/')) return Buffer.from('other@email.com')
+      if (p === '/data/whatsapp/inbox/123/selected.docx') {
+        sessionReadCount++
+        return Buffer.from(sessionReadCount % 2 === 1 ? 'same@email.com' : 'changed-after-verification@email.com')
+      }
+      return Buffer.from('same@email.com')
+    }, writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable },
     '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
@@ -164,7 +172,9 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     abs: `/data/users/${offlineUser}/same@email.com/Cloud Security Engineer.docx`,
   }
   providerAvailable = false
+  const readsBeforeOfflineFallback = sessionReadCount
   await generate('123', offlineSession, offlineUser, undefined, offlineFiles)
+  assert.equal(sessionReadCount - readsBeforeOfflineFallback, 1, 'the verified library bytes are delivered without rereading a mutable session copy')
   assert.equal(runs, 5, 'offline fallback must not call the AI writer')
   assert.equal(deliveries, 6, 'the selected original is delivered once')
   assert.match(docs.at(-1).caption, /NOT TAILORED/)
