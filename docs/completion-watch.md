@@ -359,3 +359,13 @@ A Library metadata listing located `Organized_Original_Resumes.zip`. The archive
 The matching Security Engineer – Risk & Controls JD remains accessible through Gmail. The source's education, employer chronology, tenure and credential facts remain quarantined because they conflict with owner-confirmed profile facts. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain missing. No model generation, historical replay, R2 write, email or WhatsApp send was performed. The 6 Nov channel-specific policy supersedes the old 98% hard hold.
 
 Continue: preserve the recovered source, keep it quarantined until owner fact reconciliation, and continue independent approved work. Do not replay or send a real WhatsApp message without the original output/provider trace and separate authorization.
+
+
+## 11 November 2026 — additive prebuild contract validated
+
+- PR #292 remains DRAFT and unmerged on the current branch. Exact head `68290b78f4f7ecef888a809ccceed5e259f79977` passed full CI `42945794561` (all 45 steps, including lint, TypeScript, Webpack build and the canonical regression chain), Plan/REA schema `42945794555`, and Kompas baseline `42945794702`. The focused Node 22 prebuild-contract test passed 3/3.
+- The brittle exact-string assertion was replaced with an ordered contract: the Kompas baseline must remain first, all existing resume/WhatsApp/dossier regression groups must remain in order, and additional approved test files are allowed. No runtime behavior or production prebuild script changed.
+- This unblocks the shared test-contract dependency for PR #291 (contract-to-hire classifier regression) and PR #290 (approved mobile hamburger regression), but neither dependent feature is thereby merged or deployed. The Safe Merge Gate owns the restack; do not duplicate its edits.
+- The Vercel commit status remains FAILURE / `Account is blocked`; the protected preview prerequisite is unavailable and canonical production HTTP is `402 DEPLOYMENT_DISABLED` despite READY deployment metadata. No preview, merge, deployment, production API acceptance, Gmail/WhatsApp action or native mobile acceptance is claimed.
+
+Continue: once the protected Vercel preview gate is legitimately restored, rerun the shared PR #292 checks on its latest docs head, then let the Safe Merge Gate restack #291 and #290 and validate each exact head. Keep the dependent PRs open until their own CI, crawler/UI, Plan/REA, Kompas and normal review gates pass.
