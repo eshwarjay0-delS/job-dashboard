@@ -751,7 +751,7 @@ export async function runTailor(opts: {
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
           const roleConfirmation = roleConfirmations[t.role] || []
           const ask = `ORIGINAL ROLE EVIDENCE (keep this employer's dates, title, and paragraph count):\n${originalEvidence}\nGAP FILL: write only the missing terms listed for this role into THIS role's existing bullets as natural project language. Each term was matched to this employer's original bullets or explicit role-bound confirmation. Do not infer a tool from the JD or another employer. If a term is not supported by this role, leave it as a gap. Do not add a bullet, employer, date, or contact. Keep every supported term already present. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
-            preferences: [...allPrefs, ask, ...(roleConfirmation.length ? ["CANDIDATE CONFIRMATION FOR THIS ROLE ONLY: " + roleConfirmation.join("; ")] : [])].join("; "),
+          return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask, ...(roleConfirmation.length ? ["CANDIDATE CONFIRMATION FOR THIS ROLE ONLY: " + roleConfirmation.join("; ")] : [])].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
         },
         startBy: roundDeadline - 6000,
         assembleBy: roundDeadline,
