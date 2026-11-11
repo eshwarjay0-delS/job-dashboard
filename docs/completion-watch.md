@@ -347,3 +347,6 @@ The prior 10 Nov handoff records recovery of the original 27,724-byte source DOC
 The current iZap business has no connected WhatsApp number; webhook history, message-history sync and sending are all “never”. iZap cannot retrieve the historical chat or signed delivery receipt. No message was sent. The per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain missing. The source education/employment/tenure/credential conflicts remain quarantined until reconciled with owner-confirmed facts. The 6 Nov channel-specific WhatsApp policy supersedes the old 98% hard hold.
 
 Continue: keep the 17 Oct incident blocked; do not replay or resend until the exact source/output/provider trace and owner fact reconciliation are available. Issue #201's swipe-reply recovery gap remains a separate code-path issue, not proof that the 17 Oct initial-JD request entered refinement.
+
+
+Current review branch: PR #292 head `8004045e2e7efe90ac8787fceea8bb34c1d9bdf2`. Its exact-head full CI, Kompas baseline and Plan/REA schema must be checked after the latest research and journal commits; prior checks on `56dbacf` do not satisfy the latest-head gate.
