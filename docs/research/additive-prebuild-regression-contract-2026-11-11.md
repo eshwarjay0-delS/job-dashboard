@@ -31,7 +31,7 @@ Test-only change. No runtime code, package prebuild command, crawler adapter, da
 - Source: canonical eshwarjay0-delS/job-dashboard, branch fix/ci-prebuild-contract-additive-suites-20261111.
 - Base: 11efbbfe7781592bc2fad1216f67546882a1c3ed.
 - Implementation commit: 09852335d8c47ac7a8ef483db753c2e7aac703cd.
-- Journal and completion-watch updates: committed on the same branch.
+- Plan journal, REA register, WhatsApp incident handoff and completion-watch updates are committed on the same branch; the current-access audit is recorded separately from the CI repair.
 - Local Node 22 focused contract test: PASS, 3/3 tests on each of the current-master, crawler-addition and mobile-addition prebuild fixtures. This isolates the assertion contract; it is not the repository full CI.
 - Exact-head GitHub full CI and Plan/REA schema: pending.
 - Protected Vercel preview: unavailable while the team reports resource_creation_blocked / live:false.
