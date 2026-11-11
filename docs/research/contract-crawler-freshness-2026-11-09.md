@@ -103,3 +103,8 @@ The Right To Hire / Contract To Perm classifier remains unchanged. Exact-head fu
 Commit `4bd1c054cff4260938f0da1747e1f650d2dcebfc` updates only that test. It now verifies that the Kompas baseline remains first, all three required regression groups remain ordered, and the crawler/mobile regression files can be added without removing existing checks. It does not change runtime classifier behavior, portal adapters, data or crawl cadence.
 
 The new exact-head checks are queued; no full-CI, crawler, schema or baseline success is claimed yet. The protected Vercel preview remains account-blocked. Do not merge or deploy until the exact-head checks and protected preview pass. The 11 Nov 11:00 UTC crawl is still the first production-data validation after a legitimate release.
+
+
+## 11 November 2026 — exact-head validation update for PR #291
+
+Current PR head `c19380fad9a006f77e501372d13d62ee382c55df` passed full CI `42957610263`, crawler regression `42957610251`, Plan/REA schema `42957610188` and Kompas baseline `42957610184`. The test-only prebuild repair is therefore source/CI validated. Protected voice-preview `42957608099` remains failed because the private Vercel preview credential/account access is unavailable. No merge, deployment or post-classifier production crawl is claimed.
