@@ -195,6 +195,12 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(docs.length, beforeWrongRoot, 'a different account root must not send a fallback')
   assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
 
+  const mismatchedRelFiles = { ...offlineFiles, rel: 'other@email.com/Cloud Security Engineer.docx' }
+  const beforeRelMismatch = docs.length
+  await generate('123', { ...offlineSession, jdId: 'offline-relative-path-mismatch' }, offlineUser, undefined, mismatchedRelFiles)
+  assert.equal(docs.length, beforeRelMismatch, 'a relative library path that does not resolve to the selected file must not send')
+  assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
+
   const beforeUnselected = docs.length
   await generate('123', { ...offlineSession, jdId: 'offline-upload' }, 'user')
   assert.equal(docs.length, beforeUnselected, 'an upload or unselected resume is not eligible for the library fallback')
