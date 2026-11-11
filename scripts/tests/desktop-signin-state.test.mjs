@@ -147,13 +147,16 @@ test('a first Chrome handoff keeps the loopback through Google sign-in', async (
   assert.equal(returned.searchParams.has('d'), false)
 })
 
-test('native desktop skips Chrome sign-in and refresh timers when auth is disabled', () => {
+test('native desktop skips Chrome sign-in only after the server says authDisabled true', () => {
   const native = readFileSync(new URL('../../legacy/perfact/desktop/main.js', import.meta.url), 'utf8')
   const flag = readFileSync(new URL('../../legacy/perfact/desktop/auth-disabled.cjs', import.meta.url), 'utf8')
-  assert.match(flag, /function isAuthDisabled/)
+  assert.match(flag, /function authDisabledFromCapabilities/)
+  assert.match(flag, /body\.authDisabled === true/)
   assert.match(native, /function desktopAuthDisabled\(\)/)
-  assert.match(native, /desktopAuthDisabled\(\)\) return hideHandoff\(\)/)
-  assert.match(native, /desktopAuthDisabled\(\)\) return true/)
+  assert.match(native, /readServerAuthDisabled\(/)
+  assert.match(native, /skipSignInFromServer = !!\(await serverAuthSkipPromise\)/)
+  assert.match(native, /function recoverSignInAfter401\(/)
+  assert.match(native, /response\.status === 401/)
   const start = native.indexOf('if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) {\n      hideHandoff();')
   assert.notEqual(start, -1)
   assert.doesNotMatch(native.slice(start, start + 120), /beginChromeSignIn/)

@@ -19,7 +19,7 @@ const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net
 const path = require("path");
 const fs = require("fs");
 const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
-const { isAuthDisabled } = require("./auth-disabled.cjs");
+const { envForcesSignIn, readServerAuthDisabled, shouldRecoverSignInFrom401 } = require("./auth-disabled.cjs");
 const { chooseCaptureSource } = require("./capture-source.cjs");
 const { rememberedTaskbar, taskbarAnswer } = require("./taskbar-choice.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
@@ -54,9 +54,24 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
 const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => app.getPath("userData"), origin: MARKETFIT_API_ORIGIN });
-// Tests may slice later functions without this require; default is no login.
+// Skip sign-in only after the server says authDisabled === true, or never if
+// AUTH_DISABLED=false. Default (helpers absent in a test slice) is today's login.
+let skipSignInFromServer = false;
+let recoveredSignInFrom401 = false;
 function desktopAuthDisabled() {
-  return typeof isAuthDisabled === "function" ? isAuthDisabled() : true;
+  if (typeof envForcesSignIn === "function" && envForcesSignIn()) return false;
+  if (recoveredSignInFrom401) return false;
+  return !!skipSignInFromServer;
+}
+function recoverSignInAfter401() {
+  if (typeof shouldRecoverSignInFrom401 === "function" &&
+      !shouldRecoverSignInFrom401({ skipActive: skipSignInFromServer && !recoveredSignInFrom401, alreadyRecovered: recoveredSignInFrom401 })) {
+    return;
+  }
+  if (recoveredSignInFrom401 || !skipSignInFromServer) return;
+  recoveredSignInFrom401 = true;
+  skipSignInFromServer = false;
+  beginChromeSignIn({ interactive: true });
 }
 let updateCheckDone = false;
 // Check the released Windows version on first visible launch, not inside the
@@ -633,13 +648,17 @@ async function serve(req) {
     }
   }
   try {
-    return await net.fetch(targetOrigin() + rel + url.search, {
+    const response = await net.fetch(targetOrigin() + rel + url.search, {
       method: req.method,
       headers,
       body: hasBody ? await req.arrayBuffer() : undefined,
       cache: "no-store",
       redirect: isMarketFitApi ? "error" : "follow",
     });
+    if (isMarketFitApi && response && response.status === 401 && typeof recoverSignInAfter401 === "function") {
+      recoverSignInAfter401();
+    }
+    return response;
   } catch (err) {
     return new Response(JSON.stringify({ error: "Kompas could not reach " + targetOrigin() + ": " + (err && err.message || err) }),
       { status: 502, headers: { "content-type": "application/json" } });
@@ -824,6 +843,11 @@ else {
     // CI startup check only. It runs after the requires above and before any
     // session file is read, so a stored sign-in is left where it is.
     if (process.env.KOMPAS_SMOKE === "1") { app.exit(0); return; }
+    // One capabilities read at startup, overlapping the taskbar prompt. No
+    // later poll, and resume does not repeat it.
+    const serverAuthSkipPromise = (typeof envForcesSignIn === "function" && envForcesSignIn())
+      ? Promise.resolve(false)
+      : readServerAuthDisabled({ origin: MARKETFIT_API_ORIGIN, fetch: (url, opts) => net.fetch(url, opts) });
     const saved = readConfig();
     const remembered = rememberedTaskbar(saved);
     if (remembered.ask) {
@@ -872,6 +896,7 @@ else {
       }, delay);
     };
     const renewQuiet = () => { void desktopAuth.renew(false).finally(armDesktopRefresh); };
+    skipSignInFromServer = !!(await serverAuthSkipPromise);
     if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) {
       hideHandoff();
     } else {

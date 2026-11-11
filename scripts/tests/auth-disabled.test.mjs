@@ -163,3 +163,11 @@ test('Kompas skips keepAuthAlive and the login wall when auth is disabled', () =
   assert.doesNotMatch(proxySrc, /kompas\/app\.js/)
   assert.doesNotMatch(proxySrc, /_next\/static/)
 })
+
+
+test('capabilities reports authDisabled from the flag, which defaults to true', () => {
+  const route = readFileSync(new URL('../../src/app/api/kompas/capabilities/route.ts', import.meta.url), 'utf8')
+  assert.match(route, /authDisabled: isAuthDisabled\(\)/)
+  assert.equal(isAuthDisabled({}), true)
+  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), false)
+})

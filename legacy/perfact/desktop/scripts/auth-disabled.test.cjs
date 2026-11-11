@@ -3,32 +3,74 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { isAuthDisabled } = require("../auth-disabled.cjs");
+const {
+  envForcesSignIn,
+  authDisabledFromCapabilities,
+  shouldSkipSignIn,
+  shouldRecoverSignInFrom401,
+  readServerAuthDisabled,
+  CAPABILITIES_TIMEOUT_MS,
+} = require("../auth-disabled.cjs");
 
-test("AUTH_DISABLED defaults to no login when unset", () => {
-  assert.equal(isAuthDisabled({}), true);
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: "" }), true);
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: "true" }), true);
-  assert.equal(isAuthDisabled({ KOMPAS_AUTH_DISABLED: "1" }), true);
+test("a local default does not skip sign-in; only false forces today's login", () => {
+  assert.equal(envForcesSignIn({}), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "" }), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "true" }), false);
+  assert.equal(shouldSkipSignIn({ env: {}, body: undefined }), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "false" }), true);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "FALSE" }), true);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "0" }), true);
+  assert.equal(envForcesSignIn({ NEXT_PUBLIC_AUTH_DISABLED: "off" }), true);
+  assert.equal(envForcesSignIn({ KOMPAS_AUTH_DISABLED: "no" }), true);
+  assert.equal(shouldSkipSignIn({ env: { AUTH_DISABLED: "false" }, body: { authDisabled: true } }), false);
 });
 
-test("setting the flag to false restores today's desktop login", () => {
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: "false" }), false);
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: "FALSE" }), false);
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: "0" }), false);
-  assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: "off" }), false);
-  assert.equal(isAuthDisabled({ KOMPAS_AUTH_DISABLED: "no" }), false);
+test("server says authDisabled true means skip sign-in", () => {
+  assert.equal(authDisabledFromCapabilities({ authDisabled: true }), true);
+  assert.equal(shouldSkipSignIn({ env: {}, body: { authDisabled: true, version: "local" } }), true);
 });
 
-test("the shell skips Chrome sign-in, token refresh, and bearer forwarding when auth is off", () => {
+test("field absent, false, or a failed/timed-out call means today's sign-in", () => {
+  assert.equal(authDisabledFromCapabilities({}), false);
+  assert.equal(authDisabledFromCapabilities({ authDisabled: false }), false);
+  assert.equal(authDisabledFromCapabilities({ authDisabled: "true" }), false);
+  assert.equal(authDisabledFromCapabilities(null), false);
+  assert.equal(shouldSkipSignIn({ env: {}, body: {} }), false);
+  assert.equal(shouldSkipSignIn({ env: {}, body: { authDisabled: false } }), false);
+  assert.equal(shouldSkipSignIn({ env: {}, error: true, body: { authDisabled: true } }), false);
+});
+
+test("readServerAuthDisabled skips only on a 200 body with authDisabled true", async () => {
+  const origin = "https://job-dashboard-fawn.vercel.app";
+  const trueFetch = async () => ({ ok: true, json: async () => ({ authDisabled: true }) });
+  const falseFetch = async () => ({ ok: true, json: async () => ({ authDisabled: false }) });
+  const absentFetch = async () => ({ ok: true, json: async () => ({ version: "local", policy: "marketfit/kompas" }) });
+  const errorFetch = async () => { throw new Error("offline"); };
+  const httpFetch = async () => ({ ok: false, status: 500, json: async () => ({}) });
+  const hangFetch = () => new Promise(() => {});
+  assert.equal(await readServerAuthDisabled({ origin, fetch: trueFetch }), true);
+  assert.equal(await readServerAuthDisabled({ origin, fetch: falseFetch }), false);
+  assert.equal(await readServerAuthDisabled({ origin, fetch: absentFetch }), false);
+  assert.equal(await readServerAuthDisabled({ origin, fetch: errorFetch }), false);
+  assert.equal(await readServerAuthDisabled({ origin, fetch: httpFetch }), false);
+  assert.equal(await readServerAuthDisabled({
+    origin, fetch: hangFetch, timeoutMs: 20,
+  }), false);
+  assert.equal(await readServerAuthDisabled({
+    origin, env: { AUTH_DISABLED: "false" }, fetch: trueFetch,
+  }), false);
+  assert.ok(CAPABILITIES_TIMEOUT_MS <= 5000);
+});
+
+test("401 after skip starts the sign-in flow once", () => {
+  assert.equal(shouldRecoverSignInFrom401({ skipActive: true, alreadyRecovered: false }), true);
+  assert.equal(shouldRecoverSignInFrom401({ skipActive: true, alreadyRecovered: true }), false);
+  assert.equal(shouldRecoverSignInFrom401({ skipActive: false, alreadyRecovered: false }), false);
   const main = fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8");
-  const pack = fs.readFileSync(path.join(__dirname, "package.mjs"), "utf8");
-  assert.match(main, /require\("\.\/auth-disabled\.cjs"\)/);
-  assert.match(main, /function desktopAuthDisabled\(\)/);
-  assert.match(main, /if \(typeof desktopAuthDisabled === "function" && desktopAuthDisabled\(\)\) return hideHandoff\(\)/);
-  assert.match(main, /if \(typeof desktopAuthDisabled === "function" && desktopAuthDisabled\(\)\) return true/);
-  assert.match(main, /if \(typeof desktopAuthDisabled === "function" && desktopAuthDisabled\(\)\) \{\s*hideHandoff\(\);/);
-  assert.match(main, /if \(!\(typeof desktopAuthDisabled === "function" && desktopAuthDisabled\(\)\)\) \{\s*await desktopAuth\.renew\(false\)/);
-  assert.doesNotMatch(main, /if \(typeof desktopAuthDisabled === "function" && desktopAuthDisabled\(\)\) \{\s*void desktopAuth\.renew/);
-  assert.match(pack, /"auth-flag\.js"/);
+  assert.match(main, /function recoverSignInAfter401\(/);
+  assert.match(main, /beginChromeSignIn\(\{ interactive: true \}\)/);
+  assert.match(main, /response\.status === 401 && typeof recoverSignInAfter401 === "function"/);
+  assert.equal((main.match(/readServerAuthDisabled\(/g) || []).length, 1);
+  assert.doesNotMatch(main, /setInterval\([^\n]*capabilities/);
+  assert.doesNotMatch(main, /\/api\/kompas\/capabilities[^\n]*resume/);
 });
