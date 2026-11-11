@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **Report factual match honestly.** Web downloads keep their strict 95% raw-overlap gate. For WhatsApp, a clean pass requires at least 70% raw overlap and 95% supported coverage; a completed, readable DOCX below 95% may still be delivered with gaps disclosed. Below 70% is not a clean pass, but an otherwise complete, readable file may still be sent with its gaps disclosed. Show measured coverage from the exported document without rounding up. The 98% figure remains a quality aspiration, never a hard WhatsApp send threshold.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
@@ -50,7 +50,7 @@ Overall keyword overlap cannot hide thin experience coverage. Every substantive 
 
 The web result shows unfinished rewrite status separately from keyword counts, including when all terms appear. The shared quality report preserves its incomplete flag. Older saved delivered-with-gaps reports receive a general review notice without inventing a specific failure reason. No scoring or delivery threshold changes. Evidence: `docs/research/resume-incomplete-notice.md`.
 
-High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
+High keyword overlap does not make unfinished role rewrites complete. Partial or incomplete outputs are held; they never receive completed status or enter the completed-result cache. The 6 November channel rule supersedes the former 95% WhatsApp delivery floor: a completed, readable DOCX below 95% may be sent with gaps disclosed, while 70% raw overlap plus 95% supported coverage defines a clean pass. A completed readable file below 70% is not a clean pass but may still be sent with gaps disclosed. The 98% figure is a quality target, not a send gate. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md` and `docs/research/whatsapp-resume-acceptance-2026-11-10.md`.
 
 ## Skills-to-experience ordering — 22 October 2026
 
