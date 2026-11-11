@@ -339,3 +339,12 @@ Canonical production metadata: `job-dashboard-fawn.vercel.app` resolves to READY
 - PR #287, resume writer evidence boundary: current branch adds per-role evidence isolation and historical artifact-search findings. Its previous REA schema failure was traced to a non-repository path in the REA source list and corrected to the research-note path; exact-head full CI, regression and schema must be rerun after the latest docs/plan update. Protected voice-preview remains blocked by the missing private token. No generated DOCX/model acceptance or WhatsApp send.
 - PR #288, bounded clearance-safe crawler pagination: current branch scans ordered pages up to `min(1,000, max(100, limit × 10))`, and reports scan truncation. The crawler regression passed before the latest Plan revision update; exact-head full CI/schema/baseline must be rechecked. Protected voice-preview and Vercel status remain failed; not merged or deployed.
 - MFit Safe Merge Gate and Kompas Continuous Voice Delivery are active. No merge is authorized while required checks are failed/unverified. No separate Bible-Keeper automation is listed. This task did not edit Kompas voice/audio behavior.
+
+
+## 11 November 2026 — deterministic crawler pagination
+
+- PR #288's clearance-safe offset scan now orders by `last_seen_at DESC, id ASC`. The UUID primary key is a unique tie-breaker for rows with equal timestamps, preventing unstable page boundaries from silently skipping or repeating jobs.
+- Regression test pins the two order clauses and the migration's primary-key definition. The helper comment now requires a stable total order.
+- Commits: `63d563531fe552b928a5a1fa8363e9679d119ee1`, `e69886d2c3b3c545225662eb07d85c303e10c566`, `f98953fbc75aff8af2f4daaff95d319fdc2c6a6b`. Exact-head checks are pending; no production crawl/API acceptance is claimed. Protected Vercel preview remains account-blocked.
+
+Continue: run exact-head crawler regression, full CI, Plan/REA schema and Kompas baseline on the final PR #288 head. Do not merge or deploy until all required gates and protected preview pass. Then verify the canonical READY alias, public API behavior and a post-release scheduled crawl.
