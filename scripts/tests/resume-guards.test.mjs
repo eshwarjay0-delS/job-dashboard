@@ -237,6 +237,8 @@ test('WhatsApp refine never sends the original or a partial baseline when an upd
   // can use the no-provider fallback, and the caption explicitly says NOT TAILORED.
   assert.match(route, /if \(files && await sendOfflineOriginal\(\)\) return/)
   assert.match(route, /const expectedRoot = filesOf\(userId\)/)
+  assert.match(route, /const relative = path\.normalize\(files\.rel\)/)
+  assert.match(route, /path\.resolve\(root, relative\) !== selected/)
   assert.match(route, /libraryBytes\.equals\(sessionBytes\)/)
   assert.match(route, /NOT TAILORED — AI provider unavailable/)
   assert.match(route, /return sendClosest\("NOT TAILORED — AI provider unavailable\.", libraryBytes\)/)
