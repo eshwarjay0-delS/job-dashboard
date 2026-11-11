@@ -10,7 +10,7 @@ export async function authenticatedUserId(request?: NextRequest): Promise<string
 }
 
 /** The signed-in person, with their email only when the identity provider has confirmed it. */
-export async function authenticatedUser(request?: NextRequest): Promise<{ id: string; email: string | null } | null> {
+export async function authenticatedUser(request?: NextRequest): Promise<{ id: string; email: string | null; synthetic?: true } | null> {
   // auth-boundaries tests strip imports; the typeof guards keep that suite
   // testing today's fail-closed behavior when the flag helper is absent.
   const authOff = typeof isAuthDisabled === "function" && isAuthDisabled()
@@ -22,21 +22,21 @@ export async function authenticatedUser(request?: NextRequest): Promise<{ id: st
       const authorization = request.headers.get("authorization")
       // An explicitly supplied invalid credential must never fall back to cookies.
       if (authorization !== null && !/^Bearer\s+\S+$/i.test(authorization)) {
-        return authOff ? owner() : null
+        return authOff ? { ...owner(), synthetic: true as const } : null
       }
       if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && !authorization) {
         const origin = request.headers.get("origin")
         if (request.headers.get("sec-fetch-site") === "cross-site" ||
             (origin !== null && origin !== request.nextUrl.origin)) {
-          return authOff ? owner() : null
+          return authOff ? { ...owner(), synthetic: true as const } : null
         }
       }
     }
     const client = request ? await createClientFromRequest(request) : await createClient()
     const user = await userFromAuthClient(client)
-    if (user?.id) return { id: user.id, email: user.email }
-    return authOff ? owner() : null
-  } catch { return authOff ? owner() : null }
+    if (user?.id) return !user.unreachable && user.synthetic ? { id: user.id, email: user.email, synthetic: true as const } : { id: user.id, email: user.email }
+    return authOff ? { ...owner(), synthetic: true as const } : null
+  } catch { return authOff ? { ...owner(), synthetic: true as const } : null }
 }
 
 export function signInRequired() {

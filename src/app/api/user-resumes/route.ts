@@ -1,4 +1,5 @@
-import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { authenticatedUser, authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { capListForSyntheticOwner, rejectIfSyntheticOwnerLimited } from "@/lib/syntheticOwnerGuards"
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { MAX_RESUME_BYTES, safeResumeName } from "@/lib/uploadSafety"
@@ -53,11 +54,11 @@ export async function GET(request: NextRequest) {
   if (!userId) return signInRequired()
 
   const userDir = path.join(BASE_DIR, userId)
-  const files = await scanDocx(userDir, userDir, formatSize)
+  const files = capListForSyntheticOwner(request, await authenticatedUser(request), await scanDocx(userDir, userDir, formatSize))
 
   const driveConnected = await hasDriveConnected(userId, request)
 
-  // Unlimited storage — limit is null.
+  // Unlimited storage — limit is null. Unauthenticated login-off lists are capped.
   return NextResponse.json({ files, count: files.length, limit: null, driveConnected })
 }
 
@@ -65,6 +66,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const userId = await authenticatedUserId(request)
   if (!userId) return signInRequired()
+  const ownerLimit = rejectIfSyntheticOwnerLimited(request, "resume-write", await authenticatedUser(request))
+  if (ownerLimit) return ownerLimit
 
   const userDir = path.join(BASE_DIR, userId)
 
@@ -93,6 +96,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const userId = await authenticatedUserId(request)
   if (!userId) return signInRequired()
+  const ownerLimit = rejectIfSyntheticOwnerLimited(request, "resume-write", await authenticatedUser(request))
+  if (ownerLimit) return ownerLimit
+
 
   const body = await request.json().catch(() => null)
   if (!body || (body.filepath !== undefined && typeof body.filepath !== "string") || (body.filename !== undefined && typeof body.filename !== "string")) return NextResponse.json({ error: "Invalid filename or filepath." }, { status: 400 })

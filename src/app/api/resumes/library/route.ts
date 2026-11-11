@@ -8,7 +8,8 @@
 // the record kept beside the files (src/lib/resume-library.ts). Kompas prep can ask this for the words to prepare on.
 import path from "path"
 import { NextRequest, NextResponse } from "next/server"
-import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { authenticatedUser, authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { capListForSyntheticOwner } from "@/lib/syntheticOwnerGuards"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { readLibraryChecked } from "@/lib/resume-library-store"
 import { COMMON_AT, learnedAll } from "@/lib/resume-library"
@@ -21,6 +22,6 @@ export async function GET(request: NextRequest) {
   if (!userId) return signInRequired()
   const library = await readLibraryChecked(path.join(USER_RESUMES_DIR, userId))
   // A kind of job is listed while a resume made for it is in Files.
-  const kinds = learnedAll(library).filter(k => k.files > 0)
+  const kinds = capListForSyntheticOwner(request, await authenticatedUser(request), learnedAll(library).filter(k => k.files > 0))
   return NextResponse.json({ ok: true, commonAt: COMMON_AT, saved: library.files.length, kinds }, { headers: { "Cache-Control": "private, no-store" } })
 }

@@ -27,24 +27,21 @@ function withEnv(vars, fn) {
   }
 }
 
-test('AUTH_DISABLED defaults to no login when unset', () => {
+test('AUTH_DISABLED is unset, false, or true only: anything else keeps today\'s login', () => {
   withEnv({}, () => {
-    assert.equal(isAuthDisabled({}), true)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: '', NEXT_PUBLIC_AUTH_DISABLED: '' }), true)
+    assert.equal(isAuthDisabled({}), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: '' }), false)
+    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: '' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), false)
+    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'false' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'true' }), true)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: '1' }), true)
-    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'yes' }), true)
+    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'true' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'TRUE' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: '1' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'on' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'yes' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), false)
   })
-})
-
-test('setting the flag to false restores today\'s login behavior', () => {
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), false)
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'FALSE' }), false)
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: '0' }), false)
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'off' }), false)
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'no' }), false)
-  assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'false' }), false)
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), false)
 })
 
 test('owner identity uses the product-owner email and a configured user id', () => {
@@ -93,22 +90,21 @@ function request(headers = {}, method = 'GET') {
   return { headers: new Headers(headers), method, nextUrl: new URL('https://app.example/api/answer') }
 }
 
-test('/api/answer and /api/admin/owner work without a session when auth is disabled', async () => {
+test('/api/answer works without a session when auth is disabled, but admin is not granted to the synthetic owner', async () => {
   const owner = { id: 'owner-id', email: 'eshwarjay0@gmail.com' }
   const boundary = loadBoundary({ isAuthDisabled: () => true, disabledOwnerUser: () => owner })
 
   const user = await boundary.authenticatedUser(request())
-  assert.deepEqual(user, owner)
+  assert.equal(user.id, 'owner-id')
+  assert.equal(user.email, 'eshwarjay0@gmail.com')
+  assert.equal(user.synthetic, true)
 
-  // Same gate /api/answer uses: no session cookie or bearer token.
   const answer = user
     ? { status: 200, body: { ok: true, userId: user.id, email: user.email } }
     : { status: 401, body: { error: 'Sign in again to use this.' } }
   assert.equal(answer.status, 200)
   assert.equal(answer.body.userId, 'owner-id')
 
-  // Same gate /api/admin/owner uses after createClient().auth.getUser()
-  // is wrapped: a missing session becomes the owner, who is allowed through.
   const env = { AUTH_DISABLED: 'true', AUTH_DISABLED_USER_ID: 'owner-id' }
   const bare = {
     auth: {
@@ -120,14 +116,13 @@ test('/api/answer and /api/admin/owner work without a session when auth is disab
   const { data: { user: got } } = await wrapped.auth.getUser()
   assert.equal(got.id, 'owner-id')
   assert.equal(got.email, 'eshwarjay0@gmail.com')
-  assert.ok(got.email_confirmed_at)
-  const isOwner = got.email === 'eshwarjay0@gmail.com'
-  const adminOwner = {
-    status: got ? (isOwner ? 200 : 403) : 401,
-    body: got ? { authenticated: true, owner: isOwner, role: isOwner ? 'owner' : 'user' } : { authenticated: false, owner: false },
-  }
-  assert.equal(adminOwner.status, 200)
-  assert.equal(adminOwner.body.owner, true)
+  assert.equal(got.app_metadata.auth_disabled_synthetic, true)
+  // Admin routes must not treat the synthetic owner as an authenticated admin.
+  const adminOwner = got.app_metadata?.auth_disabled_synthetic
+    ? { status: 401, body: { authenticated: false, owner: false } }
+    : { status: 200, body: { authenticated: true, owner: true } }
+  assert.equal(adminOwner.status, 401)
+  assert.equal(adminOwner.body.owner, false)
 })
 
 test('a wrapped client keeps a live session and only falls back when none exists', async () => {
@@ -165,9 +160,20 @@ test('Kompas skips keepAuthAlive and the login wall when auth is disabled', () =
 })
 
 
-test('capabilities reports authDisabled from the flag, which defaults to true', () => {
+test('capabilities reports authDisabled from the flag, which defaults to false', () => {
   const route = readFileSync(new URL('../../src/app/api/kompas/capabilities/route.ts', import.meta.url), 'utf8')
   assert.match(route, /authDisabled: isAuthDisabled\(\)/)
-  assert.equal(isAuthDisabled({}), true)
+  assert.equal(isAuthDisabled({}), false)
+  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'true' }), true)
   assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), false)
+})
+
+
+test('auth-flag and stamp default to auth on; a missing window flag is auth on', () => {
+  const flag = readFileSync(new URL('../../public/kompas/auth-flag.js', import.meta.url), 'utf8')
+  assert.match(flag, /window\.KOMPAS_AUTH_DISABLED = false/)
+  assert.match(appSrc, /function isKompasAuthDisabled\(/)
+  assert.match(appSrc, /return false;/)
+  const stamp = readFileSync(new URL('../stamp-version.mjs', import.meta.url), 'utf8')
+  assert.match(stamp, /return raw === "true"/)
 })

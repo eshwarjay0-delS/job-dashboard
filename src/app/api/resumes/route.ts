@@ -4,7 +4,8 @@ import { createHash } from "node:crypto"
 import { extractText } from "@/lib/docx"
 import { resumeEmails, rankResumeCategories } from "@/lib/resumeOrganization"
 import { safeResumeName, readLimitedStream, MAX_ARCHIVE_FILES } from "@/lib/uploadSafety"
-import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { authenticatedUser, authenticatedUserId, signInRequired } from "@/lib/authBoundary"
+import { capListForSyntheticOwner, rejectIfSyntheticOwnerLimited } from "@/lib/syntheticOwnerGuards"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { listFiles, readPath, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
   const user = { userId, dir: path.join(USER_RESUMES_BASE, userId) }
 
   try {
-    const files = await scanDir(user.dir)
+    const files = capListForSyntheticOwner(request, await authenticatedUser(request), await scanDir(user.dir))
     return NextResponse.json({ files })
   } catch (err) {
     console.error("[/api/resumes GET]", err)
@@ -88,6 +89,8 @@ export async function DELETE(request: NextRequest) {
   const user = { userId, dir: path.join(USER_RESUMES_BASE, userId) }
 
   try {
+    const ownerLimit = rejectIfSyntheticOwnerLimited(request, "resume-write", await authenticatedUser(request))
+    if (ownerLimit) return ownerLimit
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
     const files: string[] = body.files ?? (body.filepath ? [body.filepath] : [])
@@ -125,6 +128,8 @@ export async function POST(request: NextRequest) {
   const userId = await authenticatedUserId(request)
   if (!userId) return signInRequired()
   const user = { userId, dir: path.join(USER_RESUMES_BASE, userId) }
+  const ownerLimit = rejectIfSyntheticOwnerLimited(request, "resume-write", await authenticatedUser(request))
+  if (ownerLimit) return ownerLimit
 
   try {
     const formData = await request.formData()

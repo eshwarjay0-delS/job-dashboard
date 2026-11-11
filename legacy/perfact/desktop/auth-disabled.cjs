@@ -4,8 +4,10 @@
 // A local default never skips sign-in on its own: production today still
 // requires login, and origin/master does not send this field.
 // AUTH_DISABLED / NEXT_PUBLIC_AUTH_DISABLED / KOMPAS_AUTH_DISABLED='false'
-// forces today's Chrome sign-in. Skip only when the server returns
-// authDisabled === true. One request at startup; no polling.
+// forces today's Chrome sign-in. A local default or an explicit true does
+// not skip on its own; skip only when the server returns authDisabled === true.
+// One request at startup; no polling. This matches the website's fail-closed
+// default (unset means auth on).
 const CAPABILITIES_TIMEOUT_MS = 4000;
 
 function envForcesSignIn(env = process.env) {

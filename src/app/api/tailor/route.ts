@@ -9,6 +9,7 @@ import { hasUnlimitedResumeTestAccess } from "@/lib/resumeTestAccess"
 import { hashUserId } from "@/lib/sttLedger"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
+import { rejectIfSyntheticOwnerLimited } from "@/lib/syntheticOwnerGuards"
 import { isAdminEmail } from "@/lib/owner"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
@@ -62,6 +63,8 @@ const HOUR_MS = 60 * 60 * 1000
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return signInRequired()
+  const limited = rejectIfSyntheticOwnerLimited(request, "tailor", user)
+  if (limited) return limited
   const userId = user.id
   try {
     const body = await request.json().catch(() => null)

@@ -2,9 +2,7 @@
 // each by src/lib/blocklist-request.ts. Read here on the server, by an admin only; nothing is blocked automatically.
 
 import Link from "next/link"
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { isAdminEmail } from "@/lib/owner"
+import { requireAdminPage } from "@/lib/adminAccess"
 import { blob } from "@/lib/storage"
 import { BLOCKLIST_PREFIX, type BlocklistRequest } from "@/lib/blocklist-request"
 
@@ -23,10 +21,7 @@ async function readRequests(): Promise<{ requests: Kept[]; total: number; unread
 }
 
 export default async function BlocklistRequestsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/login?next=/dashboard/admin/blocklist")
-  if (!isAdminEmail(user.email)) redirect("/dashboard")
+  await requireAdminPage("/dashboard/admin/blocklist")
 
   const { requests, total, unreadable } = await readRequests()
   return (

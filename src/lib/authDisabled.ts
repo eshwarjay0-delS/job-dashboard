@@ -1,8 +1,6 @@
-// Reversible login switch (owner, 11 Nov 2026): lift the need for a sign-in
-// everywhere, without deleting auth code. AUTH_DISABLED and
-// NEXT_PUBLIC_AUTH_DISABLED default to "off" (no login) when unset, so a
-// deploy does not need a Vercel env change. Set either flag to "false"
-// (or "0" / "off" / "no") to restore today's login behavior.
+// Reversible login switch. Fail-closed: AUTH_DISABLED or
+// NEXT_PUBLIC_AUTH_DISABLED lifts sign-in only when the value is exactly
+// "true". Unset, "false", "1", "on", "yes", or any other value keeps today's login.
 //
 // Machine-to-machine secrets (CRON_SECRET, WATCHDOG_CRON_SECRET,
 // AUTO_REPLY_CRON_SECRET, WhatsApp, Gmail crawl verification) stay required.
@@ -23,9 +21,13 @@ function readFlag(env: Env, name: string): string | undefined {
 /** True when the app should not require a person to sign in. */
 export function isAuthDisabled(env: Env = process.env): boolean {
   const raw = readFlag(env, "AUTH_DISABLED") ?? readFlag(env, "NEXT_PUBLIC_AUTH_DISABLED")
-  if (raw == null || String(raw).trim() === "") return true
-  const value = String(raw).trim().toLowerCase()
-  return value !== "false" && value !== "0" && value !== "off" && value !== "no"
+  return raw === "true"
+}
+
+export function isSyntheticDisabledAuthUser(user: unknown): boolean {
+  if (!user || typeof user !== "object") return false
+  const meta = (user as { app_metadata?: { auth_disabled_synthetic?: unknown } }).app_metadata
+  return meta?.auth_disabled_synthetic === true
 }
 
 function firstWhatsAppOwnerUserId(env: Env = process.env): string {
@@ -63,7 +65,7 @@ export function disabledOwnerAsUser(env: Env = process.env) {
     last_sign_in_at: now,
     created_at: now,
     updated_at: now,
-    app_metadata: { provider: "env", providers: ["env"] },
+    app_metadata: { provider: "env", providers: ["env"], auth_disabled_synthetic: true },
     user_metadata: {},
     identities: [] as unknown[],
     is_anonymous: false,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
+import { rejectIfSyntheticOwnerLimited } from "@/lib/syntheticOwnerGuards"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { keysFor, resolveKeys } from "@/lib/llm"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
@@ -17,6 +18,8 @@ const failure = (error: string, status: number) => NextResponse.json({ error }, 
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return failure("Sign in again to use this.", 401)
+  const ownerLimit = rejectIfSyntheticOwnerLimited(request, "screen", user)
+  if (ownerLimit) return ownerLimit
   if (!checkRateLimit(`kompas-screen:${user.id}`, { max: 20, windowMs: 60_000 }).ok)
     return failure("Too much at once. Wait a moment.", 429)
   const reader = request.body?.getReader()

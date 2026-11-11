@@ -1,10 +1,7 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { isOwnerEmail } from "@/lib/owner"
+import { requireAdminPage } from "@/lib/adminAccess"
 
 export default async function AdminIntegrationsPage(){
- const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser()
- if(!user) redirect("/login?next=/dashboard/admin/integrations"); if(!isOwnerEmail(user.email)) redirect("/dashboard")
+ await requireAdminPage("/dashboard/admin/integrations")
  const services=[
   ["Gmail","Connection state must come from the actual OAuth grant. Never infer connected from account knowledge."],
   ["WhatsApp","Owner binding and webhook health are shown independently."],
