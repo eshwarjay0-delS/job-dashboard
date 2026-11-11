@@ -41,3 +41,46 @@ export function crawlSearchOrFilter(input: string): string | null {
   if (!terms.length) return null
   return terms.flatMap(term => SEARCH_FIELDS.map(field => `${field}.ilike.*${term}*`)).join(",")
 }
+
+export type FilteredPageResult<T> = {
+  items: T[]
+  scanned: number
+  excluded: number
+  scanLimited: boolean
+}
+
+/** Scan bounded ordered pages until the visible result limit is filled.
+ * Filtering after a single over-fetch can underfill search when clearance roles
+ * dominate the newest rows. The caller owns filtering and must supply a stable total
+ * order (for example last_seen_at DESC, id ASC) before offset pagination. */
+export async function collectFilteredPages<T>(
+  fetchPage: (offset: number, pageSize: number) => Promise<readonly T[]>,
+  limit: number,
+  exclude: (row: T) => boolean,
+  options: { pageSize?: number; maxRows?: number } = {},
+): Promise<FilteredPageResult<T>> {
+  const target = Math.max(1, Math.min(100, Math.floor(limit) || 20))
+  const pageSize = Math.max(1, Math.min(100, Math.floor(options.pageSize ?? 100) || 100))
+  const maxRows = Math.max(1, Math.min(1000, Math.floor(options.maxRows ?? 1000) || 1000))
+  const items: T[] = []
+  let scanned = 0
+  let excluded = 0
+
+  while (scanned < maxRows && items.length < target) {
+    const take = Math.min(pageSize, maxRows - scanned)
+    const page = await fetchPage(scanned, take)
+    if (!page.length) break
+    scanned += page.length
+    const visible = page.filter(row => !exclude(row))
+    excluded += page.length - visible.length
+    items.push(...visible)
+    if (page.length < take) break
+  }
+
+  return {
+    items: items.slice(0, target),
+    scanned,
+    excluded,
+    scanLimited: items.length < target && scanned >= maxRows,
+  }
+}

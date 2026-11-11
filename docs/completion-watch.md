@@ -325,3 +325,33 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+## 10 November 2026 — clearance-safe contract search pagination
+
+Continue: validate PR for `fix/crawl-clearance-pagination-20261110`. The prior crawler jobs API fetched only four times the requested limit (capped at 100) before filtering clearance roles, so a clearance-heavy newest page could silently underfill results despite later eligible fresh jobs. The branch now scans ordered 100-row pages up to `min(1,000, max(100, limit × 10))`, stops when enough eligible results are collected, and returns `clearance_scan_limited` when the cap is reached. The Apply search note now tells the user when the bounded clearance scan reaches its cap and advises narrowing the search. Tests cover a clearance-only first page followed by eligible rows and an underfilled capped scan. Commits: bcab029, ee5ac59, 3aea24c, f063458, 1fbc4d5. No production query or crawl was run. Exact-head crawler tests/full CI/Plan-REA/Kompas gates and post-merge READY alias + API smoke remain pending.
+
+
+## 10 November 2026 — cross-product continuation checkpoint
+
+Canonical production metadata: `job-dashboard-fawn.vercel.app` resolves to READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, exact master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. The public HTTP smoke on the separate Voice Delivery audit returned `402 DEPLOYMENT_DISABLED`, and Vercel project inspection returned 403. A READY deployment object is not public HTTP or UX acceptance.
+
+- PR #286, Poke-inspired per-account Gmail health + approved mobile hamburger: current head `b625cf9f934fdc4e4aefc2c333b830a78116521e`; full CI, Plan/REA and Kompas baseline pass on the audited exact head, but protected voice-preview fails because private `KOMPAS_VERCEL_API_TOKEN` is missing and Vercel status is FAILURE. Two-inbox and narrow-mobile acceptance remain open. Keep the unattended worker disabled; no real Gmail send.
+- PR #287, resume writer evidence boundary: current branch adds per-role evidence isolation and historical artifact-search findings. Its previous REA schema failure was traced to a non-repository path in the REA source list and corrected to the research-note path; exact-head full CI, regression and schema must be rerun after the latest docs/plan update. Protected voice-preview remains blocked by the missing private token. No generated DOCX/model acceptance or WhatsApp send.
+- PR #288, bounded clearance-safe crawler pagination: current branch scans ordered pages up to `min(1,000, max(100, limit × 10))`, and reports scan truncation. The crawler regression passed before the latest Plan revision update; exact-head full CI/schema/baseline must be rechecked. Protected voice-preview and Vercel status remain failed; not merged or deployed.
+- MFit Safe Merge Gate and Kompas Continuous Voice Delivery are active. No merge is authorized while required checks are failed/unverified. No separate Bible-Keeper automation is listed. This task did not edit Kompas voice/audio behavior.
+
+
+## 11 November 2026 — deterministic crawler pagination
+
+- PR #288's clearance-safe offset scan now orders by `last_seen_at DESC, id ASC`. The UUID primary key is a unique tie-breaker for rows with equal timestamps, preventing unstable page boundaries from silently skipping or repeating jobs.
+- Regression test pins the two order clauses and the migration's primary-key definition. The helper comment now requires a stable total order.
+- Commits: `63d563531fe552b928a5a1fa8363e9679d119ee1`, `e69886d2c3b3c545225662eb07d85c303e10c566`, `f98953fbc75aff8af2f4daaff95d319fdc2c6a6b`. Exact-head checks are pending; no production crawl/API acceptance is claimed. Protected Vercel preview remains account-blocked.
+
+Continue: run exact-head crawler regression, full CI, Plan/REA schema and Kompas baseline on the final PR #288 head. Do not merge or deploy until all required gates and protected preview pass. Then verify the canonical READY alias, public API behavior and a post-release scheduled crawl.
+
+
+## 11 November 2026 — PR #288 exact-head CI completion
+
+PR #288 exact code/test head `b0db69d976606bc3b8a8833a7bc2310331172e2e` passed full CI `42957613778`, crawler regression `42957613731`, Plan/REA schema `42957613941` and Kompas baseline `42957613834`. The stable `last_seen_at DESC, id ASC` offset order is source/CI validated. Protected voice-preview `42957611600` remains failed because private Vercel preview credential/account access is unavailable. No merge, deployment, public API smoke or post-release crawl is claimed.
+
+Continue: restore protected Vercel preview/account access, revalidate the final docs head, then merge only through the normal path and verify the canonical READY alias, public API and first post-release scheduled crawl. Keep Robert Half manual-only.

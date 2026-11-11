@@ -94,3 +94,31 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+## 10 November 2026 — bounded clearance-safe search pagination
+
+The contract search API previously fetched at most four times the requested result limit (capped at 100), then removed clearance-required rows in application code. If the newest page contained mostly clearance postings, the API could return fewer contract results while eligible fresh rows remained further down the ordered result set.
+
+The route now uses `collectFilteredPages()` to scan ordered 100-row pages, stopping once the requested visible limit is filled, the query reaches the end, or a bounded per-request scan cap is reached. The cap is `min(1,000, max(100, limit × 10))`; the API reports both `excluded_clearance` and `clearance_scan_limited`, so an underfilled capped result is explicit rather than silently presented as complete. The Apply search note now tells the user when the bounded clearance scan reaches its cap and advises narrowing the search. The `clearance=include` override retains the direct caller-limit path.
+
+Two executable helper tests cover a clearance-heavy first page followed by eligible jobs and a capped scan that remains underfilled. A route contract regression pins the page range, exclusion predicate and response metadata. These are mocked/source-level tests, not a live production API or crawl result. The first classifier-aware scheduled crawl remains 11 November 2026 at 11:00 UTC; it must be checked separately from this pagination change.
+
+## 10 November 2026 — current alias and next crawl
+
+The canonical alias `job-dashboard-fawn.vercel.app` is mapped to READY production deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, exact master SHA `11efbbfe7781592bc2fad1216f67546882a1c3ed`. This release includes the contract classifier and PR #285 crawler regression workflow. The 10 Nov 11:00 UTC crawl ran before this release on `a66c108`; the first expected classifier-aware run is 11 Nov 2026 11:00 UTC and remains unverified.
+
+A separate public HTTP smoke returned `402 DEPLOYMENT_DISABLED` and Vercel project inspection returned 403 despite READY metadata. No public `GET /api/crawl/jobs` response is claimed. PR #288's pagination change is not merged or deployed; its exact-head crawler regression passed before the latest plan update, while full CI/schema/baseline are rerunning and the protected voice-preview gate is blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`.
+
+
+## 11 November 2026 — deterministic ordering for clearance pagination
+
+The bounded clearance scan uses offset pagination. The route previously ordered only by `last_seen_at DESC`, but that timestamp is not unique. When several rows share the same timestamp, a database page boundary has no deterministic tie-breaker; rows could be skipped or repeated between requests.
+
+The query now uses `last_seen_at DESC, id ASC`. The crawl-jobs migration defines `id` as the UUID primary key, so this supplies a unique total order without changing freshness, clearance policy, contract classification, page size, scan cap, adapters or stored rows. `collectFilteredPages()` now documents that callers must provide a stable order. The regression test pins both order clauses and the primary-key definition.
+
+Source commits: `63d563531fe552b928a5a1fa8363e9679d119ee1`, `e69886d2c3b3c545225662eb07d85c303e10c566`, `f98953fbc75aff8af2f4daaff95d319fdc2c6a6b`. Exact-head crawler/full-CI/schema/baseline checks are pending on the final documentation head. The protected Vercel preview remains account-blocked. No production query, crawl, API smoke or database mutation was performed.
+
+
+## 11 November 2026 — exact-head CI completion for deterministic pagination
+
+PR #288 exact code/test head `b0db69d976606bc3b8a8833a7bc2310331172e2e` passed full CI `42957613778`, crawler regression `42957613731`, Plan/REA schema `42957613941` and Kompas baseline `42957613834`. The stable `last_seen_at DESC, id ASC` pagination order and regression are source/CI validated. Protected voice-preview `42957611600` remains failed because the private Vercel preview credential/account access is unavailable. No merge, deployment, live API smoke or post-release crawl is claimed.

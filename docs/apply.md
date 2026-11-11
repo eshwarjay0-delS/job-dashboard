@@ -28,7 +28,7 @@ When the user searches "software developer", the engine spiders all vendor porta
 - Modeled on how Jobright AI crawls LinkedIn and job sites into one database. We do the same for prime vendor portals.
 - Pipeline: scheduled crawler → per-site adapters → normalized job records (title, company, location, work type, rate if listed, posted date, source URL, vendor) → dedupe → full-text + faceted search (role, location, work type, remote).
 - Work-type tagging is mandatory: every job carries W2 / C2C / 1099 / C2H. Contract-only filtering is the default view.
-- Clearance-required roles are excluded by default across both the aggregated search and stored crawler lanes. Explicit `no clearance required` wording remains eligible; an internal API override does not change the default Apply experience. Evidence: `docs/research/contract-clearance-filter.md`.
+- Clearance-required roles are excluded by default across both the aggregated search and stored crawler lanes. Explicit `no clearance required` wording remains eligible; an internal API override does not change the default Apply experience. Evidence: `docs/research/contract-clearance-filter.md`. The crawler API scans ordered pages in a bounded window after clearance filtering so a cluster of clearance roles does not silently underfill results; `clearance_scan_limited` reports when the cap is reached. The Apply search note now tells the user when the bounded clearance scan reaches its cap and advises narrowing the search.
 - Start with the top portals by volume; expand adapter coverage over time. Adapters are isolated per site so one site's redesign never breaks the rest.
 
 ### 2. Inclusive browser (browse without leaving)
@@ -189,3 +189,14 @@ PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deploym
 The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
 
 The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
+
+## 10 November 2026 — current production and crawler acceptance
+
+PR #285 is merged as master `11efbbfe7781592bc2fad1216f67546882a1c3ed`; deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` is READY at that exact SHA and the canonical alias resolves to it. This includes the PR #276 contract work-type classifier and PR #285's dedicated freshness/classifier workflow and manual-source boundary. The 10 Nov 11:00 UTC crawl ran before this release on `a66c108` (6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort); it is not post-classifier evidence. The first expected classifier-aware crawl is 11 Nov 2026 11:00 UTC.
+
+A separate current HTTP smoke returned `402 DEPLOYMENT_DISABLED` despite READY deployment metadata, and Vercel project inspection returned 403. Public API behavior is therefore not verified from this runtime. PR #288's bounded clearance-safe pagination remains source-only until exact-head CI, protected preview and production HTTP/API acceptance pass.
+
+
+### 11 November 2026 — deterministic clearance pagination order
+
+The clearance-filtered jobs API now orders by `last_seen_at DESC, id ASC` before using offsets. `id` is the crawl-jobs UUID primary key, so equal-timestamp rows have a deterministic position across pages. This prevents a paginated scan from silently skipping or repeating jobs when timestamps tie. The change does not alter the 14-day freshness window, clearance exclusion/override, result cap, work-type classification or source adapters. Full CI 42957613778, crawler regression 42957613731, Plan/REA schema 42957613941 and Kompas baseline 42957613834 passed on exact code/test head b0db69d976606bc3b8a8833a7bc2310331172e2e. Protected Vercel preview remains account-blocked; no merge, deployment or production API/crawl acceptance is claimed.
