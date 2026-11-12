@@ -67,3 +67,46 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
+
+
+test('11 Nov WhatsApp profile-gap and Gmail Auth quota REA records remain traceable', () => {
+  const whatsapp = REA_SESSIONS.find(s => s.id === 'whatsapp-profile-gap-fill-2026-11-11')
+  assert.ok(whatsapp, 'WhatsApp profile-gap REA entry missing')
+  assert.equal(whatsapp.state, 'Blocked')
+  assert.ok(whatsapp.steps.some(s => s.status === 'Implemented' && s.label.includes('pending-state resolver')))
+  assert.ok(whatsapp.steps.some(s => s.status === 'Blocked' && s.finding.includes('No live model call')))
+  assert.ok(whatsapp.sources.some(s => s.path === 'docs/research/whatsapp-profile-gap-fill-2026-11-11.md'))
+
+  const gmail = REA_SESSIONS.find(s => s.id === 'gmail-supabase-auth-egress-quota-2026-11-11')
+  assert.ok(gmail, 'Gmail Supabase Auth quota REA entry missing')
+  assert.equal(gmail.state, 'Blocked')
+  assert.match(gmail.limits, /No mailbox contents/)
+  assert.ok(gmail.steps.some(s => s.status === 'Blocked' && s.finding.includes('upgrade the plan or remove spend caps')))
+  assert.ok(gmail.sources.some(s => s.path === 'docs/research/gmail-supabase-egress-quota-2026-11-11.md'))
+})
+
+
+test('11 Nov WhatsApp fallback and contract classifier REA records remain traceable', () => {
+  const wa = REA_SESSIONS.find(s => s.id === 'whatsapp-fallback-boundary-tests-2026-11-11')
+  assert.ok(wa)
+  assert.equal(wa.state, 'Implemented, verification pending')
+  assert.ok(wa.steps.some(s => s.status === 'Pending' && s.finding.includes('queued')))
+  assert.ok(wa.sources.some(s => s.path === 'scripts/tests/whatsapp-resume-contract.test.mjs'))
+
+  const app = REA_SESSIONS.find(s => s.id === 'contract-classifier-precision-2026-11-11')
+  assert.ok(app)
+  assert.equal(app.state, 'Implemented, verification pending')
+  assert.ok(app.steps.some(s => s.status === 'Pending' && s.finding.includes('queued')))
+  assert.ok(app.sources.some(s => s.path === 'src/lib/contract-jobs.ts'))
+})
+
+
+test('12 Nov 16:16 completion REA entry records source limits and release gates', () => {
+  const entry = REA_SESSIONS.find(s => s.id === 'mfit-completion-watch-2026-11-12-1616z')
+  assert.ok(entry, '16:16 completion REA entry missing')
+  assert.equal(entry.state, 'Blocked')
+  assert.match(entry.limits, /No private token/)
+  assert.ok(entry.steps.some(s => s.finding.includes('no linked WhatsApp number')))
+  assert.ok(entry.steps.some(s => s.finding.includes('HTTP 402 exceed_egress_quota')))
+  assert.ok(entry.sources.some(s => s.url?.endsWith('/pull/321')))
+})

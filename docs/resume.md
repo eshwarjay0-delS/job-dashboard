@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **Use channel-specific acceptance, with truthful evidence.** Web downloads retain a 95% raw JD-overlap floor. WhatsApp may send a completed, readable DOCX below 95% with gaps disclosed; a clean 70–94.9% pass requires at least 95% supported coverage. A finished result below 70% is not a clean pass but may still be sent with gaps disclosed. For an initial JD request with no AI provider key, only the exact selected same-account library original may be sent, explicitly labeled NOT TAILORED after verifying the authenticated library root, selected path, exact bytes and profile email; otherwise no file. For swipe-reply refinement, provider failure, partial or incomplete output, unreadable or missing DOCX, or identity/date mismatch is text-only: never send the original or partial baseline, and preserve the last delivered version. The 98% figure is an evidence target, not a hard WhatsApp send threshold. Report raw overlap, supported coverage, role completeness and final-DOCX integrity separately.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
@@ -50,7 +50,7 @@ Overall keyword overlap cannot hide thin experience coverage. Every substantive 
 
 The web result shows unfinished rewrite status separately from keyword counts, including when all terms appear. The shared quality report preserves its incomplete flag. Older saved delivered-with-gaps reports receive a general review notice without inventing a specific failure reason. No scoring or delivery threshold changes. Evidence: `docs/research/resume-incomplete-notice.md`.
 
-High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
+High keyword overlap does not make unfinished role rewrites complete. Partial or incomplete outputs are held; they never receive completed status or enter the completed-result cache. The 6 November channel policy supersedes the former 95% WhatsApp delivery floor: completed readable DOCX files below 95% may be sent with gaps disclosed; 70% raw overlap plus 95% supported coverage defines a clean pass, and a completed readable result below 70% is not a clean pass but may still be sent with gaps disclosed. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
 
 ## Skills-to-experience ordering — 22 October 2026
 
@@ -80,3 +80,31 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## 12 November 2026 — role-scoped evidence release status (06:53 UTC) <!-- resume-evidence-recheck-0653z -->
+
+PR #317 is the current-master restack of the approved resume/JD/confirmed-experience changes. Exact head `f3182de28fb229401e30893d7687805e55c846e7` passes full CI `43164222540`, WhatsApp recovery `43164222577` and Kompas baseline `43164222576`. Protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN` and Vercel project `live=false`; keep the PR DRAFT and unmerged.
+
+The implementation keeps employer-specific bullets inside that employer's source evidence, allows general first-person confirmations to support profile/skills only, restores a whole bullet when its JD term is unsupported by the same role, and preserves visible gaps rather than inventing experience. No threshold was lowered. A green source/build suite is not a live 98% resume match; no live model generation, personal DOCX creation or WhatsApp send was performed.
+
+**Continue:** after legitimate protected preview access is restored, review and merge the exact green PR head, then separately evaluate an authorized real resume/JD pair and the final exported DOCX. Keep unverified employer attribution, dates, credentials and metrics out of the resume.
+
+## 12 November 2026 — owner-confirmed skills may map into existing projects
+
+The owner’s 6 Nov 2026 9:55 AM CT correction, already recorded in journal entry `whatsapp-constructed-jd-finish-2026-11-06` and reaffirmed in PR #319 comment 6817645128, is authoritative: an explicit first-person confirmation of a JD skill may be mapped naturally into relevant existing project bullets across roles, including earlier roles, even when that role’s original bullet does not name the tool. Employer-source verification is not an additional prerequisite for that confirmed skill. This supersedes the narrower role-only restriction described in the earlier PR #317 restack notes; the old decision remains in the journal for history.
+
+The confirmation authorizes the skill only. It does not authorize a new employer, project, action, outcome, title, location, date, contact, metric or credential, and it does not permit mixing another account’s resume/profile. JD wording, a target score or an editing instruction alone is not confirmation. The selected resume’s existing project context and frame remain intact. Conflicting education, employment chronology, tenure and credential facts from the historical 17 October source DOCX remain quarantined pending owner reconciliation.
+
+PR #317 branch `fix/resume-role-evidence-restack-da1db145-20261112` was updated through code commits `dfcd2b4`, `14ac764`, `216581d` and `2214469`: the writer prompt now permits explicitly confirmed skills in relevant existing project bullets; the deterministic guard allows only those confirmed terms across roles while continuing to reject unconfirmed cross-role terms; role-alignment counts a confirmed term only when it appears in that role’s edited bullets. Exact-head full CI, WhatsApp recovery and Kompas baseline are pending for the updated head. Protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`; the PR remains DRAFT, unmerged and undeployed.
+
+No live model call, personal DOCX generation, WhatsApp send, R2 write or real handset acceptance occurred. This source/prompt change is not a live ATS score or proof of the historical 17 October delivery.
+
+
+## Current-master WhatsApp and resume evidence status — 12 November 2026, 09:35 UTC
+
+PR #321 head `ed15c9782e7d71c9340a04a718f8b36821f58fa2` combines the owner-approved initial-JD/no-provider fallback, text-only failed swipe refinement and race-safe session-pair consumption. Exact-head Kompas baseline 43193485006 and WhatsApp recovery 43193485660 pass; full CI 43193485035 remains in progress. The previous head's green full CI is superseded. Protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`; no merge or production deployment is claimed.
+
+PR #317 head `4ef3cba838ef00dd3702fb6e955628d20ab77664` carries the 6 Nov confirmed-skill correction: an explicit first-person skill confirmation may be mapped into a relevant existing project bullet across roles, but cannot create an employer, project, action, outcome, title, location, date, contact, metric or credential. Full CI 43180792088, WhatsApp recovery 43180792058 and Kompas baseline 43180791965 pass; protected preview 43180787874 fails closed on the same missing private token. No authenticated model-generated DOCX, 98% live match or personal-library write is established.
+
+The historical 17 Oct 17:28 Chicago generated output DOCX and per-run R2/webhook/Meta delivery correlation remain missing. The original source/JD pair is not proof of the bytes sent or of handset delivery. Conflicting source facts remain quarantined. No replay, real WhatsApp send, R2 write or model call occurred.

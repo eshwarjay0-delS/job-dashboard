@@ -80,3 +80,41 @@ test('approved final-DOCX Gemini review and current crawler/Gmail blockers remai
   assert.match(gmail.detail, /2,002/)
   assert.match(gmail.next, /CRON_SECRET/)
 })
+
+
+test('11 Nov completion-watch journal preserves the current WhatsApp and Gmail blockers', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'mfit-completion-watch-2026-11-11-2015')
+  assert.ok(entry, 'current completion-watch journal entry missing')
+  assert.equal(entry.approval, 'approved')
+  assert.equal(entry.delivery, 'in progress')
+  assert.match(entry.detail, /70% raw overlap/)
+  assert.match(entry.detail, /draft_parts_missing/)
+  assert.match(entry.detail, /exceed_egress_quota/)
+  assert.match(entry.next, /restack PR #296|Restack PR #296/i)
+})
+
+
+test('11 Nov WhatsApp fallback and contract classifier journal entries preserve exact pending gates', () => {
+  const wa = PLAN_JOURNAL.find(e => e.id === 'mfit-whatsapp-fallback-boundary-tests-2026-11-11')
+  assert.ok(wa)
+  assert.equal(wa.approval, 'approved')
+  assert.equal(wa.delivery, 'in progress')
+  assert.match(wa.evidence, /fcee3fb6/)
+  const app = PLAN_JOURNAL.find(e => e.id === 'mfit-contract-classifier-precision-2026-11-11')
+  assert.ok(app)
+  assert.equal(app.approval, 'approved')
+  assert.equal(app.delivery, 'in progress')
+  assert.match(app.evidence, /278d9b3f/)
+})
+
+
+test('12 Nov 16:16 completion checkpoint preserves live release and exact blockers', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'mfit-completion-watch-2026-11-12-1616z')
+  assert.ok(entry, '16:16 completion checkpoint missing')
+  assert.equal(entry.approval, 'approved')
+  assert.equal(entry.delivery, 'blocked')
+  assert.match(entry.evidence, /6c82abf4b240de7c768916188794b8beaaaf3b10/)
+  assert.match(entry.evidence, /exceed_egress_quota/)
+  assert.match(entry.evidence, /KOMPAS_VERCEL_API_TOKEN/)
+  assert.match(entry.next, /before any historical replay/)
+})

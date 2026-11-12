@@ -155,3 +155,41 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+
+## Offline fallback session lifecycle — 12 November 2026
+
+The no-provider initial-JD fallback remains restricted to the exact selected same-account library original, matching session bytes, selected profile email and authenticated user's library root. Its exact visible label is **Original resume — NOT TAILORED**. The 12 Nov stacked follow-up PR #310 centralizes pair consumption: after Meta returns a document message ID, clear only the JD/resume fields whose IDs and paths still match this run, preserve a newer request that arrived during the send, and retain the old pair when Meta rejects the document. The same helper is used by the normal paid-rewrite path so the two paths share the same race-safe clearing rule.
+
+Source and test review only. The exact PR #303 parent remains DRAFT with full CI 43097475873, WhatsApp recovery 43097475896 and Kompas baseline 43097475962 QUEUED. PR #310's exact-head WhatsApp recovery run 43136393260 completed SUCCESS. Plan/REA schema on PR #311 passed run 43136679015, and PR #306's full CI, baseline and schema runs 43131176244, 43131176252 and 43131176205 passed. The protected preview gate is unavailable because the private GitHub Actions secret KOMPAS_VERCEL_API_TOKEN is absent; 17 fail-closed resolver tests passed. The owner/authorized administrator must configure it privately. PR #306 records public production health/version/desktop-version GETs returning 200; this is not authenticated device acceptance. The follow-up is stacked on that branch and must not merge independently. No model call, R2 mutation, Meta send, real email, production deployment or handset acceptance was performed. The Plan/REA follow-up is recorded in the dependent documentation branch based on PR #306; it remains pending until that stack is accepted.
+
+
+## 12 November 2026 — offline fallback pair lifecycle restack
+
+PR #316 is the current replacement for the superseded PR #310. It is based on the latest PR #303 head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` and preserves the exact caption **Original resume — NOT TAILORED**. It consumes the JD/resume pair only after Meta returns a document message ID, and only when both fields still match the run; mixed newer-pair races preserve both fields. Exact-head WhatsApp recovery `43163655905` passed. It remains DRAFT and stacked; full CI/baseline and protected preview must be rerun after parent acceptance. No real WhatsApp send or R2 write.
+
+
+## 12 November 2026 — exact-head WhatsApp and resume recheck (06:53 UTC) <!-- whatsapp-exact-gates-0653z -->
+
+The approved initial-JD offline fallback PR #303 is still DRAFT. Exact head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` has full CI `43138216531`, WhatsApp recovery `43138216521` and Kompas baseline `43138216526` all SUCCESS. Protected preview `43138214326` fails because the private GitHub Actions secret `KOMPAS_VERCEL_API_TOKEN` is absent; the Vercel project reports `live=false`. Do not bypass or merge without that required gate.
+
+Dependent PR #316 is the current replacement for #310, based on #303. Its exact head `4af7d8bed8f51ef56d1b05156af430c74758fd92` passes WhatsApp recovery `43163655905`; full CI and Kompas baseline are deferred until parent acceptance. It clears only the exact JD/resume pair after Meta returns a document message ID, preserves a newer pair written during send, and retains the old pair on rejected send. The visible no-provider caption remains **Original resume — NOT TAILORED**.
+
+The 17 Oct 17:28 Chicago historical case remains open: the original source DOCX and matching JD were recovered earlier, but the generated output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. Fresh Library search found no uniquely correlated output; iZap lists zero linked WhatsApp numbers and a 17 Oct resume search returned zero messages. No historical replay, real Meta send, model call, R2 write or production mutation occurred.
+
+**Continue:** after legitimate protected preview access is restored, review/merge #303 on its exact green head, then retarget #316 to the resulting master and rerun full CI, WhatsApp recovery and Kompas baseline. Keep the 17 Oct incident open until the exact artifact and signed provider correlation are recovered or explicitly declared irrecoverable.
+
+## Current-master lifecycle integration — 12 November 2026, 09:35 UTC
+
+The owner-approved 6 Nov fallback/no-baseline policy is restacked in current-master PR #321. This continuation also integrates the race-safe pair-consumption helper from the old stacked PR #316 into #321, so the fallback and lifecycle fix can be reviewed together.
+
+- Code commit: `921033d71fba5f33e0d5566bde572be7287baf8b`.
+- Regression commit: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`.
+- The helper clears the JD and resume only when both still match the run; it preserves a newer JD/resume combination and retains the pair when Meta rejects the document.
+- New mocked cases cover accepted offline consumption, newer JD, same resume/new JD, same JD/new resume and rejected-send retention.
+- Updated PR head: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`. Exact-head Kompas baseline 43193485006 and WhatsApp recovery 43193485660 are SUCCESS; full CI 43193485035 is still IN_PROGRESS at migration asset closure. Earlier `ac38ff` full CI results do not validate the new head.
+- The previous protected preview 43191231435 failed closed because the private `KOMPAS_VERCEL_API_TOKEN` was empty. No exact-head preview pass, merge, production deployment, model call, R2 write, real WhatsApp message or Meta callback is claimed.
+
+The canonical production alias remains READY at master `da1db145c5981254f95620ff6bb0222ab4228125`, not this PR. Vercel project metadata reports `live=false`. The historical 17 Oct 17:28 Chicago output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain unavailable. No replay or resend is authorized.
+
+**Continue:** finish exact-head full CI 43193485035; then keep PR #321 DRAFT until an authorized repository administrator privately configures the preview token and the protected preview passes. Only then review/merge, deploy the exact merged SHA, verify the active production alias and perform a consented real WhatsApp acceptance. PR #316 is now a source/history dependency and must not be merged independently; close it as superseded only after PR #321 is accepted.
