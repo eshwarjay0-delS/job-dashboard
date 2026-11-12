@@ -32,7 +32,7 @@ test('production builds cannot stamp a shared synthetic-owner login bypass', () 
   const file = join(dir, 'auth-flag.js')
   try {
     assert.equal(stampAuthFlag({ env: { NODE_ENV: 'production', AUTH_DISABLED: 'true', NEXT_PUBLIC_AUTH_DISABLED: 'true' }, file, log: () => {} }), false)
-    assert.equal(readFileSync(file, 'utf8'), 'window.KOMPAS_AUTH_DISABLED = false;\\n')
+    assert.equal(readFileSync(file, 'utf8'), 'window.KOMPAS_AUTH_DISABLED = false;\n')
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
