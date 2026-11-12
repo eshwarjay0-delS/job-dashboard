@@ -40,6 +40,8 @@ export async function createClient(): Promise<ServerClient> {
 
   const cookieStore = await cookies();
   const cookiesOnRequest = cookieStore.getAll();
+  // Skip-login must not call Supabase Auth. A leftover cookie would otherwise
+  // wait on HTTP 402 exceed_egress_quota before any page or session can start.
   const client = createServerClient(url, key, {
     cookies: {
       getAll() {
@@ -58,7 +60,7 @@ export async function createClient(): Promise<ServerClient> {
     },
   });
   return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
-    skipNetwork: !hasSupabaseAuthMaterial({ cookies: cookiesOnRequest }),
+    skipNetwork: isAuthDisabled() || !hasSupabaseAuthMaterial({ cookies: cookiesOnRequest }),
   })) as ServerClient;
 }
 
@@ -84,6 +86,6 @@ export async function createClientFromRequest(request: NextRequest) {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
   });
   return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
-    skipNetwork: !hasSupabaseAuthMaterial({ authorization }),
+    skipNetwork: isAuthDisabled() || !hasSupabaseAuthMaterial({ authorization }),
   })) as ServerClient;
 }

@@ -124,6 +124,26 @@ function isKompasAuthDisabled() {
   if (typeof window !== "undefined" && typeof window.KOMPAS_AUTH_DISABLED === "boolean") return window.KOMPAS_AUTH_DISABLED;
   return false;
 }
+let authFlagFlight = null;
+function ensureAuthFlag() {
+  if (isKompasAuthDisabled()) return Promise.resolve(true);
+  if (authFlagFlight) return authFlagFlight;
+  authFlagFlight = fetch("/api/kompas/capabilities", { cache: "no-store" })
+    .then(r => r.ok ? r.json() : null)
+    .then(body => {
+      if (body && body.authDisabled === true) {
+        window.KOMPAS_AUTH_DISABLED = true;
+        try { document.documentElement.classList.add("kompas-auth-off"); } catch {}
+        const user = LS.get("user");
+        if (!user || !user.email || user.email === "you@perfact.app") LS.set("user", { email: "eshwarjay05@gmail.com" });
+        try { if (typeof show === "function") show("dashboard"); } catch {}
+        return true;
+      }
+      return false;
+    })
+    .catch(() => false);
+  return authFlagFlight;
+}
 $("loginBtn").onclick = () => {
   const email = $("loginEmail").value.trim();
   if (!email) { $("loginEmail").focus(); return; }
@@ -1618,7 +1638,10 @@ function warmDesktopLevels(card, question) {
 /* ---- start / stop ---- */
 let running = false;
 $("startBtn").onclick = () => {
-  if (!running && (sessionAuthGate === "sign_in" || sessionAuthGate === "egress")) { offerFreshSignIn(false); return; }
+  if (!running && (sessionAuthGate === "sign_in" || sessionAuthGate === "egress")) {
+    if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) { void start(); return; }
+    offerFreshSignIn(false); return;
+  }
   running ? wrapSession() : start();
 };
 
@@ -1644,6 +1667,7 @@ let sessionAuthPrompted = false;
 let __lastAuthFailure = null;
 function offerFreshSignIn(auto) {
   if (running) return;
+  if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return;
   if (window.kompasDesktop) {
     if (!auto && typeof window.kompasDesktop.openSignIn === "function") window.kompasDesktop.openSignIn();
     return;
@@ -1659,6 +1683,8 @@ async function checkSessionReadiness() {
   button.textContent = "Checking…";
   status("Connecting…", "live");
   try {
+    if (typeof ensureAuthFlag === "function") await ensureAuthFlag();
+    const authOff = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
     const attempt = () => fetch("/api/answer", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ preflight: true }), signal: AbortSignal.timeout(50000),
@@ -1666,7 +1692,7 @@ async function checkSessionReadiness() {
     let response = await attempt();
     let refreshAttempted = false;
     let refreshOk = false;
-    if (response.status === 401) {
+    if (response.status === 401 && !authOff) {
       refreshAttempted = true;
       if (typeof window.kompasDesktop?.refreshAuth === "function") {
         // Browser sign-in and Electron are different security contexts. Restore
@@ -1702,9 +1728,18 @@ async function checkSessionReadiness() {
         noticeCode: authState && authState.notice ? authState.notice.code : "",
         hasSession: authState ? authState.hasSession === true : undefined,
         ready: result.ready === true,
+        authDisabled: authOff,
       })
       : { action: "explain", egress: false, autoSignIn: false, message: result.error || "The answer service is not ready. Please check again before starting." };
     sessionReadyUntil = 0;
+    if (decision.action === "proceed") {
+      sessionAuthGate = null;
+      sessionAuthPrompted = false;
+      sessionReadyUntil = Date.now() + 30000;
+      button.textContent = "Start session";
+      status(authOff ? "Sign-in is off. Press Start session." : "Answer service ready. Press Start session to connect your audio.", "live");
+      return;
+    }
     if (decision.action === "wait") {
       if (!running) button.textContent = "Start";
       return;
@@ -1730,8 +1765,18 @@ async function checkSessionReadiness() {
     status(decision.message || beforeSessionNotice(result.error), "err");
   } catch (error) {
     sessionReadyUntil = 0;
-    button.textContent = "Check again";
-    status(beforeSessionNotice(error.message), "err");
+    const authOffNow = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
+    const message = String((error && error.message) || error || "");
+    if (authOffNow && /exceed_egress|egress quota|401|402|sign in/i.test(message)) {
+      sessionAuthGate = null;
+      sessionAuthPrompted = false;
+      sessionReadyUntil = Date.now() + 30000;
+      button.textContent = "Start session";
+      status("Sign-in is off. Press Start session.", "live");
+    } else {
+      button.textContent = "Check again";
+      status(beforeSessionNotice(message), "err");
+    }
   } finally { button.disabled = false; sessionCheckPending = false; }
 }
 
@@ -6864,6 +6909,7 @@ if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) {
   const user = LS.get("user");
   if (!user || !user.email || user.email === "you@perfact.app") LS.set("user", { email: "eshwarjay05@gmail.com" });
 } else if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
+if (typeof ensureAuthFlag === "function") void ensureAuthFlag();
 pruneExpiredResumes();           // a resume past its 15 days is removed on launch, even if the Resume view is never opened
 openDashboard();
 accountSessionSync?.start();

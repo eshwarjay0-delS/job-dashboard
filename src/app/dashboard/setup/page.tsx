@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 
 // The page's own palette, in theme tokens. It was six literal paper colours, so on the night the card stayed white with
 // night-coloured fields inside it (the owner, 8 Oct 2026: "The Entrance white colors alone is cute poop").
@@ -87,7 +88,10 @@ export default function SetupPage() {
   const load = useCallback(async (remind = false) => {
     try {
       const r = await fetch(remind ? "/api/onboarding?remind=1" : "/api/onboarding", { cache: "no-store" })
-      if (r.status === 401) { router.replace("/login?next=%2Fdashboard%2Fsetup"); return }
+      if (r.status === 401) {
+        if (await serverReportsAuthDisabled()) { router.replace("/dashboard"); return }
+        router.replace("/login?next=%2Fdashboard%2Fsetup"); return
+      }
       const j = await r.json()
       if (j?.resumeOnly) { router.replace("/dashboard/resume"); return }
       if (j?.ok) take(j as State); else setNote("Setup could not be loaded. Reload the page in a moment.")

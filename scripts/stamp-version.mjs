@@ -21,7 +21,11 @@ export const AUTH_FLAG_FILE = new URL("../public/kompas/auth-flag.js", import.me
 
 export function stampAuthFlag({ env = process.env, file = AUTH_FLAG_FILE, log = console.log } = {}) {
   const disabled = authDisabledStamp(env)
-  writeFileSync(file, "window.KOMPAS_AUTH_DISABLED = " + (disabled ? "true" : "false") + ";\n")
+  const line = "window.KOMPAS_AUTH_DISABLED = " + (disabled ? "true" : "false") + ";"
+  const hide = disabled
+    ? "try { document.documentElement.classList.add(\"kompas-auth-off\"); } catch (e) {}\n"
+    : ""
+  writeFileSync(file, line + "\n" + hide)
   log("[stamp-version] auth-flag.js KOMPAS_AUTH_DISABLED=" + disabled)
   return disabled
 }

@@ -34,6 +34,10 @@ The refresh token is stored with Electron `safeStorage` when the OS keychain or 
 
 The desktop schedules the next refresh for shortly before the access token expires, or for the existing window before the three-day family ends. It does not refresh on a fixed 4-minute, 10-minute, or 30-minute timer. A 401 from an API call still asks the shell to renew.
 
+## Skip-login
+
+When `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `true`, the site does not show `/login` and does not call Supabase Auth. The person is the Houston account `eshwarjay05@gmail.com`, using `AUTH_DISABLED_USER_ID` when that variable is set. Logout, a failed refresh, and HTTP 402 `exceed_egress_quota` do not send them to `/login`. Kompas Start still runs. MarketFit opens without the setup gate. Admin pages still need a real session. Setting the flag to anything other than `true` restores the sign-in flow below.
+
 ## After every session is revoked
 
 Supabase "sign out everywhere" deletes the refresh token. The next silent renewal then fails. The desktop drops that dead token and, when no interview is running, opens the existing Chrome sign-in. The website sends the person to `/login` and, after Google succeeds, back to `/kompas/index.html` so they can press Start. A live interview does not open Chrome and does not navigate to the login page. The ask waits until Stop.

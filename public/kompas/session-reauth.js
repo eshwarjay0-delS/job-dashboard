@@ -16,6 +16,17 @@ function decideSessionStart(input) {
   const refreshStatus = Number(src.refreshStatus) || 0;
   const hay = [src.code, src.message, src.refreshCode, src.noticeCode].map(v => String(v || "")).join(" ").toLowerCase();
   const egress = src.noticeCode === "egress_quota" || src.code === "exceed_egress_quota" || src.refreshCode === "exceed_egress_quota" || /exceed_egress|egress quota|exceeded egress/.test(hay);
+  const signedOut = src.noticeCode === "signed_out" || src.noticeCode === "revoked" || src.refreshCode === "signed_out" || src.refreshCode === "revoked" || src.code === "signed_out";
+  // Skip-login never sends the person to Google or /login. Auth 401 and
+  // Supabase HTTP 402 are not a logout: the session can still start.
+  if (src.authDisabled === true) {
+    if (src.interviewLive) return { action: "wait", egress: false, autoSignIn: false, message: "" };
+    if (httpStatus === 200 && src.ready === true) return { action: "proceed", egress: false, autoSignIn: false, message: "" };
+    if (egress || httpStatus === 401 || httpStatus === 402 || signedOut) {
+      return { action: "proceed", egress: false, autoSignIn: false, message: "" };
+    }
+    return { action: "explain", egress: false, autoSignIn: false, message: NOT_READY };
+  }
   if (egress) return { action: "explain", egress: true, autoSignIn: false, message: AUTH_EGRESS_BLOCKED };
   if (src.interviewLive) return { action: "wait", egress: false, autoSignIn: false, message: "" };
   if (httpStatus === 200 && src.ready === true) return { action: "proceed", egress: false, autoSignIn: false, message: "" };
@@ -24,7 +35,6 @@ function decideSessionStart(input) {
   if (httpStatus === 503 || refreshUnreachable || /sign_in_unavailable|issuer_unavailable/.test(hay)) {
     return { action: "explain", egress: false, autoSignIn: false, message: AUTH_UNAVAILABLE };
   }
-  const signedOut = src.noticeCode === "signed_out" || src.noticeCode === "revoked" || src.refreshCode === "signed_out" || src.refreshCode === "revoked" || src.code === "signed_out";
   // The desktop still holds a token it did not classify as logged out. That
   // includes a valid 3-day family and an already-used refresh race.
   if (src.hasSession === true && src.noticeCode !== "signed_out" && src.noticeCode !== "revoked") {
