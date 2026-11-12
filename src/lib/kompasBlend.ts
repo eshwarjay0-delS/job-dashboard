@@ -15,7 +15,7 @@ export const BLEND_MOVES: readonly string[] = [
   "Put [beat] once or twice, immediately before the sentence the listener has to remember. A third beat is only a breath.",
   "After a technical name, one clause says what it does in this answer.",
   "The last sentence returns to the question. It does not repeat the opening sentence, and it does not open another topic.",
-  "Say use, fix, and check. Do not say utilize, leverage, stakeholders, or great question.",
+  "Say use, fix, and check. Do not say utilize, leverage, stakeholders, or great question. Do not say delve, underscore, tapestry, shed light, play a pivotal role, robust framework, it is important to note, in conclusion, or in today's landscape.",
   "Do not add right?, you know, or basically.",
   "Where practice varies, say it depends on the setup, then say what you actually do.",
   "Where knowledge ends, mark that edge in one breath instead of inventing the rest.",
@@ -27,12 +27,50 @@ export const BLEND_MOVES: readonly string[] = [
   "Say it the way a person continues out loud in a technical interview, not the way a document lists bullets.",
   // Owner, 23 Oct 2026: "Format things in a readable ways as if you're introducing it to 5 yr old to read", while
   // "still fulfilling the technical jargon level as promised".
-  "Short sentences, one idea each, about fifteen words. Say what a thing does in plain words first, then its exact technical name, so a first-time reader follows and an expert still hears the right term.",
+  "Vary the rhythm the way a person talks: short sentences next to one longer working-through sentence, not a run of the same length. Say what a thing does in plain words first, then its exact technical name, so a first-time reader follows and an expert still hears the right term.",
 ]
 
 export function blendPrompt(): string {
   return "OTTER BLEND (how the spoken answer moves, on top of the craft rules):\n" +
     BLEND_MOVES.map((move, i) => `${i + 1}. ${move}`).join("\n")
+}
+
+export const BANNED_LLM_PHRASES: readonly { pattern: RegExp; plain: string }[] = [
+  { pattern: /delving( into)?/gi, plain: "looking at" },
+  { pattern: /delved( into)?/gi, plain: "looked at" },
+  { pattern: /delves( into)?/gi, plain: "looks at" },
+  { pattern: /delve( into)?/gi, plain: "look at" },
+  { pattern: /underscores the importance of/gi, plain: "shows" },
+  { pattern: /underscore the importance of/gi, plain: "show" },
+  { pattern: /underscores/gi, plain: "shows" },
+  { pattern: /underscore/gi, plain: "show" },
+  { pattern: /a rich tapestry of/gi, plain: "" },
+  { pattern: /rich tapestry/gi, plain: "mix" },
+  { pattern: /tapestry of/gi, plain: "" },
+  { pattern: /shed light on/gi, plain: "show" },
+  { pattern: /sheds light on/gi, plain: "shows" },
+  { pattern: /plays? an? (crucial|pivotal|significant) role( in)?/gi, plain: "matters for" },
+  { pattern: /navigate(s|d|ing)? the (complexities|landscape)( of)?/gi, plain: "work through" },
+  { pattern: /(robust|comprehensive|holistic) framework/gi, plain: "design" },
+  { pattern: /multifaceted approach/gi, plain: "approach" },
+  { pattern: /it is (important|worth) (to note|noting) that/gi, plain: "" },
+  { pattern: /in today'?s( rapidly evolving)? (landscape|world|environment)/gi, plain: "" },
+  { pattern: /as an experienced (engineer|architect|director|leader|professional)/gi, plain: "" },
+  { pattern: /i would like to start by/gi, plain: "" },
+  { pattern: /let'?s (dive in|unpack|explore|delve)/gi, plain: "" },
+]
+
+/** Swap empty model phrasing for plain words. An empty plain value becomes a space. */
+export function dropBannedPhrases(text: string): string {
+  let out = String(text || "")
+  for (const { pattern, plain } of BANNED_LLM_PHRASES) {
+    pattern.lastIndex = 0
+    out = out.replace(pattern, (hit) => {
+      if (!plain) return " "
+      return hit[0] === hit[0].toUpperCase() ? plain[0].toUpperCase() + plain.slice(1) : plain
+    })
+  }
+  return out
 }
 
 function capital(word: string, replacement: string): string {
@@ -120,11 +158,15 @@ export function blendSpoken(input: string): string {
   if (!original.trim()) return original
   // A code block is never read out (owner, 23 Oct 2026). The words around it already say what it does.
   let text = speakableWords(original.replace(/\r\n/g, "\n").replace(/\n?```[\s\S]*?```\n?/g, " "))
-  text = text.replace(/^(?:(?:great question|that's a great question|that is a great question|certainly|absolutely|of course)[,.!]+\s+)+/i, "")
+  text = text.replace(/^(?:(?:(?:that(?:'s| is))?\s*(?:a|an)?\s*(?:great|excellent|incredible|wonderful|fantastic)\s+question|what an (?:incredible|excellent|amazing) question|certainly|absolutely|of course|picture this|welcome back)[,.!]+\s+)+/i, "")
+  text = dropBannedPhrases(text)
   text = text.replace(/\byou know\b[, ]*/gi, "")
   text = text.replace(/\bbasically\b[, ]*/gi, "")
   text = text.replace(/\bright\?/gi, "")
   text = text.replace(/\b(?:utiliz(?:e|es|ed|ing)|leverag(?:e|es|ed|ing))\b/gi, swap)
+  text = text.replace(/\bFurthermore, /g, "").replace(/\bfurthermore, /g, "")
+  text = text.replace(/\bMoreover, /g, "").replace(/\bmoreover, /g, "")
+  text = text.replace(/\bAdditionally, /g, "").replace(/\badditionally, /g, "")
   text = text.replace(/(?:\[(?:beat|breath)\]\s*){2,}/gi, (stack) => (/\[beat\]/i.test(stack) ? "[beat] " : "[breath] "))
   let beats = 0
   text = text.replace(/\[beat\]/gi, () => (++beats <= 2 ? "[beat]" : "[breath]"))
@@ -136,7 +178,7 @@ export function blendSpoken(input: string): string {
   }
   const parts = sentencesOf(text.replace(/[ \t]{2,}/g, " ").trim())
   if (parts.length >= 2 && normSentence(parts[0]) === normSentence(parts[parts.length - 1])) parts.pop()
-  if (parts.length && /^(?:on a separate note|another thing|switching topics|in a different area)\b/i.test(parts[parts.length - 1])) parts.pop()
+  if (parts.length && /^(?:on a separate note|another thing|switching topics|in a different area|in conclusion|to summarize|to sum up|in summary|as you can see|at the end of the day)\b/i.test(parts[parts.length - 1])) parts.pop()
   if (parts.length >= 3 && !parts.some((p) => /\[breath\]/i.test(p))) {
     parts[0] = parts[0].replace(/([.!?])$/, "$1 [breath]")
   }

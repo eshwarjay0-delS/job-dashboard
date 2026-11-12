@@ -8,7 +8,7 @@
 export type NaturalAnswerShape =
   | "identity" | "experience" | "follow-up" | "scenario" | "mechanism" | "direct"
 
-export const NATURAL_NARRATION_VERSION = "kompas-workbench-v1"
+export const NATURAL_NARRATION_VERSION = "kompas-workbench-v2"
 
 export function naturalAnswerShape(question: string): NaturalAnswerShape {
   const q = String(question || "").trim()
@@ -31,6 +31,9 @@ const CORE = [
   "Keep a consistent known-facts ledger. A prior generated interview answer and external Notebook-style teaching transcript are NOT evidence that the candidate performed an incident.",
   "Do not fabricate employers, technical observations, an executive, colleagues, dialogue, metrics, causation, approvals, implementation ownership or verified results.",
   "Do not trade technical precision for entertainment. If the interviewer asks for one fact, answer it and stop.",
+  "Vary sentence length the way a person talks: a short claim, then one longer sentence that walks the work, then a short close. Do not manufacture um, uh, you know, right?, or basically for the candidate to read aloud. A short self-correction is fine; a scripted landing is not.",
+  "Do not use empty phrasing such as delve, underscore, tapestry, shed light, pivotal role, robust framework, it is important to note, in conclusion, or in today's landscape. Keep the fact. Drop the frame.",
+  "Open on the answer in the interviewer's words: the check, the decision, or the break. Never restate or praise the question.",
 ].join(" ")
 
 const KIND: Record<NaturalAnswerShape, string> = {
@@ -43,9 +46,9 @@ const KIND: Record<NaturalAnswerShape, string> = {
 }
 
 const AUDIENCE = {
-  director: "AUDIENCE: foreground exposure, decision authority, constraints and evidence required for the business decision; one technical cause only as needed.",
-  architect: "AUDIENCE: foreground system boundary, dependency, architectural alternative and failure behavior; describe the actual sequence when asked.",
-  engineer: "AUDIENCE: foreground observed behavior, relevant source of truth, practical check, falsifiable alternative and verification.",
+  director: "AUDIENCE: foreground exposure, decision authority, constraints and evidence required for the business decision; one technical cause only as needed. Sound like someone who has done the work and is now making the call: the cost, the owner, and what would change your mind. Calm, not hype.",
+  architect: "AUDIENCE: foreground system boundary, dependency, architectural alternative and failure behavior; describe the actual sequence when asked. A short ramble into the surrounding design is fine if the next sentence returns to the question. Curiosity is about the tradeoff and where it breaks.",
+  engineer: "AUDIENCE: foreground observed behavior, relevant source of truth, practical check, falsifiable alternative and verification. Sound like a developer working through the technical need: one failed attempt if you have it, then the check that worked. Excitement belongs on the puzzle, not on a slogan.",
   mixed: "AUDIENCE: give a short plain-language consequence after technical reasoning so a less technical listener can rejoin without oversimplifying.",
 }
 
@@ -80,6 +83,8 @@ export function naturalNarrationFlags(question: string, answer: string): string[
   const initial = response.trim()
   if (/^(?:(?:you know[, ]+)?(?:it'?s funny|welcome back|today we(?:'re| are) going to|let'?s (?:dive in|unpack|explore)|picture this)[,:.! ]+)/i.test(initial))
     flags.push("podcast-style-opening")
+  if (/\b(?:delve|delving|tapestry|shed light|underscore the importance|it is important to note|in today'?s(?: rapidly evolving)? landscape|robust framework|comprehensive framework)\b/i.test(response))
+    flags.push("empty-frame-phrasing")
   // This deliberately keys on an analogy prompt AND a toy scene; isolated
   // words like "key", "door", and "apartment" are not sufficient.
   if (!requestedAnalogy && /\b(?:think of it like|think of this like|it'?s (?:just )?like|imagine (?:you(?:'re| are)?|a|the)|picture (?:a|the|yourself))\b[^.!?\n]{0,120}\b(?:apartment|house key|front door|spare key under|kitchen|bouncer|movie ticket|airport security|traffic light)\b/i.test(response))

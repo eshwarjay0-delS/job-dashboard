@@ -1,14 +1,15 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import fs from "node:fs"
-import { BLEND_MOVES, blendPrompt, blendSpoken } from "../../src/lib/kompasBlend.ts"
+import { BANNED_LLM_PHRASES, BLEND_MOVES, blendPrompt, blendSpoken } from "../../src/lib/kompasBlend.ts"
 
 const route = fs.readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
 
 test("twenty-one blend moves are in the prompt the answer hears", () => {
-  // 21st (owner, 23 Oct 2026): short sentences, plain meaning first, then the exact term.
+  // 21st: a person's rhythm, plain meaning first, then the exact term.
   assert.equal(BLEND_MOVES.length, 21)
-  assert.match(BLEND_MOVES[20], /Short sentences, one idea each/)
+  assert.match(BLEND_MOVES[20], /Vary the rhythm the way a person talks/)
+  assert.match(BLEND_MOVES[12], /delve/)
   const prompt = blendPrompt()
   for (const move of BLEND_MOVES) assert.ok(prompt.includes(move), move)
   assert.match(route, /blendPrompt\(\)/)
@@ -134,6 +135,32 @@ test("19c numbers, versions and names are kept exactly while their symbols are s
   const out = blendSpoken("TLS 1.3 cut the handshake to 1 round trip, and CI/CD runs on port 8443 for 99.9% of builds.")
   assert.match(out, /TLS 1\.3/); assert.match(out, /CI\/CD/); assert.match(out, /8443/); assert.match(out, /99\.9 percent/)
   assert.equal(blendSpoken(out), out, "said once, said the same the second time")
+})
+
+test("21 delved becomes looked at", () => {
+  const out = blendSpoken("I delved into the sign-in log and found the stale session.")
+  assert.match(out, /looked at the sign-in log/)
+  assert.equal(/delved/i.test(out), false)
+})
+
+test("22 an empty frame drops and the fact stays", () => {
+  const out = blendSpoken("It is important to note that the chain is checked at the proxy.")
+  assert.equal(/important to note/i.test(out), false)
+  assert.match(out, /The chain is checked at the proxy/)
+})
+
+test("23 the banned phrase list is long enough to matter", () => {
+  assert.ok(BANNED_LLM_PHRASES.length >= 10)
+})
+
+test("24 praise of the question is not spoken", () => {
+  assert.equal(blendSpoken("That's an excellent question. The chain is checked at the proxy."), "The chain is checked at the proxy.")
+})
+
+test("25 a closing frame is not the last sentence", () => {
+  const out = blendSpoken("The chain is checked at the proxy. In conclusion, this showcases my ability to lead.")
+  assert.equal(/in conclusion/i.test(out), false)
+  assert.match(out, /The chain is checked at the proxy/)
 })
 
 test("20 the same answer blended twice does not move again", () => {
