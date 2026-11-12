@@ -39,7 +39,7 @@ Work in THIS order: map the JD requirements to source evidence, write substantiv
    ONE LINE PER [idx] — NEVER MERGE: rewrite each skill line SEPARATELY at its own [idx], returning that same [idx]. NEVER collapse several skill lines into one mega-line, and never dump every keyword into a single line — that destroys the resume's structure. Return one skills entry per [idx] you change, and only use [idx] values that appear in the SKILL LINES block below.
    EXACT JD WORDING + ABBREVIATIONS: when the source evidence supports the same skill, use the JD's precise terminology and abbreviations (for example "S2S VPN", "IPsec", "PAN-OS", or "EOL"). Pair an acronym with its expansion where natural. Exact wording improves ATS matching, but never insert a term whose underlying experience is not supported.
    FOCUS: preserve every factual tool the source already states. Add an exact JD name only when the same meaning is supported by the source or an explicit candidate confirmation. Never add a tool merely because it appears in the JD, and never drop a source tool to make room.
-   NO CROSS-ROLE TRANSFER: do not assume that security, IAM, cloud, or other practices repeat across employers. Each role must be supported by its own original evidence or an explicit role-specific confirmation.
+   NO CROSS-ROLE TRANSFER: do not assume that security, IAM, cloud, or other practices repeat across employers. Each role must be supported by its own original source evidence. General first-person confirmations may support skills/profile only; they do not establish an employer-specific claim.
    JD-PREFERRED FIRST: lead the summary and skills section with the most relevant supported tools and skills. Never place an unsupported JD requirement in the summary merely to improve a match score.
 
 VOICE — write like the real senior engineer. Vary the rhythm. No buzzwords (spearheaded, leveraged, orchestrated, championed, utilized, synergy), no em-dash stuffing, no invented percentages, no hype.
@@ -231,7 +231,7 @@ export async function adapt(opts: {
   // A refinement gets no keyword list: it invites "absorbing" more terms, which is exactly the
   // churn a targeted change must avoid (the JD itself is still in the prompt).
   const kwLine = opts.jdKeywords?.length && !opts.refine
-    ? `\n\nJD TERMS AND ENRICHMENT SUGGESTIONS (suggestions are not additional mandatory requirements or proof of experience; explicit candidate confirmations supplement baseline evidence; ${part === "profile" ? "surface the matching verified skills" : "rewrite bullets where source role history or role-specific candidate confirmations substantiate them"}): ${opts.jdKeywords.join(", ")}`
+    ? `\n\nJD TERMS AND ENRICHMENT SUGGESTIONS (suggestions are not additional mandatory requirements or proof of experience; explicit candidate confirmations supplement baseline evidence; ${part === "profile" ? "surface matching source-supported or explicitly confirmed skills" : "rewrite bullets only where that role\'s original source history substantiates them"}): ${opts.jdKeywords.join(", ")}`
     : ""
   const pref = !opts.preferences ? ""
     : opts.refine ? `\n\nCHANGE REQUEST FROM THE CANDIDATE (apply exactly this, nothing else): ${opts.preferences}`
