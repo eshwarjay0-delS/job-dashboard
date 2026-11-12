@@ -126,21 +126,23 @@ type Session = {
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
+async function parseSession(from: string, raw: string | null): Promise<Session> {
+  if (!raw) return {}
+  const s = JSON.parse(raw) as Session
+  // Old versions kept resumes indefinitely. Do not reuse them after the rollback.
+  if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }
+  const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
+  if (s.updatedAt && Date.now() - s.updatedAt > ttl) {
+    if (s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
+      await deletePath(s.resumePath).catch(() => {})
+    return { version: 3, seen: s.seen?.slice(-40) }
+  }
+  return s
+}
+
 async function loadSession(from: string): Promise<Session> {
-  try {
-    const raw = await blob.getText(sessionKey(from))
-    if (!raw) return {}
-    const s = JSON.parse(raw) as Session
-    // Old versions kept resumes indefinitely. Do not reuse them after the rollback.
-    if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }
-    const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
-    if (s.updatedAt && Date.now() - s.updatedAt > ttl) {
-      if (s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
-        await deletePath(s.resumePath).catch(() => {})
-      return { version: 3, seen: s.seen?.slice(-40) }
-    }
-    return s
-  } catch { return {} }
+  try { return await parseSession(from, await blob.getText(sessionKey(from))) }
+  catch { return {} }
 }
 
 async function saveSession(from: string, s: Session): Promise<void> {
@@ -840,48 +842,61 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // still send the already-chosen resume if the run throws before a file goes out.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
   const consumeSessionPair = async (): Promise<void> => {
-    const cur = await loadSession(from)
-    // Treat JD + resume as one pair. Clearing either field independently can
-    // strand a newer JD that reused the same resume, or a newer resume attached
-    // to the same JD, after an in-flight document send completes.
-    const jdMatches = session.jdId
-      ? cur.jdId === session.jdId
-      : !cur.jdId && cur.jd === session.jd
-    const resumeMatches = session.resumePath
-      ? cur.resumePath === session.resumePath
-      : !cur.resumePath
-    const pairMatches = jdMatches && resumeMatches
-    let changed = false
-    if (pairMatches) {
-      if (cur.jd !== undefined || cur.jdId !== undefined) {
-        delete cur.jd
-        delete cur.jdId
+    const key = sessionKey(from)
+    // R2's If-Match is evaluated atomically by the object store. If a newer webhook
+    // writes between this read and the conditional put, retry against that newer pair.
+    // A conflict never falls back to an unconditional write; after bounded retries the
+    // pair stays available for recovery rather than risking data loss.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const snapshot = await blob.getWithEtag(key)
+      const cur = await parseSession(from, snapshot?.data.toString("utf8") ?? null)
+      // Treat JD + resume as one pair. Clearing either field independently can
+      // strand a newer JD that reused the same resume, or a newer resume attached
+      // to the same JD, after an in-flight document send completes.
+      const jdMatches = session.jdId
+        ? cur.jdId === session.jdId
+        : !cur.jdId && cur.jd === session.jd
+      const resumeMatches = session.resumePath
+        ? cur.resumePath === session.resumePath
+        : !cur.resumePath
+      const pairMatches = jdMatches && resumeMatches
+      let changed = false
+      if (pairMatches) {
+        if (cur.jd !== undefined || cur.jdId !== undefined) {
+          delete cur.jd
+          delete cur.jdId
+          changed = true
+        }
+        if (cur.resumePath !== undefined || cur.resumeName !== undefined || cur.resumeAt !== undefined) {
+          delete cur.resumePath
+          delete cur.resumeName
+          delete cur.resumeAt
+          changed = true
+        }
+        if (session.jdId && cur.pending?.jdId === session.jdId) {
+          delete cur.pending
+          changed = true
+        }
+      }
+      // Keep the last-used resume record even when a newer JD/resume pair arrived
+      // while this document was being accepted; this does not mutate that pair.
+      if (files && !quiet && session.jd) {
+        cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
         changed = true
       }
-      if (cur.resumePath !== undefined || cur.resumeName !== undefined || cur.resumeAt !== undefined) {
-        delete cur.resumePath
-        delete cur.resumeName
-        delete cur.resumeAt
+      const seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
+      if (seen.length !== (cur.seen || []).length || seen.some((value, index) => value !== cur.seen?.[index])) {
+        cur.seen = seen
         changed = true
       }
-      if (session.jdId && cur.pending?.jdId === session.jdId) {
-        delete cur.pending
-        changed = true
-      }
+      if (!changed) return
+      const next = JSON.stringify({ ...cur, version: 3, updatedAt: Date.now() })
+      const saved = snapshot
+        ? await blob.putIfMatch(key, snapshot.etag, next)
+        : await blob.putIfAbsent(key, next)
+      if (saved) return
     }
-    // Keep the last-used resume record even when a newer JD/resume pair arrived
-    // while this document was being accepted; this does not mutate that pair.
-    if (files && !quiet && session.jd) {
-      cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
-      changed = true
-    }
-    const seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
-    if (seen.length !== (cur.seen || []).length || seen.some((value, index) => value !== cur.seen?.[index])) {
-      cur.seen = seen
-      changed = true
-    }
-    if (!changed) return
-    await saveSession(from, cur)
+    throw new Error("WhatsApp session changed repeatedly while consuming a delivered resume pair")
   }
   const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
     if (finished || sending) return false
