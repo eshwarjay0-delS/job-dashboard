@@ -49,13 +49,13 @@ test('a blank caption thumbnail falls through instead of returning an empty fram
   assert.equal(picked.source, meet)
 })
 
-test('remembered hide skips the dialog and an unchecked answer asks again', () => {
+test('a yes hide is kept and a no is asked again', () => {
   assert.deepEqual(rememberedTaskbar({ hideTaskbar: true, hideTaskbarRemembered: true }), { ask: false, hide: true })
-  assert.deepEqual(rememberedTaskbar({ hideTaskbar: false, hideTaskbarRemembered: true }), { ask: false, hide: false })
+  assert.deepEqual(rememberedTaskbar({ hideTaskbar: false, hideTaskbarRemembered: true }), { ask: true, hide: null })
   assert.deepEqual(rememberedTaskbar({ hideTaskbar: true }), { ask: true, hide: null })
   assert.deepEqual(rememberedTaskbar({}), { ask: true, hide: null })
-  assert.deepEqual(taskbarAnswer(0, true), { hide: true, remember: true })
-  assert.deepEqual(taskbarAnswer(1, false), { hide: false, remember: false })
+  assert.deepEqual(taskbarAnswer(0, false), { hide: true, remember: true })
+  assert.deepEqual(taskbarAnswer(1, true), { hide: false, remember: false })
 })
 
 test('the packaged manifest is rewritten to asInvoker and not to administrator', () => {

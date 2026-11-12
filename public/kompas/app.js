@@ -1745,9 +1745,54 @@ if (typeof window.kompasDesktop?.onAuthReady === "function") {
     if (!running) void checkSessionReadiness();
   });
 }
+let outputDeviceKey = "";
+async function currentOutputKey() {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== "function") return "";
+  let devices = [];
+  try { devices = await navigator.mediaDevices.enumerateDevices(); } catch { return ""; }
+  const api = globalThis.KompasOutputAudio;
+  return api && typeof api.defaultOutputKey === "function" ? api.defaultOutputKey(devices) : "";
+}
+async function followOutputDevice() {
+  const next = await currentOutputKey();
+  const api = globalThis.KompasOutputAudio;
+  const follow = !!(api && typeof api.shouldFollowOutputDevice === "function" && api.shouldFollowOutputDevice(outputDeviceKey, next));
+  if (next) outputDeviceKey = next;
+  if (!follow || !running || !srcOn.sys || !window.kompasDesktop) return;
+  try { await stopSource("Them"); } catch {}
+  if (running && srcOn.sys) void startSys();
+}
+try {
+  if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", () => { void followOutputDevice(); });
+  }
+} catch {}
+function boostedLoopbackStream(ctx, sourceNode) {
+  const api = globalThis.KompasOutputAudio;
+  const gainValue = api && typeof api.recordGainFor === "function" ? api.recordGainFor("Them") : 2.5;
+  if (!(gainValue > 1) || !ctx || typeof ctx.createMediaStreamDestination !== "function" || typeof ctx.createGain !== "function" || typeof ctx.createDynamicsCompressor !== "function") return null;
+  try {
+    const dest = ctx.createMediaStreamDestination();
+    const makeup = ctx.createGain();
+    makeup.gain.value = gainValue;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -24;
+    comp.knee.value = 12;
+    comp.ratio.value = 3;
+    comp.attack.value = 0.005;
+    comp.release.value = 0.25;
+    sourceNode.connect(makeup);
+    makeup.connect(comp);
+    comp.connect(dest);
+    const tracks = dest.stream && dest.stream.getAudioTracks ? dest.stream.getAudioTracks() : [];
+    if (!tracks.length) return null;
+    return dest.stream;
+  } catch { return null; }
+}
 async function start() {
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
   sessionReadyUntil = 0;
+  void currentOutputKey().then(key => { if (key) outputDeviceKey = key; });
   const generation = sourceGeneration.You;
   primeAudio();                       // inside the click, so the browser lets audio run
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
@@ -2031,7 +2076,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   if (stale()) { releaseTracks(); return; }
   if (who === "Them") displayVideo = owner?.getVideoTracks()[0] || null;
   const src = ctx.createMediaStreamSource(stream);
-  const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0, lastVadAt: performance.now(), lastAudibleAt: performance.now(), zeroWarned: false, watchdog: null, an: null };
+  const cap = { who, stream, rawStream: stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0, lastVadAt: performance.now(), lastAudibleAt: performance.now(), zeroWarned: false, watchdog: null, an: null };
   if (who === "Them" && displayVideo && typeof document !== "undefined" && document.createElement) {
     try {
       const hold = document.createElement("video");
@@ -2045,11 +2090,16 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
     } catch {}
   }
   const an = ctx.createAnalyser(); an.fftSize = 1024;
-  // Parity (owner, 1 Nov 2026): the mic gets browser auto-gain, the raw
-  // system loopback gets none, so quiet call audio sat under the VAD floor
-  // and dropped every 6 s while the mic transcribed fine. A Them-only tap
-  // gain lifts the measured level (never the recorded stream) into the same
-  // working range. VAD thresholds untouched; Whisper input untouched.
+  // The microphone uses auto-gain. Computer audio does not: echo cancellation
+  // and noise suppression punch holes in the meeting. A makeup gain plus a
+  // compressor lifts the recorded loopback into that same range without those
+  // filters. The analyser tap stays on the unprocessed source.
+  let recordStream = stream;
+  if (who === "Them") {
+    const boosted = boostedLoopbackStream(ctx, src);
+    if (boosted) recordStream = boosted;
+  }
+  cap.stream = recordStream;
   let tap = null;
   try { if (who === "Them" && typeof ctx.createGain === "function") { tap = ctx.createGain(); tap.gain.value = 4; src.connect(tap); } } catch { tap = null; }
   const tapSrc = tap || src;

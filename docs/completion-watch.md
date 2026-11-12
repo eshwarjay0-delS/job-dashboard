@@ -20,9 +20,13 @@ Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the
 6. Update the journal with the exact outcome, evidence and next step. Continue independent work when another item is blocked.
 7. Before ending a turn, identify remaining approved work. If stopping because of a wall, state the failed action, evidence, missing prerequisite and exact unblock action. Do not imply work continues in this chat after the turn unless scheduled execution is actually configured.
 
+## 12 November 2026 — Computer audio follows the output device
+
+After the logout fix was on the production alias, the desktop loopback still names no output device. It follows the Windows default render endpoint, and a later device change reopens that loopback. A yes on hide-from-taskbar is kept. A no is asked next launch. Live Captions stays the caption source. parfAct was HTTP 404. Not a Windows playback test.
+
 ## 12 November 2026 — Sign in again after a full logout
 
-Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. AUTH_DISABLED stays false in production. Simulated suites passed 58/58 across five rounds. Typecheck was clean. No live Google round trip. Not deployed in this note. The next step is CI, then the production alias.
+Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. AUTH_DISABLED stays false in production. Merged as e8ce442051c1cbee1fbbeb6a26aa75200a1ddf97. GitHub production deployment 7745002467 completed. The alias /version.json commitFull matches that SHA. Unsigned refresh returned 401 invalid_grant, not 402. No live Google round trip.
 
 ## 11 November 2026 — Desktop sign-in
 
