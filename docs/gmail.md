@@ -290,3 +290,8 @@ The first full CI for PR #320 failed one test in `scripts/tests/kompas-deploy-bu
 PR #320's corrected head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` has Kompas baseline run `43190229393` SUCCESS. Full CI `43190228931` is still in progress at migration asset closure. Protected preview `43190224739` failed closed because the private `KOMPAS_VERCEL_API_TOKEN` is empty; it must be configured privately by an authorized repository administrator. The initial full CI failure was the stale exact-string prebuild assertion and is corrected in the latest commit.
 
 The live `/api/gmail/notify-rules/export` route has 42 Supabase Auth `402 exceed_egress_quota` errors across 34 users in the last 24 hours, latest 09:07:04 UTC; one event appears in the last 30 minutes. The project owner/administrator must upgrade the Supabase plan or remove the spend cap that restricts Auth. No authentication bypass, credential swap, billing change, real email send, unattended worker or two-inbox acceptance was performed. Vercel project metadata reports `live=false`; READY/alias metadata is not public UX acceptance.
+
+
+### Full CI result — 12 November 2026, 09:23 UTC
+
+PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` now passes full CI `43190228931` (47/47 steps) and Kompas baseline `43190229393`. The prebuild log explicitly shows `scripts/tests/dashboard-shell.test.mjs` and reports 4 tests, 4 pass, 0 fail. The protected preview `43190224739` failed at exact-head preview resolution because the private `KOMPAS_VERCEL_API_TOKEN` is empty. PR #320 remains DRAFT; no production deployment, public HTTP, two-inbox or real-phone acceptance is claimed.
