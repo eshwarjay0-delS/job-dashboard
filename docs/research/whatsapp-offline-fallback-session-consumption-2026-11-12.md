@@ -38,3 +38,19 @@ The new mocked regressions cover: accepted offline fallback clears its matching 
 - The historical 17 October 17:28 Chicago incident remains unresolved: the original source DOCX and full JD are recovered, but the generated output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable. Conflicting education/employment/credential facts remain quarantined pending owner reconciliation.
 
 No model call, R2 write, email, WhatsApp send, production mutation or handset test was performed. Do not claim this fix is deployed or that the historical delivery succeeded.
+
+
+## Current-master lifecycle integration — 12 November 2026, 09:35 UTC
+
+The owner-approved 6 Nov fallback/no-baseline policy is restacked in current-master PR #321. This continuation also integrates the race-safe pair-consumption helper from the old stacked PR #316 into #321, so the fallback and lifecycle fix can be reviewed together.
+
+- Code commit: `921033d71fba5f33e0d5566bde572be7287baf8b`.
+- Regression commit: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`.
+- The helper clears the JD and resume only when both still match the run; it preserves a newer JD/resume combination and retains the pair when Meta rejects the document.
+- New mocked cases cover accepted offline consumption, newer JD, same resume/new JD, same JD/new resume and rejected-send retention.
+- Updated PR head: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`. Exact-head Kompas baseline 43193485006 and WhatsApp recovery 43193485660 are SUCCESS; full CI 43193485035 is still IN_PROGRESS at migration asset closure. Earlier `ac38ff` full CI results do not validate the new head.
+- The previous protected preview 43191231435 failed closed because the private `KOMPAS_VERCEL_API_TOKEN` was empty. No exact-head preview pass, merge, production deployment, model call, R2 write, real WhatsApp message or Meta callback is claimed.
+
+The canonical production alias remains READY at master `da1db145c5981254f95620ff6bb0222ab4228125`, not this PR. Vercel project metadata reports `live=false`. The historical 17 Oct 17:28 Chicago output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain unavailable. No replay or resend is authorized.
+
+**Continue:** finish exact-head full CI 43193485035; then keep PR #321 DRAFT until an authorized repository administrator privately configures the preview token and the protected preview passes. Only then review/merge, deploy the exact merged SHA, verify the active production alias and perform a consented real WhatsApp acceptance. PR #316 is now a source/history dependency and must not be merged independently; close it as superseded only after PR #321 is accepted.
