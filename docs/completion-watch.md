@@ -545,3 +545,8 @@ Continue: finish the exact-head PR #303 checks, restore protected preview access
 - Plan/REA docs PR #311 schema `43138875726` SUCCESS on `3b30b905`; it remains stacked on PR #306, whose full CI/baseline/schema pass but protected preview fails for the same missing private token.
 
 Continue: finish the exact-head PR #304 gates, obtain the protected-preview secret through the owner/authorized repository administrator, then accept #303 and restack #310 in dependency order. Keep PR #293, #277 and #307 unapproved. No live model/DOCX, WhatsApp or Gmail acceptance is claimed.
+
+
+## 12 November 2026 — PR #304 exact preview blocker
+
+PR #304 head `a07c4870e9aee390111fc36c5959b6d80f6d9884`: Kompas baseline `43139136646` and WhatsApp recovery `43139136594` passed; full CI `43139136600` is in progress at Type-check. Protected preview `43139133535` failed with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. The source/test correction is committed; the remaining preview wall requires the owner/authorized repository administrator to set that GitHub Actions secret privately. No secret should be pasted into chat or bypassed.
