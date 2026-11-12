@@ -218,8 +218,13 @@ test("offline stand-in: every mode is first person, speakable, and at least 50% 
       assert.doesNotMatch(r.text, /\b(?:your|yourself)\b/i, `${r.level}: ${r.text}`)
       assert.doesNotMatch(r.text, /\bI (?:how|what|why|your|you|a situation)\b|\bWhen I a\b|\bsince I led\b/i, `${r.level}: ${r.text}`)
     }
-    const gaps = evaluateLiveAnswers(rows, RESUME).failures.filter((f) => f.startsWith("length gap"))
-    assert.deepEqual(gaps, [], q)
+    const judged = evaluateLiveAnswers(rows, RESUME)
+    const lengthGaps = judged.failures.filter((f) => f.startsWith("length gap"))
+    assert.deepEqual(lengthGaps, [], q)
+    for (const gap of judged.failures.filter((f) => f.startsWith("stance gap"))) {
+      assert.match(gap, /under 0\.50 for/)
+      assert.ok(gap.endsWith(q), gap)
+    }
   }
 })
 

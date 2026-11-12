@@ -1,3 +1,9 @@
+## 2026-11-12 — Answer length follows the question, then the mode
+
+No new screen. A design question is one stage and a named checkpoint. "How would you design X" and a bare "Design X" are a design ask, read before a scenario. The length table is aim and ceiling by question type and mode. A director is often shorter. The mode changes the stance. Ceilings still scale with the number of parts and stop at 300. The spoken prompt no longer gives a second word quota. A named-layer checkpoint stays. An empty "happy to go deeper" and "in conclusion" still come out. The narration version is kompas-workbench-v4.
+
+**Checked locally. Not merged. Not a production deploy.** Question-length, blend, narration, relevance, baseline, and the suites around them: 536 pass, 0 fail. `tsc --noEmit` clean. Offline stand-in, fictional resume, 150 drafts, no model: 0 pairs at Jaccard >= 0.7 (highest 0.647), 0 same-answer failures, 0 answers outside the ceiling, 0 logistics or Houston or Saint Louis hits. The content-gap rule, 1 minus Jaccard between modes of the same question, is under 0.50 on 80 mode pairs. Those pairs were reported and not padded. No production URL was called.
+
 ## 2026-11-12 — Spoken answers sound like a person who has done the work
 
 No new screen. This is genuineness grounded in real experience, not a way past a detector. Fillers such as um, you know, and basically are still not manufactured. Empty frames such as delve, tapestry, and in conclusion come out. The fact stays. A director sounds like someone who has done the work and is now making the call. An architect may take one short ramble into the design and then come back. An engineer works through the technical need.

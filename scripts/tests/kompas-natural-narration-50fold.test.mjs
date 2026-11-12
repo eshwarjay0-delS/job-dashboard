@@ -15,7 +15,7 @@ const folds = [
   ["mechanism","Why does OAuth need a state parameter?"],["mechanism","How do certificates get validated?"],["mechanism","What happens when CyberArk rotation fails?"],
   ["direct","What is NIST CSF 2.0?"],["direct","Define compensating control"],["direct","Have you used ServiceNow?"],["direct","Are you local to Pittsburgh?"],["direct","When could you start?"],
   ["direct","What is IDOR?"],["direct","Compare DAST and SAST"],["direct","How many years of experience do you have?"],["direct","CRI"],
-  ["scenario","How would you design a rollback without downtime?"],["scenario","Suppose the bank cannot patch until month-end"],
+  ["design","How would you design a rollback without downtime?"],["scenario","Suppose the bank cannot patch until month-end"],
   ["experience","Tell me about a time a policy exception was rejected"],["experience","Walk me through an issue you found"],
   ["follow-up","How did you prove the root cause?"],["follow-up","Who approved closure?"],
   ["scenario","What would you do if the business owner disputes impact?"],["scenario","How would you challenge a missing control owner?"],
@@ -25,7 +25,7 @@ const folds = [
   ["mechanism","Explain how logging actually proves the control operated"],
 ] 
 test("Natural narration respects every source category and doesn't privilege one BNY question",()=>{
-  assert.equal(NATURAL_NARRATION_VERSION,"kompas-workbench-v3")
+  assert.equal(NATURAL_NARRATION_VERSION,"kompas-workbench-v4")
   assert.equal(folds.length,50)
   for(const [shape,q] of folds){
     assert.equal(naturalAnswerShape(q),shape,q)
@@ -48,6 +48,18 @@ test("Narration adapts to the question rather than forcing STAR or an anecdote o
   assert.match(hypothetical,/testable assumption/)
   const follow=naturalNarrationGuidance("Which logs did you check?","engineer")
   assert.match(follow,/stay in the same project/)
+})
+test("A design answer is one stage and length follows the question",()=>{
+  const g=naturalNarrationGuidance("How would you design the storage layer?","architect")
+  assert.equal(naturalAnswerShape("Design a rate limiter for the public API."),"design")
+  assert.equal(naturalAnswerShape("How would you investigate a privileged access exception?"),"scenario")
+  assert.match(g,/DESIGN VOICE/)
+  assert.match(g,/Want me to go deeper on the storage layer/)
+  assert.match(g,/Follow-ups do not restart the map/)
+  assert.match(g,/decision and tradeoff first/)
+  assert.match(g,/concrete behavior/)
+  assert.match(g,/short ramble/)
+  assert.match(g,/Length follows the question type first/)
 })
 test("A work question prefers one worked example",()=>{
   const g=naturalNarrationGuidance("Tell me about a time you fixed the nightly batch","engineer")

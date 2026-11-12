@@ -8,7 +8,7 @@ import {
 const cases=JSON.parse(readFileSync(new URL('../fixtures/kompas-50fold-intents.json',import.meta.url),'utf8'))
 assert.equal(cases.length,100,'exactly one hundred distinct interview prompts')
 assert.equal(new Set(cases.map(x=>x.question.toLowerCase())).size,100,'no duplicate benchmark prompts')
-const valid=new Set(['introduction','closing-question','acknowledgement','value','experience-story','comparison','definition','scenario','technical-process','logistics','follow-up','direct'])
+const valid=new Set(['introduction','closing-question','acknowledgement','value','experience-story','comparison','definition','scenario','design','technical-process','logistics','follow-up','direct'])
 for(let n=1;n<=cases.length;n++){
  test('Relevance fold '+String(n).padStart(3,'0')+' of 100 — cumulative question intent and scope',()=>{
    for(const {id,question,intent} of cases.slice(0,n)){

@@ -157,7 +157,18 @@ test("24 praise of the question is not spoken", () => {
   assert.equal(blendSpoken("That's an excellent question. The chain is checked at the proxy."), "The chain is checked at the proxy.")
 })
 
-test("25 a closing frame is not the last sentence", () => {
+test("25 a named-layer checkpoint stays and an empty offer does not", () => {
+  const checkpoint = "The first layer is the write path. Want me to go deeper on the storage layer, or shall I keep sketching the whole shape?"
+  assert.match(blendSpoken(checkpoint), /Want me to go deeper on the storage layer/)
+  assert.match(blendSpoken(checkpoint), /shall I keep sketching the whole shape/)
+  assert.match(blendSpoken("The check is the write path. Should I walk the end-to-end flow?"), /Should I walk the end-to-end flow/)
+  assert.match(blendSpoken("The cache stays out. We can leave that out of scope."), /out of scope/)
+  const empty = blendSpoken("The chain is checked at the proxy. I'm happy to go deeper.")
+  assert.equal(/happy to go deeper/i.test(empty), false)
+  assert.match(empty, /The chain is checked at the proxy/)
+})
+
+test("26 a closing frame is not the last sentence", () => {
   const out = blendSpoken("The chain is checked at the proxy. In conclusion, this showcases my ability to lead.")
   assert.equal(/in conclusion/i.test(out), false)
   assert.match(out, /The chain is checked at the proxy/)

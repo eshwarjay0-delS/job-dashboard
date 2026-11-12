@@ -6,13 +6,16 @@
  * This is prompt guidance, not factual verification or synthesized speech.
  */
 export type NaturalAnswerShape =
-  | "identity" | "experience" | "follow-up" | "scenario" | "mechanism" | "direct"
+  | "identity" | "experience" | "follow-up" | "design" | "scenario" | "mechanism" | "direct"
 
-export const NATURAL_NARRATION_VERSION = "kompas-workbench-v3"
+export const NATURAL_NARRATION_VERSION = "kompas-workbench-v4"
+
+const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 
 export function naturalAnswerShape(question: string): NaturalAnswerShape {
   const q = String(question || "").trim()
   if (/\b(?:tell me about yourself|introduce yourself|your (?:career|background|resume)|walk me through your (?:career|background|resume))\b/i.test(q)) return "identity"
+  if (DESIGN_ASK.test(q)) return "design"
   if (/\b(?:what exactly|which logs|what did (?:you|the team) (?:check|do|change)|what happened next|how did you (?:verify|validate|prove|know)|who (?:approved|owned|signed off)|go deeper|more detail|what artifacts did you)\b/i.test(q)) return "follow-up"
   if (/\b(?:tell me about a time|describe a (?:time|situation)|share an example (?:of|when)|give me an example from|walk me through an? (?:issue|incident|project) (?:you|that))\b/i.test(q)) return "experience"
   if (/\b(?:how (?:would|could|should) you|what would you|suppose|imagine|if (?:you|the|an? )|how do you (?:decide|prioritize|assess|handle))\b/i.test(q)) return "scenario"
@@ -35,12 +38,14 @@ const CORE = [
   "Do not use empty phrasing such as delve, underscore, tapestry, shed light, pivotal role, robust framework, it is important to note, in conclusion, or in today's landscape. Keep the fact. Drop the frame.",
   "Open on the answer in the interviewer's words: the check, the decision, or the break. Never restate or praise the question.",
   "When the question is about work you did, prefer one worked example over a list of capabilities: say for example, then the sources, the join or key, and the actual batch or case. After the action, name the simpler path you rejected with rather than. If you did not do the thing they asked, say so in one short clause, then the nearest sourced work. For a failure or recovery question, start at the failed step, rerun only the affected batch, and say how you checked you did not create duplicates or gaps. Do not invent years, systems, or a case to fill the example.",
+  "Length follows the question type first, then the mode; mode changes stance more than volume.",
 ].join(" ")
 
 const KIND: Record<NaturalAnswerShape, string> = {
   identity: "IDENTITY VOICE: give a coherent career arc from documented experience. Connect responsibilities, work and impact; no invented turning-point scene or forced metaphor.",
   experience: "EXPERIENCE VOICE: one actually supported situation; what caused concern, what was your responsibility, the technical check or decision, the real obstacle if documented, and what the evidence established. STAR is an internal structure, never spoken as labels. If only a broad responsibility is sourced, don't invent a named incident. Prefer a single worked example to a list of systems.",
   "follow-up": "FOLLOW-UP VOICE: stay in the same project and facts. State the requested precise artifact, check, permission, observation or approval boundary first. If the record lacks it, distinguish what was personally documented from the test you would perform. No fresh story or restart.",
+  design: "DESIGN VOICE: Name the map in one short sentence. Build only the first layer, as thought in progress. End with a named-layer checkpoint such as \"Want me to go deeper on the storage layer, or shall I keep sketching the whole shape?\" Keep optional tangents explicitly optional or out of scope. Follow-ups do not restart the map. Never invent components, metrics or years. The director gives the decision and tradeoff first, then the offer. The engineer gives a concrete behavior, then the mechanism, then the offer. The architect gives the boundary, a short ramble, a return, then the offer.",
   scenario: "SCENARIO VOICE: identify an explicit, testable assumption. Show the evidence that would disprove it, the operational constraint, a safe action or decision, and how you'd check the outcome. Use 'I would' for hypothetical work and don't pretend the case happened.",
   mechanism: "MECHANISM VOICE: start with the actual mechanism and its cause-and-effect sequence. Show one failure mode or contrast only if the question needs it. Go into log/field/protocol detail when requested, but don't drag in a career story.",
   direct: "DIRECT VOICE: answer only the asked definition, comparison, personal experience fact, policy or logistics. No forced STAR episode, anecdote, dramatic premise or lengthy explanation.",

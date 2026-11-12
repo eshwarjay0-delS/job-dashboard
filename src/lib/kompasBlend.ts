@@ -178,7 +178,12 @@ export function blendSpoken(input: string): string {
   }
   const parts = sentencesOf(text.replace(/[ \t]{2,}/g, " ").trim())
   if (parts.length >= 2 && normSentence(parts[0]) === normSentence(parts[parts.length - 1])) parts.pop()
-  if (parts.length && /^(?:on a separate note|another thing|switching topics|in a different area|in conclusion|to summarize|to sum up|in summary|as you can see|at the end of the day)\b/i.test(parts[parts.length - 1])) parts.pop()
+  const namedCheckpoint = (sentence: string) => /\b(?:want me to go deeper on|shall i keep sketching|should i walk the end-to-end flow|we can leave that out of scope)\b/i.test(sentence)
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (namedCheckpoint(parts[i])) continue
+    if (/\b(?:i(?:'m| am) )?happy to go deeper\b/i.test(parts[i])) parts.splice(i, 1)
+  }
+  if (parts.length && !namedCheckpoint(parts[parts.length - 1]) && /^(?:on a separate note|another thing|switching topics|in a different area|in conclusion|to summarize|to sum up|in summary|as you can see|at the end of the day)\b/i.test(parts[parts.length - 1])) parts.pop()
   if (parts.length >= 3 && !parts.some((p) => /\[breath\]/i.test(p))) {
     parts[0] = parts[0].replace(/([.!?])$/, "$1 [breath]")
   }
