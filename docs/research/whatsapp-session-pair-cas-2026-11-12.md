@@ -10,7 +10,7 @@ This follow-up is limited to the sender session persistence boundary. It does no
 
 - Extend the storage contract with getWithEtag() and putIfMatch().
 - Cloudflare R2 reads the object bytes and ETag together, then uses the S3-compatible PutObject If-Match conditional write. R2 evaluates that condition atomically against the committed object state.
-- The local filesystem adapter serializes per-key operations and uses a SHA-256 content token for compare-and-swap.
+- The local filesystem adapter serializes per-key operations within one adapter process and uses a SHA-256 content token for compare-and-swap. Production R2 uses storage-level conditional writes across serverless instances.
 - consumeSessionPair() re-reads and reapplies the pair-match rule after a failed conditional write. It retries at most eight times. It never falls back to an unconditional write; repeated conflicts leave the session pair intact for recovery.
 - The same pair rule remains: clear JD and resume only when both still match this run; preserve a newer JD, a newer resume, or both; retain the last-used resume record.
 
