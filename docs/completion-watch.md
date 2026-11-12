@@ -565,3 +565,8 @@ The current GitHub PR API reports PR #310 `mergeable=true` relative to its curre
 ## 12 November 2026 — final resume evidence prompt correction
 
 PR #304 head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` removes the remaining two prompt clauses that still allowed a role-specific confirmation to support employer history. Employer-specific bullets now require same-role original source evidence; general confirmations remain skills/profile only. Previous exact-head CI failures were informative: `43138129880` had malformed regex assertions (42 other cases passed); `43139136600` then exposed the residual prompt wording (64/65 cases passed). The current exact-head full CI `43139954490`, baseline `43139954651`, WhatsApp recovery `43139954504` and preview `43139950971` are IN PROGRESS. No merge or live claim until all pass.
+
+
+## 12 November 2026 — PR #304 protected preview result
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` SUCCESS; WhatsApp recovery `43139954504` IN PROGRESS; full CI `43139954490` IN PROGRESS at Lint. Protected preview `43139950971` FAILED; the job log explicitly states `KOMPAS_VERCEL_API_TOKEN must be configured privately`. This requires the owner/authorized repository administrator; do not paste the secret into chat or bypass the gate.
