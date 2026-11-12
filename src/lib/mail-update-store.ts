@@ -1,8 +1,26 @@
 import {createHash} from 'node:crypto'
 import {blob} from '@/lib/storage'
 import {defaultUpdatePreferences,validUpdatePreferences,type UpdatePreferences,type InboxUpdate} from '@/lib/mail-update-policy'
+import {validNotifyRule,type NotifyRule} from '@/lib/notify-rules'
 export const updateRoot=(uid:string)=>`mail/updates/${uid.replace(/[^a-zA-Z0-9_-]/g,'_')}/`
 export const accountKey=(email:string)=>createHash('sha256').update(email.toLowerCase()).digest('hex')
+
+const notifyRulesRoot='gmail/notify-rules/'
+const notifyPendingTtlMs=10*60*1000
+const pendingIsStale=(raw:string|null)=>{if(!raw)return false;try{const at=Number(JSON.parse(raw).at);return !Number.isFinite(at)||Date.now()-at>notifyPendingTtlMs}catch{return true}}
+async function clearStaleNotifyPending(uid:string){let cleared=false;const keys=[notifyPendingUserKey(uid),notifyPendingAdminKey(uid)];for(const key of keys){const raw=await blob.getText(key);if(pendingIsStale(raw)){await blob.delete(key);cleared=true}}return cleared}
+const safeNotifyUid=(uid:string)=>{if(!/^[A-Za-z0-9_-]{1,128}$/.test(uid))throw Error('Invalid notify-rules owner');return uid}
+const notifyUserKey=(uid:string)=>notifyRulesRoot+'users/'+safeNotifyUid(uid)+'.json'
+const notifyAdminKey=(uid:string)=>notifyRulesRoot+'admin/'+safeNotifyUid(uid)+'.json'
+const notifyPendingUserKey=(uid:string)=>notifyRulesRoot+'pending/users/'+safeNotifyUid(uid)+'.json'
+const notifyPendingAdminKey=(uid:string)=>notifyRulesRoot+'pending/admin/'+safeNotifyUid(uid)+'.json'
+function parseNotifyRules(raw:string):NotifyRule[]{const value=JSON.parse(raw);if(!Array.isArray(value)||!value.every(validNotifyRule))throw Error('Stored notify rules are invalid');return value}
+export async function beginNotifyRulesUpdate(uid:string){await clearStaleNotifyPending(uid);const marker=JSON.stringify({at:Date.now()});if(!(await blob.putIfAbsent(notifyPendingUserKey(uid),marker)))throw Error('A notify-rules update is already in progress');if(!(await blob.putIfAbsent(notifyPendingAdminKey(uid),marker))){await blob.delete(notifyPendingUserKey(uid));throw Error('A notify-rules export update is already in progress')}}
+export async function abortNotifyRulesUpdate(uid:string){await Promise.all([blob.delete(notifyPendingUserKey(uid)),blob.delete(notifyPendingAdminKey(uid))])}
+export async function completeNotifyRulesUpdate(uid:string,rules:NotifyRule[],admin:boolean){if(!Array.isArray(rules)||!rules.every(validNotifyRule))throw Error('Invalid notify rules');const payload=JSON.stringify(rules);await blob.put(notifyUserKey(uid),payload);if(admin)await blob.put(notifyAdminKey(uid),payload);else await blob.delete(notifyAdminKey(uid));await Promise.all([blob.delete(notifyPendingUserKey(uid)),blob.delete(notifyPendingAdminKey(uid))])}
+export async function migrateNotifyRulesIfMissing(uid:string,rules:NotifyRule[],admin:boolean){const recovered=await clearStaleNotifyPending(uid);if(await blob.getText(notifyPendingUserKey(uid))||await blob.getText(notifyPendingAdminKey(uid)))throw Error('Notify rules update is pending');const payload=JSON.stringify(rules);if(recovered){await blob.put(notifyUserKey(uid),payload);if(admin)await blob.put(notifyAdminKey(uid),payload);else await blob.delete(notifyAdminKey(uid));return}await blob.putIfAbsent(notifyUserKey(uid),payload);if(admin)await blob.putIfAbsent(notifyAdminKey(uid),payload);else await blob.delete(notifyAdminKey(uid))}
+export async function loadNotifyRules(uid:string):Promise<NotifyRule[]>{if(await blob.getText(notifyPendingUserKey(uid)))throw Error('Notify rules update is pending');const raw=await blob.getText(notifyUserKey(uid));if(!raw)throw Error('Notify rules are not synchronized for this account');return parseNotifyRules(raw)}
+export async function listAdminNotifyRules():Promise<NotifyRule[][]>{const pending=await blob.list(notifyRulesRoot+'pending/admin/');if(pending.some(k=>k.endsWith('.json')))throw Error('Admin notify rules update is pending');const keys=(await blob.list(notifyRulesRoot+'admin/')).filter(k=>k.endsWith('.json')).sort();return Promise.all(keys.map(async key=>{const raw=await blob.getText(key);return raw?parseNotifyRules(raw):[]}))}
 export type MobileDeliveryReceipt={status:'sending'|'accepted'|'delivered'|'read'|'failed'|'needs_review'|'cancelled';at:number;reason?:string}
 type ProviderDeliveryStatus='sent'|'delivered'|'read'|'failed'
 const providerIndexRoot='mail/update-provider/'

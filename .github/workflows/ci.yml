@@ -146,7 +146,7 @@ jobs:
         run: node --test scripts/tests/login-journey-animation.test.mjs scripts/tests/login-35s-story.test.mjs
 
       - name: Verify Gmail selected-sender and per-inbox thread isolation
-        run: node --experimental-strip-types --test scripts/tests/gmail-send-account-isolation.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/gmail-send-account-isolation.test.mjs scripts/tests/mail-digest-account-isolation.test.mjs scripts/tests/gmail-multi-account-fetch-isolation.test.mjs scripts/tests/mail-updates.test.mjs scripts/tests/gmail-notify-rules-worker-auth.test.mjs
 
       - name: Build (Webpack; retry only known intermittent Google-font URL bug)
         run: |
