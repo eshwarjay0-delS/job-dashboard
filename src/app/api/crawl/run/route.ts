@@ -6,8 +6,9 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300  // thirty portals, six at a time (runner.ts)
 
-// GET /api/crawl/run — daily portal crawl. Vercel cron (see vercel.json),
-// same secret pattern as the other crons.
+// GET /api/crawl/run — secret-gated portal crawl runner.
+// Contract crawling is manual/on-demand; no Vercel cron currently targets this route.
+// Do not add a scheduled crawler trigger without explicit owner approval.
 
 function timingSafeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a)
