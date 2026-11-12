@@ -1,12 +1,11 @@
 name: Kompas voice exact-head preview HTTP gate
 
-# Privileged preview credentials must never be available to PR-head code.
-# pull_request_target reads this workflow from trusted master; checkout stays
-# on master, never on the proposed PR branch or a fork's untrusted code.
+# Preview deploys are disabled for the Vercel Hobby plan, so this gate must
+# not run automatically. Privileged preview credentials must never be available
+# to PR-head code. Checkout stays on master, never on a proposed PR branch or
+# a fork's untrusted code. Run it by hand with workflow_dispatch only.
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read

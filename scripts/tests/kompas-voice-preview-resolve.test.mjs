@@ -60,10 +60,11 @@ test('missing token, unsafe inputs, malformed API and unauthorized API fail clos
   await assert.rejects(resolveVoicePreview({ expectedSha: sha, token, fetcher: async () => ({ ok: true, json: async () => ({}) }), attempts: 1 }), /Invalid Vercel deployment API response/);
 });
 
-test('release workflow runs trusted base code, never executes PR-head code with secrets', () => {
+test('release workflow is manual-only and never executes PR-head code with secrets', () => {
   const workflow = readFileSync(new URL('../../.github/workflows/kompas-voice-preview-smoke.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /pull_request_target:/);
-  assert.doesNotMatch(workflow, /^\s+pull_request:/m);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /pull_request_target:/);
+  assert.doesNotMatch(workflow, /pull_request:/);
   assert.match(workflow, /ref: master/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /KOMPAS_VERCEL_API_TOKEN: \$\{\{ secrets\.KOMPAS_VERCEL_API_TOKEN \}\}/);
