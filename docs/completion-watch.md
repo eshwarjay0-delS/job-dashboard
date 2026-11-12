@@ -575,3 +575,14 @@ PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `
 ## 12 November 2026 — PR #304 recovery regression completed
 
 PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` and WhatsApp recovery `43139954504` now both SUCCESS. Full CI `43139954490` remains IN PROGRESS. Protected preview `43139950971` FAILED with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. No merge or production deployment.
+
+
+## 12 November 2026 — resume profile-gap regressions added to the build gate
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` now has all three code gates complete: full CI `43139954490` SUCCESS, WhatsApp recovery `43139954504` SUCCESS and Kompas baseline `43139954651` SUCCESS. Its protected preview `43139950971` remains FAILED because the private GitHub Actions secret `KOMPAS_VERCEL_API_TOKEN` is missing. The owner or authorized repository administrator must configure it privately; do not paste or bypass it. PR #304 remains DRAFT and is not deployed.
+
+Local execution of the new profile-gap suite found two test-harness failures caused by strict comparison of objects created in a separate Node VM realm. The object fields were correct; the prototypes differed. Test-only PR #312 `0ae92d33f17133fed79328ccb7b7b0029817e2bc` normalizes those results and adds both `resume-confirmation-quality.test.mjs` and `tailor-profile-gap-fill.test.mjs` to the fail-fast build-time prebuild command. Local sandbox evidence on that exact content: targeted suites 31/31, Kompas baseline 92/92, TypeScript passed, focused ESLint passed, and `npm run build -- --webpack` passed with the updated prebuild suites and 160 static pages. PR #312 is stacked on #304, marked ready for review, and has no GitHub workflow run yet; it must not merge independently or before the parent gate.
+
+The production alias remains READY on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`; project metadata still reports `live:false`, so the protected preview remains unavailable. No new production deployment, authenticated model call, DOCX generation, R2 mutation, Meta send, email or handset acceptance occurred. The separate `roles_unrewritten` blocker must not be relaxed without owner approval. The 17 Oct 17:28 Chicago incident still lacks the generated output DOCX, R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt; conflicting source facts remain quarantined.
+
+Continue: check PR #312's exact-head GitHub CI and baseline, then continue the approved contract-crawler classifier validation without performing a manual crawl or production data mutation.
