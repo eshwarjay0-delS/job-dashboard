@@ -167,3 +167,14 @@ Source and test review only. The exact PR #303 parent remains DRAFT with full CI
 ## 12 November 2026 — offline fallback pair lifecycle restack
 
 PR #316 is the current replacement for the superseded PR #310. It is based on the latest PR #303 head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` and preserves the exact caption **Original resume — NOT TAILORED**. It consumes the JD/resume pair only after Meta returns a document message ID, and only when both fields still match the run; mixed newer-pair races preserve both fields. Exact-head WhatsApp recovery `43163655905` passed. It remains DRAFT and stacked; full CI/baseline and protected preview must be rerun after parent acceptance. No real WhatsApp send or R2 write.
+
+
+## 12 November 2026 — exact-head WhatsApp and resume recheck (06:53 UTC) <!-- whatsapp-exact-gates-0653z -->
+
+The approved initial-JD offline fallback PR #303 is still DRAFT. Exact head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` has full CI `43138216531`, WhatsApp recovery `43138216521` and Kompas baseline `43138216526` all SUCCESS. Protected preview `43138214326` fails because the private GitHub Actions secret `KOMPAS_VERCEL_API_TOKEN` is absent; the Vercel project reports `live=false`. Do not bypass or merge without that required gate.
+
+Dependent PR #316 is the current replacement for #310, based on #303. Its exact head `4af7d8bed8f51ef56d1b05156af430c74758fd92` passes WhatsApp recovery `43163655905`; full CI and Kompas baseline are deferred until parent acceptance. It clears only the exact JD/resume pair after Meta returns a document message ID, preserves a newer pair written during send, and retains the old pair on rejected send. The visible no-provider caption remains **Original resume — NOT TAILORED**.
+
+The 17 Oct 17:28 Chicago historical case remains open: the original source DOCX and matching JD were recovered earlier, but the generated output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. Fresh Library search found no uniquely correlated output; iZap lists zero linked WhatsApp numbers and a 17 Oct resume search returned zero messages. No historical replay, real Meta send, model call, R2 write or production mutation occurred.
+
+**Continue:** after legitimate protected preview access is restored, review/merge #303 on its exact green head, then retarget #316 to the resulting master and rerun full CI, WhatsApp recovery and Kompas baseline. Keep the 17 Oct incident open until the exact artifact and signed provider correlation are recovered or explicitly declared irrecoverable.
