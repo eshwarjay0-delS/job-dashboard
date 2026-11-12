@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
+import { isAuthDisabled } from "@/lib/authDisabled"
 import { createServiceClient } from "@/lib/supabase/service"
 import { checkRateLimit } from "@/lib/rateLimit"
+import {
+  isFreeSessionStoreConfigured,
+  readArtifact,
+  saveArtifact,
+  shouldUseFreeSessionStore,
+} from "@/lib/kompasFreeSessionStore"
 
 export const runtime="nodejs"
 export const dynamic="force-dynamic"
@@ -19,6 +26,11 @@ export async function GET(req:NextRequest) {
   const key=keyParts(req.nextUrl.searchParams.get("key"))
   if(!key)return json({ok:false,error:"Invalid interview transcript."},400)
   try {
+    if(shouldUseFreeSessionStore()){
+      if(!isFreeSessionStoreConfigured())return json({ok:false,error:"Transcript could not be retrieved."},503)
+      const data=await readArtifact(user.id,key.id,key.key)
+      return json({ok:true,data:data?.payload||null,capturedAt:data?.captured_at||null,...(isAuthDisabled()?{authDisabled:true}:{})})
+    }
     const {data,error}=await createServiceClient().from("kompas_account_session_artifacts")
       .select("payload,captured_at").eq("user_id",user.id)
       .eq("session_id",key.id).eq("artifact_key",key.key).maybeSingle()
@@ -42,6 +54,11 @@ export async function POST(req:NextRequest) {
   const at=typeof (payload as Record<string,unknown>).at==="number"?(payload as Record<string,unknown>).at:Date.now()
   if(typeof at!=="number"||!Number.isSafeInteger(at)||at<0)return json({ok:false,error:"Invalid snapshot date."},400)
   try {
+    if(shouldUseFreeSessionStore()){
+      if(!isFreeSessionStoreConfigured())return json({ok:false,error:"Transcript kept locally; server sync will retry."},503)
+      const saved=await saveArtifact(user.id,key.id,key.key,payload as Record<string,unknown>,at)
+      return json({ok:true,saved,...(isAuthDisabled()?{authDisabled:true}:{})})
+    }
     const {data,error}=await createServiceClient().rpc("save_kompas_account_artifact",{
       p_user_id:user.id,p_session_id:key.id,p_key:key.key,p_payload:payload,p_captured:at,
     })

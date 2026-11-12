@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
+import { isAuthDisabled } from "@/lib/authDisabled"
 import { capSessionPayloadForSyntheticOwner, rejectIfSyntheticOwnerLimited, syntheticReadPageSize } from "@/lib/syntheticOwnerGuards"
 import { createServiceClient } from "@/lib/supabase/service"
 import { checkRateLimit } from "@/lib/rateLimit"
@@ -13,6 +14,15 @@ import {
   rememberedCatalogTag,
   rememberCatalogTag,
 } from "@/lib/kompasCatalogPoll"
+import {
+  catalogMarks,
+  deltaRows,
+  isFreeSessionStoreConfigured,
+  loadCatalog,
+  mergeSessionOperations,
+  pageRows,
+  shouldUseFreeSessionStore,
+} from "@/lib/kompasFreeSessionStore"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -33,6 +43,95 @@ function isMissingFunction(error: unknown): boolean {
 }
 const json = (value: unknown, status = 200) =>
   NextResponse.json(value, { status, headers: HEADERS })
+
+const authDisabledFlag = () => (isAuthDisabled() ? { authDisabled: true as const } : {})
+
+function capRecords(
+  req: NextRequest,
+  user: { id: string; email: string | null; synthetic?: true },
+  records: { id: string; session: Record<string, unknown> | null; deleted: boolean; revision: number; updatedAt: string }[],
+) {
+  return records.map(r => ({
+    ...r,
+    session: r.deleted ? null : capSessionPayloadForSyntheticOwner(req, user, r.session),
+  }))
+}
+
+async function getFromFreeStore(
+  req: NextRequest,
+  user: { id: string; email: string | null; synthetic?: true },
+) {
+  if (!isFreeSessionStoreConfigured()) {
+    return json({ ok: false, error: "Could not read the account's Kompas sessions. Local sessions were preserved." }, 503)
+  }
+  const pageSize = syntheticReadPageSize(req, user, 100)
+  const cursor = req.nextUrl.searchParams.get("after") || ""
+  if (cursor && !ID_RE.test(cursor)) return json({ ok: false, error: "Invalid sync cursor." }, 400)
+  const catalog = await loadCatalog(user.id)
+  const marks = catalogMarks(catalog.rows)
+  if (!cursor) {
+    const inm = req.headers.get("if-none-match") || ""
+    if (inm) {
+      if (isCatalogPollDisabled()) {
+        return new NextResponse(null, { status: 429, headers: { ...HEADERS, "Retry-After": "3600", "X-Kompas-Poll": "disabled" } })
+      }
+      const cap = checkCatalogPollCap(user.id)
+      if (!cap.ok) {
+        return new NextResponse(null, {
+          status: 429,
+          headers: { ...HEADERS, "Retry-After": String(cap.retryAfterSec || 60), "X-Kompas-Poll": "throttled" },
+        })
+      }
+      const cached = rememberedCatalogTag(user.id)
+      if (cached && cached === inm) {
+        return new NextResponse(null, { status: 304, headers: { ...HEADERS, ETag: cached } })
+      }
+      const tag = catalogTag(user.id, marks)
+      rememberCatalogTag(user.id, tag)
+      if (inm === tag) return new NextResponse(null, { status: 304, headers: { ...HEADERS, ETag: tag } })
+      const floor = deltaSinceFloor(req.nextUrl.searchParams.get("since"))
+      if (floor && marks.length < pageSize) {
+        const changed = deltaRows(catalog.rows, floor, pageSize)
+        if (changed) {
+          return NextResponse.json({
+            ok: true, userId: user.id, email: user.email, delta: true, nextCursor: null,
+            ...authDisabledFlag(),
+            records: capRecords(req, user, changed),
+          }, { status: 200, headers: { ...HEADERS, ETag: tag } })
+        }
+      }
+    } else {
+      const full = checkCatalogFullReadCap(user.id)
+      if (!full.ok) {
+        return new NextResponse(null, {
+          status: 429,
+          headers: { ...HEADERS, "Retry-After": String(full.retryAfterSec || 60), "X-Kompas-Poll": "full-read-throttled" },
+        })
+      }
+    }
+  }
+  const page = pageRows(catalog.rows, cursor, pageSize)
+  const etag = !cursor ? catalogTag(user.id, marks) : ""
+  if (etag) rememberCatalogTag(user.id, etag)
+  return NextResponse.json({
+    ok: true, userId: user.id, email: user.email,
+    ...authDisabledFlag(),
+    nextCursor: page.nextCursor,
+    records: capRecords(req, user, page.records),
+  }, { status: 200, headers: etag ? { ...HEADERS, ETag: etag } : HEADERS })
+}
+
+async function postToFreeStore(
+  user: { id: string; email: string | null; synthetic?: true },
+  validated: { id: string; patch: Record<string, unknown>; deleted: boolean }[],
+) {
+  if (!isFreeSessionStoreConfigured()) {
+    return json({ ok: false, error: "Could not save sessions to the account. Updates remain queued locally." }, 503)
+  }
+  const records = await mergeSessionOperations(user.id, validated)
+  invalidateCatalogTag(user.id)
+  return json({ ok: true, userId: user.id, ...authDisabledFlag(), records })
+}
 
 function safePatch(id: string, patch: unknown): Record<string, unknown> | null {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) return null
@@ -56,6 +155,7 @@ export async function GET(req: NextRequest) {
   if (!user) return json({ ok: false, error: "Sign in to sync your sessions." }, 401)
   const pageSize = syntheticReadPageSize(req, user, 100)
   try {
+    if (shouldUseFreeSessionStore()) return await getFromFreeStore(req, user)
     const db = createServiceClient()
     // Cursor pagination follows the owner/session primary key; no arbitrary
     // 300-session cutoff and no shifting offset when another device updates.
@@ -165,6 +265,7 @@ export async function POST(req: NextRequest) {
   }
   if (new Set(validated.map(x => x.id)).size !== validated.length) return json({ ok: false, error: "Duplicate session operation." }, 400)
   try {
+    if (shouldUseFreeSessionStore()) return await postToFreeStore(user, validated)
     const db = createServiceClient()
     const records = []
     for (const o of validated) {
