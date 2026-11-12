@@ -638,7 +638,7 @@ export async function runTailor(opts: {
           const rolePlan = (part.roles || []).map(i => {
             const role = zones.roles[i]
             const supported = [...coveredJdKeywords(role.bullets.map(b => b.text).join("\n"), jdKwsPrompt)]
-            return `ROLE #${i}: preserve and develop only these JD skills supported by this role original bullets: ${supported.join(", ") || "none identified"}. Review every bullet, retaining its factual context. Use equivalent exact JD terminology only where the meaning is supported. If no role-specific evidence exists, leave the requirement as a gap; do not add an experience claim. Explicitly candidate-confirmed skills may also be mapped into relevant existing project bullets across roles, including earlier roles, without same-role source proof. Do not turn bullets into skill lists or repeat identical points across clients.`
+            return `ROLE #${i}: preserve and develop only these JD skills supported by the original bullets for this role: ${supported.join(", ") || "none identified"}. Review every bullet, retaining its factual context. Use equivalent exact JD terminology only where the meaning is supported. If neither role-specific source evidence nor an explicit candidate confirmation exists, leave the requirement as a gap; do not add an experience claim. Explicitly candidate-confirmed skills may also be mapped into relevant existing project bullets across roles, including earlier roles, without same-role source proof. Do not turn bullets into skill lists or repeat identical points across clients.`
           }).join("\n")
           return adapt({ ...call, preferences: [call.preferences, rolePlan].filter(Boolean).join("\n"), ...laneCall(lane), part: part.kind, roles: part.roles })
         },
