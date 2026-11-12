@@ -8,7 +8,11 @@ const require = createRequire(import.meta.url)
 function load(name, mocks = {}, globals = {}) {
   const module = { exports: {} }
   const js = ts.transpileModule(readFileSync(new URL(`../../src/lib/${name}.ts`, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
-  runInNewContext(js, { module, exports:module.exports, require:id => id in mocks ? mocks[id] : require(id), Buffer, console, Date, AbortSignal, process:{env:{WHATSAPP_GMAIL_UPDATE_TEMPLATE:'inbox_update',WHATSAPP_TOKEN:'test',WHATSAPP_PHONE_NUMBER_ID:'test'}}, ...globals })
+  runInNewContext(js, { module, exports:module.exports, require:id => {
+      if (Object.prototype.hasOwnProperty.call(mocks, id)) return mocks[id]
+      if (id.startsWith("@/lib/")) return load(id.slice("@/lib/".length), mocks)
+      return require(id)
+    }, Buffer, console, Date, AbortSignal, process:{env:{WHATSAPP_GMAIL_UPDATE_TEMPLATE:'inbox_update',WHATSAPP_TOKEN:'test',WHATSAPP_PHONE_NUMBER_ID:'test'}}, ...globals })
   return module.exports
 }
 const policy = load('mail-update-policy')
@@ -45,16 +49,16 @@ function deliveryHarness({previous=0,fail=false,change=false,muted=false,disconn
   const rows = new Map([['whatsapp/linked/user.json',JSON.stringify({numbers:[{digits:'15555551234'}]})],['whatsapp/links/15555551234.json',JSON.stringify({userId:'user',verified:true})]])
   const feed=Array.from({length:8},(_,i)=>({...event,id:String(i)}))
   for(let i=0;i<previous;i++) rows.set(`updates/deliveries/${i}.json`,'{"status":"accepted"}')
-  let calls=0,reads=0
+  let calls=0,reads=0,authLookups=0
   const blob={getText:async key=>rows.get(key)||null,put:async(key,value)=>rows.set(key,value),putIfAbsent:async(key,value)=>{if(rows.has(key))return false;rows.set(key,value);return true}}
   const mod=load('mail-update-delivery',{
     '@/lib/storage':{blob},'@/lib/mail-update-policy':policy,
-    '@/lib/supabase/service':{createServiceClient:()=>({auth:{admin:{getUserById:async()=>({data:{user:{user_metadata:{gmail_notify_rules:muted?[{account:'a@example.com',email:'sender@example.com',mode:'never'}]:[]}}},error:null})}}})},
+    '@/lib/supabase/service':{createServiceClient:()=>{authLookups++;throw Error('notify rules must not enumerate or query Supabase Auth during delivery')}},
     '@/lib/googleWorkspace':{listGoogleWorkspaceAccounts:async()=>disconnected?[]:[{google_email:'a@example.com',gmail_enabled:true}]},
-    '@/lib/mail-update-store':{registerUpdateProviderReceipt:async()=>true,updateRoot:()=> 'updates/',updatePreferences:async()=>++reads>1&&change?{...prefs,accounts:[]}:prefs,updateFeed:async()=>feed},
+    '@/lib/mail-update-store':{registerUpdateProviderReceipt:async()=>true,loadNotifyRules:async()=>muted?[{account:'a@example.com',email:'sender@example.com',mode:'never'}]:[],updateRoot:()=> 'updates/',updatePreferences:async()=>++reads>1&&change?{...prefs,accounts:[]}:prefs,updateFeed:async()=>feed},
     '@/lib/mail-important-store':{trackedSenders:async()=>[]},'@/lib/mail-important':{trackedBy:()=>true},'@/lib/mail-reading':{senderEmail:s=>s},'@/lib/whatsapp':{waConfigured:()=>true},
   },{fetch:async()=>{calls++;if(fail)throw Error('timeout');return {ok:true,json:async()=>({messages:[{id:'receipt'}]})}}})
-  return {mod,rows,calls:()=>calls}
+  return {mod,rows,calls:()=>calls,authLookups:()=>authLookups}
 }
 test('already delivered newest items do not starve older pending alerts',async()=>{
   const h=deliveryHarness({previous:5});const r=await h.mod.deliverInboxUpdates('user');assert.equal(r.accepted,3);assert.equal(h.calls(),3)
@@ -65,6 +69,9 @@ test('uncertain delivery is reserved and never blindly repeated',async()=>{
   await h.mod.deliverInboxUpdates('user');assert.equal(h.calls(),8)
   await h.mod.deliverInboxUpdates('user');assert.equal(h.calls(),8)
   assert.equal(JSON.parse(h.rows.get('updates/deliveries/0.json')).status,'needs_review')
+})
+test('sender mute is read from the owner-scoped cache without a Supabase Auth lookup',async()=>{
+  const h=deliveryHarness({muted:true});await h.mod.deliverInboxUpdates('user');assert.equal(h.calls(),0);assert.equal(h.authLookups(),0)
 })
 test('account removed after scan cancels alert before external send',async()=>{
   const h=deliveryHarness({change:true});await h.mod.deliverInboxUpdates('user');assert.equal(h.calls(),0)

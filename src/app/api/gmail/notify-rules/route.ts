@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
 import { validNotifyRule, type NotifyRule } from "@/lib/notify-rules"
+import { isAdminEmail } from "@/lib/owner"
+import { abortNotifyRulesUpdate, beginNotifyRulesUpdate, completeNotifyRulesUpdate, migrateNotifyRulesIfMissing } from "@/lib/mail-update-store"
 
 // Kept so existing `import type { NotifyRule } from "@/app/api/gmail/notify-rules/route"` keeps working.
 export type { NotifyRule }
@@ -15,7 +17,11 @@ export async function GET() {
   const { data: { user }, error } = await sb.auth.getUser()
   if (error || !user) return NextResponse.json({ ok: false, error: "Sign in required" }, { status: 401 })
   const stored = user.user_metadata?.gmail_notify_rules
-  return NextResponse.json({ ok: true, rules: Array.isArray(stored) ? stored.filter(validNotifyRule) : [] })
+  const rules = Array.isArray(stored) ? stored.filter(validNotifyRule) : []
+  let workerExportUpdated = true
+  try { await migrateNotifyRulesIfMissing(user.id, rules, isAdminEmail(user.email)) }
+  catch { workerExportUpdated = false }
+  return NextResponse.json({ ok: true, rules, workerExportUpdated }, { headers: { "Cache-Control": "private, no-store" } })
 }
 
 export async function PUT(req: Request) {
@@ -31,7 +37,16 @@ export async function PUT(req: Request) {
   const rules: NotifyRule[] = [...new Map<string, NotifyRule>(
     input.rules.map((r: NotifyRule) => [`${r.account.toLowerCase()}:${r.email.toLowerCase()}`, { ...r, account: r.account.toLowerCase(), email: r.email.toLowerCase() }])
   ).values()]
+  try { await beginNotifyRulesUpdate(user.id) }
+  catch { return NextResponse.json({ ok: false, error: "Another sender-rules update is in progress. Retry shortly; preferences were not changed." }, { status: 409 }) }
   const result = await sb.auth.updateUser({ data: { gmail_notify_rules: rules } })
-  if (result.error) return NextResponse.json({ ok: false, error: "Could not save notify preferences" }, { status: 500 })
-  return NextResponse.json({ ok: true, rules })
+  if (result.error) {
+    await abortNotifyRulesUpdate(user.id).catch(() => {})
+    return NextResponse.json({ ok: false, error: "Could not save notify preferences" }, { status: 500 })
+  }
+  try { await completeNotifyRulesUpdate(user.id, rules, isAdminEmail(user.email)) }
+  catch {
+    return NextResponse.json({ ok: false, saved: true, rules, workerExportUpdated: false, error: "Preferences were saved, but secure background sync is pending. Background alerts are held until it finishes." }, { status: 503 })
+  }
+  return NextResponse.json({ ok: true, rules, workerExportUpdated: true })
 }

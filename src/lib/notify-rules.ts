@@ -1,10 +1,6 @@
 // Per-sender notify controls (Poke parity): "always" boosts a sender past the
 // normal nudge bar, "never" mutes them entirely. The UI writes these to
-// Supabase user_metadata via /api/gmail/notify-rules (GET/PUT). The 30-minute
-// inbox worker has no user session and no service key, so it cannot read
-// user_metadata — the worker-readable export at /api/gmail/notify-rules/export
-// serves it only what triage needs (sender emails + mode; account addresses
-// stay server-side).
+// Supabase user_metadata via /api/gmail/notify-rules (GET/PUT). The worker reads an owner-scoped R2 cache populated only by authenticated settings updates. The export route is protected by CRON_SECRET and returns only sender emails + mode; account addresses stay server-side.
 
 export type NotifyRule = { account: string; email: string; mode: "always" | "never" }
 /** The worker's view: sender email + mode only. */
