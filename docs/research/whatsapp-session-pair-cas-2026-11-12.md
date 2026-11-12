@@ -19,7 +19,7 @@ This follow-up is limited to the sender session persistence boundary. It does no
 - A barrier-controlled webhook regression pauses after the session ETag read, commits a newer JD/resume pair, then resumes the stale consumer. The conditional write rejects the stale ETag, the consumer reloads and preserves the newer pair, and last-used bookkeeping is retained.
 - Filesystem tests verify stale-write rejection and exactly one winner for two concurrent writes using the same ETag.
 - R2 adapter tests verify ETag retrieval, the outgoing If-Match value, precondition conflict handling and a successful subsequent conditional write.
-- whatsapp-single-request.test.mjs is added to the production prebuild regression group so the barrier case runs with full CI.
+- whatsapp-single-request.test.mjs is added as a dedicated full-CI step; the canonical prebuild command remains unchanged.
 
 ## Safety and acceptance boundary
 
