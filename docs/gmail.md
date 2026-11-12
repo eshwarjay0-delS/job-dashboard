@@ -250,3 +250,8 @@ Production Auth egress is currently restricted: the 24-hour runtime aggregate sh
 The last read-only account snapshot remains three account sync rows and 2,002 account-keyed threads, latest sync 10 Nov 14:44:44Z. This is persisted account separation, not two-inbox healthy/partial-failure, reconnect or selected-From live acceptance.
 
 PR #309 exact-head full CI `43145194068` and Kompas baseline `43145194212` passed for the approved normal-flow mobile navigation (hamburger expands below the sticky top bar and pushes content down; no overlay). Protected preview `43145190595` remains blocked because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. No real phone/narrow viewport acceptance or production deployment is claimed. Keep sync-health cards proposed and the unattended update worker disabled until its external scheduler, CRON_SECRET, approved Meta template and explicit enablement are present.
+
+
+## 12 November 2026 — mobile navigation restack
+
+The approved Poke-inspired mobile behavior is restacked as PR #318 on PR #317. It preserves the normal-flow requirement: the hamburger opens below the sticky top bar and pushes content down; no overlay/scrim. It adds `dashboard-shell.test.mjs` to fail-fast prebuild without dropping the resume profile suites. Exact head `571b8594b3189f87f5d3fe50f2067a65330d09f6` is a draft stacked PR with no workflow run visible yet. Prior #309 full CI/baseline success does not validate this restack. Real phone acceptance and protected preview remain open; no email was sent and the unattended worker stays disabled.
