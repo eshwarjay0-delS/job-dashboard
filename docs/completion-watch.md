@@ -535,3 +535,13 @@ The exact protected-preview blocker is the absent private GitHub Actions secret 
 - **Gmail/mobile:** PR #309 exact-head full CI `43130664507` and Kompas baseline `43130664424` passed; protected preview `43130664448` failed because `KOMPAS_VERCEL_API_TOKEN` is missing. No phone acceptance. Keep sync-health cards and unattended worker unapproved/disabled; no real email send.
 
 Continue: finish the exact-head PR #303 checks, restore protected preview access through the owner/authorized repository administrator, then restack #310. In parallel, finish PR #304 full CI; do not merge PR #293, #277 or PR #307. Keep the 17 Oct 17:28 Chicago incident open until the exact generated DOCX and correlated R2/webhook/Meta signed delivery evidence are recovered or explicitly deemed irrecoverable. No live WhatsApp, email, model or device tests were performed.
+
+
+## 12 November 2026 — exact-head CI follow-through
+
+- PR #303 exact head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` now has full CI `43138216531`, WhatsApp recovery `43138216521` and Kompas baseline `43138216526` all SUCCESS. Protected preview `43138214326` still fails because private `KOMPAS_VERCEL_API_TOKEN` is absent. Keep DRAFT; no merge or bypass.
+- PR #304 previous head `96cbc657` failed full CI `43138129880` only because two new regex assertions had invalid slash escaping; 42 other tests passed. Fixed with `String.includes` in `a07c4870e9aee390111fc36c5959b6d80f6d9884`. New exact-head CI `43139136600` is QUEUED, baseline `43139136646` and WhatsApp recovery `43139136594` are IN PROGRESS, preview `43139133535` is IN PROGRESS. Wait for all exact-head results; no merge.
+- PR #310's atomic-pair regression `43137900527` remains green, but it must be restacked onto the accepted parent after #303 passes its protected preview gate.
+- Plan/REA docs PR #311 schema `43138875726` SUCCESS on `3b30b905`; it remains stacked on PR #306, whose full CI/baseline/schema pass but protected preview fails for the same missing private token.
+
+Continue: finish the exact-head PR #304 gates, obtain the protected-preview secret through the owner/authorized repository administrator, then accept #303 and restack #310 in dependency order. Keep PR #293, #277 and #307 unapproved. No live model/DOCX, WhatsApp or Gmail acceptance is claimed.
