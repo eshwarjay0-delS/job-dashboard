@@ -819,3 +819,8 @@ Vercel's 24-hour runtime aggregation reports 42 Gmail notify-rules/export Supaba
 ## 12 November 2026 09:24 UTC — WhatsApp fallback restack
 
 The approved 6 Nov initial-JD/no-provider fallback and no-baseline swipe-refinement policy are restacked from stale PR #303 onto current master in PR #321, head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`. The six changed files were byte-identical between old base `65bdf2f` and current master `da1db145` before copying, so intervening master work was preserved. Exact-head full CI 43191231356, WhatsApp recovery 43191231421, Kompas baseline 43191231296 and protected preview 43191231435 are IN_PROGRESS. Keep DRAFT until all pass. PR #316's pair-consumption fix remains dependent on the old #303 branch and must be restacked onto accepted master only after #321 is accepted. The 17 Oct generated output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivery/read receipt remain missing; no replay, model call, real send, R2 write or production deployment occurred.
+
+
+## 12 November 2026 09:23 UTC — mobile navigation CI outcome
+
+PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` passed full CI 43190228931 (47/47 steps) and Kompas baseline 43190229393. The actual prebuild log confirms `scripts/tests/dashboard-shell.test.mjs` ran and all four tests passed. Protected preview 43190224739 failed at exact-head resolution because the private `KOMPAS_VERCEL_API_TOKEN` is empty. Keep DRAFT; no deployment, authenticated Gmail/two-inbox or real phone acceptance. The separate Supabase Auth 402 restriction still affects Gmail export.
