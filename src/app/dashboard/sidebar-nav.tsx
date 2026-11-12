@@ -385,7 +385,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       {!resumeOnly && <CreditsPill />}
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
-      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
+      <nav aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
         {(resumeOnly ? RESUME_ONLY_TABS : NAV_TABS).map(tab => {
           const inTab = (h: string) => h === tab.href ? pathname === h : pathname === h || pathname.startsWith(h + "/")
           const tabActive = inTab(tab.href) || tab.items.some(i => inTab(i.href))
