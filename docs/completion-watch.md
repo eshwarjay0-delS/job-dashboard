@@ -656,3 +656,8 @@ The historical output DOCX, exact R2 key, webhook/request ID, Meta message ID an
 ## 12 November 2026 — Gmail mobile navigation exact-head CI completed
 
 PR #309 head `96b8e84a7550cf7481d043e53ba51d7130c1af84` now has full CI `43145194068` SUCCESS and Kompas baseline `43145194212` SUCCESS. The unique navigation-target fix and regression are covered by the exact-head run. Protected preview `43145190595` remains FAILURE because the private `KOMPAS_VERCEL_API_TOKEN` is unavailable. Keep PR #309 DRAFT; no production deployment, narrow browser viewport or real phone acceptance has occurred.
+
+
+## 12 November 2026 — stale Gmail test PR closed
+
+PR #297 was closed as a stale duplicate after current-master PR #313 preserved the same five selected-sender/per-inbox regression tests and corrected the harness naming. PR #297 was not merged; its history and superseded note remain. PR #313 exact-head full CI `43143457248` and Kompas baseline `43143457299` passed, but the protected preview gate remains failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. PR #313 remains open/unmerged and test-only; no real email or two-inbox acceptance is claimed.
