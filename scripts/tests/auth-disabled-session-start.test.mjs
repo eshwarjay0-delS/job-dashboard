@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import reauth from "../../public/kompas/session-reauth.js"
 
-const { decideSessionStart, NOT_READY } = reauth
+const { decideSessionStart, AUTH_UNAVAILABLE } = reauth
 const sidebar = readFileSync(new URL("../../src/app/dashboard/sidebar-nav.tsx", import.meta.url), "utf8")
 
 const dead = {
@@ -50,5 +50,5 @@ test("a real answer outage is explained and does not become an auth bypass", () 
   })
   assert.equal(down.action, "explain")
   assert.equal(down.autoSignIn, false)
-  assert.equal(down.message, NOT_READY)
+  assert.equal(down.message, AUTH_UNAVAILABLE)
 })
