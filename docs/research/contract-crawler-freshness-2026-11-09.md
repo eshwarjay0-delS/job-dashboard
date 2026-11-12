@@ -94,3 +94,21 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+ 
+## 11 November 2026 — scheduled post-classifier crawl did not run (12:04 UTC)
+
+The expected daily run at 11:00 UTC is absent from the production-linked `mfit_crawl_runs` table. The newest record remains 10 November 2026 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, with one Inspyr abort. Grouped `mfit_crawl_jobs` observations remain on 10 November 11:01 UTC; no 11 November listing refresh is present.
+
+The canonical master and alias metadata still agree on `11efbbfe7781592bc2fad1216f67546882a1c3ed` / deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne`, but Vercel project inspection reports `live=false`. Public health and crawl endpoints have returned HTTP 402 `DEPLOYMENT_DISABLED`. The alias's READY metadata therefore does not establish an available cron runtime or successful API behavior. No crawl was manually triggered and no rows were inserted or rewritten.
+
+**Next:** the Vercel owner/account must restore project availability. Then verify `GET /api/health`, `GET /api/crawl/jobs?limit=1`, and a subsequent completed scheduled crawl on the reviewed classifier SHA. Keep Robert Half manual-only. PR #288's clearance-safe pagination and PR #291's C2H extension remain unmerged and preview-blocked; their passing source suites are not production acceptance.
+
+
+## 11 Nov 2026 — classifier precision review
+
+A source review traced the contractTypes call sites. The jobs API passes full descriptions into the classifier, so a generic contract-token match can incorrectly classify permanent roles that mention contract administration, negotiation, compliance or lifecycle management. The crawler's work-type classifier also previously concatenated engagement and title, obscuring which value was the structured employment label.
+
+PR #305 current head 278d9b3fa614c7e50aebf83b80ce9ac913724bf9 now passes engagement separately, trusts an explicit structured employmentType for generic Contract labels, and requires strong employment-context phrases in free text. It strips negated Contract, W2, C2C, 1099 and Temporary labels. Regression cases cover generic contract vocabulary, explicit contract positions, structured C2C/1099/Contract/Temporary, W2 payroll alone and negative statements.
+
+Exact-head full CI 43096994492, crawler regression 43096994482 and Kompas baseline 43096994493 are queued. This is not merged or live. No manual crawl or database mutation occurred; the latest persisted crawl remains 10 Nov 11:00 UTC.
