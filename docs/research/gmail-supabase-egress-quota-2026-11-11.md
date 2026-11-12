@@ -23,3 +23,8 @@ The project owner must decide to upgrade the Supabase plan or remove the spend c
 - Read-only Gmail aggregate query: three accounts, three sync rows, 2,002 threads, latest sync 10 Nov 14:44:44 UTC.
 
 No user mailbox contents, credentials, email addresses, or private message bodies are included.
+
+
+## 12 November 2026 — latest recorded Auth egress evidence (06:53 UTC) <!-- gmail-egress-current-0653z -->
+
+The latest recorded production runtime aggregate for `/api/gmail/notify-rules/export` remains 32 HTTP 402 `exceed_egress_quota` failures across 27 users, latest event `2026-11-12T04:07:07Z`. This is the last available aggregate in this continuation, not a new live re-query at 06:53 UTC. Supabase project metadata may remain healthy while its Auth service is restricted. The owner/project administrator must decide whether to upgrade the plan or remove the applicable spend cap. No billing change, credential swap, alternate-auth workaround, manual export, email send or secret read was attempted.
