@@ -33,8 +33,8 @@ export class SpeechError extends Error {
 
 /** The kinds of recording accepted, with the file ending the recogniser wants to see. */
 export const AUDIO_TYPES: Record<string, string> = {
-  "audio/webm": "webm", "audio/ogg": "ogg", "audio/wav": "wav", "audio/x-wav": "wav",
-  "audio/mp4": "m4a", "audio/m4a": "m4a", "audio/x-m4a": "m4a", "audio/mpeg": "mp3",
+  "audio/webm": "webm", "video/webm": "webm", "audio/ogg": "ogg", "audio/wav": "wav", "audio/x-wav": "wav",
+  "audio/mp4": "m4a", "video/mp4": "mp4", "audio/m4a": "m4a", "audio/x-m4a": "m4a", "audio/mpeg": "mp3",
 }
 /** The type before any ";codecs=…", or null when it is not one we take. */
 export function audioType(mime: string | null): string | null {

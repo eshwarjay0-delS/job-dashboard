@@ -1,3 +1,9 @@
+## 2026-11-12 — Login-off sessions on the free Blob store, and Android keeps the last audio chunk
+
+No new screen. Three reviewed patches landed on master `27f600ef`: when `AUTH_DISABLED` is exactly true, `/api/kompas/account-sessions` and `/api/kompas/account-artifacts` use the private Hobby Blob store, and the first successful login-off catalog read uploads this origin's local sessions. Signed-in accounts still use Supabase and still need an explicit Import. Chrome on Android waits briefly after `MediaRecorder.onstop` so the last `dataavailable` chunk is included, and a timeslice `start` falls back to an untimed start. `AUTH_DISABLED` was not changed.
+
+**Checked locally. Production deploy is the next step, not done in this note.** `npm run lint`: 0 errors, 263 existing warnings. `npx tsc --noEmit` exit 0. `npm run test:baseline` 92/92. Related Kompas suites 134 pass, 2 fail. The two failures were already in `scripts/tests/kompas-voice.test.mjs` on master: the web sharing prompt expects `['share','mic']` and got `[]`, and repeated AI Answer clicks expect 1 in-progress answer and got 0. The new late-chunk case passed. Not a live Blob write. Not a phone recording.
+
 ## 2026-11-12 — The question window sits on the caption frame
 
 No new screen. Pull request 234 was conflicting with master. The rebase kept the later caption and mic framing, including skip-login and computer-audio work already on master. The frame still gathers the latest interviewer chunks and strips the candidate's speech. When those chunks hold more than one question, the last-four window then keeps the longest coherent tail: Last 1 2 3 4, then Last 1 2 3, then Last 1 2, then Last 1. One question keeps the setup the frame already attached. A trailing fragment stays with that setup. Four unrelated questions stay apart, and a logistics tail is still skipped. The WhatsApp test keeps both the site origin and the window merge.

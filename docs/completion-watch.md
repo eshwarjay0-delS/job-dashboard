@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 12 November 2026 — free account session sync and Android last chunk
+
+Owner request the same day: apply the three reviewed format-patch files onto `27f600ef` and ship one production deploy. `git am` had no conflicts. Login-off catalog reads and writes use the private Hobby Blob store. The first login-off read uploads local sessions. Android Chrome keeps a `dataavailable` chunk that arrives after `onstop`. `AUTH_DISABLED` was not edited. Local gates: lint 0 errors, `tsc --noEmit` clean, baseline 92/92, related Kompas suites 134 pass and 2 fail. Those two failures are the pre-existing `kompas-voice` cases (web share order, repeated AI Answer). Production `/kompas/version.json` and one `GET /api/kompas/account-sessions` are the ship check. Not a live phone recording.
+
 ## 12 November 2026 — question window on the caption frame
 
 Owner, 12 Nov 2026, 4:18 PM America/Chicago: question stripping and capture are the top Kompas priority. Pull request 234 was rebased onto current master. The caption and mic frame stays. The last-four window runs when the framed chunks hold more than one question. One question keeps its setup. Offline stand-in: 150 drafts, 0 pairs at Jaccard >= 0.7, 0 same-answer failures. Focused suites 208 pass, 0 fail. Baseline 15 checks hold. `tsc --noEmit` clean. Not a production deploy. No ship marker.

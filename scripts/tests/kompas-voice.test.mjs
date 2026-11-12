@@ -59,6 +59,29 @@ test('stop flushes final recorder data without restarting it', async () => {
  await s.endSegment({rec,chunks,speechMs:400,who:'You',stopped:true},true,false);
  assert.equal(sent.length,1); assert.equal(sent[0].size,4);
 });
+
+test('endSegment includes a late dataavailable after onstop (Chrome Android)', async () => {
+ const s=env({VAD:{MIN_SPEECH_MS:280}, finals:new Set(), startSegment:()=>{throw Error('must not restart');}, transcribe:undefined});
+ const sent=[]; s.transcribe=async(blob,who)=>sent.push({size:blob.size,who,text:await blob.text()});
+ vm.runInContext(section('function segmentKept(', 'function endSegment('),s);
+ vm.runInContext(section('function spokenWallTime(', '\n}')+'\n}',s);
+ vm.runInContext(section('function endSegment(', '// AI Answer pressed'),s);
+ const chunks=[new Blob(['head'])];
+ const rec={
+  mimeType:'audio/webm',
+  state:'recording',
+  requestData(){},
+  ondataavailable(e){ if (e.data && e.data.size) chunks.push(e.data); },
+  stop(){
+   this.state='inactive';
+   this.onstop();
+   queueMicrotask(() => { this.ondataavailable({ data: new Blob(['tail-audio']) }); });
+  }
+ };
+ await s.endSegment({rec,chunks,speechMs:400,who:'You',stopped:true},true,false);
+ assert.equal(sent.length,1);
+ assert.match(sent[0].text, /tail-audio/);
+});
 test('sync patch is idempotent and fails on unknown upstream source',()=>{
  assert.equal(patchKompasVoice(source),source);
  assert.throws(()=>patchKompasVoice('unknown upstream'),/needs review/);

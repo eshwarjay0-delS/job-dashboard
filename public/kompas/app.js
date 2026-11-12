@@ -2257,7 +2257,9 @@ function startSegment(cap) {
     void stopSource(cap.who); reportSources();
     if (!captures.length) void stop(false);
   };
-  try { rec.start(250); } catch (error) { cap.rec = null; throw error; }
+  try { rec.start(250); } catch {
+    try { rec.start(); } catch (error) { cap.rec = null; throw error; }
+  }
   cap.rec = rec;
 }
 const finals = new Set();              // final transcriptions still in flight (AI Answer waits for them)
@@ -2289,11 +2291,22 @@ function endSegment(cap, keep, restart = true, force = false) {
   const done = new Promise(r => { settle = r; });
   finals.add(done); done.then(() => finals.delete(done));
   rec.onstop = () => {
+    // Chrome on Android often delivers the last dataavailable after onstop.
+    // A header-only WebM is under 800 bytes, so /api/kompas/speech returns 400
+    // "empty" and the session shows "The last phrase could not be transcribed."
+    const flush = () => {
+      if (!segmentKept(speech, keep, force)) return settle();
+      const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
+      if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
+    };
+    setTimeout(flush, 80);
+  };
+  try { if (typeof rec.requestData === "function" && rec.state && rec.state !== "inactive") rec.requestData(); } catch {}
+  try { rec.stop(); } catch { setTimeout(() => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
     if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
-  };
-  try { rec.stop(); } catch { settle(); }
+  }, 80); }
   const watchdog = setTimeout(() => {
     if (epoch === transcriptionEpoch) status("Audio processing stalled. Check your connection and retry AI Answer.", "err");
     settle(false);

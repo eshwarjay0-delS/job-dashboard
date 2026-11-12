@@ -116,7 +116,7 @@
         if(u && (!sinceMark || Date.parse(u)>Date.parse(sinceMark))) sinceMark=u;
       }
     }
-    let lastPollKind="", pollStopped=!!pollDisabledAtStart, pollTimer=null, currentPollMs=POLL_MS, unchangedPolls=0, lastActivity=Date.now();
+    let lastPollKind="", pollStopped=!!pollDisabledAtStart, pollTimer=null, currentPollMs=POLL_MS, unchangedPolls=0, lastActivity=Date.now(), loginOffSync=false;
     async function api(method, body, cursor = "", conditional = false) {
       const sendTag = conditional && method==="GET" && !cursor && owner && catalogTag && catalogTagOwner===owner;
       const sendSince = sendTag && sinceMark && sinceOwner===owner;
@@ -192,6 +192,11 @@
         }
         const nextOwner=data.userId;
         const firstPullForOwner = owner !== nextOwner;
+        // Login-off (server says authDisabled): this is the single owner account, so
+        // local and leftover-legacy sessions are uploaded on the first successful read.
+        // Signed-in accounts still require an explicit Import click.
+        const loginOff = data.authDisabled === true;
+        if (loginOff) loginOffSync = true;
         if(firstPullForOwner){
           if(owner)persist();
           const previous=storage.getItem(prefix+"owner")||"";
@@ -212,7 +217,10 @@
           // is genuinely missing, fall back to the same-owner shadow cache.
           const sameOwner=previous===nextOwner && Array.isArray(unscoped) &&
             storage.getItem("perfact.sessions")!==null;
-          local=sameOwner?unscoped:(Array.isArray(cached)?cached:[]);
+          const adoptLocal = loginOff && Array.isArray(unscoped) &&
+            storage.getItem("perfact.sessions")!==null &&
+            (!previous || previous===nextOwner);
+          local=(sameOwner||adoptLocal)?unscoped:(Array.isArray(cached)?cached:[]);
         } else {local=read();}
         // A device which belonged to this same authenticated account may have
         // previously created sessions offline. Those missing from the server
@@ -221,11 +229,25 @@
         for (const s of local) if(firstPullForOwner && !knownIds.has(s.id) && !pending[s.id]){
           const op=delta([],[s])[0];if(op)queue(op);
         }
+        if(loginOff){
+          const existing=getJSON(prefix+"legacy",[]);
+          const have=new Set((local||[]).map(s=>s&&s.id));
+          for(const s of existing){
+            if(!s || typeof s.id!=="string" || have.has(s.id) || knownIds.has(s.id) || pending[s.id]) continue;
+            const op=delta([],[s])[0];
+            if(op){ queue(op); local=local.concat([s]); have.add(s.id); }
+          }
+        }
         noteSince(data.records,data.userId);
         remoteWrite(combine(data.records||[],local,pending));
         lastCheck=Date.now();
         syncStatus({state:importing?"importing":"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
-        if(Object.keys(pending).length) void flush();
+        // Login-off: finish the first upload before the page treats sync as done, so
+        // opening the old origin once actually puts local sessions in the free store.
+        if(Object.keys(pending).length){
+          if(loginOff) await flush();
+          else void flush();
+        }
         return true;
       })().catch(err=>{
         lastError=Date.now();syncStatus({state:"offline",message:err.message});
@@ -248,7 +270,15 @@
           persist();
         }
         // Conditional: unchanged or delta read, never a second download of every session payload.
-        if(!Object.keys(pending).length) void refresh(true);
+        if(!Object.keys(pending).length){
+          if(loginOffSync){
+            const existing=getJSON(prefix+"legacy",[]);
+            const have=new Set(read().map(s=>s&&s.id));
+            if(Array.isArray(existing) && existing.every(s=>!s||!s.id||have.has(s.id)))
+              storage.removeItem(prefix+"legacy");
+          }
+          void refresh(true);
+        }
         return !Object.keys(pending).length;
       } catch(err) {
         lastError=Date.now();
