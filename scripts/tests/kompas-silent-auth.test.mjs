@@ -101,10 +101,18 @@ test('no auth UI text remains in the client', () => {
 });
 
 test('twenty folds: a live answer never opens sign-in or says reconnecting', () => {
+  const waitStart = appSrc.indexOf('function waitForAuthSilently');
+  const waitEnd = appSrc.indexOf('async function preparePack', waitStart);
+  const live = appSrc.slice(waitStart, waitEnd);
+  const offerStart = appSrc.indexOf('function offerFreshSignIn');
+  const offerEnd = appSrc.indexOf('async function checkSessionReadiness', offerStart);
+  const offer = appSrc.slice(offerStart, offerEnd);
   for (let fold = 0; fold < 20; fold++) {
     assert.equal(appSrc.includes('status("Reconnecting.'), false, 'fold ' + fold);
     assert.equal(appSrc.includes('Desktop session is reconnecting'), false, 'fold ' + fold);
     assert.equal(appSrc.includes('Still waiting for the session'), false, 'fold ' + fold);
-    assert.equal(/openSignIn\s*\(/.test(appSrc), false, 'fold ' + fold);
+    assert.equal(/openSignIn\s*\(/.test(live), false, 'fold ' + fold);
+    assert.equal(live.includes('/login?next='), false, 'fold ' + fold);
+    assert.match(offer, /if \(running\) return/, 'fold ' + fold);
   }
 });

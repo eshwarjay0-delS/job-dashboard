@@ -34,6 +34,14 @@ The refresh token is stored with Electron `safeStorage` when the OS keychain or 
 
 The desktop schedules the next refresh for shortly before the access token expires, or for the existing window before the three-day family ends. It does not refresh on a fixed 4-minute, 10-minute, or 30-minute timer. A 401 from an API call still asks the shell to renew.
 
+## After every session is revoked
+
+Supabase "sign out everywhere" deletes the refresh token. The next silent renewal then fails. The desktop drops that dead token and, when no interview is running, opens the existing Chrome sign-in. The website sends the person to `/login` and, after Google succeeds, back to `/kompas/index.html` so they can press Start. A live interview does not open Chrome and does not navigate to the login page. The ask waits until Stop.
+
+An HTTP 402 `exceed_egress_quota` response is not a logout. The stored 3-day session stays. The sentence on the screen says Auth is blocked because the project exceeded its egress quota, and that sign-in works again once Auth is reachable. This app does not raise the spend cap and does not invent another identity.
+
+A refresh that loses a rotation race (`already used`) does not delete the desktop family. A network failure does not delete it either.
+
 ## Kompas page
 
 `keepAuthAlive` wakes every 60 seconds and on focus, and only while the tab is visible. Each wake reads the access-token expiry already stored in this browser. It calls the refresh route only when that expiry is inside the last minute. A hidden tab does not call Supabase.

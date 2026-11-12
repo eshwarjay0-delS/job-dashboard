@@ -797,7 +797,10 @@ async function tryRefreshAuth(reason) {
       // the bridge branch above returns first.
       const run = async () => {
         const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
-        if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+        let body = null;
+        try { body = await res.json(); } catch { body = null; }
+        if (res.ok) { __lastAuthRefresh = Date.now(); __lastAuthFailure = null; return true; }
+        __lastAuthFailure = { status: res.status, code: body && (body.error || body.code) || "", message: body && (body.message || body.error) || "" };
         return false;
       };
       const locks = (typeof navigator !== "undefined" && navigator.locks) || null;
@@ -1614,7 +1617,10 @@ function warmDesktopLevels(card, question) {
 }
 /* ---- start / stop ---- */
 let running = false;
-$("startBtn").onclick = () => running ? wrapSession() : start();
+$("startBtn").onclick = () => {
+  if (!running && (sessionAuthGate === "sign_in" || sessionAuthGate === "egress")) { offerFreshSignIn(false); return; }
+  running ? wrapSession() : start();
+};
 
 function providerLeak(text) {
   return /\bopenrouter\b|\btry again in\s+\d|\btokens per minute\b|\bOPENROUTER_[A-Z0-9_]+\b|\banswer engine is at its limit\b|\bpaid provider is temporarily\b|\bpaid answer service returned\b/i.test(String(text || ""));
@@ -1624,12 +1630,27 @@ function isUnavailableAnswer(meta, text) {
 }
 function beforeSessionNotice(message) {
   const m = String(message || "");
+  if (/exceed_egress|egress quota|exceeded egress/i.test(m)) {
+    return (globalThis.KompasSessionReauth && KompasSessionReauth.AUTH_EGRESS_BLOCKED) || m;
+  }
   if (/credit|402|quota|allowance/i.test(m)) return "Session has not started. The answer service has no credit left.";
   if (/sign in|401|403|not signed/i.test(m)) return "Session has not started. The answer service is not ready yet.";
   return "Session has not started. The answer service is not ready. Check again before starting.";
 }
 let sessionReadyUntil = 0;
 let sessionCheckPending = false;
+let sessionAuthGate = null;
+let sessionAuthPrompted = false;
+let __lastAuthFailure = null;
+function offerFreshSignIn(auto) {
+  if (running) return;
+  if (window.kompasDesktop) {
+    if (!auto && typeof window.kompasDesktop.openSignIn === "function") window.kompasDesktop.openSignIn();
+    return;
+  }
+  const reason = sessionAuthGate === "egress" ? "&reason=egress" : "";
+  window.location.assign("/login?next=" + encodeURIComponent("/kompas/index.html") + reason);
+}
 async function checkSessionReadiness() {
   if (sessionCheckPending) return;
   sessionCheckPending = true;
@@ -1643,17 +1664,70 @@ async function checkSessionReadiness() {
       body: JSON.stringify({ preflight: true }), signal: AbortSignal.timeout(50000),
     });
     let response = await attempt();
-    if (response.status === 401 && typeof window.kompasDesktop?.refreshAuth === "function") {
-      // Browser sign-in and Electron are different security contexts. Restore
-      // only the native token family; never borrow another account's cookies.
-      const renewed = await window.kompasDesktop.refreshAuth("rejected").catch(() => false);
-      if (renewed) response = await attempt();
+    let refreshAttempted = false;
+    let refreshOk = false;
+    if (response.status === 401) {
+      refreshAttempted = true;
+      if (typeof window.kompasDesktop?.refreshAuth === "function") {
+        // Browser sign-in and Electron are different security contexts. Restore
+        // only the native token family; never borrow another account's cookies.
+        refreshOk = await window.kompasDesktop.refreshAuth("rejected").catch(() => false);
+      } else if (typeof tryRefreshAuth === "function") {
+        refreshOk = await tryRefreshAuth("rejected");
+      }
+      if (refreshOk) response = await attempt();
     }
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.ready !== true) throw new Error(result.error || "The answer service is not ready. Please check again before starting.");
-    sessionReadyUntil = Date.now() + 30000;
-    button.textContent = "Start session";
-    status("Answer service ready. Press Start session to connect your audio.", "live");
+    if (response.ok && result.ready === true) {
+      sessionAuthGate = null;
+      sessionAuthPrompted = false;
+      sessionReadyUntil = Date.now() + 30000;
+      button.textContent = "Start session";
+      status("Answer service ready. Press Start session to connect your audio.", "live");
+      return;
+    }
+    let authState = null;
+    if (typeof window.kompasDesktop?.authState === "function") authState = await window.kompasDesktop.authState().catch(() => null);
+    const failure = __lastAuthFailure || {};
+    const decision = (globalThis.KompasSessionReauth && KompasSessionReauth.decideSessionStart)
+      ? KompasSessionReauth.decideSessionStart({
+        httpStatus: response.status,
+        code: result.code || "",
+        message: result.error || result.message || "",
+        interviewLive: !!running,
+        refreshAttempted,
+        refreshOk,
+        refreshStatus: failure.status || (authState && authState.notice && authState.notice.code === "egress_quota" ? 402 : response.status === 401 && refreshAttempted && !refreshOk ? 401 : 0),
+        refreshCode: failure.code || (authState && authState.notice && authState.notice.code) || "",
+        noticeCode: authState && authState.notice ? authState.notice.code : "",
+        hasSession: authState ? authState.hasSession === true : undefined,
+        ready: result.ready === true,
+      })
+      : { action: "explain", egress: false, autoSignIn: false, message: result.error || "The answer service is not ready. Please check again before starting." };
+    sessionReadyUntil = 0;
+    if (decision.action === "wait") {
+      if (!running) button.textContent = "Start";
+      return;
+    }
+    if (decision.action === "sign_in") {
+      sessionAuthGate = "sign_in";
+      button.textContent = "Sign in";
+      status(decision.message, "err");
+      if (decision.autoSignIn && !sessionAuthPrompted) {
+        sessionAuthPrompted = true;
+        offerFreshSignIn(true);
+      }
+      return;
+    }
+    if (decision.egress) {
+      sessionAuthGate = "egress";
+      button.textContent = "Sign in";
+      status(decision.message, "err");
+      return;
+    }
+    sessionAuthGate = null;
+    button.textContent = "Check again";
+    status(decision.message || beforeSessionNotice(result.error), "err");
   } catch (error) {
     sessionReadyUntil = 0;
     button.textContent = "Check again";
@@ -1678,6 +1752,7 @@ async function start() {
   primeAudio();                       // inside the click, so the browser lets audio run
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
+  try { window.kompasDesktop?.setInterview?.(true); } catch {}
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
   document.querySelector(".rec").classList.add("live");
   status("Starting capture…", "live");
@@ -1702,6 +1777,7 @@ async function start() {
 }
 async function stop(say = true) {
   running = false;
+  try { window.kompasDesktop?.setInterview?.(false); } catch {}
   $("startBtn").textContent = "Start"; $("startBtn").classList.remove("on");
   document.querySelector(".rec").classList.remove("live"); stopClock();
   const finishing = [stopSource("You"), stopSource("Them")];
