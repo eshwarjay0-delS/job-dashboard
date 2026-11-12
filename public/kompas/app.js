@@ -5084,18 +5084,26 @@ function frameHeardQuestion(chunks, opts = {}) {
     start--;
   }
   const parts = rows.slice(start, end + 1).map((r) => r.text);
-  // The frame gathered the latest chunks. The window then keeps the longest
-  // coherent tail: Last 1 2 3 4, then Last 1 2 3, then Last 1 2, then Last 1.
-  // A replay that slices only this function still has the framed question.
+  // The frame gathered the latest chunks, including the setup of one ask.
+  // The window then runs only when those chunks hold more than one question:
+  // Last 1 2 3 4, then Last 1 2 3, then Last 1 2, then Last 1. One question
+  // keeps the setup the frame already attached. A replay that slices only
+  // this function still has the framed question.
   let chosen = parts;
   let chosenSeq = rows[start].seq;
-  if (typeof selectQuestionWindow === "function" && parts.length > 1) {
+  if (typeof selectQuestionWindow === "function" && typeof questionPieces === "function" && parts.length > 1) {
     try {
-      const pick = selectQuestionWindow(parts);
-      if (pick && pick.text && pick.span > 0 && pick.span <= parts.length) {
-        const drop = parts.length - pick.span;
-        chosen = parts.slice(drop);
-        chosenSeq = rows[start + drop].seq;
+      const asks = parts.flatMap((text) => questionPieces(text));
+      if (asks.length >= 2) {
+        const pick = selectQuestionWindow(asks);
+        if (pick && pick.text && pick.span > 0 && pick.span < asks.length) {
+          const firstKept = asks[asks.length - pick.span];
+          let partIndex = parts.findIndex((text) => text.indexOf(firstKept) >= 0 || firstKept.indexOf(text) >= 0);
+          if (partIndex < 0) partIndex = parts.length - 1;
+          while (partIndex > 0 && questionPieces(parts[partIndex - 1]).length === 0) partIndex--;
+          chosen = parts.slice(partIndex);
+          chosenSeq = rows[start + partIndex].seq;
+        }
       }
     } catch { /* the framed parts still stand */ }
   }

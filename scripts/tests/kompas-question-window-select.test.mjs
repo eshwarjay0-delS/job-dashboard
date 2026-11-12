@@ -154,3 +154,36 @@ test("the desktop page uses the same window selection as the server", () => {
   ]
   assert.equal(ctx.selectQuestionWindow(related).label, "Last 1 2 3 4")
 })
+
+test("the caption frame then runs the last-four window", () => {
+  const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
+  const qwStart = app.indexOf("const QW_LABELS")
+  const qwEnd = app.indexOf("// ── Question intake", qwStart)
+  const frameStart = app.indexOf("function frameHeardQuestion(")
+  const frameEnd = app.indexOf("$(\"screenBtn\")", frameStart)
+  assert.ok(qwStart > 0 && qwEnd > qwStart && frameStart > qwEnd && frameEnd > frameStart)
+  const ctx = {}
+  vm.createContext(ctx)
+  vm.runInContext(app.slice(qwStart, qwEnd) + "\n" + app.slice(frameStart, frameEnd) + "\nthis.frameHeardQuestion=frameHeardQuestion;", ctx)
+  const related = ctx.frameHeardQuestion([
+    "Walk me through how you designed the incident pipeline and how you measured MTTR.",
+    "And what would you change?",
+  ], { source: "Them" })
+  has(related.question, "incident pipeline")
+  has(related.question, "measured MTTR")
+  has(related.question, "what would you change")
+  const standalone = ctx.frameHeardQuestion([
+    "How do you scope an access review?",
+    "What is least privilege?",
+  ], { source: "Them" })
+  has(standalone.question, "least privilege")
+  lacks(standalone.question, "access review")
+  const live = ctx.frameHeardQuestion([
+    "What is Kubernetes?",
+    "What is Terraform?",
+    "What is Ansible?",
+    "Where do you live?",
+  ], { source: "Them" })
+  assert.equal(live.skip, "logistics")
+  lacks((live.parts || []).join(" "), "Kubernetes")
+})
