@@ -125,3 +125,74 @@ test('a disabled inbox cannot be selected for sending', async () => {
   assert.equal(h.calls.tokens.length, 0)
   assert.equal(h.calls.fetch.length, 0)
 })
+
+
+// Calendar must use the selected Google Workspace account too; a missing token
+// for that account must never fall back to another connected inbox.
+const calendarRouteSource = readFileSync(new URL('../../src/app/api/calendar-sync/route.ts', import.meta.url), 'utf8')
+
+function calendarHarness({ user = { id: 'user-1' }, tokens = { 'acct-a': 'token-a', 'acct-b': 'token-b' }, fetchHandler } = {}) {
+  const calls = { tokens: [], fetch: [] }
+  const moduleMock = { exports: {} }
+  const compiled = ts.transpileModule(calendarRouteSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true,
+    },
+  }).outputText
+  const mocks = {
+    'next/server': {
+      NextResponse: { json: (body, init = {}) => ({ body, status: init.status ?? 200 }) },
+    },
+    '@/lib/supabase/server': {
+      createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }),
+    },
+    '@/lib/googleWorkspace': {
+      getGoogleWorkspaceAccessToken: async (userId, accountId) => {
+        calls.tokens.push({ userId, accountId })
+        return tokens[accountId] ?? null
+      },
+    },
+    '@/lib/rateLimit': { checkRateLimit: () => ({ ok: true }) },
+  }
+  const fetchCalendar = fetchHandler || (async () => ({
+    ok: true,
+    json: async () => ({ items: [{ id: 'event-1', summary: 'Interview', start: { dateTime: '2026-11-12T12:00:00Z' }, end: { dateTime: '2026-11-12T12:30:00Z' } }] }),
+  }))
+  runInNewContext(compiled, {
+    module: moduleMock,
+    exports: moduleMock.exports,
+    require: id => mocks[id] ?? nodeRequire(id),
+    fetch: async (url, init) => {
+      calls.fetch.push({ url: String(url), init })
+      return fetchCalendar(String(url), init)
+    },
+    AbortSignal,
+    URL,
+    URLSearchParams,
+    Date,
+    console,
+  })
+  return { GET: moduleMock.exports.GET, calls }
+}
+
+test('Calendar sync uses only the selected Google Workspace account token', async () => {
+  const h = calendarHarness()
+  const response = await h.GET({ url: 'https://marketfit.test/api/calendar-sync?accountId=acct-b' })
+  assert.equal(response.status, 200)
+  assert.deepEqual(h.calls.tokens, [{ userId: 'user-1', accountId: 'acct-b' }])
+  assert.equal(h.calls.fetch.length, 1)
+  assert.equal(h.calls.fetch[0].init.headers.Authorization, 'Bearer token-b')
+  assert.equal(response.body.accountId, 'acct-b')
+  assert.equal(response.body.events[0].title, 'Interview')
+})
+
+test('Calendar sync fails closed when the selected account is disconnected; it does not fall back', async () => {
+  const h = calendarHarness({ tokens: { 'acct-a': 'token-a', 'acct-b': null } })
+  const response = await h.GET({ url: 'https://marketfit.test/api/calendar-sync?accountId=acct-b' })
+  assert.equal(response.status, 403)
+  assert.deepEqual(response.body, { connected: false, events: [] })
+  assert.deepEqual(h.calls.tokens, [{ userId: 'user-1', accountId: 'acct-b' }])
+  assert.equal(h.calls.fetch.length, 0)
+})
