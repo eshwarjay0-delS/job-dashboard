@@ -106,3 +106,15 @@ test('11 Nov WhatsApp fallback and contract classifier journal entries preserve 
   assert.equal(app.delivery, 'in progress')
   assert.match(app.evidence, /278d9b3f/)
 })
+
+
+test('12 Nov 16:16 completion checkpoint preserves live release and exact blockers', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'mfit-completion-watch-2026-11-12-1616z')
+  assert.ok(entry, '16:16 completion checkpoint missing')
+  assert.equal(entry.approval, 'approved')
+  assert.equal(entry.delivery, 'blocked')
+  assert.match(entry.evidence, /6c82abf4b240de7c768916188794b8beaaaf3b10/)
+  assert.match(entry.evidence, /exceed_egress_quota/)
+  assert.match(entry.evidence, /KOMPAS_VERCEL_API_TOKEN/)
+  assert.match(entry.next, /Do not replay or resend|before any replay/)
+})
