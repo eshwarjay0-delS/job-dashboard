@@ -16,7 +16,7 @@ On the exact PR #303 head `fcee3fb6c46bd3d69bcc1565ed7fd1d5adb244cb`, `sendOffli
 - Keep the old pair when the document send is rejected or unconfirmed; do not clear it merely because the provider key is absent.
 - Preserve the selected email and relative library path in the last-used record when the matching pair is consumed.
 
-The parent PR #303 still owns the approved offline fallback and no-baseline refinement policy. This follow-up is stacked on its branch and must not be merged independently.
+The parent PR #303 still owns the approved offline fallback and no-baseline refinement policy. It now also uses the exact visible caption label `Original resume — NOT TAILORED`. This follow-up is stacked on its branch and must not be merged independently.
 
 ## Verification
 
@@ -28,13 +28,13 @@ The patch was developed against parent head `fcee3fb6c46bd3d69bcc1565ed7fd1d5adb
 - Focused ESLint on the changed route and test: exit 0.
 - `npm run build -- --webpack`: exit 0, including the repository prebuild gates and production webpack build.
 
-The new mocked regression covers: accepted offline fallback clears its matching JD/resume; a newer session arriving during the send survives; and a refused Meta document send leaves the old pair intact for retry. These are source/runtime contract tests, not real WhatsApp delivery evidence.
+The new mocked regressions cover: accepted offline fallback clears its matching JD/resume; a newer JD using the same resume path survives; a newer resume attached to the same JD survives; a newer JD and resume both survive; and a refused Meta document send leaves the old pair intact for retry. These are source/runtime contract tests, not real WhatsApp delivery evidence.
 
 ## Exact blockers and next action
 
-- Parent PR #303 remains DRAFT. Exact-head full CI 43097475873, WhatsApp recovery 43097475896 and Kompas baseline 43097475962 remain QUEUED. PR #310 exact-head WhatsApp recovery 43136393260 completed SUCCESS. PR #311 Plan/REA schema 43136679015 passed; PR #306 full CI 43131176244, Kompas baseline 43131176252 and Plan/REA schema 43131176205 passed. The protected preview remains unavailable while Vercel project metadata reports live=false.
+- Parent PR #303 remains DRAFT at updated head `344ed47061ae475a42e9695d08ca2dba91bf3fc2`; its Kompas baseline `43138216526` is SUCCESS, full CI `43138216531` and WhatsApp recovery `43138216521` are IN PROGRESS, and protected preview `43138214326` failed because the private `KOMPAS_VERCEL_API_TOKEN` is absent. PR #310 exact-head WhatsApp recovery 43136393260 completed SUCCESS. PR #311 Plan/REA schema 43136679015 passed; PR #306 full CI 43131176244, Kompas baseline 43131176252 and Plan/REA schema 43131176205 passed. The protected preview remains unavailable while Vercel project metadata reports live=false.
 - The protected preview gate is unavailable because GitHub Actions lacks the private KOMPAS_VERCEL_API_TOKEN; the 17 fail-closed resolver tests passed. The owner or authorized repository administrator must configure it privately. PR #306 records public production health/version/desktop-version GETs returning 200; this is not authenticated device acceptance. Do not bypass protection or alias a preview.
-- The Plan/REA follow-up is recorded in a stacked documentation branch based on PR #306. It remains pending with that parent restack and the WhatsApp code stack; no documentation merge is claimed.
+- The Plan/REA follow-up is PR #311, stacked on PR #306. PR #310 is now non-mergeable because its parent branch advanced; after #303 is accepted, restack #310 onto the accepted parent and rerun its full CI, WhatsApp recovery, Kompas baseline and legitimate protected preview. No documentation merge is claimed.
 - The historical 17 October 17:28 Chicago incident remains unresolved: the original source DOCX and full JD are recovered, but the generated output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable. Conflicting education/employment/credential facts remain quarantined pending owner reconciliation.
 
 No model call, R2 write, email, WhatsApp send, production mutation or handset test was performed. Do not claim this fix is deployed or that the historical delivery succeeded.
