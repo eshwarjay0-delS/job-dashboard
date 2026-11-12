@@ -155,3 +155,10 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+
+## Offline fallback session lifecycle — 12 November 2026
+
+The no-provider initial-JD fallback remains restricted to the exact selected same-account library original, matching session bytes, selected profile email and authenticated user's library root. Its caption must say **NOT TAILORED**. The 12 Nov stacked follow-up PR #310 centralizes pair consumption: after Meta returns a document message ID, clear only the JD/resume fields whose IDs and paths still match this run, preserve a newer request that arrived during the send, and retain the old pair when Meta rejects the document. The same helper is used by the normal paid-rewrite path so the two paths share the same race-safe clearing rule.
+
+Source and test review only. The exact PR #303 parent remains DRAFT with its exact-head full CI, WhatsApp recovery and Kompas baseline checks queued; the protected preview is not available while Vercel reports the project as not live. The follow-up is stacked on that branch and must not merge independently. No model call, R2 mutation, Meta send, real email, production deployment or handset acceptance was performed. The Plan/REA follow-up is recorded in the dependent documentation branch based on PR #306; it remains pending until that stack is accepted.
