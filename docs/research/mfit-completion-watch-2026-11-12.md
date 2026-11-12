@@ -119,7 +119,7 @@ The Vercel project metadata reports `live=false` even though the latest deployme
 ### Contract classifier continuation
 
 - New safe restack PR #315: `bd62bcd17b2b2be79c6ee23db19b8582a5225015`, based on current master. The five files copied from old PR #305 were verified byte-identical to the old base on current master before editing.
-- Crawler regression 43157849909 SUCCESS (8/8); Kompas baseline 43157849768 SUCCESS (92/92); full CI 43157849751 remains IN PROGRESS at migration asset closure; protected preview 43157849584 FAILED at exact-head preview resolution. Its job log returned 404, so the precise failure cause is not asserted.
+- Crawler regression 43157849909 SUCCESS (8/8); Kompas baseline 43157849768 SUCCESS (92/92); full CI 43157849751 SUCCESS (47 workflow steps); protected preview 43157849584 FAILED at exact-head preview resolution. Its job log returned 404, so the precise failure cause is not asserted.
 - Scope: explicit Right To Hire / Contract To Perm / Contract To Permanent C2H aliases, negation preservation, generic contract-vocabulary false-positive rejection, structured employmentType and additive prebuild regression coverage.
 - No production deployment, manual crawl, database row rewrite, new adapter or daily cron restoration. Old PR #305 remains untouched pending validation of #315.
 
@@ -142,3 +142,8 @@ No real email or WhatsApp message was sent. No manual crawl, database mutation, 
 ## 12 November 2026 — Kompas question/voice CI result (04:59 UTC)
 
 The Safe Merge Gate's test-only PR #314 is based on current master and adds one CI step for five existing suites (69 automated cases). Exact-head full CI 43157259968 and Kompas baseline 43157260433 both SUCCESS. The full CI run completed all 69 question-framing, one-press, typed-input and voice regression cases and the Webpack build. Protected preview 43157259910 FAILED at exact-head preview resolution because the private KOMPAS_VERCEL_API_TOKEN is unavailable. Keep PR #314 DRAFT/unmerged; no runtime behavior changed. The separate Kompas Continuous Voice Delivery automation is disabled. These source tests do not establish native Windows, phone, WhatsApp or real-session acceptance.
+
+
+## 12 November 2026 — contract classifier exact-head full CI result (05:02 UTC)
+
+PR #315 final head `bd62bcd17b2b2be79c6ee23db19b8582a5225015` now has all code gates SUCCESS: full CI 43157849751 (47 workflow steps), crawler classification regression 43157849909 (8/8), and Kompas baseline 43157849768 (92/92). Protected preview 43157849584 still FAILED at exact-head preview resolution; its job log returned 404. Vercel project metadata remains `live=false`. Keep PR #315 DRAFT/unmerged; no deployment, manual crawl or production row mutation.
