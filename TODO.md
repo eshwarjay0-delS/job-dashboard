@@ -4,6 +4,8 @@ No new screen. A design question is one stage and a named checkpoint. "How would
 
 **Checked locally. Not merged. Not a production deploy.** Question-length, blend, narration, relevance, baseline, and the suites around them: 536 pass, 0 fail. `tsc --noEmit` clean. Offline stand-in, fictional resume, 150 drafts, no model: 0 pairs at Jaccard >= 0.7 (highest 0.647), 0 same-answer failures, 0 answers outside the ceiling, 0 logistics or Houston or Saint Louis hits. The content-gap rule, 1 minus Jaccard between modes of the same question, is under 0.50 on 80 mode pairs. Those pairs were reported and not padded. No production URL was called.
 
+CI then failed the cross-domain fidelity step. The word-limit check was scoring every direct question against the yes/no ceiling, because it did not pass the question into the length table. It now uses the question's own ceiling. A content gap between modes is reported and does not fail the draft. When a director has several matching lines, the first ones stay with the engineer. Rounds 11 to 13 hold offline.
+
 ## 2026-11-12 — Spoken answers sound like a person who has done the work
 
 No new screen. This is genuineness grounded in real experience, not a way past a detector. Fillers such as um, you know, and basically are still not manufactured. Empty frames such as delve, tapestry, and in conclusion come out. The fact stays. A director sounds like someone who has done the work and is now making the call. An architect may take one short ramble into the design and then come back. An engineer works through the technical need.

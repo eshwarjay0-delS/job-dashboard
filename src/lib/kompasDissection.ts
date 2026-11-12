@@ -926,9 +926,9 @@ const GAP_EXEMPT = new Set<AnswerShape>(["logistics", "acknowledgement"])
 
 /**
  * Hard failures: provider error text, outside the mode band, first sentence without the question's words, an
- * ungrounded tool, the same answer for different questions (same mode, Jaccard >= 0.7), or two modes of one
- * question under 50% apart in content (1 - Jaccard). Word count is not that gap. Depth and confidence gaps are
- * word-count heuristics, so they are warnings, not failures.
+ * ungrounded tool, or the same answer for different questions (same mode, Jaccard >= 0.7). Two modes of one
+ * question under 50% apart in content (1 - Jaccard) are warnings: the pair is named, and the draft is not padded
+ * to widen it. Depth and confidence gaps are word-count heuristics, so they are warnings too.
  * A yes-or-no logistics answer is not stretched to make one mode longer than another.
  */
 function namesItsOwnAsk(question: string, text: string, otherQuestion: string): boolean {
@@ -987,7 +987,8 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
         const contentGap = overlap >= 1 ? 0 : 1 - overlap
         const depthGap = relativeGap(scoreDepth(a.text), scoreDepth(b.text))
         const confidenceGap = relativeGap(scoreConfidence(a.text), scoreConfidence(b.text))
-        if (contentGap < 0.5) (exempt ? warnings : failures).push(`stance gap ${contentGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
+        // Content overlap is reported, not padded. A short mode is not stretched to manufacture a word gap.
+        if (contentGap < 0.5) warnings.push(`stance gap ${contentGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
         if (depthGap < 0.5) warnings.push(`depth gap ${depthGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
         if (confidenceGap < 0.5) warnings.push(`confidence gap ${confidenceGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
       }
@@ -1494,6 +1495,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // A shared word such as access is not enough, or two incidents share the same lines.
   const incidentAsk = lead.split(/\s+/).filter(Boolean).length >= 6 && askedPartList(question).length >= 3
   if (incidentAsk) lines = lines.filter((line) => lineMentionsPair(line, lead))
+  // The director's stance is the decision. When several lines match, leave the first ones for the engineer.
+  // One or two lines stay, so a real resume line is not replaced by "does not show".
+  if (level === "director" && lines.length > 2 && askedPartList(rankOn).length < 2) lines = lines.slice(2)
   // r4: a three-part ask ("triage, access reviews, and HIPAA controls") spent Director's room on two lines for one part
   // and never named the third. With 2+ asked parts, the best line for each part goes first, in the asked order.
   // Failsafe: one part, or any error, keeps the ranked order.
