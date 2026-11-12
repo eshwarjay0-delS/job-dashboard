@@ -789,3 +789,7 @@ Current master `da1db145c5981254f95620ff6bb0222ab4228125` is READY on production
 - Current master da1db145c5981254f95620ff6bb0222ab4228125 has READY deployment metadata dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj and alias metadata for job-dashboard-fawn.vercel.app, but Vercel project metadata reports live=false. This is not public HTTP, authenticated UX or native-device acceptance.
 
 Continue: verify the new exact-head Plan/REA schema run after commits 5c69ae8, 0ebfd2d and dfa45b6; repair only an observed failure. Keep #317/#303/#315/#314 behind the legitimate protected-preview gate, #316/#318 stacked behind their parents, and the 17 Oct delivery unresolved until its exact output/provider artifacts and owner fact reconciliation exist.
+
+## 12 November 2026 — AUTH_DISABLED configuration recheck (08:26 UTC)
+
+Current authorized Vercel environment inspection confirms production AUTH_DISABLED=false and NEXT_PUBLIC_AUTH_DISABLED=false. No flag or other environment variable was changed, and no synthetic-owner identity or credential was read. The current project still reports live=false; deployment/alias metadata is READY on exact master da1db145c5981254f95620ff6bb0222ab4228125. This supersedes the earlier note that the latest flag check was not current enough. Issue #308 remains open for explicit owner approval, production fail-closed tests, and real owner/admin, ordinary-account and desktop continuity acceptance. Keep both flags false and authentication fail-closed.
