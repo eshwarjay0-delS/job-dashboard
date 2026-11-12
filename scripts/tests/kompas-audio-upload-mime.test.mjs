@@ -27,3 +27,24 @@ test('provider form uses verified MIME and original audio bytes', () => {
   assert.match(speech, /const container = containerFor\(input\.audio, input\.mime\)/)
   assert.match(speech, /new Blob\(\[input\.audio as BlobPart\], \{ type: uploadMimeForContainer\(container, type\) \}\), `audio\.\$\{container\}`/)
 })
+
+test('audioType accepts Android Chrome video/webm and video/mp4 declarations', () => {
+  const speech = readFileSync(new URL('../../src/lib/kompasSpeech.ts', import.meta.url), 'utf8')
+  const start = speech.indexOf('export const AUDIO_TYPES')
+  const end = speech.indexOf('/** The type before', start)
+  const block = speech.slice(start, end)
+  assert.match(block, /"video\/webm": "webm"/)
+  assert.match(block, /"video\/mp4": "mp4"/)
+  assert.match(block, /"audio\/webm": "webm"/)
+  const types = {}
+  for (const m of block.matchAll(/"([^"]+)": "([^"]+)"/g)) types[m[1]] = m[2]
+  const audioType = (mime) => {
+    const type = String(mime || "").split(";")[0].trim().toLowerCase()
+    return type in types ? type : null
+  }
+  assert.equal(audioType('audio/webm;codecs=opus'), 'audio/webm')
+  assert.equal(audioType('video/webm;codecs=opus'), 'video/webm')
+  assert.equal(audioType('video/mp4'), 'video/mp4')
+  assert.equal(audioType('audio/mp4'), 'audio/mp4')
+  assert.equal(audioType('audio/aac'), null)
+})
