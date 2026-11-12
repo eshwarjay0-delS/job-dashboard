@@ -7013,7 +7013,7 @@ if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) {
 if (typeof ensureAuthFlag === "function") void ensureAuthFlag();
 pruneExpiredResumes();           // a resume past its 15 days is removed on launch, even if the Resume view is never opened
 openDashboard();
-accountSessionSync?.start();
+try { accountSessionSync?.start(); } catch (e) { console.warn("Kompas session sync could not start", e); }
 
 /* ---- live screen: one clean row; secondary tools live in the ⋯ menu ---- */
 (() => {

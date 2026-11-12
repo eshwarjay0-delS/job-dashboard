@@ -66,7 +66,7 @@
   function create(opts) {
     const {storage,fetcher,read,write,render,notify,recoverAuth,timer,document:docOpt} = opts;
     const doc = docOpt || (typeof document !== "undefined" ? document : undefined);
-    const clock = timer || (typeof setTimeout === "function" ? { setTimeout, clearTimeout } : { setTimeout: () => 0, clearTimeout: () => {} });
+    const clock = timer || (typeof setTimeout === "function" ? { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (id) => clearTimeout(id) } : { setTimeout: () => 0, clearTimeout: () => {} });
     const pollDisabledAtStart = opts.pollDisabled === true || envPollDisabled();
     const prefix = "perfact.cloud.";
     const getJSON = (key,fallback) => { try{return JSON.parse(storage.getItem(key))||fallback;}catch{return fallback;} };

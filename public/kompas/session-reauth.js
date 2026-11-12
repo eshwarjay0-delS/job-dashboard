@@ -1,4 +1,5 @@
 "use strict";
+(() => {
 
 // What to do after a session start meets a dead sign-in.
 // A live interview never opens Chrome or the login page.
@@ -50,3 +51,4 @@ function decideSessionStart(input) {
 const api = { AUTH_EGRESS_BLOCKED, AUTH_SIGNED_OUT, AUTH_UNAVAILABLE, NOT_READY, decideSessionStart };
 if (typeof module === "object" && module.exports) module.exports = api;
 globalThis.KompasSessionReauth = api;
+})();
