@@ -32,3 +32,10 @@ The first repair callback clears `pendingProfile` only when a profile part is ac
 No live model call, resume-library write, DOCX generation, email, WhatsApp send, or production data mutation was performed. The code branch remains a draft and must pass exact-head full CI, WhatsApp recovery regression, Kompas baseline and the protected preview gate before any merge. The Plan/REA entry and schema check are tracked in PR #296. The Vercel project currently reports `live:false` and the protected preview is blocked; do not bypass that access control.
 
 The separate 17 October 17:28 Chicago incident remains an unresolved historical-delivery case. Its generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt are still unavailable. The original source pair remains quarantined pending owner reconciliation of conflicting factual claims. This code fix does not retroactively prove or replay that delivery.
+
+
+## Regression-gate follow-up — 11 November 2026
+
+The two new pending-part assertions initially failed when executed locally because the helper is evaluated in a separate Node VM realm; the returned object's prototype differs even though its fields match. This was a test-harness comparison issue, not a runtime failure. The assertions now normalize the VM result through JSON before strict structural comparison. Both new regression suites are added to the repository's build-time prebuild gate so the profile-part acceptance and role-isolation checks cannot remain unexecuted while CI reports a green build.
+
+Local verification on the dependent branch: resume confirmation + profile gap-fill suites 31/31; Kompas baseline 92/92; TypeScript 0 errors; focused ESLint 0 errors; npm run build -- --webpack completed successfully, including prebuild and the 160-page production build. This is local sandbox evidence only. GitHub exact-head CI, protected preview, production release and authenticated WhatsApp delivery remain separate pending gates. No real model call, DOCX write, R2 mutation, Meta send or email occurred.
