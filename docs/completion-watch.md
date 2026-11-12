@@ -555,3 +555,8 @@ PR #304 head `a07c4870e9aee390111fc36c5959b6d80f6d9884`: Kompas baseline `431391
 ## 12 November 2026 — durable refinement approval gate
 
 PR #277 has been converted to DRAFT and retitled `[DRAFT — OWNER APPROVAL REQUIRED] Durable WhatsApp swipe-refinement recovery` at head `c5cb99a45262d30ff1621e0673d6300115da689a`. The owner explicitly clarified that durable refinement recovery remains unapproved. This is distinct from the approved initial no-provider fallback and no-baseline text-only refinement failure in PR #303. Do not merge, deploy or replay PR #277 without separate explicit owner approval.
+
+
+## 12 November 2026 — PR #310 mergeability correction
+
+The current GitHub PR API reports PR #310 `mergeable=true` relative to its current base branch, which is PR #303's feature branch at the earlier base commit. Older notes saying it is `non-mergeable` are stale and superseded. It remains a stacked dependency and is **not independently ship-ready**: do not merge before parent #303 is accepted. After #303 is accepted into master, retarget/restack #310 onto the accepted master SHA and rerun full CI, WhatsApp recovery, Kompas baseline and protected preview on that final head.
