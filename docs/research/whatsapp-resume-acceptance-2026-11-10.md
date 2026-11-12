@@ -198,3 +198,8 @@ A recursive, metadata-only Library listing filtered to DOCX files created from `
 ### 12 November 2026 — approved WhatsApp fallback restacked on current master
 
 The 6 November owner-approved distinction is now isolated in current-master PR #321 (`ac38ffde34709a04664fc6b2b3b92fab9515fa7e`): initial JD/no-provider may send only the exact selected same-account library original after authenticated root, safe relative-path, byte-equality and selected-profile email checks, with the exact NOT TAILORED caption. Swipe-refinement provider failure, timeout, partial/incomplete output, unreadable/missing DOCX or identity/contact/date failure is text-only and preserves the last delivered version. Before restacking, all six PR #303 changed files were byte-identical between old base `65bdf2f` and current master `da1db145`; only the intended six files were copied. Full CI 43191231356, WhatsApp recovery 43191231421, Kompas baseline 43191231296 and protected preview 43191231435 are in progress. No merge, deployment, model call, real send, R2 write or Meta callback occurred. Dependent pair-consumption PR #316 remains stacked on the old parent and must be restacked only after #321 is accepted.
+
+
+### 12 November 2026 — accessible iZap recheck
+
+The connected iZap account returned one business and zero linked WhatsApp numbers. A read-only `search_messages` for `resume` on `2026-10-17` in `America/Chicago` returned zero messages. This is evidence only about the accessible iZap business; it does not establish that no message exists in another WhatsApp account, another chat, Meta's message records or R2. No chat was changed and no outbound message was sent.
