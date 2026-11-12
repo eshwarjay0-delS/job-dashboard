@@ -625,3 +625,15 @@ Stale PR #297 (f7c7ff0c4d919f763e9bf9f3e3169134d602ffc8) was based on old master
 Local exact-content evidence: Gmail route tests 5/5, TypeScript passed after clearing stale generated .next/types from earlier branch checkouts, focused ESLint passed. GitHub Kompas baseline 43143457299 SUCCESS; full CI 43143457248 IN PROGRESS. No real email, Gmail OAuth credential, production data, two-inbox account or mobile device was used. Keep #313 open until full CI passes; then close stale #297 as superseded. The actual healthy/partial sync, selected-From, same-inbox thread and affected-inbox-only reconnect acceptance remains open.
 
 PR #309 separately implements the approved no-obstruction mobile navigation behavior: full CI 43130664507 and baseline 43130664424 SUCCESS, protected preview 43130664448 FAILURE because private KOMPAS_VERCEL_API_TOKEN is absent, local dashboard-shell 4/4 and TypeScript pass. It remains DRAFT; no real phone acceptance. The unattended Gmail/WhatsApp update worker remains disabled until approved scheduler, CRON_SECRET, Meta template and explicit enablement exist. No email or WhatsApp message was sent.
+
+
+## 12 November 2026 — Gmail mobile navigation accessibility correction
+
+The approved mobile behavior remains a normal-flow panel below the sticky top bar; it pushes content down and never overlays, dims or disables the page. PR #309 source review found `aria-controls="marketfit-navigation"` was duplicated on both the outer `<aside>` and inner `<nav>`. The fix removes the inner duplicate and keeps the outer aside as the sole target. The dashboard-shell regression now asserts exactly one occurrence and rejects an id on the inner nav.
+
+- Code commit: `d206090ae3ca9e96615c7688f4799e8562b4b774`.
+- Regression commit: `96b8e84a7550cf7481d043e53ba51d7130c1af84`.
+- Exact source check: one target id, no duplicate on the inner nav.
+- Previous PR head `c18b356` full CI and Kompas baseline passed; protected preview failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable.
+- New head `96b8e84` has no exact-head workflow result visible yet. The container could not clone GitHub because DNS resolution failed, so no local test run is claimed.
+- No production deployment or real-phone acceptance. Keep PR #309 DRAFT until exact-head CI/baseline and legitimate protected preview pass; the owner or authorized repository administrator must configure the private token. Then verify on a real narrow viewport.
