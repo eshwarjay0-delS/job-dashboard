@@ -151,3 +151,8 @@ A fresh semantic search of the accessible Library used the 17 Oct 17:28 Chicago 
 A read-only iZap `list_businesses` check returned one business (`eshwarjay0`) with **zero linked WhatsApp numbers**. There is therefore no connected iZap conversation source from which to retrieve the historical thread or signed message status in this runtime. No message was sent and no connection was changed.
 
 The historical case remains open: generated output DOCX, exact per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. The recovered source/JD relationship does not establish which bytes were sent or whether Meta delivered them. Do not replay or resend the historical request; if the artifact and provider correlation cannot be recovered, record the historical delivery as irrecoverable rather than guessing.
+
+
+## 12 November 2026 — durable refinement approval boundary
+
+The owner clarified that durable recovery/replay for swipe-reply refinements remains unapproved. This is separate from the approved initial no-provider fallback and the approved no-baseline failure behavior (text-only; preserve the last delivered version). PR #277 was converted to DRAFT and retitled with an explicit owner-approval requirement at head `c5cb99a45262d30ff1621e0673d6300115da689a`. Issue #201 documents a design gap but is not authorization to implement or ship it. No durable replay was performed, no real WhatsApp message was sent, and no historical 17 Oct request was replayed.
