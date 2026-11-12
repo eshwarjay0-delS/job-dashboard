@@ -155,3 +155,27 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+## Channel-specific resume fallback — 11 November 2026
+
+The owner-approved 6 November correction distinguishes initial JD generation from swipe-reply refinement:
+
+- For an initial JD request with no AI provider key, the only allowed offline document is the exact selected same-account library original. Before sending, verify that the selected library root belongs to the authenticated user, the selected file is inside that root, the library bytes exactly match the session copy, and the document's single email matches the selected profile. The WhatsApp caption must say **NOT TAILORED** and explain that no edits were applied. If any check fails or no library selection exists, send no document and keep the request retryable.
+- For swipe-reply refinement, provider failure/timeout, partial or incomplete output, unreadable/missing DOCX, missing original, or failed name/contact/employment-date verification must result in a text-only explanation. Never send the original or a partial baseline; the last delivered version remains unchanged.
+
+The 11 November focused source change is on `fix/whatsapp-offline-fallback-refine-no-baseline-20261111`; runtime tests mock the transport and storage. No real WhatsApp message, provider call, R2 write or handset acceptance was performed. PR #277's durable swipe-reply recovery remains a separate owner-approval gate and is not included here. The 17 October 17:28 Chicago incident remains historically incomplete because the generated DOCX and per-run R2/Meta trace are missing.
+
+No voice/audio code was changed in this slice. The separately named Kompas Continuous Voice Delivery automation was disabled in the accessible task list at the time of this check; that is not evidence that native voice acceptance is complete.
+
+
+
+## 12 November 2026 — source/JD evidence recheck
+
+This recheck corrects earlier handoff wording that treated the original source DOCX bytes as currently recovered. The accessible evidence is narrower:
+
+- Prior conversation retrieval identifies the screenshot timestamp as `2026-10-17T22:28:39Z` (5:28 PM America/Chicago) and the user's follow-up “Fix it” at `2026-10-17T22:53:16Z`. The screenshot's failure text and eight missing terms are recorded in the research handoff; the historical output is not available here.
+- The matching full JD is independently retrievable from Gmail thread `1a1464393628992f`, subject **Fwd: Looking 5+ Years || Security Engineer – Risk & Controls || Atlanta/GA (Onsite)**. The thread is dated `2026-10-16T19:49:07Z`; the forwarded JD identifies an onsite Atlanta contract role, 5+ years in cybersecurity/technology risk/controls governance, and preferred blockchain, cloud, IAM, audit, GRC and risk-reporting skills.
+- `Resume_Inventory.csv` records the candidate source path as `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`, with SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712` and identity `jayeshwar44@gmail.com`. The referenced Library path `/J_Eshwar_44/General Security` returned “Library path not found”; the DOCX bytes were not retrievable in this run. Do not substitute a different resume from the other email library.
+- No generated output DOCX, per-run R2 key/version, webhook/request correlation, Meta message ID, or signed delivered/read receipt is available. No historical replay or resend is authorized.
+
+Accordingly, the full JD is recovered, but the exact source DOCX is only identified by an inventory path/hash and is not presently accessible. The historical delivery remains unverified, not proven delivered or undelivered. The original 27,724-byte recovery claim in earlier notes is not independently reproducible from the current Library access and must not be treated as current artifact evidence.
