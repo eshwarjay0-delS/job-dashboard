@@ -283,3 +283,10 @@ The owner's 4 October requirement is that opening the hamburger must not block o
 ### Prebuild contract follow-up — 12 November 2026
 
 The first full CI for PR #320 failed one test in `scripts/tests/kompas-deploy-build.test.mjs`: the shared build-contract assertion required an exact prebuild string, so adding the mobile shell suite correctly changed the string but tripped the stale assertion. The failure was not a voice runtime regression. Corrective commit `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` replaces byte-for-byte equality with ordered required-group checks, explicitly verifies the dashboard-shell suite remains in prebuild, and permits additive suites without dropping existing gates. The new exact-head CI result is still pending; the prior baseline passed. No production or phone acceptance is claimed.
+
+
+### Current release and Auth gate — 12 November 2026, 09:22 UTC
+
+PR #320's corrected head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` has Kompas baseline run `43190229393` SUCCESS. Full CI `43190228931` is still in progress at migration asset closure. Protected preview `43190224739` failed closed because the private `KOMPAS_VERCEL_API_TOKEN` is empty; it must be configured privately by an authorized repository administrator. The initial full CI failure was the stale exact-string prebuild assertion and is corrected in the latest commit.
+
+The live `/api/gmail/notify-rules/export` route has 42 Supabase Auth `402 exceed_egress_quota` errors across 34 users in the last 24 hours, latest 09:07:04 UTC; one event appears in the last 30 minutes. The project owner/administrator must upgrade the Supabase plan or remove the spend cap that restricts Auth. No authentication bypass, credential swap, billing change, real email send, unattended worker or two-inbox acceptance was performed. Vercel project metadata reports `live=false`; READY/alias metadata is not public UX acceptance.
