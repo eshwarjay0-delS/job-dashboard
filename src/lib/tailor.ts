@@ -706,7 +706,7 @@ export async function runTailor(opts: {
   const injectFor = (covered: Set<string>): string[] => {
     const missing = forcedJdKws.filter(k => !covered.has(k))
     if (!missing.length) return []
-    return [`SUPPORTED JD TERMS (source resume or explicit candidate confirmation): ${missing.join(", ")}. Use the exact JD wording in the existing skills section when accurate. Do not add a term to the summary or an employer-specific bullet unless the source or a role-specific confirmation supports it. Unsupported requirements remain gaps or separately labelled Job-post terms.`]
+    return [`SUPPORTED JD TERMS (source resume or explicit candidate confirmation): ${missing.join(", ")}. Use the exact JD wording in the existing skills section when accurate. Do not add a term to the summary or an employer-specific bullet unless that same role's original source evidence supports it. General confirmations may support the skills/profile section only. Unsupported requirements remain gaps or separately labelled Job-post terms.`]
   }
 
   // GAP FILL (full retarget): every role must show each listed JD skill the years math requires of it, and no role may be
