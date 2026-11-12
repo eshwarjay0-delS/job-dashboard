@@ -516,7 +516,7 @@ The latest 24-hour `/api/whatsapp/webhook` error group remains 11 quality-gate r
 - PR #310 exact-head WhatsApp recovery run 43136393260 completed SUCCESS. Its dependent code PR remains DRAFT and is stacked on parent #303.
 - Parent PR #303 exact-head full CI 43097475873, WhatsApp recovery 43097475896 and Kompas baseline 43097475962 remain QUEUED; no merge is permitted.
 - PR #311 Plan/REA schema 43136679015 passed. Parent documentation PR #306 full CI 43131176244, Kompas baseline 43131176252 and Plan/REA schema 43131176205 passed.
-- The protected preview remains unavailable while Vercel project metadata reports live=false; do not bypass it. Vercel deployment metadata still maps job-dashboard-fawn.vercel.app to READY deployment dpl_5ipmErFiEhTsp5tEupta39o8EA1K at master SHA 65bdf2f8cf1dd7299b8623885641400efe57bbfe. This is deployment/alias evidence, not authenticated WhatsApp, Gmail, native Windows or mobile acceptance.
+- The protected preview remains unavailable because GitHub Actions lacks the private KOMPAS_VERCEL_API_TOKEN; the owner/authorized administrator must configure it privately; do not bypass it. Vercel deployment metadata still maps job-dashboard-fawn.vercel.app to READY deployment dpl_5ipmErFiEhTsp5tEupta39o8EA1K at master SHA 65bdf2f8cf1dd7299b8623885641400efe57bbfe. This is deployment/alias evidence, not authenticated WhatsApp, Gmail, native Windows or mobile acceptance.
 
  
 ## 12 November 2026 — production synthetic-auth review
