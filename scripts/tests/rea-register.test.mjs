@@ -99,3 +99,14 @@ test('11 Nov WhatsApp fallback and contract classifier REA records remain tracea
   assert.ok(app.steps.some(s => s.status === 'Pending' && s.finding.includes('queued')))
   assert.ok(app.sources.some(s => s.path === 'src/lib/contract-jobs.ts'))
 })
+
+
+test('12 Nov 16:16 completion REA entry records source limits and release gates', () => {
+  const entry = REA_SESSIONS.find(s => s.id === 'mfit-completion-watch-2026-11-12-1616z')
+  assert.ok(entry, '16:16 completion REA entry missing')
+  assert.equal(entry.state, 'Blocked')
+  assert.match(entry.limits, /No private token/)
+  assert.ok(entry.steps.some(s => s.finding.includes('no linked WhatsApp number')))
+  assert.ok(entry.steps.some(s => s.finding.includes('HTTP 402 exceed_egress_quota')))
+  assert.ok(entry.sources.some(s => s.url?.endsWith('/pull/321')))
+})
