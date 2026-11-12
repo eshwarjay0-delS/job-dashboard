@@ -295,3 +295,8 @@ The live `/api/gmail/notify-rules/export` route has 42 Supabase Auth `402 exceed
 ### Full CI result — 12 November 2026, 09:23 UTC
 
 PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` now passes full CI `43190228931` (47/47 steps) and Kompas baseline `43190229393`. The prebuild log explicitly shows `scripts/tests/dashboard-shell.test.mjs` and reports 4 tests, 4 pass, 0 fail. The protected preview `43190224739` failed at exact-head preview resolution because the private `KOMPAS_VERCEL_API_TOKEN` is empty. PR #320 remains DRAFT; no production deployment, public HTTP, two-inbox or real-phone acceptance is claimed.
+
+
+### Account-keyed persistence recheck — 12 November 2026, 09:30 UTC
+
+Read-only production SQL returned 3 rows in `mfit_gmail_sync` across 3 account IDs for 1 user, with latest sync at `2026-11-10 14:44:44.277 UTC`. `mfit_gmail_threads` contains 2,002 rows across the same 3 accounts for 1 user; latest thread update is `2026-11-10 14:46:49.790 UTC`. No message bodies were read. This confirms account-keyed persisted data only, not fresh two-inbox sync, selected-From delivery, isolated reconnect or phone behavior. The 24-hour Auth export aggregation remains 42 `402 exceed_egress_quota` errors across 34 users, latest 09:07:04 UTC; the Supabase owner/admin must resolve the spend-cap restriction before acceptance.
