@@ -1,4 +1,5 @@
 "use strict";
+(() => {
 
 // Same rules as legacy/perfact/desktop/output-loopback.cjs, for the page.
 // The desktop opens WASAPI loopback on the current Windows default output.
@@ -28,3 +29,4 @@ function recordGainFor(who) {
 const api = { THEM_RECORD_GAIN, defaultOutputKey, shouldFollowOutputDevice, recordGainFor };
 if (typeof module === "object" && module.exports) module.exports = api;
 globalThis.KompasOutputAudio = api;
+})();
