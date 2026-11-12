@@ -802,3 +802,8 @@ The owner-approved 4 Oct correction says the mobile menu must not obstruct or co
 ## 12 November 2026 — mobile navigation prebuild correction
 
 PR #320 first full CI (run 43189621652, head bc2c019e) failed one assertion in `scripts/tests/kompas-deploy-build.test.mjs`: it pinned the entire `prebuild` command and rejected the added dashboard-shell suite. The log shows 60/61 tests passed in that gate; the failure was the exact-string contract, not a Kompas voice runtime defect. Corrective commit `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` changes the contract to preserve the required ordered regression groups, explicitly require the mobile shell test, and allow additive suites. Baseline 43189621653 passed on the prior head. Exact-head full CI/preview are pending on the corrected head. No voice code was changed, and no production or phone acceptance is claimed.
+
+
+## 12 November 2026 — historical WhatsApp output search
+
+A new recursive metadata-only Library listing for DOCX files created in the exact 17 Oct incident window, 22:20–23:00 UTC (5:20–6:00 PM Chicago), returned zero items. Targeted semantic Library search also found no uniquely correlated output. This only narrows the accessible Library; it does not prove absence from browser-local/temp storage, another chat, R2 or Meta. The generated output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain the exact blockers. No replay, model call, file generation, R2 write or outbound message was performed.
