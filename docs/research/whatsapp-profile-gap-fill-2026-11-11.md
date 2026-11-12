@@ -25,7 +25,7 @@ The first repair callback clears `pendingProfile` only when a profile part is ac
 - Add one shared `hasProfilePartContent` predicate and use it for the initial profile draft and both repair paths.
 - Add `resolvePendingDraftPart` so an accepted profile repair clears only the profile flag and an accepted experience repair clears only that role's pending state.
 - Add regressions for summary-only, headline-only, skills-only, empty/disabled output, profile-versus-role state isolation, and wiring of all three acceptance paths.
-- No coverage threshold, evidence rule, identity guard, WhatsApp send policy, or external-send behavior is relaxed.
+- No coverage threshold, identity guard, WhatsApp send policy, or external-send behavior is relaxed. The evidence boundary remains fail-closed for JD-only and unconfirmed terms; explicit first-person skill confirmations are a separate owner-approved evidence source and may be mapped into relevant existing project bullets across roles.
 
 ## Verification boundary
 
@@ -51,3 +51,14 @@ The latest 24-hour production aggregation reports 11 WhatsApp tailoring quality-
 PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` has full CI `43139954490`, Kompas baseline `43139954651` and WhatsApp recovery `43139954504` SUCCESS. It remains DRAFT because the protected preview workflow `43139950971` cannot access the private `KOMPAS_VERCEL_API_TOKEN`. The owner or authorized repository administrator must configure that secret privately; no preview bypass was attempted.
 
 The change fixes a source-supported mismatch between profile-part acceptance and pending-draft state resolution; the production logs do not expose the missing part index or `pendingProfile`, so the exact runtime root cause is not proven for every rejection. The 17 Oct historical delivery remains a separate unresolved case. No live model call, DOCX generation, resume-library write, R2 mutation, Meta send or authenticated handset test occurred.
+
+
+## 12 November 2026 — owner correction to confirmed-skill attribution
+
+The 6 Nov 2026 9:55 AM CT owner clarification, recorded in journal entry `whatsapp-constructed-jd-finish-2026-11-06` and reaffirmed in PR #319 comment 6817645128, supersedes the earlier same-role-only interpretation: when the candidate explicitly confirms a JD skill, that confirmation is sufficient to map the skill naturally into relevant existing project bullets across roles, including earlier roles, even if the original bullet does not name the tool. Employer-source verification is not an extra prerequisite for that confirmed skill.
+
+This is not permission to infer a skill from the JD. The confirmation must be an explicit first-person candidate statement (or the owner's narrow blanket confirmation of all listed requirements). A confirmed skill may be used in an existing project context; it does not create a new project, employer, action, outcome, title, location, date, contact, metric or credential. Do not force a skill into unrelated roles, and do not mix the selected account's resume with another account's library. The historical source DOCX's education/employment/tenure/credential conflicts remain quarantined.
+
+The current-master restack PR #317 was updated on branch `fix/resume-role-evidence-restack-da1db145-20261112` through commits `dfcd2b4`, `14ac764`, `216581d` and `2851eaa`. The writer prompt now allows confirmed skills in relevant existing project bullets; the final deterministic guard permits only those confirmed terms across roles while still restoring unconfirmed cross-role terms; per-role alignment counts a confirmed term only when it is actually present in that role's edited bullets. Exact-head CI/recovery/baseline for `2851eaa` are pending. The protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`; no merge or deployment occurred.
+
+No live model call, DOCX generation, library write, R2 mutation, Meta send or handset test occurred. The profile-part acceptance fix remains a source-supported failure mode, not proof that it caused every production rejection.
