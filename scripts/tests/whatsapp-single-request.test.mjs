@@ -312,6 +312,8 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(preservedSameJd.jd, sameJdRun.jd)
   assert.equal(preservedSameJd.resumePath, '/data/whatsapp/inbox/123/newer-resume.docx')
 
+  sessionReadCount = 0
+  sessionMutationDuringSend = null
   // Barrier-controlled race: a newer webhook commits after the old run reads its
   // session snapshot but before its conditional write. The old consumer must retry.
   const casWindowRun = { ...offlineSession, jdId: 'offline-cas-window' }
