@@ -560,3 +560,8 @@ PR #277 has been converted to DRAFT and retitled `[DRAFT — OWNER APPROVAL REQU
 ## 12 November 2026 — PR #310 mergeability correction
 
 The current GitHub PR API reports PR #310 `mergeable=true` relative to its current base branch, which is PR #303's feature branch at the earlier base commit. Older notes saying it is `non-mergeable` are stale and superseded. It remains a stacked dependency and is **not independently ship-ready**: do not merge before parent #303 is accepted. After #303 is accepted into master, retarget/restack #310 onto the accepted master SHA and rerun full CI, WhatsApp recovery, Kompas baseline and protected preview on that final head.
+
+
+## 12 November 2026 — final resume evidence prompt correction
+
+PR #304 head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` removes the remaining two prompt clauses that still allowed a role-specific confirmation to support employer history. Employer-specific bullets now require same-role original source evidence; general confirmations remain skills/profile only. Previous exact-head CI failures were informative: `43138129880` had malformed regex assertions (42 other cases passed); `43139136600` then exposed the residual prompt wording (64/65 cases passed). The current exact-head full CI `43139954490`, baseline `43139954651`, WhatsApp recovery `43139954504` and preview `43139950971` are IN PROGRESS. No merge or live claim until all pass.
