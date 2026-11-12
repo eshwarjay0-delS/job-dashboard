@@ -20,8 +20,12 @@ function readFlag(env: Env, name: string): string | undefined {
   return env[name]
 }
 
-/** True when the app should not require a person to sign in. */
+/** True only for an explicitly enabled non-production local instance. */
 export function isAuthDisabled(env: Env = process.env): boolean {
+  // A synthetic owner is not a production authentication method. Check both the
+  // real process and the injected environment so callers cannot override the
+  // production boundary with a test/config object.
+  if (process.env.NODE_ENV === "production" || readFlag(env, "NODE_ENV") === "production") return false
   const raw = readFlag(env, "AUTH_DISABLED") ?? readFlag(env, "NEXT_PUBLIC_AUTH_DISABLED")
   return raw === "true"
 }
