@@ -95,3 +95,7 @@ Production alias is READY on exact master `da1db145`. No Kompas runtime change w
 The container could not resolve GitHub DNS for a local clone, so this run made no local code execution claim. No secrets, billing, auth bypass, production rows, email, WhatsApp message or manual crawl were changed.
 
 **Continue:** verify PR #305's exact-head queued workflows; keep PR #304/#303 and PR #309 DRAFT until the protected preview prerequisite is restored privately; keep the historical 17 Oct case open until output and signed provider trace plus owner fact reconciliation exist.
+ 
+### AGENTS.md test-note correction — 12 November 2026
+
+The old note claiming `mail-overview.test.mjs` expected StandingSection before the filter was inconsistent with current source: line 180 asserts the section is after `Filter inbox`; the overview page has the filter at line 593 and the section at line 667. AGENTS.md was corrected to mark the old failure note stale and require a fresh full hardening run before any pass claim. No local test execution is claimed because the container could not resolve GitHub DNS.
