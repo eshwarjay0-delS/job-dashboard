@@ -28,3 +28,10 @@ PR #306's protected preview workflow 43130279686 failed because the private GitH
 - Separately verify owner/admin access, ordinary account isolation, and desktop sign-in continuity using real verifiable sessions.
 
 No auth behavior, production environment, account data, deployment or Vercel protection was changed in this review.
+
+
+## 12 November 2026 — current-master recheck (06:53 UTC) <!-- auth-disabled-master-recheck-0653z -->
+
+Canonical master has advanced to `da1db145c5981254f95620ff6bb0222ab4228125` and the production alias metadata resolves to READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. The last authorized environment inspection recorded production `AUTH_DISABLED=false` and `NEXT_PUBLIC_AUTH_DISABLED=false`; this continuation did not read or change either value. No synthetic owner login was enabled and no access-control bypass was attempted.
+
+Protected preview remains blocked by the missing private GitHub Actions `KOMPAS_VERCEL_API_TOKEN` and Vercel project `live=false`. The owner or authorized repository administrator must configure the token privately and restore legitimate preview availability. No secret value is recorded here.
