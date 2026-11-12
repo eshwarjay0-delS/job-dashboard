@@ -570,3 +570,8 @@ PR #304 head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` removes the remaining tw
 ## 12 November 2026 — PR #304 protected preview result
 
 PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` SUCCESS; WhatsApp recovery `43139954504` IN PROGRESS; full CI `43139954490` IN PROGRESS at Lint. Protected preview `43139950971` FAILED; the job log explicitly states `KOMPAS_VERCEL_API_TOKEN must be configured privately`. This requires the owner/authorized repository administrator; do not paste the secret into chat or bypass the gate.
+
+
+## 12 November 2026 — PR #304 recovery regression completed
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` and WhatsApp recovery `43139954504` now both SUCCESS. Full CI `43139954490` remains IN PROGRESS. Protected preview `43139950971` FAILED with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. No merge or production deployment.
