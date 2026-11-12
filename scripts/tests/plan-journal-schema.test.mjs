@@ -116,5 +116,5 @@ test('12 Nov 16:16 completion checkpoint preserves live release and exact blocke
   assert.match(entry.evidence, /6c82abf4b240de7c768916188794b8beaaaf3b10/)
   assert.match(entry.evidence, /exceed_egress_quota/)
   assert.match(entry.evidence, /KOMPAS_VERCEL_API_TOKEN/)
-  assert.match(entry.next, /Do not replay or resend|before any replay/)
+  assert.match(entry.next, /before any historical replay/)
 })
