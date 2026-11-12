@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
-import { LOGIN_OFF_OWNER_EMAIL, isAuthDisabled } from "@/lib/authDisabled"
 import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
@@ -166,7 +165,6 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
   const [signedIn, setSignedIn] = useState(false)
-  const [authOff, setAuthOff] = useState(false)
   const [admin, setAdmin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -175,7 +173,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   const [signingOut, setSigningOut] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)   // the menu button on a narrow window
-  const drawerRef = useRef<HTMLElement>(null)         // the menu itself, a drawer on a narrow window
+  const drawerRef = useRef<HTMLElement>(null)         // the expanded navigation panel on a narrow window
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
 
@@ -204,7 +202,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     if (signingOut) return
     setSigningOut(true)
     try {
-      if (authOff || isAuthDisabled() || await serverReportsAuthDisabled()) { setAccountOpen(false); return }
+      if (await serverReportsAuthDisabled()) { setAccountOpen(false); return }
       const supabase = createClient()
       // The mail kept for instant pages, and that their setup is done, belong to this person: they go at sign-out.
       forgetGmailData()
@@ -222,7 +220,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   // the link that had it is hidden with the drawer and the keyboard is dropped at the top of the document.
   const closeMenu = useCallback(() => {
     const el = document.activeElement as HTMLElement | null
-    const inside = !!el && (!!drawerRef.current?.contains(el) || el.classList.contains("mf-nav-scrim"))
+    const inside = !!el && !!drawerRef.current?.contains(el)
     setMenuOpen(false)
     if (inside) toggleRef.current?.focus()
   }, [])
@@ -232,26 +230,29 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMenu()
     }
-    // While the drawer is open the page under the dimming cannot be reached with Tab or read out by a screen reader.
-    const page = document.getElementById("dashboard-content")
-    page?.setAttribute("inert", "")
-    // The drawer exists only on a narrow window. Widened past it, the menu is the fixed rail again: the drawer is closed,
-    // so the page is never left unreachable behind a drawer that is no longer one.
+    // The panel expands below the sticky top bar and pushes the page down. Outside clicks close it without blocking the page.
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target || drawerRef.current?.contains(target) || toggleRef.current?.contains(target)) return
+      setMenuOpen(false)
+    }
+    // The panel exists only on a narrow window. Widened past it, the menu is the fixed desktop rail again, so close it.
     const wide = window.matchMedia("(min-width: 1025px)")
     const onWide = () => { if (wide.matches) setMenuOpen(false) }
     wide.addEventListener("change", onWide)
+    document.addEventListener("pointerdown", closeOutside)
     window.addEventListener("keydown", onKey)
     return () => {
-      page?.removeAttribute("inert")
+      document.removeEventListener("pointerdown", closeOutside)
       wide.removeEventListener("change", onWide)
       window.removeEventListener("keydown", onKey)
     }
   }, [menuOpen, closeMenu])
 
   useEffect(() => {
+    const supabase = createClient()
     let active = true
     let authRevision = 0
-    let unsubscribe = () => {}
     // Who is signed in, as last seen. Supabase also reports a refreshed session (on tab focus, on token refresh) for the
     // same person; that is not a change, so the Admin link is not hidden and re-asked for it (it was: five asks in nine
     // seconds on the owner's account, 14 Oct 2026, the link blinking each time).
@@ -267,17 +268,6 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       setInitials(name.split(/\s+/).filter(Boolean).map((part: string) => part[0]).join("").slice(0, 2).toUpperCase() || "MF")
     }
 
-    async function start() {
-      if (isAuthDisabled() || await serverReportsAuthDisabled()) {
-        if (!active) return
-        setAuthOff(true)
-        setSignedIn(true)
-        setEmail(LOGIN_OFF_OWNER_EMAIL)
-        setInitials("EJ")
-        return
-      }
-      if (!active) return
-      const supabase = createClient()
     const initialRevision = authRevision
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       // A later sign-out or account switch must win over this initial request.
@@ -322,12 +312,9 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       updateAccount(session?.user || null)
       if (active) window.postMessage({ source: "marketfit-web", type: "MF_AUTH", session: session?.user.is_anonymous ? null : session }, window.location.origin)
     })
-      unsubscribe = () => subscription.subscription.unsubscribe()
-    }
-    void start()
     return () => {
       active = false
-      unsubscribe()
+      subscription.subscription.unsubscribe()
     }
   }, [router])
 
@@ -357,14 +344,13 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
       </button>
       <Link
-        href={signedIn || authOff ? "/dashboard/connections" : "/login?next=/dashboard"}
+        href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}
         className="mf-mobile-account"
       >
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
-    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={closeMenu} />}
-    <aside ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+    <aside id="marketfit-navigation" aria-label="MarketFit navigation" ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       background: "var(--surface)",
       display: "flex",
       flexDirection: "column",
@@ -399,7 +385,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       {!resumeOnly && <CreditsPill />}
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
-      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
+      <nav aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
         {(resumeOnly ? RESUME_ONLY_TABS : NAV_TABS).map(tab => {
           const inTab = (h: string) => h === tab.href ? pathname === h : pathname === h || pathname.startsWith(h + "/")
           const tabActive = inTab(tab.href) || tab.items.some(i => inTab(i.href))
@@ -482,7 +468,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
             }}>{signingOut ? "Logging out…" : "Log out"}</button>
           </div>
         )}
-        <button type="button" onClick={() => (signedIn || authOff) ? setAccountOpen(open => !open) : router.push("/login?next=/dashboard")}
+        <button type="button" onClick={() => signedIn ? setAccountOpen(open => !open) : router.push("/login?next=/dashboard")}
           aria-expanded={signedIn ? accountOpen : undefined} aria-haspopup={signedIn ? "menu" : undefined}
           style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: 0, border: 0, background: "transparent", textAlign: "left", cursor: "pointer" }}>
           <div style={{
