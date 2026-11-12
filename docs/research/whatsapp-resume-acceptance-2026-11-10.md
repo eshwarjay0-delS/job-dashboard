@@ -142,3 +142,12 @@ The connected iZap workspace has one business but no linked WhatsApp number, zer
 The current webhook source separates the initial JD generate path from reply-to swipe refinement. The initial no-provider fallback is reachable only when a library selection is present; it verifies the authenticated user's library root, selected relative path, exact library/session bytes and selected profile email, then labels the attachment NOT TAILORED. The swipe reply routes to refine, which checks the same account, returns text only when the provider is unavailable or the rewrite is unusable, and requires sameResumeFacts before delivering a new document. It contains no sendClosest or sendOfflineOriginal fallback.
 
 PR #303 head fcee3fb6c46bd3d69bcc1565ed7fd1d5adb244cb adds two source-contract tests for these boundaries. Exact-head recovery regression 43097475896, full CI 43097475873 and Kompas baseline 43097475962 are queued. No real WhatsApp message or live model call was made. The 17 Oct generated DOCX, R2 object key, Meta correlation and signed delivery receipt remain missing.
+
+
+## 12 November 2026 — bounded Library and WhatsApp-connector recheck
+
+A fresh semantic search of the accessible Library used the 17 Oct 17:28 Chicago WhatsApp failure, the Risk & Controls JD, the original source DOCX and the generated output as separate query anchors. It returned related BNY preparation documents and the resume-tailoring research paper, but did not surface a uniquely correlated generated output DOCX. This is a bounded search result, not proof that no copy exists in every Library folder, conversation, WhatsApp account or R2 bucket.
+
+A read-only iZap `list_businesses` check returned one business (`eshwarjay0`) with **zero linked WhatsApp numbers**. There is therefore no connected iZap conversation source from which to retrieve the historical thread or signed message status in this runtime. No message was sent and no connection was changed.
+
+The historical case remains open: generated output DOCX, exact per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. The recovered source/JD relationship does not establish which bytes were sent or whether Meta delivered them. Do not replay or resend the historical request; if the artifact and provider correlation cannot be recovered, record the historical delivery as irrecoverable rather than guessing.
