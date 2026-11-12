@@ -637,3 +637,10 @@ The approved mobile behavior remains a normal-flow panel below the sticky top ba
 - Previous PR head `c18b356` full CI and Kompas baseline passed; protected preview failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable.
 - New head `96b8e84` has no exact-head workflow result visible yet. The container could not clone GitHub because DNS resolution failed, so no local test run is claimed.
 - No production deployment or real-phone acceptance. Keep PR #309 DRAFT until exact-head CI/baseline and legitimate protected preview pass; the owner or authorized repository administrator must configure the private token. Then verify on a real narrow viewport.
+
+
+## 12 November 2026 — historical WhatsApp artifact recheck
+
+The earlier audit's recovery of the original 27,724-byte source DOCX and matching full JD remains accepted; this run did not re-open those private artifacts. Fresh Library search did not surface a uniquely correlated generated output, and personal-context search returned no matching original conversation. Read-only iZap listing found one business with zero linked WhatsApp numbers; searching `resume` on 17 Oct 2026 (`America/Chicago`) returned zero messages. Read-only Supabase aggregate found zero rows in `resume_documents` and `resume_import_jobs` during 22:20–22:40 UTC. This does not rule out R2-only or Meta-side records.
+
+The historical output DOCX, exact R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain missing. The recovered source DOCX still has education/employment/credential conflicts with the owner-confirmed profile; keep them quarantined pending owner reconciliation. Exact unblock: authorized read-only access to the correct R2/Meta logs or an owner-provided export with request/provider identifiers. No replay, model call, R2 write, WhatsApp send or production mutation occurred.
