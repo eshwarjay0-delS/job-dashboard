@@ -80,3 +80,12 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## 12 November 2026 — role-scoped evidence release status (06:53 UTC) <!-- resume-evidence-recheck-0653z -->
+
+PR #317 is the current-master restack of the approved resume/JD/confirmed-experience changes. Exact head `f3182de28fb229401e30893d7687805e55c846e7` passes full CI `43164222540`, WhatsApp recovery `43164222577` and Kompas baseline `43164222576`. Protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN` and Vercel project `live=false`; keep the PR DRAFT and unmerged.
+
+The implementation keeps employer-specific bullets inside that employer's source evidence, allows general first-person confirmations to support profile/skills only, restores a whole bullet when its JD term is unsupported by the same role, and preserves visible gaps rather than inventing experience. No threshold was lowered. A green source/build suite is not a live 98% resume match; no live model generation, personal DOCX creation or WhatsApp send was performed.
+
+**Continue:** after legitimate protected preview access is restored, review and merge the exact green PR head, then separately evaluate an authorized real resume/JD pair and the final exported DOCX. Keep unverified employer attribution, dates, credentials and metrics out of the resume.
