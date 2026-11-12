@@ -189,3 +189,33 @@ PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deploym
 The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
 
 The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
+
+
+## 11 November 2026 — classifier release and result-supply follow-up
+
+PR #285 merged as 11efbbfe7781592bc2fad1216f67546882a1c3ed, carrying the classifier regression workflow and manual-only source guard. The canonical Vercel alias metadata points to READY deployment dpl_7uEfjq1XprC48DoTFfFuiBoShPne on that exact SHA, but the Vercel project reports live=false and public /api/health and /api/crawl/jobs requests return HTTP 402 DEPLOYMENT_DISABLED. This is not runtime API acceptance.
+
+The latest completed crawl (10 Nov 11:00 UTC) found/upserted 6,818 listings across 20 portals before the classifier release. The next scheduled crawl is 11 Nov 2026 at 11:00 UTC; it remains pending. Do not manually rewrite stored rows. Robert Half remains a manual-only directory link because automated retrieval is not authorized.
+
+PR #288 adds bounded pagination after clearance filtering; PR #291 maps explicit Right To Hire and Contract To Perm wording to C2H while keeping negated forms unknown. Both have green exact-head crawler, schema, Kompas baseline and full-CI checks, but their shared voice-preview check and Vercel account status fail. They remain open, unmerged and not production-accepted. Do not bypass the account block or treat a passing source suite as a live search result.
+
+ 
+## 11 November 2026 — missed post-classifier crawl and production runtime
+
+The scheduled 11:00 UTC crawl did not create a new `mfit_crawl_runs` row. At 12:04 UTC, the latest database run was still 10 Nov 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, one Inspyr abort. The latest stored listing observations remained on 10 Nov.
+
+The canonical master/alias metadata match at `11efbbfe7781592bc2fad1216f67546882a1c3ed`, but the Vercel project reports `live=false` and public health/jobs endpoints have returned HTTP 402 `DEPLOYMENT_DISABLED`. A READY alias record is not proof that the daily cron or API is running. No manual crawl or database rewrite was performed. Restore authorized Vercel project availability, then verify the public health route, clearance/freshness search API and a later completed scheduled crawl using the classifier. Robert Half remains manual-only.
+
+ 
+## 12 November 2026 — contract crawler continuation status (04:13 UTC)
+
+The latest read-only production `mfit_crawl_runs` record remains 10 Nov 2026 11:00:24–11:01:11 UTC: 6,818 jobs found/upserted across 20 portals, with one Inspyr abort. There is no 11 or 12 Nov run because the owner-approved Hobby usage reduction intentionally removed the daily contract-crawler cron. The approved mode is manual/on-demand; no manual crawl was run and no production job rows were changed. Do not restore the daily schedule without a new explicit owner instruction.
+
+PR #305 (`278d9b3fa614c7e50aebf83b80ce9ac913724bf9`) restacks Right To Hire / Contract To Perm → C2H classification on current master and tightens employment-context matching so generic contract administration/negotiation text does not imply contract employment. Negated labels remain unknown. Exact-head full CI `43096994492`, crawler regression `43096994482` and Kompas baseline `43096994493` are still QUEUED. Local classifier/additive-prebuild tests 34/34, Kompas baseline 92/92, TypeScript, focused ESLint and Webpack build passed in the isolated sandbox; those are not GitHub exact-head CI or production evidence. Keep the PR DRAFT and do not modify production rows.
+
+
+## 12 November 2026 — current-master contract classifier restack
+
+The approved explicit employment labels `Right To Hire`, `Contract To Perm` and `Contract To Permanent` map to C2H. Negated versions remain unknown. Free-text contract administration, negotiation, vendor compliance and lifecycle wording do not prove contract employment; the structured employmentType field remains authoritative when supplied. W2 payroll alone remains insufficient.
+
+The safe restack is PR #315, based on current master `da1db145c5981254f95620ff6bb0222ab4228125`, head `bd62bcd17b2b2be79c6ee23db19b8582a5225015`. GitHub's exact-head crawler regression passed 8/8, the Kompas baseline passed 92/92 and full CI passed all 47 workflow steps. The protected exact-head preview failed at resolution and the Vercel project reports `live=false`. Keep the PR draft and unmerged. No production rows were rewritten, no manual crawl was run, and the daily cron remains removed under the approved Hobby usage reduction. PR #305 is left untouched pending validation of the restack. Robert Half remains manual-only.
