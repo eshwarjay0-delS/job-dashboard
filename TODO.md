@@ -4,6 +4,8 @@ No new screen. This is genuineness grounded in real experience, not a way past a
 
 **Checked locally. Not merged. Not a production deploy.** Blend tests: 28 pass, 0 fail. Natural-narration tests: 6 pass, 0 fail. Focused Kompas suites: 208 pass, 0 fail. `tsc --noEmit` clean after `npm ci` installed the current lockfile. Offline stand-in, fictional resume, 150 drafts, no model: 0 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling, 0 logistics or Houston or Saint Louis hits. No production URL was called.
 
+GitHub CI then failed a stamp check that was already wrong on master: the page build said `kompas-20261112-output` while `app.js` was cached as `20261112-startfix`. Those two now say `kompas-20261112-startfix`. The voice-preview check failed because its token was empty.
+
 ## 2026-11-12 — Login-off sessions on the free Blob store, and Android keeps the last audio chunk
 
 No new screen. Three reviewed patches landed on master `27f600ef`: when `AUTH_DISABLED` is exactly true, `/api/kompas/account-sessions` and `/api/kompas/account-artifacts` use the private Hobby Blob store, and the first successful login-off catalog read uploads this origin's local sessions. Signed-in accounts still use Supabase and still need an explicit Import. Chrome on Android waits briefly after `MediaRecorder.onstop` so the last `dataavailable` chunk is included, and a timeslice `start` falls back to an untimed start. `AUTH_DISABLED` was not changed.
