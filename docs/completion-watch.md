@@ -687,3 +687,7 @@ The local container could not resolve GitHub DNS for a clone, so no local code e
 ## 12 November 2026 — stale hardening-test note corrected
 
 A source-level audit found the old AGENTS.md note about `mail-overview.test.mjs` was stale: the current test asserts the StandingSection appears after `Filter inbox`, and the current page renders it after the filter. The full `npm run test:hardening` suite was not executed in this run; no overall pass is claimed. The repository instruction was corrected to require a fresh run before claiming the suite is green.
+
+### Vercel live-state caveat — 12 November 2026 04:26 UTC
+
+The Vercel project metadata reports `live=false` even though the latest deployment object is READY and `job-dashboard-fawn.vercel.app` is assigned to it. External requests for `/api/health` and `/kompas/version.json` were inaccessible in this run. Therefore production deployment readiness and alias assignment are verified, but public HTTP/end-user availability is **not** verified. Do not claim a fully live release until the project live state and public route are confirmed.
