@@ -1034,3 +1034,10 @@ Owner correction recorded in PR #315: contract-portal crawling is manual/on-dema
 3. Gmail acceptance needs two authorized inboxes (healthy and partial/failed) and narrow-mobile device testing; no live email send was made.
 4. Manual-only crawler acceptance needs an inventory of external callers of the secret-gated GET route; the Vercel schedule alone does not prove there is no external scheduler.
 5. Kompas skip-login approval provenance is disputed in the accessible record; leave the production flags false until resolved. Real Windows and phone acceptance is not available to this runtime.
+
+
+## 12 November 2026 — historical WhatsApp source evidence correction
+
+The latest read-only recheck recovered the matching full Security Engineer – Risk & Controls JD from Gmail thread `1a1464393628992f` (Atlanta onsite contract; 5+ years requirement). It did **not** recover the source DOCX bytes. `Resume_Inventory.csv` records the source path/hash under the separate `jayeshwar44@gmail.com` library, but listing `/J_Eshwar_44/General Security` returned `Library path not found`. The earlier 27,724-byte/source-conflict claims are not independently reproducible from current access; keep them as historical assertions and do not substitute a different account's resume.
+
+The generated output DOCX, per-run R2 key/version, webhook/request ID, Meta message ID and signed delivered/read receipt remain missing. No replay or resend. PR #321 has been restacked onto current master as `2d642ff`; baseline `43292088358` passes while full CI `43292088241` and WhatsApp recovery `43292088573` are running. The PR is DRAFT and not deployed. The production alias remains at master `cd70190`; no WhatsApp acceptance is claimed.
