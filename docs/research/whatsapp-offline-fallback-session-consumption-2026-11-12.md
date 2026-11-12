@@ -54,3 +54,12 @@ The owner-approved 6 Nov fallback/no-baseline policy is restacked in current-mas
 The canonical production alias remains READY at master `da1db145c5981254f95620ff6bb0222ab4228125`, not this PR. Vercel project metadata reports `live=false`. The historical 17 Oct 17:28 Chicago output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain unavailable. No replay or resend is authorized.
 
 **Continue:** finish exact-head full CI 43193485035; then keep PR #321 DRAFT until an authorized repository administrator privately configures the preview token and the protected preview passes. Only then review/merge, deploy the exact merged SHA, verify the active production alias and perform a consented real WhatsApp acceptance. PR #316 is now a source/history dependency and must not be merged independently; close it as superseded only after PR #321 is accepted.
+
+
+## 12 November 2026 — 10:05 UTC exact-head continuation
+
+PR #321 current head is `b5b418905906e925cacba1772a011457d9a5db03`. Exact-head full CI `43196332095`, WhatsApp recovery `43196332031`, and Kompas baseline `43196332103` all completed SUCCESS. No exact-head protected-preview pass is recorded; the previous preview attempt `43191231435` failed closed because the private `KOMPAS_VERCEL_API_TOKEN` was empty. Keep the PR DRAFT and do not bypass the protected resolver.
+
+The no-provider path is a best-match fallback, not a random file: `fromLibrary` calls `pickAndMake`, which calls the same `chooseResume` selector used by the normal library path with the authenticated user directory, selected email and JD. The fallback then sends only the exact selected library original after root, relative-path, byte-equality and profile-email checks, with the explicit caption **Original resume — NOT TAILORED**. It does not write a tailored document or claim that AI edits occurred. The pair-consumption helper clears only the JD/resume pair that still matches the run, after Meta returns a document message ID; a newer JD/resume pair is preserved and a rejected send retains the old pair. The failed swipe-refinement path remains text-only and keeps the last delivered version.
+
+No real WhatsApp send, model call, R2 mutation, Meta callback or handset acceptance occurred. The 17 Oct 17:28 Chicago generated output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain unavailable. The current production alias remains READY on master `da1db145c5981254f95620ff6bb0222ab4228125`, not PR #321.
