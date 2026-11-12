@@ -137,3 +137,8 @@ The Vercel project metadata reports `live=false` even though the latest deployme
 - PR #314 adds only CI wiring for 69 existing Kompas question/voice cases; its full CI 43157259968 remains in progress at Webpack build, preview 43157259910 failed. No runtime behavior changed. Kompas Continuous Voice Delivery is disabled; no duplicate voice work was started.
 
 No real email or WhatsApp message was sent. No manual crawl, database mutation, billing change, secret access or authentication bypass occurred.
+
+
+## 12 November 2026 — Kompas question/voice CI result (04:59 UTC)
+
+The Safe Merge Gate's test-only PR #314 is based on current master and adds one CI step for five existing suites (69 automated cases). Exact-head full CI 43157259968 and Kompas baseline 43157260433 both SUCCESS. The full CI run completed all 69 question-framing, one-press, typed-input and voice regression cases and the Webpack build. Protected preview 43157259910 FAILED at exact-head preview resolution because the private KOMPAS_VERCEL_API_TOKEN is unavailable. Keep PR #314 DRAFT/unmerged; no runtime behavior changed. The separate Kompas Continuous Voice Delivery automation is disabled. These source tests do not establish native Windows, phone, WhatsApp or real-session acceptance.
