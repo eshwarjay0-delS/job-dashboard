@@ -300,3 +300,10 @@ PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` now passes full CI
 ### Account-keyed persistence recheck — 12 November 2026, 09:30 UTC
 
 Read-only production SQL returned 3 rows in `mfit_gmail_sync` across 3 account IDs for 1 user, with latest sync at `2026-11-10 14:44:44.277 UTC`. `mfit_gmail_threads` contains 2,002 rows across the same 3 accounts for 1 user; latest thread update is `2026-11-10 14:46:49.790 UTC`. No message bodies were read. This confirms account-keyed persisted data only, not fresh two-inbox sync, selected-From delivery, isolated reconnect or phone behavior. The 24-hour Auth export aggregation remains 42 `402 exceed_egress_quota` errors across 34 users, latest 09:07:04 UTC; the Supabase owner/admin must resolve the spend-cap restriction before acceptance.
+
+
+## Poke-inspired account and mobile status — 12 November 2026, 09:35 UTC
+
+PR #320 head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` implements the approved mobile hamburger behavior: the panel opens below the sticky top bar in normal document flow, pushes content down, never overlays or dims the page, and closes on outside interaction, Escape, route selection or desktop widening. Exact full CI 43190228931 and Kompas baseline 43190229393 pass; protected preview 43190224739 fails closed because the private `KOMPAS_VERCEL_API_TOKEN` is empty. No real phone acceptance is claimed.
+
+The account-keyed production snapshot remains 3 sync rows and 2,002 cached threads across 3 account IDs, with latest sync 10 Nov 14:44:44 UTC; this is not fresh two-inbox or reconnect acceptance. Supabase Auth export is restricted by HTTP 402 `exceed_egress_quota` (42 errors across 34 users in the latest recorded 24-hour aggregation, latest 09:07:04 UTC). The project owner/admin must resolve the Auth spend cap. The unattended Gmail/WhatsApp update worker remains disabled; no email was sent.
