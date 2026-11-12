@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { etagBlobMethods } from './helpers/etag-blob.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -52,6 +53,41 @@ test('concurrent storage claims produce exactly one winner and propagate storage
     assert.equal(await r2.putIfAbsent('jobs/request', '1'), false)
     r2.s3 = { send: async () => { throw new Error('storage offline') } }
     await assert.rejects(r2.putIfAbsent('jobs/request', '1'), /storage offline/)
+
+    await fs.put('sessions/current', 'original')
+    const first = await fs.getWithEtag('sessions/current')
+    assert.ok(first?.etag)
+    await fs.put('sessions/current', 'newer')
+    assert.equal(await fs.putIfMatch('sessions/current', first.etag, 'stale'), false)
+    assert.equal(await fs.getText('sessions/current'), 'newer', 'a stale conditional write cannot overwrite a newer session')
+    const latest = await fs.getWithEtag('sessions/current')
+    const concurrent = await Promise.all([
+      fs.putIfMatch('sessions/current', latest.etag, 'winner-a'),
+      fs.putIfMatch('sessions/current', latest.etag, 'winner-b'),
+    ])
+    assert.equal(concurrent.filter(Boolean).length, 1, 'only one concurrent writer may commit against the same ETag')
+
+    let remoteBytes = Buffer.from('original')
+    let remoteEtag = '"r2-original"'
+    r2.s3 = { send: async command => {
+      if (command.constructor.name === 'GetObjectCommand') {
+        return { ETag: remoteEtag, Body: { transformToByteArray: async () => remoteBytes } }
+      }
+      if (command.constructor.name === 'PutObjectCommand') {
+        if (command.input.IfMatch !== remoteEtag) throw { $metadata: { httpStatusCode: 412 } }
+        remoteBytes = Buffer.from(command.input.Body)
+        remoteEtag = '"r2-next"'
+        return {}
+      }
+      throw new Error('unexpected R2 command')
+    } }
+    const remote = await r2.getWithEtag('sessions/current')
+    assert.equal(remote.etag, '"r2-original"')
+    remoteEtag = '"r2-concurrent-update"'
+    assert.equal(await r2.putIfMatch('sessions/current', remote.etag, 'stale'), false)
+    const remoteLatest = await r2.getWithEtag('sessions/current')
+    assert.equal(await r2.putIfMatch('sessions/current', remoteLatest.etag, 'committed'), true)
+    assert.equal((await r2.getWithEtag('sessions/current')).data.toString(), 'committed')
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
@@ -60,9 +96,17 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
   let failNextDocument = false, sessionMutationDuringSend = null
+  let sessionCasBarrier = null
   const said = []
   const docs = []
   const blob = {
+    ...etagBlobMethods(entries, { beforePutIfMatch: async key => {
+      if (key !== 'whatsapp/session-123.json' || !sessionCasBarrier) return
+      const barrier = sessionCasBarrier
+      sessionCasBarrier = null
+      barrier.entered()
+      await barrier.release
+    } }),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
@@ -268,6 +312,34 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(preservedSameJd.jd, sameJdRun.jd)
   assert.equal(preservedSameJd.resumePath, '/data/whatsapp/inbox/123/newer-resume.docx')
 
+  // Barrier-controlled race: a newer webhook commits after the old run reads its
+  // session snapshot but before its conditional write. The old consumer must retry.
+  const casWindowRun = { ...offlineSession, jdId: 'offline-cas-window' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: casWindowRun.jdId, jd: casWindowRun.jd,
+    resumePath: casWindowRun.resumePath, resumeName: casWindowRun.resumeName,
+    seen: ['cas-window-old'], updatedAt: Date.now(),
+  }))
+  let casEnteredResolve
+  const casEntered = new Promise(resolve => { casEnteredResolve = resolve })
+  let casReleaseResolve
+  const casRelease = new Promise(resolve => { casReleaseResolve = resolve })
+  sessionCasBarrier = { entered: casEnteredResolve, release: casRelease }
+  const casWindowSend = generate('123', casWindowRun, offlineUser, undefined, offlineFiles)
+  await casEntered
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: 'newer-after-cas-read', jd: 'A newer JD committed inside the CAS window',
+    resumePath: '/data/whatsapp/inbox/123/newer-after-cas-read.docx',
+    resumeName: 'Newer After CAS Read', seen: ['cas-window-new'], updatedAt: Date.now(),
+  }))
+  casReleaseResolve()
+  await casWindowSend
+  const afterCasWindow = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(afterCasWindow.jdId, 'newer-after-cas-read')
+  assert.equal(afterCasWindow.jd, 'A newer JD committed inside the CAS window')
+  assert.equal(afterCasWindow.resumePath, '/data/whatsapp/inbox/123/newer-after-cas-read.docx')
+  assert.equal(afterCasWindow.last.email, offlineFiles.email, 'last-used bookkeeping survives the CAS retry')
+
   // A refused document send leaves the matching pair intact for retry.
   const failedSendSession = { ...offlineSession, jdId: 'offline-send-failure' }
   entries.set('whatsapp/session-123.json', JSON.stringify({
@@ -317,6 +389,7 @@ test('a below-floor rewrite still delivers the Word file and names what is missi
   const said = []
   const docs = []
   const blob = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
@@ -372,6 +445,7 @@ test('a reply to a hold uses confirmed evidence and never sends a baseline when 
   const docs = []
   const { createHash } = require('node:crypto')
   const blob = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
@@ -434,6 +508,7 @@ test('a partial hold names the unfinished sections and invites a reply-redo; oth
   // which sections never came back (result.partial) and never said so.
   const entries = new Map()
   const blob = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
