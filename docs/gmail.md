@@ -204,3 +204,54 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## 11 November 2026 — Poke-inspired account and mobile acceptance
+
+The owner-approved broad direction remains up to four connected Gmail accounts, per-account Gmail/Calendar targeting, account+thread identity, no silent cross-account merge, selected From preservation, and reconnect limited to the affected inbox. The last read-only production aggregate (10 Nov) showed 3 account IDs, 2,002 cached threads and 3 sync rows. This does not prove two-inbox partial/failure recovery or mobile acceptance.
+
+PR #290 isolates the approved 4 October mobile navigation correction: the hamburger panel expands in normal document flow below the sticky header, pushes content down, and does not overlay, dim or inert the page. Its latest exact head 7bd60f97a1b486f66ec61a018f64a9dbe5dc00a9 passed full CI 42969455798, schema 42969455846 and Kompas baseline 42969455728. The shared voice-preview gate fails and the Vercel project is blocked, so the change is not merged or production-accepted; a real narrow-phone check remains.
+
+Per-account sync-health cards in PRs #271/#286 remain draft/proposed because no separate owner approval for that UI was retrieved. Do not enable the unattended update worker without its external scheduler, CRON_SECRET, approved Meta template and explicit GMAIL_UPDATES_SCHEDULER_ENABLED=true. The scheduled Auto Reply Loop's latest run failed its configuration check and skipped its POST step; no email action occurred. No real Gmail API call, email send or WhatsApp send was made in this continuation.
+
+
+## 11 November 2026 — selected sender regression coverage
+
+PR #297 adds five test-only cases against the actual `gmail-send` route with mocked authentication, OAuth-token and network adapters. They verify selected From plus the matching OAuth account, same-inbox thread lookup before send, selected-inbox reconnect without fallback, unknown sender rejection, and disabled-account rejection. Exact-head full CI `42997343901` and Kompas baseline `42997343939` passed, including the new Gmail isolation step. No real Gmail API call or email send occurred, and no runtime behavior changed. The protected Vercel preview remains unavailable while the project/account is blocked, so PR #297 is open and unmerged. Real two-inbox healthy/partial-failure and narrow-phone acceptance remain pending; the proposed sync-health cards and unattended update worker retain their separate approval/configuration gates.
+
+ 
+## 11 November 2026 — Gmail account freshness snapshot (12:04 UTC)
+
+Read-only production state shows 3 connected-account sync rows and 3 distinct account IDs, with 2,002 cached threads. Latest sync is 10 Nov 14:44:44 UTC; latest cached-thread update is 14:46:49 UTC. No sync or thread update occurred in the last hour; all three sync rows are within 24 hours. The composite `(user_id, account_id, thread_id)` key has zero duplicate groups.
+
+This confirms persisted per-account separation only. It does not demonstrate a healthy inbox plus a partially failing inbox, live reconnect behavior, mobile delivery or email sending. PR #297's five mocked sender/thread-boundary regressions pass full CI and baseline, but the protected preview remains blocked. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement are configured. No real Gmail API call or email was sent.
+
+
+## 11 November 2026 — Supabase Auth egress restriction
+
+A production `/api/gmail/notify-rules/export` request at 20:07 UTC failed with `AuthApiError` status 402 and `exceed_egress_quota`. Supabase project metadata reports `ACTIVE_HEALTHY`; the runtime error specifically identifies a restriction on the Auth service, so this is not evidence that the entire database is down. Gmail aggregates remain three account IDs, three sync rows and 2,002 cached threads, with latest sync 10 November 14:44:44 UTC and no sync in the last hour.
+
+The exact unblock requirement is an owner billing decision: upgrade the Supabase plan or remove spend caps to restore the restricted service. No billing change, credential swap, alternate-auth workaround, manual sync or email send was attempted. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit owner enablement are all present.
+
+
+### Mobile navigation non-obstruction — 12 November 2026
+
+Owner requirement retrieved from 4 October 2026: “Navigation must not block/cover the view; even if opened, it should not obstruct the page.” The selected implementation expands the hamburger panel below the sticky top bar in normal document flow and pushes content down; it does not float over, dim or make the page inert. Outside-pointer, Escape, route-close and focus-return behavior are implementation/accessibility details rather than separate owner-authored requirements.
+
+PR #309 restacks the behavior onto current master and preserves the later `serverReportsAuthDisabled` sign-out guard. Exact-head full CI is pending, the Kompas baseline passes, and the protected preview gate is blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`. No production deployment or real phone/mobile viewport acceptance is claimed.
+
+ 
+## 12 November 2026 — production and mobile recheck (04:13 UTC)
+
+The canonical production alias now resolves to READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, exact master `da1db145c5981254f95620ff6bb0222ab4228125`. PR #313 is merged and adds five mocked selected-sender and receiving-inbox isolation regressions to CI (full CI `43143457248`, baseline `43143457299`); it does not change runtime Gmail behavior or prove a real send.
+
+Production Auth egress is currently restricted: the 24-hour runtime aggregate shows 32 `/api/gmail/notify-rules/export` failures across 27 users, latest `2026-11-12T04:07:07Z`, HTTP 402 `exceed_egress_quota`. The owner/project administrator must resolve the Supabase Auth restriction. No billing change, credential swap, alternate-auth workaround or email send was attempted.
+
+The last read-only account snapshot remains three account sync rows and 2,002 account-keyed threads, latest sync 10 Nov 14:44:44Z. This is persisted account separation, not two-inbox healthy/partial-failure, reconnect or selected-From live acceptance.
+
+PR #309 exact-head full CI `43145194068` and Kompas baseline `43145194212` passed for the approved normal-flow mobile navigation (hamburger expands below the sticky top bar and pushes content down; no overlay). Protected preview `43145190595` remains blocked because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. No real phone/narrow viewport acceptance or production deployment is claimed. Keep sync-health cards proposed and the unattended update worker disabled until its external scheduler, CRON_SECRET, approved Meta template and explicit enablement are present.
+
+
+## 12 November 2026 — mobile navigation restack
+
+The approved Poke-inspired mobile behavior is restacked as PR #318 on PR #317. It preserves the normal-flow requirement: the hamburger opens below the sticky top bar and pushes content down; no overlay/scrim. It adds `dashboard-shell.test.mjs` to fail-fast prebuild without dropping the resume profile suites. Exact head `571b8594b3189f87f5d3fe50f2067a65330d09f6` is a draft stacked PR with no workflow run visible yet. Prior #309 full CI/baseline success does not validate this restack. Real phone acceptance and protected preview remain open; no email was sent and the unattended worker stays disabled.
