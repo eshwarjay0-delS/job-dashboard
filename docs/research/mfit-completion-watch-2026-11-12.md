@@ -191,3 +191,40 @@ Read-only Supabase aggregate now confirms 22 account-session rows across one own
 No real email or WhatsApp test, live model call, DOCX generation, R2 write, production row mutation, manual crawl, billing change, secret access, authentication bypass or device test occurred. The Kompas Continuous Voice Delivery automation remains disabled; no voice/audio/caption work was duplicated. MFit Safe Merge Gate remains active, so no merge was attempted.
 
 **Continue:** check the new exact-head full CI, WhatsApp recovery and Kompas baseline for PR #317 head `2214469`; keep it DRAFT until those pass and the protected preview is legitimately available. Then review the updated prompt/guard against the 6 Nov owner correction before any merge. Preserve PR #303/#316/#315 and every other backlog item; do not claim live resume quality, WhatsApp delivery, Gmail two-inbox/mobile acceptance, post-release crawl, or Kompas native acceptance without their separate evidence.
+
+
+## 12 November 2026 — 10:05 UTC continuation and evidence refresh
+
+### Canonical master and production
+
+- Test-only PR #322 merged as master commit `6c82abf4b240de7c768916188794b8beaaaf3b10`. Exact PR head `9a51d6119089a0f19d95c5a9d15803cc866c4b47` passed full CI `43196458471` and Kompas baseline `43196458630`. It adds selected-account Calendar token isolation tests only; no runtime code changed.
+- The canonical production alias `job-dashboard-fawn.vercel.app` remains independently mapped to READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, runtime SHA `da1db145c5981254f95620ff6bb0222ab4228125`. No redeploy was needed for the test-only merge. Vercel project metadata still reports `live=false`; protected previews remain unavailable.
+
+### WhatsApp and resume/JD alignment
+
+- PR #321 exact head `b5b418905906e925cacba1772a011457d9a5db03`: full CI `43196332095`, WhatsApp recovery `43196332031`, and Kompas baseline `43196332103` all SUCCESS. No exact-head protected-preview pass is recorded; prior preview `43191231435` failed because the private `KOMPAS_VERCEL_API_TOKEN` was empty. Keep DRAFT until a legitimate exact-head preview passes.
+- Source review confirms the fallback uses `fromLibrary → pickAndMake → chooseResume` with the authenticated user directory, selected email and JD, so it uses the normal same-account best-match selector. When no provider is available it sends only the exact selected original after root/path/byte/profile-email checks and labels it **Original resume — NOT TAILORED**. The race-safe JD/resume pair-consumption fix is integrated; consumption occurs only after Meta returns a document message ID, and a newer pair is preserved. No real WhatsApp send, model call or R2 write occurred.
+- PR #317 exact head `4ef3cba838ef00dd3702fb6e955628d20ab77664`: full CI `43180792088`, WhatsApp recovery `43180792058`, and baseline `43180791965` all SUCCESS. Protected preview `43180787874` remains blocked by the missing private token. Owner comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) explicitly approves mapping a first-person confirmed skill into relevant existing project bullets across roles, while prohibiting invented employer/project/action/outcome/date/metric/credential facts. No live model generation, final DOCX export, Gemini ATS review or 98% live match is claimed.
+- The 17 Oct 17:28 Chicago incident remains unresolved: the original source DOCX and matching JD were previously recovered, but no uniquely correlated output DOCX, per-run R2 key, webhook/request ID, Meta message ID or signed delivered/read receipt is available. A fresh Library search did not identify a uniquely matching output; it is not proof that no output ever existed. Conflicting source facts remain quarantined. No replay or resend.
+
+### Poke-inspired Gmail and mobile
+
+- PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf`: full CI `43190228931` and Kompas baseline `43190229393` SUCCESS. Protected preview `43190224739` is blocked by the missing private token; no narrow-phone acceptance or production deployment.
+- PR #322 is merged test-only; no real Gmail send or Calendar mutation. The last recorded production Auth export restriction remains HTTP 402 `exceed_egress_quota` (32 errors across 27 users, latest 04:07:07Z). Persisted account data remains three sync rows and 2,002 account-keyed threads across three accounts, last refreshed 10 Nov; this is not live two-inbox acceptance. The unattended worker remains disabled.
+
+### Contract crawler
+
+- Read-only production `mfit_crawl_runs` latest row remains 10 Nov 11:00:24–11:01:11Z: 6,818 found/upserted across 20 portals, one error item. No 11/12 Nov crawl is expected because the daily cron was intentionally removed under the approved Hobby usage reduction; manual/on-demand only.
+- Active jobs seen in the last 14 days: 120 Right To Hire/Right to Hire records still have `work_type=unknown` (71 and 49 by exact engagement label); 546 exact `Contract To Perm` records are classified contract; 2,316 records are unknown overall.
+- PR #315 exact head `bd62bcd17b2b2be79c6ee23db19b8582a5225015`: full CI `43157849751`, crawler regression `43157849909` (8/8), and Kompas baseline `43157849768` SUCCESS. Protected preview `43157849584` remains blocked by the missing private token. No production classification deploy, manual crawl or row mutation.
+
+### Kompas coordination
+
+- The separate Kompas Continuous Voice Delivery automation is disabled; no active Bible-Keeper audit was found in the accessible automation list. This run made no voice, caption, microphone, Windows packaging or native edits.
+- PR #314 remains test-only (full CI `43157259968` and baseline `43157260433` SUCCESS; protected preview `43157259910` blocked). PR #283 remains unapproved. The authenticated 50-pair Kompas-versus-ChatGPT comparison, independent human scoring and native Windows/phone/WhatsApp acceptance remain open.
+
+### Work performed and remaining blockers
+
+- Completed: merged PR #322 test-only Calendar account-isolation regressions; reconciled production alias vs master; read-only crawler counts; reviewed exact-head status for PRs #315, #317, #320 and #321; updated Plan & Vision evidence.
+- Not completed: no PR #315/#317/#320/#321 merge or deployment; no real WhatsApp/email send; no manual crawl; no DB mutation; no model/DOCX generation; no device acceptance.
+- Exact shared preview unblock: the owner or authorized repository administrator must configure `KOMPAS_VERCEL_API_TOKEN` privately and restore the legitimate protected-preview path. Do not expose the secret or bypass the resolver. Supabase Auth `exceed_egress_quota` requires a separate owner/project-admin resolution; no billing or credential workaround was attempted.
