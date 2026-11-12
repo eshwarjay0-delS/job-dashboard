@@ -824,3 +824,8 @@ The approved 6 Nov initial-JD/no-provider fallback and no-baseline swipe-refinem
 ## 12 November 2026 09:23 UTC — mobile navigation CI outcome
 
 PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` passed full CI 43190228931 (47/47 steps) and Kompas baseline 43190229393. The actual prebuild log confirms `scripts/tests/dashboard-shell.test.mjs` ran and all four tests passed. Protected preview 43190224739 failed at exact-head resolution because the private `KOMPAS_VERCEL_API_TOKEN` is empty. Keep DRAFT; no deployment, authenticated Gmail/two-inbox or real phone acceptance. The separate Supabase Auth 402 restriction still affects Gmail export.
+
+
+## 12 November 2026 09:28 UTC — accessible iZap evidence recheck
+
+The connected iZap account reports one business and zero linked WhatsApp numbers. A read-only search for `resume` on 17 Oct 2026 in `America/Chicago` returned zero messages. This narrows only the connected iZap business; it does not rule out other WhatsApp accounts, other chats, Meta-side records or R2-only artifacts. Combined with the exact-window Library DOCX search returning zero files, the historical output remains unavailable. No chat mutation, outbound send, R2 write or model call occurred.
