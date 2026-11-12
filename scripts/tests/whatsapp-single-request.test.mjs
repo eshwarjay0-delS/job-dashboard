@@ -59,6 +59,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   let providerAvailable = true, offlineMismatch = false
   let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
+  let failNextDocument = false, sessionMutationDuringSend = null
   const said = []
   const docs = []
   const blob = {
@@ -82,7 +83,19 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable },
     '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { deliveries++; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
+    '@/lib/whatsapp': {
+      sendText: async (_to, message) => { said.push(message) },
+      sendDocument: async (_to, body, _name, caption) => {
+        if (failNextDocument) { failNextDocument = false; throw new Error('WA sendDoc 503: unavailable') }
+        deliveries++
+        docs.push({ body: Buffer.from(body).toString(), caption })
+        if (sessionMutationDuringSend) {
+          entries.set('whatsapp/session-123.json', JSON.stringify(sessionMutationDuringSend))
+          sessionMutationDuringSend = null
+        }
+        return 'sent'
+      },
+    },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
@@ -111,6 +124,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   }
   const { generate, captionFor, resumeGapReport } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor, resumeGapReport };')
   const session = { jdId: 'jd-message', jd: 'job description', resumePath: '/data/whatsapp/inbox/123/unique.docx' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({ version: 3, ...session, seen: [], updatedAt: Date.now() }))
   await Promise.all([generate('123', session, 'user'), generate('123', session, 'user')])
   assert.equal(runs, 1)
   assert.equal(deliveries, 1)
@@ -172,6 +186,11 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     abs: `/data/users/${offlineUser}/same@email.com/Cloud Security Engineer.docx`,
   }
   providerAvailable = false
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: offlineSession.jdId, jd: offlineSession.jd,
+    resumePath: offlineSession.resumePath, resumeName: offlineSession.resumeName,
+    seen: ['offline-initial'], updatedAt: Date.now(),
+  }))
   const readsBeforeOfflineFallback = sessionReadCount
   await generate('123', offlineSession, offlineUser, undefined, offlineFiles)
   assert.equal(sessionReadCount - readsBeforeOfflineFallback, 1, 'the verified library bytes are delivered without rereading a mutable session copy')
@@ -181,6 +200,48 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.match(docs.at(-1).caption, /AI provider unavailable/)
   assert.match(docs.at(-1).caption, /no edits were applied/)
   assert.equal(docs.at(-1).body, 'same@email.com', 'the exact selected library bytes are sent')
+  const consumedOffline = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(consumedOffline.jd, undefined, 'a successfully accepted offline original consumes its old JD')
+  assert.equal(consumedOffline.jdId, undefined)
+  assert.equal(consumedOffline.resumePath, undefined, 'the old inbox copy is not left attached to the next JD')
+  assert.equal(consumedOffline.last.email, offlineFiles.email)
+  assert.equal(consumedOffline.last.used, offlineFiles.rel)
+
+  // A newer pair arriving while Meta accepts the fallback must not be erased.
+  const raceSession = { ...offlineSession, jdId: 'offline-race' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: raceSession.jdId, jd: raceSession.jd,
+    resumePath: raceSession.resumePath, resumeName: raceSession.resumeName,
+    seen: ['race-old'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  sessionMutationDuringSend = {
+    version: 3, jdId: 'newer-jd', jd: 'A newer job description',
+    resumePath: '/data/whatsapp/inbox/123/newer.docx', resumeName: 'Newer Resume',
+    seen: ['newer'], updatedAt: Date.now(),
+  }
+  await generate('123', raceSession, offlineUser, undefined, offlineFiles)
+  const preservedNewer = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(preservedNewer.jdId, 'newer-jd')
+  assert.equal(preservedNewer.jd, 'A newer job description')
+  assert.equal(preservedNewer.resumePath, '/data/whatsapp/inbox/123/newer.docx')
+
+  // A refused document send leaves the matching pair intact for retry.
+  const failedSendSession = { ...offlineSession, jdId: 'offline-send-failure' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: failedSendSession.jdId, jd: failedSendSession.jd,
+    resumePath: failedSendSession.resumePath, resumeName: failedSendSession.resumeName,
+    seen: ['failed-send'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  failNextDocument = true
+  const docsBeforeFailedSend = docs.length
+  await generate('123', failedSendSession, offlineUser, undefined, offlineFiles)
+  const retainedAfterFailedSend = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(docs.length, docsBeforeFailedSend, 'a rejected Meta send does not count as delivery')
+  assert.equal(retainedAfterFailedSend.jdId, failedSendSession.jdId)
+  assert.equal(retainedAfterFailedSend.jd, failedSendSession.jd)
+  assert.equal(retainedAfterFailedSend.resumePath, failedSendSession.resumePath)
 
   const beforeMismatch = docs.length
   offlineMismatch = true
