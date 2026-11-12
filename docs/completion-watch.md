@@ -718,3 +718,8 @@ The canonical master remains `da1db145c5981254f95620ff6bb0222ab4228125`. Vercel 
 ## 12 November 2026 — resume restack CI correction (05:55 UTC)
 
 The first current-master resume restack head `21c62da5ecc9396e4ca990c1082fde3b158ea46b` passed Kompas baseline but full CI `43163859624` failed in the existing `kompas-deploy-build.test.mjs`: its byte-for-byte prebuild assertion rejected the two newly added resume suites. This was a stale build-contract test, not a reported failure in the role-evidence logic. Commit `f3182de28fb229401e30893d7687805e55c846e7` changes the assertion to preserve ordered required groups while allowing additive test files, and explicitly checks both resume profile suites are wired. New exact-head baseline `43164222576` is SUCCESS; full CI `43164222540` and WhatsApp recovery `43164222577` are still IN PROGRESS. Keep PR #317 DRAFT until both complete and the protected preview is available.
+
+
+## 12 November 2026 — Poke mobile restack (05:57 UTC)
+
+PR #318 restacks the approved Poke-inspired mobile navigation from #309 on the current resume stack #317. On narrow screens, the hamburger expands below the sticky top bar in normal flow and pushes content down rather than overlaying the page. It adds the dashboard-shell regression to prebuild while preserving both resume profile suites. Exact head `571b8594b3189f87f5d3fe50f2067a65330d09f6`, base #317 head `f3182de28fb229401e30893d7687805e55c846e7`, 4 files. No workflow run is visible yet for this non-master base; previous #309 CI/baseline are not accepted as current validation. No real phone, account switch or Gmail send was tested.
