@@ -228,3 +228,14 @@ No real email or WhatsApp test, live model call, DOCX generation, R2 write, prod
 - Completed: merged PR #322 test-only Calendar account-isolation regressions; reconciled production alias vs master; read-only crawler counts; reviewed exact-head status for PRs #315, #317, #320 and #321; updated Plan & Vision evidence.
 - Not completed: no PR #315/#317/#320/#321 merge or deployment; no real WhatsApp/email send; no manual crawl; no DB mutation; no model/DOCX generation; no device acceptance.
 - Exact shared preview unblock: the owner or authorized repository administrator must configure `KOMPAS_VERCEL_API_TOKEN` privately and restore the legitimate protected-preview path. Do not expose the secret or bypass the resolver. Supabase Auth `exceed_egress_quota` requires a separate owner/project-admin resolution; no billing or credential workaround was attempted.
+
+
+## 12 November 2026 — 10:21 UTC production runtime error refresh
+
+A read-only Vercel runtime-error query was retried with the verified project team ID `team_KwcTxUmbowZqkysvuBZw2423` and succeeded.
+
+- **Gmail Auth:** 44 HTTP 402 `exceed_egress_quota` errors across 36 users in the last 24 hours on `/api/gmail/notify-rules/export`, latest 10:06:57Z, deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. The stack reaches Supabase Auth `listUsers`; the provider message says the project owner must upgrade or remove spend caps. Last 30 minutes: one Gmail event.
+- **WhatsApp:** 11 tailoring quality-gate rejections across 10 users, latest 11 Nov 22:16:15Z. Samples have 100% keyword and supported coverage but remain `partial=true`, `incomplete=true`, `needs_review` due to `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable`, `role_evidence_gaps` and/or `roles_unrewritten`. This is why a keyword score cannot stand in for a completed resume. Last 30 minutes: no WhatsApp quality-gate group.
+- **Kompas:** two account-session Auth 402 errors at 11 Nov 16:55:02Z on older deployment `dpl_Hca18aPST4C7fmaTH3V1V3yWzWu1`; none in the last 30 minutes.
+
+No billing change, credential workaround, email/WhatsApp send, session read, database mutation or model call occurred. Runtime error aggregation succeeded using the correct team ID. The separate Vercel sandbox-session list remains optional and consent-gated; a one-time link was issued but is not required for the error findings above.
