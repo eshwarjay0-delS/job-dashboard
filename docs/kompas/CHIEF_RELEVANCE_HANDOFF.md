@@ -74,3 +74,26 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+ 
+## 11 November 2026 — production availability recheck (12:04 UTC)
+
+This section supersedes the earlier 10 November paragraph that listed `a66c108bff6175149c4aadd882ab11128445b8cc` as the current production alias. Canonical master is now `11efbbfe7781592bc2fad1216f67546882a1c3ed`, including the merged question-first relevance and answer-shape ancestry. Vercel alias metadata maps `job-dashboard-fawn.vercel.app` to READY deployment `dpl_7uEfjq1XprC48DoTFfFuiBoShPne` at that exact SHA, but project inspection reports `live=false`; public runtime probes have returned HTTP 402 `DEPLOYMENT_DISABLED`. A READY deployment object is not evidence that the shared answer service is currently reachable.
+
+The live quality gate remains open: no 50 authenticated same-question Kompas-versus-ChatGPT response pairs or independent human 0–4 scorecards were captured. That work still requires the authorized private `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. Do not substitute the 50/54 synthetic fixtures, source tests, or READY metadata for live answer quality.
+
+The separate Kompas Continuous Voice Delivery automation is paused/disabled and retains PR #283; this continuation made no microphone, computer-audio, caption or voice-source edits. Native Windows, mobile and WhatsApp answer/voice parity remains unverified.
+
+**Continue:** after the Vercel owner restores verifiable project availability and protected preview access, run the live API smoke, capture the authorized 50 same-question pairs, and obtain independent human scores. Preserve source provenance and account isolation. No production promotion, voice behavior change or E2E completion is claimed here.
+
+
+## 12 November 2026 — current release and acceptance ledger
+
+This section supersedes the 11 November production-availability paragraph above. Canonical master is `65bdf2f8cf1dd7299b8623885641400efe57bbfe`. The canonical `job-dashboard-fawn.vercel.app` alias still maps to READY production deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K` at that exact SHA. Vercel project metadata reports `live=false`; its latest non-production deployment is ERROR (`dpl_rxPMNAqzLXTVmrWqL6uSZhcL1LPq`) on an older docs branch SHA `5264f5211b27c31f0d5432ac2011f67f546f21c5`, target `null`, due two unsupported REA method labels. That stale deployment does not replace the canonical alias. The last successful public smoke recorded in the current Plan/REA branch was 12 Nov 00:47 UTC: `/api/health`, `/version.json` and `/api/kompas/desktop-version` returned 200 and the exact master SHA/0.8.8 manifest. Current direct web probes were inaccessible, and runtime-error aggregation returned HTTP 403; do not claim current runtime errors are absent or public availability was re-proven in this run.
+
+Open same-question branches remain unchanged and unmerged:
+- PR #262 head `30cc94b7db156419ced5abb09e296b3fc04d0e5c`, base `e93c73751c77b98a88936c144c7dfa851b857f6a`, 26 files / 1,237 additions, `mergeable=false`. Its `Vercel Preview Comments` check is SUCCESS and `voice-preview-smoke` is FAILURE; no exact-head full CI was present. Do not blindly rebase the 26-file answer/style change over current master.
+- PR #234 head `f0d6f04e5d6a6b295e6458bbc2dec606f47ffdab`, base `3e2d2359d3ea84d45aad23c199fea9de527c3607`, 11 files / 509 additions, `mergeable=false`. Its `Vercel Preview Comments` check is SUCCESS and `voice-preview-smoke` is FAILURE; no exact-head full CI was present. Preserve its question-window selector for a deliberate conflict review; do not treat the old branch as shipped.
+- PR #270 remains DRAFT and belongs to the separate Kompas Continuous Voice Delivery task. This continuation made no microphone, computer-audio, caption or voice-source edits.
+
+The real quality gate is still open: zero authorized live 50-pair Kompas-versus-ChatGPT responses and zero independent human 0–4 scorecards were captured in this run. It still requires the private `KOMPAS_API_TOKEN`, approved original resume/JD/reference bundles, identical question conditions and human review. Synthetic 50/54-fold fixtures and source tests are not substitutes. Native Windows, mobile and WhatsApp answer/voice parity remains unverified. Do not change voice behavior or claim 50-fold live quality until these gates pass.
