@@ -135,3 +135,19 @@ A fresh read-only query of `public.mfit_crawl_jobs` confirms the classification 
 The classifier restack PR #315 maps Right To Hire and Contract To Perm/Contract To Permanent aliases to C2H, preserves negation handling, and distinguishes employment context from generic contract administration. Exact-head full CI `43157849751` (47 steps), crawler regression `43157849909` (8/8) and Kompas baseline `43157849768` (92/92) passed on `bd62bcd17b2b2be79c6ee23db19b8582a5225015`; protected preview `43157849584` failed. PR #315 remains DRAFT, unmerged and undeployed, so production counts are expected to remain unchanged until a legitimate preview and release.
 
 The latest crawl remains 10 Nov 2026 11:00:24–11:01:11 UTC (6,818 found/upserted across 20 portals, one Inspyr abort). The daily cron was deliberately removed under the approved Hobby usage reduction. This check did not run a manual crawl, alter rows or reclassify production data.
+
+
+## 12 November 2026 — manual-only crawler and C2H production snapshot
+
+Read-only SQL against the production-linked Supabase project confirms the latest completed crawl is still 10 Nov 2026 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, with one Inspyr abort. No 11 or 12 Nov run exists. This is expected because the owner explicitly removed the daily contract-crawler cron; crawling remains manual/on-demand only. No crawl was triggered in this check.
+
+Current active-row aggregate:
+
+| Raw engagement label | Current stored `work_type` | Active rows |
+|---|---:|---:|
+| Contract To Perm | contract | 589 |
+| Right To Hire | unknown | 131 |
+
+The 589 Contract To Perm rows are already in the broad contract bucket, but their C2H subtype is not represented by the current classifier. The 131 Right To Hire rows remain unknown. Current master `6c82abf4b240de7c768916188794b8beaaaf3b10` does not include PR #315's alias changes. PR #315 exact head `bd62bcd17b2b2be79c6ee23db19b8582a5225015` adds Right To Hire / Contract To Perm / Contract To Permanent -> C2H, removes explicit negations before classification, requires employment context for generic contract wording, and passes structured engagement to `contractTypes()`. Exact-head full CI `43157849751`, crawler regression `43157849909` (8/8) and Kompas baseline `43157849768` are SUCCESS; protected preview `43157849584` remains failed closed because the private `KOMPAS_VERCEL_API_TOKEN` is unavailable. The branch is not merged or live.
+
+No production rows were rewritten, no manual crawl was run, and no daily schedule was restored. After the legitimate preview gate and release, confirm READY production SHA/alias and the jobs API, then use only a future owner-authorized manual/on-demand crawl to validate new classifications. Robert Half remains manual-only pending written authorization or a sanctioned feed/API.
