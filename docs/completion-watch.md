@@ -683,3 +683,7 @@ The historical 17 Oct 17:28 Chicago delivery remains unresolved: the original so
 The local container could not resolve GitHub DNS for a clone, so no local code execution is claimed in this run. GitHub Actions and read-only connected data were used. No billing, secret, auth, production data or external-send settings were changed.
 
 **Continue:** verify PR #305's queued exact-head full CI, crawler regression and Kompas baseline when they start. Keep #305 DRAFT until those pass and the legitimate protected preview gate passes. Keep #304/#303 DRAFT until the owner or authorized repository administrator configures `KOMPAS_VERCEL_API_TOKEN` privately; do not bypass protection. Keep #310 stacked until #303 is accepted. Continue the 17 Oct evidence recovery and owner fact reconciliation without sending or replaying a message.
+ 
+## 12 November 2026 — stale hardening-test note corrected
+
+A source-level audit found the old AGENTS.md note about `mail-overview.test.mjs` was stale: the current test asserts the StandingSection appears after `Filter inbox`, and the current page renders it after the filter. The full `npm run test:hardening` suite was not executed in this run; no overall pass is claimed. The repository instruction was corrected to require a fresh run before claiming the suite is green.
