@@ -258,7 +258,7 @@ test("expired native access resumes from the desktop refresh for the same accoun
   assert.equal(h.requests.at(-2).body.refresh_token, DESKTOP_REFRESH);
   assert.equal(h.requests.at(-1).body.refresh_token, "");
 });
-test("a revoked refresh is the only renewal that signs the desktop out", async () => {
+test("a revoked refresh signs the desktop out", async () => {
   const h = harness();
   const state = h.auth.issueState();
   assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
@@ -267,6 +267,55 @@ test("a revoked refresh is the only renewal that signs the desktop out", async (
   assert.equal(await h.auth.renew(false), false);
   assert.equal(h.auth.hasSession(), false);
   assert.equal(h.files.size, 0);
+  assert.equal(h.auth.authNotice().code, "signed_out");
+});
+
+test("logout everywhere clears the dead refresh and says to sign in again", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  h.setClock(2000000000000 + 10000);
+  h.setFailure({ status: 401, ok: false, error: "signed_out", error_description: "Invalid Refresh Token: Refresh Token Not Found" });
+  assert.equal(await h.auth.renew(false), false);
+  assert.equal(h.auth.hasSession(), false);
+  assert.equal(h.files.size, 0);
+  assert.match(h.auth.authNotice().message, /Sign in again/);
+});
+
+test("a forced refresh of a dead token clears it even while the access token still looks live", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  h.setFailure({ status: 401, ok: false, error: "invalid_grant", error_description: "Invalid Refresh Token: Refresh Token Not Found" });
+  assert.equal(await h.auth.renew("rejected"), false);
+  assert.equal(h.auth.hasSession(), false);
+  assert.equal(h.auth.token(), "");
+});
+
+test("HTTP 402 keeps the 3-day session and explains the egress block", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  const family = h.auth.familyExpiresAt();
+  h.setFailure({ status: 402, ok: false, error: "egress_quota", error_description: "exceed_egress_quota" });
+  assert.equal(await h.auth.renew(true), false);
+  assert.equal(h.auth.hasSession(), true);
+  assert.equal(h.auth.token(), DESKTOP_ACCESS);
+  assert.equal(h.auth.familyExpiresAt(), family);
+  assert.equal(h.auth.authNotice().code, "egress_quota");
+  assert.match(h.auth.authNotice().message, /spend cap/);
+  assert.equal(h.files.size, 1);
+});
+
+test("a quiet renew with a valid token does not ask for sign-in", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  const before = h.getRefreshes();
+  assert.equal(await h.auth.renew(false), true);
+  assert.equal(h.getRefreshes(), before);
+  assert.equal(h.auth.authNotice(), null);
+  assert.equal(h.auth.hasSession(), true);
 });
 
 test("a code deep link is exchanged once and a mismatched outstanding nonce is ignored", async () => {

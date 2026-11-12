@@ -31,8 +31,8 @@ function issued(session: Session | null): DesktopCredential | null {
   }
 }
 
-function failure(error: { message?: string; code?: string } | null, fallback = "invalid_grant") {
-  return { session: null, error: { message: error?.message || fallback, code: error?.code || fallback } }
+function failure(error: { message?: string; code?: string; status?: number } | null, fallback = "invalid_grant") {
+  return { session: null, error: { message: error?.message || fallback, code: error?.code || fallback, status: error?.status } }
 }
 
 export function supabaseDesktopAuth(): DesktopAuthPort {

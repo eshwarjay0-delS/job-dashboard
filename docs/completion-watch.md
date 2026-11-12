@@ -20,6 +20,10 @@ Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the
 6. Update the journal with the exact outcome, evidence and next step. Continue independent work when another item is blocked.
 7. Before ending a turn, identify remaining approved work. If stopping because of a wall, state the failed action, evidence, missing prerequisite and exact unblock action. Do not imply work continues in this chat after the turn unless scheduled execution is actually configured.
 
+## 12 November 2026 — Sign in again after a full logout
+
+Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. AUTH_DISABLED stays false in production. Simulated suites passed 58/58 across five rounds. Typecheck was clean. No live Google round trip. Not deployed in this note. The next step is CI, then the production alias.
+
 ## 11 November 2026 — Desktop sign-in
 
 Owner request: the desktop was signed out after every relaunch, and the website said authenticated before the desktop received the session. Local gates: tsc clean, baseline 92/92, auth and desktop tests 125 pass, production build exit 0. No live Google round trip. The Supabase project is still restricted. The website half ships with the master deploy. The installed exe changes when the existing Windows workflow publishes kompas-desktop-latest.

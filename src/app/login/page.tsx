@@ -1,7 +1,7 @@
 "use client"
 
 import { safeAuthNext } from "@/lib/authRedirect"
-import { plainAuthError } from "@/lib/kompasAuthSession"
+import { AUTH_EGRESS_BLOCKED, plainAuthError } from "@/lib/kompasAuthSession"
 import { stampLoginClock } from "@/lib/session-clock"
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
@@ -32,7 +32,7 @@ function LoginContent() {
   const [password,setPassword]=useState("")
   const [resetMode,setResetMode]=useState(false)
   const [emailOpen,setEmailOpen]=useState(false)
-  const [error,setError]=useState<string|null>(null)
+  const [error,setError]=useState<string|null>(searchParams.get("reason") === "egress" ? AUTH_EGRESS_BLOCKED : null)
 
   useEffect(() => {
     let gone = false

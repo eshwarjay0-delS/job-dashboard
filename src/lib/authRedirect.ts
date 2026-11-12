@@ -27,6 +27,9 @@ export function safeAuthNext(value: string | null | undefined): string {
       const query = params.toString()
       return query ? "/auth/desktop?" + query : "/auth/desktop"
     }
+    if (url.pathname === "/kompas" || url.pathname === "/kompas/" || url.pathname === "/kompas/index.html") {
+      return "/kompas/index.html"
+    }
     if (!(url.pathname === "/dashboard" || url.pathname.startsWith("/dashboard/"))) return "/dashboard"
     return url.pathname + url.search + url.hash
   } catch { return "/dashboard" }

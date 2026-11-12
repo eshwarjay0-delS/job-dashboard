@@ -1,12 +1,28 @@
 // J1 authentication boundary: model output never establishes identity.
 import path from "node:path"
 import type { NextRequest } from "next/server"
-import { userFromAuthClient } from "./kompasAuthSession"
+import { AUTH_EGRESS_BLOCKED, AUTH_UNAVAILABLE, userFromAuthClient } from "./kompasAuthSession"
 import { createClient, createClientFromRequest } from "./supabase/server"
 import { disabledOwnerUser, isAuthDisabled } from "./authDisabled"
 
 export async function authenticatedUserId(request?: NextRequest): Promise<string | null> {
   return (await authenticatedUser(request))?.id ?? null
+}
+
+export type AuthBlock = {
+  kind: "egress" | "unavailable"
+  status: 402 | 503
+  code: "exceed_egress_quota" | "sign_in_unavailable"
+  message: string
+}
+
+const authBlocks = new WeakMap<object, AuthBlock>()
+
+export function takeAuthBlock(request: object | undefined): AuthBlock | null {
+  if (!request) return null
+  const block = authBlocks.get(request) || null
+  authBlocks.delete(request)
+  return block
 }
 
 /** The signed-in person, with their email only when the identity provider has confirmed it. */
@@ -35,6 +51,11 @@ export async function authenticatedUser(request?: NextRequest): Promise<{ id: st
     const client = request ? await createClientFromRequest(request) : await createClient()
     const user = await userFromAuthClient(client)
     if (user?.id) return !user.unreachable && user.synthetic ? { id: user.id, email: user.email, synthetic: true as const } : { id: user.id, email: user.email }
+    if (user?.unreachable && request && !authOff) {
+      authBlocks.set(request, user.blocked === "egress"
+        ? { kind: "egress", status: 402, code: "exceed_egress_quota", message: AUTH_EGRESS_BLOCKED }
+        : { kind: "unavailable", status: 503, code: "sign_in_unavailable", message: AUTH_UNAVAILABLE })
+    }
     return authOff ? { ...owner(), synthetic: true as const } : null
   } catch { return authOff ? { ...owner(), synthetic: true as const } : null }
 }

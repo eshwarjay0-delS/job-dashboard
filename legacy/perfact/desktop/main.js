@@ -109,6 +109,8 @@ async function checkNativeDesktopUpdate() {
 // reconnects remain silent until the user explicitly chooses to sign in.
 let chromeSignInAttempted = false;
 let handoffVisible = false;
+let interviewLive = false;
+let signInDeferred = false;
 let loopbackPromise = null;
 function paintHandoff() {
   if (!win || win.isDestroyed()) return;
@@ -182,6 +184,8 @@ function beginChromeSignIn({ interactive = false } = {}) {
   if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return hideHandoff();
   // A stored desktop session stays up. Opening Chrome would put auth UI over a live interview.
   if (desktopAuth.hasSession()) return hideHandoff();
+  // Silent renewal failed during a live interview. Remember it, and ask only after Stop.
+  if (interviewLive) { signInDeferred = true; return; }
   const action = handoffAction({ hasSession: false, interactive, alreadyAttempted: chromeSignInAttempted });
   if (!action.show) return;
   handoffVisible = true;
@@ -745,12 +749,34 @@ function wireIpc() {
     if (!verified && pendingSession) beginChromeSignIn();
     return verified;
   });
-  ipcMain.handle("kompas:refresh-auth", (event, reason) => {
+  ipcMain.on("kompas:interview", (event, on) => {
+    if (!win || event.sender.id !== win.webContents.id) return;
+    interviewLive = !!on;
+    if (interviewLive) return;
+    if (signInDeferred && !desktopAuth.hasSession()) {
+      signInDeferred = false;
+      beginChromeSignIn();
+    }
+  });
+  ipcMain.handle("kompas:auth-state", (event) => {
+    if (!win || event.sender.id !== win.webContents.id) return { hasSession: false, notice: null };
+    return {
+      hasSession: desktopAuth.hasSession(),
+      notice: typeof desktopAuth.authNotice === "function" ? desktopAuth.authNotice() : null,
+    };
+  });
+  ipcMain.handle("kompas:refresh-auth", async (event, reason) => {
     if (!win || event.sender.id !== win.webContents.id) throw Error("Invalid auth caller");
     if (typeof desktopAuthDisabled === "function" && desktopAuthDisabled()) return true;
     // A rejected call rotates the desktop family. A quiet call renews only
     // inside the access lead or the 10–24 hour window before the 3-day expiry.
-    return desktopAuth.renew(reason === "rejected" ? "rejected" : false);
+    const ok = await desktopAuth.renew(reason === "rejected" ? "rejected" : false);
+    const notice = typeof desktopAuth.authNotice === "function" ? desktopAuth.authNotice() : null;
+    if (!ok && !desktopAuth.hasSession() && !(notice && notice.code === "egress_quota")) {
+      if (interviewLive) signInDeferred = true;
+      else beginChromeSignIn();
+    }
+    return ok;
   });
   ipcMain.on("kompas:open-signin", (event) => {
     if (win && event.sender.id === win.webContents.id) beginChromeSignIn({ interactive: true });
@@ -906,7 +932,9 @@ else {
       hideHandoff();
     } else {
       void desktopAuth.renew(false).then(ok => {
-        if (!ok && !desktopAuth.hasSession()) beginChromeSignIn();
+        const notice = typeof desktopAuth.authNotice === "function" ? desktopAuth.authNotice() : null;
+        if (!ok && !desktopAuth.hasSession() && !(notice && notice.code === "egress_quota")) beginChromeSignIn();
+        else if (notice && win && !win.isDestroyed()) win.webContents.send("kompas:auth-notice", notice);
         armDesktopRefresh();
       });
     }

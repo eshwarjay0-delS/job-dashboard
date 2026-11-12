@@ -45,6 +45,9 @@ export function shouldRefreshAndRetry(status: number, alreadyRetried: boolean): 
 
 export const AUTH_UNAVAILABLE =
   "MarketFit could not reach the sign-in service. Nothing was signed out. Return to Kompas and try again."
+export const AUTH_EGRESS_BLOCKED =
+  "Supabase Auth is blocked because this project exceeded its egress quota (HTTP 402). Sign-in will work again once Auth is reachable. This app cannot raise the spend cap."
+export const AUTH_SIGNED_OUT = "Your session ended. Sign in again to start a session."
 export const AUTH_RETRY = "Sign-in did not finish. Return to Kompas and try again."
 export const AUTH_CLAIMED = "Kompas has the sign-in. You can close this tab."
 export const AUTH_WAITING =
@@ -56,25 +59,47 @@ export const AUTH_USED = "This sign-in code was already used. Return to Kompas a
 
 export const ACCESS_REFRESH_LEAD_MS = 60_000
 
+type AuthFailureLike = { message?: string; status?: number; name?: string; code?: string; error?: string } | null | undefined
+
+export function isAuthEgressBlocked(error: AuthFailureLike): boolean {
+  if (!error) return false
+  const status = Number(error.status)
+  const hay = [error.message, error.code, error.error, error.name].map(v => String(v || "")).join(" ").toLowerCase()
+  if (status === 402 && /exceed_egress|egress quota|exceeded egress/.test(hay)) return true
+  if (String(error.code || "") === "exceed_egress_quota" || String(error.error || "") === "exceed_egress_quota") return true
+  return /exceed_egress|egress quota|exceeded egress/.test(hay)
+}
+
+/** A refresh token Supabase no longer has. "Already used" is a rotation race, not a logout. */
+export function isTerminalSignOut(error: AuthFailureLike): boolean {
+  if (!error || isAuthEgressBlocked(error)) return false
+  const hay = [error.message, error.code, error.error].map(v => String(v || "")).join(" ").toLowerCase()
+  if (/already used|already_used/.test(hay)) return false
+  return /revok|not found|signed_out|refresh_token_not_found|session_not_found|invalid refresh token/.test(hay)
+}
+
 export function plainAuthError(error: unknown): string {
-  const message = error instanceof Error ? error.message : typeof error === "string" ? error : ""
+  const record = error && typeof error === "object" ? error as AuthFailureLike : undefined
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : String(record?.message || "")
   const lower = message.toLowerCase()
+  if (isAuthEgressBlocked(record || { message })) return AUTH_EGRESS_BLOCKED
   if (!message) return AUTH_RETRY
-  if (/egress|quota|unavailable|fetch failed|network|timeout|econnrefused|enotfound|503/.test(lower)) return AUTH_UNAVAILABLE
+  if (/unavailable|fetch failed|network|timeout|econnrefused|enotfound|503/.test(lower)) return AUTH_UNAVAILABLE
   if (/invalid login|invalid credentials|invalid email or password/.test(lower)) {
     return "That email or password was not accepted. Try again, or continue with Google."
   }
   return message.length > 180 ? AUTH_RETRY : message
 }
 
-export function isAuthUnreachable(error: { message?: string; status?: number; name?: string } | null | undefined): boolean {
+export function isAuthUnreachable(error: AuthFailureLike): boolean {
   if (!error) return false
+  if (isAuthEgressBlocked(error)) return true
   const name = String(error.name || "")
   const message = String(error.message || "").toLowerCase()
   const status = Number(error.status)
   if (name === "AuthRetryableFetchError") return true
   if (status === 0 || (Number.isFinite(status) && status >= 500)) return true
-  return /fetch failed|network|timeout|unreachable|econnrefused|enotfound|exceed_egress|egress quota/.test(message)
+  return /fetch failed|network|timeout|unreachable|econnrefused|enotfound/.test(message)
 }
 
 export function shouldRefreshBeforeExpiry(expiresAtSec: number, nowMs: number, leadMs = ACCESS_REFRESH_LEAD_MS): boolean {
@@ -127,7 +152,7 @@ export type AuthClientLike = {
 
 export type ResolvedAuthUser =
   | { id: string; email: string | null; unreachable: false; synthetic?: true }
-  | { id: ""; email: null; unreachable: true }
+  | { id: ""; email: null; unreachable: true; blocked: "egress" | "unavailable" }
 
 // getUser() talks to Supabase. When that call cannot reach the service, a
 // still-valid access token is accepted from getClaims() (local signature
@@ -150,17 +175,25 @@ export async function userFromAuthClient(client: AuthClientLike, nowSec = Math.f
     return resolved
   }
   if (!isAuthUnreachable(error)) return null
+  const blocked = isAuthEgressBlocked(error) ? "egress" as const : "unavailable" as const
   if (typeof client.auth.getClaims === "function") {
     try {
       const claimsResult = await client.auth.getClaims()
-      if (!isAuthUnreachable(claimsResult.error)) {
+      if (!isAuthUnreachable(claimsResult.error) && !isAuthEgressBlocked(claimsResult.error)) {
         const local = userFromClaims(claimsResult.data?.claims, nowSec)
         if (local) return { id: local.id, email: local.email, unreachable: false }
+        // The access token is expired. An egress block is not a logout: the
+        // refresh token may still be valid once Auth answers again.
+        if (blocked === "egress") return { id: "", email: null, unreachable: true, blocked }
         return null
       }
     } catch (err) {
-      if (!isAuthUnreachable(err instanceof Error ? err : { message: "fetch failed" })) return null
+      const thrown = err instanceof Error ? err : { message: "fetch failed" }
+      if (!isAuthUnreachable(thrown)) {
+        if (blocked === "egress") return { id: "", email: null, unreachable: true, blocked }
+        return null
+      }
     }
   }
-  return { id: "", email: null, unreachable: true }
+  return { id: "", email: null, unreachable: true, blocked }
 }

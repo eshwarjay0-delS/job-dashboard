@@ -206,7 +206,7 @@ describe('desktop session refresh family', { concurrency: 1 }, () => {
     const provider = classifyRefreshFailure({ message: ALREADY_USED, code: 'refresh_token_already_used' })
     assert.deepEqual(provider, { error: 'already_used', error_description: ALREADY_USED })
     const notFound = classifyRefreshFailure({ message: 'Invalid Refresh Token: Refresh Token Not Found', code: 'refresh_token_not_found' })
-    assert.equal(notFound.error, 'invalid_grant')
+    assert.equal(notFound.error, 'signed_out')
     assert.match(notFound.error_description, /Not Found/)
   })
 
@@ -267,6 +267,39 @@ describe('desktop session refresh family', { concurrency: 1 }, () => {
     assert.match(exchanged.body.error_description, /required/)
     assert.equal(calls.minted.length, 0)
     assert.equal(calls.refreshed.length, 0)
+  })
+
+  test('logout everywhere is signed_out and an egress 402 does not revoke the desktop family', async () => {
+    const loggedOut = await exchangeDesktopSession(
+      { accessToken: null, refreshToken: 'gone-after-logout-everywhere' },
+      {
+        async userFromAccessToken() { return null },
+        async refreshPresented() {
+          return { session: null, error: { message: 'Invalid Refresh Token: Refresh Token Not Found', code: 'refresh_token_not_found', status: 400 } }
+        },
+        async mintIndependentSession() { return { session: null, error: { message: 'invalid_grant', code: 'invalid_grant' } } },
+      },
+      createDesktopSessionMemory(),
+    )
+    assert.equal(loggedOut.status, 401)
+    assert.equal(loggedOut.body.error, 'signed_out')
+    assert.match(loggedOut.body.error_description, /Not Found/)
+
+    const egress = await exchangeDesktopSession(
+      { accessToken: null, refreshToken: 'still-stored' },
+      {
+        async userFromAccessToken() { return null },
+        async refreshPresented() {
+          return { session: null, error: { message: 'Service restricted: exceed_egress_quota', code: 'exceed_egress_quota', status: 402 } }
+        },
+        async mintIndependentSession() { return { session: null, error: { message: 'invalid_grant', code: 'invalid_grant' } } },
+      },
+      createDesktopSessionMemory(),
+    )
+    assert.equal(egress.status, 402)
+    assert.equal(egress.body.error, 'egress_quota')
+    assert.match(egress.body.error_description, /spend cap/)
+    assert.match(egress.body.error_description, /HTTP 402/)
   })
 
   test('the desktop route is separate from the website refresh route', () => {

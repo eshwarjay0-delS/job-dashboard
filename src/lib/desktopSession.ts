@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { AUTH_EGRESS_BLOCKED, isAuthEgressBlocked } from "./kompasAuthSession.ts"
 
 // The website rotates one Supabase refresh family: the cookie session behind
 // POST /api/auth/refresh. Two browser tabs can present that same token, and
@@ -23,7 +24,7 @@ export type DesktopCredential = {
   userId?: string
 }
 
-export type DesktopAuthFailure = { message?: string; code?: string }
+export type DesktopAuthFailure = { message?: string; code?: string; status?: number }
 
 export type DesktopAuthPort = {
   userFromAccessToken(accessToken: string): Promise<DesktopAccount | null>
@@ -77,15 +78,22 @@ export function desktopAuthPort(fallback: () => DesktopAuthPort): DesktopAuthPor
   return portOverride ?? fallback()
 }
 
-export function classifyRefreshFailure(error: DesktopAuthFailure | null): { error: "already_used" | "revoked" | "invalid_grant"; error_description: string } {
+export function classifyRefreshFailure(error: DesktopAuthFailure | null): { error: "already_used" | "revoked" | "signed_out" | "egress_quota" | "invalid_grant"; error_description: string } {
   const message = (error?.message || "").trim()
   const code = (error?.code || "").trim()
   const haystack = `${code} ${message}`.toLowerCase()
+  if (isAuthEgressBlocked(error)) {
+    return { error: "egress_quota", error_description: AUTH_EGRESS_BLOCKED }
+  }
   if (haystack.includes("already used") || haystack.includes("already_used") || code === "refresh_token_already_used") {
     return { error: "already_used", error_description: ALREADY_USED }
   }
-  if (haystack.includes("revok")) {
+  if (haystack.includes("revok") || code === "refresh_token_revoked") {
     return { error: "revoked", error_description: message || "Refresh token revoked" }
+  }
+  // Global logout deletes the refresh token. Supabase then says it was not found.
+  if (haystack.includes("not found") || haystack.includes("signed_out") || code === "refresh_token_not_found" || code === "session_not_found") {
+    return { error: "signed_out", error_description: message || "Refresh token not found" }
   }
   return { error: "invalid_grant", error_description: message || "invalid_grant" }
 }
@@ -137,6 +145,7 @@ async function rotateOnce(refreshToken: string, port: DesktopAuthPort, memory: D
   }
   if (refreshed.error?.code === "issuer_unavailable") return unavailable(refreshed.error.message)
   const classified = classifyRefreshFailure(refreshed.error)
+  if (classified.error === "egress_quota") return failure(402, classified.error, classified.error_description)
   if (classified.error === "already_used") remember(memory, refreshToken)
   return failure(401, classified.error, classified.error_description)
 }
@@ -207,5 +216,6 @@ export async function exchangeDesktopSession(
   if (minted.session) return success(minted.session)
   if (minted.error?.code === "issuer_unavailable") return unavailable(minted.error.message)
   const classified = classifyRefreshFailure(minted.error)
+  if (classified.error === "egress_quota") return failure(402, classified.error, classified.error_description)
   return failure(401, classified.error, classified.error_description)
 }

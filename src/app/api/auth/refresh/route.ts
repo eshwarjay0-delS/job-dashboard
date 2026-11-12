@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_UNAVAILABLE, isAuthUnreachable, userFromAuthClient } from "@/lib/kompasAuthSession";
+import { AUTH_EGRESS_BLOCKED, AUTH_SIGNED_OUT, AUTH_UNAVAILABLE, isAuthEgressBlocked, isAuthUnreachable, isTerminalSignOut, userFromAuthClient } from "@/lib/kompasAuthSession";
 import { createClientFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
     const supabase = await createClientFromRequest(request);
     const first = await userFromAuthClient(supabase);
     if (first?.unreachable) {
+      if (first.blocked === "egress") {
+        return NextResponse.json(
+          { ok: false, error: "exceed_egress_quota", message: AUTH_EGRESS_BLOCKED },
+          { status: 402, headers: noStore },
+        );
+      }
       return NextResponse.json(
         { ok: false, error: "sign_in_unavailable", message: AUTH_UNAVAILABLE },
         { status: 503, headers: noStore },
@@ -33,6 +39,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, refreshed: false, userId: first.id }, { headers: noStore });
     }
     const { data, error } = await supabase.auth.refreshSession();
+    if (error && isAuthEgressBlocked(error)) {
+      return NextResponse.json(
+        { ok: false, error: "exceed_egress_quota", message: AUTH_EGRESS_BLOCKED },
+        { status: 402, headers: noStore },
+      );
+    }
     if (error && isAuthUnreachable(error)) {
       return NextResponse.json(
         { ok: false, error: "sign_in_unavailable", message: AUTH_UNAVAILABLE },
@@ -40,7 +52,11 @@ export async function POST(request: NextRequest) {
       );
     }
     if (error || !data.session) {
-      return NextResponse.json({ ok: false }, { status: 401, headers: noStore });
+      const signedOut = !error || isTerminalSignOut(error);
+      return NextResponse.json(
+        { ok: false, error: signedOut ? "signed_out" : "invalid_grant", message: signedOut ? AUTH_SIGNED_OUT : undefined },
+        { status: 401, headers: noStore },
+      );
     }
     return NextResponse.json({ ok: true, refreshed: true, userId: data.session.user.id }, { headers: noStore });
   } catch (err) {

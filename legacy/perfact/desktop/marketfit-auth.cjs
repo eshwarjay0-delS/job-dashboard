@@ -29,7 +29,9 @@ function proactiveReauthInWindow(now, familyExpiresAt) {
 
 function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, now = Date.now }) {
   if (new URL(origin).protocol !== "https:") throw Error("MarketFit auth requires HTTPS");
-  let access = "", refresh = "", owner = "", expiresAt = 0, familyExpiresAt = 0, flight = null;
+  let access = "", refresh = "", owner = "", expiresAt = 0, familyExpiresAt = 0, flight = null, notice = null;
+  const EGRESS_MESSAGE = "Supabase Auth is blocked because this project exceeded its egress quota (HTTP 402). Sign-in will work again once Auth is reachable. This app cannot raise the spend cap.";
+  const SIGNED_OUT_MESSAGE = "Your session ended. Sign in again to start a session.";
   const states = new Map();
   const file = () => path.join(profileDir(), "marketfit-auth.bin");
   const encrypted = () => !!safeStorage?.isEncryptionAvailable?.();
@@ -172,12 +174,26 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     try { json = await response.json(); } catch { json = null; }
     return { ok: response.ok, status: response.status, json };
   }
-  function tokenRevoked(result) {
+  function setNotice(code, message) {
+    notice = code ? { code, message } : null;
+  }
+  function renewalOutcome(result) {
     const body = result && result.json || {};
-    const hay = ((body.error || "") + " " + (body.error_description || "")).toLowerCase();
-    if (result.status !== 401) return false;
-    if (/already used|already_used/.test(hay)) return false;
-    return /revok|not found|invalid refresh token/.test(hay);
+    const hay = [body.error, body.error_description, body.message, body.code].filter(Boolean).join(" ").toLowerCase();
+    const status = Number(result && result.status);
+    if (result && result.ok && body.ok === true) return "ok";
+    if (status === 402 || body.error === "egress_quota" || /exceed_egress|egress quota|exceeded egress/.test(hay)) return "egress";
+    if (!result || status === 0 || status >= 500 || body.error === "issuer_unavailable" || /issuer_unavailable|fetch failed|network|timeout|econnrefused|enotfound/.test(hay)) return "unavailable";
+    if (status === 401 && /already used|already_used/.test(hay)) return "already_used";
+    if (status === 401 && (body.error === "revoked" || body.error === "signed_out" || /revok|not found|invalid refresh token|signed_out|refresh_token_not_found|session_not_found/.test(hay))) return "signed_out";
+    return "rejected";
+  }
+  function applyOutcome(result) {
+    const outcome = renewalOutcome(result);
+    if (outcome === "ok") { setNotice(null); return outcome; }
+    if (outcome === "signed_out") { clear(); setNotice("signed_out", SIGNED_OUT_MESSAGE); return outcome; }
+    if (outcome === "egress") { setNotice("egress_quota", EGRESS_MESSAGE); return outcome; }
+    return outcome;
   }
   async function exchangeCode(code, nonce) {
     if (typeof code !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(code)) return false;
@@ -225,24 +241,26 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     try {
       if (!liveAccess() && refresh) {
         const rotated = await postSession(refresh, "");
-        if (!rotated.ok || !adopt(rotated.json, false)) {
-          if (tokenRevoked(rotated)) clear();
-          return false;
-        }
+        const outcome = applyOutcome(rotated);
+        if (outcome !== "ok" || !adopt(rotated.json, false)) return false;
       }
+      if (!hasSession()) return false;
       const due = proactiveReauthDue(now(), familyExpiresAt) || (!familyExpiresAt && liveAccess());
       if (due && liveAccess()) {
         const minted = await postSession("", access);
-        if (minted.ok && adopt(minted.json, true)) return true;
+        const outcome = applyOutcome(minted);
+        if (outcome === "ok" && adopt(minted.json, true)) return true;
+        if (outcome === "signed_out") return false;
         return liveAccess();
       }
       const lead = liveAccess() && expiresAt - now() <= ACCESS_LEAD_MS;
       if ((forced || lead) && refresh) {
         const rotated = await postSession(refresh, liveAccess() ? access : "");
-        if (rotated.ok && adopt(rotated.json, false)) return true;
-        if (tokenRevoked(rotated)) clear();
+        const outcome = applyOutcome(rotated);
+        if (outcome === "ok" && adopt(rotated.json, false)) return true;
         return false;
       }
+      if (liveAccess()) setNotice(null);
       return liveAccess();
     } catch { return false; }
   }
@@ -269,7 +287,7 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
   }
   return {
     token, ownerId: () => owner, hasSession, load, clear, issueState, callback, acceptCallback, renew,
-    exchangeCode, pollCode, millisecondsUntilRefresh,
+    exchangeCode, pollCode, millisecondsUntilRefresh, authNotice: () => notice,
     familyExpiresAt: () => familyExpiresAt,
   };
 }

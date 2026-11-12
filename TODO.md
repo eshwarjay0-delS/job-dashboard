@@ -1,3 +1,11 @@
+## 2026-11-12 — Sign in again after logout everywhere (no new screen until the exe is updated)
+
+No new website screen beyond the sign-in sentence and the login-page quota sentence. After a full Supabase logout, a revoked refresh token, or a 401 whose refresh also fails, Start offers Google again. A live interview does not open Chrome and does not leave for `/login`. HTTP 402 `exceed_egress_quota` keeps the stored session and says the project is over its egress quota. The spend cap is not changed. `AUTH_DISABLED` is not turned on.
+
+**Verified locally.** `./node_modules/.bin/tsc --noEmit --skipLibCheck` exit 0. ESLint on the edited TypeScript files exit 0. Five rounds of the session, silent-auth, desktop-family, marketfit-auth, and auth-session suites: 58 pass, 0 fail each round.
+
+**Not verified.** A live Google sign-in. A Windows click-through. Whether production Auth is still HTTP 402. The installed Kompas.exe does not change until the Windows release workflow publishes `kompas-desktop-latest`. Production `/version.json` is the ship check for the website half.
+
 ## 2026-11-11 — Desktop sign-in (no new screen until the exe is updated)
 
 No new website screen beyond the sign-in sentences. Closing Kompas no longer drops the refresh token when OS encryption is off: it is stored with safeStorage or as an encrypted file and read back on launch. Chrome hands over a short one-time code, not the access token. The page says Kompas has the sign-in only after the desktop claims that code. A sign-in service error stays an error. The flow is written in `docs/AUTH_WORKFLOW.md`.
