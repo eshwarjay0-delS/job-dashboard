@@ -1,0 +1,31 @@
+name: Contract crawler schedule policy
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "vercel.json"
+      - "src/app/api/crawl/**"
+      - "scripts/tests/crawl-schedule-policy.test.mjs"
+      - ".github/workflows/crawl-schedule-policy.yml"
+  push:
+    branches: [master]
+    paths:
+      - "vercel.json"
+      - "src/app/api/crawl/**"
+      - "scripts/tests/crawl-schedule-policy.test.mjs"
+      - ".github/workflows/crawl-schedule-policy.yml"
+
+jobs:
+  verify:
+    name: Verify manual-only contract crawler policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test schedule and authorization boundaries
+        run: node --test scripts/tests/crawl-schedule-policy.test.mjs
