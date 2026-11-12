@@ -48,6 +48,8 @@ test("the expanded navigation sits between the top bar and the main page content
   const layout = read("src/app/dashboard/layout.tsx")
   assert.match(nav, /aria-controls="marketfit-navigation"/)
   assert.match(nav, /<aside id="marketfit-navigation" aria-label="MarketFit navigation"/)
+  assert.equal((nav.match(/id="marketfit-navigation"/g) || []).length, 1, "the hamburger must control one unique navigation target")
+  assert.doesNotMatch(nav, /<nav id="marketfit-navigation"/, "the inner page list must not duplicate the panel id")
   assert.ok(layout.indexOf("<SidebarNav") < layout.indexOf("<main id=\"dashboard-content\""), "sidebar must render before main content")
   assert.match(rule(".mf-mobile-home"), /position:sticky;\s*top:0/)
   assert.match(shell, /:root\{--mf-topbar-h:64px\}/)
