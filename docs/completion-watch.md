@@ -661,3 +661,8 @@ PR #309 head `96b8e84a7550cf7481d043e53ba51d7130c1af84` now has full CI `4314519
 ## 12 November 2026 — stale Gmail test PR closed
 
 PR #297 was closed as a stale duplicate after current-master PR #313 preserved the same five selected-sender/per-inbox regression tests and corrected the harness naming. PR #297 was not merged; its history and superseded note remain. PR #313 exact-head full CI `43143457248` and Kompas baseline `43143457299` passed, but the protected preview gate remains failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. PR #313 remains open/unmerged and test-only; no real email or two-inbox acceptance is claimed.
+
+
+## 12 November 2026 — Chief Relevance and voice boundary
+
+The canonical alias remains READY on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`, but Vercel project metadata reports `live=false`; runtime-error access returned 403. The last successful public smoke recorded in the Plan/REA branch is 12 Nov 00:47 UTC. PR #262 (`30cc94b`) and PR #234 (`f0d6f04`) remain open and non-mergeable on old bases; both have Vercel Preview Comments SUCCESS, voice-preview-smoke FAILURE and no exact-head full CI. No blind restack or merge was attempted. PR #270 remains DRAFT with the separate Voice Delivery task; no voice/audio/caption files were edited. The live 50-pair Kompas/ChatGPT benchmark still requires private `KOMPAS_API_TOKEN`, approved source bundles and independent human scorecards; no live pairs or native Windows/phone/WhatsApp acceptance are claimed.
