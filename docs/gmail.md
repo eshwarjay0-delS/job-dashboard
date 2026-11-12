@@ -267,3 +267,10 @@ The approved Poke-inspired mobile behavior is restacked as PR #318 on PR #317. I
 - The common release wall is the missing private `KOMPAS_VERCEL_API_TOKEN` in GitHub Actions plus Vercel project `live=false`. The owner or authorized repository administrator must configure it privately and restore legitimate preview availability; no protection bypass is allowed. The Supabase Auth 402 needs a separate owner/project-admin billing or spend-cap decision. No real email/WhatsApp message, R2 write, manual crawl, production row mutation, billing change, secret read or authentication bypass occurred.
 
 **Continue:** run the Plan Journal/REA schema and full CI on this current-master documentation restack; keep it DRAFT if the protected preview remains unavailable. Then resume the highest-priority code stack in order: #303 before #316, #317 before #318, and #315 only after its own protected preview. Keep the historical 17 Oct incident open until its exact artifact and provider correlation are recovered or explicitly marked irrecoverable.
+
+
+## 12 November 2026 — active Supabase Auth restriction (07:13 UTC) <!-- gmail-auth-402-0713z -->
+
+A fresh 24-hour production error aggregation shows 38 `/api/gmail/notify-rules/export` HTTP 402 `exceed_egress_quota` failures across 30 users, latest `07:07:19Z`, on current deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. The last 30-minute query shows one event. This is an active Supabase Auth service restriction, not evidence that the project as a whole is down. The owner/project administrator must upgrade the plan or remove the spend cap. No alternate auth path, credential swap, manual export or email send was attempted.
+
+The account-sync snapshot remains 3 account sync rows and 2,002 account-keyed threads from the prior read; no new two-inbox, reconnect, selected-From or phone acceptance is established. Keep the unattended worker disabled.

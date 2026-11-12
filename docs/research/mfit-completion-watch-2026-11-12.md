@@ -159,3 +159,12 @@ PR #315 final head `bd62bcd17b2b2be79c6ee23db19b8582a5225015` now has all code g
 - The common release wall is the missing private `KOMPAS_VERCEL_API_TOKEN` in GitHub Actions plus Vercel project `live=false`. The owner or authorized repository administrator must configure it privately and restore legitimate preview availability; no protection bypass is allowed. The Supabase Auth 402 needs a separate owner/project-admin billing or spend-cap decision. No real email/WhatsApp message, R2 write, manual crawl, production row mutation, billing change, secret read or authentication bypass occurred.
 
 **Continue:** run the Plan Journal/REA schema and full CI on this current-master documentation restack; keep it DRAFT if the protected preview remains unavailable. Then resume the highest-priority code stack in order: #303 before #316, #317 before #318, and #315 only after its own protected preview. Keep the historical 17 Oct incident open until its exact artifact and provider correlation are recovered or explicitly marked irrecoverable.
+
+
+## 12 November 2026 — live Auth egress and session persistence (07:13 UTC) <!-- auth-egress-session-0713z -->
+
+The latest 24-hour Vercel error aggregation reports 38 HTTP 402 `exceed_egress_quota` errors from `/api/gmail/notify-rules/export` across 30 users, latest `2026-11-12T07:07:19Z`, on current production deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. The 30-minute query shows one Gmail Auth 402 event. The owner/project administrator must upgrade the Supabase plan or remove the spend cap that restricts Auth; no workaround is authorized.
+
+The same 24-hour query shows 11 WhatsApp tailoring quality-gate rejections across 10 users, latest `2026-11-11T22:16:15Z` on older deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`; no grouped WhatsApp errors appeared in the last 30 minutes. Two `/api/kompas/account-sessions` Auth 402 events occurred `2026-11-11T16:55:02Z` on older deployment `dpl_Hca18aPST4C7fmaTH3V1V3yWzWu1`; no grouped events appeared in the last 30 minutes.
+
+Read-only Supabase aggregate now confirms 22 account-session rows across one owner, 7 tombstones, and 28 artifacts across one owner. Latest session and artifact updates are both 9 Nov 21:47Z. This is persisted data, not two-device or current-sync acceptance; the Auth restriction may be a blocker, but causation is not established. No session was created and no database mutation occurred.

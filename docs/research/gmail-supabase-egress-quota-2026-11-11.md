@@ -28,3 +28,7 @@ No user mailbox contents, credentials, email addresses, or private message bodie
 ## 12 November 2026 — latest recorded Auth egress evidence (06:53 UTC) <!-- gmail-egress-current-0653z -->
 
 The latest recorded production runtime aggregate for `/api/gmail/notify-rules/export` remains 32 HTTP 402 `exceed_egress_quota` failures across 27 users, latest event `2026-11-12T04:07:07Z`. This is the last available aggregate in this continuation, not a new live re-query at 06:53 UTC. Supabase project metadata may remain healthy while its Auth service is restricted. The owner/project administrator must decide whether to upgrade the plan or remove the applicable spend cap. No billing change, credential swap, alternate-auth workaround, manual export, email send or secret read was attempted.
+
+## 12 November 2026 — live restriction recheck (07:13 UTC) <!-- gmail-egress-402-0713z -->
+
+The latest 24-hour production aggregation has increased to 38 HTTP 402 `exceed_egress_quota` errors across 30 users on `/api/gmail/notify-rules/export`, latest `2026-11-12T07:07:19Z`, on current production deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. A 30-minute query returned one event. The Supabase Auth service is still restricted; the owner/project administrator must upgrade the plan or remove the spend cap. No billing change, alternate-auth workaround, credential swap, manual export or email send was attempted.

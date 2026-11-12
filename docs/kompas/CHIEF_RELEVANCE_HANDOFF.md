@@ -108,3 +108,9 @@ Test-only PR #314 adds CI wiring for five existing Kompas question/voice regress
 The real 50-pair acceptance remains open: zero authorized same-question Kompas-versus-ChatGPT response pairs and zero independent human 0–4 scorecards are recorded. Native Windows, mobile and WhatsApp parity remains unverified. Synthetic fixtures and passing source tests do not establish live answer quality.
 
 **Continue:** after the owner/authorized administrator restores legitimate protected preview access, run the approved live API smoke and obtain the authorized 50 same-question pairs plus independent human scores. Preserve source provenance and account isolation; no voice behavior change or E2E completion is claimed.
+
+## 12 November 2026 — account-session Auth and persisted-state recheck (07:13 UTC) <!-- kompas-auth-session-0713z -->
+
+Vercel's 24-hour route aggregation recorded two `/api/kompas/account-sessions` Auth 402 `exceed_egress_quota` events at `2026-11-11T16:55:02Z` on older deployment `dpl_Hca18aPST4C7fmaTH3V1V3yWzWu1`; no grouped Kompas session errors appeared in the last 30 minutes. The same Supabase Auth restriction is currently producing Gmail export failures on the live deployment. This may affect account sync, but causation is not established.
+
+Read-only Supabase counts are 22 account-session rows for one owner, 7 tombstones and 28 artifacts for one owner; latest updates are 9 Nov 21:47Z. This is not proof of a second device or current session writes. The project owner/admin must resolve the Auth spend-cap restriction before authenticated cross-device acceptance can be meaningfully repeated. No session or artifact was written, and no device test was claimed.
