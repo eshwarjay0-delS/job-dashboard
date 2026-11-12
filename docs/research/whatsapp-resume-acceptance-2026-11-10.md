@@ -208,3 +208,8 @@ The connected iZap account returned one business and zero linked WhatsApp number
 ### 12 November 2026 09:26 UTC — exact-head WhatsApp regression result
 
 On current-master PR #321 head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`, WhatsApp resume recovery run `43191231421` and Kompas baseline `43191231296` completed SUCCESS. The recovery job ran npm ci, TypeScript and `whatsapp-resume-recovery` plus `whatsapp-resume-contract` tests. Full CI `43191231356` remains in progress at migration asset closure after the first 15 checks passed. Protected preview `43191231435` failed; the job log shows `KOMPAS_VERCEL_API_TOKEN` empty and requires it to be configured privately. No merge, deployment, model call, R2 write, real send or Meta callback occurred.
+
+
+### 12 November 2026 09:31 UTC — current-master WhatsApp code gates complete
+
+PR #321 exact head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e` now passes full CI `43191231356` (47/47 steps), WhatsApp recovery `43191231421`, and Kompas baseline `43191231296`. The full CI logs confirm: resume guards 31/31, WhatsApp selected-library/single-request group 52/52, resume contract 44/44, resume acceptance 105/105, and storage-prefix recovery 21/21; the Webpack build completed. Protected preview `43191231435` remains FAILURE because the log says `KOMPAS_VERCEL_API_TOKEN` is empty and must be configured privately. The PR remains DRAFT. These source/contract tests do not prove a real WhatsApp send or retroactively verify the 17 Oct delivery. No merge, production deployment, model call, R2 write or Meta callback occurred.
