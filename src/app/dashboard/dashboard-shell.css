@@ -203,9 +203,9 @@
   .mf-menu-toggle.is-open span:nth-child(2){opacity:0}
   .mf-menu-toggle.is-open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
 
-  /* Owner-approved mobile behavior: the navigation expands under the sticky top bar in normal flow and pushes the
-     page down. It must never float over, dim, or make the page inert. Keep this selector heavier than the global
-     visibility guard (html body aside.dash-sidebar), which otherwise forces the 240px desktop rail on narrow screens. */
+  /* Chosen implementation of the owner's no-obstruction requirement: the navigation expands under the sticky top bar
+     in normal flow and pushes the page down. It must never float over, dim, or make the page inert. Keep this selector
+     heavier than the global visibility guard (html body aside.dash-sidebar), which otherwise forces the 240px desktop rail. */
   html body .mf-dashboard-shell aside.dash-sidebar{
     position:static!important;
     inset:auto!important;
