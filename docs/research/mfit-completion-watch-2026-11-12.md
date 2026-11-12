@@ -107,3 +107,33 @@ Vercel environment metadata requested with `decrypt=false` confirms both `AUTH_D
 ### Vercel live-state caveat — 12 November 2026 04:26 UTC
 
 The Vercel project metadata reports `live=false` even though the latest deployment object is READY and `job-dashboard-fawn.vercel.app` is assigned to it. External requests for `/api/health` and `/kompas/version.json` were inaccessible in this run. Therefore production deployment readiness and alias assignment are verified, but public HTTP/end-user availability is **not** verified. Do not claim a fully live release until the project live state and public route are confirmed.
+
+
+## 12 November 2026 — continuation run at 04:55 UTC
+
+### Current release boundary
+
+- Master and canonical alias metadata: `da1db145c5981254f95620ff6bb0222ab4228125`, READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, alias assigned.
+- Vercel project metadata still reports `live=false`; external HTTP health/version probes remain inaccessible. Deployment READY + alias assignment is not public reachability or end-user acceptance.
+
+### Contract classifier continuation
+
+- New safe restack PR #315: `bd62bcd17b2b2be79c6ee23db19b8582a5225015`, based on current master. The five files copied from old PR #305 were verified byte-identical to the old base on current master before editing.
+- Crawler regression 43157849909 SUCCESS (8/8); Kompas baseline 43157849768 SUCCESS (92/92); full CI 43157849751 remains IN PROGRESS at migration asset closure; protected preview 43157849584 FAILED at exact-head preview resolution. Its job log returned 404, so the precise failure cause is not asserted.
+- Scope: explicit Right To Hire / Contract To Perm / Contract To Permanent C2H aliases, negation preservation, generic contract-vocabulary false-positive rejection, structured employmentType and additive prebuild regression coverage.
+- No production deployment, manual crawl, database row rewrite, new adapter or daily cron restoration. Old PR #305 remains untouched pending validation of #315.
+
+### WhatsApp and resume evidence
+
+- The historical 17 Oct 17:28 Chicago 98% hold remains unverified: generated DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt remain missing; source chronology/credential conflicts remain quarantined pending owner reconciliation.
+- PR #303 exact-head full CI 43138216531, recovery 43138216521 and baseline 43138216526 passed; protected preview 43138214326 failed because private `KOMPAS_VERCEL_API_TOKEN` is absent. PR #310 remains stacked on #303.
+- PR #304 exact-head full CI 43139954490, recovery 43139954504 and baseline 43139954651 passed; protected preview 43139950971 failed for the same missing private token. PR #312 remains stacked on #304.
+- Production runtime error aggregation still shows 11 WhatsApp tailoring quality-gate rejections across 10 users, latest at 2026-11-11T22:16:15Z. The samples have 100% instrumented literal/supported coverage but remain partial/incomplete, with differing blockers (`role_evidence_gaps`, `roles_unrewritten`, `draft_parts_missing`). This is not a uniform failure or proof of a 98% live match.
+
+### Gmail/mobile and Kompas
+
+- PR #309 mobile navigation: exact-head full CI 43145194068 and baseline 43145194212 passed; protected preview 43145190595 failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable; no real phone acceptance.
+- Multi-account Gmail remains separate: PR #271/#286 sync-health UI is not approved for merge; two authorized inboxes (one healthy, one partial/failed), selected-From/reconnect and narrow-mobile acceptance remain open. Unattended updates stay disabled until scheduler, CRON_SECRET, approved Meta template and explicit enablement are present.
+- PR #314 adds only CI wiring for 69 existing Kompas question/voice cases; its full CI 43157259968 remains in progress at Webpack build, preview 43157259910 failed. No runtime behavior changed. Kompas Continuous Voice Delivery is disabled; no duplicate voice work was started.
+
+No real email or WhatsApp message was sent. No manual crawl, database mutation, billing change, secret access or authentication bypass occurred.
