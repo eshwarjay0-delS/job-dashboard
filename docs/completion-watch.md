@@ -602,3 +602,10 @@ Continue: wait for exact-head PR #305 checks and protected preview; after a revi
 ## 12 November 2026 — voice-workstream coordination check
 
 The automation inventory at 02:22 UTC showed MFit Completion Watch and MFit Safe Merge Gate enabled, while Kompas Continuous Voice Delivery was disabled. No separate Bible-Keeper automation appeared. PR #283 `9a0e77fad2ca0fd7fd750a85c2e02f29d62917da` remains open, not draft, with full CI `42841544434`, baseline `42841544689`, cross-device gate `42841544818` and Windows x64 packaging `42841544525` all SUCCESS; the authenticated voice-preview gate failed and no PR review was returned. Prior-conversation search found no explicit Eshwar approval for the microphone-on/system-audio-off default or first-tap opt-in behavior; available support was assistant-authored only. Keep PR #283 unchanged and unmerged until explicit owner approval is recorded. No audio, microphone, caption or continuous-voice edits were made in this run.
+
+
+## 12 November 2026 — production runtime-error access blocked
+
+A fresh read-only Vercel runtime-error query scoped to /api/whatsapp/webhook, /api/crawl/run and /api/gmail-sync returned HTTP 403 permission denied (request ID iad1:iad1:sfo1:sfo1:hnd1:iad1:sfo1:sfo1::sfo1::6rkkl-1794451109443-12b478c2d157). The documented CLI fallback was attempted in the isolated sandbox, but the vercel CLI is not installed. Do not retry the unchanged MCP call, assume zero errors, or use a different account/team. Unblock requires Vercel observability/log-read permission for the connected integration or an approved CLI environment scoped to the same team/project; never paste credentials into chat.
+
+This is not a production availability failure: the canonical alias independently remains READY at deployment dpl_5ipmErFiEhTsp5tEupta39o8EA1K, exact master SHA 65bdf2f8cf1dd7299b8623885641400efe57bbfe. Public GET /api/health -> 200, /version.json -> 200 with the exact full SHA, and /api/kompas/desktop-version -> 200 advertising version 0.8.8 and the official GitHub executable URL. Runtime-error clusters for WhatsApp, crawler and Gmail are currently unverified, not clean.
