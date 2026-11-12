@@ -103,3 +103,7 @@ The old note claiming `mail-overview.test.mjs` expected StandingSection before t
 ### Production synthetic-auth flag verification — 12 November 2026
 
 Vercel environment metadata requested with `decrypt=false` confirms both `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` are false for production. Neither flag was changed. Keep normal verified sign-in and account isolation fail-closed; issue #308 remains open for the explicit owner scope decision and regression tests. No decrypted secret was requested or repeated.
+
+### Vercel live-state caveat — 12 November 2026 04:26 UTC
+
+The Vercel project metadata reports `live=false` even though the latest deployment object is READY and `job-dashboard-fawn.vercel.app` is assigned to it. External requests for `/api/health` and `/kompas/version.json` were inaccessible in this run. Therefore production deployment readiness and alias assignment are verified, but public HTTP/end-user availability is **not** verified. Do not claim a fully live release until the project live state and public route are confirmed.
