@@ -126,14 +126,14 @@ type Session = {
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
-async function parseSession(from: string, raw: string | null): Promise<Session> {
+async function parseSession(from: string, raw: string | null, cleanupExpired = true): Promise<Session> {
   if (!raw) return {}
   const s = JSON.parse(raw) as Session
   // Old versions kept resumes indefinitely. Do not reuse them after the rollback.
   if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }
   const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
   if (s.updatedAt && Date.now() - s.updatedAt > ttl) {
-    if (s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
+    if (cleanupExpired && s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
       await deletePath(s.resumePath).catch(() => {})
     return { version: 3, seen: s.seen?.slice(-40) }
   }
@@ -849,7 +849,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     // pair stays available for recovery rather than risking data loss.
     for (let attempt = 0; attempt < 8; attempt++) {
       const snapshot = await blob.getWithEtag(key)
-      const cur = await parseSession(from, snapshot?.data.toString("utf8") ?? null)
+      const cur = await parseSession(from, snapshot?.data.toString("utf8") ?? null, false)
       // Treat JD + resume as one pair. Clearing either field independently can
       // strand a newer JD that reused the same resume, or a newer resume attached
       // to the same JD, after an in-flight document send completes.
