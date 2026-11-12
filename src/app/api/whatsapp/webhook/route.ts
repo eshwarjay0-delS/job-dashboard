@@ -839,6 +839,51 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Assigned inside the run, after the job text is known. The outer catch can
   // still send the already-chosen resume if the run throws before a file goes out.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
+  // Consume only the pair this run owns. A newer JD/resume arriving while a
+  // document is being sent must survive; failed or unconfirmed sends keep the
+  // original session available for retry.
+  const consumeSessionPair = async (): Promise<void> => {
+    const cur = await loadSession(from)
+    // Treat JD + resume as one pair. Clearing either field independently can
+    // strand a newer JD that reused the same resume, or a newer resume attached
+    // to the same JD, after an in-flight document send completes.
+    const jdMatches = session.jdId
+      ? cur.jdId === session.jdId
+      : !cur.jdId && cur.jd === session.jd
+    const resumeMatches = session.resumePath
+      ? cur.resumePath === session.resumePath
+      : !cur.resumePath
+    const pairMatches = jdMatches && resumeMatches
+    let changed = false
+    if (pairMatches) {
+      if (cur.jd !== undefined || cur.jdId !== undefined) {
+        delete cur.jd
+        delete cur.jdId
+        changed = true
+      }
+      if (cur.resumePath !== undefined || cur.resumeName !== undefined || cur.resumeAt !== undefined) {
+        delete cur.resumePath
+        delete cur.resumeName
+        delete cur.resumeAt
+        changed = true
+      }
+      if (session.jdId && cur.pending?.jdId === session.jdId) {
+        delete cur.pending
+        changed = true
+      }
+      if (files && !quiet && session.jd) {
+        cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
+        changed = true
+      }
+    }
+    const seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
+    if (seen.length !== (cur.seen || []).length || seen.some((value, index) => value !== cur.seen?.[index])) {
+      cur.seen = seen
+      changed = true
+    }
+    if (!changed) return
+    await saveSession(from, cur)
+  }
   const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
     if (finished || sending) return false
     const resumePath = session.resumePath
@@ -860,6 +905,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       if (!sentId) throw new Error("WhatsApp document send returned no message id")
       const accepted = await markResumeDocumentAccepted(job, sentId)
       finished = true
+      // Meta returned a message ID. Clear only the matching session pair;
+      // storage failure must not turn a sent file into a retry.
+      await consumeSessionPair().catch(() => {})
       if (accepted && files) await markUsed(files.userDir, files.abs).catch(() => {})
       return true
     } catch (error) {
@@ -901,15 +949,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           : "AI tailoring is unavailable and no same-account library resume was selected, so no file was sent. Your request is saved for retry.")
       return
     }
-  // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
-  // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
-  const cur = await loadSession(from)
-  if (cur.jdId === session.jdId) { delete cur.jd; delete cur.jdId }
-  if (cur.resumePath === session.resumePath) { delete cur.resumePath; delete cur.resumeName; delete cur.resumeAt }
-  if (cur.pending?.jdId === session.jdId) delete cur.pending
-  cur.seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
-  if (files && !quiet) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
-  await saveSession(from, cur)
+  // Consume this pair before starting a paid rewrite, preserving any newer request.
+  await consumeSessionPair()
 
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
