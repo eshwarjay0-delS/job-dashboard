@@ -1,5 +1,5 @@
-// Owner correction, 4 Oct 2026: the mobile menu must not block or overlay content. It expands below the sticky top bar
-// in normal document flow and pushes page content down. The earlier floating-drawer behavior is superseded.
+// Owner requirement, 4 Oct 2026: the mobile menu must not block or cover the view. Normal-flow expansion below the
+// sticky top bar, pushing content down, is the chosen implementation of that requirement.
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
