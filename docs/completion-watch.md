@@ -807,3 +807,10 @@ PR #320 first full CI (run 43189621652, head bc2c019e) failed one assertion in `
 ## 12 November 2026 — historical WhatsApp output search
 
 A new recursive metadata-only Library listing for DOCX files created in the exact 17 Oct incident window, 22:20–23:00 UTC (5:20–6:00 PM Chicago), returned zero items. Targeted semantic Library search also found no uniquely correlated output. This only narrows the accessible Library; it does not prove absence from browser-local/temp storage, another chat, R2 or Meta. The generated output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain the exact blockers. No replay, model call, file generation, R2 write or outbound message was performed.
+
+
+## 12 November 2026 09:22 UTC — Gmail/mobile and Auth blockers
+
+PR #320 corrected head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf`: Kompas baseline 43190229393 SUCCESS; full CI 43190228931 still IN_PROGRESS at migration asset closure; protected preview 43190224739 FAILED because the job log shows the private `KOMPAS_VERCEL_API_TOKEN` is empty. The initial full CI failure on bc2c019 was the stale byte-for-byte prebuild assertion; the corrective commit makes the required groups order-checked and explicitly requires dashboard-shell.test.mjs. No voice code changed.
+
+Vercel's 24-hour runtime aggregation reports 42 Gmail notify-rules/export Supabase Auth 402 exceed_egress_quota errors across 34 users, latest 09:07:04Z; the 30-minute window has one event. The Supabase project owner/administrator must upgrade the plan or remove the spend cap. Do not bypass authentication or change billing. Project metadata live=false; no public HTTP, two-inbox or phone acceptance. Keep the unattended worker disabled.
