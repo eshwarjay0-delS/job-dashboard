@@ -263,3 +263,10 @@ This run independently retrieved the full matching JD from Gmail thread `1a14643
 The source resume is not currently retrievable. `Resume_Inventory.csv` records `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`, identity `jayeshwar44@gmail.com`, SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`. A Library listing of `/J_Eshwar_44/General Security` returned `Library path not found`; no DOCX bytes were read. Do not substitute another resume from the separate `eshwarjay05@gmail.com` library. The earlier 27,724-byte source recovery and source-content conflict claims are not independently reproducible in this run; preserve them as historical notes, not current artifact evidence, and keep disputed facts quarantined.
 
 The generated output DOCX, per-run R2 key/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable. The prior conversation identifies the screenshot at `2026-10-17T22:28:39Z` and the user's “Fix it” at `2026-10-17T22:53:16Z`. No replay or resend is authorized. The delivery remains unverified, not proven delivered or undelivered.
+
+
+## 12 November 2026 — exact-head gate update
+
+PR #321 head `2d642ffb5acc37c1066a070ab182bd461112d3b3` now has all three source gates SUCCESS: full CI `43292088241`, Kompas baseline `43292088358`, WhatsApp recovery `43292088573`. It remains DRAFT because the protected preview token is unavailable; no production deployment or real WhatsApp send is claimed.
+
+The separate PR #325 profile-gap repair is restacked at `513be21`; baseline `43292578119` and WhatsApp recovery `43292578125` pass, full CI `43292578201` is in progress. The source DOCX remains inaccessible; the matching JD is recovered but not enough to claim factual resume match or output quality.
