@@ -839,3 +839,8 @@ The Chief Relevance handoff has been updated to canonical master `da1db145` and 
 ## 12 November 2026 09:26 UTC — WhatsApp fallback gates
 
 Current-master PR #321 exact head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`: WhatsApp resume recovery 43191231421 SUCCESS; Kompas baseline 43191231296 SUCCESS; full CI 43191231356 still IN_PROGRESS at migration asset closure after 15 checks passed; protected preview 43191231435 FAILED. The preview job log explicitly says `KOMPAS_VERCEL_API_TOKEN` is empty and must be configured privately. Keep DRAFT; do not bypass. No merge, production deployment, model call, R2 write or real WhatsApp message occurred. Dependent PR #316 remains stacked on old #303 and waits for #321 acceptance.
+
+
+## 12 November 2026 09:30 UTC — Gmail persisted-state recheck
+
+Read-only production SQL confirms `mfit_gmail_sync`: 3 rows, 3 account IDs, 1 user, latest sync 10 Nov 14:44:44.277 UTC; `mfit_gmail_threads`: 2,002 rows, 3 account IDs, 1 user, latest update 10 Nov 14:46:49.790 UTC. No message bodies were read. This is account-keyed persistence, not fresh two-inbox/selected-From/reconnect/phone acceptance. The 24h runtime aggregation still has 42 Supabase Auth 402 exceed_egress_quota errors across 34 users, latest 09:07:04Z. Owner/admin must resolve the spend cap; no bypass, real email send or unattended worker was enabled.
