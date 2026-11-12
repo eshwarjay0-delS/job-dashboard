@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { millisecondsUntilRefresh, shouldRefreshBeforeExpiry } from "@/lib/kompasAuthSession"
 import { ensureLoginClock } from "@/lib/session-clock"
 import { isAuthDisabled } from "@/lib/authDisabled"
+import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 
 // Renew the browser session once, shortly before the access token expires.
 // Focus and visibility only look at the locally stored expiry. They do not
@@ -14,12 +15,8 @@ export default function SessionLifetimeGuard() {
     if (isAuthDisabled()) return
     let active = true
     let timer = 0
-    let supabase: ReturnType<typeof createClient>
-    try {
-      supabase = createClient()
-    } catch {
-      return
-    }
+    let supabase: ReturnType<typeof createClient> | null = null
+    let started = false
     const arm = (expiresAt?: number | null) => {
       window.clearTimeout(timer)
       if (!expiresAt) return
@@ -28,8 +25,9 @@ export default function SessionLifetimeGuard() {
       timer = window.setTimeout(() => { void renew() }, delay)
     }
     const renew = () => {
-      if (document.hidden) return
-      supabase.auth.getSession().then(({ data }) => {
+      const client = supabase
+      if (!client || document.hidden) return
+      client.auth.getSession().then(({ data }) => {
         if (!active || !data.session) return
         ensureLoginClock()
         const expiresAt = data.session.expires_at
@@ -37,14 +35,27 @@ export default function SessionLifetimeGuard() {
           arm(expiresAt)
           return
         }
-        void supabase.auth.refreshSession().then(({ data: next }) => {
+        void client.auth.refreshSession().then(({ data: next }) => {
           if (next.session) arm(next.session.expires_at)
         }).catch(() => {})
       }).catch(() => {})
     }
-    renew()
-    window.addEventListener("focus", renew)
-    document.addEventListener("visibilitychange", renew)
+    const begin = () => {
+      if (!active || started) return
+      started = true
+      try {
+        supabase = createClient()
+      } catch {
+        return
+      }
+      renew()
+      window.addEventListener("focus", renew)
+      document.addEventListener("visibilitychange", renew)
+    }
+    void serverReportsAuthDisabled().then(off => {
+      if (!active || off) return
+      begin()
+    })
     return () => {
       active = false
       window.clearTimeout(timer)

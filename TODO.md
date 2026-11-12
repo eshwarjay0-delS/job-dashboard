@@ -1,3 +1,11 @@
+## 2026-11-12 — Skip-login without calling Supabase Auth
+
+No new screen beyond hiding the Kompas login card when skip-login is on. Login came back because production `auth-flag.js` is `false` on commit `e8ce442` (PR #326), which was told to leave `AUTH_DISABLED` off and to send a signed-out start to `/login`. With the flag exactly `true`, Auth is not called, so HTTP 402 does not hold Start or bounce MarketFit into setup. The Houston user id was not recovered: the Supabase project returned 402 and the id is not in the repo. This environment has no Vercel token, so the three production variables still have to be set and the site redeployed before `/kompas/auth-flag.js` can read `true`. Computer audio from the output-device commit stays.
+
+**Verified locally.** Skip-login, session-reauth, auth-disabled, and output-audio tests passed after the restack onto a7b2334b. `tsc --noEmit --skipLibCheck` exit 0. ESLint on the edited TypeScript files had no errors. `npm run test:baseline` and `npm run build` exit 0.
+
+**Not verified.** A live Start click with the production flag already true, and the owner's auth.users id. No email or WhatsApp was sent. The installed exe does not change until the Windows workflow publishes it.
+
 ## 2026-11-12 — Computer audio follows the Windows output device (no new screen until the exe is updated)
 
 No new website screen. Desktop loopback stays `audio: "loopback"` and does not pin Realtek or any other device name. When the default output label changes during a running desktop session, the loopback track is opened again. The recorded computer-audio stream is gained 2.5 and compressed. The microphone stays at unity with its existing auto-gain. A yes on hide-from-taskbar is stored. A no is asked next launch. Windows Live Captions remains the only caption window. parfAct was HTTP 404, so this is `legacy/perfact/desktop`.

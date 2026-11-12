@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 12 November 2026 — skip-login
+
+Owner approval the same day supersedes the session-recovery note that said to leave `AUTH_DISABLED` off. Production still served `window.KOMPAS_AUTH_DISABLED = false` from commit `e8ce442`. Skip-login must not call Supabase Auth, must not open `/login`, and must let Kompas Start and MarketFit open. The Houston user id was not read because the project returned HTTP 402. Draft PR #324 stays unmerged. PR #327 is a different branch and is not part of this slice.
+
 ## Active development loop
 
 Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the task queue. Reconcile replaced next actions against later evidence before executing them; see `docs/research/board-todo-reconciliation.md`. Keep work moving through approved implementation, release and acceptance rather than treating the boards as documentation alone.

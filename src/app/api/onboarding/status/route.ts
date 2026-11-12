@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { isSyntheticDisabledAuthUser } from "@/lib/authDisabled"
+import { isAuthDisabled, isSyntheticDisabledAuthUser } from "@/lib/authDisabled"
 import { isAdminEmail, isOwnerEmail } from "@/lib/owner"
 import { phoneStepAvailable } from "@/lib/identityStatus"
 
@@ -11,6 +11,15 @@ export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
+
+  // Skip-login enters as the Houston owner. A missing or 402-blocked profile
+  // must not trap MarketFit on the setup form.
+  if (isAuthDisabled() || isSyntheticDisabledAuthUser(user)) {
+    return NextResponse.json({
+      complete: true, missing: [], resumeTo: null, durable: true,
+      role: "user", onboardingBypassed: true, authDisabled: true,
+    })
+  }
 
   if (!isSyntheticDisabledAuthUser(user) && isOwnerEmail(user.email)) {
     return NextResponse.json({

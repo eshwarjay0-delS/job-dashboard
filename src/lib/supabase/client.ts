@@ -44,8 +44,10 @@ export function createClient(): BrowserClient {
     return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as BrowserClient;
   }
   const client = createBrowserClient(url, key);
-  // Browser storage may still hold a live session. Never skip the network
-  // here: attachDisabledAuthFallback keeps a valid one and only falls back
-  // to the owner when none exists.
-  return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never)) as BrowserClient;
+  // Skip-login never asks Supabase Auth. A live cookie session is kept only
+  // while login is on; attachDisabledAuthFallback then falls back to the owner
+  // when that session is missing.
+  return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
+    skipNetwork: isAuthDisabled(),
+  })) as BrowserClient;
 }

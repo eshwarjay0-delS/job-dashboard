@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
+import { LOGIN_OFF_OWNER_EMAIL, isAuthDisabled } from "@/lib/authDisabled"
 import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
@@ -165,6 +166,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
   const [signedIn, setSignedIn] = useState(false)
+  const [authOff, setAuthOff] = useState(false)
   const [admin, setAdmin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -202,7 +204,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     if (signingOut) return
     setSigningOut(true)
     try {
-      if (await serverReportsAuthDisabled()) { setAccountOpen(false); return }
+      if (authOff || isAuthDisabled() || await serverReportsAuthDisabled()) { setAccountOpen(false); return }
       const supabase = createClient()
       // The mail kept for instant pages, and that their setup is done, belong to this person: they go at sign-out.
       forgetGmailData()
@@ -247,9 +249,9 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   }, [menuOpen, closeMenu])
 
   useEffect(() => {
-    const supabase = createClient()
     let active = true
     let authRevision = 0
+    let unsubscribe = () => {}
     // Who is signed in, as last seen. Supabase also reports a refreshed session (on tab focus, on token refresh) for the
     // same person; that is not a change, so the Admin link is not hidden and re-asked for it (it was: five asks in nine
     // seconds on the owner's account, 14 Oct 2026, the link blinking each time).
@@ -265,6 +267,17 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       setInitials(name.split(/\s+/).filter(Boolean).map((part: string) => part[0]).join("").slice(0, 2).toUpperCase() || "MF")
     }
 
+    async function start() {
+      if (isAuthDisabled() || await serverReportsAuthDisabled()) {
+        if (!active) return
+        setAuthOff(true)
+        setSignedIn(true)
+        setEmail(LOGIN_OFF_OWNER_EMAIL)
+        setInitials("EJ")
+        return
+      }
+      if (!active) return
+      const supabase = createClient()
     const initialRevision = authRevision
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       // A later sign-out or account switch must win over this initial request.
@@ -309,9 +322,12 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       updateAccount(session?.user || null)
       if (active) window.postMessage({ source: "marketfit-web", type: "MF_AUTH", session: session?.user.is_anonymous ? null : session }, window.location.origin)
     })
+      unsubscribe = () => subscription.subscription.unsubscribe()
+    }
+    void start()
     return () => {
       active = false
-      subscription.subscription.unsubscribe()
+      unsubscribe()
     }
   }, [router])
 
@@ -341,7 +357,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
       </button>
       <Link
-        href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}
+        href={signedIn || authOff ? "/dashboard/connections" : "/login?next=/dashboard"}
         className="mf-mobile-account"
       >
         {signedIn ? initials : "Sign in"}
@@ -466,7 +482,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
             }}>{signingOut ? "Logging out…" : "Log out"}</button>
           </div>
         )}
-        <button type="button" onClick={() => signedIn ? setAccountOpen(open => !open) : router.push("/login?next=/dashboard")}
+        <button type="button" onClick={() => (signedIn || authOff) ? setAccountOpen(open => !open) : router.push("/login?next=/dashboard")}
           aria-expanded={signedIn ? accountOpen : undefined} aria-haspopup={signedIn ? "menu" : undefined}
           style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: 0, border: 0, background: "transparent", textAlign: "left", cursor: "pointer" }}>
           <div style={{

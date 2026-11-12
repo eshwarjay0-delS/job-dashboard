@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_EGRESS_BLOCKED, AUTH_SIGNED_OUT, AUTH_UNAVAILABLE, isAuthEgressBlocked, isAuthUnreachable, isTerminalSignOut, userFromAuthClient } from "@/lib/kompasAuthSession";
+import { disabledOwnerUser, isAuthDisabled } from "@/lib/authDisabled";
 import { createClientFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -20,6 +21,14 @@ export const runtime = "nodejs";
 // 200 = a live session exists after the attempt; 401 = truly signed out.
 export async function POST(request: NextRequest) {
   const noStore = { "Cache-Control": "no-store" };
+  if (isAuthDisabled()) {
+    // The owner is already the signed-in person. Do not call Supabase Auth,
+    // including when Auth is HTTP 402.
+    return NextResponse.json(
+      { ok: true, refreshed: false, authDisabled: true, userId: disabledOwnerUser().id },
+      { headers: noStore },
+    );
+  }
   try {
     const supabase = await createClientFromRequest(request);
     const first = await userFromAuthClient(supabase);
