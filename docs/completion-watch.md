@@ -957,3 +957,13 @@ The active MFit Safe Merge Gate last reviewed 39 open PRs and found no eligible 
 - No real email/WhatsApp send, live model call, DOCX write, R2 mutation, manual crawl, production database mutation, billing change, secret read or device acceptance occurred.
 
 **Continue:** finish full CI `43253868401` on exact PR #325 head. Keep #325 DRAFT until the legitimate protected preview passes with `KOMPAS_VERCEL_API_TOKEN` configured privately by an authorized administrator. Then inspect an owner-authorized exported DOCX and separately obtain real WhatsApp delivery evidence. Restore Supabase Auth only through the project owner/administrator. Keep contract crawling manual-only, preserve all other PRs and do not claim 98% live resume match or native Kompas acceptance from synthetic tests.
+
+
+## 12 November 2026 — 16:10 UTC — profile repair source gates passed; protected preview failed
+
+- PR #325 code head `77cd61d6471f1dad43307c96225638613494cee9` passed full CI `43253868401` (16:07:05 UTC), Kompas baseline `43253868346` (16:00:29 UTC), and WhatsApp recovery `43253868317` (16:01:54 UTC).
+- The protected `voice-preview-smoke` check `43253868304` FAILED at `Resolve READY exact-head preview from the pinned Vercel project`. The private `KOMPAS_VERCEL_API_TOKEN` is unavailable to this run. This is the exact release blocker; no preview bypass was attempted.
+- A documentation-only follow-up commit `49953dd9d5e6ccc247a338035255d42d7661c2f9` records the test results in the focused research note. PR #325 remains DRAFT. No new PR-triggered checks have been observed on the newer documentation-only head, so only source head `77cd61d` has the above test evidence. The source code is unchanged on the new head.
+- No merge, production deployment, actual DOCX review, live model call or WhatsApp send occurred. The production alias remains on current master `6c82abf4b240de7c768916188794b8beaaaf3b10`.
+
+**Continue:** keep PR #325 DRAFT. The owner/authorized repository administrator must configure `KOMPAS_VERCEL_API_TOKEN` privately, then the exact final PR head must pass the protected preview and all required checks. Actual exported-DOCX review and real WhatsApp delivery remain separate acceptance gates.
