@@ -123,3 +123,15 @@ Read-only `mfit_crawl_jobs` grouping shows 76 active `Right To Hire` and 55 acti
 Current-master PR #315 head `bd62bcd17b2b2be79c6ee23db19b8582a5225015` maps explicit Right To Hire / Contract To Perm / Contract To Permanent to C2H, preserves negation, and requires employment context for free-text Contract. Exact-head full CI `43157849751` (47 workflow steps), crawler regression `43157849909` (8/8) and Kompas baseline `43157849768` (92/92) all SUCCESS. Protected preview `43157849584` failed at exact-head resolution; its job-log read returned 404, so the narrower cause is not asserted. The Vercel project reports `live=false`; no production deployment or post-classifier crawl is claimed.
 
 **Continue:** keep PR #315 DRAFT until its legitimate protected preview and required checks pass. After an authorized release, request a separate owner-approved manual crawl and verify the new classifications; do not restore the daily schedule, rewrite stored rows, add unauthorized adapters or treat the 10 Nov run as post-release evidence.
+
+## 12 November 2026 — read-only production classification snapshot
+
+A fresh read-only query of `public.mfit_crawl_jobs` confirms the classification gap remains unchanged since the 10 November crawl:
+- `Right to Hire`: 55 active rows with `work_type=unknown` (49 seen in 14 days).
+- `Right To Hire`: 76 active rows with `work_type=unknown` (71 seen in 14 days).
+- Combined Right To Hire: 131 active, 120 seen in 14 days, still `unknown`.
+- `Contract To Perm`: 589 active rows already classified `work_type=contract`, 546 seen in 14 days.
+
+The classifier restack PR #315 maps Right To Hire and Contract To Perm/Contract To Permanent aliases to C2H, preserves negation handling, and distinguishes employment context from generic contract administration. Exact-head full CI `43157849751` (47 steps), crawler regression `43157849909` (8/8) and Kompas baseline `43157849768` (92/92) passed on `bd62bcd17b2b2be79c6ee23db19b8582a5225015`; protected preview `43157849584` failed. PR #315 remains DRAFT, unmerged and undeployed, so production counts are expected to remain unchanged until a legitimate preview and release.
+
+The latest crawl remains 10 Nov 2026 11:00:24–11:01:11 UTC (6,818 found/upserted across 20 portals, one Inspyr abort). The daily cron was deliberately removed under the approved Hobby usage reduction. This check did not run a manual crawl, alter rows or reclassify production data.
