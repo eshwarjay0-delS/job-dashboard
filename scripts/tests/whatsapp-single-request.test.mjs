@@ -226,6 +226,44 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(preservedNewer.jd, 'A newer job description')
   assert.equal(preservedNewer.resumePath, '/data/whatsapp/inbox/123/newer.docx')
 
+  // A newer JD may reuse the same resume path. Preserve both fields as one pair.
+  const sameResumeRun = { ...offlineSession, jdId: 'offline-same-resume-race' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: sameResumeRun.jdId, jd: sameResumeRun.jd,
+    resumePath: sameResumeRun.resumePath, resumeName: sameResumeRun.resumeName,
+    seen: ['same-resume-old'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  sessionMutationDuringSend = {
+    version: 3, jdId: 'newer-jd-same-resume', jd: 'A newer JD using the same resume',
+    resumePath: sameResumeRun.resumePath, resumeName: sameResumeRun.resumeName,
+    seen: ['same-resume-new'], updatedAt: Date.now(),
+  }
+  await generate('123', sameResumeRun, offlineUser, undefined, offlineFiles)
+  const preservedSameResume = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(preservedSameResume.jdId, 'newer-jd-same-resume')
+  assert.equal(preservedSameResume.jd, 'A newer JD using the same resume')
+  assert.equal(preservedSameResume.resumePath, sameResumeRun.resumePath)
+
+  // A newer resume may arrive for the same JD. Do not clear the JD independently.
+  const sameJdRun = { ...offlineSession, jdId: 'offline-same-jd-race' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: sameJdRun.jdId, jd: sameJdRun.jd,
+    resumePath: sameJdRun.resumePath, resumeName: sameJdRun.resumeName,
+    seen: ['same-jd-old'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  sessionMutationDuringSend = {
+    version: 3, jdId: sameJdRun.jdId, jd: sameJdRun.jd,
+    resumePath: '/data/whatsapp/inbox/123/newer-resume.docx', resumeName: 'Newer Resume',
+    seen: ['same-jd-new'], updatedAt: Date.now(),
+  }
+  await generate('123', sameJdRun, offlineUser, undefined, offlineFiles)
+  const preservedSameJd = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(preservedSameJd.jdId, sameJdRun.jdId)
+  assert.equal(preservedSameJd.jd, sameJdRun.jd)
+  assert.equal(preservedSameJd.resumePath, '/data/whatsapp/inbox/123/newer-resume.docx')
+
   // A refused document send leaves the matching pair intact for retry.
   const failedSendSession = { ...offlineSession, jdId: 'offline-send-failure' }
   entries.set('whatsapp/session-123.json', JSON.stringify({
