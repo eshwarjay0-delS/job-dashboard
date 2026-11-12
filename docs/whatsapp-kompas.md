@@ -167,3 +167,10 @@ The 11 November focused source change is on `fix/whatsapp-offline-fallback-refin
 
 No voice/audio code was changed in this slice. The separately named Kompas Continuous Voice Delivery automation was disabled in the accessible task list at the time of this check; that is not evidence that native voice acceptance is complete.
 
+
+
+## Offline fallback session lifecycle — 12 November 2026
+
+The no-provider initial-JD fallback remains restricted to the exact selected same-account library original, matching session bytes, selected profile email and authenticated user's library root. Its caption must say **NOT TAILORED**. The 12 Nov stacked follow-up centralizes pair consumption: after Meta returns a document message ID, clear only the JD/resume fields whose IDs and paths still match this run, preserve a newer request that arrived during the send, and retain the old pair when Meta rejects the document. The same helper is used by the normal paid-rewrite path so the two paths share the same race-safe clearing rule.
+
+Source and test review only. The exact PR #303 parent remains DRAFT with its exact-head full CI, WhatsApp recovery and Kompas baseline checks queued; the protected preview is not available while Vercel reports the project as not live. The follow-up is stacked on that branch and must not merge independently of its parent. No model call, R2 mutation, Meta send, real email, production deployment or handset acceptance was performed. The Plan/REA reconciliation remains with the active restack in PR #306; add this follow-up to that register before the stack is released.
