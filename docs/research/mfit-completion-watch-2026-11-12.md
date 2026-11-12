@@ -99,3 +99,7 @@ The container could not resolve GitHub DNS for a local clone, so this run made n
 ### AGENTS.md test-note correction — 12 November 2026
 
 The old note claiming `mail-overview.test.mjs` expected StandingSection before the filter was inconsistent with current source: line 180 asserts the section is after `Filter inbox`; the overview page has the filter at line 593 and the section at line 667. AGENTS.md was corrected to mark the old failure note stale and require a fresh full hardening run before any pass claim. No local test execution is claimed because the container could not resolve GitHub DNS.
+
+### Production synthetic-auth flag verification — 12 November 2026
+
+Vercel environment metadata requested with `decrypt=false` confirms both `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` are false for production. Neither flag was changed. Keep normal verified sign-in and account isolation fail-closed; issue #308 remains open for the explicit owner scope decision and regression tests. No decrypted secret was requested or repeated.
