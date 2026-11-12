@@ -232,3 +232,10 @@ This confirms persisted per-account separation only. It does not demonstrate a h
 A production `/api/gmail/notify-rules/export` request at 20:07 UTC failed with `AuthApiError` status 402 and `exceed_egress_quota`. Supabase project metadata reports `ACTIVE_HEALTHY`; the runtime error specifically identifies a restriction on the Auth service, so this is not evidence that the entire database is down. Gmail aggregates remain three account IDs, three sync rows and 2,002 cached threads, with latest sync 10 November 14:44:44 UTC and no sync in the last hour.
 
 The exact unblock requirement is an owner billing decision: upgrade the Supabase plan or remove spend caps to restore the restricted service. No billing change, credential swap, alternate-auth workaround, manual sync or email send was attempted. Keep the unattended worker disabled until the external scheduler, `CRON_SECRET`, approved Meta template and explicit owner enablement are all present.
+
+
+### Mobile navigation non-obstruction — 12 November 2026
+
+Owner requirement retrieved from 4 October 2026: “Navigation must not block/cover the view; even if opened, it should not obstruct the page.” The selected implementation expands the hamburger panel below the sticky top bar in normal document flow and pushes content down; it does not float over, dim or make the page inert. Outside-pointer, Escape, route-close and focus-return behavior are implementation/accessibility details rather than separate owner-authored requirements.
+
+PR #309 restacks the behavior onto current master and preserves the later `serverReportsAuthDisabled` sign-out guard. Exact-head full CI is pending, the Kompas baseline passes, and the protected preview gate is blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`. No production deployment or real phone/mobile viewport acceptance is claimed.
