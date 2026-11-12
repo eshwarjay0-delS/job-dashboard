@@ -179,3 +179,9 @@ This recheck corrects earlier handoff wording that treated the original source D
 - No generated output DOCX, per-run R2 key/version, webhook/request correlation, Meta message ID, or signed delivered/read receipt is available. No historical replay or resend is authorized.
 
 Accordingly, the full JD is recovered, but the exact source DOCX is only identified by an inventory path/hash and is not presently accessible. The historical delivery remains unverified, not proven delivered or undelivered. The original 27,724-byte recovery claim in earlier notes is not independently reproducible from the current Library access and must not be treated as current artifact evidence.
+
+## Conditional pair consumption — 12 November 2026
+
+After Meta returns a document message ID, the webhook now consumes the matching JD/resume pair with a storage-level compare-and-swap rather than an unconditional read-modify-write. The R2 adapter reads the object's ETag and writes with the S3-compatible If-Match condition; a conflict retries from the latest session, and a missing session is created only with If-None-Match semantics. The local filesystem adapter serializes per-key reads and writes and uses a SHA-256 version token. The retry is bounded and fails closed: if the session keeps changing, the old pair remains available for recovery rather than overwriting a newer request.
+
+The regression suite pauses the conditional write after its read, commits a newer JD/resume pair in that exact window, then verifies the stale consumer retries and preserves the newer pair. Separate storage tests cover stale ETags, concurrent writers and the R2 If-Match request contract. These are mocked/local regression tests only; they do not send WhatsApp messages or prove a real handset delivery. PR #321 remains DRAFT until the protected exact-head Vercel preview gate is available and all release gates are rerun on the final head.
