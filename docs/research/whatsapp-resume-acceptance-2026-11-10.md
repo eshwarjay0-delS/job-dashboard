@@ -203,3 +203,8 @@ The 6 November owner-approved distinction is now isolated in current-master PR #
 ### 12 November 2026 — accessible iZap recheck
 
 The connected iZap account returned one business and zero linked WhatsApp numbers. A read-only `search_messages` for `resume` on `2026-10-17` in `America/Chicago` returned zero messages. This is evidence only about the accessible iZap business; it does not establish that no message exists in another WhatsApp account, another chat, Meta's message records or R2. No chat was changed and no outbound message was sent.
+
+
+### 12 November 2026 09:26 UTC — exact-head WhatsApp regression result
+
+On current-master PR #321 head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`, WhatsApp resume recovery run `43191231421` and Kompas baseline `43191231296` completed SUCCESS. The recovery job ran npm ci, TypeScript and `whatsapp-resume-recovery` plus `whatsapp-resume-contract` tests. Full CI `43191231356` remains in progress at migration asset closure after the first 15 checks passed. Protected preview `43191231435` failed; the job log shows `KOMPAS_VERCEL_API_TOKEN` empty and requires it to be configured privately. No merge, deployment, model call, R2 write, real send or Meta callback occurred.
