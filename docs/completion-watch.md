@@ -1065,3 +1065,8 @@ Kompas narration PR #334 head `1c8cc42b376bedd9cb4b2fb023cde5baa9ef0ca1` passes 
 Historical 17 Oct 17:28 WhatsApp delivery remains unverified: generated output DOCX, correlated R2/webhook/Meta IDs and signed delivery/read receipt are missing; source fact conflicts remain quarantined. The owner-approved skip-login request is separate; this ship did not set auth-disabled environment variables, and no login-off behavior is claimed. Supabase Auth 402 events in prior logs were on older deployments; the new release has no request evidence to prove either recovery or continued failure. Vercel `live:false` and missing private preview token are distinct blockers.
 
 Continue: obtain the protected-preview token privately through the owner/authorized admin; validate and merge isolated PR #333 first, then rerun #330/#323/#331 exact-head CI and #335 combined tests. Restack #317/#315 on current master after coordination. Do not merge or deploy blocked PRs, send email/WhatsApp tests, change billing, or claim real UX acceptance without device evidence.
+
+
+## 12 November 2026 23:24 UTC — WhatsApp evidence-source blocker
+
+Fresh read-only iZap status for its only business `eshwarjay0`: no WhatsApp number is linked; registration is disconnected; no inbound webhook, history backfill or outbound delivery has ever been recorded. iZap therefore cannot retrieve the 17 Oct incident evidence now. This does not establish the status of MarketFit's separate Meta integration. A 59-result Library search did not surface the generated DOCX or correlated receipt, but is not proof no copy exists elsewhere. No connect link, message, replay or resend was initiated.
