@@ -270,3 +270,38 @@ No billing change, credential workaround, email/WhatsApp send, session read, dat
 MFit Safe Merge Gate remains enabled and its 11:18Z run found no eligible merge. Kompas Continuous Voice Delivery is disabled; no active Bible-Keeper task was present in the accessible automation list. No voice work was duplicated. The container could not resolve GitHub DNS for a local clone, so no local code/test execution is claimed. No email/WhatsApp send, model call, R2 write, manual crawl, database mutation, billing change, secret exposure or device acceptance occurred.
 
 **Continue:** keep the above PRs DRAFT until their exact protected-preview and task-specific approval gates are satisfied; restore Supabase Auth only through the project owner/administrator; obtain the missing historical DOCX/R2/Meta evidence and reconcile conflicting facts before any replay. Do not restore the daily crawler cron or claim real-device acceptance.
+
+
+## 12 November 2026 — 14:57 UTC — fresh completion-watch recheck
+
+### Production and runtime
+- Canonical master: `6c82abf4b240de7c768916188794b8beaaaf3b10`.
+- Production deployment: `dpl_8Eb9A1Wp81WFrtF43NjCRuyHSnMw`, READY, target production.
+- Independent canonical alias: `job-dashboard-fawn.vercel.app` maps to the same deployment.
+- Vercel 24-hour runtime aggregation: 49 Supabase Auth 402 `exceed_egress_quota` errors on `/api/gmail/notify-rules/export`, 38 users, latest 14:37:02Z. The owner/project administrator must upgrade the Supabase plan or remove spend caps to restore Auth.
+- WhatsApp webhook aggregation: 11 tailoring quality-gate rejections across 10 users, latest 11 Nov 22:16:15Z on older deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`. Samples report partial/incomplete non-deliverable drafts and role-evidence/draft-part blockers. Do not infer current-deployment failure or successful document delivery from these samples.
+- Kompas account-session aggregation: two Supabase Auth 402 events at 11 Nov 16:55Z on older deployment `dpl_Hca18aPST4C7fmaTH3V1V3yWzWu1`.
+
+### Approved source slices and exact-head checks
+| Slice | Exact head | Checks | Remaining gate |
+|---|---|---|---|
+| WhatsApp selected-library fallback, no-baseline refinement and pair consumption (#321) | `b5b418905906e925cacba1772a011457d9a5db03` | Full CI 43196332095, WhatsApp recovery 43196332031, baseline 43196332103 SUCCESS | Protected preview blocked by missing private `KOMPAS_VERCEL_API_TOKEN`; no Meta/R2/device acceptance |
+| Resume confirmed-skill mapping across relevant roles (#317) | `4ef3cba838ef00dd3702fb6e955628d20ab77664` | Full CI 43180792088, WhatsApp recovery 43180792058, baseline 43180791965 SUCCESS | Protected preview and actual exported-DOCX review |
+| Right To Hire / Contract To Perm → C2H classifier (#315) | `bd62bcd17b2b2be79c6ee23db19b8582a5225015` | Full CI 43157849751, crawler regression 43157849909, baseline 43157849768 SUCCESS | Protected preview; no manual crawl authorized |
+| Gmail mobile normal-flow navigation (#320) | `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` | Full CI 43190228931, baseline 43190229393 SUCCESS | Protected preview and narrow-phone acceptance |
+| Gmail digest/thread and sender-mute account isolation (#323) | `66f6e04c20c3d88945e34eb6ab446d6e5ee590af` | Full CI 43206768698, baseline 43206768299 SUCCESS | Protected preview, Supabase Auth restoration and two-inbox acceptance |
+| Production synthetic-owner fail-closed hardening (#324) | `7272329916c9de573f1afedc9d23421735139fc4` | Full CI 43230051370, baseline 43230051427, Plan/REA schema 43230051744 SUCCESS | Protected preview and security review |
+| Kompas question/voice regression CI wiring only (#314) | `3cc8ca2b495339035d2b1cb3f511682d614f656a` | Full CI 43157259968, baseline 43157260433 SUCCESS | Protected preview; no runtime changes or native voice acceptance |
+
+All listed pull requests remain DRAFT. The exact protected preview resolver requires the private GitHub Actions secret `KOMPAS_VERCEL_API_TOKEN`; this run cannot configure or expose it and will not bypass the gate. Safe Merge Gate's 14:15Z report found the default branch unprotected, required-check enforcement disabled and no requested reviewers; no merge was performed.
+
+### Backlog and acceptance
+- The 17 Oct 17:28 Chicago WhatsApp incident still lacks the generated output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt. Original source DOCX/JD recovery does not establish that the bot sent or delivered an output. Conflicting source facts remain quarantined; no replay.
+- The 6 Nov resume rule remains: only explicit first-person confirmation authorizes cross-role placement of a JD skill into relevant existing project bullets; JD text and target score are not confirmation. Do not invent a project, employer, outcome, date, metric or credential.
+- The contract crawler remains manual/on-demand only after the approved removal of the daily cron. No manual crawl or row mutation was performed. Robert Half remains manual-only without documented authorization.
+- Poke-inspired Gmail scope remains up to four separate accounts, per-account Gmail/Calendar, account+thread identity, selected From preservation, per-account reconnect, and mobile navigation below the sticky header in normal flow. No real email or phone acceptance.
+- Kompas Continuous Voice Delivery is disabled; this run made no duplicate voice/capture changes. No active Bible-Keeper task appeared in the accessible automation list. The authenticated 50-pair Kompas/ChatGPT review and independent human scorecards remain open.
+
+No local clone or test execution was possible because the container could not resolve github.com. No model call, email/WhatsApp send, R2 write, manual crawl, database mutation, billing change, secret read or device acceptance occurred.
+
+**Continue:** keep PR #321 DRAFT until the private protected-preview token is configured by an authorized administrator and exact-head preview passes; then continue PR #317 and actual DOCX review. Restore Supabase Auth through the project owner/administrator only. Preserve the manual-only crawler decision, Gmail/mobile account boundaries and Kompas real-model/native acceptance gaps.
