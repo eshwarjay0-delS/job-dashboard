@@ -270,3 +270,12 @@ The generated output DOCX, per-run R2 key/version, webhook/request correlation, 
 PR #321 head `2d642ffb5acc37c1066a070ab182bd461112d3b3` now has all three source gates SUCCESS: full CI `43292088241`, Kompas baseline `43292088358`, WhatsApp recovery `43292088573`. It remains DRAFT because the protected preview token is unavailable; no production deployment or real WhatsApp send is claimed.
 
 The separate PR #325 profile-gap repair is restacked at `513be21`; baseline `43292578119` and WhatsApp recovery `43292578125` pass, full CI `43292578201` is in progress. The source DOCX remains inaccessible; the matching JD is recovered but not enough to claim factual resume match or output quality.
+
+
+## 12 November 2026 23:24 UTC — fresh WhatsApp evidence-source check
+
+A read-only iZap check on the only business, `eshwarjay0` (business ID `1e8ba087-e379-46ac-91e1-ee71abfcff94`), returned no linked WhatsApp number. `get_whatsapp_connection_status` at `2026-11-12T23:24:07Z` reports `connected:false`, registration `disconnected` / `status_none`, webhooks `never` with no live inbound, history sync `never`, and sending `never` with no proven outbound reaching Meta. This means iZap cannot supply the missing 17 Oct thread or delivery receipt in its current state. It does **not** prove the separate MarketFit Meta integration is disconnected; these are distinct systems. No connection link was generated and no message was sent.
+
+A fresh two-page semantic Library search returned 59 results and did not surface the generated 17 Oct output DOCX or a correlated R2/Meta receipt. This is not proof that no copy exists under another filename, archive, or provider account. The source DOCX/JD recovery and conflicting-fact quarantine remain as previously recorded; no historical replay or resend is authorized.
+
+To make iZap a future evidence source, the owner would need to complete Meta Embedded Signup for the intended business/number. That cannot retroactively recreate the missing MarketFit R2 object, webhook correlation, Meta message ID, or signed delivery/read callback; those still need to be recovered from the original MarketFit provider/account or device archive.
