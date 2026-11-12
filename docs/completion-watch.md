@@ -912,3 +912,12 @@ The active MFit Safe Merge Gate last reviewed 39 open PRs and found no eligible 
 - Contract crawler remains manual/on-demand only. No crawl, row mutation, email/WhatsApp send, model call, R2 write, native-device test or local test execution occurred. Kompas Continuous Voice Delivery is disabled; no active Bible-Keeper task was visible in the accessible automation list.
 
 **Continue:** preserve all pending PRs and their exact gates; restore Supabase Auth only through the project owner/admin; obtain the historical artifact and provider trace plus owner fact reconciliation before any replay; do not restore the daily crawler schedule or declare live acceptance from unit tests.
+
+
+## 12 November 2026 — 12:38 UTC — Plan/REA exact-head CI repair
+
+- Continue: repair the current-master Plan & Vision / REA documentation restack's TypeScript failure without changing product runtime.
+- Full CI run `43214429248` failed in job `131169931111` at `src/lib/rea-register.ts(367,22)`: a spread array of appended REA records widened `area` from the literal union to `string`. The appended batch now has an explicit `ReaSession[]` assertion, preserving the existing schema. Fix commit: `a898fece60b64b64d499b6facf4823964909d197`.
+- The previous head `4179ed01707db600a13300aa4d92d94f715443c5` had Plan/REA schema `43214429126`, crawler regression `43214429133` and Kompas baseline `43214429025` SUCCESS, but its full CI failed; none of those results validates the fix commit. Plan Journal now records this correction in commit `efc262c6ddbfc7f84c6a016e7943099e9074f7dd`.
+- Canonical production remains READY at `dpl_8Eb9A1Wp81WFrtF43NjCRuyHSnMw`, exact master `6c82abf4b240de7c768916188794b8beaaaf3b10`; this documentation branch is not a production release. The protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`, which is not available to this run.
+- Next: run full CI, Plan/REA schema, crawler regression and Kompas baseline on the final exact PR #319 head. Keep it DRAFT until the protected preview gate passes legitimately. Do not merge, deploy, bypass protection, or infer runtime acceptance from this documentation repair.
