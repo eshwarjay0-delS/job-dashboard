@@ -1745,7 +1745,7 @@ function closestResumeCaption(name: string, label: string, why: string): string 
   return [
     `*${name}*`,
     notTailored
-      ? `${why} This is the original resume you selected (${label}); no edits were applied.`
+      ? `Original resume — NOT TAILORED. ${why.replace(/^NOT TAILORED\\s*[—-]\\s*/i, "")} This is the original resume you selected (${label}); no edits were applied.`
       : `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
     "Reply to this file to request changes.",
   ].join("\n")
