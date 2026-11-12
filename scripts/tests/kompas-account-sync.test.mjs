@@ -264,3 +264,53 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
   assert.match(source, /if \(!bearer\)/);
   assert.match(source, /stubClient\(\)/);
 });
+
+test("login-off auto-uploads unscoped local sessions on the first successful read, then a second device sees them",async()=>{
+  const db=new Map([["perfact.sessions",JSON.stringify([
+    {id:"local-old",role:"Security Engineer",company:"LPL Financial",resume:"Kept locally",createdAt:2}
+  ])]]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=JSON.parse(db.get("perfact.sessions")),posts=[],remote=[];
+  const fetcher=async(_url,opts)=>{
+    if(opts.method==="GET")return {ok:true,json:async()=>({ok:true,userId:"67f02d95-f7fe-4058-9b0d-9363221e7c61",authDisabled:true,records:remote})};
+    const body=JSON.parse(opts.body);posts.push(body);
+    for(const op of body.operations)remote=[
+      ...remote.filter(r=>r.id!==op.id),{id:op.id,session:op.deleted?null:{...op.patch,id:op.id},deleted:op.deleted,updatedAt:"2026-11-12T00:00:00.000Z"}
+    ];
+    return {ok:true,json:async()=>({ok:true,userId:"67f02d95-f7fe-4058-9b0d-9363221e7c61",authDisabled:true,records:remote})};
+  };
+  const sync=create({storage,read:()=>current,
+    write:rows=>{current=rows;storage.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher});
+  assert.equal(await sync.refresh(),true);
+  assert.equal(posts.length,1,"the first page load uploads local sessions without Import");
+  assert.equal(posts[0].operations[0].id,"local-old");
+  assert.equal(current[0].resume,"Kept locally");
+  assert.equal(storage.getItem("perfact.cloud.legacy"),null,"legacy backup clears once the free store has the rows");
+  assert.equal(sync.owner,"67f02d95-f7fe-4058-9b0d-9363221e7c61");
+
+  const other=new Map(),store2={getItem:k=>other.get(k)||null,setItem:(k,v)=>other.set(k,String(v)),removeItem:k=>other.delete(k)};
+  let second=[];
+  const device2=create({storage:store2,read:()=>second,write:rows=>{second=rows;store2.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher});
+  await device2.refresh();
+  assert.deepEqual(second.map(row=>row.id),["local-old"]);
+  assert.equal(second[0].resume,"Kept locally");
+  assert.equal(second[0].company,"LPL Financial");
+});
+
+test("signed-in accounts still require Import; authDisabled is what opts into auto-upload",async()=>{
+  const db=new Map([["perfact.sessions",JSON.stringify([{id:"stay-local",role:"Analyst"}])]]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=JSON.parse(db.get("perfact.sessions")),posts=[];
+  const fetcher=async(_url,opts)=>{
+    if(opts.method==="POST"){posts.push(1);return {ok:true,json:async()=>({ok:true,userId:"someone-else",records:[]})};}
+    return {ok:true,json:async()=>({ok:true,userId:"someone-else",records:[]})};
+  };
+  const sync=create({storage,read:()=>current,write:rows=>{current=rows;storage.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher});
+  await sync.refresh();
+  assert.equal(posts.length,0);
+  assert.equal(current.length,0);
+  assert.equal(JSON.parse(storage.getItem("perfact.cloud.legacy"))[0].id,"stay-local");
+});

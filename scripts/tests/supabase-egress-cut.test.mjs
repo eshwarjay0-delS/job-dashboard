@@ -74,7 +74,7 @@ test("focus, visibility, online, sibling-tab and post-save refreshes are conditi
   assert.match(lib, /addEventListener\("focus",\(\)=>\{noteActivity\(\);void refresh\(true\);\}\)/)
   assert.match(lib, /visibilitychange",\(\)=>\{if\(!document\.hidden\)\{noteActivity\(\);void refresh\(true\);\}\}/)
   assert.match(lib, /flush\(\)\.then\(\(\)=>refresh\(true\)\)/)
-  assert.match(lib, /if\(!Object\.keys\(pending\)\.length\) void refresh\(true\);/)
+  assert.match(lib, /if\(!Object\.keys\(pending\)\.length\)\{[\s\S]*?void refresh\(true\);\s*\}/)
   assert.match(lib, /now-lastStorageRefresh<STORAGE_REFRESH_MS/)
   assert.doesNotMatch(lib, /void refresh\(\);\s*\}\);\s*document/, "no unconditional sibling-tab refresh")
 })
