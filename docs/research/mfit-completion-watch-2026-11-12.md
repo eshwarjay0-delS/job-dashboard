@@ -239,3 +239,34 @@ A read-only Vercel runtime-error query was retried with the verified project tea
 - **Kompas:** two account-session Auth 402 errors at 11 Nov 16:55:02Z on older deployment `dpl_Hca18aPST4C7fmaTH3V1V3yWzWu1`; none in the last 30 minutes.
 
 No billing change, credential workaround, email/WhatsApp send, session read, database mutation or model call occurred. Runtime error aggregation succeeded using the correct team ID. The separate Vercel sandbox-session list remains optional and consent-gated; a one-time link was issued but is not required for the error findings above.
+
+
+## 12 November 2026 — 11:50 UTC continuation and release-gate refresh
+
+### Canonical release
+
+- Master and production alias: `6c82abf4b240de7c768916188794b8beaaaf3b10`.
+- READY production deployment: `dpl_8Eb9A1Wp81WFrtF43NjCRuyHSnMw`; independent alias lookup maps `job-dashboard-fawn.vercel.app` to this deployment.
+- PR #322 was test-only Calendar token-isolation coverage; it changed no runtime behavior, so no new deployment was required.
+- Plan Journal continuation entry was committed on this documentation branch as `055698724d2ae0c8fa95f7c467f6548228f0e261`.
+
+### Open approved slices
+
+- **WhatsApp #321:** exact head `b5b418905906e925cacba1772a011457d9a5db03`; full CI `43196332095`, WhatsApp recovery `43196332031`, baseline `43196332103` all SUCCESS. It implements the approved initial-JD no-provider path using only the exact selected same-account original with a NOT TAILORED caption and root/path/byte/profile checks; swipe-refinement failures are text-only; pair consumption occurs only after Meta acceptance and preserves newer pairs. Protected preview `43196328253` failed closed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. The Safe Merge Gate also keeps the external-send release decision open. No merge, deploy, live send or historical replay.
+- **Resume/JD #317:** exact head `4ef3cba838ef00dd3702fb6e955628d20ab77664`; full CI `43180792088`, recovery `43180792058`, baseline `43180791965` SUCCESS; protected preview `43180787874` failed closed. The 6 Nov 09:55 CT confirmed-skill-across-relevant-existing-project-bullets rule is preserved. No authenticated model run, exported-DOCX acceptance or 98% live-match evidence.
+- **Gmail #323:** exact head `66f6e04c20c3d88945e34eb6ab446d6e5ee590af`; full CI `43206768698`, baseline `43206768299` SUCCESS. Protected preview failed; Safe Merge Gate requires explicit acceptance of the account/privacy behavior. No real Gmail calls or sends.
+- **Mobile #320:** exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf`; full CI `43190228931`, baseline `43190229393` SUCCESS; preview `43190224739` failed; no phone acceptance.
+- **Contract classifier #315:** exact head `bd62bcd17b2b2be79c6ee23db19b8582a5225015`; full CI `43157849751`, crawler regression `43157849909` (8/8), baseline `43157849768` SUCCESS; preview `43157849584` failed. Right To Hire / Contract To Perm map to C2H, negations stay unknown, and generic contract administration is not employment evidence. Crawler remains manual/on-demand only; no crawl or row mutation.
+- Documentation PR #319 exact head `34ebbce743973a37f35e1810ec481310400a54e4`: full CI `43207261713`, Plan/REA schema `43207261576`, crawler freshness `43207261838`, baseline `43207261855` SUCCESS. Protected preview remains unavailable; keep DRAFT.
+
+### Production errors and hard blockers
+
+- Last 24 hours: 47 Supabase Auth HTTP 402 `exceed_egress_quota` errors on `/api/gmail/notify-rules/export` across 37 users; 7 Gmail alert errors across 3 users; 2 older Kompas account-session errors at 11 Nov 16:55Z; 11 WhatsApp incomplete-draft quality rejections across 10 users, latest 11 Nov 22:16:15Z on older deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`.
+- Last 30 minutes: one Gmail 402 at 11:36:59Z; no grouped WhatsApp or Kompas session errors.
+- Supabase project metadata is `ACTIVE_HEALTHY`, but Auth API reports the egress restriction. Exact unblock: project owner/administrator must restore Auth by upgrading the plan or removing the spend cap. No billing or credential workaround was attempted.
+- Read-only iZap check: its only business has no connected WhatsApp number; connection is disconnected, and 17 Oct searches for `Eshwar_Resume` and `governance` returned zero. This is iZap-only evidence, not proof about MFit's separate Meta account.
+- Historical 17 Oct 17:28 Chicago output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt remain missing. Original source DOCX and JD are recovered, but conflicting education/employment/credential facts remain quarantined pending owner reconciliation.
+
+MFit Safe Merge Gate remains enabled and its 11:18Z run found no eligible merge. Kompas Continuous Voice Delivery is disabled; no active Bible-Keeper task was present in the accessible automation list. No voice work was duplicated. The container could not resolve GitHub DNS for a local clone, so no local code/test execution is claimed. No email/WhatsApp send, model call, R2 write, manual crawl, database mutation, billing change, secret exposure or device acceptance occurred.
+
+**Continue:** keep the above PRs DRAFT until their exact protected-preview and task-specific approval gates are satisfied; restore Supabase Auth only through the project owner/administrator; obtain the missing historical DOCX/R2/Meta evidence and reconcile conflicting facts before any replay. Do not restore the daily crawler cron or claim real-device acceptance.
