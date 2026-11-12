@@ -829,3 +829,8 @@ PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` passed full CI 431
 ## 12 November 2026 09:28 UTC — accessible iZap evidence recheck
 
 The connected iZap account reports one business and zero linked WhatsApp numbers. A read-only search for `resume` on 17 Oct 2026 in `America/Chicago` returned zero messages. This narrows only the connected iZap business; it does not rule out other WhatsApp accounts, other chats, Meta-side records or R2-only artifacts. Combined with the exact-window Library DOCX search returning zero files, the historical output remains unavailable. No chat mutation, outbound send, R2 write or model call occurred.
+
+
+## 12 November 2026 09:30 UTC — Kompas handoff reconciliation
+
+The Chief Relevance handoff has been updated to canonical master `da1db145` and current release metadata: deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj` READY production, independent alias assignment verified; Vercel project metadata `live=false`, public HTTP not checked. Test-only PR #314 full CI 43157259968 and baseline 43157260433 pass; protected preview 43157259910 fails because the private `KOMPAS_VERCEL_API_TOKEN` is unavailable. Voice Delivery remains separate and disabled; PR #283 remains unapproved and untouched. The authenticated 50-pair model comparison, human scorecards and native Windows/phone/WhatsApp acceptance remain open. No Kompas runtime behavior was changed by this documentation update.
