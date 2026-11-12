@@ -229,3 +229,12 @@ The owner-approved 6 Nov fallback/no-baseline policy is restacked in current-mas
 The canonical production alias remains READY at master `da1db145c5981254f95620ff6bb0222ab4228125`, not this PR. Vercel project metadata reports `live=false`. The historical 17 Oct 17:28 Chicago output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain unavailable. No replay or resend is authorized.
 
 **Continue:** finish exact-head full CI 43193485035; then keep PR #321 DRAFT until an authorized repository administrator privately configures the preview token and the protected preview passes. Only then review/merge, deploy the exact merged SHA, verify the active production alias and perform a consented real WhatsApp acceptance. PR #316 is now a source/history dependency and must not be merged independently; close it as superseded only after PR #321 is accepted.
+
+
+## 12 November 2026 11:50 UTC — read-only connector recheck
+
+The iZap connector currently lists one business but no linked WhatsApp number. Its connection status is disconnected, with no live inbound, history backfill or outbound send evidence. Read-only searches for `Eshwar_Resume` and `governance` on 17 October 2026 in America/Chicago returned zero messages. This confirms only that iZap cannot supply the missing incident trace; it does not establish whether the separate MFit Meta Cloud API account retained data.
+
+Current source-release status: PR #321 exact head `b5b418905906e925cacba1772a011457d9a5db03` passes full CI `43196332095`, WhatsApp recovery `43196332031` and baseline `43196332103`. Its protected preview `43196328253` is failed closed because private `KOMPAS_VERCEL_API_TOKEN` is not configured, and the Safe Merge Gate still requires the external-send release decision to be cleared. The current production master/alias remains `6c82abf4b240de7c768916188794b8beaaaf3b10`, so #321 is not live.
+
+The historical 17 Oct 17:28 Chicago generated DOCX, per-run R2 object key, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. The recovered source DOCX and JD do not prove the bytes sent or handset delivery. Conflicting education, employment chronology and credential claims remain quarantined until owner reconciliation. No replay or resend was performed or authorized.
