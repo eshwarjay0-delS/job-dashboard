@@ -188,3 +188,8 @@ The owner’s 6 Nov 2026 9:55 AM CT correction is authoritative and supersedes t
 PR #317 branch `fix/resume-role-evidence-restack-da1db145-20261112` now reflects that decision in the writer prompt, candidate-evidence context, role-alignment measurement and final deterministic guard (commits `dfcd2b4`, `14ac764`, `216581d`, `2214469`). Explicitly confirmed skills may survive cross-role placement; unconfirmed terms borrowed from another employer remain blocked. Exact-head full CI, WhatsApp recovery and Kompas baseline must pass on the updated head, and the protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. The PR remains DRAFT, unmerged and undeployed.
 
 The historical generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt remain unavailable. The bounded search is not proof that no copy exists in every Library folder, chat, R2 bucket or Meta export. No replay, live model call, DOCX generation, R2 write, WhatsApp send, email send or handset test occurred.
+
+
+### 12 November 2026 — targeted Library output recheck
+
+A recursive, metadata-only Library listing filtered to DOCX files created from `2026-10-17T22:20:00Z` through `2026-10-17T23:00:00Z` returned zero items. A targeted semantic Library search for the Security Engineer — Risk & Controls generated output also returned no uniquely correlated DOCX. This narrows the accessible Library only; it does not prove that no browser-local/temp copy, other-chat attachment, R2 object or Meta record exists. The generated output DOCX, per-run R2 object key, webhook/request ID, Meta message ID and signed delivered/read receipt remain missing. No replay, file generation, R2 write or outbound message occurred.
