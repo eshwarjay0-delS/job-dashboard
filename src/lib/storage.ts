@@ -376,7 +376,7 @@ function makeBlob(): Blob {
     const unavailable = async (): Promise<never> => {
       throw new Error("Durable storage is not configured. Configure all R2 storage settings before saving data.")
     }
-    return { putIfAbsent: unavailable, put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
+    return { putIfAbsent: unavailable, put: unavailable, get: unavailable, getText: unavailable, getWithEtag: unavailable, putIfMatch: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
   }
   if (R2_BUCKET && R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
     return new R2Storage(R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)
