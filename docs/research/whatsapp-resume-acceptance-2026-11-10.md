@@ -112,3 +112,168 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 11 November 2026 — current access and delivery check
+
+The 17 October 17:28 Chicago incident remains open. The exact original input DOCX is still verified in the private archive, and the matching Security Engineer – Risk & Controls JD was recovered from the owner's inbox. The source's education, employer chronology, experience length and credential claims remain quarantined because they conflict with owner-confirmed profile facts. Do not copy disputed facts into a new output.
+
+A targeted current Library search for the generated DOCX, the incident-specific WhatsApp output, and R2/Meta delivery references did not surface the generated output. This is a bounded search result, not proof that the file is absent from every Library folder, chat, R2 bucket or external archive. The output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable.
+
+A read-only iZap check on 11 November 2026 at 08:14:16 UTC found one business and no linked WhatsApp number. Connection state is disconnected; there is no phone number, live inbound history, Coexistence history backfill or proven outbound send. No real message was sent. This connector cannot currently retrieve the historical bot conversation or a signed delivery receipt.
+
+The canonical MFit master is 11efbbfe7781592bc2fad1216f67546882a1c3ed. Vercel alias metadata is READY at dpl_7uEfjq1XprC48DoTFfFuiBoShPne on that SHA, but the project reports live=false; public health and Kompas version requests return HTTP 402 DEPLOYMENT_DISABLED. The source is current in deployment metadata, but the runtime is unavailable for authenticated replay or delivery verification.
+
+PR #287 contains the approved writer-only JD/evidence boundary fix. Its exact-head full CI, Plan/REA schema, Kompas baseline and resume regression pass; the shared voice-preview gate fails and the Vercel account is blocked. The PR is open and not production-live. PR #293 is an explicitly unapproved draft for narrower employer/role-scoped confirmations. PR #289 is a draft implementation of the owner-approved 3 November final-DOCX Gemini review loop, stacked on #287, with no exact-head validation or live model call. None of these branches proves the historical output or delivery.
+
+The 6 November WhatsApp policy remains authoritative and supersedes the older 98% hard hold. No replay, new model generation, DOCX write, R2 write, email send or WhatsApp send was performed.
+
+
+
+## 11 November 2026 — 09:13 UTC WhatsApp history recheck
+
+Gmail retrieval reconfirmed the matching Security Engineer – Risk & Controls JD as a 5+ year Atlanta onsite contract role; Solana is listed among preferred DLT platforms. This is employer target context only, not proof of candidate experience or credentials.
+
+The connected iZap workspace has one business but no linked WhatsApp number, zero chats, and zero message-search hits for “Risk & Controls” on 17 October. This connector therefore cannot recover the historical bot exchange or a delivery callback. The exact source DOCX remains privately verified, but its disputed education/employer chronology/tenure/credential facts remain quarantined. The generated output DOCX, R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. No replay or outbound test was sent. A zero-result iZap search is evidence about this connected workspace only, not proof that the records do not exist in every external store.
+
+
+## 11 Nov 2026 — route-level fallback boundary review
+
+The current webhook source separates the initial JD generate path from reply-to swipe refinement. The initial no-provider fallback is reachable only when a library selection is present; it verifies the authenticated user's library root, selected relative path, exact library/session bytes and selected profile email, then labels the attachment NOT TAILORED. The swipe reply routes to refine, which checks the same account, returns text only when the provider is unavailable or the rewrite is unusable, and requires sameResumeFacts before delivering a new document. It contains no sendClosest or sendOfflineOriginal fallback.
+
+PR #303 head fcee3fb6c46bd3d69bcc1565ed7fd1d5adb244cb adds two source-contract tests for these boundaries. Exact-head recovery regression 43097475896, full CI 43097475873 and Kompas baseline 43097475962 are queued. No real WhatsApp message or live model call was made. The 17 Oct generated DOCX, R2 object key, Meta correlation and signed delivery receipt remain missing.
+
+
+## 12 November 2026 — bounded Library and WhatsApp-connector recheck
+
+A fresh semantic search of the accessible Library used the 17 Oct 17:28 Chicago WhatsApp failure, the Risk & Controls JD, the original source DOCX and the generated output as separate query anchors. It returned related BNY preparation documents and the resume-tailoring research paper, but did not surface a uniquely correlated generated output DOCX. This is a bounded search result, not proof that no copy exists in every Library folder, conversation, WhatsApp account or R2 bucket.
+
+A read-only iZap `list_businesses` check returned one business (`eshwarjay0`) with **zero linked WhatsApp numbers**. There is therefore no connected iZap conversation source from which to retrieve the historical thread or signed message status in this runtime. No message was sent and no connection was changed.
+
+The historical case remains open: generated output DOCX, exact per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. The recovered source/JD relationship does not establish which bytes were sent or whether Meta delivered them. Do not replay or resend the historical request; if the artifact and provider correlation cannot be recovered, record the historical delivery as irrecoverable rather than guessing.
+
+
+## 12 November 2026 — durable refinement approval boundary
+
+The owner clarified that durable recovery/replay for swipe-reply refinements remains unapproved. This is separate from the approved initial no-provider fallback and the approved no-baseline failure behavior (text-only; preserve the last delivered version). PR #277 was converted to DRAFT and retitled with an explicit owner-approval requirement at head `c5cb99a45262d30ff1621e0673d6300115da689a`. Issue #201 documents a design gap but is not authorization to implement or ship it. No durable replay was performed, no real WhatsApp message was sent, and no historical 17 Oct request was replayed.
+
+
+## 12 November 2026 — bounded historical-artifact retrieval recheck
+
+The prior recovery recorded above remains the accepted evidence: the original 27,724-byte source DOCX and matching full JD were recovered in the earlier audit. This run did not re-open those private artifacts and does not downgrade that prior finding. Fresh Library semantic searches for the 17 October 17:28 incident, the exact Security Engineer — Risk & Controls title, and the visible missing terms did not surface a uniquely correlated generated output DOCX. Search results included unrelated resume artifacts; none was treated as the incident output without a request ID, R2 key or provider receipt. A personal-context search for the original 17 October conversation returned no matching conversation, so no additional chat wording is inferred.
+
+Read-only iZap inspection found one business (`eshwarjay0`) with zero linked WhatsApp numbers. Searching that business for `resume` on 17 October 2026 in `America/Chicago` returned zero messages. This connector therefore cannot provide the original thread or a delivery status. A read-only Supabase metadata query also found zero rows in `resume_documents` and zero rows in `resume_import_jobs` created during 17 October 2026 22:20–22:40 UTC (the screenshot window). Those tables do not prove that no R2-only object or Meta-side record exists; the query only rules out a matching row in those two public tables.
+
+The historical output DOCX, exact per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt remain unavailable. The recovered source DOCX still contains education, employment-date and credential conflicts against the owner-confirmed profile; keep those facts quarantined until the owner reconciles them. The next unblock is read-only access to the correct R2/Meta logs or a user-provided export containing the request and provider identifiers. No replay, model call, R2 write, WhatsApp send or production mutation was performed.
+
+
+## 12 November 2026 — exact-head and retrieval recheck (06:53 UTC) <!-- wa-acceptance-exact-gates-0653z -->
+
+The approved no-provider initial-JD fallback remains separate from swipe-refinement failure behavior. PR #303 exact head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` now has full CI `43138216531`, WhatsApp recovery `43138216521` and Kompas baseline `43138216526` all SUCCESS. The protected preview `43138214326` fails because the private `KOMPAS_VERCEL_API_TOKEN` is missing; keep the PR DRAFT and do not bypass Vercel protection.
+
+Dependent PR #316 exact head `4af7d8bed8f51ef56d1b05156af430c74758fd92` passes WhatsApp recovery `43163655905`; full CI and baseline remain deferred until parent acceptance. It consumes the JD/resume pair only after Meta returns a document message ID, only when both fields still match the run, and preserves a newer mixed pair or the old pair after a rejected send. No real Meta send or R2 write occurred.
+
+Resume/JD/confirmed-experience PR #317 exact head `f3182de28fb229401e30893d7687805e55c846e7` passes full CI `43164222540`, WhatsApp recovery `43164222577` and Kompas baseline `43164222576`. Its protected preview remains blocked by the same private token prerequisite. The code preserves employer-scoped evidence, treats general confirmations as profile/skills evidence only, and does not lower identity, date, unsupported-claim or delivery gates. No live model call, personal DOCX generation or 98% live-match result is claimed.
+
+The historical 17 Oct 17:28 Chicago output DOCX, per-run R2 object key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable. The recovered original source and JD do not establish which bytes were sent or whether Meta delivered them. Fresh Library search did not surface a uniquely correlated output; iZap has one business with zero linked WhatsApp numbers and a targeted 17 Oct `resume` search returned zero messages. Do not replay or resend the historical request. If the exact artifact and provider correlation cannot be recovered, record the historical delivery as irrecoverable rather than guessing.
+
+**Continue:** obtain the exact artifact and correlated R2/webhook/Meta export through owner-authorized storage or a user-provided export; separately wait for the protected preview prerequisite before any code merge/deploy.
+
+## 12 November 2026 — screenshot and inbox source rechecked; owner-confirmed skill rule reconciled
+
+A read-only Library listing found the incident screenshot at `2026-10-17T22:28:39Z` (5:28 PM America/Chicago). It shows the 5:25 PM Risk & Controls JD plus a five-page, approximately 28 KB Word resume, followed by the 5:28 PM bot reply that the rewrite had not reached its 98% target after automatic repair and the file was held. A read-only Gmail search and message retrieval reconfirmed the matching full JD forwarded on 16 October 2026, subject `Job Opportunity - Cyber Security Engineer- Risk & Controls with Blockchain`; its title, Atlanta onsite contract context and preferred Solana platform match the screenshot. This confirms the source pair, not the generated output or delivery. No email was sent.
+
+The owner’s 6 Nov 2026 9:55 AM CT correction is authoritative and supersedes the later same-role-only prompt interpretation that appeared in the PR #317 restack. An explicit first-person confirmation of a JD skill is sufficient to map that skill naturally into relevant existing project bullets across roles, including earlier roles, even when the original bullet does not name the tool. Employer-source verification is not an additional prerequisite for that confirmed skill. This exception is limited to the confirmed skill and the selected account/resume/JD; it does not authorize a new employer, project, title, location, date, contact, metric, credential or unrelated project detail. JD wording, a target score and editing instructions alone are not confirmation. The original source DOCX’s conflicting education, employer chronology, tenure and credential claims remain quarantined pending owner reconciliation.
+
+PR #317 branch `fix/resume-role-evidence-restack-da1db145-20261112` now reflects that decision in the writer prompt, candidate-evidence context, role-alignment measurement and final deterministic guard (commits `dfcd2b4`, `14ac764`, `216581d`, `2214469`). Explicitly confirmed skills may survive cross-role placement; unconfirmed terms borrowed from another employer remain blocked. Exact-head full CI, WhatsApp recovery and Kompas baseline must pass on the updated head, and the protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. The PR remains DRAFT, unmerged and undeployed.
+
+The historical generated output DOCX, per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt remain unavailable. The bounded search is not proof that no copy exists in every Library folder, chat, R2 bucket or Meta export. No replay, live model call, DOCX generation, R2 write, WhatsApp send, email send or handset test occurred.
+
+
+### 12 November 2026 — targeted Library output recheck
+
+A recursive, metadata-only Library listing filtered to DOCX files created from `2026-10-17T22:20:00Z` through `2026-10-17T23:00:00Z` returned zero items. A targeted semantic Library search for the Security Engineer — Risk & Controls generated output also returned no uniquely correlated DOCX. This narrows the accessible Library only; it does not prove that no browser-local/temp copy, other-chat attachment, R2 object or Meta record exists. The generated output DOCX, per-run R2 object key, webhook/request ID, Meta message ID and signed delivered/read receipt remain missing. No replay, file generation, R2 write or outbound message occurred.
+
+
+### 12 November 2026 — approved WhatsApp fallback restacked on current master
+
+The 6 November owner-approved distinction is now isolated in current-master PR #321 (`ac38ffde34709a04664fc6b2b3b92fab9515fa7e`): initial JD/no-provider may send only the exact selected same-account library original after authenticated root, safe relative-path, byte-equality and selected-profile email checks, with the exact NOT TAILORED caption. Swipe-refinement provider failure, timeout, partial/incomplete output, unreadable/missing DOCX or identity/contact/date failure is text-only and preserves the last delivered version. Before restacking, all six PR #303 changed files were byte-identical between old base `65bdf2f` and current master `da1db145`; only the intended six files were copied. Full CI 43191231356, WhatsApp recovery 43191231421, Kompas baseline 43191231296 and protected preview 43191231435 are in progress. No merge, deployment, model call, real send, R2 write or Meta callback occurred. Dependent pair-consumption PR #316 remains stacked on the old parent and must be restacked only after #321 is accepted.
+
+
+### 12 November 2026 — accessible iZap recheck
+
+The connected iZap account returned one business and zero linked WhatsApp numbers. A read-only `search_messages` for `resume` on `2026-10-17` in `America/Chicago` returned zero messages. This is evidence only about the accessible iZap business; it does not establish that no message exists in another WhatsApp account, another chat, Meta's message records or R2. No chat was changed and no outbound message was sent.
+
+
+### 12 November 2026 09:26 UTC — exact-head WhatsApp regression result
+
+On current-master PR #321 head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`, WhatsApp resume recovery run `43191231421` and Kompas baseline `43191231296` completed SUCCESS. The recovery job ran npm ci, TypeScript and `whatsapp-resume-recovery` plus `whatsapp-resume-contract` tests. Full CI `43191231356` remains in progress at migration asset closure after the first 15 checks passed. Protected preview `43191231435` failed; the job log shows `KOMPAS_VERCEL_API_TOKEN` empty and requires it to be configured privately. No merge, deployment, model call, R2 write, real send or Meta callback occurred.
+
+
+### 12 November 2026 09:31 UTC — current-master WhatsApp code gates complete
+
+PR #321 exact head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e` now passes full CI `43191231356` (47/47 steps), WhatsApp recovery `43191231421`, and Kompas baseline `43191231296`. The full CI logs confirm: resume guards 31/31, WhatsApp selected-library/single-request group 52/52, resume contract 44/44, resume acceptance 105/105, and storage-prefix recovery 21/21; the Webpack build completed. Protected preview `43191231435` remains FAILURE because the log says `KOMPAS_VERCEL_API_TOKEN` is empty and must be configured privately. The PR remains DRAFT. These source/contract tests do not prove a real WhatsApp send or retroactively verify the 17 Oct delivery. No merge, production deployment, model call, R2 write or Meta callback occurred.
+
+
+## Current-master lifecycle integration — 12 November 2026, 09:35 UTC
+
+The owner-approved 6 Nov fallback/no-baseline policy is restacked in current-master PR #321. This continuation also integrates the race-safe pair-consumption helper from the old stacked PR #316 into #321, so the fallback and lifecycle fix can be reviewed together.
+
+- Code commit: `921033d71fba5f33e0d5566bde572be7287baf8b`.
+- Regression commit: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`.
+- The helper clears the JD and resume only when both still match the run; it preserves a newer JD/resume combination and retains the pair when Meta rejects the document.
+- New mocked cases cover accepted offline consumption, newer JD, same resume/new JD, same JD/new resume and rejected-send retention.
+- Updated PR head: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`. Exact-head Kompas baseline 43193485006 and WhatsApp recovery 43193485660 are SUCCESS; full CI 43193485035 is still IN_PROGRESS at migration asset closure. Earlier `ac38ff` full CI results do not validate the new head.
+- The previous protected preview 43191231435 failed closed because the private `KOMPAS_VERCEL_API_TOKEN` was empty. No exact-head preview pass, merge, production deployment, model call, R2 write, real WhatsApp message or Meta callback is claimed.
+
+The canonical production alias remains READY at master `da1db145c5981254f95620ff6bb0222ab4228125`, not this PR. Vercel project metadata reports `live=false`. The historical 17 Oct 17:28 Chicago output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain unavailable. No replay or resend is authorized.
+
+**Continue:** finish exact-head full CI 43193485035; then keep PR #321 DRAFT until an authorized repository administrator privately configures the preview token and the protected preview passes. Only then review/merge, deploy the exact merged SHA, verify the active production alias and perform a consented real WhatsApp acceptance. PR #316 is now a source/history dependency and must not be merged independently; close it as superseded only after PR #321 is accepted.
+
+
+## 12 November 2026 11:50 UTC — read-only connector recheck
+
+The iZap connector currently lists one business but no linked WhatsApp number. Its connection status is disconnected, with no live inbound, history backfill or outbound send evidence. Read-only searches for `Eshwar_Resume` and `governance` on 17 October 2026 in America/Chicago returned zero messages. This confirms only that iZap cannot supply the missing incident trace; it does not establish whether the separate MFit Meta Cloud API account retained data.
+
+Current source-release status: PR #321 exact head `b5b418905906e925cacba1772a011457d9a5db03` passes full CI `43196332095`, WhatsApp recovery `43196332031` and baseline `43196332103`. Its protected preview `43196328253` is failed closed because private `KOMPAS_VERCEL_API_TOKEN` is not configured, and the Safe Merge Gate still requires the external-send release decision to be cleared. The current production master/alias remains `6c82abf4b240de7c768916188794b8beaaaf3b10`, so #321 is not live.
+
+The historical 17 Oct 17:28 Chicago generated DOCX, per-run R2 object key, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. The recovered source DOCX and JD do not prove the bytes sent or handset delivery. Conflicting education, employment chronology and credential claims remain quarantined until owner reconciliation. No replay or resend was performed or authorized.
+
+
+## 12 November 2026 12:05 UTC — final-DOCX Gemini review dependency and role rewrite gate
+
+The owner's 3 Nov 2026 16:20:28 UTC approval requires the exact Gemini prompt “Give me ATS score” after every complete exported DOCX, followed by assistant-side evidence analysis, correction only for source-resume or explicit first-person-confirmed gaps, re-export and recheck to the highest truthful match. The 20:53 UTC correction targets 95–100% only when genuinely supported. Gemini's score and suggestions are diagnostic only, never candidate evidence. The approved loop is bounded to at most two correction/re-export/review passes.
+
+PR #289 (feat/resume: add final-DOCX Gemini ATS score and evidence-only repair loop) is exact head 4bd94819ade5fcecf21e4dc00b783fa25a30e87b, DRAFT and non-mergeable. It is stacked on PR #287's feature branch at 21309f44921646d1d89b923cb42c9b988e5faa20; PR #287 is now marked superseded/non-mergeable by the newer evidence restacks #304 and #317. Because the repository CI workflow triggers pull_request only when the base is master/main, #289 has no exact-head GitHub Actions run; its nine added helper/source tests are not yet validated on this head. Do not retarget it to master merely to force CI, because that would bundle the unapproved/stale #287 branch.
+
+PR #317 is the current-master confirmed-skill/evidence restack. Its exact-head full CI 43180792088, WhatsApp recovery 43180792058 and baseline 43180791965 are SUCCESS, but protected preview 43180787874 failed closed and no actual DOCX/model acceptance exists. After #317 is accepted, restack #289 onto that accepted evidence base, rerun exact-head full CI + Plan/REA schema + baseline + protected preview, then perform the authorized Gemini review against the approved original resume/JD/confirmation inputs and inspect the actual exported DOCX bytes.
+
+The separate 30% role-rewrite threshold remains unchanged. The research handoff records that the owner has not approved removing it; do not weaken it to reduce roles_unrewritten rejections. This is distinct from the 6 Nov WhatsApp channel policy, which superseded the old 98% hard hold but did not authorize changing the role-rewrite threshold. The 17 Oct historical generated DOCX and R2/webhook/Meta delivery trace remain missing; conflicting source facts remain quarantined. No Gemini call, DOCX write, WhatsApp/email send, R2 write or production mutation occurred.
+
+
+## 12 November 2026 — 16:16 UTC read-only history recheck
+
+The accessible iZap business `eshwarjay0` still has no linked WhatsApp Business number; its connection status is disconnected, and the read-only 17 October searches for `resume`, `DOCX` and `tailor` each returned zero messages. No outbound message is proven to have reached Meta. A date-filtered Library metadata listing returned zero DOCX files with a 17 October creation date. That metadata result does not invalidate the earlier recovery of the original 27,724-byte source DOCX and matching full JD; their archive/creation timestamps may differ. The exact generated output DOCX, per-run R2 key/version, webhook/request correlation, Meta outbound message ID and signed delivered/read receipt remain unavailable. The historical incident is therefore still unverifiable, not proven undelivered. No replay, resend, model call, R2 write or device test was performed.
+
+
+## 12 November 2026 — source DOCX access correction and Gmail JD recovery
+
+A prior read-only Gmail retrieval, recorded in the earlier handoff, documented the matching Security Engineer – Risk & Controls JD and its 5+ years target requirement. This continuation did not re-read that inbox record; no message or thread identifier is stored here. The JD's experience requirement is target context, not candidate history.
+
+The exact source resume is not currently retrievable from the accessible Library surface. The expected account-owned folder returned Library path not found; no DOCX bytes were read. Do not substitute another account's resume. The earlier 27,724-byte source recovery and source-content conflict claims are historical, not independently reproducible in this run; preserve them as historical notes, not current artifact evidence, and keep disputed facts quarantined.
+
+The generated output DOCX, per-run R2 key/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable. The prior conversation identifies the screenshot at `2026-10-17T22:28:39Z` and the user's “Fix it” at `2026-10-17T22:53:16Z`. No replay or resend is authorized. The delivery remains unverified, not proven delivered or undelivered.
+
+
+## 12 November 2026 — exact-head gate update
+
+PR #321 head `2d642ffb5acc37c1066a070ab182bd461112d3b3` now has all three source gates SUCCESS: full CI `43292088241`, Kompas baseline `43292088358`, WhatsApp recovery `43292088573`. It remains DRAFT because the protected preview token is unavailable; no production deployment or real WhatsApp send is claimed.
+
+The separate PR #325 profile-gap repair is restacked at `513be21`; baseline `43292578119` and WhatsApp recovery `43292578125` pass, full CI `43292578201` is in progress. The source DOCX remains inaccessible; the matching JD is recovered but not enough to claim factual resume match or output quality.
+
+
+## 12 November 2026 19:55 UTC — current access recheck
+
+A fresh semantic Library search for the incident source and an exact listing of the expected account-owned folder did not return the DOCX; the folder lookup returned **Library path not found**. The accessible personal-context search did not retrieve the original 17 October conversation. The earlier Gmail retrieval is documented in the prior handoff but was not repeated in this run. No replacement resume was selected.
+
+The 17 October screenshot remains recorded at 17:28 America/Chicago. The earlier archive-size and source-conflict assertions are retained as historical notes only; they are not independently reproducible from current access. The generated output DOCX, per-run R2 key/version, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. No historical replay, WhatsApp send or database write was performed.

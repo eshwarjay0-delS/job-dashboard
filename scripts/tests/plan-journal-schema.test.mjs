@@ -80,3 +80,67 @@ test('approved final-DOCX Gemini review and current crawler/Gmail blockers remai
   assert.match(gmail.detail, /2,002/)
   assert.match(gmail.next, /CRON_SECRET/)
 })
+
+
+test('11 Nov completion-watch journal preserves the current WhatsApp and Gmail blockers', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'mfit-completion-watch-2026-11-11-2015')
+  assert.ok(entry, 'current completion-watch journal entry missing')
+  assert.equal(entry.approval, 'approved')
+  assert.equal(entry.delivery, 'in progress')
+  assert.match(entry.detail, /70% raw overlap/)
+  assert.match(entry.detail, /draft_parts_missing/)
+  assert.match(entry.detail, /exceed_egress_quota/)
+  assert.match(entry.next, /restack PR #296|Restack PR #296/i)
+})
+
+
+test('11 Nov WhatsApp fallback and contract classifier journal entries preserve exact pending gates', () => {
+  const wa = PLAN_JOURNAL.find(e => e.id === 'mfit-whatsapp-fallback-boundary-tests-2026-11-11')
+  assert.ok(wa)
+  assert.equal(wa.approval, 'approved')
+  assert.equal(wa.delivery, 'in progress')
+  assert.match(wa.evidence, /fcee3fb6/)
+  const app = PLAN_JOURNAL.find(e => e.id === 'mfit-contract-classifier-precision-2026-11-11')
+  assert.ok(app)
+  assert.equal(app.approval, 'approved')
+  assert.equal(app.delivery, 'in progress')
+  assert.match(app.evidence, /278d9b3f/)
+})
+
+
+test('12 Nov 16:16 completion checkpoint preserves live release and exact blockers', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'mfit-completion-watch-2026-11-12-1616z')
+  assert.ok(entry, '16:16 completion checkpoint missing')
+  assert.equal(entry.approval, 'approved')
+  assert.equal(entry.delivery, 'blocked')
+  assert.match(entry.evidence, /6c82abf4b240de7c768916188794b8beaaaf3b10/)
+  assert.match(entry.evidence, /exceed_egress_quota/)
+  assert.match(entry.evidence, /KOMPAS_VERCEL_API_TOKEN/)
+  assert.match(entry.next, /before any historical replay/)
+})
+
+
+test('current no-bypass instruction supersedes the earlier public skip-login request', () => {
+  const correction = PLAN_JOURNAL.find(e => e.id === 'kompas-no-auth-bypass-current-instruction-2026-11-12-1955z')
+  assert.ok(correction)
+  assert.equal(correction.approval, 'approved')
+  assert.match(correction.detail, /do not bypass access controls/i)
+  const prior = PLAN_JOURNAL.find(e => e.id === 'skip-login-live-2026-11-12')
+  assert.ok(prior)
+  assert.match(prior.next, /Keep AUTH_DISABLED/i)
+  assert.match(prior.next, /Do not set a synthetic-owner identity/i)
+})
+
+test('17 Oct current source-access recheck stays blocked and private-locator free', () => {
+  const entry = PLAN_JOURNAL.find(e => e.id === 'whatsapp-incident-evidence-recheck-2026-11-12-1940')
+  assert.ok(entry)
+  const serialized = JSON.stringify(entry)
+  assert.match(serialized, /path not found/i)
+  assert.doesNotMatch(serialized, /@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+  assert.doesNotMatch(serialized, /[a-f0-9]{64}/i)
+  assert.doesNotMatch(serialized, /J_Eshwar_44|Resume_Inventory\.csv|1a1464393628992f|\.docx/i)
+  const current = PLAN_JOURNAL.find(e => e.id === 'whatsapp-oct17-source-access-recheck-2026-11-12-1955z')
+  assert.ok(current)
+  assert.equal(current.delivery, 'blocked')
+  assert.match(current.next, /do not replay or resend/i)
+})
