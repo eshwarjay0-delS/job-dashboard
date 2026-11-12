@@ -844,3 +844,8 @@ Current-master PR #321 exact head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`: Wh
 ## 12 November 2026 09:30 UTC — Gmail persisted-state recheck
 
 Read-only production SQL confirms `mfit_gmail_sync`: 3 rows, 3 account IDs, 1 user, latest sync 10 Nov 14:44:44.277 UTC; `mfit_gmail_threads`: 2,002 rows, 3 account IDs, 1 user, latest update 10 Nov 14:46:49.790 UTC. No message bodies were read. This is account-keyed persistence, not fresh two-inbox/selected-From/reconnect/phone acceptance. The 24h runtime aggregation still has 42 Supabase Auth 402 exceed_egress_quota errors across 34 users, latest 09:07:04Z. Owner/admin must resolve the spend cap; no bypass, real email send or unattended worker was enabled.
+
+
+## 12 November 2026 09:31 UTC — WhatsApp fallback code gates complete
+
+Current-master PR #321 head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`: full CI 43191231356 SUCCESS (47/47), WhatsApp recovery 43191231421 SUCCESS, Kompas baseline 43191231296 SUCCESS. Logs confirm resume guards 31/31, selected-library/single-request tests 52/52, resume contract 44/44, resume acceptance 105/105, storage-prefix recovery 21/21 and successful Webpack build. Protected preview 43191231435 FAILED because its log shows `KOMPAS_VERCEL_API_TOKEN` empty. Keep DRAFT; do not bypass. No merge, production deployment, model call, R2 write, real WhatsApp send or Meta callback occurred. The 17 Oct output DOCX/R2/Meta receipt remain missing.
