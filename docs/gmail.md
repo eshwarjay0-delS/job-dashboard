@@ -278,3 +278,8 @@ The account-sync snapshot remains 3 account sync rows and 2,002 account-keyed th
 ### Mobile navigation correction — 12 November 2026
 
 The owner's 4 October requirement is that opening the hamburger must not block or cover the view. PR #320 restacks the normal-flow implementation on current master: the menu expands below the sticky 64px top bar, pushes content down, and does not dim the page or make the main content inert. Outside pointer interaction, Escape, route selection and desktop-width changes close it; Escape restores focus to the hamburger. The desktop rail and account switching remain unchanged. Four source-contract regressions replace the obsolete drawer/scrim assertions and are wired into fail-fast prebuild. PR #320 is DRAFT; exact-head CI and the protected preview gate are pending. No production deploy or real phone-width acceptance is claimed.
+
+
+### Prebuild contract follow-up — 12 November 2026
+
+The first full CI for PR #320 failed one test in `scripts/tests/kompas-deploy-build.test.mjs`: the shared build-contract assertion required an exact prebuild string, so adding the mobile shell suite correctly changed the string but tripped the stale assertion. The failure was not a voice runtime regression. Corrective commit `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf` replaces byte-for-byte equality with ordered required-group checks, explicitly verifies the dashboard-shell suite remains in prebuild, and permits additive suites without dropping existing gates. The new exact-head CI result is still pending; the prior baseline passed. No production or phone acceptance is claimed.
