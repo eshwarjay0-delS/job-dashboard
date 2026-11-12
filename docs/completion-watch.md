@@ -12,6 +12,45 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 Owner approval the same day supersedes the session-recovery note that said to leave `AUTH_DISABLED` off. Production still served `window.KOMPAS_AUTH_DISABLED = false` from commit `e8ce442`. Skip-login must not call Supabase Auth, must not open `/login`, and must let Kompas Start and MarketFit open. The Houston user id was not read because the project returned HTTP 402. Draft PR #324 stays unmerged. PR #327 is a different branch and is not part of this slice.
 
+## 12 November 2026, 18:38 UTC — cross-workstream continuation checkpoint
+
+Canonical master is `cd70190e9903994a01c7c721641196a2b15027d4`. Vercel reports production deployment `dpl_GE4WyYLKQWhRcCDQq11hfvHiaSke` READY at that exact SHA, and the independent alias lookup maps `job-dashboard-fawn.vercel.app` to it. This is deployment-control-plane evidence; public HTTP health could not be opened through the available web runtime.
+
+### WhatsApp resume failure and factual tailoring
+
+- The 17 Oct 2026 17:28 Chicago screenshot and matching source pair are recovered: the original 27,724-byte input DOCX and complete Security Engineer – Risk & Controls JD. The generated output DOCX, per-run R2 key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt remain unavailable. The source resume has conflicting education, employment-date and credential facts versus owner-confirmed profile information; keep those claims quarantined. Do not replay or resend the historical request.
+- The 6 Nov channel-specific policy supersedes the old 98% hard WhatsApp hold: web remains strict at 95% raw overlap; WhatsApp may send completed readable files with gaps disclosed under its separate supported-coverage rules. The 98% figure remains a measured quality target, not a send threshold or proof of live quality.
+- PR #321 (manual/offline JD fallback, no-baseline refinement and race-safe JD/resume pair consumption) is still DRAFT. Exact head `b5b418905906e925cacba1772a011457d9a5db03`: full CI `43196332095`, WhatsApp recovery `43196332031`, and Kompas baseline `43196332103` passed. Protected preview `43196328253` failed closed because the private `KOMPAS_VERCEL_API_TOKEN` is unavailable. No merge, deployment or real send.
+- PR #325 (requested profile-gap repairs only) is still DRAFT. Exact head `49953dd9d5e6ccc247a338035255d42d7661c2f9`: full CI `43255302754`, baseline `43255302833`, and WhatsApp recovery `43255302752` passed. Its protected preview failed for the same missing private token. It does not resolve role-evidence gaps or establish exported-DOCX quality. PR #316 is superseded by the integrated pair-consumption work in #321; do not merge #316 separately.
+- PR #201 / #277's durable swipe-refinement recovery is a separate design/approval gap. Do not implement the draft without the required owner approval and safe state-transition evidence.
+
+### Poke-inspired Gmail and mobile
+
+The approved broad constraints remain up to four Gmail accounts, per-account Gmail/Calendar targeting, account-plus-thread identity, no silent merging, selected-From preservation, reconnect only the affected inbox, and responsive mobile hamburger navigation. WhatsApp notifications remain optional/off by default; the unattended update worker stays disabled pending an external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement.
+- PR #320 mobile navigation is DRAFT at head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf`; full CI `43190228931` and Kompas baseline `43190229393` passed, but protected preview `43190224739` failed closed because the private token is unavailable. No phone acceptance.
+- PR #323 account-scoped digest actions and sender mutes remains DRAFT. Synthetic account/thread tests do not establish two real inboxes or narrow-mobile behavior. PR #271's sync-health card is not separately owner-approved; keep it draft.
+
+### Contract job search and crawler
+
+Owner correction recorded in PR #315: contract-portal crawling is manual/on-demand only. Current `vercel.json` has no `/api/crawl/run` or `/api/crawl/jobs` cron; `/api/gmail/crawl` is a separate Gmail sync. The visible `POST /api/crawl/jobs` is admin-only. The secret-gated `GET /api/crawl/run` remains callable but has no Vercel schedule; external scheduler configuration has not been inspected.
+- Read-only production DB snapshot, 12 Nov: 14,566 rows, 12,407 active, 11,019 active within 14 days; newest `last_seen_at` 10 Nov 11:01:11 UTC. There are 21 run records. Latest run remains 10 Nov 11:00:24–11:01:11 UTC, 20 portals, 6,818 found/upserted, one Inspyr abort. No crawl was triggered.
+- PR #315's Right To Hire / Contract To Perm → C2H correction remains DRAFT at `bd62bcd17b2b2be79c6ee23db19b8582a5225015`. Full CI `43157849751`, crawler regression `43157849909`, and baseline `43157849768` passed; protected preview `43157849584` failed for the missing private token and mergeability was false. Current master does not yet recognize the shortened aliases. Do not rewrite stored rows or restore a daily cron.
+
+### Kompas and release safety
+
+- The production alias is READY at `cd70190`; post-merge full CI `43278752159`, Windows packaging `43278752331`, Plan/REA schema `43278752263`, and Kompas baseline `43278752168` passed. This does not prove live authenticated Google sign-in, desktop session acceptance, Windows playback or caption hardware behavior.
+- PR #328 was merged by another actor as `cd70190`. The Safe Merge Gate recorded no formal reviews or owner-authored approval comment, and its protected preview failed because the private token was missing. The bypass code is deployed, but that audit read both production flags `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` as `false`. Accessible prior-context retrieval did not establish owner-authored approval for making every public visitor the same synthetic account. Do not activate or change those flags until approval provenance and the account-isolation tradeoff are verified; do not treat an assistant-authored journal entry as approval.
+- The 12 Nov output-audio change is simulated only. No Windows playback was captured. The installed executable and real Live Captions/AI Answer flow remain separate device acceptance.
+- The automation inventory showed MFit Completion Watch and MFit Safe Merge Gate enabled; no separate Bible-Keeper audit task was present. Coordinate with the Safe Merge Gate and do not race its active PR inventory.
+
+### Exact blockers
+
+1. Private `KOMPAS_VERCEL_API_TOKEN` must be configured by the owner or an authorized repository administrator for the protected exact-head preview gate; do not bypass it.
+2. Historical WhatsApp acceptance needs the exact generated output plus R2/webhook/Meta correlation and signed delivery/read receipt, and owner reconciliation of conflicting source facts. No replay is authorized without those.
+3. Gmail acceptance needs two authorized inboxes (healthy and partial/failed) and narrow-mobile device testing; no live email send was made.
+4. Manual-only crawler acceptance needs an inventory of external callers of the secret-gated GET route; the Vercel schedule alone does not prove there is no external scheduler.
+5. Kompas skip-login approval provenance is disputed in the accessible record; leave the production flags false until resolved. Real Windows and phone acceptance is not available to this runtime.
+
 ## Active development loop
 
 Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the task queue. Reconcile replaced next actions against later evidence before executing them; see `docs/research/board-todo-reconciliation.md`. Keep work moving through approved implementation, release and acceptance rather than treating the boards as documentation alone.
