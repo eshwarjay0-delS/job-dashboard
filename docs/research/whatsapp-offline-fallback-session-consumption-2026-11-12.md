@@ -32,7 +32,7 @@ The new mocked regression covers: accepted offline fallback clears its matching 
 
 ## Exact blockers and next action
 
-- Parent PR #303 remains DRAFT. Its exact-head full CI, WhatsApp recovery and Kompas baseline workflows were still queued at the time of this check.
+- Parent PR #303 remains DRAFT. Exact-head full CI 43097475873, WhatsApp recovery 43097475896 and Kompas baseline 43097475962 remain QUEUED. PR #310 exact-head WhatsApp recovery 43136393260 completed SUCCESS. PR #311 Plan/REA schema 43136679015 passed; PR #306 full CI 43131176244, Kompas baseline 43131176252 and Plan/REA schema 43131176205 passed. The protected preview remains unavailable while Vercel project metadata reports live=false.
 - The Vercel project metadata reports `live=false`; the protected preview gate is unavailable. Do not bypass Vercel protection or alias a preview.
 - The Plan/REA follow-up is recorded in a stacked documentation branch based on PR #306. It remains pending with that parent restack and the WhatsApp code stack; no documentation merge is claimed.
 - The historical 17 October 17:28 Chicago incident remains unresolved: the original source DOCX and full JD are recovered, but the generated output DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable. Conflicting education/employment/credential facts remain quarantined pending owner reconciliation.
