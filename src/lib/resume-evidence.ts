@@ -26,7 +26,8 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
   ].some(pattern => pattern.test(text))
 }
 
-/** Only explicit candidate assertions can expand deterministic evidence. Naming a
+/** Only explicit candidate assertions can expand skills/profile evidence. This parser
+ * does not attribute a general statement to an employer, project, date or metric. Naming a
  * tool in an editing instruction, a question or a negation is not confirmation. */
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
