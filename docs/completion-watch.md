@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 12 November 2026 — question window on the caption frame
+
+Owner, 12 Nov 2026, 4:18 PM America/Chicago: question stripping and capture are the top Kompas priority. Pull request 234 was rebased onto current master. The caption and mic frame stays. The last-four window runs when the framed chunks hold more than one question. One question keeps its setup. Offline stand-in: 150 drafts, 0 pairs at Jaccard >= 0.7, 0 same-answer failures. Focused suites 208 pass, 0 fail. Baseline 15 checks hold. `tsc --noEmit` clean. Not a production deploy. No ship marker.
+
 ## 12 November 2026 — skip-login
 
 Owner approval the same day supersedes the session-recovery note that said to leave `AUTH_DISABLED` off. Production still served `window.KOMPAS_AUTH_DISABLED = false` from commit `e8ce442`. Skip-login must not call Supabase Auth, must not open `/login`, and must let Kompas Start and MarketFit open. The Houston user id was not read because the project returned HTTP 402. Draft PR #324 stays unmerged. PR #327 is a different branch and is not part of this slice.

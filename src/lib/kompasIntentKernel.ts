@@ -1,3 +1,4 @@
+import { questionPieces, selectQuestionWindow } from "./kompasQuestionWindow.ts"
 /**
  * The interviewer's request, not keyword overlap, decides what Kompas answers.
  *
@@ -38,8 +39,14 @@ function isAsk(s:string):boolean{
 function lastEmbeddedAsk(s:string):string{
  const parts=Array.from(s.matchAll(SCOPED_CLAUSE))
  for(let j=parts.length-1;j>=0;j--){
-  const m=parts[j],after=s.slice((m.index||0)+m[0].length)
-  if(isAsk(after)) return removeFillerHead(after)
+  const m=parts[j], at=m.index||0
+  const after=s.slice(at+m[0].length)
+  if(!isAsk(after)) continue
+  const left=s.slice(0, at).trim()
+  // "and how you measured MTTR" continues an ask that already started.
+  // Cutting there answered only the trailing clause.
+  if(/^(?:and|but)\b/i.test(m[0].trim()) && isAsk(left)) continue
+  return removeFillerHead(after)
  }
  return removeFillerHead(s)
 }
@@ -81,5 +88,38 @@ export function questionKernel(value:string):QuestionKernel{
  const leading=sentences[first].endsWith(firstChosen) ? sentences[first].slice(0,-firstChosen.length).trim() : ""
  const ask=sentences.slice(first,last+1).map(lastEmbeddedAsk).join(" ").replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()
  const setup=[...sentences.slice(0,first),leading,...sentences.slice(last+1)].filter(Boolean).join(" ").trim()
- return {ask:ask||original,setup,constraints:getConstraints(setup),carryOptions:OPTION_REFERENCE.test(ask)}
+ return withQuestionWindow(original, {ask:ask||original,setup,constraints:getConstraints(setup),carryOptions:OPTION_REFERENCE.test(ask)})
+}
+
+/**
+ * The legacy cut keeps every consecutive ask, and it also drops a narrowing
+ * sentence that sits between them. The window picks Last 1 2 3 4 down to
+ * Last 1, so a fragment keeps the setup it needs and an unrelated later
+ * question does not become a mega-question.
+ */
+function withQuestionWindow(original: string, base: QuestionKernel): QuestionKernel {
+ if(/^(?:suppose|imagine|assume|if|given|consider)\b/i.test(String(original||"").trim())) return base
+ const pieces=questionPieces(original)
+ if(pieces.length<2) return base
+ const selected=selectQuestionWindow(pieces)
+ if(!selected.text) return base
+ if(selected.span===1){
+  const newest=selected.text
+  if(base.ask===newest) return base
+  if(base.ask.toLowerCase().includes(newest.toLowerCase()) && base.ask.length>newest.length){
+   const idx=original.lastIndexOf(newest)
+   const setup=idx>0?original.slice(0,idx).trim():base.setup
+   return {ask:newest,setup,constraints:getConstraints(setup),carryOptions:OPTION_REFERENCE.test(newest)}
+  }
+  return base
+ }
+ const start=pieces[pieces.length-selected.span]
+ const idx=original.lastIndexOf(start)
+ const setup=idx>0?original.slice(0,idx).trim():""
+ return {
+  ask:selected.text,
+  setup,
+  constraints:getConstraints(setup),
+  carryOptions:OPTION_REFERENCE.test(selected.text)||base.carryOptions,
+ }
 }

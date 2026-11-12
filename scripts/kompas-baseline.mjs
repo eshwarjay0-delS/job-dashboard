@@ -79,6 +79,7 @@ const PAGE = (() => {
   if (!app.includes('$("answerBtn").onclick = () => aiAnswer(false);')) throw new Error('the AI Answer button no longer runs aiAnswer(false)')
   return [
     slice('const Q_CUE =', '\nlet lastQ'),
+    slice('const QW_LABELS', '// ── Question intake'),
     slice('// ── Question intake', '// ── end question intake ──'),
     slice('function recentQA(', '\nfunction askingLevel('),
     slice('function shortFollowUp(', 'const armsAuto'),
