@@ -173,7 +173,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   const [signingOut, setSigningOut] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)   // the menu button on a narrow window
-  const drawerRef = useRef<HTMLElement>(null)         // the menu itself, a drawer on a narrow window
+  const drawerRef = useRef<HTMLElement>(null)         // the expanded navigation panel on a narrow window
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
 
@@ -220,7 +220,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   // the link that had it is hidden with the drawer and the keyboard is dropped at the top of the document.
   const closeMenu = useCallback(() => {
     const el = document.activeElement as HTMLElement | null
-    const inside = !!el && (!!drawerRef.current?.contains(el) || el.classList.contains("mf-nav-scrim"))
+    const inside = !!el && !!drawerRef.current?.contains(el)
     setMenuOpen(false)
     if (inside) toggleRef.current?.focus()
   }, [])
@@ -230,17 +230,20 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMenu()
     }
-    // While the drawer is open the page under the dimming cannot be reached with Tab or read out by a screen reader.
-    const page = document.getElementById("dashboard-content")
-    page?.setAttribute("inert", "")
-    // The drawer exists only on a narrow window. Widened past it, the menu is the fixed rail again: the drawer is closed,
-    // so the page is never left unreachable behind a drawer that is no longer one.
+    // The panel expands below the sticky top bar and pushes the page down. Outside clicks close it without blocking the page.
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target || drawerRef.current?.contains(target) || toggleRef.current?.contains(target)) return
+      setMenuOpen(false)
+    }
+    // The panel exists only on a narrow window. Widened past it, the menu is the fixed desktop rail again, so close it.
     const wide = window.matchMedia("(min-width: 1025px)")
     const onWide = () => { if (wide.matches) setMenuOpen(false) }
     wide.addEventListener("change", onWide)
+    document.addEventListener("pointerdown", closeOutside)
     window.addEventListener("keydown", onKey)
     return () => {
-      page?.removeAttribute("inert")
+      document.removeEventListener("pointerdown", closeOutside)
       wide.removeEventListener("change", onWide)
       window.removeEventListener("keydown", onKey)
     }
@@ -347,8 +350,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
-    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={closeMenu} />}
-    <aside ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+    <aside id="marketfit-navigation" aria-label="MarketFit navigation" ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       background: "var(--surface)",
       display: "flex",
       flexDirection: "column",
