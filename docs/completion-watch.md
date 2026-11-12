@@ -550,3 +550,8 @@ Continue: finish the exact-head PR #304 gates, obtain the protected-preview secr
 ## 12 November 2026 — PR #304 exact preview blocker
 
 PR #304 head `a07c4870e9aee390111fc36c5959b6d80f6d9884`: Kompas baseline `43139136646` and WhatsApp recovery `43139136594` passed; full CI `43139136600` is in progress at Type-check. Protected preview `43139133535` failed with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. The source/test correction is committed; the remaining preview wall requires the owner/authorized repository administrator to set that GitHub Actions secret privately. No secret should be pasted into chat or bypassed.
+
+
+## 12 November 2026 — durable refinement approval gate
+
+PR #277 has been converted to DRAFT and retitled `[DRAFT — OWNER APPROVAL REQUIRED] Durable WhatsApp swipe-refinement recovery` at head `c5cb99a45262d30ff1621e0673d6300115da689a`. The owner explicitly clarified that durable refinement recovery remains unapproved. This is distinct from the approved initial no-provider fallback and no-baseline text-only refinement failure in PR #303. Do not merge, deploy or replay PR #277 without separate explicit owner approval.
