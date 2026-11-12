@@ -142,3 +142,26 @@ The connected iZap workspace has one business but no linked WhatsApp number, zer
 The current webhook source separates the initial JD generate path from reply-to swipe refinement. The initial no-provider fallback is reachable only when a library selection is present; it verifies the authenticated user's library root, selected relative path, exact library/session bytes and selected profile email, then labels the attachment NOT TAILORED. The swipe reply routes to refine, which checks the same account, returns text only when the provider is unavailable or the rewrite is unusable, and requires sameResumeFacts before delivering a new document. It contains no sendClosest or sendOfflineOriginal fallback.
 
 PR #303 head fcee3fb6c46bd3d69bcc1565ed7fd1d5adb244cb adds two source-contract tests for these boundaries. Exact-head recovery regression 43097475896, full CI 43097475873 and Kompas baseline 43097475962 are queued. No real WhatsApp message or live model call was made. The 17 Oct generated DOCX, R2 object key, Meta correlation and signed delivery receipt remain missing.
+
+
+## 12 November 2026 — bounded Library and WhatsApp-connector recheck
+
+A fresh semantic search of the accessible Library used the 17 Oct 17:28 Chicago WhatsApp failure, the Risk & Controls JD, the original source DOCX and the generated output as separate query anchors. It returned related BNY preparation documents and the resume-tailoring research paper, but did not surface a uniquely correlated generated output DOCX. This is a bounded search result, not proof that no copy exists in every Library folder, conversation, WhatsApp account or R2 bucket.
+
+A read-only iZap `list_businesses` check returned one business (`eshwarjay0`) with **zero linked WhatsApp numbers**. There is therefore no connected iZap conversation source from which to retrieve the historical thread or signed message status in this runtime. No message was sent and no connection was changed.
+
+The historical case remains open: generated output DOCX, exact per-run R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. The recovered source/JD relationship does not establish which bytes were sent or whether Meta delivered them. Do not replay or resend the historical request; if the artifact and provider correlation cannot be recovered, record the historical delivery as irrecoverable rather than guessing.
+
+
+## 12 November 2026 — durable refinement approval boundary
+
+The owner clarified that durable recovery/replay for swipe-reply refinements remains unapproved. This is separate from the approved initial no-provider fallback and the approved no-baseline failure behavior (text-only; preserve the last delivered version). PR #277 was converted to DRAFT and retitled with an explicit owner-approval requirement at head `c5cb99a45262d30ff1621e0673d6300115da689a`. Issue #201 documents a design gap but is not authorization to implement or ship it. No durable replay was performed, no real WhatsApp message was sent, and no historical 17 Oct request was replayed.
+
+
+## 12 November 2026 — bounded historical-artifact retrieval recheck
+
+The prior recovery recorded above remains the accepted evidence: the original 27,724-byte source DOCX and matching full JD were recovered in the earlier audit. This run did not re-open those private artifacts and does not downgrade that prior finding. Fresh Library semantic searches for the 17 October 17:28 incident, the exact Security Engineer — Risk & Controls title, and the visible missing terms did not surface a uniquely correlated generated output DOCX. Search results included unrelated resume artifacts; none was treated as the incident output without a request ID, R2 key or provider receipt. A personal-context search for the original 17 October conversation returned no matching conversation, so no additional chat wording is inferred.
+
+Read-only iZap inspection found one business (`eshwarjay0`) with zero linked WhatsApp numbers. Searching that business for `resume` on 17 October 2026 in `America/Chicago` returned zero messages. This connector therefore cannot provide the original thread or a delivery status. A read-only Supabase metadata query also found zero rows in `resume_documents` and zero rows in `resume_import_jobs` created during 17 October 2026 22:20–22:40 UTC (the screenshot window). Those tables do not prove that no R2-only object or Meta-side record exists; the query only rules out a matching row in those two public tables.
+
+The historical output DOCX, exact per-run R2 object key, webhook/request correlation ID, Meta message ID and signed delivered/read receipt remain unavailable. The recovered source DOCX still contains education, employment-date and credential conflicts against the owner-confirmed profile; keep those facts quarantined until the owner reconciles them. The next unblock is read-only access to the correct R2/Meta logs or a user-provided export containing the request and provider identifiers. No replay, model call, R2 write, WhatsApp send or production mutation was performed.

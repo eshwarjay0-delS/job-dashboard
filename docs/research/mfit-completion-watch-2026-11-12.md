@@ -53,3 +53,97 @@ Method: source and artifact analysis. This record contains no credentials, priva
 ## WhatsApp production-window recheck — 12 Nov 00:57 UTC
 
 A fresh Vercel query filtered to `/api/whatsapp/webhook` found 11 quality-gate rejections across 10 users in 24 hours; first `2026-10-29T18:00:41Z`, latest `2026-11-11T22:16:15Z`, deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`. The three returned sample messages contain different blocker sets: one includes `role_evidence_gaps`, one includes `roles_unrewritten`, and one contains only `draft_parts_missing` plus quality blockers. Each sample reports 100% instrumented literal/supported coverage but `partial=true` and `incomplete=true`. A separate 30-minute query returned no runtime errors. Do not interpret the quiet window as proof that PR #304 is live or that the 17 Oct request produced a delivered DOCX.
+
+ 
+## 12 November 2026 — 04:13 UTC production and backlog delta
+
+### Current master and production
+
+- Canonical master: `da1db145c5981254f95620ff6bb0222ab4228125`.
+- Production deployment: `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, READY, target production, exact master SHA.
+- Independent alias lookup: `job-dashboard-fawn.vercel.app` → same deployment; `aliasError=null`.
+- GitHub combined Vercel status for master: SUCCESS.
+- PR #313 merged as `da1db145`; it adds five mocked selected-sender/inbox-isolation route tests and CI wiring only. Exact-head full CI `43143457248` and Kompas baseline `43143457299` succeeded. No Gmail runtime behavior was changed.
+
+### WhatsApp resume and historical 17 October case
+
+The 24-hour production error aggregate reports 11 `[whatsapp] tailoring quality gate rejected draft` events across 10 users, latest `2026-11-11T22:16:15Z`. The last 30-minute error-log query returned no WhatsApp errors. This quiet window is not proof of resolution or successful delivery.
+
+- PR #304 (`667c9ab3`): full CI `43139954490`, Kompas baseline `43139954651`, WhatsApp recovery `43139954504` SUCCESS. DRAFT. Protected preview `43139950971` fails because private `KOMPAS_VERCEL_API_TOKEN` is unavailable.
+- PR #303 (`344ed470`): full CI `43138216531`, recovery `43138216521`, baseline `43138216526` SUCCESS. DRAFT. Protected preview `43138214326` fails for the same missing secret.
+- PR #310 (`84136bfc`): WhatsApp recovery `43137900527` SUCCESS; still stacked on #303, no exact-head full CI/baseline and not independently ship-ready.
+- PR #312 (`0ae92d33`): test-only follow-up stacked on #304, no exact-head Actions run. Its local evidence is 31/31 resume confirmation/profile gap-fill tests, 92/92 baseline, TypeScript, focused ESLint and webpack build; it is not merged or independently validated by GitHub.
+
+The 17 Oct 17:28 Chicago case remains historically incomplete. Original source DOCX and matching full JD are recovered; generated output DOCX, exact R2 key, webhook/request correlation, Meta message ID and signed delivered/read receipt are missing. The source DOCX conflicts with owner-confirmed education/employment/credential facts, so those claims remain quarantined pending owner reconciliation. No real WhatsApp send/replay, model call, DOCX write or R2 write occurred.
+
+### Gmail/Poke and mobile
+
+Production runtime aggregation reports 32 Auth egress errors on `/api/gmail/notify-rules/export`, 27 users, last `2026-11-12T04:07:07Z`, HTTP 402 `exceed_egress_quota`; seven additional alert-route errors affected three users. This is a Supabase Auth service restriction, not evidence that all database tables are unavailable. Owner/project administrator must resolve the egress restriction; no billing or credential workaround was attempted.
+
+PR #309 exact-head full CI `43145194068` and Kompas baseline `43145194212` SUCCESS. Protected preview `43145190595` remains blocked by missing private `KOMPAS_VERCEL_API_TOKEN`; no phone/narrow-viewport acceptance exists. PR #313 is test-only. Three Gmail sync rows and 2,002 account-keyed threads remain in production; latest sync was 10 Nov 14:44:44Z. This does not establish live two-inbox partial-failure/reconnect or selected-From acceptance. The unattended update worker remains disabled.
+
+### Contract crawler
+
+Read-only production `mfit_crawl_runs` still ends at 10 Nov 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, one Inspyr abort. No 11/12 run is expected because the owner-approved Hobby usage reduction removed the daily contract-crawler cron; manual/on-demand only. No manual crawl or row mutation was performed.
+
+PR #305 exact head `278d9b3fa614c7e50aebf83b80ce9ac913724bf9` adds explicit Right To Hire/Contract To Perm → C2H aliases, preserves negation and avoids generic contract-administration false positives. Full CI `43096994492`, crawler regression `43096994482` and Kompas baseline `43096994493` remain QUEUED. Local sandbox checks 34/34, baseline 92/92, TypeScript, focused ESLint and webpack build passed, but are not GitHub exact-head checks. Keep DRAFT and do not manually recategorize rows.
+
+### Kompas and limitations
+
+Production alias is READY on exact master `da1db145`. No Kompas runtime change was made in this continuation. The authenticated 50-pair same-question Kompas/ChatGPT benchmark, independent human scorecards, native Windows, phone and WhatsApp acceptance remain open. The separate Kompas Continuous Voice Delivery automation was disabled in the accessible task list; no voice edits were duplicated.
+
+The container could not resolve GitHub DNS for a local clone, so this run made no local code execution claim. No secrets, billing, auth bypass, production rows, email, WhatsApp message or manual crawl were changed.
+
+**Continue:** verify PR #305's exact-head queued workflows; keep PR #304/#303 and PR #309 DRAFT until the protected preview prerequisite is restored privately; keep the historical 17 Oct case open until output and signed provider trace plus owner fact reconciliation exist.
+ 
+### AGENTS.md test-note correction — 12 November 2026
+
+The old note claiming `mail-overview.test.mjs` expected StandingSection before the filter was inconsistent with current source: line 180 asserts the section is after `Filter inbox`; the overview page has the filter at line 593 and the section at line 667. AGENTS.md was corrected to mark the old failure note stale and require a fresh full hardening run before any pass claim. No local test execution is claimed because the container could not resolve GitHub DNS.
+
+### Production synthetic-auth flag verification — 12 November 2026
+
+Vercel environment metadata requested with `decrypt=false` confirms both `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` are false for production. Neither flag was changed. Keep normal verified sign-in and account isolation fail-closed; issue #308 remains open for the explicit owner scope decision and regression tests. No decrypted secret was requested or repeated.
+
+### Vercel live-state caveat — 12 November 2026 04:26 UTC
+
+The Vercel project metadata reports `live=false` even though the latest deployment object is READY and `job-dashboard-fawn.vercel.app` is assigned to it. External requests for `/api/health` and `/kompas/version.json` were inaccessible in this run. Therefore production deployment readiness and alias assignment are verified, but public HTTP/end-user availability is **not** verified. Do not claim a fully live release until the project live state and public route are confirmed.
+
+
+## 12 November 2026 — continuation run at 04:55 UTC
+
+### Current release boundary
+
+- Master and canonical alias metadata: `da1db145c5981254f95620ff6bb0222ab4228125`, READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, alias assigned.
+- Vercel project metadata still reports `live=false`; external HTTP health/version probes remain inaccessible. Deployment READY + alias assignment is not public reachability or end-user acceptance.
+
+### Contract classifier continuation
+
+- New safe restack PR #315: `bd62bcd17b2b2be79c6ee23db19b8582a5225015`, based on current master. The five files copied from old PR #305 were verified byte-identical to the old base on current master before editing.
+- Crawler regression 43157849909 SUCCESS (8/8); Kompas baseline 43157849768 SUCCESS (92/92); full CI 43157849751 SUCCESS (47 workflow steps); protected preview 43157849584 FAILED at exact-head preview resolution. Its job log returned 404, so the precise failure cause is not asserted.
+- Scope: explicit Right To Hire / Contract To Perm / Contract To Permanent C2H aliases, negation preservation, generic contract-vocabulary false-positive rejection, structured employmentType and additive prebuild regression coverage.
+- No production deployment, manual crawl, database row rewrite, new adapter or daily cron restoration. Old PR #305 remains untouched pending validation of #315.
+
+### WhatsApp and resume evidence
+
+- The historical 17 Oct 17:28 Chicago 98% hold remains unverified: generated DOCX, per-run R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt remain missing; source chronology/credential conflicts remain quarantined pending owner reconciliation.
+- PR #303 exact-head full CI 43138216531, recovery 43138216521 and baseline 43138216526 passed; protected preview 43138214326 failed because private `KOMPAS_VERCEL_API_TOKEN` is absent. PR #310 remains stacked on #303.
+- PR #304 exact-head full CI 43139954490, recovery 43139954504 and baseline 43139954651 passed; protected preview 43139950971 failed for the same missing private token. PR #312 remains stacked on #304.
+- Production runtime error aggregation still shows 11 WhatsApp tailoring quality-gate rejections across 10 users, latest at 2026-11-11T22:16:15Z. The samples have 100% instrumented literal/supported coverage but remain partial/incomplete, with differing blockers (`role_evidence_gaps`, `roles_unrewritten`, `draft_parts_missing`). This is not a uniform failure or proof of a 98% live match.
+
+### Gmail/mobile and Kompas
+
+- PR #309 mobile navigation: exact-head full CI 43145194068 and baseline 43145194212 passed; protected preview 43145190595 failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable; no real phone acceptance.
+- Multi-account Gmail remains separate: PR #271/#286 sync-health UI is not approved for merge; two authorized inboxes (one healthy, one partial/failed), selected-From/reconnect and narrow-mobile acceptance remain open. Unattended updates stay disabled until scheduler, CRON_SECRET, approved Meta template and explicit enablement are present.
+- PR #314 adds only CI wiring for 69 existing Kompas question/voice cases; its full CI 43157259968 remains in progress at Webpack build, preview 43157259910 failed. No runtime behavior changed. Kompas Continuous Voice Delivery is disabled; no duplicate voice work was started.
+
+No real email or WhatsApp message was sent. No manual crawl, database mutation, billing change, secret access or authentication bypass occurred.
+
+
+## 12 November 2026 — Kompas question/voice CI result (04:59 UTC)
+
+The Safe Merge Gate's test-only PR #314 is based on current master and adds one CI step for five existing suites (69 automated cases). Exact-head full CI 43157259968 and Kompas baseline 43157260433 both SUCCESS. The full CI run completed all 69 question-framing, one-press, typed-input and voice regression cases and the Webpack build. Protected preview 43157259910 FAILED at exact-head preview resolution because the private KOMPAS_VERCEL_API_TOKEN is unavailable. Keep PR #314 DRAFT/unmerged; no runtime behavior changed. The separate Kompas Continuous Voice Delivery automation is disabled. These source tests do not establish native Windows, phone, WhatsApp or real-session acceptance.
+
+
+## 12 November 2026 — contract classifier exact-head full CI result (05:02 UTC)
+
+PR #315 final head `bd62bcd17b2b2be79c6ee23db19b8582a5225015` now has all code gates SUCCESS: full CI 43157849751 (47 workflow steps), crawler classification regression 43157849909 (8/8), and Kompas baseline 43157849768 (92/92). Protected preview 43157849584 still FAILED at exact-head preview resolution; its job log returned 404. Vercel project metadata remains `live=false`. Keep PR #315 DRAFT/unmerged; no deployment, manual crawl or production row mutation.

@@ -239,3 +239,19 @@ The exact unblock requirement is an owner billing decision: upgrade the Supabase
 Owner requirement retrieved from 4 October 2026: “Navigation must not block/cover the view; even if opened, it should not obstruct the page.” The selected implementation expands the hamburger panel below the sticky top bar in normal document flow and pushes content down; it does not float over, dim or make the page inert. Outside-pointer, Escape, route-close and focus-return behavior are implementation/accessibility details rather than separate owner-authored requirements.
 
 PR #309 restacks the behavior onto current master and preserves the later `serverReportsAuthDisabled` sign-out guard. Exact-head full CI is pending, the Kompas baseline passes, and the protected preview gate is blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`. No production deployment or real phone/mobile viewport acceptance is claimed.
+
+ 
+## 12 November 2026 — production and mobile recheck (04:13 UTC)
+
+The canonical production alias now resolves to READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, exact master `da1db145c5981254f95620ff6bb0222ab4228125`. PR #313 is merged and adds five mocked selected-sender and receiving-inbox isolation regressions to CI (full CI `43143457248`, baseline `43143457299`); it does not change runtime Gmail behavior or prove a real send.
+
+Production Auth egress is currently restricted: the 24-hour runtime aggregate shows 32 `/api/gmail/notify-rules/export` failures across 27 users, latest `2026-11-12T04:07:07Z`, HTTP 402 `exceed_egress_quota`. The owner/project administrator must resolve the Supabase Auth restriction. No billing change, credential swap, alternate-auth workaround or email send was attempted.
+
+The last read-only account snapshot remains three account sync rows and 2,002 account-keyed threads, latest sync 10 Nov 14:44:44Z. This is persisted account separation, not two-inbox healthy/partial-failure, reconnect or selected-From live acceptance.
+
+PR #309 exact-head full CI `43145194068` and Kompas baseline `43145194212` passed for the approved normal-flow mobile navigation (hamburger expands below the sticky top bar and pushes content down; no overlay). Protected preview `43145190595` remains blocked because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. No real phone/narrow viewport acceptance or production deployment is claimed. Keep sync-health cards proposed and the unattended update worker disabled until its external scheduler, CRON_SECRET, approved Meta template and explicit enablement are present.
+
+
+## 12 November 2026 — mobile navigation restack
+
+The approved Poke-inspired mobile behavior is restacked as PR #318 on PR #317. It preserves the normal-flow requirement: the hamburger opens below the sticky top bar and pushes content down; no overlay/scrim. It adds `dashboard-shell.test.mjs` to fail-fast prebuild without dropping the resume profile suites. Exact head `571b8594b3189f87f5d3fe50f2067a65330d09f6` is a draft stacked PR with no workflow run visible yet. Prior #309 full CI/baseline success does not validate this restack. Real phone acceptance and protected preview remain open; no email was sent and the unattended worker stays disabled.

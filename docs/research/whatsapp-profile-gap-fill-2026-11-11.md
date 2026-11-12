@@ -42,3 +42,12 @@ This new roles_unrewritten blocker is important: the PR #304 profile-part accept
 PR #304 exact head 6a15dad591a956e2b7cae6ec30f2ecd4d53909a3 now has full CI 43094812633 SUCCESS, WhatsApp recovery 43094812579 SUCCESS and Kompas baseline 43094812748 SUCCESS. The protected voice-preview gate 43094807518 FAILED; its job-log read timed out, so the narrower cause is not known. The branch remains DRAFT and is not deployed. The live alias still points to master 65bdf, not PR #304.
 
 The separate 17 October 17:28 Chicago historical case remains blocked: the 27,724-byte original DOCX and matching full JD are recovered read-only, but the generated output DOCX, R2 object key, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain unavailable. The source DOCX conflicts with owner-confirmed education/employment/credential facts, so those claims remain quarantined pending owner reconciliation. iZap has no connected WhatsApp number and no matching history. No model call, DOCX write, R2 mutation, WhatsApp message or handset test was performed.
+
+ 
+## 12 November 2026 — exact-head and production recheck (04:13 UTC)
+
+The latest 24-hour production aggregation reports 11 WhatsApp tailoring quality-gate rejections across 10 users, latest `2026-11-11T22:16:15Z`. The last 30-minute error-log query returned no WhatsApp failures. This does not prove that the profile-gap mismatch is resolved or that any DOCX was delivered.
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` has full CI `43139954490`, Kompas baseline `43139954651` and WhatsApp recovery `43139954504` SUCCESS. It remains DRAFT because the protected preview workflow `43139950971` cannot access the private `KOMPAS_VERCEL_API_TOKEN`. The owner or authorized repository administrator must configure that secret privately; no preview bypass was attempted.
+
+The change fixes a source-supported mismatch between profile-part acceptance and pending-draft state resolution; the production logs do not expose the missing part index or `pendingProfile`, so the exact runtime root cause is not proven for every rejection. The 17 Oct historical delivery remains a separate unresolved case. No live model call, DOCX generation, resume-library write, R2 mutation, Meta send or authenticated handset test occurred.

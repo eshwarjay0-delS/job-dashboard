@@ -304,7 +304,7 @@ The Safe Merge Gate identified private source locators in the Oct 17 handoff: th
 ### Kompas and coordination
 - Production Supabase has 22 account-session rows, 7 tombstones, 9 not-ended sessions and 28 artifacts across one owner. This is persisted data, not proof of a second device, native Windows handoff or WhatsApp catalog convergence.
 - No grouped runtime-error clusters were returned for the selected production routes in the last 24 hours. This is not device or message-delivery acceptance.
-- The active Kompas Continuous Voice Delivery task owns PR #283 and audio/capture work; no parallel voice edits were made. The Safe Merge Gate is active. No separate Bible-Keeper automation appeared in the accessible active automation list.
+- The Kompas Continuous Voice Delivery automation is currently disabled. PR #283 remains open and not draft with full CI, baseline, cross-device and Windows packaging gates green, but accessible prior-conversation search found no explicit owner approval for its first-tap audio opt-in behavior; no PR review was returned. Do not merge or modify it until approval is recorded; no voice/audio/caption changes were made here. The MFit Safe Merge Gate is active. No separate Bible-Keeper automation appeared in the accessible active automation list.
 - PR #275 exact head `3766479ae3514e8584be856c6bb7644a5f849d1c` had full CI `42839542006` SUCCESS and Kompas baseline `42839541783` SUCCESS. The dedicated Plan Journal/REA schema workflow `42839542019` failed one assertion because the REA entry referenced `src/lib/whatsapp-resume-recovery-path.ts`, which is not on master while PR #278 remains unmerged; this commit removes that unmerged local path reference. Exact-head preview `dpl_F25p2djy16dHjBozp2p5Ap4ixVLR` is READY. The authenticated preview smoke still requires the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it. PR #281 overlaps the same journal/REA files and remains deferred until #275 is reconciled.
 
 Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275 head; keep the branch unmerged until the authenticated preview smoke gate is legitimately available. Then restack PR #281 without dropping its crawler tests/docs. Separately wait for Vercel capacity before one reviewed production deployment and verify the first post-classifier crawl. Keep PR #274/#277/#279/#271 approval gates and PR #283 with Voice Delivery. Do not claim the backlog complete.
@@ -500,3 +500,226 @@ The previous statements that direct public production HTTP was inaccessible/unve
 ## 12 November 2026 — WhatsApp production window recheck
 
 The latest 24-hour `/api/whatsapp/webhook` error group remains 11 quality-gate rejections across 10 users; first occurrence 29 Oct 18:00:41 UTC, latest 11 Nov 22:16:15 UTC, on production deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`. The samples do not show one uniform blocker: they include `role_evidence_gaps`, `roles_unrewritten`, and `draft_parts_missing` combinations. All shown samples have 100% instrumented literal/supported coverage but remain `partial=true` and `incomplete=true`. The independent 30-minute query returned **no runtime errors**. That quiet window is not proof of a fix, a completed DOCX, or Meta delivery. PR #304 remains unmerged/undeployed behind its preview gate; preserve all role/evidence thresholds.
+
+
+## 12 November 2026 — offline WhatsApp fallback session lifecycle
+
+- Continue: the approved no-provider fallback is in parent PR #303; dependent PR #310 fixes stale session state after a successful fallback. It clears only the matching JD/resume pair after Meta returns a document message ID, preserves a newer request arriving during send, and keeps the old pair when Meta rejects the document.
+- Local evidence on parent #303 plus patch: targeted WhatsApp/resume 64/64, Kompas baseline 92/92, TypeScript, focused ESLint and production webpack build pass. PR #310's exact-head WhatsApp recovery run \`43136393260\` is IN_PROGRESS; parent #303 exact-head full CI/recovery/baseline were queued at last check.
+- PR #310 remains DRAFT and stacked on #303. Do not merge independently, change WhatsApp send policy, or claim live delivery. The protected Vercel preview remains unavailable while project metadata reports \`live=false\`; do not bypass it.
+- Plan/REA entry and source evidence are recorded in this documentation follow-up stacked on PR #306. No live Meta send, R2 write, model call, production deployment or handset acceptance occurred.
+- The historical 17 Oct 17:28 Chicago case remains open: original source DOCX and full JD recovered; generated output DOCX, per-run R2 key, webhook/Meta correlation and signed delivery/read receipt remain missing; conflicting source facts remain quarantined pending owner reconciliation.
+
+
+## 12 November 2026 01:47 UTC — exact-head gate recheck
+
+- PR #310 exact-head WhatsApp recovery run 43136393260 completed SUCCESS. Its dependent code PR remains DRAFT and is stacked on parent #303.
+- Parent PR #303 exact-head full CI 43097475873, WhatsApp recovery 43097475896 and Kompas baseline 43097475962 remain QUEUED; no merge is permitted.
+- PR #311 Plan/REA schema 43136679015 passed. Parent documentation PR #306 full CI 43131176244, Kompas baseline 43131176252 and Plan/REA schema 43131176205 passed.
+- The protected preview remains unavailable because GitHub Actions lacks the private KOMPAS_VERCEL_API_TOKEN; the owner/authorized administrator must configure it privately; do not bypass it. Vercel deployment metadata still maps job-dashboard-fawn.vercel.app to READY deployment dpl_5ipmErFiEhTsp5tEupta39o8EA1K at master SHA 65bdf2f8cf1dd7299b8623885641400efe57bbfe. This is deployment/alias evidence, not authenticated WhatsApp, Gmail, native Windows or mobile acceptance.
+
+ 
+## 12 November 2026 — production synthetic-auth review
+
+Issue #308 remains open and the login-off fallback remains unapproved. Authorized Vercel inspection confirms Production AUTH_DISABLED=false and NEXT_PUBLIC_AUTH_DISABLED=false; neither flag was changed. The canonical alias maps to READY deployment dpl_5ipmErFiEhTsp5tEupta39o8EA1K at master 65bdf2f8cf1dd7299b8623885641400efe57bbfe. PR #306 records public health/version/desktop-version endpoints returning 200 at 00:56 UTC; this is not authenticated account/device acceptance.
+
+The exact protected-preview blocker is the absent private GitHub Actions secret KOMPAS_VERCEL_API_TOKEN (PR #306 workflow 43130279686); the 17 fail-closed resolver tests passed. The owner or authorized repository administrator must configure the secret privately. Keep both production flags false; no rollback or production change was requested or made. Production fail-closed tests, explicit owner decision, owner/admin and ordinary-account isolation, and desktop continuity remain open.
+
+
+## 12 November 2026 — current continuation and owner corrections
+
+- **WhatsApp initial fallback:** PR #303 head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` now uses the exact visible label `Original resume — NOT TAILORED`. Baseline `43138216526` passed; full CI `43138216531` and WhatsApp recovery `43138216521` are in progress; protected preview `43138214326` failed because the private `KOMPAS_VERCEL_API_TOKEN` is absent. Keep the PR DRAFT and do not bypass protection.
+- **WhatsApp session race:** PR #310 commits `3038456` and `84136bfc` make JD/resume consumption atomic. The exact-head recovery regression `43137900527` passed, including same-resume/new-JD and same-JD/new-resume cases. Parent #303 advanced, so #310 is non-mergeable and must be restacked after #303 is accepted.
+- **Resume evidence:** PR #304 head `96cbc6575a012f4d29f11b180b36532e7c36e912` restricts general confirmations to skills/profile; employer-specific experience requires same-role source bullets. WhatsApp recovery `43138129998` and Kompas baseline `43138129952` passed; full CI `43138129880` is in progress; preview `43138127368` failed due the missing private token. PR #293 employer/role attribution remains unapproved and DRAFT. No live model/DOCX result or 98% match is claimed.
+- **Contract crawler:** owner correction: the daily contract cron was deliberately removed under the approved Hobby usage reduction. Manual/on-demand only. Keep PR #307's schedule restoration DRAFT/unapproved. PR #305 classifier precision checks are queued on its exact head; no production change.
+- **Gmail/mobile:** PR #309 exact-head full CI `43130664507` and Kompas baseline `43130664424` passed; protected preview `43130664448` failed because `KOMPAS_VERCEL_API_TOKEN` is missing. No phone acceptance. Keep sync-health cards and unattended worker unapproved/disabled; no real email send.
+
+Continue: finish the exact-head PR #303 checks, restore protected preview access through the owner/authorized repository administrator, then restack #310. In parallel, finish PR #304 full CI; do not merge PR #293, #277 or PR #307. Keep the 17 Oct 17:28 Chicago incident open until the exact generated DOCX and correlated R2/webhook/Meta signed delivery evidence are recovered or explicitly deemed irrecoverable. No live WhatsApp, email, model or device tests were performed.
+
+
+## 12 November 2026 — exact-head CI follow-through
+
+- PR #303 exact head `344ed47061ae475a42e9695d08ca2dba91bf3fc2` now has full CI `43138216531`, WhatsApp recovery `43138216521` and Kompas baseline `43138216526` all SUCCESS. Protected preview `43138214326` still fails because private `KOMPAS_VERCEL_API_TOKEN` is absent. Keep DRAFT; no merge or bypass.
+- PR #304 previous head `96cbc657` failed full CI `43138129880` only because two new regex assertions had invalid slash escaping; 42 other tests passed. Fixed with `String.includes` in `a07c4870e9aee390111fc36c5959b6d80f6d9884`. New exact-head CI `43139136600` is QUEUED, baseline `43139136646` and WhatsApp recovery `43139136594` are IN PROGRESS, preview `43139133535` is IN PROGRESS. Wait for all exact-head results; no merge.
+- PR #310's atomic-pair regression `43137900527` remains green, but it must be restacked onto the accepted parent after #303 passes its protected preview gate.
+- Plan/REA docs PR #311 schema `43138875726` SUCCESS on `3b30b905`; it remains stacked on PR #306, whose full CI/baseline/schema pass but protected preview fails for the same missing private token.
+
+Continue: finish the exact-head PR #304 gates, obtain the protected-preview secret through the owner/authorized repository administrator, then accept #303 and restack #310 in dependency order. Keep PR #293, #277 and #307 unapproved. No live model/DOCX, WhatsApp or Gmail acceptance is claimed.
+
+
+## 12 November 2026 — PR #304 exact preview blocker
+
+PR #304 head `a07c4870e9aee390111fc36c5959b6d80f6d9884`: Kompas baseline `43139136646` and WhatsApp recovery `43139136594` passed; full CI `43139136600` is in progress at Type-check. Protected preview `43139133535` failed with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. The source/test correction is committed; the remaining preview wall requires the owner/authorized repository administrator to set that GitHub Actions secret privately. No secret should be pasted into chat or bypassed.
+
+
+## 12 November 2026 — durable refinement approval gate
+
+PR #277 has been converted to DRAFT and retitled `[DRAFT — OWNER APPROVAL REQUIRED] Durable WhatsApp swipe-refinement recovery` at head `c5cb99a45262d30ff1621e0673d6300115da689a`. The owner explicitly clarified that durable refinement recovery remains unapproved. This is distinct from the approved initial no-provider fallback and no-baseline text-only refinement failure in PR #303. Do not merge, deploy or replay PR #277 without separate explicit owner approval.
+
+
+## 12 November 2026 — PR #310 mergeability correction
+
+The current GitHub PR API reports PR #310 `mergeable=true` relative to its current base branch, which is PR #303's feature branch at the earlier base commit. Older notes saying it is `non-mergeable` are stale and superseded. It remains a stacked dependency and is **not independently ship-ready**: do not merge before parent #303 is accepted. After #303 is accepted into master, retarget/restack #310 onto the accepted master SHA and rerun full CI, WhatsApp recovery, Kompas baseline and protected preview on that final head.
+
+
+## 12 November 2026 — final resume evidence prompt correction
+
+PR #304 head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` removes the remaining two prompt clauses that still allowed a role-specific confirmation to support employer history. Employer-specific bullets now require same-role original source evidence; general confirmations remain skills/profile only. Previous exact-head CI failures were informative: `43138129880` had malformed regex assertions (42 other cases passed); `43139136600` then exposed the residual prompt wording (64/65 cases passed). The current exact-head full CI `43139954490`, baseline `43139954651`, WhatsApp recovery `43139954504` and preview `43139950971` are IN PROGRESS. No merge or live claim until all pass.
+
+
+## 12 November 2026 — PR #304 protected preview result
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` SUCCESS; WhatsApp recovery `43139954504` IN PROGRESS; full CI `43139954490` IN PROGRESS at Lint. Protected preview `43139950971` FAILED; the job log explicitly states `KOMPAS_VERCEL_API_TOKEN must be configured privately`. This requires the owner/authorized repository administrator; do not paste the secret into chat or bypass the gate.
+
+
+## 12 November 2026 — PR #304 recovery regression completed
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` and WhatsApp recovery `43139954504` now both SUCCESS. Full CI `43139954490` completed SUCCESS. Protected preview `43139950971` FAILED with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. No merge or production deployment.
+
+
+## 12 November 2026 — resume profile-gap regressions added to the build gate
+
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e` now has all three code gates complete: full CI `43139954490` SUCCESS, WhatsApp recovery `43139954504` SUCCESS and Kompas baseline `43139954651` SUCCESS. Its protected preview `43139950971` remains FAILED because the private GitHub Actions secret `KOMPAS_VERCEL_API_TOKEN` is missing. The owner or authorized repository administrator must configure it privately; do not paste or bypass it. PR #304 remains DRAFT and is not deployed.
+
+Local execution of the new profile-gap suite found two test-harness failures caused by strict comparison of objects created in a separate Node VM realm. The object fields were correct; the prototypes differed. Test-only PR #312 `0ae92d33f17133fed79328ccb7b7b0029817e2bc` normalizes those results and adds both `resume-confirmation-quality.test.mjs` and `tailor-profile-gap-fill.test.mjs` to the fail-fast build-time prebuild command. Local sandbox evidence on that exact content: targeted suites 31/31, Kompas baseline 92/92, TypeScript passed, focused ESLint passed, and `npm run build -- --webpack` passed with the updated prebuild suites and 160 static pages. PR #312 is stacked on #304, marked ready for review, and has no GitHub workflow run yet; it must not merge independently or before the parent gate.
+
+The production alias remains READY on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`; project metadata still reports `live:false`, so the protected preview remains unavailable. No new production deployment, authenticated model call, DOCX generation, R2 mutation, Meta send, email or handset acceptance occurred. The separate `roles_unrewritten` blocker must not be relaxed without owner approval. The 17 Oct 17:28 Chicago incident still lacks the generated output DOCX, R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt; conflicting source facts remain quarantined.
+
+Continue: check PR #312's exact-head GitHub CI and baseline, then continue the approved contract-crawler classifier validation without performing a manual crawl or production data mutation.
+
+
+## 12 November 2026 — Right To Hire / Contract To Perm classifier local validation
+
+PR #305 exact head `278d9b3fa614c7e50aebf83b80ce9ac913724bf9` is restacked on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`. Its exact-head GitHub full CI `43096994492`, crawler regression `43096994482`, Kompas baseline `43096994493` and protected preview `43096990568` remain QUEUED at this check; it remains DRAFT and is not deployed.
+
+Local sandbox validation on that exact head: crawler classifier + additive prebuild tests 34/34, Kompas baseline 92/92, TypeScript passed, focused ESLint passed, and `npm run build -- --webpack` passed with all prebuild suites and 160 static pages. The tests cover explicit Right To Hire/Contract To Perm aliases, negated labels, generic contract-administration vocabulary, structured C2C/1099/Contract/Temporary labels and W2-only payroll. This is local code evidence, not a live crawl or persisted-row acceptance.
+
+The approved daily crawler cron remains deliberately removed under the Hobby usage reduction. Do not restore it without owner approval, run a manual crawl or mutate production job rows. The last known persisted crawl is 10 Nov 2026 11:00 UTC (6,818 found/upserted across 20 portals, one Inspyr abort); no post-classifier crawl has been demonstrated. PR #305 and test-only PR #312 both change `package.json` prebuild, so the final restack must preserve both crawler and resume regression additions. PR #305 includes an additive-prebuild regression that protects the existing ordered baseline groups.
+
+Continue: wait for exact-head PR #305 checks and protected preview; after a reviewed production release, verify the canonical alias and use only the next legitimate scheduled crawl for C2H persisted-row/API acceptance.
+
+
+## 12 November 2026 — voice-workstream coordination check
+
+The automation inventory at 02:22 UTC showed MFit Completion Watch and MFit Safe Merge Gate enabled, while Kompas Continuous Voice Delivery was disabled. No separate Bible-Keeper automation appeared. PR #283 `9a0e77fad2ca0fd7fd750a85c2e02f29d62917da` remains open, not draft, with full CI `42841544434`, baseline `42841544689`, cross-device gate `42841544818` and Windows x64 packaging `42841544525` all SUCCESS; the authenticated voice-preview gate failed and no PR review was returned. Prior-conversation search found no explicit Eshwar approval for the microphone-on/system-audio-off default or first-tap opt-in behavior; available support was assistant-authored only. Keep PR #283 unchanged and unmerged until explicit owner approval is recorded. No audio, microphone, caption or continuous-voice edits were made in this run.
+
+
+## 12 November 2026 — production runtime-error access blocked
+
+A fresh read-only Vercel runtime-error query scoped to /api/whatsapp/webhook, /api/crawl/run and /api/gmail-sync returned HTTP 403 permission denied (request ID iad1:iad1:sfo1:sfo1:hnd1:iad1:sfo1:sfo1::sfo1::6rkkl-1794451109443-12b478c2d157). The documented CLI fallback was attempted in the isolated sandbox, but the vercel CLI is not installed. Do not retry the unchanged MCP call, assume zero errors, or use a different account/team. Unblock requires Vercel observability/log-read permission for the connected integration or an approved CLI environment scoped to the same team/project; never paste credentials into chat.
+
+This is not a production availability failure: the canonical alias independently remains READY at deployment dpl_5ipmErFiEhTsp5tEupta39o8EA1K, exact master SHA 65bdf2f8cf1dd7299b8623885641400efe57bbfe. Public GET /api/health -> 200, /version.json -> 200 with the exact full SHA, and /api/kompas/desktop-version -> 200 advertising version 0.8.8 and the official GitHub executable URL. Runtime-error clusters for WhatsApp, crawler and Gmail are currently unverified, not clean.
+
+
+## 12 November 2026 — Poke-inspired mobile navigation local verification
+
+PR #309 exact head c18b356f0006bfce3c9b65b4196f2973e31eb088: full CI 43130664507 SUCCESS and Kompas baseline 43130664424 SUCCESS; protected preview 43130664448 FAILED because private KOMPAS_VERCEL_API_TOKEN is absent. Local dashboard-shell.test.mjs passed 4/4 and TypeScript passed on the exact head. The approved narrow-screen panel expands below the sticky top bar in normal flow, pushes content down, does not dim/inert the page, and closes on outside click, route selection or Escape with focus return. PR #309 remains DRAFT; no real phone/narrow-device acceptance or production deployment.
+
+This does not complete Poke-inspired multi-account Gmail: PR #297 is stale/DRAFT, two-inbox healthy/partial-failure, selected-From and affected-inbox-only reconnect acceptance remain open. The unattended Gmail/WhatsApp update worker remains disabled pending the approved external scheduler, CRON_SECRET, Meta template and explicit enablement. No email or WhatsApp message was sent.
+
+
+## 12 November 2026 — multi-account Gmail selected-sender regression restack
+
+Stale PR #297 (f7c7ff0c4d919f763e9bf9f3e3169134d602ffc8) was based on old master 11efbbfe and its new test triggered Next.js ESLint no-assign-module-variable because the VM harness used a local variable named module. Current-master replacement PR #313 (a456f004dad7c66b29528d257d547e1fd7b02431) renames it to moduleMock, preserves the existing CI workflow and adds the five mocked selected-sender/inbox-isolation route cases.
+
+Local exact-content evidence: Gmail route tests 5/5, TypeScript passed after clearing stale generated .next/types from earlier branch checkouts, focused ESLint passed. GitHub Kompas baseline 43143457299 SUCCESS; full CI 43143457248 IN PROGRESS. No real email, Gmail OAuth credential, production data, two-inbox account or mobile device was used. Keep #313 open until full CI passes; then close stale #297 as superseded. The actual healthy/partial sync, selected-From, same-inbox thread and affected-inbox-only reconnect acceptance remains open.
+
+PR #309 separately implements the approved no-obstruction mobile navigation behavior: full CI 43130664507 and baseline 43130664424 SUCCESS, protected preview 43130664448 FAILURE because private KOMPAS_VERCEL_API_TOKEN is absent, local dashboard-shell 4/4 and TypeScript pass. It remains DRAFT; no real phone acceptance. The unattended Gmail/WhatsApp update worker remains disabled until approved scheduler, CRON_SECRET, Meta template and explicit enablement exist. No email or WhatsApp message was sent.
+
+
+## 12 November 2026 — Gmail mobile navigation accessibility correction
+
+The approved mobile behavior remains a normal-flow panel below the sticky top bar; it pushes content down and never overlays, dims or disables the page. PR #309 source review found `aria-controls="marketfit-navigation"` was duplicated on both the outer `<aside>` and inner `<nav>`. The fix removes the inner duplicate and keeps the outer aside as the sole target. The dashboard-shell regression now asserts exactly one occurrence and rejects an id on the inner nav.
+
+- Code commit: `d206090ae3ca9e96615c7688f4799e8562b4b774`.
+- Regression commit: `96b8e84a7550cf7481d043e53ba51d7130c1af84`.
+- Exact source check: one target id, no duplicate on the inner nav.
+- Previous PR head `c18b356` full CI and Kompas baseline passed; protected preview failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable.
+- New head `96b8e84` has no exact-head workflow result visible yet. The container could not clone GitHub because DNS resolution failed, so no local test run is claimed.
+- No production deployment or real-phone acceptance. Keep PR #309 DRAFT until exact-head CI/baseline and legitimate protected preview pass; the owner or authorized repository administrator must configure the private token. Then verify on a real narrow viewport.
+
+
+## 12 November 2026 — historical WhatsApp artifact recheck
+
+The earlier audit's recovery of the original 27,724-byte source DOCX and matching full JD remains accepted; this run did not re-open those private artifacts. Fresh Library search did not surface a uniquely correlated generated output, and personal-context search returned no matching original conversation. Read-only iZap listing found one business with zero linked WhatsApp numbers; searching `resume` on 17 Oct 2026 (`America/Chicago`) returned zero messages. Read-only Supabase aggregate found zero rows in `resume_documents` and `resume_import_jobs` during 22:20–22:40 UTC. This does not rule out R2-only or Meta-side records.
+
+The historical output DOCX, exact R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain missing. The recovered source DOCX still has education/employment/credential conflicts with the owner-confirmed profile; keep them quarantined pending owner reconciliation. Exact unblock: authorized read-only access to the correct R2/Meta logs or an owner-provided export with request/provider identifiers. No replay, model call, R2 write, WhatsApp send or production mutation occurred.
+
+
+## 12 November 2026 — current deployment and Gmail freshness
+
+- Canonical alias `job-dashboard-fawn.vercel.app` still resolves to READY production deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`, exact master SHA `65bdf2f8cf1dd7299b8623885641400efe57bbfe`. Vercel project metadata reports `live=false`. The latest project deployment is a non-production ERROR (`dpl_rxPMNAqzLXTVmrWqL6uSZhcL1LPq`) from an older docs branch SHA `5264f5211b27c31f0d5432ac2011f67f546f21c5`, target `null`; its build failed TypeScript on two invalid REA method labels at lines 300 and 303. This is not the current #311 docs branch, whose allowed method values pass Plan/REA schema run `43145699117`. Do not infer that the canonical alias is down, and do not unpause or change billing without owner decision. Runtime-log access returned HTTP 403.
+- Read-only Gmail aggregates: `mfit_gmail_threads` = 2,002 rows across 3 account IDs and one user; `mfit_gmail_sync` = 3 rows across the same 3 accounts. Latest thread update `2026-11-10 14:46:49.790 UTC`, latest sync `14:44:44.277 UTC`; no persisted refresh for more than 24 hours. Account separation is visible in stored keys, but healthy live OAuth, two-inbox behavior, sending and mobile acceptance are not proven. Supabase Auth egress 402 remains an owner-level service/billing blocker; no workaround or email send.
+- The 11 Nov contract crawl is intentionally absent after the owner removed the daily cron under the approved Hobby usage reduction. Manual/on-demand only; do not restore the schedule or run a manual crawl without a separate owner instruction.
+
+
+## 12 November 2026 — Gmail mobile navigation exact-head CI completed
+
+PR #309 head `96b8e84a7550cf7481d043e53ba51d7130c1af84` now has full CI `43145194068` SUCCESS and Kompas baseline `43145194212` SUCCESS. The unique navigation-target fix and regression are covered by the exact-head run. Protected preview `43145190595` remains FAILURE because the private `KOMPAS_VERCEL_API_TOKEN` is unavailable. Keep PR #309 DRAFT; no production deployment, narrow browser viewport or real phone acceptance has occurred.
+
+
+## 12 November 2026 — stale Gmail test PR closed
+
+PR #297 was closed as a stale duplicate after current-master PR #313 preserved the same five selected-sender/per-inbox regression tests and corrected the harness naming. PR #297 was not merged; its history and superseded note remain. PR #313 exact-head full CI `43143457248` and Kompas baseline `43143457299` passed, but the protected preview gate remains failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. PR #313 remains open/unmerged and test-only; no real email or two-inbox acceptance is claimed.
+
+
+## 12 November 2026 — Chief Relevance and voice boundary
+
+The canonical alias remains READY on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`, but Vercel project metadata reports `live=false`; runtime-error access returned 403. The last successful public smoke recorded in the Plan/REA branch is 12 Nov 00:47 UTC. PR #262 (`30cc94b`) and PR #234 (`f0d6f04`) remain open and non-mergeable on old bases; both have Vercel Preview Comments SUCCESS, voice-preview-smoke FAILURE and no exact-head full CI. No blind restack or merge was attempted. PR #270 remains DRAFT with the separate Voice Delivery task; no voice/audio/caption files were edited. The live 50-pair Kompas/ChatGPT benchmark still requires private `KOMPAS_API_TOKEN`, approved source bundles and independent human scorecards; no live pairs or native Windows/phone/WhatsApp acceptance are claimed.
+
+ 
+## 12 November 2026 — current master and continuation reconciliation (04:13 UTC)
+
+Canonical master is `da1db145c5981254f95620ff6bb0222ab4228125`. Vercel production deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj` is READY at that exact SHA; independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to it, with no alias error. PR #313 merged as this SHA and adds five mocked selected-sender/inbox-isolation regressions to CI; full CI `43143457248` and Kompas baseline `43143457299` passed. It changes no Gmail runtime behavior.
+
+**WhatsApp resume remains the top unresolved product failure.** The latest 24-hour production aggregation reports 11 tailoring quality-gate rejections across 10 users, latest `2026-11-11T22:16:15Z`; the last 30-minute query had no WhatsApp errors, which is not proof of resolution. PR #304 exact-head full CI `43139954490`, baseline `43139954651` and recovery `43139954504` passed, but it remains DRAFT because protected preview `43139950971` cannot resolve without private `KOMPAS_VERCEL_API_TOKEN`. PR #303 full CI `43138216531`, recovery `43138216521` and baseline `43138216526` passed; its protected preview `43138214326` is blocked by the same missing secret. PR #310's recovery run `43137900527` passed, but it is stacked on #303 and lacks full CI/baseline on its exact head. No real WhatsApp message, model generation, R2 write or handset test occurred.
+
+The historical 17 Oct 17:28 Chicago delivery remains unresolved: the original source DOCX and matching JD were recovered, but the exact generated output, R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt are still missing. Conflicting education/employment/credential facts remain quarantined pending owner reconciliation. Do not replay or send a real test message.
+
+**Gmail/Poke:** PR #313 is test-only. The 24-hour runtime aggregation shows 32 Supabase Auth egress failures on `/api/gmail/notify-rules/export`, affecting 27 users, last `2026-11-12T04:07:07Z`, HTTP 402 `exceed_egress_quota`. PR #309 exact-head CI `43145194068` and baseline `43145194212` passed, but protected preview `43145190595` is blocked by the missing private token and no real phone acceptance exists. Keep the unattended worker disabled.
+
+**Contract crawler:** read-only `mfit_crawl_runs` still ends at 10 Nov 11:00 UTC (6,818 jobs across 20 portals, one Inspyr abort). No 11/12 run is expected because the daily crawl was intentionally removed under the owner-approved Hobby usage reduction; manual/on-demand only. Do not restore the daily cron or run a manual crawl without a separate owner instruction. PR #305 exact-head full CI `43096994492`, crawler regression `43096994482` and baseline `43096994493` are still QUEUED; its local 34/34 tests and 92/92 baseline are not GitHub exact-head CI.
+
+The local container could not resolve GitHub DNS for a clone, so no local code execution is claimed in this run. GitHub Actions and read-only connected data were used. No billing, secret, auth, production data or external-send settings were changed.
+
+**Continue:** verify PR #305's queued exact-head full CI, crawler regression and Kompas baseline when they start. Keep #305 DRAFT until those pass and the legitimate protected preview gate passes. Keep #304/#303 DRAFT until the owner or authorized repository administrator configures `KOMPAS_VERCEL_API_TOKEN` privately; do not bypass protection. Keep #310 stacked until #303 is accepted. Continue the 17 Oct evidence recovery and owner fact reconciliation without sending or replaying a message.
+ 
+## 12 November 2026 — stale hardening-test note corrected
+
+A source-level audit found the old AGENTS.md note about `mail-overview.test.mjs` was stale: the current test asserts the StandingSection appears after `Filter inbox`, and the current page renders it after the filter. The full `npm run test:hardening` suite was not executed in this run; no overall pass is claimed. The repository instruction was corrected to require a fresh run before claiming the suite is green.
+
+### Vercel live-state caveat — 12 November 2026 04:26 UTC
+
+The Vercel project metadata reports `live=false` even though the latest deployment object is READY and `job-dashboard-fawn.vercel.app` is assigned to it. External requests for `/api/health` and `/kompas/version.json` were inaccessible in this run. Therefore production deployment readiness and alias assignment are verified, but public HTTP/end-user availability is **not** verified. Do not claim a fully live release until the project live state and public route are confirmed.
+
+
+## 12 November 2026 — contract classifier continuation
+
+Continue: restack the approved Right To Hire / Contract To Perm employment classifier onto current master. The old PR #305 branch was preserved; all five changed files were confirmed byte-identical to its old base on current master before copying. New PR #315 is based on `da1db145c5981254f95620ff6bb0222ab4228125`, head `bd62bcd17b2b2be79c6ee23db19b8582a5225015`. Its crawler regression run 43157849909 passed 8/8 and Kompas baseline 43157849768 passed 92/92. Full CI 43157849751 has now passed all 47 workflow steps. Protected preview 43157849584 failed at exact-head preview resolution; job log retrieval returned 404, and Vercel project metadata reports `live=false`. Keep PR #315 DRAFT and unmerged until exact full CI and legitimate protected preview requirements pass. No production deploy, manual crawl, row rewrite, new adapter or daily cron restoration.
+
+The historical 17 Oct 17:28 Chicago WhatsApp resume delivery remains unverified; generated output, per-run R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt are still missing, and source chronology/credential conflicts remain quarantined. PR #303 is code-green but its protected preview is blocked by missing private `KOMPAS_VERCEL_API_TOKEN`; #310 is stacked on it. PR #304 code gates pass but its protected preview is blocked by the same private token; #312 is stacked. PR #309 full CI/baseline pass but preview and real-phone acceptance remain open. PR #314 is test-only Kompas CI wiring; exact-head full CI 43157259968 and baseline 43157260433 both SUCCESS across 69 existing regression cases, while protected preview 43157259910 failed. It remains DRAFT/unmerged; no runtime behavior changed. Kompas Continuous Voice Delivery is disabled; no duplicate voice work was started.
+
+The canonical production deployment/alias metadata is READY at master `da1db145`, but Vercel project metadata reports `live=false`; public HTTP/end-user availability is not verified. Multi-account Gmail still needs two authorized inbox scenarios and narrow-mobile acceptance; unattended updates remain disabled until the external scheduler, CRON_SECRET, approved Meta template and explicit enablement exist. The daily contract crawler remains removed under the approved Hobby usage reduction. No real email/WhatsApp message, manual crawl, database mutation, billing change, secret access or auth bypass occurred.
+
+
+## 12 November 2026 — current continuation (05:52 UTC)
+
+The canonical master remains `da1db145c5981254f95620ff6bb0222ab4228125`. Vercel production deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj` is READY and the independent `job-dashboard-fawn.vercel.app` alias points to it. However, project metadata reports `live=false`, and public HTTP requests could not be independently fetched in this run. Record deployment readiness and alias assignment separately from public availability and authenticated acceptance.
+
+**WhatsApp:** PR #303 exact-head full CI `43138216531`, WhatsApp recovery `43138216521` and Kompas baseline `43138216526` all pass. Its protected preview `43138214326` fails because the private `KOMPAS_VERCEL_API_TOKEN` is missing. PR #316 is the clean restack of the approved offline-session pair-consumption fix on the latest #303 head; exact-head WhatsApp recovery `43163655905` passes. It remains stacked and draft; full master-targeted CI/baseline follow only after #303 is accepted. Old PR #310 was closed as superseded with its history preserved.
+
+**Resume evidence:** PR #317 restacks the approved role-scoped JD/confirmed-experience guard and PR #312's profile-gap tests on current master. Exact head `21c62da5ecc9396e4ca990c1082fde3b158ea46b`; Kompas baseline `43163859623` passed, full CI `43163859624` and WhatsApp recovery `43163859725` were still running at this check. Protected preview remains a separate required gate. No live DOCX or 98% match claim.
+
+**Other approved work:** PR #315 contract classifier code/crawler/baseline checks pass but its protected preview fails; keep the daily crawl cron removed under the approved Hobby reduction. PR #309 mobile navigation code CI/baseline pass but preview and real phone acceptance remain open. PR #314 is test-only Kompas voice/question CI wiring; no voice code was edited. The Kompas Continuous Voice Delivery automation is disabled, MFit Safe Merge Gate is enabled, and no Bible-Keeper automation is present in the accessible automation list.
+
+**Continue:** verify PR #317 exact-head full CI and WhatsApp recovery to terminal. Keep it DRAFT until the private protected-preview token is configured by the owner/authorized administrator. After #303 is accepted, restack #316 onto the accepted master SHA and rerun full CI, WhatsApp recovery, baseline and preview. No real WhatsApp/email messages, manual crawls, production data writes, billing changes or credential workarounds occurred.
+
+
+## 12 November 2026 — resume restack CI correction (05:55 UTC)
+
+The first current-master resume restack head `21c62da5ecc9396e4ca990c1082fde3b158ea46b` passed Kompas baseline but full CI `43163859624` failed in the existing `kompas-deploy-build.test.mjs`: its byte-for-byte prebuild assertion rejected the two newly added resume suites. This was a stale build-contract test, not a reported failure in the role-evidence logic. Commit `f3182de28fb229401e30893d7687805e55c846e7` changes the assertion to preserve ordered required groups while allowing additive test files, and explicitly checks both resume profile suites are wired. New exact-head baseline `43164222576` is SUCCESS; full CI `43164222540` and WhatsApp recovery `43164222577` are still IN PROGRESS. Keep PR #317 DRAFT until both complete and the protected preview is available.
+
+
+## 12 November 2026 — Poke mobile restack (05:57 UTC)
+
+PR #318 restacks the approved Poke-inspired mobile navigation from #309 on the current resume stack #317. On narrow screens, the hamburger expands below the sticky top bar in normal flow and pushes content down rather than overlaying the page. It adds the dashboard-shell regression to prebuild while preserving both resume profile suites. Exact head `571b8594b3189f87f5d3fe50f2067a65330d09f6`, base #317 head `f3182de28fb229401e30893d7687805e55c846e7`, 4 files. No workflow run is visible yet for this non-master base; previous #309 CI/baseline are not accepted as current validation. No real phone, account switch or Gmail send was tested.
