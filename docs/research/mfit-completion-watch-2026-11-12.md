@@ -48,3 +48,8 @@ Method: source and artifact analysis. This record contains no credentials, priva
 
 - Windows Kompas 0.8.8 is published and the public manifest advertises it; installed Windows, real browser-to-desktop, phone, WhatsApp and native voice acceptance remain unverified.
 - The authenticated 50-pair Kompas-versus-ChatGPT response set and independent human scoring remain open. Synthetic/source tests are not a substitute.
+
+
+## WhatsApp production-window recheck — 12 Nov 00:57 UTC
+
+A fresh Vercel query filtered to `/api/whatsapp/webhook` found 11 quality-gate rejections across 10 users in 24 hours; first `2026-10-29T18:00:41Z`, latest `2026-11-11T22:16:15Z`, deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`. The three returned sample messages contain different blocker sets: one includes `role_evidence_gaps`, one includes `roles_unrewritten`, and one contains only `draft_parts_missing` plus quality blockers. Each sample reports 100% instrumented literal/supported coverage but `partial=true` and `incomplete=true`. A separate 30-minute query returned no runtime errors. Do not interpret the quiet window as proof that PR #304 is live or that the 17 Oct request produced a delivered DOCX.
