@@ -35,3 +35,12 @@ No auth behavior, production environment, account data, deployment or Vercel pro
 Canonical master has advanced to `da1db145c5981254f95620ff6bb0222ab4228125` and the production alias metadata resolves to READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. The last authorized environment inspection recorded production `AUTH_DISABLED=false` and `NEXT_PUBLIC_AUTH_DISABLED=false`; this continuation did not read or change either value. No synthetic owner login was enabled and no access-control bypass was attempted.
 
 Protected preview remains blocked by the missing private GitHub Actions `KOMPAS_VERCEL_API_TOKEN` and Vercel project `live=false`. The owner or authorized repository administrator must configure the token privately and restore legitimate preview availability. No secret value is recorded here.
+## 12 November 2026 — current production configuration recheck (08:26 UTC)
+
+Authorized Vercel project/environment reads were repeated against the current job-dashboard project:
+- Production AUTH_DISABLED: false.
+- Production NEXT_PUBLIC_AUTH_DISABLED: false.
+- The project reports live=false; its latest deployment metadata is READY at exact master da1db145c5981254f95620ff6bb0222ab4228125, and the alias metadata assigns job-dashboard-fawn.vercel.app to that deployment.
+- Only the two boolean flag states were inspected; no synthetic-owner identity, user email, token, credential or other environment value was read or recorded. No variable was changed.
+
+This recheck resolves the current flag-state uncertainty: the synthetic fallback is not enabled by these production flags. Issue #308 remains open because the code path is present without owner approval, production fail-closed tests are still required, and owner/admin plus ordinary-account and desktop continuity acceptance have not been exercised. Keep both flags false. READY plus alias metadata and false flags do not prove public HTTP reachability or authenticated UX while the project reports live=false.
