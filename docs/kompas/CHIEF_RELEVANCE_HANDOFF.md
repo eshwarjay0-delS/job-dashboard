@@ -97,3 +97,14 @@ Open same-question branches remain unchanged and unmerged:
 - PR #270 remains DRAFT and belongs to the separate Kompas Continuous Voice Delivery task. This continuation made no microphone, computer-audio, caption or voice-source edits.
 
 The real quality gate is still open: zero authorized live 50-pair Kompas-versus-ChatGPT responses and zero independent human 0–4 scorecards were captured in this run. It still requires the private `KOMPAS_API_TOKEN`, approved original resume/JD/reference bundles, identical question conditions and human review. Synthetic 50/54-fold fixtures and source tests are not substitutes. Native Windows, mobile and WhatsApp answer/voice parity remains unverified. Do not change voice behavior or claim 50-fold live quality until these gates pass.
+
+
+## 12 November 2026 — current production and separate voice ownership (06:53 UTC) <!-- kompas-continuation-0653z -->
+
+Canonical production deployment metadata now resolves to READY deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, exact master `da1db145c5981254f95620ff6bb0222ab4228125`, with `job-dashboard-fawn.vercel.app` in its alias list and `aliasError: null`. This confirms deployment/alias metadata only; no public HTTP, authenticated interview session or native-device smoke was run in this check.
+
+Test-only PR #314 adds CI wiring for five existing Kompas question/voice regression suites. Exact-head full CI `43157259968` and Kompas baseline `43157260433` pass; protected preview `43157259910` fails because the private `KOMPAS_VERCEL_API_TOKEN` is unavailable and Vercel reports `live=false`. No runtime voice, microphone, computer-audio or caption behavior was changed. The separate Kompas Continuous Voice Delivery automation is disabled and remains the owner of its voice work; do not duplicate or merge its unapproved first-tap audio opt-in behavior.
+
+The real 50-pair acceptance remains open: zero authorized same-question Kompas-versus-ChatGPT response pairs and zero independent human 0–4 scorecards are recorded. Native Windows, mobile and WhatsApp parity remains unverified. Synthetic fixtures and passing source tests do not establish live answer quality.
+
+**Continue:** after the owner/authorized administrator restores legitimate protected preview access, run the approved live API smoke and obtain the authorized 50 same-question pairs plus independent human scores. Preserve source provenance and account isolation; no voice behavior change or E2E completion is claimed.
