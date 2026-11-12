@@ -205,3 +205,10 @@ PR #288 adds bounded pagination after clearance filtering; PR #291 maps explicit
 The scheduled 11:00 UTC crawl did not create a new `mfit_crawl_runs` row. At 12:04 UTC, the latest database run was still 10 Nov 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, one Inspyr abort. The latest stored listing observations remained on 10 Nov.
 
 The canonical master/alias metadata match at `11efbbfe7781592bc2fad1216f67546882a1c3ed`, but the Vercel project reports `live=false` and public health/jobs endpoints have returned HTTP 402 `DEPLOYMENT_DISABLED`. A READY alias record is not proof that the daily cron or API is running. No manual crawl or database rewrite was performed. Restore authorized Vercel project availability, then verify the public health route, clearance/freshness search API and a later completed scheduled crawl using the classifier. Robert Half remains manual-only.
+
+ 
+## 12 November 2026 — contract crawler continuation status (04:13 UTC)
+
+The latest read-only production `mfit_crawl_runs` record remains 10 Nov 2026 11:00:24–11:01:11 UTC: 6,818 jobs found/upserted across 20 portals, with one Inspyr abort. There is no 11 or 12 Nov run because the owner-approved Hobby usage reduction intentionally removed the daily contract-crawler cron. The approved mode is manual/on-demand; no manual crawl was run and no production job rows were changed. Do not restore the daily schedule without a new explicit owner instruction.
+
+PR #305 (`278d9b3fa614c7e50aebf83b80ce9ac913724bf9`) restacks Right To Hire / Contract To Perm → C2H classification on current master and tightens employment-context matching so generic contract administration/negotiation text does not imply contract employment. Negated labels remain unknown. Exact-head full CI `43096994492`, crawler regression `43096994482` and Kompas baseline `43096994493` are still QUEUED. Local classifier/additive-prebuild tests 34/34, Kompas baseline 92/92, TypeScript, focused ESLint and Webpack build passed in the isolated sandbox; those are not GitHub exact-head CI or production evidence. Keep the PR DRAFT and do not modify production rows.
