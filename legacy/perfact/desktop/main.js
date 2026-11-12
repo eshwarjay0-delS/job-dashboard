@@ -13,7 +13,7 @@
 // resize. Place and size are saved and restored on the next launch.
 // Computer audio is the Windows output mix (WASAPI loopback): a call, a video, a browser tab — whatever the
 // speakers are playing. The process is always Kompas.exe. Still not here: a blank process name, meeting detection.
-// Hide-from-taskbar is asked until the person checks Remember; a remembered choice is applied with no dialog.
+// Hide-from-taskbar: a yes is kept and not asked again. A no is asked next launch.
 // Pinned means above everything, the taskbar included, and the window cannot be lost: see holdOnTop and bringBack.
 const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net, desktopCapturer, powerMonitor, globalShortcut, dialog, safeStorage } = require("electron");
 const path = require("path");
@@ -22,6 +22,7 @@ const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
 const { envForcesSignIn, readServerAuthDisabled, shouldRecoverSignInFrom401 } = require("./auth-disabled.cjs");
 const { chooseCaptureSource } = require("./capture-source.cjs");
 const { rememberedTaskbar, taskbarAnswer } = require("./taskbar-choice.cjs");
+const { loopbackCapture } = require("./output-loopback.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
 const { chooseDesktopUpdate } = require("./desktop-update.cjs");
 const { handoffAction, chromeHandoffUrl, startChromeLoopback, protocolArgFromLoopback, handoffPaintScript } = require("./chrome-handoff.cjs");
@@ -229,7 +230,7 @@ let config = { onTop: true, isPrivate: true, bounds: null };
 let win = null, collapsed = false, resizing = null, saveTimer = null, pendingSession = null, hideTaskbar = true;
 
 // Closing the box with Esc or X is a No: the button stays, so a window that might be lost behind others always
-// has a way back. Remember stores the choice; the next launch applies it and does not ask again.
+// has a way back. Yes is kept for the next launch. No is asked again.
 async function askTaskbar() {
   const { response, checkboxChecked } = await dialog.showMessageBox({
     type: "question",
@@ -696,10 +697,12 @@ function lockDownSession() {
     if (!win || win.isDestroyed()) { callback({}); return; }
     desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } }).then((sources) => {
       const video = sources[0];
-      // WASAPI loopback (Electron audio: "loopback") is the whole output mix.
+      // WASAPI loopback follows the Windows default output device at this moment
+      // (Realtek, headphones, or whatever else is the default). No device name is pinned.
       // The screen source stays a screen: Windows will not start that track without one.
       // Screen Answer is separate and prefers Live Captions. The page keeps this audio and labels it Them.
-      callback(video ? { video, audio: "loopback" } : {});
+      const loop = typeof loopbackCapture === "function" ? loopbackCapture() : { audio: "loopback" };
+      callback(video && loop.audio === "loopback" ? { video, audio: "loopback" } : {});
     }).catch(() => callback({}));
   });
   ses.protocol.handle("kompas", serve);

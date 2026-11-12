@@ -1,3 +1,11 @@
+## 2026-11-12 — Computer audio follows the Windows output device (no new screen until the exe is updated)
+
+No new website screen. Desktop loopback stays `audio: "loopback"` and does not pin Realtek or any other device name. When the default output label changes during a running desktop session, the loopback track is opened again. The recorded computer-audio stream is gained 2.5 and compressed. The microphone stays at unity with its existing auto-gain. A yes on hide-from-taskbar is stored. A no is asked next launch. Windows Live Captions remains the only caption window. parfAct was HTTP 404, so this is `legacy/perfact/desktop`.
+
+**Verified locally.** Five rounds of the output-audio, capture, computer-audio state, and release-stamp suites: 22 pass, 0 fail each round. `node --check` on app.js, main.js, and the new helpers.
+
+**Not verified.** A live Windows playback on Realtek or another device. The installed exe does not change until the Windows workflow publishes `kompas-desktop-latest`.
+
 ## 2026-11-12 — Sign in again after logout everywhere (no new screen until the exe is updated)
 
 No new website screen beyond the sign-in sentence and the login-page quota sentence. After a full Supabase logout, a revoked refresh token, or a 401 whose refresh also fails, Start offers Google again. A live interview does not open Chrome and does not leave for `/login`. HTTP 402 `exceed_egress_quota` keeps the stored session and says the project is over its egress quota. The spend cap is not changed. `AUTH_DISABLED` is not turned on.
