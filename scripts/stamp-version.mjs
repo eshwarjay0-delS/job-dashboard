@@ -11,8 +11,9 @@ import { fileURLToPath } from "node:url"
 
 export const STAMP_FILES = ["../public/version.json", "../public/kompas/version.json"].map((p) => new URL(p, import.meta.url))
 
-/** Login is lifted only when AUTH_DISABLED / NEXT_PUBLIC_AUTH_DISABLED is exactly "true". */
+/** Login-off is a local/development convenience only; production always requires real sign-in. */
 export function authDisabledStamp(env = process.env) {
+  if (process.env.NODE_ENV === "production" || env.NODE_ENV === "production") return false
   const raw = env.AUTH_DISABLED ?? env.NEXT_PUBLIC_AUTH_DISABLED
   return raw === "true"
 }
