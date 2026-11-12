@@ -844,25 +844,44 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // original session available for retry.
   const consumeSessionPair = async (): Promise<void> => {
     const cur = await loadSession(from)
+    // Treat JD + resume as one pair. Clearing either field independently can
+    // strand a newer JD that reused the same resume, or a newer resume attached
+    // to the same JD, after an in-flight document send completes.
+    const jdMatches = session.jdId
+      ? cur.jdId === session.jdId
+      : !cur.jdId && cur.jd === session.jd
+    const resumeMatches = session.resumePath
+      ? cur.resumePath === session.resumePath
+      : !cur.resumePath
+    const pairMatches = jdMatches && resumeMatches
     let changed = false
-    if (session.jdId && cur.jdId === session.jdId) {
-      delete cur.jd
-      delete cur.jdId
-      changed = true
+    if (pairMatches) {
+      if (cur.jd !== undefined || cur.jdId !== undefined) {
+        delete cur.jd
+        delete cur.jdId
+        changed = true
+      }
+      if (cur.resumePath !== undefined || cur.resumeName !== undefined || cur.resumeAt !== undefined) {
+        delete cur.resumePath
+        delete cur.resumeName
+        delete cur.resumeAt
+        changed = true
+      }
+      if (session.jdId && cur.pending?.jdId === session.jdId) {
+        delete cur.pending
+        changed = true
+      }
+      if (files && !quiet && session.jd) {
+        cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
+        changed = true
+      }
     }
-    if (session.resumePath && cur.resumePath === session.resumePath) {
-      delete cur.resumePath
-      delete cur.resumeName
-      delete cur.resumeAt
-      changed = true
-    }
-    if (session.jdId && cur.pending?.jdId === session.jdId) {
-      delete cur.pending
+    const seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
+    if (seen.length !== (cur.seen || []).length || seen.some((value, index) => value !== cur.seen?.[index])) {
+      cur.seen = seen
       changed = true
     }
     if (!changed) return
-    cur.seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
-    if (files && !quiet && session.jd) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
     await saveSession(from, cur)
   }
   const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
