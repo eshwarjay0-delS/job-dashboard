@@ -574,7 +574,7 @@ PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `
 
 ## 12 November 2026 — PR #304 recovery regression completed
 
-PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` and WhatsApp recovery `43139954504` now both SUCCESS. Full CI `43139954490` remains IN PROGRESS. Protected preview `43139950971` FAILED with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. No merge or production deployment.
+PR #304 exact head `667c9ab3be3d58dac8ef00962b71b9158ce8456e`: Kompas baseline `43139954651` and WhatsApp recovery `43139954504` now both SUCCESS. Full CI `43139954490` completed SUCCESS. Protected preview `43139950971` FAILED with the explicit message `KOMPAS_VERCEL_API_TOKEN must be configured privately`. No merge or production deployment.
 
 
 ## 12 November 2026 — resume profile-gap regressions added to the build gate
@@ -586,3 +586,14 @@ Local execution of the new profile-gap suite found two test-harness failures cau
 The production alias remains READY on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`; project metadata still reports `live:false`, so the protected preview remains unavailable. No new production deployment, authenticated model call, DOCX generation, R2 mutation, Meta send, email or handset acceptance occurred. The separate `roles_unrewritten` blocker must not be relaxed without owner approval. The 17 Oct 17:28 Chicago incident still lacks the generated output DOCX, R2 key, webhook/request correlation, Meta message ID and signed delivery/read receipt; conflicting source facts remain quarantined.
 
 Continue: check PR #312's exact-head GitHub CI and baseline, then continue the approved contract-crawler classifier validation without performing a manual crawl or production data mutation.
+
+
+## 12 November 2026 — Right To Hire / Contract To Perm classifier local validation
+
+PR #305 exact head `278d9b3fa614c7e50aebf83b80ce9ac913724bf9` is restacked on master `65bdf2f8cf1dd7299b8623885641400efe57bbfe`. Its exact-head GitHub full CI `43096994492`, crawler regression `43096994482`, Kompas baseline `43096994493` and protected preview `43096990568` remain QUEUED at this check; it remains DRAFT and is not deployed.
+
+Local sandbox validation on that exact head: crawler classifier + additive prebuild tests 34/34, Kompas baseline 92/92, TypeScript passed, focused ESLint passed, and `npm run build -- --webpack` passed with all prebuild suites and 160 static pages. The tests cover explicit Right To Hire/Contract To Perm aliases, negated labels, generic contract-administration vocabulary, structured C2C/1099/Contract/Temporary labels and W2-only payroll. This is local code evidence, not a live crawl or persisted-row acceptance.
+
+The approved daily crawler cron remains deliberately removed under the Hobby usage reduction. Do not restore it without owner approval, run a manual crawl or mutate production job rows. The last known persisted crawl is 10 Nov 2026 11:00 UTC (6,818 found/upserted across 20 portals, one Inspyr abort); no post-classifier crawl has been demonstrated. PR #305 and test-only PR #312 both change `package.json` prebuild, so the final restack must preserve both crawler and resume regression additions. PR #305 includes an additive-prebuild regression that protects the existing ordered baseline groups.
+
+Continue: wait for exact-head PR #305 checks and protected preview; after a reviewed production release, verify the canonical alias and use only the next legitimate scheduled crawl for C2H persisted-row/API acceptance.
