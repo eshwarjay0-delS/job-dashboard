@@ -57,6 +57,6 @@ test('CI and Vercel agree on Webpack to prevent intermittent Turbopack font fail
 test('resume profile gap suites remain part of fail-fast prebuild', () => {
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
   for (const file of ['scripts/tests/resume-confirmation-quality.test.mjs', 'scripts/tests/tailor-profile-gap-fill.test.mjs']) {
-    assert.ok(pkg.scripts.prebuild.split(/\\s+/).includes(file), `prebuild must execute ${file}`)
+    assert.ok(pkg.scripts.prebuild.split(/\s+/).includes(file), `prebuild must execute ${file}`)
   }
 })
