@@ -4,6 +4,8 @@ No new screen. This is genuineness grounded in real experience, not a way past a
 
 **Checked locally. Not merged. Not a production deploy.** Blend tests: 28 pass, 0 fail. Natural-narration tests: 6 pass, 0 fail. Focused Kompas suites: 208 pass, 0 fail. `tsc --noEmit` clean after `npm ci` installed the current lockfile. Offline stand-in, fictional resume, 150 drafts, no model: 0 pairs at Jaccard >= 0.7, 0 same-answer failures, 0 length failures, 0 mode gaps under 0.50, 0 answers over the ceiling, 0 logistics or Houston or Saint Louis hits. No production URL was called.
 
+A later mock-interview pass asks for one worked example: the sources, the join or key, and the batch, then the simpler path rejected with rather than. A failure starts at the failed step. Years, systems, and cases are not invented to fill the example. The narration version is kompas-workbench-v3. Blend tests: 28 pass, 0 fail. Natural-narration tests: 7 pass, 0 fail. Focused Kompas suites: 208 pass, 0 fail. `tsc --noEmit` clean. Offline stand-in: 150 drafts, 0 pairs at Jaccard >= 0.7, 0 same-answer, 0 length, 0 mode-gap, and 0 ceiling failures, with 0 logistics or Houston or Saint Louis hits. Not merged. Not deployed.
+
 GitHub CI then failed a stamp check that was already wrong on master: the page build said `kompas-20261112-output` while `app.js` was cached as `20261112-startfix`. Those two now say `kompas-20261112-startfix`. The voice-preview check failed because its token was empty.
 
 ## 2026-11-12 — Login-off sessions on the free Blob store, and Android keeps the last audio chunk

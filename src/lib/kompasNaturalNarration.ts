@@ -8,7 +8,7 @@
 export type NaturalAnswerShape =
   | "identity" | "experience" | "follow-up" | "scenario" | "mechanism" | "direct"
 
-export const NATURAL_NARRATION_VERSION = "kompas-workbench-v2"
+export const NATURAL_NARRATION_VERSION = "kompas-workbench-v3"
 
 export function naturalAnswerShape(question: string): NaturalAnswerShape {
   const q = String(question || "").trim()
@@ -34,11 +34,12 @@ const CORE = [
   "Vary sentence length the way a person talks: a short claim, then one longer sentence that walks the work, then a short close. Do not manufacture um, uh, you know, right?, or basically for the candidate to read aloud. A short self-correction is fine; a scripted landing is not.",
   "Do not use empty phrasing such as delve, underscore, tapestry, shed light, pivotal role, robust framework, it is important to note, in conclusion, or in today's landscape. Keep the fact. Drop the frame.",
   "Open on the answer in the interviewer's words: the check, the decision, or the break. Never restate or praise the question.",
+  "When the question is about work you did, prefer one worked example over a list of capabilities: say for example, then the sources, the join or key, and the actual batch or case. After the action, name the simpler path you rejected with rather than. If you did not do the thing they asked, say so in one short clause, then the nearest sourced work. For a failure or recovery question, start at the failed step, rerun only the affected batch, and say how you checked you did not create duplicates or gaps. Do not invent years, systems, or a case to fill the example.",
 ].join(" ")
 
 const KIND: Record<NaturalAnswerShape, string> = {
   identity: "IDENTITY VOICE: give a coherent career arc from documented experience. Connect responsibilities, work and impact; no invented turning-point scene or forced metaphor.",
-  experience: "EXPERIENCE VOICE: one actually supported situation; what caused concern, what was your responsibility, the technical check or decision, the real obstacle if documented, and what the evidence established. STAR is an internal structure, never spoken as labels. If only a broad responsibility is sourced, don't invent a named incident.",
+  experience: "EXPERIENCE VOICE: one actually supported situation; what caused concern, what was your responsibility, the technical check or decision, the real obstacle if documented, and what the evidence established. STAR is an internal structure, never spoken as labels. If only a broad responsibility is sourced, don't invent a named incident. Prefer a single worked example to a list of systems.",
   "follow-up": "FOLLOW-UP VOICE: stay in the same project and facts. State the requested precise artifact, check, permission, observation or approval boundary first. If the record lacks it, distinguish what was personally documented from the test you would perform. No fresh story or restart.",
   scenario: "SCENARIO VOICE: identify an explicit, testable assumption. Show the evidence that would disprove it, the operational constraint, a safe action or decision, and how you'd check the outcome. Use 'I would' for hypothetical work and don't pretend the case happened.",
   mechanism: "MECHANISM VOICE: start with the actual mechanism and its cause-and-effect sequence. Show one failure mode or contrast only if the question needs it. Go into log/field/protocol detail when requested, but don't drag in a career story.",
@@ -48,7 +49,7 @@ const KIND: Record<NaturalAnswerShape, string> = {
 const AUDIENCE = {
   director: "AUDIENCE: foreground exposure, decision authority, constraints and evidence required for the business decision; one technical cause only as needed. Sound like someone who has done the work and is now making the call: the cost, the owner, and what would change your mind. Calm, not hype.",
   architect: "AUDIENCE: foreground system boundary, dependency, architectural alternative and failure behavior; describe the actual sequence when asked. A short ramble into the surrounding design is fine if the next sentence returns to the question. Curiosity is about the tradeoff and where it breaks.",
-  engineer: "AUDIENCE: foreground observed behavior, relevant source of truth, practical check, falsifiable alternative and verification. Sound like a developer working through the technical need: one failed attempt if you have it, then the check that worked. Excitement belongs on the puzzle, not on a slogan.",
+  engineer: "AUDIENCE: foreground observed behavior, relevant source of truth, practical check, falsifiable alternative and verification. Sound like a developer working through the technical need: one failed attempt if you have it, then the check that worked. Excitement belongs on the puzzle, not on a slogan. For a failure, start at the failed activity, not the whole pipeline, and say how you verified the recovery.",
   mixed: "AUDIENCE: give a short plain-language consequence after technical reasoning so a less technical listener can rejoin without oversimplifying.",
 }
 

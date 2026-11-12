@@ -25,7 +25,7 @@ const folds = [
   ["mechanism","Explain how logging actually proves the control operated"],
 ] 
 test("Natural narration respects every source category and doesn't privilege one BNY question",()=>{
-  assert.equal(NATURAL_NARRATION_VERSION,"kompas-workbench-v2")
+  assert.equal(NATURAL_NARRATION_VERSION,"kompas-workbench-v3")
   assert.equal(folds.length,50)
   for(const [shape,q] of folds){
     assert.equal(naturalAnswerShape(q),shape,q)
@@ -48,6 +48,11 @@ test("Narration adapts to the question rather than forcing STAR or an anecdote o
   assert.match(hypothetical,/testable assumption/)
   const follow=naturalNarrationGuidance("Which logs did you check?","engineer")
   assert.match(follow,/stay in the same project/)
+})
+test("A work question prefers one worked example",()=>{
+  const g=naturalNarrationGuidance("Tell me about a time you fixed the nightly batch","engineer")
+  assert.match(g,/prefer one worked example/)
+  assert.match(g,/rather than/)
 })
 test("Each audience sounds like a person who has done the work",()=>{
   assert.match(naturalNarrationGuidance("What evidence is enough?","director"),/done the work and is now making the call/)
