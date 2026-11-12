@@ -58,7 +58,7 @@ test("resume writer permits only explicit candidate-confirmed cross-role skills"
   assert.match(tailor, /confirmedInRole/)
   assert.match(tailor, /new Set\(confirmedJdKws\)/)
   assert.match(tailor, /candidate-confirmed skills may also be mapped into relevant existing project bullets across roles/)
-  assert.match(tailor, /ROLE #\$\{i\}: preserve and develop only these JD skills supported by this role original bullets:[\s\S]*Explicitly candidate-confirmed skills may also be mapped into relevant existing project bullets across roles/)
+  assert.match(tailor, /ROLE #\$\{i\}: preserve and develop only these JD skills supported by the original bullets for this role:[\s\S]*If neither role-specific source evidence nor an explicit candidate confirmation exists, leave the requirement as a gap[\s\S]*Explicitly candidate-confirmed skills may also be mapped into relevant existing project bullets across roles/)
   assert.match(tailor, /return adapt\(\{ \.\.\.call, preferences: \[call\.preferences, rolePlan\]/)
   assert.doesNotMatch(tailor, /tailor-gap-fill|profilePrefs|hasProfilePartContent/)
   assert.doesNotMatch(tailor, /write EACH of these JD terms into the current and previous project bullets/)
