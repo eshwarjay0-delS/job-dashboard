@@ -112,3 +112,14 @@ A source review traced the contractTypes call sites. The jobs API passes full de
 PR #305 current head 278d9b3fa614c7e50aebf83b80ce9ac913724bf9 now passes engagement separately, trusts an explicit structured employmentType for generic Contract labels, and requires strong employment-context phrases in free text. It strips negated Contract, W2, C2C, 1099 and Temporary labels. Regression cases cover generic contract vocabulary, explicit contract positions, structured C2C/1099/Contract/Temporary, W2 payroll alone and negative statements.
 
 Exact-head full CI 43096994492, crawler regression 43096994482 and Kompas baseline 43096994493 are queued. This is not merged or live. No manual crawl or database mutation occurred; the latest persisted crawl remains 10 Nov 11:00 UTC.
+
+
+## 12 November 2026 — production classification data audit (06:53 UTC) <!-- crawler-sql-audit-0653z -->
+
+Read-only production queries show the latest `mfit_crawl_runs` row is still 10 Nov 2026 11:00:24–11:01:11 UTC: 6,818 found/upserted across 20 portals, with one Inspyr abort. There is no 11/12 Nov crawl because the owner-approved Hobby usage reduction removed the daily cron; approved operation is manual/on-demand only. No manual crawl or database row rewrite was performed.
+
+Read-only `mfit_crawl_jobs` grouping shows 76 active `Right To Hire` and 55 active `Right to Hire` rows still have `work_type='unknown'` (131 total; 120 seen in the last 14 days). `Contract To Perm` has 589 active rows classified as contract. A small number of `Direct Hire`, `IT Direct Placement` and `Full-time` engagement rows are also currently labelled contract; those are candidate false positives, not independently confirmed errors, and were not rewritten.
+
+Current-master PR #315 head `bd62bcd17b2b2be79c6ee23db19b8582a5225015` maps explicit Right To Hire / Contract To Perm / Contract To Permanent to C2H, preserves negation, and requires employment context for free-text Contract. Exact-head full CI `43157849751` (47 workflow steps), crawler regression `43157849909` (8/8) and Kompas baseline `43157849768` (92/92) all SUCCESS. Protected preview `43157849584` failed at exact-head resolution; its job-log read returned 404, so the narrower cause is not asserted. The Vercel project reports `live=false`; no production deployment or post-classifier crawl is claimed.
+
+**Continue:** keep PR #315 DRAFT until its legitimate protected preview and required checks pass. After an authorized release, request a separate owner-approved manual crawl and verify the new classifications; do not restore the daily schedule, rewrite stored rows, add unauthorized adapters or treat the 10 Nov run as post-release evidence.
