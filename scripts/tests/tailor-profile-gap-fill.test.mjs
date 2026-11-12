@@ -22,6 +22,7 @@ function load(rel) {
 const { hasProfilePartContent, resolvePendingDraftPart } = load("src/lib/tailor-gap-fill.ts")
 const tailor = readFileSync(resolve(root, "src/lib/tailor.ts"), "utf8")
 const allSections = { skills: true, summary: true, headline: true }
+const plain = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value))
 
 test("summary-only profile repair is accepted and clears a pending profile part", () => {
   assert.equal(hasProfilePartContent({ summary: "A concise, source-backed summary." }, allSections), true)
@@ -46,17 +47,17 @@ test("empty or disabled profile output is not accepted", () => {
 })
 
 test("profile repair preserves still-pending employer roles", () => {
-  assert.deepEqual(resolvePendingDraftPart({
+  assert.deepEqual(plain(resolvePendingDraftPart({
     failed: 2, total: 6, pendingRoles: [2], pendingProfile: true,
-  }, -1), {
+  }, -1)), {
     failed: 1, total: 6, pendingRoles: [2], pendingProfile: false,
   })
 })
 
 test("experience repair does not clear the pending profile part", () => {
-  assert.deepEqual(resolvePendingDraftPart({
+  assert.deepEqual(plain(resolvePendingDraftPart({
     failed: 2, total: 6, pendingRoles: [2], pendingProfile: true,
-  }, 2), {
+  }, 2)), {
     failed: 1, total: 6, pendingRoles: [], pendingProfile: true,
   })
 })
