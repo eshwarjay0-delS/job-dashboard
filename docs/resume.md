@@ -99,3 +99,12 @@ The confirmation authorizes the skill only. It does not authorize a new employer
 PR #317 branch `fix/resume-role-evidence-restack-da1db145-20261112` was updated through code commits `dfcd2b4`, `14ac764`, `216581d` and `2214469`: the writer prompt now permits explicitly confirmed skills in relevant existing project bullets; the deterministic guard allows only those confirmed terms across roles while continuing to reject unconfirmed cross-role terms; role-alignment counts a confirmed term only when it appears in that role’s edited bullets. Exact-head full CI, WhatsApp recovery and Kompas baseline are pending for the updated head. Protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`; the PR remains DRAFT, unmerged and undeployed.
 
 No live model call, personal DOCX generation, WhatsApp send, R2 write or real handset acceptance occurred. This source/prompt change is not a live ATS score or proof of the historical 17 October delivery.
+
+
+## Current-master WhatsApp and resume evidence status — 12 November 2026, 09:35 UTC
+
+PR #321 head `ed15c9782e7d71c9340a04a718f8b36821f58fa2` combines the owner-approved initial-JD/no-provider fallback, text-only failed swipe refinement and race-safe session-pair consumption. Exact-head Kompas baseline 43193485006 and WhatsApp recovery 43193485660 pass; full CI 43193485035 remains in progress. The previous head's green full CI is superseded. Protected preview remains blocked by the missing private `KOMPAS_VERCEL_API_TOKEN`; no merge or production deployment is claimed.
+
+PR #317 head `4ef3cba838ef00dd3702fb6e955628d20ab77664` carries the 6 Nov confirmed-skill correction: an explicit first-person skill confirmation may be mapped into a relevant existing project bullet across roles, but cannot create an employer, project, action, outcome, title, location, date, contact, metric or credential. Full CI 43180792088, WhatsApp recovery 43180792058 and Kompas baseline 43180791965 pass; protected preview 43180787874 fails closed on the same missing private token. No authenticated model-generated DOCX, 98% live match or personal-library write is established.
+
+The historical 17 Oct 17:28 Chicago generated output DOCX and per-run R2/webhook/Meta delivery correlation remain missing. The original source/JD pair is not proof of the bytes sent or of handset delivery. Conflicting source facts remain quarantined. No replay, real WhatsApp send, R2 write or model call occurred.
