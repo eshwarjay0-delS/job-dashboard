@@ -849,3 +849,39 @@ Read-only production SQL confirms `mfit_gmail_sync`: 3 rows, 3 account IDs, 1 us
 ## 12 November 2026 09:31 UTC — WhatsApp fallback code gates complete
 
 Current-master PR #321 head `ac38ffde34709a04664fc6b2b3b92fab9515fa7e`: full CI 43191231356 SUCCESS (47/47), WhatsApp recovery 43191231421 SUCCESS, Kompas baseline 43191231296 SUCCESS. Logs confirm resume guards 31/31, selected-library/single-request tests 52/52, resume contract 44/44, resume acceptance 105/105, storage-prefix recovery 21/21 and successful Webpack build. Protected preview 43191231435 FAILED because its log shows `KOMPAS_VERCEL_API_TOKEN` empty. Keep DRAFT; do not bypass. No merge, production deployment, model call, R2 write, real WhatsApp send or Meta callback occurred. The 17 Oct output DOCX/R2/Meta receipt remain missing.
+
+
+## 12 November 2026 09:35 UTC — WhatsApp lifecycle integration and backlog reconciliation
+
+**Continue: finish the exact-head full CI for PR #321, then record its terminal result and proceed to the next approved independent slice.**
+
+### WhatsApp resume failure and 17 October incident
+
+The owner-approved 6 Nov initial-JD/no-provider fallback and no-baseline swipe-refinement policy is on current-master PR #321. I integrated the race-safe session-pair consumption fix previously isolated in PR #316 into the same PR, rather than leaving a successful offline send with a stale JD/resume pair.
+
+- Current PR #321 head: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`.
+- Code commit: `921033d71fba5f33e0d5566bde572be7287baf8b`.
+- Regression commit: `ed15c9782e7d71c9340a04a718f8b36821f58fa2`.
+- The helper clears only when both JD identifier and resume path still match; a newer JD, newer resume, or a rejected Meta send retains the appropriate session state.
+- New mocked tests cover accepted offline consumption, newer JD, same resume/new JD, same JD/new resume, and failed-send retention.
+- Exact-head baseline 43193485006 SUCCESS; WhatsApp recovery 43193485660 SUCCESS; full CI 43193485035 IN_PROGRESS at migration asset closure. Prior head `ac38ff` CI is superseded for this new head.
+- Prior protected preview 43191231435 FAILED because `KOMPAS_VERCEL_API_TOKEN` is empty. No exact-head preview pass, merge, production deployment, model call, R2 write, real WhatsApp send or Meta callback is claimed.
+- PR #316 must not be merged independently; it is now the source/history of code integrated into #321. Close it as superseded only after #321 is accepted.
+
+The canonical production alias remains READY at deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`, exact master `da1db145c5981254f95620ff6bb0222ab4228125`. It does not contain PR #321. Vercel project metadata reports `live=false`; no public or authenticated WhatsApp acceptance was established. The 17 Oct 17:28 Chicago generated output DOCX, per-run R2 key, webhook/request ID, Meta message ID and signed delivered/read receipt remain missing. The original source DOCX/JD pair does not prove which output was sent. Accessible Library/iZap/SQL checks did not surface the output or a correlated message. No historical replay or resend is authorized.
+
+### Other approved work, still separate
+
+- **Resume/JD/confirmed experience:** PR #317 exact head `4ef3cba838ef00dd3702fb6e955628d20ab77664`; full CI 43180792088, WhatsApp recovery 43180792058 and baseline 43180791965 all SUCCESS. The 6 Nov correction allows explicit first-person skill confirmations in relevant existing project bullets across roles, without inventing new employer/project/action/outcome/date/metric/credential. Protected preview 43180787874 FAILED on the missing private token. No authenticated model DOCX or 98% live match.
+- **Poke-inspired mobile navigation:** PR #320 exact head `a021c6c3cd3a3e964ec4375a66cbf9f7a5220baf`; full CI 43190228931 and baseline 43190229393 SUCCESS; protected preview 43190224739 FAILED on the missing token. No real phone acceptance.
+- **Contract crawler:** PR #315 exact head `bd62bcd17b2b2be79c6ee23db19b8582a5225015`; full CI 43157849751, crawler regression 43157849909 (8/8) and baseline 43157849768 SUCCESS; preview 43157849584 FAILED. Not deployed. Manual/on-demand only; daily cron remains removed; prohibited sources remain excluded.
+- **Gmail account health:** production snapshot remains 3 account sync rows and 2,002 account-keyed threads across 3 accounts; latest sync 10 Nov 14:44:44 UTC. Latest recorded 24-hour Gmail Auth restriction is 42 HTTP 402 `exceed_egress_quota` errors across 34 users, latest 09:07:04 UTC. The owner/project admin must resolve the Supabase Auth spend cap; no bypass, billing change or real email send.
+- **Kompas:** do not duplicate the disabled Continuous Voice Delivery work. Actual 50-pair authenticated model comparison, human grading and native Windows/phone/WhatsApp acceptance remain open. No synthetic tests substitute for those gates.
+
+### Documentation and execution evidence
+
+Plan & Vision, Plan Journal, REA, completion handoff and product research notes are being updated on the active documentation restack PR #319. Its head before the current docs update was `88ae9f06d96f417cf2567e775d3415bc6172c541`; Plan/REA schema 43192394415 and Kompas baseline 43192395012 passed, while full CI 43192392012 was in progress. The documentation update created new commits, so all exact-head checks must be rerun.
+
+The active MFit Safe Merge Gate last reviewed 39 open PRs and found no eligible merge; it keeps external-send, protected-preview, live-DOCX and device acceptance holds intact. No separately named Bible-Keeper automation was visible in the accessible task list. The GitHub container clone failed because DNS could not resolve github.com; no local npm execution is claimed. GitHub Actions is the test evidence. The installed Next.js version is 16.3.8; the official Route Handler guide was reviewed, but the repository's local `node_modules/next/dist/docs` could not be read without a working clone. No Next.js route API was changed.
+
+**Unblock requirement:** the owner or authorized repository administrator must configure `KOMPAS_VERCEL_API_TOKEN` privately and restore the legitimate protected preview gate. Do not paste the secret into chat, commit it, or bypass the preview resolver. Once the gate passes, review and merge only the exact green head, deploy the merged SHA through the normal Git/Vercel path, verify READY plus the active canonical alias, and then run consented end-to-end acceptance.
