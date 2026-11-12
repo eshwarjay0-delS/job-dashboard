@@ -500,3 +500,12 @@ The previous statements that direct public production HTTP was inaccessible/unve
 ## 12 November 2026 — WhatsApp production window recheck
 
 The latest 24-hour `/api/whatsapp/webhook` error group remains 11 quality-gate rejections across 10 users; first occurrence 29 Oct 18:00:41 UTC, latest 11 Nov 22:16:15 UTC, on production deployment `dpl_5ipmErFiEhTsp5tEupta39o8EA1K`. The samples do not show one uniform blocker: they include `role_evidence_gaps`, `roles_unrewritten`, and `draft_parts_missing` combinations. All shown samples have 100% instrumented literal/supported coverage but remain `partial=true` and `incomplete=true`. The independent 30-minute query returned **no runtime errors**. That quiet window is not proof of a fix, a completed DOCX, or Meta delivery. PR #304 remains unmerged/undeployed behind its preview gate; preserve all role/evidence thresholds.
+
+
+## 12 November 2026 — offline WhatsApp fallback session lifecycle
+
+- Continue: the approved no-provider fallback is in parent PR #303; dependent PR #310 fixes stale session state after a successful fallback. It clears only the matching JD/resume pair after Meta returns a document message ID, preserves a newer request arriving during send, and keeps the old pair when Meta rejects the document.
+- Local evidence on parent #303 plus patch: targeted WhatsApp/resume 64/64, Kompas baseline 92/92, TypeScript, focused ESLint and production webpack build pass. PR #310's exact-head WhatsApp recovery run \`43136393260\` is IN_PROGRESS; parent #303 exact-head full CI/recovery/baseline were queued at last check.
+- PR #310 remains DRAFT and stacked on #303. Do not merge independently, change WhatsApp send policy, or claim live delivery. The protected Vercel preview remains unavailable while project metadata reports \`live=false\`; do not bypass it.
+- Plan/REA entry and source evidence are recorded in this documentation follow-up stacked on PR #306. No live Meta send, R2 write, model call, production deployment or handset acceptance occurred.
+- The historical 17 Oct 17:28 Chicago case remains open: original source DOCX and full JD recovered; generated output DOCX, per-run R2 key, webhook/Meta correlation and signed delivery/read receipt remain missing; conflicting source facts remain quarantined pending owner reconciliation.
