@@ -96,3 +96,6 @@ The first current-master REA run found two fixture issues, not runtime failures:
 ## 13 November 2026 — signed callback fixture correction
 
 The first exact-head full CI run failed one assertion because the fixture combined `failNextDocument=true` (an ambiguous first upload failure) with `acceptedByProvider=false` (a signed failed-delivery result). The production path correctly avoids a duplicate when the first upload is ambiguous, so the fixture could not produce the message ID its assertion expected. Commit `cdf62de950b80ff9762ac82ff1656af98c11885f` removes that ambiguous failure from this specific scenario: the upload succeeds, the mock acceptance helper returns false because the signed failure callback already won, and the JD/resume pair must remain. This correction changes only the test fixture; exact-head CI is pending.
+
+
+The callback-retention fixture correction is now recorded in the Plan Journal and REA. Exact-head CI must run on the branch head containing this documentation commit; prior failures on 40709a9 are superseded only for the test fixture, not treated as passing.
