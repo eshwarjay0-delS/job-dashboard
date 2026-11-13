@@ -200,3 +200,8 @@ The canonical production alias is READY at master 4c01951. A read-only GET /api/
 The C2H/Right To Hire classifier is present in current production source, but live result classification cannot be verified while the crawl store is restricted. Robert Half remains a manual navigation link only; no scraper, adapter, automated retrieval or unauthorized feed is permitted.
 
 Continue: keep all contract crawling unscheduled. After the owner restores Supabase egress, run a manual crawl only when explicitly requested, then verify fresh contract rows, 14-day expiry, clearance exclusion and C2H classification. Do not infer that a successful HTTP status means the job data was available.
+
+
+## Current-master restack — 13 November 2026
+
+The approved C2H evidence classifier is restacked from PR #355 onto current master `026c72968e45314ff0a99f701942c966e79f0a1e` in `fix/contract-c2h-classifier-master-026c729-run11-20261113`, implementation commit `e7a54477ee30e48b84df36ec9e754ff81b34c9b9`. The change preserves the manual/on-demand crawl authorization guard. W2 payroll and contract duration alone are not C2H; explicit conversion/right-to-hire language is required and negations suppress the signal. No cron or live portal crawl was added. Exact-head CI and protected preview remain pending.
