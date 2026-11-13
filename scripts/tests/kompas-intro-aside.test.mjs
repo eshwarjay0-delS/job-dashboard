@@ -23,11 +23,11 @@ test("side-talk before introduce yourself is not the question", () => {
   assert.equal(cleanHeardQuestion("How would you design the service catalog?"), "How would you design the service catalog?")
   assert.equal(cleanHeardQuestion("Introduce yourself. Why do you want this job?"), "Introduce yourself. Why do you want this job?")
   const start = app.indexOf("function cleanHeardQuestion(")
-  const end = app.indexOf("function plainIntroAnswer(")
+  const end = app.indexOf("function renderCard(")
   const ctx = {}
   vm.runInContext(app.slice(start, end) + "\nthis.cleanHeardQuestion = cleanHeardQuestion;", vm.createContext(ctx))
   assert.equal(ctx.cleanHeardQuestion(HEARD), "Introduce yourself.")
-  assert.match(app, /return cleanHeardQuestion\(shown\)/)
+  assert.match(app, /cleanHeardQuestion\(draft \|\| c\.question\)/)
   assert.match(app, /question = cleanHeardQuestion\(String\(question \|\| ""\)\.trim\(\)\)/)
 })
 
@@ -39,11 +39,9 @@ test("an introduction is one paragraph, with no Claim header and no First", () =
   assert.doesNotMatch(card, /^- /m)
   assert.match(card, /^I am a Senior Cybersecurity Engineer at Citi Bank/)
   assert.match(card, /Previously I secured healthcare systems at CVS Health/)
-  const cleanStart = app.indexOf("function cleanHeardQuestion(")
-  const cleanEnd = app.indexOf("function framedQuestion(")
-  const start = app.indexOf("function plainIntroAnswer(")
-  const end = app.indexOf("function answerLines(")
+  const clean = app.slice(app.indexOf("function cleanHeardQuestion("), app.indexOf("function renderCard("))
+  const present = app.slice(app.indexOf("function plainIntroAnswer("), app.indexOf("function answerLines("))
   const ctx = {}
-  vm.runInContext(app.slice(cleanStart, cleanEnd) + app.slice(start, end) + "\nthis.presentAnswer = presentAnswer;", vm.createContext(ctx))
+  vm.runInContext(clean + present + "\nthis.presentAnswer = presentAnswer;", vm.createContext(ctx))
   assert.equal(ctx.presentAnswer(HEARD, INTRO, ""), card)
 })

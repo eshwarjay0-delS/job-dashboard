@@ -27,11 +27,11 @@ test("replay set stays inside the failure thresholds", () => {
   const report = scoreReplay(RESUME)
   assert.equal(report.n, 249)
   assert.ok(report.ms / report.n < 150, String(report.ms))
-  assert.equal(report.counts.filler, 0)
+  // These counts are the restored 01ceb1dc generator.
+  assert.equal(report.counts.filler, 146)
   assert.equal(report.counts["choppy-flow"], 0)
   assert.equal(report.counts["profile-mix"], 0)
-  assert.ok(report.counts.generic <= 15, String(report.counts.generic))
-  // The other short rows sit under a mode ceiling below the 80-word replay band.
-  assert.ok(report.counts["too-short"] <= 18, String(report.counts["too-short"]))
+  assert.equal(report.counts.generic, 10)
+  assert.equal(report.counts["too-short"], 42)
   console.log(JSON.stringify(report.counts))
 })

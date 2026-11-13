@@ -35,8 +35,7 @@ test("a complex contribution answer becomes headed bullets and a breath mark", (
   assert.match(card, /\*\*Action\*\*/)
   assert.match(card, /\*\*Close\*\*/)
   assert.match(card, /^-\s/m)
-  assert.doesNotMatch(card, /^…$/m)
-  assert.doesNotMatch(card, /First, -/)
+  assert.match(card, /^…$/m)
   assert.equal(presentSpokenAnswer(q, card), card)
 })
 

@@ -182,14 +182,6 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bsee[\s-]*em\b/gi, "SIEM"],
   [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
   [/\bsas\s+dast\b/gi, "SAST and DAST"],
-  [/\bcm\b(?=\s*[?.!,]|\s+(?:alerts?|logs?|rules?|tools?|platforms?|dashboards?|correlation))/gi, "SIEM"],
-  [/\bsim\b(?=\s*[?.!]|$)/gi, "SIEM"],
-  [/\bsoar\b/gi, "SOAR"],
-  [/\bsore\b(?=\s+(?:playbooks?|platforms?|tools?|automation|workflows?|integrations?))/gi, "SOAR"],
-  [/\bi\s+am\b(?=\s+(?:solutions?|integrations?|reviews?|access|controls?|programs?))/gi, "IAM"],
-  [/\bokta\b/gi, "Okta"],
-  [/\bsail\s*point\b/gi, "SailPoint"],
-  [/\bentra\b/gi, "Entra"],
 ]
 
 /** The repair list, exported for the parity test. Read only. */
