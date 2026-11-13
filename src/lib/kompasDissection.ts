@@ -1758,14 +1758,14 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       : bareTerm
       ? []
       : namedDesign
-      ? (cut.shape === "design" && !DEEPER_ON.test(question) ? designStageLines(level, lead) : [])
+      ? (cut.shape === "design" && !DEEPER_ON.test(question) && askedParts.length < 2 ? designStageLines(level, lead) : [])
       : [
           `I start from ${lead}.`,
           `The case is ${lead}.`,
           `I check ${lead} before I move on.`,
           `What I watch is ${lead}.`,
         ]
-    const designFirst = namedDesign && cut.shape === "design" && !DEEPER_ON.test(question)
+    const designFirst = namedDesign && cut.shape === "design" && !DEEPER_ON.test(question) && askedParts.length < 2
     const fillTo = designFirst ? Math.max(mode.minWords, stop - 8) : Math.max(stop, mode.minWords)
     for (const line of extra) {
       if (words >= fillTo) break
