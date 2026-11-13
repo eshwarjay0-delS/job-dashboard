@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 13 November 2026 — confirmed-skill role mapping current-master restack
+
+Continue: carry the explicit candidate-confirmed skill correction into the current-master resume pipeline without weakening factual boundaries. The 6 Nov owner decision, reiterated in owner-authored issue #317 comment 6817645128, permits an explicit positive first-person confirmation to support that named skill across relevant existing project bullets, including earlier roles, without requiring same-role source wording. The 13 Nov role-relevance guard narrows this: the existing project context must fit the skill family; unknown skill names remain source-bound. JD terms, target scores, and editing instructions are not evidence. No new employer, project, action, outcome, date, title, location, contact, metric, credential or unsupported project fact may be introduced.
+
+The implementation is being restacked in PR #352 on branch fix/resume-confirmed-skill-role-mapping-master-9032-20261113, based directly on current master 9032d5bd18854c8fd1e61fc781b51085e3af2a26. It changes the candidate-evidence helpers, writer prompt and tailor integration, with positive/negative role-context, prompt-label and rollback regressions. Previous PR #352 head 8c30adcc1c2a3a3acc95d92bb72466c00e8f1247 passed full CI 43421003670, WhatsApp recovery 43421003721, Kompas baseline 43421003774 and Plan/REA schema 43421003647; those checks do not validate this new current-master restack. Fresh exact-head checks are pending. Keep DRAFT until the authorized protected preview succeeds; KOMPAS_VERCEL_API_TOKEN is not available to this run.
+
+No authenticated baseline + JD + explicit-confirmation run, exported DOCX inspection, final Gemini ATS score, 95–100% live match or production release is claimed. The separately approved Gemini final-DOCX ATS review remains unimplemented. PR #353 profile-gap repair is a separate slice and must not be conflated with this confirmed-skill mapping.
+
+
 Owner instruction: 17 October 2026. Keep unfinished approved commitments moving until deployed and verified, or report a concrete blocker. Recover accessible prior requests and respect later corrections. Do not ask the owner to repeat known requirements.
 
 ## Scheduled execution
