@@ -1119,3 +1119,10 @@ The 00:27 continuation said the personal-context search did not recover a direct
 - PR #330/#335/#323/#331 remain blocked by the release-stamp dependency or incomplete exact-head tests. Preserve the owner-approved login-off behavior in #331; do not remove it.
 
 Kompas Continuous Voice Delivery remains disabled; this run made no voice/caption changes. No real email/WhatsApp tests, model calls, DOCX writes, R2 writes, database mutations, manual crawl, billing changes, secret exposure or device acceptance occurred.
+
+
+## 13 November 2026 — correction to Gmail Auth 402 deployment attribution
+
+The earlier 00:27/00:40 continuation wording that placed the 48-event Auth 402 aggregate on the current production deployment is superseded. Direct owner-authored [PR #319 comment #6838375980](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6838375980) says the 30-minute 402 events all identify PREVIOUS deployments `dpl_BzrEfKcVcxUWS1QXuLAQoNAjFUPb` and `dpl_BFzWaCXX5PPhvpAzaw2dFtyoNBHL`, with last events 22:33–22:37Z. The new `a247ddf` production deployment became READY later; its first 30-minute error-level query returned no entries, and no `/api/kompas/account-sessions` request was logged.
+
+**Correct status:** Supabase Auth egress is neither confirmed cleared nor confirmed reproducing on `a247ddf`. Current live Gmail/credits status is unverified. No safe read-only API request or owner-device test was made. Keep the Gmail worker disabled; do not claim a current-deployment 402, change billing or use an alternate identity.
