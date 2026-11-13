@@ -188,3 +188,23 @@ test('unsupported JD terms are restored from the affected role without deleting 
   ])
   assert.deepEqual(guarded.blockedTerms.sort(), ['Okta', 'Splunk'])
 })
+
+
+test('confirmed cloud skills do not transfer through generic marketing-automation wording', () => {
+  const roles = [
+    { bullets: [{ idx: 5, text: 'Built Salesforce email campaigns and marketing automation.' }] },
+    { bullets: [{ idx: 6, text: 'Deployed containerized workloads to cloud infrastructure through CI/CD.' }] },
+  ]
+  const edits = [
+    { idx: 5, text: 'Built Salesforce email campaigns and marketing automation using AWS.' },
+    { idx: 6, text: 'Deployed containerized workloads to cloud infrastructure through CI/CD on AWS.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['AWS'], cover, new Set(['AWS']))
+  assert.equal(guarded.reverted, 1)
+  assert.deepEqual(guarded.edits, [
+    { idx: 5, text: roles[0].bullets[0].text },
+    edits[1],
+  ])
+  assert.deepEqual(guarded.blockedTerms, ['AWS'])
+})

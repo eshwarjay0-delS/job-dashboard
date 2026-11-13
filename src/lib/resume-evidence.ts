@@ -66,7 +66,7 @@ const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
   },
   {
     skill: /\b(?:aws|amazon web services|azure|gcp|google cloud|kubernetes|docker|terraform|cloudformation|ansible)\b/i,
-    context: /\b(?:cloud|infrastructure|deployment|deploy|container|pipeline|platform|server|migration|automation|network|api|service|orchestration|hosting)\b/i,
+    context: /\b(?:cloud|infrastructure|container(?:ized)?|docker|kubernetes|server(?:less)?|hosting|orchestration|terraform|cloudformation|ansible|vpc|ec2|s3|rds|lambda|cloudwatch|ci\/cd)\b/i,
   },
   {
     skill: /\b(?:canton|solana|solidity|hyperledger|dlt|blockchain|distributed ledger)\b/i,
