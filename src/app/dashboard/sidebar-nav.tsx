@@ -236,7 +236,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     const closeOutside = (event: PointerEvent) => {
       const target = event.target as Node | null
       if (!target || drawerRef.current?.contains(target) || toggleRef.current?.contains(target)) return
-      setMenuOpen(false)
+      closeMenu()
     }
     // The panel exists only on a narrow window. Widened past it, the menu is the fixed desktop rail again, so close it.
     const wide = window.matchMedia("(min-width: 1025px)")
