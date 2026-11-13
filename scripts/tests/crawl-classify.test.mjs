@@ -29,7 +29,7 @@ test("permanent work remains distinct and explicit contract evidence wins", () =
   assert.equal(classifyWorkType("Full-time Contract"), "contract")
 })
 
- 
+
 test("Right To Hire and Contract To Perm are explicit contract-to-hire aliases", () => {
   for (const value of ["Right To Hire", "Right to Hire", "right-to-hire", "Right‑to‑Hire", "Contract To Perm", "Contract-to-Perm", "Contract To Permanent"]) {
     assert.ok(contractTypes(value).includes("C2H"), value)
