@@ -30,3 +30,8 @@ The source PR #345 exact head 3390272c63e81c7879375625b172f1ac0c254402 passed fu
 ## Acceptance still required
 
 A synthetic test suite is not a live resume/JD match. After exact-head checks and protected preview, perform an owner-authorized baseline + JD + explicit-confirmation run; inspect the exported DOCX for preserved structure and unsupported facts; record raw and weighted keyword coverage without rounding; and separately complete the approved final-DOCX Gemini ATS-score review. No 95–100% live match or 98% result is claimed.
+
+
+## Prompt-label regression
+
+A source review found that candidateEvidenceInput(opts.jd, ...) labeled the JD string as “ORIGINAL SUBMITTED TEXT”, even though the value is the job description. That label could blur the boundary between target requirements and candidate evidence. The prompt now labels it “JOB DESCRIPTION (target requirements, not candidate evidence)”. The resume-confirmation-quality test asserts the new label and rejects the former label. Commits: 08065f4bcfc2cc2b7ca3b6436c9b6b715f562a7d and d31b599cf7d2121878e7a0f78275cf0e2fcdfd7c.
