@@ -53,12 +53,19 @@ function uncap(sentence: string): string {
   return sentence.replace(/^([A-Z])([a-z])/, (_, a: string, b: string) => a.toLowerCase() + b)
 }
 
-function signpost(section: AnswerSection, sentence: string): string {
-  const clean = uncap(sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, ""))
-  if (section === "Context") return /^first\b/i.test(sentence) ? sentence : `First, ${clean}`
-  if (section === "Action") return /^then\b/i.test(sentence) ? sentence : `Then, ${clean}`
-  if (section === "Result") return /^the result\b/i.test(sentence) ? sentence : `The result: ${clean}`
-  return sentence
+function bareSentence(sentence: string): string {
+  return String(sentence || "").replace(/^(?:[-•*]|\d+[.)])\s+/, "").replace(/^(?:first|then|the result)\b[:,]?\s+(?:[-•]\s+)?/i, "").trim()
+}
+
+function signpost(section: AnswerSection, sentence: string, first: boolean): string {
+  const bare = bareSentence(sentence)
+  if (!bare) return ""
+  const clean = uncap(bare)
+  if (!first) return bare
+  if (section === "Context") return `First, ${clean}`
+  if (section === "Action") return `Then, ${clean}`
+  if (section === "Result") return `The result: ${clean}`
+  return bare
 }
 
 function bucket(sentence: string, source: string): AnswerSection {
@@ -83,10 +90,12 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
   for (const title of SECTION_ORDER) {
     const group = groups[title]
     if (!group.length) continue
-    if (blocks.length) blocks.push("…")
     blocks.push(`**${title}**`)
     const tight = group.length <= 4 ? group : [...group.slice(0, 3), group.slice(3).join(" ")]
-    for (const sentence of tight) blocks.push(`- ${signpost(title, sentence)}`)
+    tight.forEach((sentence, index) => {
+      const line = signpost(title, sentence, index === 0)
+      if (line) blocks.push(`- ${line}`)
+    })
   }
   return blocks.join("\n")
 }

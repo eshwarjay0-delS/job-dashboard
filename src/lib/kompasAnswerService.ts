@@ -31,6 +31,7 @@ import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, fir
 import { answerAside, shortFactAnswer, type AnswerAside } from "@/lib/kompasAnswerAside"
 import { claimPrompt, screenSuggestion } from "@/lib/kompasSessionMind"
 import { readInterviewer } from "@/lib/kompasIntegration"
+import { instantSpokenLine } from "@/lib/kompasLatency"
 import { runSession } from "@/lib/kompasNervousSystem"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
@@ -369,6 +370,7 @@ type AnswerJob = {
   aside?: AnswerAside
   // Mic and caption text already heard. Used only to keep a new line from contradicting it.
   heard?: string
+  brainMs?: number
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -568,7 +570,12 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
       }
       try {
-        emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
+        emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy, brain_ms: job.brainMs || 0 })
+        const instant = instantSpokenLine(job.question)
+        if (instant) {
+          emit({ type: "instant", text: instant })
+          if (!timing.visible_first_ms) timing.visible_first_ms = Date.now() - startedAt
+        }
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
         if (job.orKey) {
@@ -1341,6 +1348,7 @@ ${INTERVIEW}`
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
   const heardForBrain = [transcript, heardAll].filter(Boolean).join("\n")
+  const brainStarted = Date.now()
   let sessionClaims: string[] = []
   let sessionNudge = ""
   let sessionClarify = ""
@@ -1356,6 +1364,7 @@ ${INTERVIEW}`
     sessionClaims = session.claims
     sessionNudge = session.nudge
     sessionClarify = session.clarify
+    job.brainMs = Date.now() - brainStarted
     job.heard = heardForBrain
   } catch { /* the answer still runs if the bus fails */ }
   job.aside = answerAside({ question, transcript: heardForBrain, resume: resumeSrc, said: sessionClaims, nudge: sessionNudge, clarify: sessionClarify })

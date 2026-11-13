@@ -1114,13 +1114,13 @@ function presentAnswer(question, answer, source) {
     const group = groups[title];
     if (!group.length) continue;
     const tight = group.length <= 4 ? group : group.slice(0, 3).concat(group.slice(3).join(" "));
-    if (blocks.length) blocks.push("…");
     blocks.push("**" + title + "**");
-    for (const sentence of tight) {
-      const clean = sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, "").replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
-      const line = title === "Context" ? (sentence.toLowerCase().startsWith("first") ? sentence : "First, " + clean) : title === "Action" ? (sentence.toLowerCase().startsWith("then") ? sentence : "Then, " + clean) : title === "Result" ? (sentence.toLowerCase().startsWith("the result") ? sentence : "The result: " + clean) : sentence;
-      blocks.push("- " + line);
-    }
+    tight.forEach((sentence, index) => {
+      const bare = String(sentence || "").replace(/^(?:[-•*]|\d+[.)])\s+/, "").replace(/^(?:first|then|the result)\b[:,]?\s+(?:[-•]\s+)?/i, "").trim();
+      const clean = bare.replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
+      const line = index !== 0 ? bare : title === "Context" ? "First, " + clean : title === "Action" ? "Then, " + clean : title === "Result" ? "The result: " + clean : bare;
+      if (line) blocks.push("- " + line);
+    });
   }
   return blocks.join("\n");
 }
@@ -1199,6 +1199,26 @@ function stripUnaskedLogistics(question, answer) {
   const kept = raw.split(/(?<=[.?!])\s+/).filter(s => s && !personalLogistics(s));
   return kept.join(" ").trim();
 }
+function framedQuestion(draft, card) {
+  const typed = String(draft || "").trim();
+  if (typed) return typed;
+  const asked = String((card && (card.anchorQ || card.question)) || "").replace(/\s+/g, " ").trim();
+  if (!asked || isPlaceholderTitle(asked)) return "";
+  if (/^deep dive into\b/i.test(asked) && /\bexperience\b/i.test(asked)) return String(card.heard || card.fullSpokenQuestion || asked).replace(/\s+/g, " ").trim();
+  return typeof fixPhrases === "function" ? fixPhrases(asked) : asked;
+}
+function strayCaption(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return true;
+  const words = t.replace(/[.?!,\s]+$/g, "").split(/\s+/).filter(Boolean);
+  return words.length < 3 && !/[?]/.test(t);
+}
+function instantSpokenLine(question) {
+  const q = String(question || "").replace(/\s+/g, " ").trim();
+  if (q.length < 12 || /^(?:Preparing|Deriving|Ready|Cleared|No question|Waiting|Listening)/i.test(q)) return "";
+  const words = q.split(" ").slice(0, 8).join(" ").replace(/[?]+$/, "");
+  return "I would start with " + words + ", and say where I stop.";
+}
 function renderCard() {
   const c = cards[idx]; if (!c) return;
   // Where you are in the book, and ends that look like ends (owner, 27 Oct 2026: Prev/Next "aren't working" at the first
@@ -1209,8 +1229,9 @@ function renderCard() {
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
-  const qLabel = draft || c.question;
-  $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
+  const qLabel = framedQuestion(draft, c);
+  const box = $("card"); if (box) box.classList.remove("q-away");
+  $("question").textContent = qLabel + (qLabel && (c.askedAt || startedAt) ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
@@ -1488,7 +1509,7 @@ $("textMinus")?.addEventListener("click", () => stepText(-2));
 $("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
 const answerPane = $("answer");
-function syncQuestion() { const card = $("card"); if (card && answerPane && answerPane.scrollTop > 2) card.classList.add("q-away"); }   // scrolling down hides the question; only an overscroll gesture brings it back
+function syncQuestion() { const card = $("card"); if (card) card.classList.remove("q-away"); }
 answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
 // Overscroll reveal (owner, 26 Oct): at the very top, one more scroll up shows the
 // question again — reaching the top alone never does. Wheel-up at the top reveals
@@ -1499,10 +1520,10 @@ answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
 // the card hides it, smoothly, so only the response box stays in view.
 function touchReveal(startTop, top, pull) { return startTop <= 0 && top <= 0 && pull > 24; }
 // Touch reveal wiring ends here.
-$("card")?.addEventListener("wheel", (e) => { const card = $("card"); if (!card) return; if (e.deltaY > 0) card.classList.add("q-away"); else if (e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away"); }, { passive: true });
+$("card")?.addEventListener("wheel", () => { const card = $("card"); if (card) card.classList.remove("q-away"); }, { passive: true });
 let touchStartY = 0, touchStartTop = 0;
 $("card")?.addEventListener("touchstart", (e) => { touchStartY = (e.touches[0] && e.touches[0].clientY) || 0; touchStartTop = answerPane ? answerPane.scrollTop : 0; }, { passive: true });
-$("card")?.addEventListener("touchmove", (e) => { const card = $("card"); if (!card) return; const y = (e.touches[0] && e.touches[0].clientY) || 0; if (answerPane && touchReveal(touchStartTop, answerPane.scrollTop, y - touchStartY)) card.classList.remove("q-away"); else if (touchStartY - y > 24) card.classList.add("q-away"); }, { passive: true });
+$("card")?.addEventListener("touchmove", () => { const card = $("card"); if (card) card.classList.remove("q-away"); }, { passive: true });
 $("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
 // The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
 const LIVE_MODELS = ["", "gpt-5.6-luna"];
@@ -2767,6 +2788,7 @@ function showCaption(who, text, isInterim) {
   const el = $("caption"); if (!el) return;
   // The candidate's mic is not the interviewer question. With call audio on, it never sits under the question.
   if (who === "You" && typeof captures !== "undefined" && captures.some(c => c && c.who === "Them" && !c.stopped)) return;
+  if (strayCaption(text)) { el.classList.add("hidden"); return; }
   if (who === "Them") noteThem(text);
   else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
@@ -3916,6 +3938,14 @@ const PHRASE_FIXES = [
   [/\bsee[\s-]*em\b/gi, "SIEM"],
   [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
   [/\bsas\s+dast\b/gi, "SAST and DAST"],
+  [/\bcm\b(?=\s*[?.!,]|\s+(?:alerts?|logs?|rules?|tools?|platforms?|dashboards?|correlation))/gi, "SIEM"],
+  [/\bsim\b(?=\s*[?.!]|$)/gi, "SIEM"],
+  [/\bsoar\b/gi, "SOAR"],
+  [/\bsore\b(?=\s+(?:playbooks?|platforms?|tools?|automation|workflows?|integrations?))/gi, "SOAR"],
+  [/\bi\s+am\b(?=\s+(?:solutions?|integrations?|reviews?|access|controls?|programs?))/gi, "IAM"],
+  [/\bokta\b/gi, "Okta"],
+  [/\bsail\s*point\b/gi, "SailPoint"],
+  [/\bentra\b/gi, "Entra"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -4740,7 +4770,6 @@ function serveBook(card, hit, depthKey) {
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
   status("Answered.", "live");
-  if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }
   if (window.KompasDiamond) {
     card.anchorQ = card.question;
     for (const a of window.KompasDiamond.questionPlan(card.anchors || {}).levels) fillAnchor(card, a);
@@ -4810,7 +4839,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
   const prevAnswer = card.answer, prevMeta = card.meta;
   const keepOld = !!opts.retries && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
-  if (!keepOld) card.answer = ["…"];
+  if (!keepOld) {
+    const instant = instantSpokenLine(String((card && card.question) || question || ""));
+    card.answer = instant ? [instant] : ["…"];
+  }
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
   // A timer abort is not a supersede: the request died on our own watchdog, so
   // retry it (twice) instead of leaving a "…" card with a stale status forever.
@@ -4926,10 +4958,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
         }
         if (card.cardTitle && !isPlaceholderTitle(card.question)) return false;
         card.question = derivedQ;
-      } else {
+      } else if (isPlaceholderTitle(card.question)) {
         card.cardTitle = title;
         card.question = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, title) : title;
-      }
+      } else card.cardTitle = title;
       if (cards[idx] === card) { renderCard(); status("Answering: " + card.question, "live"); }
       return false;
     };
@@ -4954,6 +4986,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (applied.title) paintTitle(applied.title, false);
       } else if (ev.type === "card") {
         if (applied.card) paintLayout(applied.card);
+      } else if (ev.type === "instant") {
+        const current = typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n");
+        if (!current.trim() || /^…/.test(current.trim()) || /I would start with /.test(current)) { if (!first) first = performance.now() - t0; text = ev.text || ""; show(text); }
       } else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; if (!card.cardLayout) show(text); }
       else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; card.cardLayout = null; show(text); }
       else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
@@ -5065,7 +5100,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     status("Answered.", "live");
     healAuthSilently();
-    if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
+    if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — wait silently if renewal fails
       if (await recoverLiveAuth()) { recoverAnswer("", 800); return; }
