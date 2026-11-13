@@ -391,3 +391,8 @@ Continue: obtain the authorized protected preview for PR #344, then merge/deploy
 ### 13 November 2026 — Plan/REA test correction
 
 The documentation commit `b7a3f6a5c9514a2a379299fe81652c9a02245008` triggered the Plan/REA schema workflow and exposed one stale historical assertion: the Oct 17 source-recovery REA still pinned the former production deployment id. That assertion was updated to the currently verified `dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS` and the code-release state remains `Deployed, verification pending`. The follow-up exact-head run on `08a8294f0a6d7306591e58158396d264ba9f0ae1` passed baseline and account-sync but the REA test still failed because its next-action text did not contain the exact `owner reconciliation` phrase; that wording is now corrected. Full CI and WhatsApp recovery were still running at the time of the check. Do not merge until all checks pass on the latest head.
+
+
+### 13 November 2026 — shared build-stamp ownership
+
+The two public build-stamp edits in PR #344 are identical to voice-owned PR #333 (`public/kompas/index.html` and `public/kompas/version.json`, `kompas-20261112-output` → `kompas-20261112-startfix`). PR #333 remains DRAFT/unmerged with its protected-preview gate unavailable. A coordination comment was posted to PR #333: it remains the owner of the shared stamp correction; after it is approved and merged, PR #344 must rebase and remove the duplicate hunks if needed. No voice behavior or voice tests were changed. Do not merge either PR without the protected preview.
