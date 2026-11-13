@@ -130,7 +130,7 @@ PR #353 `97c6fbf2caec1507059b44a1237f397263f27b95` now passes full CI, Kompas ba
 
 ## 13 November 2026 — source and JD recovery (private artifacts withheld)
 
-A prior 13 Nov Library retrieval recorded that the original 17 Oct resume attachment and matching job description had been recovered and cross-checked against the incident screenshot. This scheduled run did not re-open the private bytes, recompute a digest, or inspect the generated output. Exact screenshot identifiers, attachment names, Library paths, file hashes, full JD text and resume content are intentionally excluded from this public repository.
+This run retrieved the private original 17 Oct resume bytes from the Library archive and verified them against the inventory record. A read-only Gmail search and full-thread fetch also recovered the matching 16 Oct job description. The private bytes, exact digest, screenshot, message body and generated output were not copied into the repository. Exact screenshot identifiers, attachment names, Library paths, file hashes, full JD text and resume content are intentionally excluded from this public repository.
 
 The screenshot evidence recorded a job-post attachment shortly before the 17:28 Chicago response. The response described an old 98% target that was not reached after automatic repair. That historical explanation is preserved as evidence of what the user was told, not as the current delivery policy: the 6 Nov owner-approved WhatsApp policy supersedes the old 98% hard hold.
 
