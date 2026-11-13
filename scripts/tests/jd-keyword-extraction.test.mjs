@@ -162,3 +162,24 @@ Sai Kumar`)
   for (const term of ['cloud-based', 'government-issued', 'closely', 'opportunity-please', 'sai kumar']) assert.ok(!terms.includes(term), term)
   for (const term of ['siem', 'palo alto', 'data mover']) assert.ok(terms.includes(term), term)
 })
+
+test('a "such as" preferred credential list is one alternative and AWS Security Specialty stays compound', () => {
+  const jd = `Preferred Qualifications
+Professional certifications such as: CISSP, CISM, CRISC, CISA, CCSP.
+AWS Security Specialty (or equivalent) preferred.
+Knowledge of distributed ledger platforms (Ethereum, Hyperledger Besu, Canton, Sol).
+Desired Attributes
+Strong ownership, collaboration and continuous learning.`
+  const terms = extractJdKeywords(jd)
+  const group = 'cissp or cism or crisc or cisa or ccsp'
+  assert.ok(terms.includes(group))
+  for (const individual of ['cissp', 'cism', 'crisc', 'cisa', 'ccsp']) assert.ok(!terms.includes(individual), individual)
+  assert.ok(terms.includes('aws security specialty'))
+  for (const heading of ['specialty', 'attributes']) assert.ok(!terms.includes(heading), heading)
+  for (const platform of ['canton', 'sol']) assert.ok(terms.includes(platform), platform)
+  const source = 'CISSP, CCSK, Security+, PenTest+, AZ-500. AWS, Azure, GCP. Smart contracts, cryptography, NIST, ISO 27001, CIS Controls, COBIT.'
+  assert.equal(present(source, group), true)
+  assert.equal(present(source, 'aws security specialty'), false)
+  assert.equal(present(source, 'canton'), false)
+  assert.equal(present(source, 'sol'), false)
+})
