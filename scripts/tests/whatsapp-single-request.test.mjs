@@ -419,7 +419,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   }))
   sessionReadCount = 0
   providerAvailable = true
-  failNextDocument = true
+  // The upload succeeds and returns a message ID; the signed callback has already marked it failed.
   acceptedByProvider = false
   const docsBeforeCallbackRetry = docs.length
   await generate('123', callbackRetrySession, offlineUser, undefined, offlineFiles)
