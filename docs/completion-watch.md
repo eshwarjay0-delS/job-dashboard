@@ -8,6 +8,14 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — run 11: Gmail digest identity and mobile navigation restack
+
+Continue: the owner-approved Poke-inspired Gmail slice is restacked from PR #357 onto current master `026c72968e45314ff0a99f701942c966e79f0a1e` in `fix/gmail-digest-mobile-master-026c729-run11-20261113`, implementation commit `5e3391b9c9cb60d1d8f8281566854d94e9e3abd5`. The current-master mail page was patched in place, preserving the intervening Gmail snapshot fallback and its `snapshotNotice`. Digest sender mutes are receiving-account + sender scoped; radar/thread identity is receiving-account + provider-thread scoped; opening digest/role/radar items selects the receiving inbox. The mobile hamburger expands below the sticky top bar in normal flow, pushes content down and never covers, dims or makes the page inert.
+
+Exact-head full CI, Kompas baseline, Plan/REA and protected preview remain pending. The private `KOMPAS_VERCEL_API_TOKEN` is unavailable to this run; no preview bypass is attempted. The production alias remains at prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`. Existing selected-From/token binding is still covered by `scripts/tests/gmail-send-account-isolation.test.mjs`; this slice does not change send behavior.
+
+Real acceptance still requires two authorized inboxes with the same provider thread ID and sender, independent mute behavior, correct inbox selection from digest/role/radar, selected-From preservation, affected-inbox-only reconnect, and a narrow-phone menu check. No Gmail API/OAuth call, inbox mutation, email send or real phone test occurred.
+ 
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 
 Owner Eshwar, final approved pass. Answer generation, prompting, question detection, and the left card are the `01ceb1dc` files. Skip-login, the Gmail snapshot, the mic stop, and the intro paragraph stay. Generation is unchanged. The left card does not show Claim, Context, Action, Result, Close, or the ellipsis. The right panel does not write the left answer. Next: one pull request, squash-merge with [ship] when CI is green, then one deployment check.
