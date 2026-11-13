@@ -1,5 +1,14 @@
 # Kompas Chief Relevance Handoff
 
+## 13 November 2026 — current production and acceptance delta
+
+Canonical MFit master and production alias are now READY at `01ceb1dc79a86473c932861b8dddfa120077fc57`, deployment `dpl_GH2UBvDyArm6beC93exvQLtjYfiK`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to that deployment. This supersedes the older 10 November release note at `a66c108`.
+
+The live answer release includes merged PRs #334, #337, #339 and #347. PR #350 is a separate 70-file proposal at head `6e84055cdd9ee1e6bd49c03d1e4217e1f18d0258`; its exact full CI remains in progress. It changes answer-engine, private-panel and login behavior. Do not merge or promote until exact-head CI is green, every changed behavior is reviewed, and the owner has explicitly approved the complete bundle. The owner-approved skip-login requirement is not yet live: `AUTH_DISABLED` was not edited in the current release and the last observed production flag was false.
+
+The real 50-pair same-question Kompas-versus-ChatGPT evaluation and independent human 0–4 grading remain blocked by the unavailable private `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. Native Windows, Live Captions, Android, WhatsApp and mobile voice acceptance remain unverified. The separate Kompas Continuous Voice Delivery automation is disabled; this continuation made no voice changes. Do not use synthetic folds, source tests or a READY deployment as a substitute for actual answer quality or device acceptance.
+
+
 **Owner's objective:** Kompas must sound like a strong, attentive, technically capable interview candidate. It must answer the *meaning and expectations* of the question, not mechanically match terms from the resume, job description, earlier replies, or nearby technical topics. The canonical system is MFit Kompas; the hosted web experience, Windows desktop wrapper, and WhatsApp session share the answering service.
 
 This guide is an explicit operating procedure for developers and evaluators, **not** a transfer of hidden model reasoning or evidence that the model has been fine-tuned. It defines observable behavior, reproducible checks, and strict source boundaries.

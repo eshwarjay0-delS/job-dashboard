@@ -1,5 +1,13 @@
 # MFit Completion Watch
 
+## 13 November 2026 — 04:20 UTC continuation reconciliation
+
+Canonical master `01ceb1dc79a86473c932861b8dddfa120077fc57` is READY in production as deployment `dpl_GH2UBvDyArm6beC93exvQLtjYfiK`; independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to that exact deployment with no alias error. This supersedes the earlier 13 Nov note that the alias check was pending and the historical Vercel quota alerts for older commits. The current master includes answer-stack PRs #334, #337, #339 and #347.
+
+The 17 Oct 17:28 Chicago WhatsApp source DOCX (27,724 bytes) and matching JD are now recovered privately. The source facts conflict with owner-confirmed education, chronology, experience length and credentials and remain quarantined. The generated final DOCX, per-run R2 key, webhook correlation ID, Meta message ID and signed delivery/read receipt are still missing. The old 98% hard WhatsApp hold is superseded by the 6 Nov channel policy; no replay, send or 98% live match is claimed.
+
+Continue: isolated the owner-approved normal-flow mobile navigation into draft PR #351 (`f3c31cb276e7d8598f8159d4933cb4ac69855bab`). Exact-head CI, protected preview, production release and real phone acceptance are pending. PR #344/#345/#346 remain draft/stale-base despite their recorded green full CI; PR #323 has an unsafe stale-marker cleanup and needs a concurrency-safe design; PR #343/#288 remain conflicting crawler work; PR #350 is a major Kompas proposal whose exact-head full CI is still in progress and whose full behavior is not approved for promotion. See `docs/research/mfit-completion-watch-2026-11-13.md` for the deduplicated evidence ledger.
+
 Owner instruction: 17 October 2026. Keep unfinished approved commitments moving until deployed and verified, or report a concrete blocker. Recover accessible prior requests and respect later corrections. Do not ask the owner to repeat known requirements.
 
 ## Scheduled execution
@@ -10,7 +18,7 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 ## 13 November 2026 — Kompas answer release
 
-Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were not in this environment, so they are not included. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. Production alias check is the next step. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
+Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were not in this environment, so they are not included. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. Production alias check was subsequently completed; see the 13 November 04:20 UTC reconciliation at the top of this file. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
 
 ## 13 November 2026 — Actions artifact storage
 
@@ -148,7 +156,7 @@ Master and production were both `90cdd1dd` (`kompas-20261105-call-audio`, `/api/
 
 ## Current highest-priority wall
 
-The 17:28 Chicago WhatsApp resume run was held after repair. The screenshot is available, but this agent has not inspected its complete JD, original Word file, generated artifact or execution trace. Obtain that exact evidence through authorized storage or user-provided inputs. Do not declare the 98% output goal achieved from the 84 passing regression tests.
+The 17:28 Chicago WhatsApp resume run was held after repair. The original 27,724-byte Word DOCX and matching JD have since been recovered privately, but the source education, employment chronology, experience length and credentials conflict with owner-confirmed profile facts and remain quarantined. The generated final DOCX, per-run R2 object key, webhook correlation ID, Meta message ID and signed delivered/read receipt remain missing. The old 98% hard WhatsApp hold is superseded by the 6 Nov channel-specific policy. Do not claim exact replay, delivery or a 98% live match.
 
 Other independently trackable work includes Poke-inspired Gmail/mobile updates, crawler schema access, contract search acceptance, resume library reconciliation and Kompas review/voice verification.
 
