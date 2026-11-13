@@ -25,3 +25,10 @@ The source PR #355 full CI, Kompas baseline and crawler regression passed. The c
 The manual/on-demand guard was source-checked in `src/app/api/crawl/run/route.ts`. No live portal crawl, posting fetch, cron execution, external API request, production deployment or account-side write occurred. The protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`, which is unavailable to this run; no bypass was attempted.
 
 This is a C2H classifier slice, not completion of the entire contract job crawler. Post-deployment acceptance must use authorized sample postings and verify C2H positive/negative evidence, W2-only false-positive suppression, freshness and account isolation.
+
+
+## 13 November 2026 — run 11 exact-head source gates passed
+
+The current-master restack PR #376 at head `fb1aaad17b982dc323342cea87313a27ce7b3ad7` passed full CI `43491614601`, crawler freshness/classification regression `43491614548`, Kompas baseline `43491614613` and Plan/REA schema `43491614636`. The full CI is separate from the dedicated crawler regression. These are source tests only.
+
+PR #376 remains DRAFT pending the legitimate protected Vercel preview. No production deployment, live portal crawl, external API request, scheduled job or account-side write occurred. Post-release acceptance must remain manual and use permitted sample postings to verify explicit conversion intent, negation, W2-only suppression, freshness and account isolation.
