@@ -31,6 +31,14 @@ Read `docs/completion-watch.md` at the start of continuation work. Before ending
 
 Owner instruction, 17 October 2026: record every REA bit by bit in the admin REA section, not only in chat. Update `src/lib/rea-register.ts`, the relevant `docs/research/` evidence file and Plan & Vision together. Each session must identify the original request, product, research method, exact sources, observed findings, implemented changes, test evidence, commits, deployment status, limitations and next action. Public reference review, source/artifact analysis and actual REA tool execution are distinct methods. Mark failed/partial tool runs as blocked; never relabel marketing claims or a documentation review as recovered proprietary internals. Backfill accessible historical studies without inventing missing evidence. Do not put credentials, private email content or personal documents in the register. The UI is versioned; it does not automatically ingest external conversations.
 
+## Authentication policy — owner correction 12 November 2026
+
+- Production sign-in is Google/Gmail OAuth only.
+- Preserve the existing owner admin membership in `admin_memberships`; do not replace it with an email/password allowlist or a synthetic owner.
+- Do not expose password sign-in/reset, a Skip login button, or a shared synthetic-owner login.
+- `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` must remain `false` in production. `isAuthDisabled` must fail closed whenever `NODE_ENV=production`, even if an injected environment object says otherwise.
+- Local development/test fallback is not a production login method. Never change admin membership or production auth environment variables except to carry out an explicit owner correction.
+
 ## Cloud Agent
 
 MarketFit is the Next.js app in this repository. `npm ci` installs it and is safe to run again. `npm run dev` serves it on port 3000.
