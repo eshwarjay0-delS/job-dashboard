@@ -10,7 +10,7 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 
-Owner Eshwar, final approved pass. Answer generation, prompting, question detection, and the left card are the `01ceb1dc` files. Skip-login, the Gmail snapshot, the mic stop, and the intro paragraph stay. A complex answer at that commit still shows Claim, Context, Action, Result, and Close. The right panel does not write the left answer. Next: one pull request, squash-merge with [ship] when CI is green, then one deployment check.
+Owner Eshwar, final approved pass. Answer generation, prompting, question detection, and the left card are the `01ceb1dc` files. Skip-login, the Gmail snapshot, the mic stop, and the intro paragraph stay. Generation is unchanged. The left card does not show Claim, Context, Action, Result, Close, or the ellipsis. The right panel does not write the left answer. Next: one pull request, squash-merge with [ship] when CI is green, then one deployment check.
 
 ## 13 November 2026 — phone mic stop matches the earlier recorder
 

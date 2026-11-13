@@ -39,20 +39,28 @@ test("a complex contribution answer becomes headed bullets and a breath mark", (
   assert.equal(presentSpokenAnswer(q, card), card)
 })
 
-test("the card renders a bold mini-heading and does not show the stars", () => {
+test("the left card never shows Claim, Context, Action, Result, or Close as labels", () => {
   const dom = new JSDOM("<ul id='answer'></ul>")
   const ctx = vm.createContext({ document: dom.window.document, window: {}, PAUSE_MARK: "(?:\\((?:pause|beat|breath)\\)|\\[(?:pause|beat|breath)\\])" })
   vm.runInContext(app.slice(app.indexOf("function unbracket"), app.indexOf("function renderCard")), ctx)
-  const lines = ctx.answerLines("**Context**\n- I joined two months before launch.\n…\n**Result**\n- The path stopped dropping rows.", "What were your contributions?")
-  assert.equal(lines.some((line) => line.kind === "head" && line.t === "**Context**"), true)
+  const source = "**Claim**\n- I joined two months before launch.\n…\n**Context**\n- First, downstream calls were failing.\n**Action**\n- Then, I implemented queue-based staging.\n**Result**\n- The result: the path stopped dropping rows.\n**Close**\n- The nightly path held."
+  const lines = ctx.answerLines(source, "What were your contributions?")
+  assert.equal(lines.some((line) => line.kind === "head" || line.kind === "pauseline"), false)
+  assert.ok(lines.some((line) => line.kind === "bullet" && /joined two months/.test(line.t)))
+  assert.ok(lines.some((line) => line.kind === "bullet" && /nightly path held/.test(line.t)))
   const ul = dom.window.document.getElementById("answer")
   for (const line of lines) {
     const li = dom.window.document.createElement("li")
-    if (line.kind === "head") li.className = "minihead"
+    li.className = line.kind
     ctx.inline(li, line.t)
     ul.append(li)
   }
-  assert.equal(ul.querySelector(".minihead strong").textContent, "Context")
+  assert.equal(ul.querySelector(".minihead"), null)
+  assert.equal(ul.querySelector(".pauseline"), null)
+  assert.doesNotMatch(ul.textContent, /\b(?:Claim|Context|Action|Result|Close)\b/)
+  assert.match(ul.textContent, /I joined two months before launch/)
+  assert.match(ul.textContent, /The result: the path stopped dropping rows/)
+  assert.equal(ul.textContent.includes("…"), false)
   assert.equal(ul.textContent.includes("**"), false)
 })
 

@@ -1172,8 +1172,9 @@ function proseLines(text) {
     .filter(l => l && !/^(EXPERIENCE|DESIGN|INTRODUCTION|DRILL-DOWN|SIMPLE|CONSOLIDATED)\b[A-Z /&-]*:?$/.test(l) && !/^<[A-Z][^>]*>$/.test(l))   // never show a template label
     .map(l => {
     if (/^#{1,6}\s+\S/.test(l)) return null;
+    if (/^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(l)) return null;
+    if (/^(?:…|\.{3})$/.test(l)) return null;
     if (/^\*\*[^*][^*]{0,40}\*\*$/.test(l)) return { t: l, kind: "head" };
-    if (/^(?:…|\.{3})$/.test(l)) return { t: "…", kind: "pauseline" };
     const b = l.match(/^(?:(?:[-•]|\*(?!\*)|\d+[.)])\s+)+(.*)$/);      // "- - text" too
     if (b) return { t: b[1], kind: "bullet" };
     if (new RegExp("^" + PAUSE_MARK + "\\.?$", "i").test(l)) return { t: l, kind: "pauseline" };
@@ -1291,7 +1292,12 @@ function renderCard() {
       li.className = "codeblock"; const pre = document.createElement("pre"), code = document.createElement("code");
       if (lang) pre.dataset.lang = lang; code.textContent = t; pre.append(code); li.append(pre); ul.append(li); return;
     }
-    if (kind === "head") { li.className = "minihead"; inline(li, t); ul.append(li); return; }
+    if (kind === "head") {
+      const label = String(t || "").replace(/\*/g, "").trim();
+      if (/^(?:Claim|Context|Action|Result|Close|What I did)$/.test(label)) return;
+      li.className = "minihead"; inline(li, t); ul.append(li); return;
+    }
+    if (kind === "pauseline" && /^(?:…|\.{3})$/.test(String(t || "").trim())) return;
     if (kind === "passage") li.className = "passage";
     else if (kind === "pauseline") li.className = "pauseline";
     inline(li, t);
