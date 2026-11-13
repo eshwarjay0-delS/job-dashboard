@@ -1791,7 +1791,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     }
   }
   const shortFact = /^(?:have you|did you|do you|are you|were you)\b/i.test(question) && /\b(?:worked|used|use|familiar|experience|been|done|know)\b/i.test(question)
-  if (!(hrAsk && level !== "architect")) {
+  if (!bareTerm && !(hrAsk && level !== "architect")) {
     const stance = modeStance(level, lead, { design: cut.shape === "design", story: cut.shape === "personal-experience" || cut.shape === "scenario" || /\btell me about a time\b/i.test(question) })
     const placed = placeStance(parts, stance, mode.maxWords)
     parts.splice(0, parts.length, ...placed)
@@ -1803,13 +1803,13 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
 function plainDefinition(level: AnswerLevel, lead: string, hr: boolean): string {
   if (level === "director") {
     return hr
-      ? `I would rather name the call on ${lead} in plain words than walk the build.`
-      : `On ${lead}, the decision is whether the leftover risk is acceptable, and I do not walk the mechanism.`
+      ? `I would rather name ${lead} in plain words than walk the build.`
+      : `I would rather decide ${lead} than walk past ${lead}.`
   }
-  if (level === "architect") return `${lead} is the boundary where the plan and the live setting can disagree.`
+  if (level === "architect") return `${lead} is the boundary I watch for ${lead}.`
   return hr
-    ? `${lead} means a plain look at what could go wrong, and why that check matters. I stop there.`
-    : `${lead} means the check I run, and I say what that check is for before I stop.`
+    ? `${lead} means a plain look at what could go wrong. I stop there.`
+    : `${lead} means the check I run on ${lead} before I stop.`
 }
 
 function modeStance(level: AnswerLevel, lead: string, flags: { design: boolean; story: boolean }): string {
