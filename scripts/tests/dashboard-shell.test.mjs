@@ -66,7 +66,7 @@ test("opening the menu never dims or makes the page inert; outside click and lin
   assert.match(nav, /drawerRef\.current\?\.contains\(target\)/)
   assert.match(nav, /toggleRef\.current\?\.contains\(target\)/)
   assert.match(nav, /if \(!target \|\| drawerRef\.current\?\.contains\(target\) \|\| toggleRef\.current\?\.contains\(target\)\) return[\s\S]*closeMenu\(\)/)
-  assert.match(nav, /closest\("a"\)\) setMenuOpen\(false\)/)
+  assert.match(nav, /closest\("a"\)\) closeMenu\(\)/)
 })
 
 test("Escape closes the expanded menu and returns focus to the hamburger", () => {
