@@ -919,9 +919,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       if (!sentId) throw new Error("WhatsApp document send returned no message id")
       const accepted = await markResumeDocumentAccepted(job, sentId)
       finished = true
-      // Meta returned a message ID; do not leave the old JD/resume pair attached to the next request.
-      await consumeSessionPair().catch(() => {})
-      if (accepted && files) await markUsed(files.userDir, files.abs).catch(() => {})
+      // A signed failed-delivery callback keeps this exact pair queued for recovery.
+      // Consume only when the provider-acceptance contract confirms this document.
+      if (accepted) {
+        await consumeSessionPair().catch(() => {})
+        if (files) await markUsed(files.userDir, files.abs).catch(() => {})
+      }
       return true
     } catch (error) {
       const refused = /WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))
