@@ -96,3 +96,14 @@ test('conversation evidence decisions are filterable and retain their recorded s
  assert.ok(entry.steps.some(step => step.status === 'Recorded'))
  assert.ok(filterReaSessions('', 'kompas', 'Conversation evidence review').some(s => s.id === entry.id))
 })
+
+test('17 Oct source recovery REA record keeps private artifact locators out of the public repository', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'whatsapp-17-oct-resume-source-recovery-2026-11-13')
+ assert.ok(entry)
+ const publicRecord = JSON.stringify(entry)
+ assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{64}\\b/i)
+ assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
+ assert.doesNotMatch(publicRecord, /\\.docx/i)
+ assert.doesNotMatch(publicRecord, /Library ZIP|J_Eshwar_44|Resume_Inventory\\.csv|Gmail message retrieved/i)
+ assert.ok(entry.sources.every(source => !source.path || existsSync(path.join(root, source.path))))
+})
