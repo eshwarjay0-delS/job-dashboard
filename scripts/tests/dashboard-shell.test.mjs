@@ -86,7 +86,7 @@ test("normal-flow navigation preserves the existing account and authentication c
   assert.match(nav, /const accountRef = useRef/)
   assert.match(nav, /Manage account/)
   assert.match(nav, /Log out/)
-  assert.match(nav, /window.matchMedia\("\\(min-width: 1025px\\)"\)/)
+  assert.match(nav, /window\.matchMedia\("\(min-width: 1025px\)"\)/)
 })
 
 
