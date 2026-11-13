@@ -18,8 +18,44 @@ permissions:
   contents: write
 
 jobs:
+  guard:
+    name: Skip master pushes that do not change the desktop
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.set.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: set
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "push" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BEFORE"
+            files="$(git diff --name-only "$BEFORE" HEAD)"
+          else
+            files="$(git diff --name-only HEAD~1 HEAD)"
+          fi
+          printf '%s\n' "$files"
+          if printf '%s\n' "$files" | grep -Eq '^(legacy/perfact/desktop/|public/kompas/)'; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "No legacy/perfact/desktop or public/kompas changes. Leaving the kompas-desktop-latest release asset unchanged."
+          fi
+
   windows-build:
     name: Build canonical MFit Kompas Windows EXE
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -60,12 +96,13 @@ jobs:
         working-directory: legacy/perfact/desktop
         run: node scripts/smoke-launch.mjs dist/win-unpacked/Kompas.exe
       - name: Publish Windows artifact for verification
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
         uses: actions/upload-artifact@v4
         with:
           name: Kompas-Windows-Caption-Once-${{ github.sha }}
           path: legacy/perfact/desktop/dist/Kompas.exe
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
       - name: Update canonical MFit desktop release asset
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
