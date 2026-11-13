@@ -459,3 +459,14 @@ Continue: rerun PR #353 exact-head full CI, WhatsApp recovery, Plan/REA schema a
 - Accessible prior-conversation retrieval found no user-authored confirmation of the JD-specific blockchain, framework, cloud, IAM/key-management, audit or preferred-credential experience; assistant-generated introduction text and JD terms are not candidate evidence. The private source document's chronology/education claims conflict with the owner-confirmed profile and remain quarantined.
 - The generated output DOCX, R2 object/version/request key, webhook trace, Meta message ID and signed delivery/read receipt remain missing. No historical replay, model call, R2 mutation or WhatsApp send was performed.
 - Continue only through authorized source recovery and consented no-send acceptance. If exact output/correlation/receipt cannot be recovered, retain the historical delivery outcome as unverified; do not infer qualifications or personal history.
+
+
+## 13 November 2026 — Manual-only contract crawler and Supabase egress blocker
+
+Owner correction on 12 Nov 2026 at 21:25 UTC supersedes the older scheduled-crawler vision. Contract crawling is manual/on-demand only. Current master has no /api/crawl/run entry in vercel.json and no schedule trigger in crawl-freshness.yml. The admin POST /api/crawl/jobs remains the manual trigger; Apply search only reads the index and does not start a crawl.
+
+A read-only production GET /api/crawl/jobs?limit=5 returned HTTP 200 with ok:false, jobs empty, reason exceed_egress_quota from the Supabase service restriction. This is not a Vercel deployment failure. No crawl, portal request, database mutation, billing change or spend-cap change was made. The project owner must restore Supabase service before the index can return jobs or a manual crawl can persist results.
+
+PR #355 adds a regression that the contract crawler has no automatic schedule and that the manual POST remains admin-gated; its exact-head checks are pending after the new commit. Robert Half remains manual-only. No scraping or unauthorized feed is permitted.
+
+Continue: keep the crawler unscheduled. After Supabase egress is restored, run only an explicitly requested manual crawl and verify 14-day freshness, clearance exclusion and C2H classification.
