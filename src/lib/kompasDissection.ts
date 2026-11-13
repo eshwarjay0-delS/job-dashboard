@@ -606,6 +606,7 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
     // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
     questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
     "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
+    "BRAIN POLICY: Sentence one answers this question. Connect the next beat with once that was confirmed, not And then or From there. If the resume has no matching incident, say I would. Do not borrow another speaker's story. Never mix Houston and Saint Louis.",
     /\btechnical HR\b/i.test(question) ? "Technical HR: one plain sentence for what it is and why it matters, then stop. No build walk." : "",
     cut.shape === "design" ? "Architect: if a thought is optional, label it as a tangent and leave it out of scope. Director: own one tradeoff in a single sentence." : "",
     cut.shape === "personal-experience" ? "After the result, one short line may offer to keep going. Do not restart the story." : "",
@@ -1297,12 +1298,12 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: (l) => `For ${l}, the boundary comes first. One short look at what sits beside it, then I come back.`,
   },
   "technical-deep-dive": {
-    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
+    engineer: (l) => `On ${l}, once I confirm the evidence, I check the next step, because that decides it.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
   direct: {
-    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
+    engineer: (l) => `On ${l}, once I confirm the evidence, I check the next step, because that decides it.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
@@ -1791,12 +1792,42 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     }
   }
   const shortFact = /^(?:have you|did you|do you|are you|were you)\b/i.test(question) && /\b(?:worked|used|use|familiar|experience|been|done|know)\b/i.test(question)
+  const storyAsk = cut.shape === "personal-experience" || cut.shape === "scenario" || /\b(?:tell me about a time|describe a (?:time|situation)|a time you)\b/i.test(question)
   if (!bareTerm && !(hrAsk && level !== "architect")) {
-    const stance = modeStance(level, lead, { design: cut.shape === "design", story: cut.shape === "personal-experience" || cut.shape === "scenario" || /\btell me about a time\b/i.test(question) })
+    const stance = modeStance(level, lead, { design: cut.shape === "design", story: storyAsk })
     const placed = placeStance(parts, stance, mode.maxWords)
     parts.splice(0, parts.length, ...placed)
   }
+  const keepGoing = storyAsk || cut.shape === "comparison" || /\bexplain the same incident\b/i.test(question)
+  if (keepGoing && level === "engineer" && !parts.some((line) => /keep going/i.test(line))) {
+    const line = `I can keep going on the result if you want the rest.`
+    if (wordCount(parts.join(" ")) + wordCount(line) + 2 <= mode.maxWords) parts.push(line)
+    else if (parts.length > 1) {
+      const swapped = parts.slice()
+      swapped[swapped.length - 1] = line
+      if (wordCount(swapped.join(" ")) <= mode.maxWords) parts.splice(0, parts.length, ...swapped)
+    }
+  }
+  const bit = lead.split(/\s+/).filter(Boolean).slice(0, 6).join(" ") || "this"
+  words = wordCount(parts.join(" "))
+  const causal = [
+    `Once that was confirmed, I would stay with ${bit}.`,
+    `Because of that, the next check on ${bit} is the one I would not skip.`,
+    `That is why I would not close ${bit} until the owner has seen it.`,
+    `The reason I would stop there is that ${bit} already has a check.`,
+  ]
+  const lengthFloor = Math.min(80, mode.maxWords - 4)
+  for (const line of causal) {
+    if (words >= lengthFloor || shortFact || bareTerm || (hrAsk && level === "engineer")) break
+    const n = wordCount(line)
+    if (words + n > mode.maxWords - 2 || parts.includes(line)) break
+    parts.push(line)
+    words += n
+  }
   if (shortFact) return trimToWords(parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28))
+  if (hrAsk && level === "engineer" && (cut.shape === "definition" || cut.shape === "direct" || cut.shape === "comparison")) {
+    return trimToWords(parts.join(" "), Math.min(mode.maxWords, 48))
+  }
   return trimToWords(parts.join(" "), mode.maxWords)
 }
 

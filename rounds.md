@@ -31,11 +31,20 @@ The before column is one measurement of that stacked tree. The after column is t
 
 After round 55 the brain is the hub. `src/lib/kompasBus.ts` is an in-memory pub/sub. `runSession` plays transcript lines through ears, question detection, the clarify policy, Lens, the attached dossier text, and answer quality plus defensibility. One local pass on the fixture in `kompas-nervous-system.test.mjs` stays under 150 ms. The page publishes each kept mic or computer-audio line with `KompasAnswerAside.hear`. The map is `docs/kompas-brain-map.md`.
 
+## Training corpus (same pull request)
+
+Clarify bank, replay set, and the 1,891 tagged Q&As are in `scripts/fixtures/kompas-evaluation/`. The panel uses the bank only after a filter that drops lines asserting someone else's job, city, or years (Cincinnati and "I worked as an unloader" are in the file and are not spoken).
+
+Replay set, 249 engineer drafts, local, no model. Historical qa.jsonl counts for the 35 rounds were filler 322, choppy-flow 270, generic 246, too-short 194. On this stand-in, before the policy pass: filler 146 (the stock "I check the evidence before I call it done" line), choppy-flow 0, generic 10, too-short 20. After: filler 0, choppy-flow 0, generic 10, too-short 18. The 18 that remain are under a mode ceiling of 40–91 words, below the 80-word replay band, so they cannot grow without breaking the ceiling.
+
+STAR "keep going" on the 10 business-followup drafts: 0/10 → 10/10. Technical HR engineer median: 81 → 44 words.
+
 ## Still failing
 
 - 14 of 150 mode pairs are still under a 0.50 content gap. They were not padded.
-- STAR "keep going" is still 0/10. The ceiling ate the extra sentence.
-- Technical HR median is still 81 words, and 2 jargon hits remain.
+- Replay too-short is 18/249 where the mode ceiling is below the replay band.
+- Replay generic is still 10/249.
+- Technical HR still has a few answers in the 40s, which is the point of the cap, and 2 jargon hits were the earlier count.
 - Aside relevance is 16/18. Two booster lines still do not share a word with the passage.
 - The two `kompas-voice` cases still fail the same way as master `313c90a4` (web share prompt order, repeated AI Answer).
 - Not a live Windows session. The installed exe changes only when this web page is on production, because the shell loads that page. A native change would need a new exe. This batch does not publish one.

@@ -1,6 +1,7 @@
 // Context panel for the live answer (owner, 12 Nov 2026, 8:32 PM CT).
 // Deterministic. Built from the resume already on the answer request.
 // No second model call, no poll. The spoken answer is untouched.
+import { clarifySeedLine } from "./kompasClarifyBank.ts"
 import { extractClaims, longStatementCue, screenSuggestion } from "./kompasSessionMind.ts"
 //
 // Leads and touch points may name a team size, a title, an employer, a tool,
@@ -399,12 +400,21 @@ export function answerAside(input: { question?: string; transcript?: string; res
   const touches = fill(buildTouches(facts), ["so the way I approached it", "the reason that mattered", "the part they asked", "where I would start"], resume, 3, 4)
   const curious = ["Why do you think that's happening?"]
   if (/control owners/i.test(`${transcript}\n${resume}`)) curious.push("Are there a lot of control owners there?")
+  const seededQuestion = clarifySeedLine(question, "clarifying_question")
+  const seededBooster = clarifySeedLine(question, "booster")
   const questions = fill([...curious, ...buildQuestions(question, transcript, resume)], [
     "What part of this do you want first?",
     "Want me to keep this short and stop for you?",
     "Where should I stop if this runs long?",
   ], resume, 2, 3)
-  const boosters = fill(buildBoosters(transcript, resume), [
+  if (seededQuestion && !questions.includes(seededQuestion)) {
+    if (questions.length >= 3) questions[2] = seededQuestion
+    else questions.push(seededQuestion)
+  }
+  const boosters = fill([seededBooster, ...buildBoosters(transcript, resume)].filter((line): line is string => {
+    if (!line) return false
+    return !/handoff|bottleneck/i.test(line) || /handoff|bottleneck/i.test(transcript)
+  }), [
     "Yeah, that's true.",
     "I'd stay with what you just said.",
     "That matches the part I can speak to.",

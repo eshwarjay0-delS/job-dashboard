@@ -1,3 +1,7 @@
+## 2026-11-13 — Clarify seed and replay gate (no new screen)
+
+The side panel now seeds one booster and one clarifying question from `scripts/fixtures/kompas-evaluation/clarify-bank.jsonl` after dropping lines that state someone else's job or city. The 249-question replay gate is local. Before: filler 146, choppy-flow 0, generic 10, too-short 20. After: filler 0, choppy-flow 0, generic 10, too-short 18. STAR keep-going 0/10 → 10/10. Technical HR median 81 → 44. Not a production deploy.
+
 ## 2026-11-13 — The brain is the hub (no new screen beyond the panel)
 
 No second window. The side panel is the same one as the rounds entry below. What changed is invisible until a transcript line arrives: mic and computer-audio lines, question detection, Lens, dossier text, the answer-quality score, and the clarify action share one in-memory bus. The map is `docs/kompas-brain-map.md`. No new network call and no poll.
