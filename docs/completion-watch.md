@@ -395,3 +395,10 @@ Continue: run exact-head CI for the security branch, keep the worker disabled, a
 
 
 Production runtime review on 13 Nov found 48 HTTP 402 responses from GET /api/gmail/notify-rules/export in the preceding 24 hours; the latest was 2026-11-13T11:06:54Z. No in-repository caller was found, so the source of the external requests is unknown. The export is not safe to leave public merely because the current tick route does not call it. The new scheduler/CRON_SECRET gate blocks the request before the Supabase service-role listUsers call, and the user-list page is bounded to 50. No external caller was identified or contacted.
+
+
+## 13 November 2026 — Gmail security merge and release-marker correction
+
+PR #359 is merged as master commit 14bc372f579b87197df77d48c8645759a12d7caa. Its exact-head full CI 43419089019, Plan Journal/REA schema 43419089029 and Kompas baseline 43419089067 all succeeded. The private owner/account-scoped notify export and disabled tick-worker guard are in master. No scheduler, Meta template, environment variable or outbound notification was enabled.
+
+The first production Git deployment dpl_AHuMVDuxLUvJZVFtZsaVsgbo3Qji cloned the exact merge SHA but was canceled before build: the Vercel Ignored Build Step requires the commit message to contain [ship]. The canonical alias is still READY on prior SHA 4c01951af59f7d64eecd2b39da32d75c607d9eea. This is a release-trigger issue, not a build failure. Continue by adding one release-marker commit on the exact current master tree with [ship], then independently verify READY and alias SHA. Do not create repeated builds or enable the background worker. The unknown source of 48 prior export requests remains unidentified.
