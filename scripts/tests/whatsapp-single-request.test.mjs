@@ -119,7 +119,7 @@ test('R2 conditional writes treat 409 and 404 as retryable conflicts and propaga
 })
 test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
   const entries = new Map()
-  let providerAvailable = true, offlineMismatch = false
+  let providerAvailable = true, offlineMismatch = false, partialMode = false
   let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
   let failNextDocument = false, failAllDocuments = false, acceptedByProvider = true, sessionMutationDuringSend = null
@@ -152,7 +152,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     }, writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable },
-    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
+    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (partialMode) return { token: 'partial-result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], partial: { failed: 1, total: 5, pendingRoles: [2] }, unverified_added_keywords: [], quality_blockers: ['draft_parts_missing'], quality: { status: 'needs_review', matched: 10, total: 10, missing: [], incomplete: true }, ats: { score: 100, passed: true, checks: [], issues: [] } }; if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': {
       sendText: async (_to, message) => { said.push(message) },
@@ -257,6 +257,31 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     rel: 'same@email.com/Cloud Security Engineer.docx',
     abs: `/data/users/${offlineUser}/same@email.com/Cloud Security Engineer.docx`,
   }
+  // A partial provider draft is not delivered. For an initial JD run, only the exact
+  // selected same-account library bytes may be sent, clearly labelled NOT TAILORED.
+  const partialSession = { ...offlineSession, jdId: 'partial-initial-run' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: partialSession.jdId, jd: partialSession.jd,
+    resumePath: partialSession.resumePath, resumeName: partialSession.resumeName,
+    seen: ['partial-initial'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  providerAvailable = true
+  partialMode = true
+  const docsBeforePartialFallback = docs.length
+  const readsBeforePartialFallback = sessionReadCount
+  await generate('123', partialSession, offlineUser, undefined, offlineFiles)
+  partialMode = false
+  assert.equal(docs.length, docsBeforePartialFallback + 1, 'a partial initial rewrite uses one verified original fallback')
+  assert.equal(sessionReadCount - readsBeforePartialFallback, 1, 'the session copy is read once and compared with the selected library bytes')
+  assert.equal(docs.at(-1).body, 'same@email.com', 'only the exact selected library bytes are sent')
+  assert.match(docs.at(-1).caption, /Original resume — NOT TAILORED/)
+  assert.match(docs.at(-1).caption, /AI rewrite incomplete/)
+  assert.match(docs.at(-1).caption, /no edits were applied/)
+  const consumedPartial = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(consumedPartial.jd, undefined, 'the old pair is consumed only after the fallback is accepted')
+  assert.equal(consumedPartial.resumePath, undefined)
+
   providerAvailable = false
   entries.set('whatsapp/session-123.json', JSON.stringify({
     version: 3, jdId: offlineSession.jdId, jd: offlineSession.jd,
