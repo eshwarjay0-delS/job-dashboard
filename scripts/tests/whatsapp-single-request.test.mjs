@@ -95,7 +95,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   let providerAvailable = true, offlineMismatch = false
   let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
-  let failNextDocument = false, failAllDocuments = false, sessionMutationDuringSend = null
+  let failNextDocument = false, failAllDocuments = false, acceptedByProvider = true, sessionMutationDuringSend = null
   let sessionCasBarrier = null
   const said = []
   const docs = []
@@ -161,7 +161,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
       patchResumeRecovery: async () => {},
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
-      markResumeDocumentAccepted: async () => true,
+      markResumeDocumentAccepted: async () => acceptedByProvider,
       recordResumeDeliveryStatus: async () => {},
       readResumeRecovery: async () => ({ status: 'pending' }),
     },
@@ -380,6 +380,29 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(retainedAfterTailoredFailure.jdId, failedTailoredSession.jdId)
   assert.equal(retainedAfterTailoredFailure.jd, failedTailoredSession.jd)
   assert.equal(retainedAfterTailoredFailure.resumePath, failedTailoredSession.resumePath)
+
+
+  // A Meta message ID is not enough when the signed delivery callback has
+  // already rejected the document and scheduled recovery; retain the pair.
+  const callbackRetrySession = { ...offlineSession, jdId: 'callback-retry-pair' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: callbackRetrySession.jdId, jd: callbackRetrySession.jd,
+    resumePath: callbackRetrySession.resumePath, resumeName: callbackRetrySession.resumeName,
+    seen: ['callback-retry'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  providerAvailable = true
+  failNextDocument = true
+  acceptedByProvider = false
+  const docsBeforeCallbackRetry = docs.length
+  await generate('123', callbackRetrySession, offlineUser, undefined, offlineFiles)
+  acceptedByProvider = true
+  providerAvailable = false
+  const retainedAfterCallbackRetry = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(docs.length, docsBeforeCallbackRetry + 1, 'the original fallback got a message ID but the signed callback rejected it')
+  assert.equal(retainedAfterCallbackRetry.jdId, callbackRetrySession.jdId)
+  assert.equal(retainedAfterCallbackRetry.jd, callbackRetrySession.jd)
+  assert.equal(retainedAfterCallbackRetry.resumePath, callbackRetrySession.resumePath)
 
 
   const beforeMismatch = docs.length
