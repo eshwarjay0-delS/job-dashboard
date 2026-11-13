@@ -20,7 +20,7 @@ The confirmation supports the named skill only. It does not authorize a new empl
 
 The code was extracted from PR #345 onto current master 4c01951 in branch:
 
-- fix/resume-confirmed-skill-role-mapping-restack-4c01951-20261113
+- fix/resume-confirmed-skill-role-mapping-master-9032-20261113
 - Implementation commits: 66df191e652cdde26bcf76399cfaaf3d009de2e6, b28846643c6a2e8913cab51f67db3d04297c9eb8, 28e1af2ee8515637d79df492d0d08e6dc905363d and 79df24a6c9678b469118fbad01e675bb8d0b9a10
 - The extraction contains only resume-evidence.ts, claude.ts, tailor.ts and resume-confirmation-quality.test.mjs. It does not carry the WhatsApp storage/CAS changes from PR #344 and does not change package.json or the Kompas deploy-build test.
 - The quality test is already included in the canonical full-CI resume test step. Fresh exact-head checks on this independent branch are pending.
@@ -48,3 +48,8 @@ The guard now checks the original bullet's project context:
 - This does not reintroduce the old same-role source-wording requirement: an earlier endpoint project can receive a confirmed CyberArk EPM skill even when the original bullet does not name CyberArk, and an earlier ledger project can receive a confirmed Canton skill.
 
 Regression coverage includes both positive relevant earlier-role cases and negative unrelated Salesforce-marketing and unknown-skill cases. Implementation commit 054372d8; test commit 35684402. Exact-head full CI, baseline, WhatsApp recovery and Plan/REA checks must rerun; the previous PR #352 green checks predate this correction. Protected preview and actual owner-authorized DOCX acceptance remain pending.
+
+
+## Current-master restack — 13 November 2026
+
+The implementation and tests are now on branch `fix/resume-confirmed-skill-role-mapping-master-9032-20261113`, based directly on master `9032d5bd18854c8fd1e61fc781b51085e3af2a26`. The source PR #352 exact-head runs on 8c30adcc are not accepted as evidence for this restack. Fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema runs are required. Protected preview and authenticated baseline/JD/confirmation acceptance remain open. No live 95–100% match or exported-DOCX acceptance is claimed.
