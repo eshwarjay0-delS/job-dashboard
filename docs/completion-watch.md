@@ -420,3 +420,18 @@ Continue: verify the exact updated PR #352 head, require fresh full CI/WhatsApp 
 
 
 The confirmed-skill role relevance regression is now included in package.json prebuild (commit 9c3fb444), so it executes in the full CI build rather than remaining an unreferenced test file. The updated exact-head full CI must pass before PR #352 can advance.
+
+
+## 13 November 2026 — Confirmed cloud-skill role context guard
+
+PR #352's approved cross-role confirmation exception remains in force, but a review found the cloud-family matcher was too broad: generic “automation,” “API,” or “service” language could make a Salesforce marketing bullet look relevant to AWS. The guard now requires clearer cloud/infrastructure/container/serverless/hosting/IaC/VPC/EC2/S3/RDS/Lambda/CloudWatch/CI-CD context.
+
+- Code/test/docs commit: 6bfb881e29ce6bf3410f809b2470816f92bbb268
+- Added a negative regression for AWS in a Salesforce email-marketing automation bullet.
+- Added a positive regression preserving AWS in an existing cloud-infrastructure/CI-CD project.
+- The previous exact-head checks on 4f611897 passed: full CI 43419187956, WhatsApp recovery 43419187860, Kompas baseline 43419188024 and Plan/REA schema 43419187989. They do not validate the new commit.
+- Fresh exact-head workflows are pending.
+- PR #352 remains DRAFT. No protected preview exists for its branch; the private KOMPAS_VERCEL_API_TOKEN is unavailable to this environment.
+- Production remains READY at master 4c01951; this PR is not deployed. No authenticated model call, exported DOCX, real WhatsApp/email send or device acceptance occurred.
+
+Continue: wait for fresh exact-head CI and Plan/REA checks, then require the protected preview. Keep the historical 17 Oct WhatsApp output/R2/Meta receipt gap separate from this resume-mapping fix.
