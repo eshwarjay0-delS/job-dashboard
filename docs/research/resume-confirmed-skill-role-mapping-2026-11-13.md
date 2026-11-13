@@ -35,3 +35,16 @@ A synthetic test suite is not a live resume/JD match. After exact-head checks an
 ## Prompt-label regression
 
 A source review found that candidateEvidenceInput(opts.jd, ...) labeled the JD string as “ORIGINAL SUBMITTED TEXT”, even though the value is the job description. That label could blur the boundary between target requirements and candidate evidence. The prompt now labels it “JOB DESCRIPTION (target requirements, not candidate evidence)”. The resume-confirmation-quality test asserts the new label and rejects the former label. Commits: 08065f4bcfc2cc2b7ca3b6436c9b6b715f562a7d and d31b599cf7d2121878e7a0f78275cf0e2fcdfd7c.
+
+
+## Role-relevance review correction — 13 November 2026
+
+A review found that the initial deterministic final guard allowed every explicitly confirmed JD term in every employer role. That was broader than the owner's approval. The approved exception is cross-role, but only into a relevant existing project bullet.
+
+The guard now checks the original bullet's project context:
+- Known skill families (security/endpoint, identity/access, cloud/infrastructure, blockchain/ledger, data/analytics, CRM/ITSM, software/automation, and governance/compliance) require a matching context marker in that original bullet.
+- Unknown skill names are not transferred across roles unless the source bullet itself supports the term.
+- The confirmed skill still does not create a new employer, project, action, outcome, date, title, location, contact, metric or credential.
+- This does not reintroduce the old same-role source-wording requirement: an earlier endpoint project can receive a confirmed CyberArk EPM skill even when the original bullet does not name CyberArk, and an earlier ledger project can receive a confirmed Canton skill.
+
+Regression coverage includes both positive relevant earlier-role cases and negative unrelated Salesforce-marketing and unknown-skill cases. Implementation commit 054372d8; test commit 35684402. Exact-head full CI, baseline, WhatsApp recovery and Plan/REA checks must rerun; the previous PR #352 green checks predate this correction. Protected preview and actual owner-authorized DOCX acceptance remain pending.
