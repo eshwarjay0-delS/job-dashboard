@@ -95,7 +95,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   let providerAvailable = true, offlineMismatch = false
   let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
-  let failNextDocument = false, sessionMutationDuringSend = null
+  let failNextDocument = false, failAllDocuments = false, sessionMutationDuringSend = null
   let sessionCasBarrier = null
   const said = []
   const docs = []
@@ -130,7 +130,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp': {
       sendText: async (_to, message) => { said.push(message) },
       sendDocument: async (_to, body, _name, caption) => {
-        if (failNextDocument) { failNextDocument = false; throw new Error('WA sendDoc 503: unavailable') }
+        if (failNextDocument || failAllDocuments) { if (failNextDocument) failNextDocument = false; throw new Error('WA sendDoc 503: unavailable') }
         deliveries++
         docs.push({ body: Buffer.from(body).toString(), caption })
         if (sessionMutationDuringSend) {
@@ -358,6 +358,28 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(retainedAfterFailedSend.jdId, failedSendSession.jdId)
   assert.equal(retainedAfterFailedSend.jd, failedSendSession.jd)
   assert.equal(retainedAfterFailedSend.resumePath, failedSendSession.resumePath)
+
+
+  // The provider-backed rewrite path must also retain the exact pair when both
+  // the tailored upload and its same-account fallback are explicitly rejected.
+  const failedTailoredSession = { ...offlineSession, jdId: 'tailored-send-failure' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: failedTailoredSession.jdId, jd: failedTailoredSession.jd,
+    resumePath: failedTailoredSession.resumePath, resumeName: failedTailoredSession.resumeName,
+    seen: ['failed-tailored-send'], updatedAt: Date.now(),
+  }))
+  sessionReadCount = 0
+  providerAvailable = true
+  failAllDocuments = true
+  const docsBeforeTailoredFailure = docs.length
+  await generate('123', failedTailoredSession, offlineUser, undefined, offlineFiles)
+  failAllDocuments = false
+  providerAvailable = false
+  const retainedAfterTailoredFailure = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(docs.length, docsBeforeTailoredFailure, 'neither rejected tailored nor fallback upload counts as delivery')
+  assert.equal(retainedAfterTailoredFailure.jdId, failedTailoredSession.jdId)
+  assert.equal(retainedAfterTailoredFailure.jd, failedTailoredSession.jd)
+  assert.equal(retainedAfterTailoredFailure.resumePath, failedTailoredSession.resumePath)
 
 
   const beforeMismatch = docs.length
