@@ -8,10 +8,10 @@ The mobile navigation behavior is separately owner-approved by the 4 October, 5 
 
 ## Implemented in this branch
 
-- Digest sender mutes are keyed by receiving Gmail account plus sender address. Muting a recruiter in one inbox does not mute the same recruiter in another inbox.
+- Digest sender mutes are keyed by receiving Gmail account plus sender address. Muting a recruiter in one inbox does not mute the same recruiter in another inbox. Non-email demo/sample account IDs are rejected as notify-rule keys so they cannot be written as invalid account addresses.
 - Digest and waiting-on-them rows use receiving account plus provider thread ID for React identity and radar matching.
 - Opening a digest, role-card, or waiting-on-them item selects its receiving inbox before selecting the thread.
-- The mobile hamburger expands the existing navigation panel below the sticky top bar. It does not use a scrim, overlay, or page `inert`; outside-pointer and link selection close it, and Escape returns focus to the hamburger.
+- The mobile hamburger expands the existing navigation panel below the sticky top bar. It does not use a scrim, overlay, or page `inert`; outside-pointer and link selection close it, and focus returns to the hamburger when a focused nav link is hidden.
 - The mobile regression is included in the existing build preflight. The digest identity regression is included in the Gmail isolation CI step.
 
 ## Explicit exclusions
