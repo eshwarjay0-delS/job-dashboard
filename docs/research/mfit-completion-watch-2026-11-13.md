@@ -21,7 +21,7 @@ The approved PR #315 classifier correction was restacked onto current master as 
 - Direct negations such as No Right To Hire and No Contract To Perm do not create contract evidence.
 - Generic contract management, contract negotiation and contract-administration language is not treated as contract employment.
 - The structured employmentType field is evaluated separately from title/description.
-- The crawler remains manual/on-demand only. vercel.json has no /api/crawl/run cron. Robert Half remains manual-only. No manual crawl, external scrape or database rewrite was performed.
+- The owner policy is manual/on-demand only. vercel.json has no /api/crawl/run cron. External scheduler configuration was not available for inspection, so this run cannot prove that no outside caller reaches the secret-gated GET route; inventory those callers before declaring manual-only enforcement complete. Robert Half remains manual-only. No manual crawl, external scrape or database rewrite was performed.
 
 Exact-head Actions evidence on PR #343:
 - Crawler freshness and contract classification regression: run 43347263264 SUCCESS.
@@ -71,9 +71,10 @@ The broad direction remains approved: up to four accounts, per-account Gmail/Cal
 ## Exact blockers and next actions
 
 1. Finish PR #343 exact-head full CI. Keep it DRAFT until the required protected preview also passes. The focused crawler regression and Kompas baseline are already green.
-2. Resolve the PR #333 protected-preview credential through the authorized owner path; do not bypass preview protection. Then re-run exact-head full CI for dependent PRs.
-3. Restore the Supabase project through the legitimate owner/provider path if the egress restriction persists. This environment did not change billing or spend caps.
-4. Recover the exact original 17 Oct DOCX bytes, full JD, generated DOCX and per-run R2/Meta trace/receipt from an authorized source before attempting a historical replay.
-5. Fix PR #323 stale-marker compare-and-swap before multi-account digest actions can be accepted.
-6. Restack PR #317 on current master and run the combined PR #335 resume-guards suite after the release-stamp dependency is resolved.
-7. Keep real two-inbox, narrow-mobile, WhatsApp delivery, Windows Caption Capture, 50 live Kompas/ChatGPT pairs and human grading as separate acceptance gates. Do not claim unit tests or deployment alone complete them.
+2. Inventory external scheduler and automation callers of the secret-gated GET /api/crawl/run before claiming that manual-only enforcement is complete.
+3. Resolve the PR #333 protected-preview credential through the authorized owner path; do not bypass preview protection. Then re-run exact-head full CI for dependent PRs.
+4. Restore the Supabase project through the legitimate owner/provider path if the egress restriction persists. This environment did not change billing or spend caps.
+5. Recover the exact original 17 Oct DOCX bytes, full JD, generated DOCX and per-run R2/Meta trace/receipt from an authorized source before attempting a historical replay.
+6. Fix PR #323 stale-marker compare-and-swap before multi-account digest actions can be accepted.
+7. Restack PR #317 on current master and run the combined PR #335 resume-guards suite after the release-stamp dependency is resolved.
+8. Keep real two-inbox, narrow-mobile, WhatsApp delivery, Windows Caption Capture, 50 live Kompas/ChatGPT pairs and human grading as separate acceptance gates. Do not claim unit tests or deployment alone complete them.
