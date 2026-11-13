@@ -381,3 +381,35 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 13 November 2026 — profile-gap continuation and cross-workstream evidence
+
+### Current release
+- Canonical master is `4c01951af59f7d64eecd2b39da32d75c607d9eea`.
+- Production deployment `dpl_BJvUK2kwPCUE6oCLcmTWPa5Dm25d` is READY at that exact SHA. Independent alias lookup confirms `job-dashboard-fawn.vercel.app`; `marketfit-app.vercel.app` is also assigned. This is the PR #350 Kompas release, not the new resume work.
+- No local clone/test execution was available in this runtime. GitHub Actions is the validation path.
+
+### WhatsApp resume / factual alignment
+- The 13 Nov production error aggregation contained two rejected drafts in 24 hours, latest 12 Nov 18:18:32 UTC. Both showed 100% raw and supported keyword coverage but `partial=true`, `incomplete=true`, `needs_review`; blockers included `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable` and `roles_unrewritten`. These are rejected drafts, not successful generation or delivery.
+- PR #353 branch `fix/resume-profile-gap-fill-current-master-4c019-20261113` restacks the owner-approved PR #325 profile-part acceptance fix onto current master. It accepts non-empty requested skills, summary or headline; merges only requested non-empty fields; preserves existing/disabled sections; and clears only the part actually accepted. Source commits: `45ea9757b00501f3a2adebdad7b504eefee95efe`, `f112f7422ab870500ec19067169a0fba5b968ca1`, `8ffce0c71f645c1c77b8446ddd7d2dbf5654811d`, `3da7d1e94e6ad62f360c263214562a7366945063`. The original PR #325 head passed full CI `43292578201`, Kompas baseline `43292578119`, and WhatsApp recovery `43292578125`; those are not fresh checks for this restack. Keep the new PR DRAFT until exact-head CI, baseline, recovery, Plan/REA schema and protected preview pass.
+- PR #352 confirmed-skill cross-role mapping passed exact-head full CI `43376058758`, baseline `43376058731`, WhatsApp recovery `43376058823`, and Plan/REA schema `43376058760`; it still lacks a protected preview and actual exported-DOCX acceptance. Only an explicit first-person confirmation supports the skill, and it may be mapped only into relevant existing project bullets.
+- PR #344's offline same-account fallback and session-pair CAS work passed exact-head source CI on its old base, but its base is stale and the protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. Its old Kompas build-stamp hunk must not be copied blindly: current master has the `20261112-output` page/version stamp with the new answer-aside asset. No real WhatsApp send was made.
+- The 6 Nov delivery policy remains authoritative: completed readable WhatsApp DOCX may be sent below 95% with gaps disclosed; 70% is the delivery-with-gaps floor and 95% supported coverage is the clean-pass criterion. Swipe-reply failure remains text-only; initial no-provider fallback is limited to the exact selected same-account original and must say NOT TAILORED.
+- The 17 Oct 17:28 incident remains unverified. The 10 Nov archive review recorded a source DOCX and matching JD, but the 12 Nov accessible Library recheck did not resolve the exact source bytes. The generated output DOCX, per-run R2/webhook correlation, Meta message ID and signed delivery/read receipt are missing. Do not replay or resend.
+
+### Poke-inspired Gmail/mobile
+- The 13 Nov Safe Merge Gate read-only production aggregation found 84 HTTP 402 `exceed_egress_quota` events in 24 hours across Gmail routes. This provider restriction blocks live refresh/updates; no billing or spend-cap change was attempted.
+- Up to four accounts, account+thread identity, selected-From preservation, per-account reconnect and normal-flow mobile hamburger remain approved requirements. Two-inbox healthy/partial-failure and narrow-mobile device acceptance remain open. The sync-health card is proposed, not separately approved; the unattended worker remains disabled pending external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement.
+- PR #346 remains a draft stacked on earlier work; PR #351 is blocked because it deletes unrelated repository files. No email was sent.
+
+### Contract crawler
+- Current production SHA `4c01951` is a descendant of `864cb9e`, so the earlier classifier and exported-DOCX gap report are in the deployed ancestry. No post-release crawl/API smoke was verified in this run.
+- PR #343's Right To Hire / Contract To Perm classifier restack has a failed exact-head full CI and stale base. PR #307's scheduled crawl change conflicts with the current manual/on-demand-only policy. Robert Half remains manual navigation only; no scraping is authorized.
+
+### Kompas and auth correction
+- PR #350 is live at production SHA `4c01951`. The actual 50-pair Kompas/ChatGPT comparison, independent human grading, and native Windows/mobile/WhatsApp voice acceptance remain open.
+- Kompas Continuous Voice Delivery is disabled in the accessible automation inventory; this run made no microphone, caption or voice edits. No separate Bible-Keeper automation was found in the accessible inventory.
+- Latest owner correction requires a login screen and Gmail-only sign-in, superseding the earlier skip-login approval claim. Safe Merge Gate changed `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` to false in a READY config-only deployment on source `a247ddf`; the alias later advanced to `4c01951`, so recheck the current public auth flag and anonymous 401 contracts before claiming the latest deployment's auth behavior. Do not enable a public synthetic-owner bypass or change the admin allowlist.
+
+Continue: run exact-head full CI, Kompas baseline, WhatsApp recovery and Plan/REA schema for `fix/resume-profile-gap-fill-current-master-4c019-20261113`; keep it DRAFT until the protected preview succeeds. The exact missing prerequisite is the private `KOMPAS_VERCEL_API_TOKEN`, which the owner or authorized repository administrator must configure without exposing it. After release, inspect an owner-authorized exported DOCX and perform a consented baseline + JD + explicit-confirmation run; do not claim a live 98% match from tests.
