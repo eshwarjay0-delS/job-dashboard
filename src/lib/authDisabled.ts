@@ -1,6 +1,5 @@
-// Reversible login switch. Fail-closed: AUTH_DISABLED or
-// NEXT_PUBLIC_AUTH_DISABLED lifts sign-in only when the value is exactly
-// "true". Unset, "false", "1", "on", "yes", or any other value keeps today's login.
+// Legacy local-development fallback only. Production always requires real Google OAuth.
+// AUTH_DISABLED and NEXT_PUBLIC_AUTH_DISABLED are ignored whenever NODE_ENV is production.
 //
 // Machine-to-machine secrets (CRON_SECRET, WATCHDOG_CRON_SECRET,
 // AUTO_REPLY_CRON_SECRET, WhatsApp, Gmail crawl verification) stay required.
@@ -20,8 +19,12 @@ function readFlag(env: Env, name: string): string | undefined {
   return env[name]
 }
 
-/** True when the app should not require a person to sign in. */
+/** True only for an explicitly enabled non-production local instance. */
 export function isAuthDisabled(env: Env = process.env): boolean {
+  // A synthetic owner is not a production authentication method. Check both the
+  // real process and the injected environment so callers cannot override the
+  // production boundary with a test/config object.
+  if (process.env.NODE_ENV === "production" || readFlag(env, "NODE_ENV") === "production") return false
   const raw = readFlag(env, "AUTH_DISABLED") ?? readFlag(env, "NEXT_PUBLIC_AUTH_DISABLED")
   return raw === "true"
 }
