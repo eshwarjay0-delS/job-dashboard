@@ -615,12 +615,21 @@ function logEvent(ev) {
 // A card's in-flight state (a request, a stream, a fill in progress) is not kept.
 const CARD_TRANSIENT = new Set(["streaming", "anchorFlight", "_flight", "_ledgerAt", "req"]);
 let liveSavedAt = 0;
+function transcriptForSave(lines) {
+  const all = Array.isArray(lines) ? lines : [];
+  let words = 0, start = all.length;
+  while (start > 0 && words < 12000) {
+    start--;
+    words += String((all[start] && all[start].text) || "").split(/\s+/).filter(Boolean).length;
+  }
+  return all.slice(start);
+}
 function saveLive(withLog) {
   const s = current; if (!s || !s.id) return Promise.resolve();
   let plain; try { plain = JSON.parse(JSON.stringify(cards, (k, v) => (CARD_TRANSIENT.has(k) || typeof v === "function" ? undefined : v))); } catch { plain = cards.map(c => ({ question: c.question, answer: c.answer })); }
   cards.forEach((c, i) => { if (c.streaming && plain[i]) plain[i].meta = "Stopped before this answer finished. Press AI Answer to run it again."; });   // a half-written answer is not shown later as a finished one
   liveSavedAt = Date.now();
-  return DossierDB.put(liveKey(s.id), { at: liveSavedAt, cards: plain, idx, transcript: transcript.slice(-600), ...(withLog ? { log: sessionLog.slice() } : {}) });
+  return DossierDB.put(liveKey(s.id), { at: liveSavedAt, cards: plain, idx, transcript: transcriptForSave(transcript), ...(withLog ? { log: sessionLog.slice() } : {}) });
 }
 async function restoreLive(s) {
   const snap = await DossierDB.get(liveKey(s.id));
@@ -1083,24 +1092,35 @@ function sayAnswer(text) {
   const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(String(text || ""));
   return bulleted && window.KompasCorrect.speak ? window.KompasCorrect.speak(cleaned) : cleaned;
 }
-function presentAnswer(question, answer) {
+function presentAnswer(question, answer, source) {
   const raw = String(answer || "").trim();
-  if (!raw || /\*\*(?:Context|What I did|Result)\*\*/.test(raw)) return raw;
-  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1);
-  const words = raw.split(/\s+/).filter(Boolean).length;
+  if (!raw || /\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return raw;
+  const allowed = String(source || "") + "\n" + String(question || "");
+  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3);
+  const words = sentences.join(" ").split(/\s+/).filter(Boolean).length;
   const q = String(question || "");
   const simple = /^(?:what is|what does|what's|define|do you|are you|have you|can you hear)\b/i.test(q.trim()) && words < 55 && sentences.length < 3;
   const complex = !simple && ((/\b(?:design|tell me about a time|walk me through|incident|war room|contributions|proud of|strategy)\b/i.test(q) && (sentences.length >= 2 || words >= 36)) || sentences.length >= 4 || words >= 70);
-  if (!complex || sentences.length < 2) return raw;
-  const third = Math.max(1, Math.ceil(sentences.length / 3));
-  const groups = [["Context", sentences.slice(0, third)], ["What I did", sentences.slice(third, third * 2)], ["Result", sentences.slice(third * 2)]];
+  if (!complex || sentences.length < 2) return sentences.join(" ") || raw;
+  const groups = { Claim: [sentences[0]], Context: [], Action: [], Result: [], Close: [] };
+  for (const sentence of sentences.slice(1)) {
+    const nums = sentence.match(/\d[\d,.]*/g) || [];
+    const sourced = nums.length && nums.every(n => allowed.includes(n.replace(/[.,]+$/, "")));
+    const key = sourced ? "Result" : (/\b(?:result|stopped|outcome)\b/i.test(sentence) ? "Close" : (/\b(?:I|we)\s+(?:checked|built|added|implemented|sent|reviewed|mapped|held|would|joined|ran)\b/i.test(sentence) ? "Action" : "Context"));
+    groups[key].push(sentence);
+  }
   const blocks = [];
-  for (const [title, group] of groups) {
+  for (const title of ["Claim", "Context", "Action", "Result", "Close"]) {
+    const group = groups[title];
     if (!group.length) continue;
     const tight = group.length <= 4 ? group : group.slice(0, 3).concat(group.slice(3).join(" "));
     if (blocks.length) blocks.push("…");
     blocks.push("**" + title + "**");
-    for (const sentence of tight) blocks.push("- " + sentence);
+    for (const sentence of tight) {
+      const clean = sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, "").replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
+      const line = title === "Context" ? (sentence.toLowerCase().startsWith("first") ? sentence : "First, " + clean) : title === "Action" ? (sentence.toLowerCase().startsWith("then") ? sentence : "Then, " + clean) : title === "Result" ? (sentence.toLowerCase().startsWith("the result") ? sentence : "The result: " + clean) : sentence;
+      blocks.push("- " + line);
+    }
   }
   return blocks.join("\n");
 }
@@ -1109,7 +1129,11 @@ function answerLines(answer, question) {
   if (Array.isArray(answer)) answer = answer.map(t => String(t).trim()).filter(Boolean).join("\n");
   if (window.KompasCorrect && window.KompasCorrect.asSpeaker) answer = window.KompasCorrect.asSpeaker(String(answer || ""), window.__speakerName);
   if (window.KompasCorrect) answer = sayAnswer(answer);
-  if (typeof question === "string") answer = presentAnswer(question, answer);
+  if (typeof question === "string") {
+    let source = "";
+    try { source = (typeof docsGet === "function" ? docsGet() : []).filter(d => d && d.kind === "resume" && d.text).map(d => d.text).join("\n"); } catch { source = ""; }
+    answer = presentAnswer(question, answer, source);
+  }
   if (Array.isArray(answer)) return answer.map(t => ({ t: String(t).trim().replace(/^(?:[-•]|\*(?!\*))\s*/, "").trim(), kind: "bullet" })).filter(x => x.t);
   // Code is visual content even when narration remains spoken. Never execute it.
   const out = []; let code = null, prose = [];
@@ -2273,7 +2297,14 @@ function startSegment(cap) {
   cap.chunks = []; cap.segStart = performance.now(); cap.speechMs = 0; cap.voiced = false; cap.interimAt = 0;
   let rec; try { rec = new MediaRecorder(cap.stream, MIME ? { mimeType: MIME } : undefined); } catch (error) { cap.rec = null; throw error; }
   const chunks = cap.chunks;
-  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.ondataavailable = (e) => {
+    if (!(e.data && e.data.size)) return;
+    chunks.push(e.data);
+    if (!cap.tail) cap.tail = [];
+    cap.tail.push({ blob: e.data, at: performance.now() });
+    const cutoff = performance.now() - 2000;
+    cap.tail = cap.tail.filter(item => item && item.at >= cutoff);
+  };
   rec.onerror = () => {
     if (cap.stopped || cap.rec !== rec) return;
     captureErrors.push("Audio recorder interrupted. Reconnect using the mic or speaker button.");
@@ -2297,7 +2328,7 @@ function flushAction(cap, now) {
   if (cap.rec && now - segStart > 1500 && now - lastVad > 3000) return "rescue";
   return "wait";
 }
-function endSegment(cap, keep, restart = true, force = false) {
+function endSegment(cap, keep, restart = true, force = false, includeTail = false) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
   const epoch = transcriptionEpoch;
   const prompt = whisperPrompt();
@@ -2314,23 +2345,35 @@ function endSegment(cap, keep, restart = true, force = false) {
   let settle;
   const done = new Promise(r => { settle = r; });
   finals.add(done); done.then(() => finals.delete(done));
+  const takeTail = () => includeTail && Array.isArray(cap.tail) ? cap.tail.map(item => item && item.blob).filter(blob => blob && blob.size && chunks.indexOf(blob) < 0) : [];
+  const flush = () => {
+    if (!segmentKept(speech, keep, force)) return settle();
+    const blob = new Blob(takeTail().concat(chunks), { type: rec.mimeType || MIME || "audio/webm" });
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
+  };
   rec.onstop = () => {
     // Chrome on Android often delivers the last dataavailable after onstop.
     // A header-only WebM is under 800 bytes, so /api/kompas/speech returns 400
     // "empty" and the session shows "The last phrase could not be transcribed."
-    const flush = () => {
-      if (!segmentKept(speech, keep, force)) return settle();
-      const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
-      if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
-    };
     setTimeout(flush, 80);
   };
-  try { if (typeof rec.requestData === "function" && rec.state && rec.state !== "inactive") rec.requestData(); } catch {}
-  try { rec.stop(); } catch { setTimeout(() => {
-    if (!segmentKept(speech, keep, force)) return settle();
-    const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
-  }, 80); }
+  const stopNow = () => { try { rec.stop(); } catch { setTimeout(flush, 80); } };
+  const canRequest = typeof rec.requestData === "function" && rec.state && rec.state !== "inactive";
+  if (includeTail && canRequest) {
+    let stopped = false;
+    const finish = () => { if (stopped) return; stopped = true; clearTimeout(wait); stopNow(); };
+    const prev = rec.ondataavailable;
+    rec.ondataavailable = (e) => {
+      try { if (typeof prev === "function") prev(e); } catch {}
+      if (e && e.data && e.data.size && chunks.indexOf(e.data) < 0 && typeof prev !== "function") chunks.push(e.data);
+      finish();
+    };
+    const wait = setTimeout(finish, 120);
+    try { rec.requestData(); } catch { finish(); }
+  } else {
+    try { if (canRequest) rec.requestData(); } catch {}
+    stopNow();
+  }
   const watchdog = setTimeout(() => {
     if (epoch === transcriptionEpoch) status("Audio processing stalled. Check your connection and retry AI Answer.", "err");
     settle(false);
@@ -2338,12 +2381,13 @@ function endSegment(cap, keep, restart = true, force = false) {
   done.then(() => clearTimeout(watchdog));
   return done;
 }
-// AI Answer pressed mid-sentence: cut every open phrase now and wait (briefly) for its words.
+// AI Answer pressed mid-sentence: cut every open phrase now and wait for its words.
+// Mic and computer audio, on the web and in the desktop shell, share this flush.
+// A short tail is transcribed. Whether it is a question is decided after the text lands.
 async function flushHeard(maxMs = 43000) {
   for (const cap of captures) {
-    const act = flushAction(cap, performance.now());
-    if (act === "keep") endSegment(cap, true, true, cap.speechMs < VAD.MIN_SPEECH_MS);
-    else if (act === "rescue") endSegment(cap, true, true, true);
+    if (!cap || !cap.rec) continue;
+    endSegment(cap, true, true, true, true);
   }
   const wait = [...finals];
   if (!wait.length) return;
@@ -2766,7 +2810,7 @@ function appendDrawer(who, text, at) {
   const words = String(text || "").replace(/\s+/g, " ").trim(); if (!words) return;
   const side = who === "You" ? "you" : "them", when = Number(at) || Date.now(), last = body.lastElementChild;
   const tagOf = (node, line) => { const tag = node.querySelector(".qtag"); if (tag) tag.textContent = utteranceTag(line); };
-  if (last && last.classList.contains("tl") && last.classList.contains(side) && (DRAWER_FILLER.test(words) || when - Number(last.dataset.at || 0) < 20000)) {
+  if (last && last.classList.contains("tl") && last.classList.contains(side) && DRAWER_FILLER.test(words) && when >= Number(last.dataset.at || 0)) {
     const span = last.querySelector("span"); span.textContent = span.textContent + " " + words;
     last.dataset.at = String(when);
     tagOf(last, span.textContent);
@@ -2777,7 +2821,8 @@ function appendDrawer(who, text, at) {
     d.querySelector("b").textContent = (side === "you" ? "You" : "Interviewer") + " · " + clock;
     d.querySelector("span").textContent = words;
     d.querySelector(".qtag").textContent = utteranceTag(words);
-    body.append(d);
+    const later = [...body.querySelectorAll(".tl")].find(row => Number(row.dataset.at || 0) > when);
+    if (later) body.insertBefore(d, later); else body.append(d);
   }
   body.scrollTop = body.scrollHeight;
 }
@@ -4560,16 +4605,56 @@ function deriveBody(question, card, opts) { return { deriveOnly: true, client: B
 // The question fields of the answer request. A question the code cut already formed is pinned, so the server answers
 // it as formed instead of cutting the heard text a second time (review of 398f299: the second cut glued his reply and
 // the "You (context keywords)" label back in front of the question the model was told to answer).
+function selectAnswerContext(lines) {
+  const ASK = /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design)\b|\?/i;
+  const sentences = [];
+  for (const line of lines || []) {
+    const who = line && line.who === "You" ? "You" : "Them";
+    const bits = String(line && line.text || "").split(/(?<=[.?!])\s+/).map(s => s.trim()).filter(Boolean);
+    for (const text of bits) sentences.push({ who, text });
+  }
+  let ask = -1;
+  for (let i = sentences.length - 1; i >= 0; i--) if (sentences[i].who !== "You" && ASK.test(sentences[i].text)) { ask = i; break; }
+  if (ask < 0) for (let i = sentences.length - 1; i >= 0; i--) if (sentences[i].who !== "You") { ask = i; break; }
+  if (ask < 0) return { question: "", passages: "", words: 0 };
+  let start = ask, words = sentences[ask].text.split(/\s+/).length;
+  while (start > 0 && words < 140) {
+    const prev = sentences[start - 1], n = prev.text.split(/\s+/).length;
+    if ((prev.who === "You" && n > 8) || words + n > 180) break;
+    words += n; start--;
+  }
+  let end = ask;
+  while (end + 1 < sentences.length && end - ask < 2 && sentences[end + 1].who === sentences[ask].who && !ASK.test(sentences[end + 1].text)) end++;
+  const picked = sentences.slice(start, end + 1);
+  const passages = picked.map(s => s.who + ": " + s.text).join("\n");
+  return { question: sentences[ask].text, passages, words: passages.split(/\s+/).filter(Boolean).length };
+}
+function linesFromPayload(text) {
+  return String(text || "").split("\n").map(line => {
+    const m = line.match(/^(You|Them|Interviewer)\s*:\s*(.*)$/i);
+    return { who: m && m[1].toLowerCase() === "you" ? "You" : "Them", text: m ? m[2] : line };
+  });
+}
 function questionFields(question, derivedQ, derivedBy, opts) { return { question, derived: derivedQ || undefined, pinned: !!opts.pinned || derivedBy === "code", again: !!opts.reask }; }
 function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
   const inline = wantsInlineAnswerDerive(opts, derivedQ);
   const fields = questionFields(question, derivedQ, derivedBy, opts);
   if (inline) { fields.pinned = false; fields.derived = derivedQ || undefined; }
+  if (String(fields.question || "").split(/\s+/).length >= 500) {
+    const picked = selectAnswerContext(linesFromPayload(fields.question));
+    if (picked.passages) fields.question = picked.passages;
+    if (!fields.derived && picked.question) fields.derived = picked.question;
+  }
+  let rest = extra;
+  if (rest && typeof rest.transcript === "string" && rest.transcript.split(/\s+/).length >= 500) {
+    const picked = selectAnswerContext(linesFromPayload(rest.transcript));
+    rest = { ...rest, transcript: picked.passages || rest.transcript };
+  }
   return {
     stream: true, client: BUILD, liveModel: typeof liveModel === "function" ? (liveModel() || undefined) : undefined, consolidated: !!opts.consolidated,
     ...(inline ? { derive: true } : {}),
     ...fields,
-    ...(extra || {}),
+    ...(rest || {}),
   };
 }
 function askingLevel() {
@@ -4875,7 +4960,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       return "";
     };
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify(answerRequestBody(question, card, opts, derivedQ, derivedBy, { transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history })) });
+      body: JSON.stringify(answerRequestBody(question, card, opts, derivedQ, derivedBy, { transcript: (typeof transcript !== "undefined" && transcript.reduce((n, t) => n + String(t && t.text || "").split(/\s+/).length, 0) >= 500) ? selectAnswerContext(transcript).passages : (consolidated ? (opts.earlier || "") : buildTranscript()), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history })) });
     responded = true; clearTimeout(fetchTimer);
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));

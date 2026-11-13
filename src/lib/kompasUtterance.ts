@@ -59,6 +59,19 @@ export function stitchUtterance(previous: string, next: string): { part: string;
 
 const FILLER = /^(?:um+|uh+|erm+|er|hmm+)[,.]?\s*/i
 
+/** Spoken order is the clock order. Arrival order is not trusted. */
+export function chronologicalUtterances<T extends { at: number }>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => a.at - b.at)
+}
+
+/**
+ * Rebuild one question from broken pieces. Words inside a piece stay in the
+ * order the speaker said them. Pieces are joined in clock order.
+ */
+export function reconstructQuestion(pieces: readonly { text: string; at: number }[]): string {
+  return deriveQuestion(chronologicalUtterances(pieces).map((piece) => piece.text))
+}
+
 /** Join fragment rows into the question the interviewer was building. */
 export function deriveQuestion(fragments: readonly string[]): string {
   const kept: string[] = []

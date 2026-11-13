@@ -132,7 +132,34 @@ const CONFIDENCE: Record<AnswerLevel, number> = { engineer: 0.3, director: 0.84,
 const DEEPER_ON = /\b(?:go deeper|dig deeper|deeper on)\b/i
 const BLAME_ASK = /\b(?:whose fault|who(?:'s| is) to blame|post-?mortem|blame you|why did you (?:miss|fail|drop)|what did you miss)\b/i
 
-/** A one-word or empty prompt. The answer names the assumption and stops. */
+/** A one-word or empty prompt. The answer states the assumption, then answers in one sentence. */
+export function vagueReply(question: string, level: AnswerLevel): string {
+  const topic = leadPhrase(question)
+  if (level === "director") return `Assuming you mean ${topic}, I leave the decision with the owner.`
+  if (level === "architect") return `Assuming you mean ${topic}, I hold the boundary where the evidence stops matching the plan.`
+  return `Assuming you mean ${topic}, I check the live setting before I change it.`
+}
+
+/** The miss, as a grammatical clause. The opener names what was missed. */
+export function blameClause(question: string): string {
+  const text = String(question || "").replace(/\s+/g, " ").trim()
+  const parts: string[] = []
+  const dropped = text.match(/\bdrop(?:ped)?\s+((?:the|a|an)\s+[^?.!]+)/i)
+  const failed = text.match(/\bfail(?:ed)?\s+((?:the|a|an)\s+[^?.!]+)/i)
+  const missed = text.match(/\bmiss(?:ed)?\s+([^?.!]+)/i)
+  if (dropped) parts.push(`I dropped ${dropped[1].trim()}`)
+  if (failed && !/\b(?:rollback|batch)\b/i.test(failed[1])) parts.push(`I failed ${failed[1].trim()}`)
+  if (missed) {
+    const obj = missed[1].trim()
+    parts.push(/^in\b/i.test(obj) ? `I missed the check ${obj}` : `I missed ${/^(?:the|a|an)\b/i.test(obj) ? obj : `the ${obj}`}`)
+  }
+  if (parts.length) return parts.join(", and ")
+  const fault = text.match(/\bwhose fault is\s+(?:the\s+)?([^?.!]+)/i)
+  if (fault) return `I owned the ${fault[1].trim()}`
+  const blameFor = text.match(/\bblame you for\s+(?:the\s+)?([^?.!]+)/i)
+  if (blameFor) return `I owned the ${blameFor[1].trim()}`
+  return `I owned ${leadPhrase(text)}`
+}
 export function vagueAsk(question: string): boolean {
   const q = String(question || "").trim()
   if (!q) return false
@@ -1138,12 +1165,12 @@ export function askedPartList(question: string): string[] {
 const PART_LINES: Record<AnswerLevel, Array<(part: string) => string>> = {
   engineer: [(p) => `For ${p}, I say what it is in one line and why it matters here.`],
   director: [
-    (p) => `On ${p}, I name the owner and the risk if it slips.`,
+    (p) => `On ${p}, the owner and the risk if it slips go on the record.`,
     (p) => `For ${p}, I give the decision and the date it is due.`,
   ],
   architect: [
-    (p) => `For ${p}, I state what it covers and the check that proves it.`,
-    (p) => `On ${p}, I name where it can fail and what stops the failure from spreading.`,
+    (p) => `For ${p}, the line covers the check that proves it.`,
+    (p) => `On ${p}, the failure point is where it can fail and what keeps it from spreading.`,
     (p) => `With ${p}, I keep one result that confirms it before I move on.`,
   ],
 }
@@ -1314,7 +1341,7 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
   ],
   director: [
     (l) => `On ${l}, the first call is whether the risk is acceptable today or needs action now.`,
-    () => "I name one owner for that call and a date for the next review.",
+    () => "One owner holds that call, with a date for the next review.",
     () => "The decision goes on record.",
     () => "The owner signs off in writing.",
     () => "If the owner accepts the risk, I record the reason and when it expires.",
@@ -1336,7 +1363,7 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     () => "After the change, I confirm the setting again later to make sure it stayed in place.",
     () => "I keep the steps short enough that someone new can run them the same way.",
     () => "Each part gets its own owner.",
-    () => "I name what would prove it wrong.",
+    () => "The proof that would show it wrong is written down.",
     () => "Every check is written down.",
     () => "Failures go back to the owner.",
     (l) => `For ${l}, I write down the inputs, the check, and the expected result before I start.`,
@@ -1418,7 +1445,7 @@ export const NUMBER_ASK = /\b(?:what (?:percentage|percent|share|number|proporti
 export const NO_GUESS = "I won't guess a figure I can't back up."
 
 const HONEST_LINES = [
-  "My resume does not show this exact work, so I answer from how I would approach it.",
+  "My resume does not show this exact work, so I walk through how I would handle it.",
   "I have not done this in a past role, so I will walk through how I would handle it.",
   "This is not something I have run before, so I will give the steps I would take.",
 ]
@@ -1492,6 +1519,27 @@ function lineMentionsPair(line: string, lead: string): boolean {
   return words.some((word) => low.includes(word))
 }
 
+/** First design stage only. Each line names this design, so two designs do not share one answer. */
+function designStageLines(level: AnswerLevel, lead: string): string[] {
+  if (level === "director") return [
+    `For ${lead}, the tradeoff is speed against a safe change, and the decision is made before the rest of the map.`,
+    `The owner of ${lead} hears what is still open, and the risk of waiting is the call on the record.`,
+    `The later layers of ${lead} wait until that decision is written down.`,
+  ]
+  if (level === "architect") return [
+    `For ${lead}, the boundary around the first layer is the part I sketch before any later path.`,
+    `The next layer of ${lead} starts only after that check has a failure point and a place the evidence can sit.`,
+    `I would keep ${lead} to one path in this pass, with the handoff written beside the boundary.`,
+    `A later pass on ${lead} can add the rest of the map once this layer holds.`,
+    `The step that can break ${lead} is the one I mark before I leave the first layer.`,
+  ]
+  return [
+    `For ${lead}, the first layer is one check on the request before it reaches the rest of the path.`,
+    `I would sketch that check for ${lead}, write down what it rejects, and leave the rest of the map for a later pass.`,
+    `The evidence for ${lead} sits next to that check so the next person can see why it fired.`,
+  ]
+}
+
 function draftAtLevel(question: string, level: AnswerLevel, resume: string, previous: string[], floor: number): string {
   const cut = dissectQuestion(question, resume)
   const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
@@ -1543,20 +1591,14 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // Stop at this mode's own aim. Do not shorten it so another mode can look longer.
   const stop = mode.aimWords
   const parts = [naturalOpener(opener(premiseLead(lead)))]
+  if (vagueAsk(question)) return trimToWords(vagueReply(question, level), mode.maxWords)
   if (BLAME_ASK.test(question)) {
-    parts[0] = `The pressure was real, and the miss was mine: ${leadPhrase(question)}.`
+    parts[0] = `The pressure was real, and the miss was mine: ${blameClause(question)}.`
     parts.splice(1, 0, level === "director"
       ? "The decision and the risk still sit with me."
       : level === "architect"
         ? "The break is the step I failed to check."
         : "I check the evidence again before I call it done.")
-  }
-  if (vagueAsk(question)) {
-    parts[0] = level === "director"
-      ? `Assuming you mean ${lead}, the decision is still open, and I stop.`
-      : level === "architect"
-        ? `Assuming you mean ${lead}, I name the boundary and stop.`
-        : `Assuming you mean ${lead}, I name the check and stop.`
   }
   if (/\b(?:strategy|govern|change your mind)\b/i.test(question)) parts.push("The owner holds the decision, and the risk is what would change my mind.")
   if (/\b(?:war room|failed overnight|duplicate row|customers are waiting|disagrees with the live)\b/i.test(question)) parts.push("I check the live evidence before I change the path.")
@@ -1716,17 +1758,19 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       : bareTerm
       ? []
       : namedDesign
-      ? []
+      ? (cut.shape === "design" && !DEEPER_ON.test(question) ? designStageLines(level, lead) : [])
       : [
           `I start from ${lead}.`,
           `The case is ${lead}.`,
           `I check ${lead} before I move on.`,
           `What I watch is ${lead}.`,
         ]
+    const designFirst = namedDesign && cut.shape === "design" && !DEEPER_ON.test(question)
+    const fillTo = designFirst ? Math.max(mode.minWords, stop - 8) : Math.max(stop, mode.minWords)
     for (const line of extra) {
-      if (words >= Math.max(stop, mode.minWords)) break
+      if (words >= fillTo) break
       const n = wordCount(line)
-      if (words + n > mode.maxWords || parts.includes(line)) continue
+      if (words + n > (designFirst ? fillTo : mode.maxWords) || parts.includes(line)) continue
       parts.push(line)
       words += n
     }

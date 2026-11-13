@@ -40,6 +40,7 @@ const CORE = [
   "When the question is about work you did, prefer one worked example over a list of capabilities: say for example, then the sources, the join or key, and the actual batch or case. After the action, name the simpler path you rejected with rather than. If you did not do the thing they asked, say so in one short clause, then the nearest sourced work. For a failure or recovery question, start at the failed step, rerun only the affected batch, and say how you checked you did not create duplicates or gaps. Do not invent years, systems, or a case to fill the example.",
   "Length follows the question type first, then the mode; mode changes stance more than volume.",
   "On a blame or post-mortem question, name the pressure, own the miss, and do not deflect. Confidence is calm. It is not a boast.",
+  "Sound like a clear teacher talking to one listener: the hook first, plain words, one idea per sentence. Signpost with First, Then, and The result. Agreeable, and easy to follow.",
 ].join(" ")
 
 const KIND: Record<NaturalAnswerShape, string> = {

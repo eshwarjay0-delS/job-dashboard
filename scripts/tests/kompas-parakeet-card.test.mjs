@@ -30,9 +30,10 @@ test("a complex contribution answer becomes headed bullets and a breath mark", (
   const a = "I joined two months before launch. Downstream calls were failing. I implemented queue-based staging and an object storage backup. I added a circuit breaker and request batching. The nightly path stopped dropping rows."
   assert.equal(answerIsComplex(q, a), true)
   const card = presentSpokenAnswer(q, a)
+  assert.match(card, /\*\*Claim\*\*/)
   assert.match(card, /\*\*Context\*\*/)
-  assert.match(card, /\*\*What I did\*\*/)
-  assert.match(card, /\*\*Result\*\*/)
+  assert.match(card, /\*\*Action\*\*/)
+  assert.match(card, /\*\*Close\*\*/)
   assert.match(card, /^-\s/m)
   assert.match(card, /^…$/m)
   assert.equal(presentSpokenAnswer(q, card), card)

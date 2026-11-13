@@ -1,3 +1,11 @@
+## 2026-11-13 — Fixed answer order, grammatical openers, and the audio tail
+
+No new screen. A complex answer now uses Claim, Context, Action, Result, and Close, in that order, every time. First, Then, and The result mark the middle beats. A number is spoken only when the resume or the question already has it. Broken transcript pieces are joined in clock order, and the drawer keeps that order. A vague ask states the assumption and then answers in one sentence. A blame ask names the miss in a grammatical sentence. The first design stage moved from 42 / 43 / 47 words to 100 / 71 / 127, toward aims of 90 / 70 / 120. Experience length and the STAR format are unchanged.
+
+Pressing AI Answer now flushes the open recorder for the microphone and for computer audio, waits for the final chunk, keeps the last two seconds, and transcribes that tail before the question is chosen. A short tail is not dropped before transcription. A session can hold about 10,000 words. The answer request sends the latest interviewer ask and its setup, not the whole transcript. A 10,000-word fixture resolved in 1.3 ms to 24 words. There is still one model call and no new polling.
+
+**Checked locally. Not merged. Not a production deploy.** Order 6 pass, fold clarity 4 pass, long context 2 pass, audio tail 1 pass, Parakeet card 7 pass, fifty folds 50 pass, one-hop 9 pass. `tsc --noEmit` clean. Two voice cases were already failing before this slice: the web share prompt order, and a repeated AI Answer click. Acoustic word error rate and time-to-first-text were not measured. No production URL was called.
+
 ## 2026-11-13 — Parakeet-style answer card and utterance rows
 
 No new screen beyond the answer card and the transcript drawer. A complex answer shows a bold section heading and tight bullets, with a breath mark between sections. A short definition stays one block. The anchor card rows are unchanged. Experience length and the STAR format are unchanged. Each transcript row is its own item, labelled Interviewer or You, with a clock time and Question detected or No question. Overlapping clip tails are stitched. The recorder slice is 200 ms, and the last chunk still waits 80 ms.
