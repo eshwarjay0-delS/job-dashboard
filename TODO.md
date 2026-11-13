@@ -1,6 +1,6 @@
-## 2026-11-13 — Left bullets no longer start with First, - (visible on the answer card)
+## 2026-11-13 — Left answer cleanup (visible on the answer card)
 
-The 10:08 AM CT card for "Did you design it alone?" put `First, -` on every bullet and kept "In general, teams" plus "they build" / "they run". The #350 peel is back: a dash is not glued on after First, Then, or Finally, and a connector is not added to every bullet. A sentence that starts with "In general, teams", or that uses they/teams with no I/we, is dropped. "I led ... field-ops teams" stays. Generation prompts were not rewritten.
+The left card no longer shows First/Then/Next/Finally, "Once that is established", "In addition", a leading dash, Claim/Context/Action/Result/Close, or an ellipsis. Generic third person and a dictionary opener are dropped. First-person lines stay, including "field-ops teams". Duplicate sentences collapse. A past question drops "I would" when a past sentence is already there. Generation prompts were not rewritten. Fixtures are the 9:04, 9:09, 9:14, 9:27, and 10:08 screenshots.
 
 ## 2026-11-13 — Main answer path restored from 01ceb1dc (visible on the left answer card)
 

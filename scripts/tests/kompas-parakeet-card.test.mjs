@@ -25,17 +25,17 @@ test("a simple definition stays one block with no section headings", () => {
   assert.doesNotMatch(presentSpokenAnswer(q, a), /\*\*/)
 })
 
-test("a complex contribution answer becomes headed bullets and a breath mark", () => {
+test("a complex contribution answer keeps its sentences without headings or an ellipsis", () => {
   const q = "What was the state of the system when you joined and what were your specific contributions?"
   const a = "I joined two months before launch. Downstream calls were failing. I implemented queue-based staging and an object storage backup. I added a circuit breaker and request batching. The nightly path stopped dropping rows."
   assert.equal(answerIsComplex(q, a), true)
   const card = presentSpokenAnswer(q, a)
-  assert.match(card, /\*\*Claim\*\*/)
-  assert.match(card, /\*\*Context\*\*/)
-  assert.match(card, /\*\*Action\*\*/)
-  assert.match(card, /\*\*Close\*\*/)
+  assert.doesNotMatch(card, /\*\*(?:Claim|Context|Action|Result|Close)\*\*/)
+  assert.doesNotMatch(card, /^…$/m)
   assert.match(card, /^-\s/m)
-  assert.match(card, /^…$/m)
+  assert.ok(card.indexOf("joined two months") < card.indexOf("Downstream calls"))
+  assert.ok(card.indexOf("Downstream calls") < card.indexOf("queue-based staging"))
+  assert.ok(card.indexOf("queue-based staging") < card.indexOf("nightly path"))
   assert.equal(presentSpokenAnswer(q, card), card)
 })
 
@@ -59,7 +59,8 @@ test("the left card never shows Claim, Context, Action, Result, or Close as labe
   assert.equal(ul.querySelector(".pauseline"), null)
   assert.doesNotMatch(ul.textContent, /\b(?:Claim|Context|Action|Result|Close)\b/)
   assert.match(ul.textContent, /I joined two months before launch/)
-  assert.match(ul.textContent, /The result: the path stopped dropping rows/)
+  assert.match(ul.textContent, /The path stopped dropping rows/)
+  assert.doesNotMatch(ul.textContent, /The result:/)
   assert.equal(ul.textContent.includes("…"), false)
   assert.equal(ul.textContent.includes("**"), false)
 })

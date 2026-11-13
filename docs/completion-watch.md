@@ -8,9 +8,9 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
-## 13 November 2026 — First, - is off the left bullets
+## 13 November 2026 — left answer cleanup
 
-Owner Eshwar, 10:08 AM America/Chicago. "Did you design it alone?" was showing First, - on every bullet, plus "In general, teams" and "they" lines. The connector peel from 4c01951 is back, and those third-person sentences are dropped. A first-person line that mentions a team stays.
+Owner Eshwar widened the 10:08 AM pass. The left presentation drops connectors, section labels, ellipsis, generic third person, dictionary openers, duplicate sentences, and "I would" on a past question when a past sentence is present. Generation prompts were not rewritten.
 
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 

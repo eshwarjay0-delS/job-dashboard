@@ -51,21 +51,10 @@ export function withoutInventedNumbers(sentence: string, source: string): string
     .trim()
 }
 
-function uncap(sentence: string): string {
-  return sentence.replace(/^([A-Z])([a-z])/, (_, a: string, b: string) => a.toLowerCase() + b)
-}
+const LEADING_MARK = /^(?:[-•*]|\d+[.)]|—|–)\s+/
+const LEADING_CONNECTOR = /^(?:first|then|next|finally),\s+|^(?:the result)[:,]\s+|^(?:in addition|once that is established),\s+/i
 
-const LEADING_MARK = /^(?:[-•*]|\d+[.)])\s+/
-const LEADING_CONNECTOR = /^(first|then|finally|the result)\b[:,]?\s+/i
-
-function connectorLabel(name: string): string {
-  if (name === "first") return "First,"
-  if (name === "then") return "Then,"
-  if (name === "finally") return "Finally,"
-  return "The result:"
-}
-
-/** Peel every leading dash and every leading connector. A later connector wins, so a prepended "First," cannot cover "Then" or "Finally". */
+/** Peel every leading dash and every leading connector. */
 function peelBullet(sentence: string): { connector: string; body: string } {
   let s = String(sentence || "").trim()
   let connector = ""
@@ -75,7 +64,7 @@ function peelBullet(sentence: string): { connector: string; body: string } {
     s = s.replace(LEADING_MARK, "").trim()
     const hit = s.match(LEADING_CONNECTOR)
     if (!hit) break
-    connector = hit[1].toLowerCase()
+    connector = hit[0].toLowerCase()
     s = s.slice(hit[0].length).trim()
   }
   return { connector, body: s.replace(LEADING_MARK, "").trim() }
@@ -84,12 +73,9 @@ function peelBullet(sentence: string): { connector: string; body: string } {
 function signpost(section: AnswerSection, sentence: string, first: boolean): string {
   const peeled = peelBullet(sentence)
   if (!peeled.body || genericThirdPerson(peeled.body)) return ""
-  const clean = uncap(peeled.body)
-  if (peeled.connector) return `${connectorLabel(peeled.connector)} ${clean}`
-  if (!first) return peeled.body
-  if (section === "Context") return `First, ${clean}`
-  if (section === "Action") return `Then, ${clean}`
-  if (section === "Result") return `The result: ${clean}`
+  // Connectors are not written onto the left card. The final pass removes any that remain.
+  void section
+  void first
   return peeled.body
 }
 
@@ -97,9 +83,76 @@ function signpost(section: AnswerSection, sentence: string, first: boolean): str
 function genericThirdPerson(sentence: string): boolean {
   const text = peelBullet(sentence).body
   if (!text) return false
-  if (/^in general,\s+teams\b/i.test(text)) return true
+  if (/^in general,\s+teams\b/i.test(text) || /^teams start\b/i.test(text) || /^next they\b/i.test(text) || /\bthey build\b/i.test(text)) return true
   if (/\b(?:I|we|my|our|me|I'm|I've|I'd|I'll|we're|we've|we'd|we'll)\b/i.test(text)) return false
   return /\b(?:they|teams)\b/i.test(text)
+}
+
+function dictionaryOpener(sentence: string): boolean {
+  return /,\s+or\s+["'“][^"'”]{1,80}["'”],?\s+is\b/i.test(sentence)
+}
+
+function pastWork(sentence: string): boolean {
+  return /\b(?:I|we)\s+(?:did|didn't|led|ran|built|made|left|went|got|took|saw|found|had|wrote|chose|began|(?:\w+ed))\b/i.test(sentence)
+}
+
+function hypothetical(sentence: string): boolean {
+  return /^(?:I|we) would\b|^(?:I|we)['’]d\b/i.test(sentence)
+}
+
+function sentenceKey(sentence: string): string {
+  return sentence.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim()
+}
+
+function nearDuplicate(a: string, b: string): boolean {
+  if (!a || !b || a === b) return a === b && a.length > 0
+  const wa = a.split(" ")
+  const wb = b.split(" ")
+  if (wa.length < 6 || wb.length < 6) return false
+  const sa = new Set(wa)
+  const sb = new Set(wb)
+  let shared = 0
+  for (const word of sa) if (sb.has(word)) shared += 1
+  return shared / (sa.size + sb.size - shared) >= 0.82
+}
+
+function tidySentence(sentence: string): string {
+  let text = sentence.replace(/\s+([,.!?;:])/g, "$1").replace(/([.!?])\1+/g, "$1").replace(/([,;:])\1+/g, "$1").replace(/,\./g, ".").replace(/\s{2,}/g, " ").trim()
+  if (/^[a-z]/.test(text)) text = text.charAt(0).toUpperCase() + text.slice(1)
+  return text
+}
+
+/** Last pass for the left card. Drops labels, connectors, and generic lines. Keeps the remaining order. */
+export function finishLeftAnswer(question: string, text: string): string {
+  const raw = String(text || "").trim()
+  if (!raw) return raw
+  const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean)
+  const bulleted = lines.some((line) => /^(?:[-•*]|\d+[.)])\s+/.test(line))
+  const pieces: string[] = []
+  for (const line of lines) {
+    if (/^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(line)) continue
+    if (/^(?:…|\.{3})$/.test(line)) continue
+    const body = line.replace(/^(?:[-•*]|\d+[.)])\s+/, "")
+    for (const bit of body.split(/(?<=[.!?])\s+/)) {
+      const peeled = peelBullet(bit).body
+      if (peeled) pieces.push(peeled)
+    }
+  }
+  const pastQuestion = /^(?:did you|what did you|have you|had you)\b/i.test(String(question || "").trim())
+  const hasPast = pieces.some(pastWork)
+  const kept: string[] = []
+  const seen: string[] = []
+  for (const piece of pieces) {
+    if (dictionaryOpener(piece) || genericThirdPerson(piece)) continue
+    if (pastQuestion && hasPast && hypothetical(piece)) continue
+    const key = sentenceKey(piece)
+    if (!key || seen.some((prior) => nearDuplicate(prior, key))) continue
+    seen.push(key)
+    const tidy = tidySentence(piece)
+    if (tidy) kept.push(tidy)
+  }
+  if (!kept.length) return ""
+  return bulleted ? kept.map((line) => `- ${line}`).join("\n") : kept.join(" ")
 }
 
 function repairSectioned(raw: string): string {
@@ -159,11 +212,11 @@ export function plainIntroAnswer(text: string): string {
 export function presentSpokenAnswer(question: string, text: string, source = ""): string {
   const raw = String(text || "").trim()
   if (!raw) return raw
-  if (INTRO_ASK.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw)
-  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw)
+  if (INTRO_ASK.test(cleanHeardQuestion(question))) return finishLeftAnswer(question, plainIntroAnswer(raw))
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return finishLeftAnswer(question, repairSectioned(raw))
   const allowed = `${source}\n${question}`
   const sentences = answerSentences(raw).map((s) => withoutInventedNumbers(s, allowed)).filter((s) => answerWordCount(s) >= 3 && !genericThirdPerson(s))
-  if (!answerIsComplex(question, sentences.join(" ")) || sentences.length < 2) return sentences.join(" ") || raw
+  if (!answerIsComplex(question, sentences.join(" ")) || sentences.length < 2) return finishLeftAnswer(question, sentences.join(" ") || raw)
   const groups: Record<AnswerSection, string[]> = { Claim: [], Context: [], Action: [], Result: [], Close: [] }
   groups.Claim.push(sentences[0])
   for (const sentence of sentences.slice(1)) groups[bucket(sentence, allowed)].push(sentence)
@@ -179,7 +232,7 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
       if (line) blocks.push(`- ${line}`)
     })
   }
-  return blocks.join("\n")
+  return finishLeftAnswer(question, blocks.join("\n"))
 }
 
 export function sectionOrder(card: string): string[] {

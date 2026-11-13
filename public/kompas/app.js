@@ -1110,37 +1110,84 @@ function peelBullet(sentence) {
   let s = String(sentence || "").trim();
   let connector = "";
   let prev = "";
-  const mark = /^(?:[-•*]|\d+[.)])\s+/;
-  const lead = /^(first|then|finally|the result)\b[:,]?\s+/i;
+  const mark = /^(?:[-•*]|\d+[.)]|—|–)\s+/;
+  const lead = /^(?:first|then|next|finally),\s+|^(?:the result)[:,]\s+|^(?:in addition|once that is established),\s+/i;
   while (s && s !== prev) {
     prev = s;
     s = s.replace(mark, "").trim();
     const hit = s.match(lead);
     if (!hit) break;
-    connector = hit[1].toLowerCase();
+    connector = hit[0].toLowerCase();
     s = s.slice(hit[0].length).trim();
   }
   return { connector, body: s.replace(mark, "").trim() };
 }
-function connectorLabel(name) {
-  return name === "first" ? "First," : name === "then" ? "Then," : name === "finally" ? "Finally," : name === "the result" ? "The result:" : "";
-}
 function genericThirdPerson(sentence) {
   const text = peelBullet(sentence).body;
   if (!text) return false;
-  if (/^in general,\s+teams\b/i.test(text)) return true;
+  if (/^in general,\s+teams\b/i.test(text) || /^teams start\b/i.test(text) || /^next they\b/i.test(text) || /\bthey build\b/i.test(text)) return true;
   if (/\b(?:I|we|my|our|me|I'm|I've|I'd|I'll|we're|we've|we'd|we'll)\b/i.test(text)) return false;
   return /\b(?:they|teams)\b/i.test(text);
+}
+function dictionaryOpener(sentence) {
+  return /,\s+or\s+["'“][^"'”]{1,80}["'”],?\s+is\b/i.test(sentence);
+}
+function pastWork(sentence) {
+  return /\b(?:I|we)\s+(?:did|didn't|led|ran|built|made|left|went|got|took|saw|found|had|wrote|chose|began|(?:\w+ed))\b/i.test(sentence);
+}
+function hypothetical(sentence) {
+  return /^(?:I|we) would\b|^(?:I|we)['’]d\b/i.test(sentence);
+}
+function sentenceKey(sentence) {
+  return sentence.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+}
+function nearDuplicate(a, b) {
+  if (!a || !b || a === b) return a === b && a.length > 0;
+  const wa = a.split(" "), wb = b.split(" ");
+  if (wa.length < 6 || wb.length < 6) return false;
+  const sa = new Set(wa), sb = new Set(wb);
+  let shared = 0;
+  for (const word of sa) if (sb.has(word)) shared += 1;
+  return shared / (sa.size + sb.size - shared) >= 0.82;
+}
+function tidySentence(sentence) {
+  let text = sentence.replace(/\s+([,.!?;:])/g, "$1").replace(/([.!?])\1+/g, "$1").replace(/([,;:])\1+/g, "$1").replace(/,\./g, ".").replace(/\s{2,}/g, " ").trim();
+  if (/^[a-z]/.test(text)) text = text.charAt(0).toUpperCase() + text.slice(1);
+  return text;
+}
+function finishLeftAnswer(question, text) {
+  const raw = String(text || "").trim();
+  if (!raw) return raw;
+  const lines = raw.split("\n").map(line => line.trim()).filter(Boolean);
+  const bulleted = lines.some(line => /^(?:[-•*]|\d+[.)])\s+/.test(line));
+  const pieces = [];
+  for (const line of lines) {
+    if (/^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(line)) continue;
+    if (/^(?:…|\.{3})$/.test(line)) continue;
+    const body = line.replace(/^(?:[-•*]|\d+[.)])\s+/, "");
+    for (const bit of body.split(/(?<=[.!?])\s+/)) {
+      const peeled = peelBullet(bit).body;
+      if (peeled) pieces.push(peeled);
+    }
+  }
+  const pastQuestion = /^(?:did you|what did you|have you|had you)\b/i.test(String(question || "").trim());
+  const hasPast = pieces.some(pastWork);
+  const kept = [], seen = [];
+  for (const piece of pieces) {
+    if (dictionaryOpener(piece) || genericThirdPerson(piece)) continue;
+    if (pastQuestion && hasPast && hypothetical(piece)) continue;
+    const key = sentenceKey(piece);
+    if (!key || seen.some(prior => nearDuplicate(prior, key))) continue;
+    seen.push(key);
+    const tidy = tidySentence(piece);
+    if (tidy) kept.push(tidy);
+  }
+  if (!kept.length) return "";
+  return bulleted ? kept.map(line => "- " + line).join("\n") : kept.join(" ");
 }
 function signBullet(title, sentence, first) {
   const peeled = peelBullet(sentence);
   if (!peeled.body || genericThirdPerson(peeled.body)) return "";
-  const clean = peeled.body.replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
-  if (peeled.connector) return connectorLabel(peeled.connector) + " " + clean;
-  if (!first) return peeled.body;
-  if (title === "Context") return "First, " + clean;
-  if (title === "Action") return "Then, " + clean;
-  if (title === "Result") return "The result: " + clean;
   return peeled.body;
 }
 function repairSectioned(raw) {
@@ -1163,15 +1210,15 @@ function repairSectioned(raw) {
 function presentAnswer(question, answer, source) {
   const raw = String(answer || "").trim();
   if (!raw) return raw;
-  if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw);
-  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw);
+  if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return finishLeftAnswer(question, plainIntroAnswer(raw));
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return finishLeftAnswer(question, repairSectioned(raw));
   const allowed = String(source || "") + "\n" + String(question || "");
   const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3 && !genericThirdPerson(s));
   const words = sentences.join(" ").split(/\s+/).filter(Boolean).length;
   const q = String(question || "");
   const simple = /^(?:what is|what does|what's|define|do you|are you|have you|can you hear)\b/i.test(q.trim()) && words < 55 && sentences.length < 3;
   const complex = !simple && ((/\b(?:design|tell me about a time|walk me through|incident|war room|contributions|proud of|strategy)\b/i.test(q) && (sentences.length >= 2 || words >= 36)) || sentences.length >= 4 || words >= 70);
-  if (!complex || sentences.length < 2) return sentences.join(" ") || raw;
+  if (!complex || sentences.length < 2) return finishLeftAnswer(question, sentences.join(" ") || raw);
   const groups = { Claim: [sentences[0]], Context: [], Action: [], Result: [], Close: [] };
   for (const sentence of sentences.slice(1)) {
     const nums = sentence.match(/\d[\d,.]*/g) || [];
@@ -1191,7 +1238,7 @@ function presentAnswer(question, answer, source) {
       if (line) blocks.push("- " + line);
     });
   }
-  return blocks.join("\n");
+  return finishLeftAnswer(question, blocks.join("\n"));
 }
 function answerLines(answer, question) {
   // He is rehearsing as himself. The stored introduction can still say his name; the line he reads cannot.
