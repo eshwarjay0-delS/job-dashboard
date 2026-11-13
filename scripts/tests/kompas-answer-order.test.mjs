@@ -4,7 +4,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import vm from "node:vm"
 import { JSDOM } from "jsdom"
-import { presentSpokenAnswer } from "../../src/lib/kompasAnswerPresentation.ts"
+import { presentSpokenAnswer, sectionOrder, SECTION_ORDER } from "../../src/lib/kompasAnswerPresentation.ts"
 import { reconstructQuestion } from "../../src/lib/kompasUtterance.ts"
 import { naturalNarrationGuidance } from "../../src/lib/kompasNaturalNarration.ts"
 
@@ -17,20 +17,22 @@ test("the same answer is ordered the same way twice", () => {
   const once = presentSpokenAnswer(QUESTION, DRAFT, RESUME)
   const twice = presentSpokenAnswer(QUESTION, DRAFT, RESUME)
   assert.equal(once, twice)
-  assert.doesNotMatch(once, /\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/)
-  const at = (phrase) => once.indexOf(phrase)
-  assert.ok(at("joined two months") < at("Downstream calls"))
-  assert.ok(at("Downstream calls") < at("implemented queue"))
-  assert.ok(at("implemented queue") < at("40"))
-  assert.ok(at("40") < at("nightly path"))
+  assert.deepEqual(sectionOrder(once), ["Claim", "Context", "Action", "Result", "Close"])
+  assert.deepEqual(sectionOrder(once).filter((name) => SECTION_ORDER.includes(name)), sectionOrder(once))
 })
 
 test("the claim comes before the evidence, and a resume number lands in the result", () => {
   const card = presentSpokenAnswer(QUESTION, DRAFT, RESUME)
-  assert.match(card, /\b40\b/)
-  assert.ok(card.indexOf("implemented queue") < card.indexOf("40"))
-  assert.doesNotMatch(card, /^(?:First|Then|Next|Finally),/m)
-  assert.doesNotMatch(card, /The result:/)
+  const order = sectionOrder(card)
+  assert.ok(order.indexOf("Claim") < order.indexOf("Context"))
+  assert.ok(order.indexOf("Context") < order.indexOf("Action"))
+  assert.ok(order.indexOf("Action") < order.indexOf("Result"))
+  const result = card.split("**Result**")[1] || ""
+  assert.match(result, /\b40\b/)
+  assert.doesNotMatch(card.split("**Result**")[0], /\b40\b/)
+  assert.match(card, /First, /)
+  assert.match(card, /Then, /)
+  assert.match(card, /The result: /)
 })
 
 test("a number the resume does not hold is not spoken", () => {
