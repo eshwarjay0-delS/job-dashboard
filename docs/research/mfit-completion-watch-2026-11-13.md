@@ -61,6 +61,16 @@ The broad direction remains approved: up to four accounts, per-account Gmail/Cal
 - PR #271's per-account sync-health card remains proposed and is not separately owner-approved.
 - The unattended updates worker remains disabled pending the external scheduler, CRON_SECRET, approved Meta template and explicit enablement. No inbox mutation, email send or WhatsApp send was performed.
 
+## Production authentication correction — owner instruction supersedes PR #328 claim
+
+The latest accessible owner-authored correction requires a login screen and Gmail-only sign-in. It does not approve a public shared synthetic-owner session. The skip-login approval assertion in PR #328 is not supported by the user-authored record and is superseded. The existing admin allowlist was preserved.
+
+- Authorized Vercel inspection found production AUTH_DISABLED=true and NEXT_PUBLIC_AUTH_DISABLED=true. Only these two plain boolean flags were read; no synthetic-owner ID, email override, credential or token was read.
+- Both production flags were changed to false. Preview and development targets were not changed.
+- One config-only production redeploy of the same already-live runtime source SHA a247ddf6042385d12a19bfd7e893983c1bcf9087 was accepted as dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS. It is BUILDING; the canonical alias still points to the prior READY deployment. This is not yet live.
+- Issue #308 remains open. PR #324 remains DRAFT as source-level defense in depth; its exact-head CI and protected preview must pass separately.
+- Acceptance after READY: independently verify job-dashboard-fawn.vercel.app maps to the new deployment, /kompas/auth-flag.js reports false, and anonymous account-session, desktop-handoff and Gmail export routes return 401. Real Google OAuth, owner/admin access and ordinary-account isolation still require an authenticated browser test. No such test was performed.
+
 ## Kompas and release gates
 
 - Current production alias remains READY at a247ddf. PR #234 question-window code is included in production, but this does not establish 50 authenticated same-question model pairs, independent human grades or native Windows/WhatsApp/mobile acceptance.
