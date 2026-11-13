@@ -1,9 +1,9 @@
 export type ReaSession = {
   id: string; title: string; area: 'gmail'|'applications'|'resume'|'kompas'|'platform';
-  method: 'Public reference review'|'Source and artifact analysis'|'REA tool attempt';
-  state: 'Research mapped'|'Implemented, verification pending'|'Deployed, verification pending'|'Blocked';
+  method: 'Public reference review'|'Source and artifact analysis'|'REA tool attempt'|'Conversation evidence review';
+  state: 'Research mapped'|'Implemented, verification pending'|'Deployed, verification pending'|'Blocked'|'Owner instruction recorded, runtime verification pending';
   updated: string; request: string; sources: {label:string;url?:string;path?:string}[];
-  steps: {label:string;finding:string;status:'Observed'|'Implemented'|'Tested'|'Pending'|'Blocked';evidence:string}[];
+  steps: {label:string;finding:string;status:'Observed'|'Implemented'|'Tested'|'Pending'|'Blocked'|'Recorded';evidence:string}[];
   limits: string; next: string; commits: string[];
 }
 export const REA_SESSIONS: ReaSession[] = [
