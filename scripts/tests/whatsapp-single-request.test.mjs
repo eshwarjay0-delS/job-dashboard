@@ -117,8 +117,6 @@ test('R2 conditional writes treat 409 and 404 as retryable conflicts and propaga
     'unexpected storage failures must propagate instead of being treated as a conflict',
   )
 })
-  } finally { await rm(root, { recursive: true, force: true }) }
-})
 test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
   const entries = new Map()
   let providerAvailable = true, offlineMismatch = false
