@@ -45,3 +45,6 @@ On PR #360 initial head `3a3dcb41f35b95690c38d0a74f63723a006c4e79`, WhatsApp rec
 ## 13 November 2026 — second Plan/REA wording correction
 
 The first documentation correction did not satisfy the exact assertion: the new REA limits said `No production R2 write, model call, real Meta send`, while the test expected the contiguous phrase `No real Meta send`. PR #361 Plan/REA run `43425775972` therefore repeated one assertion failure; the other 13 checks passed. The limit wording is being made explicit, then the schema gate will rerun on the next exact head. The WhatsApp recovery and Kompas baseline gates passed on `5bf054926e7cb7eaadb91f585b1f73d99a995123`.
+
+
+The current-master restack branch is tracked by PR #362. The previous exact-head REA assertion mismatch was corrected in commit d931eb5b7a42c40ba1b4dbae3fe3b5865da5f15a; fresh checks must be attached to the latest PR head, not reused from PR #358 or the earlier restack heads.
