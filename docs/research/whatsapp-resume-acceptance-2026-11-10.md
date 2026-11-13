@@ -137,3 +137,16 @@ The 6 Nov owner correction remains authoritative: web downloads stay strict at 9
 The current #368 adapter's use of `GetObject` ETag followed by `PutObject` with `If-Match` is supported by Cloudflare's current S3 API documentation. Cloudflare states that `PutObject` accepts `If-Match` and that the condition is evaluated atomically against committed bucket state; competing conditional writes are serialized. References: [Conditional operations](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) and [Consistency model](https://developers.cloudflare.com/r2/reference/consistency/).
 
 The visible PR test suite exercises stale ETag/412 and a concurrent winner, while the implementation also treats 409 and 404 as compare-and-swap failure. Add explicit mocked 409 and 404 cases (or document why they cannot arise on this path) before final acceptance. This is a documentation/source review only; no R2 write or live webhook was run.
+
+## 13 November 2026 — current-master offline fallback and pair-CAS restack (#374)
+
+PR #374 is the current-master restack of the offline original-resume fallback and R2 pair-CAS work. Exact head: 794ba1151f8761720c55936d15bb0eb9a0a37c5c, based on master 026c729.
+
+- Full CI 43503280817, WhatsApp recovery regression 43503280946, Kompas baseline 43503280979, and Plan/REA 43503280606 all completed SUCCESS on that exact head.
+- The fallback verifies the selected same-account library path and exact source bytes before sending, labels the file NOT TAILORED, and does not substitute the original resume into a swipe-refinement result. R2 ETag/If-Match and local key serialization protect pair consumption; the pair is consumed only after provider acceptance.
+- PR #374 remains DRAFT. An authorized Vercel preview request dpl_6Ejh8tNfxR7pDYNcxWRp2f2thWV7 was CANCELED by the project's Ignored Build Step. The protected preview still requires the private KOMPAS_VERCEL_API_TOKEN. No ignore rule or protection setting was changed.
+- No real WhatsApp send, R2 production write, model call, or handset test occurred.
+
+**Historical 17 Oct 17:28 Chicago incident remains separately blocked.** The original 27,724-byte source DOCX and matching JD are recorded as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation ID, Meta message ID, and signed delivery/read receipt remain unavailable. The source's education/employment/credential facts conflict with the owner-confirmed profile and remain quarantined pending owner reconciliation. Do not replay the request or infer delivery from a source file or a mocked test.
+
+**Next:** keep #374 DRAFT until the legitimate protected preview and Safe Merge Gate approval. Historical closure requires the exact generated output plus per-run R2/webhook/Meta evidence and owner fact reconciliation before any authorized replay. Real handset delivery is a separate acceptance gate.
