@@ -11,7 +11,7 @@ This follow-up is limited to the sender session persistence boundary. It does no
 - Extend the storage contract with getWithEtag() and putIfMatch().
 - Cloudflare R2 reads the object bytes and ETag together, then uses the S3-compatible PutObject If-Match conditional write. R2 evaluates that condition atomically against the committed object state.
 - The local filesystem adapter serializes per-key operations within one adapter process and uses a SHA-256 content token for compare-and-swap. Production R2 uses storage-level conditional writes across serverless instances. The implementation follows Cloudflare's documented R2 conditional-write contract: https://developers.cloudflare.com/r2/api/s3/conditional-operations/. Production R2 uses storage-level conditional writes across serverless instances.
-- consumeSessionPair() re-reads and reapplies the pair-match rule after a failed conditional write. It retries at most eight times. It never falls back to an unconditional write; repeated conflicts leave the session pair intact for recovery. The no-provider original consumes only after Meta returns a document message ID; the normal rewrite path retains its existing claim-time consumption, but both use the same conditional update.
+- consumeSessionPair() re-reads and reapplies the pair-match rule after a failed conditional write. It retries at most eight times. It never falls back to an unconditional write; repeated conflicts leave the session pair intact for recovery. Both the no-provider original and the normal rewrite consume only after markResumeDocumentAccepted confirms provider acceptance for that exact document. An explicit HTTP rejection retains the pair for retry; a signed failed-delivery callback also retains it while recovery is scheduled. An ambiguous send is never automatically duplicated.
 - The same pair rule remains: clear JD and resume only when both still match this run; preserve a newer JD, a newer resume, or both; retain the last-used resume record.
 
 ## Regression evidence
@@ -53,3 +53,10 @@ The current-master restack branch is tracked by PR #362. The previous exact-head
 ## 13 November 2026 — case-insensitive REA assertion
 
 The second Plan/REA run `43425775972` failed because the REA limit used lowercase `no real Meta send`, while the test asserted uppercase `No real Meta send`. The recorded limit is accurate; the test is changed to case-insensitive matching. This does not relax the no-send requirement. All checks must rerun on the next exact head.
+
+
+## 13 November 2026 — consume only after provider acceptance
+
+A focused review of the restacked webhook found that the normal rewrite path called consumeSessionPair() before tailoring and upload, even though the no-provider path consumed only after delivery. That would erase a matching pair when the tailored upload and fallback were both rejected. The call is moved after markResumeDocumentAccepted returns true. The sendClosest path also now preserves the pair when a signed failed-delivery callback returns false, even if Meta first returned a message ID.
+
+Two mocked regressions were added: (1) provider-backed tailored upload and same-account fallback both receive explicit HTTP rejection, and the JD/resume pair remains; (2) the fallback receives a message ID but the signed delivery callback rejects it, and the pair remains for scheduled recovery. These tests are part of the new exact-head CI run; no real Meta request was made.
