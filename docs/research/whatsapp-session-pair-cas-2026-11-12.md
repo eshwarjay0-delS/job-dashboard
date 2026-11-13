@@ -60,3 +60,10 @@ The second Plan/REA run `43425775972` failed because the REA limit used lowercas
 A focused review of the restacked webhook found that the normal rewrite path called consumeSessionPair() before tailoring and upload, even though the no-provider path consumed only after delivery. That would erase a matching pair when the tailored upload and fallback were both rejected. The call is moved after markResumeDocumentAccepted returns true. The sendClosest path also now preserves the pair when a signed failed-delivery callback returns false, even if Meta first returned a message ID.
 
 Two mocked regressions were added: (1) provider-backed tailored upload and same-account fallback both receive explicit HTTP rejection, and the JD/resume pair remains; (2) the fallback receives a message ID but the signed delivery callback rejects it, and the pair remains for scheduled recovery. These tests are part of the new exact-head CI run; no real Meta request was made.
+
+
+## 13 November 2026 — test-fixture correction after exact-head CI
+
+Full CI `43448510964` on head `325e4def14e3f91951eb8a36a9b3325c67ee2ade` ran 52 tests in `scripts/tests/whatsapp-single-request.test.mjs`: 51 passed and one failed. The failure occurred before the intended provider-callback scenario because the route called `saveTailored()` but the test mock exposed only `markUsed`, producing `TypeError: saveTailored is not a function`. The mock now provides `saveTailored: async () => null` so the test reaches the intended upload/fallback and signed-callback path. This is a test-fixture correction; no production source behavior changed. Commit: `6925ebdd3375c46e639c50c00fdebe5d48781ce2`.
+
+Fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema results on the new exact head are required. The branch remains DRAFT and is still based on `9032d5bd`; current master has advanced to `024177889d092f30aaeada20fab649aa41c9d1f4`. Preserve the later Kompas commits when restacking. The protected preview credential remains unavailable; do not bypass it. No model call, R2 production write, Meta send, historical replay or handset acceptance occurred.
