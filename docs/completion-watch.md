@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 13 November 2026 — pair consumption moved behind provider acceptance
+
+Continue: verify the approved WhatsApp offline fallback and lossless pair CAS in PR #368. Code review found a real ordering defect in the restack: the normal rewrite path consumed the matching JD/resume pair before tailoring/upload, and the fallback path consumed even when the signed delivery callback rejected the document. The code now consumes only after markResumeDocumentAccepted confirms provider acceptance; rejected uploads and callback-scheduled retries retain the pair. New mocked tests cover both tailored+fallback HTTP rejection and a message-ID-then-callback-rejection case.
+
+PR #368 current exact head: 7bfcb488bc26e9f46294e4f4dcca46036337bc50. The new branch is based directly on current master 9032d5bd18854c8fd1e61fc781b51085e3af2a26, which is also the independently verified READY production alias. This WhatsApp work is not deployed. Fresh exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema checks are pending. The protected preview still requires an authorized private KOMPAS_VERCEL_API_TOKEN; keep the PR DRAFT and do not bypass it. No real Meta send, R2 production write, historical replay or handset test occurred.
+
+
 ## 13 November 2026 — WhatsApp Oct 17 incident and current-master restack
 
 Continue: carry the owner-approved offline fallback and lossless resume/JD pair-consumption CAS through exact-head validation and the protected release gate. The source implementation is in the stacked PR #365 branch, which includes parent PR #364's webhook, R2 ETag/If-Match adapter, bounded CAS retry, selected-library-only NOT TAILORED fallback, text-only swipe-refinement failure behavior, and interleaving regressions. Parent PR #364 head 29d82ffc352e153a7c7b76ae23f56bc469ff50a9 passed its four recorded checks (full CI 43426407953, WhatsApp recovery 43426408103, Kompas baseline 43426408264, Plan/REA schema 43426407983); those results do not validate the later #365 documentation restack. The combined PR must run fresh exact-head checks and remain DRAFT until an authorized protected preview exists. The private KOMPAS_VERCEL_API_TOKEN is not available to this run; do not bypass the preview gate.
