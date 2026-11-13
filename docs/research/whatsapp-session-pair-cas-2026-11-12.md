@@ -86,3 +86,8 @@ The current PR branch includes test-only correction commit `83c81db42877b7022719
 ## 13 November 2026 — REA schema alignment
 
 The REA now records this run's current-master restack under `whatsapp-offline-cas-restack-run11-2026-11-13`, including the explicit consume-after-provider-acceptance step. A separate blocked REA entry records that this execution's Library search did not re-resolve the exact 27,724-byte input DOCX, while preserving the earlier private-review recovery evidence. The schema tests assert these current IDs and the no-real-Meta-send boundary.
+
+
+## 13 November 2026 — REA fixture corrections
+
+The first current-master REA run found two fixture issues, not runtime failures: a non-repository Files search label was used where the schema requires a repository source path, and an extra array comma created a skipped step. The REA source now points to the public historical acceptance handoff, and the provider-acceptance step is a real ordered item. The next exact-head Plan/REA run must confirm the correction.
