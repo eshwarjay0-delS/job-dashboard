@@ -5,6 +5,8 @@ import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 import { recipients, attachments, encodeGmailMessage } from '../../src/lib/gmail-message.ts'
+import { toWorkerNotifyOwner } from '../../src/lib/notify-rules.ts'
+import { hasCronBearer } from '../../src/lib/cronAuth.ts'
 
 const nodeRequire = createRequire(import.meta.url)
 const routeSource = readFileSync(new URL('../../src/app/api/gmail-send/route.ts', import.meta.url), 'utf8')
@@ -196,4 +198,58 @@ test('Calendar sync fails closed when the selected account is disconnected; it d
   assert.equal(response.body.events.length, 0)
   assert.deepEqual(h.calls.tokens, [{ userId: 'user-1', accountId: 'acct-b' }])
   assert.equal(h.calls.fetch.length, 0)
+})
+
+
+const notifyExportSource = readFileSync(new URL('../../src/app/api/gmail/notify-rules/export/route.ts', import.meta.url), 'utf8')
+const updateTickSource = readFileSync(new URL('../../src/app/api/gmail/updates/tick/route.ts', import.meta.url), 'utf8')
+
+test('worker notification rules retain owner and receiving inbox identity', () => {
+  const first = toWorkerNotifyOwner('user-a', [
+    { account: 'One@Example.com', email: 'Recruiter@Agency.com', mode: 'always' },
+    { account: 'Two@Example.com', email: 'Recruiter@Agency.com', mode: 'never' },
+  ])
+  const second = toWorkerNotifyOwner('user-b', [
+    { account: 'one@example.com', email: 'recruiter@agency.com', mode: 'never' },
+  ])
+  assert.deepEqual(first, {
+    ownerId: 'user-a',
+    rules: [
+      { account: 'one@example.com', email: 'recruiter@agency.com', mode: 'always' },
+      { account: 'two@example.com', email: 'recruiter@agency.com', mode: 'never' },
+    ],
+  })
+  assert.deepEqual(second, {
+    ownerId: 'user-b',
+    rules: [{ account: 'one@example.com', email: 'recruiter@agency.com', mode: 'never' }],
+  })
+  assert.notDeepEqual(first, second)
+})
+
+test('cron bearer authorization is constant-time and fails closed on missing or short secrets', () => {
+  const secret = 'long-enough-test-secret'
+  assert.equal(hasCronBearer(`Bearer ${secret}`, secret), true)
+  assert.equal(hasCronBearer('Bearer wrong-secret', secret), false)
+  assert.equal(hasCronBearer(null, secret), false)
+  assert.equal(hasCronBearer(`Bearer ${secret}`, 'short'), false)
+})
+
+test('notify export is private, owner-scoped and disabled until scheduler authorization exists', () => {
+  assert.match(notifyExportSource, /GMAIL_UPDATES_SCHEDULER_ENABLED/)
+  assert.match(notifyExportSource, /CRON_SECRET/)
+  assert.match(notifyExportSource, /hasCronBearer/)
+  assert.match(notifyExportSource, /toWorkerNotifyOwner/)
+  assert.doesNotMatch(notifyExportSource, /mergePublicRules/)
+  assert.match(notifyExportSource, /private, no-store/)
+  assert.doesNotMatch(notifyExportSource, /public, max-age/)
+})
+
+test('background tick refuses work before storage scan or delivery until flag and template are configured', () => {
+  const gate = updateTickSource.indexOf('GMAIL_UPDATES_SCHEDULER_ENABLED')
+  const list = updateTickSource.indexOf('blob.list')
+  const delivery = updateTickSource.indexOf('deliverInboxUpdates')
+  assert.ok(gate >= 0 && gate < list && gate < delivery)
+  assert.match(updateTickSource, /WHATSAPP_GMAIL_UPDATE_TEMPLATE/)
+  assert.match(updateTickSource, /status:503/)
+  assert.match(updateTickSource, /hasCronBearer/)
 })
