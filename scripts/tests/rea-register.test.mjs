@@ -105,5 +105,7 @@ test('17 Oct source recovery REA record keeps private artifact locators out of t
  assert.doesNotMatch(publicRecord, /\b\d{13}\b/)
  assert.doesNotMatch(publicRecord, /\.docx/i)
  assert.doesNotMatch(publicRecord, /Library ZIP|J_Eshwar_44|Resume_Inventory\.csv|Gmail message retrieved/i)
+ assert.doesNotMatch(publicRecord, /CISSP|CCSK|Security\\+|PenTest\\+|AZ-500|CISM|CRISC|CISA|CCSP|AWS Security Specialty|Ethereum|Hyperledger Besu|Canton|Sol/i)
+ assert.doesNotMatch(publicRecord, /@/)
  assert.ok(entry.sources.every(source => !source.path || existsSync(path.join(root, source.path))))
 })
