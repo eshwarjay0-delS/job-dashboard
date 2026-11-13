@@ -12,17 +12,19 @@ const {
   CAPABILITIES_TIMEOUT_MS,
 } = require("../auth-disabled.cjs");
 
-test("a local default does not skip sign-in; only false forces today's login", () => {
+test("false, empty, and unset do not force sign-in; only the confirmed-off value does", () => {
   assert.equal(envForcesSignIn({}), false);
   assert.equal(envForcesSignIn({ AUTH_DISABLED: "" }), false);
   assert.equal(envForcesSignIn({ AUTH_DISABLED: "true" }), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "false" }), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "FALSE" }), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "0" }), false);
+  assert.equal(envForcesSignIn({ NEXT_PUBLIC_AUTH_DISABLED: "off" }), false);
+  assert.equal(envForcesSignIn({ KOMPAS_AUTH_DISABLED: "no" }), false);
+  assert.equal(envForcesSignIn({ AUTH_DISABLED: "off-confirmed-by-eshwar" }), true);
   assert.equal(shouldSkipSignIn({ env: {}, body: undefined }), false);
-  assert.equal(envForcesSignIn({ AUTH_DISABLED: "false" }), true);
-  assert.equal(envForcesSignIn({ AUTH_DISABLED: "FALSE" }), true);
-  assert.equal(envForcesSignIn({ AUTH_DISABLED: "0" }), true);
-  assert.equal(envForcesSignIn({ NEXT_PUBLIC_AUTH_DISABLED: "off" }), true);
-  assert.equal(envForcesSignIn({ KOMPAS_AUTH_DISABLED: "no" }), true);
-  assert.equal(shouldSkipSignIn({ env: { AUTH_DISABLED: "false" }, body: { authDisabled: true } }), false);
+  assert.equal(shouldSkipSignIn({ env: { AUTH_DISABLED: "false" }, body: { authDisabled: true } }), true);
+  assert.equal(shouldSkipSignIn({ env: { AUTH_DISABLED: "off-confirmed-by-eshwar" }, body: { authDisabled: true } }), false);
 });
 
 test("server says authDisabled true means skip sign-in", () => {
@@ -58,6 +60,9 @@ test("readServerAuthDisabled skips only on a 200 body with authDisabled true", a
   }), false);
   assert.equal(await readServerAuthDisabled({
     origin, env: { AUTH_DISABLED: "false" }, fetch: trueFetch,
+  }), true);
+  assert.equal(await readServerAuthDisabled({
+    origin, env: { AUTH_DISABLED: "off-confirmed-by-eshwar" }, fetch: trueFetch,
   }), false);
   assert.ok(CAPABILITIES_TIMEOUT_MS <= 5000);
 });

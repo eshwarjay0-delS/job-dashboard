@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
-import { attachDisabledAuthFallback, hasSupabaseAuthMaterial, isAuthDisabled } from "@/lib/authDisabled";
+import { attachDisabledAuthFallback, hasOwnerSkipCookie, hasSupabaseAuthMaterial, isAuthDisabled } from "@/lib/authDisabled";
 import { softenSupabaseDataAccess } from "@/lib/supabaseRestriction";
 
 type ServerClient = ReturnType<typeof createServerClient>;
@@ -35,11 +35,12 @@ export async function createClient(): Promise<ServerClient> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as ServerClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled(), force: isAuthDisabled() })) as ServerClient;
   }
 
   const cookieStore = await cookies();
   const cookiesOnRequest = cookieStore.getAll();
+  const lifted = isAuthDisabled() || hasOwnerSkipCookie(cookiesOnRequest);
   // Skip-login must not call Supabase Auth. A leftover cookie would otherwise
   // wait on HTTP 402 exceed_egress_quota before any page or session can start.
   const client = createServerClient(url, key, {
@@ -60,7 +61,8 @@ export async function createClient(): Promise<ServerClient> {
     },
   });
   return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
-    skipNetwork: isAuthDisabled() || !hasSupabaseAuthMaterial({ cookies: cookiesOnRequest }),
+    skipNetwork: lifted || !hasSupabaseAuthMaterial({ cookies: cookiesOnRequest }),
+    force: lifted,
   })) as ServerClient;
 }
 
@@ -72,20 +74,22 @@ export async function createClientFromRequest(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as ServerClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled(), force: isAuthDisabled() })) as ServerClient;
   }
 
   const authorization = request.headers.get("authorization");
   if (authorization === null) return createClient();
   const bearer = authorization.match(/^Bearer\s+(\S+)$/i)?.[1];
   if (!bearer) {
-    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as ServerClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled(), force: isAuthDisabled() })) as ServerClient;
   }
 
+  const lifted = isAuthDisabled();
   const client = createSupabaseClient(url, key, {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
   });
   return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
-    skipNetwork: isAuthDisabled() || !hasSupabaseAuthMaterial({ authorization }),
+    skipNetwork: lifted || !hasSupabaseAuthMaterial({ authorization }),
+    force: lifted,
   })) as ServerClient;
 }

@@ -1,20 +1,16 @@
 "use strict";
 
 // Desktop follows the website's /api/kompas/capabilities.authDisabled flag.
-// A local default never skips sign-in on its own: production today still
-// requires login, and origin/master does not send this field.
-// AUTH_DISABLED / NEXT_PUBLIC_AUTH_DISABLED / KOMPAS_AUTH_DISABLED='false'
-// forces today's Chrome sign-in. A local default or an explicit true does
-// not skip on its own; skip only when the server returns authDisabled === true.
-// One request at startup; no polling. This matches the website's fail-closed
-// default (unset means auth on).
+// Eshwar requires skip-login. Do not change without his confirmation in Grok Bot chat.
+// AUTH_DISABLED / NEXT_PUBLIC_AUTH_DISABLED / KOMPAS_AUTH_DISABLED force the
+// Chrome sign-in only when the value is exactly "off-confirmed-by-eshwar".
+// "false", empty, and unset do not. Skip when the server returns authDisabled === true.
+// One request at startup; no polling.
 const CAPABILITIES_TIMEOUT_MS = 4000;
 
 function envForcesSignIn(env = process.env) {
   const raw = env.AUTH_DISABLED ?? env.NEXT_PUBLIC_AUTH_DISABLED ?? env.KOMPAS_AUTH_DISABLED;
-  if (raw == null || String(raw).trim() === "") return false;
-  const value = String(raw).trim().toLowerCase();
-  return value === "false" || value === "0" || value === "off" || value === "no";
+  return raw === "off-confirmed-by-eshwar";
 }
 
 // Strict: only the boolean true from the server lifts login. Missing, false,

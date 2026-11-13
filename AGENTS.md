@@ -8,6 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Skip-login stays on
+
+Eshwar requires skip-login. Do not change without his confirmation in Grok Bot chat. The site opens as eshwarjay05@gmail.com (Supabase user 67f02d95-f7fe-4058-9b0d-9363221e7c61). `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` turn that off only when the value is exactly `off-confirmed-by-eshwar`. Unset, empty, and `false` stay on. Do not set those variables to false, do not add a production check that ignores them, and do not call the Vercel env API to turn skip-login off. Admin routes stay behind a real session or the `mf_admin` cookie. The synthetic owner is not an admin. The unmerged Google-only policy on `fix/google-only-login-production-auth-20261113` (commits 6e7a2fc8, fe649106, c9edd57a) is not in force.
+
 ## Finish means committed, deployed, and live
 
 Owner, 29 Oct 2026: *"Commit, deployed and live?"* then *"Always do that remember. don't make me repeat."*
@@ -37,6 +41,6 @@ MarketFit is the Next.js app in this repository. `npm ci` installs it and is saf
 
 Open the app at `http://localhost:3000`. Next.js 16 blocks dev assets when the host is `127.0.0.1`, so the page renders but buttons do not run. `GET /api/health` works on either host and returns `{ ok: true, app: "MarketFit" }`.
 
-Supabase, Gmail, WhatsApp, R2, and model keys are not required to boot. Without `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, nobody can sign in. `/dashboard` calls `/api/onboarding/status`, gets 401, and sends the browser to `/login`. The public action that works with no secrets is the landing-page waitlist (Resume Pack, Job Hunt, or Interview Pro). It appends a row to `data/waitlist.jsonl`, which git ignores. `POST /api/tailor` still needs a signed-in user and a model key.
+Supabase, Gmail, WhatsApp, R2, and model keys are not required to boot. Skip-login opens `/dashboard` as the Houston owner without a Google round trip. The public action that works with no secrets is the landing-page waitlist (Resume Pack, Job Hunt, or Interview Pro). It appends a row to `data/waitlist.jsonl`, which git ignores. `POST /api/tailor` still needs a signed-in user and a model key. Admin routes still reject the synthetic owner.
 
 `npm run check` runs typecheck, lint, autofill, and application merge. `npm run build` is the production build. `npm run test:hardening` is the broader suite. One case in `scripts/tests/mail-overview.test.mjs` fails on current master: it expects `<StandingSection account={filter} />` before the text `Filter inbox` in `src/app/dashboard/overview/page.tsx`, and the page no longer matches that source. The other 978 tests pass.

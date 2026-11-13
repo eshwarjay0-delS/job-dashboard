@@ -36,7 +36,7 @@ The desktop schedules the next refresh for shortly before the access token expir
 
 ## Skip-login
 
-When `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `true`, the site does not show `/login` and does not call Supabase Auth. The person is the Houston account `eshwarjay05@gmail.com`, using `AUTH_DISABLED_USER_ID` when that variable is set. Logout, a failed refresh, and HTTP 402 `exceed_egress_quota` do not send them to `/login`. Kompas Start still runs. MarketFit opens without the setup gate. Admin pages still need a real session. Setting the flag to anything other than `true` restores the sign-in flow below.
+Owner mode is on unless `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `off-confirmed-by-eshwar`. Unset, empty, `false`, and `true` all leave it on. The site does not show `/login` and does not call Supabase Auth. The person is the Houston account `eshwarjay05@gmail.com`. The id is `AUTH_DISABLED_USER_ID` when that variable is set, otherwise `67f02d95-f7fe-4058-9b0d-9363221e7c61`. Logout, a failed refresh, and HTTP 402 `exceed_egress_quota` do not send them to `/login`. Kompas Start still runs. MarketFit opens without the setup gate. Admin pages still need a real session or the `mf_admin` cookie. The synthetic owner is not an admin. Do not set the flags to `false`.
 
 ## After every session is revoked
 

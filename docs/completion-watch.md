@@ -8,13 +8,17 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — skip-login is permanent in code
+
+Owner Eshwar: the app opens as eshwarjay05@gmail.com with no sign-in screen. Owner mode is on unless `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `off-confirmed-by-eshwar`. `false`, empty, and unset stay on. The login card keeps a Skip sign-in button that sets the synthetic-owner cookie and opens `/dashboard`. Admin stays 401 for that owner. The Google-only rule that set the production flags to false lives on unmerged branch `fix/google-only-login-production-auth-20261113` (policy commits 6e7a2fc8, fe649106, c9edd57a). It is not the rule. Do not call the Vercel env API to turn skip-login off.
+
 ## 13 November 2026 — answer length and the stuttering telecom card
 
 Owner Eshwar, 11:03 PM and 11:04 PM CT, on production. The telecom card prepended `First, -` onto bullets that already started with First, Then, or Finally, drew a stray ellipsis, and hid the question. Both formatters now keep one connector. The question box stays rendered. Have-you-done, how-have-you-used, and how-do-you use the measured word bands, and Long raises the spoken ceiling. Local focused suites passed. Not merged in this note. No ship marker on the branch commit.
 
 ## 13 November 2026 — Skip login button
 
-Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.
+Superseded the same day by the permanent skip-login note above. The earlier button waited for AUTH_DISABLED to be exactly true. That is no longer the rule.
 
 ## 13 November 2026 — rounds 36-55 and the desktop shell
 
@@ -62,7 +66,7 @@ After the logout fix was on the production alias, the desktop loopback still nam
 
 ## 12 November 2026 — Sign in again after a full logout
 
-Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. AUTH_DISABLED stays false in production. Merged as e8ce442051c1cbee1fbbeb6a26aa75200a1ddf97. GitHub production deployment 7745002467 completed. The alias /version.json commitFull matches that SHA. Unsigned refresh returned 401 invalid_grant, not 402. No live Google round trip.
+Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. The line in this note that said AUTH_DISABLED stays false is superseded (13 Nov 2026): skip-login stays on unless the value is exactly off-confirmed-by-eshwar. Merged as e8ce442051c1cbee1fbbeb6a26aa75200a1ddf97. GitHub production deployment 7745002467 completed. The alias /version.json commitFull matches that SHA. Unsigned refresh returned 401 invalid_grant, not 402. No live Google round trip.
 
 ## 11 November 2026 — Desktop sign-in
 

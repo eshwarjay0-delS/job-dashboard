@@ -23,12 +23,13 @@ import { catalogTag } from "../../src/lib/kompasCatalogPoll.ts"
 
 const { create } = createRequire(import.meta.url)("../../public/kompas/account-sync.js")
 
-test("login-off uses the free store only when AUTH_DISABLED is exactly true", () => {
-  assert.equal(shouldUseFreeSessionStore({}), false)
-  assert.equal(shouldUseFreeSessionStore({ AUTH_DISABLED: "false" }), false)
-  assert.equal(shouldUseFreeSessionStore({ AUTH_DISABLED: "1" }), false)
+test("login-off uses the free store unless skip-login was explicitly turned off", () => {
+  assert.equal(shouldUseFreeSessionStore({}), true)
+  assert.equal(shouldUseFreeSessionStore({ AUTH_DISABLED: "false" }), true)
+  assert.equal(shouldUseFreeSessionStore({ AUTH_DISABLED: "1" }), true)
   assert.equal(shouldUseFreeSessionStore({ AUTH_DISABLED: "true" }), true)
   assert.equal(shouldUseFreeSessionStore({ NEXT_PUBLIC_AUTH_DISABLED: "true" }), true)
+  assert.equal(shouldUseFreeSessionStore({ AUTH_DISABLED: "off-confirmed-by-eshwar" }), false)
   assert.equal(isFreeSessionStoreConfigured({}), false)
   assert.equal(isFreeSessionStoreConfigured({ BLOB_STORE_ID: "store_test" }), true)
 })

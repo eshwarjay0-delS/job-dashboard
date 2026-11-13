@@ -55,8 +55,9 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
 const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => app.getPath("userData"), origin: MARKETFIT_API_ORIGIN });
-// Skip sign-in only after the server says authDisabled === true, or never if
-// AUTH_DISABLED=false. Default (helpers absent in a test slice) is today's login.
+// Skip sign-in when the server says authDisabled === true. A local
+// AUTH_DISABLED=false does not force the sign-in card. Only the exact value
+// off-confirmed-by-eshwar does. Default (helpers absent) follows the server.
 let skipSignInFromServer = false;
 let serverSaidAuthDisabled = false;
 let recoveredSignInFrom401 = false;

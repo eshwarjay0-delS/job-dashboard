@@ -1,17 +1,25 @@
-// Reversible login switch. Fail-closed: AUTH_DISABLED or
-// NEXT_PUBLIC_AUTH_DISABLED lifts sign-in only when the value is exactly
-// "true". Unset, "false", "1", "on", "yes", or any other value keeps today's login.
+// Eshwar requires skip-login. Do not change without his confirmation in Grok Bot chat.
+// Owner mode is on in every environment. AUTH_DISABLED or NEXT_PUBLIC_AUTH_DISABLED
+// turns it off only when the value is exactly "off-confirmed-by-eshwar".
+// Unset, empty, "false", and "true" all leave owner mode on.
 //
 // Machine-to-machine secrets (CRON_SECRET, WATCHDOG_CRON_SECRET,
 // AUTO_REPLY_CRON_SECRET, WhatsApp, Gmail crawl verification) stay required.
 // This flag only covers people signing in.
 // Login-off owner is the Houston profile. Never the Saint Louis address.
-// The auth.users id is supplied only by AUTH_DISABLED_USER_ID (env), never
-// hardcoded and never looked up at runtime (no Supabase egress).
+// When AUTH_DISABLED_USER_ID is unset, the id is the Houston auth.users id.
+// It is not looked up at runtime (no Supabase egress).
 export const LOGIN_OFF_OWNER_EMAIL = "eshwarjay05@gmail.com"
 const SAINT_LOUIS_PROFILE_EMAIL = "jayeshwar44@gmail.com"
 
-export const AUTH_DISABLED_FALLBACK_USER_ID = "00000000-0000-4000-8000-000000000001"
+export const AUTH_DISABLED_OFF = "off-confirmed-by-eshwar"
+export const AUTH_DISABLED_FALLBACK_USER_ID = "67f02d95-f7fe-4058-9b0d-9363221e7c61"
+
+// Same token the in-memory synthetic session uses (access_token "auth-disabled").
+// The Skip sign-in route sets this cookie so the synthetic path still runs if
+// owner mode was turned off with the exact string above.
+export const OWNER_SKIP_COOKIE = "mf_owner_session"
+export const OWNER_SKIP_VALUE = "auth-disabled"
 
 type Env = Record<string, string | undefined>
 
@@ -20,10 +28,42 @@ function readFlag(env: Env, name: string): string | undefined {
   return env[name]
 }
 
+function browserHasOwnerSkip(): boolean {
+  if (typeof document === "undefined" || typeof document.cookie !== "string") return false
+  const needle = OWNER_SKIP_COOKIE + "=" + OWNER_SKIP_VALUE
+  return document.cookie.split(";").some(part => part.trim() === needle)
+}
+
 /** True when the app should not require a person to sign in. */
 export function isAuthDisabled(env: Env = process.env): boolean {
+  // Eshwar requires skip-login. Do not change without his confirmation in Grok Bot chat.
   const raw = readFlag(env, "AUTH_DISABLED") ?? readFlag(env, "NEXT_PUBLIC_AUTH_DISABLED")
-  return raw === "true"
+  if (raw !== AUTH_DISABLED_OFF) return true
+  return browserHasOwnerSkip()
+}
+
+export function hasOwnerSkipCookie(cookies: { name: string; value: string }[] | undefined): boolean {
+  return (cookies || []).some(cookie => cookie.name === OWNER_SKIP_COOKIE && cookie.value === OWNER_SKIP_VALUE)
+}
+
+export function ownerSkipLocation(requestUrl: string): URL {
+  return new URL("/dashboard", requestUrl)
+}
+
+export function ownerSkipCookieOptions(): {
+  httpOnly: false
+  secure: boolean
+  sameSite: "lax"
+  path: "/"
+  maxAge: number
+} {
+  return {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 365 * 24 * 60 * 60,
+  }
 }
 
 export function isSyntheticDisabledAuthUser(user: unknown): boolean {
@@ -32,20 +72,10 @@ export function isSyntheticDisabledAuthUser(user: unknown): boolean {
   return meta?.auth_disabled_synthetic === true
 }
 
-function firstWhatsAppOwnerUserId(env: Env = process.env): string {
-  const items = String(env.WHATSAPP_OWNER_NUMBERS || "").split(",").map(s => s.trim()).filter(Boolean)
-  for (const entry of items) {
-    const userId = entry.split("=")[1]?.trim()
-    if (userId) return userId
-  }
-  return ""
-}
-
-// Data in Supabase is keyed by auth.users.id. Prefer AUTH_DISABLED_USER_ID,
-// then existing non-Supabase fallbacks (OWNER_USER_ID, a WhatsApp owner id,
-// then the built-in fallback). Email is AUTH_DISABLED_USER_EMAIL, defaulting
-// to the Houston address, then AUTH_DISABLED_EMAIL / OWNER_EMAIL. The Saint
-// Louis profile is never selected here.
+// Data in Supabase is keyed by auth.users.id. AUTH_DISABLED_USER_ID when set,
+// otherwise the Houston id. Email is AUTH_DISABLED_USER_EMAIL when set,
+// otherwise the Houston address, then AUTH_DISABLED_EMAIL / OWNER_EMAIL.
+// The Saint Louis profile is never selected here.
 export function disabledOwnerEmail(env: Env = process.env): string {
   for (const name of ["AUTH_DISABLED_USER_EMAIL", "AUTH_DISABLED_EMAIL", "OWNER_EMAIL"] as const) {
     const raw = String(readFlag(env, name) ?? "").trim().toLowerCase()
@@ -56,10 +86,7 @@ export function disabledOwnerEmail(env: Env = process.env): string {
 
 export function disabledOwnerUser(env: Env = process.env): { id: string; email: string } {
   const email = disabledOwnerEmail(env)
-  const id = String(env.AUTH_DISABLED_USER_ID || "").trim()
-    || String(env.OWNER_USER_ID || "").trim()
-    || firstWhatsAppOwnerUserId(env)
-    || AUTH_DISABLED_FALLBACK_USER_ID
+  const id = String(env.AUTH_DISABLED_USER_ID || "").trim() || AUTH_DISABLED_FALLBACK_USER_ID
   return { id, email }
 }
 
@@ -125,10 +152,10 @@ type AuthClient = {
 // credentials at all (Hobby egress).
 export function attachDisabledAuthFallback<T extends AuthClient>(
   client: T,
-  options: { skipNetwork?: boolean; env?: Env } = {},
+  options: { skipNetwork?: boolean; env?: Env; force?: boolean } = {},
 ): T {
   const env = options.env || process.env
-  if (!isAuthDisabled(env)) return client
+  if (!options.force && !isAuthDisabled(env)) return client
   const auth = client.auth
   const originalGetUser = auth.getUser.bind(auth)
   const originalGetSession = auth.getSession.bind(auth)

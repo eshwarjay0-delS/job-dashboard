@@ -41,7 +41,7 @@ export function createClient(): BrowserClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled() })) as BrowserClient;
+    return softenSupabaseDataAccess(attachDisabledAuthFallback(stubClient() as never, { skipNetwork: isAuthDisabled(), force: isAuthDisabled() })) as BrowserClient;
   }
   const client = createBrowserClient(url, key);
   // Skip-login never asks Supabase Auth. A live cookie session is kept only
@@ -49,5 +49,6 @@ export function createClient(): BrowserClient {
   // when that session is missing.
   return softenSupabaseDataAccess(attachDisabledAuthFallback(client as never, {
     skipNetwork: isAuthDisabled(),
+    force: isAuthDisabled(),
   })) as BrowserClient;
 }

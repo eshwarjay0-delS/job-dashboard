@@ -30,21 +30,26 @@ function withEnv(vars, fn) {
   }
 }
 
-test('AUTH_DISABLED is unset, false, or true only: anything else keeps today\'s login', () => {
+test('unset, false, and true keep owner mode; only off-confirmed-by-eshwar turns it off', () => {
   withEnv({}, () => {
-    assert.equal(isAuthDisabled({}), false)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: '' }), false)
-    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: '' }), false)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), false)
-    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'false' }), false)
+    assert.equal(isAuthDisabled({}), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: '' }), true)
+    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: '' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), true)
+    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'false' }), true)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'true' }), true)
     assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'true' }), true)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'TRUE' }), false)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: '1' }), false)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'on' }), false)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'yes' }), false)
-    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'TRUE' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: '1' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'on' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'yes' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), true)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'off-confirmed-by-eshwar' }), false)
+    assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'off-confirmed-by-eshwar' }), false)
+    assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false', NEXT_PUBLIC_AUTH_DISABLED: 'off-confirmed-by-eshwar' }), true)
   })
+  const src = readFileSync(new URL('../../src/lib/authDisabled.ts', import.meta.url), 'utf8')
+  assert.match(src, /Eshwar requires skip-login\. Do not change without his confirmation in Grok Bot chat\./)
 })
 
 test('owner identity uses the Houston email and AUTH_DISABLED_USER_ID, never Saint Louis', () => {
@@ -53,6 +58,7 @@ test('owner identity uses the Houston email and AUTH_DISABLED_USER_ID, never Sai
   assert.equal(fallback.email, LOGIN_OFF_OWNER_EMAIL)
   assert.equal(fallback.email, 'eshwarjay05@gmail.com')
   assert.equal(fallback.id, AUTH_DISABLED_FALLBACK_USER_ID)
+  assert.equal(fallback.id, houstonId)
   assert.notEqual(LOGIN_OFF_OWNER_EMAIL, PRODUCT_OWNER_EMAIL)
 
   assert.deepEqual(
@@ -61,11 +67,11 @@ test('owner identity uses the Houston email and AUTH_DISABLED_USER_ID, never Sai
   )
   assert.deepEqual(
     disabledOwnerUser({ OWNER_USER_ID: 'user-from-owner-env' }),
-    { id: 'user-from-owner-env', email: LOGIN_OFF_OWNER_EMAIL },
+    { id: houstonId, email: LOGIN_OFF_OWNER_EMAIL },
   )
   assert.deepEqual(
     disabledOwnerUser({ WHATSAPP_OWNER_NUMBERS: '+1 (314) 555-0100=wa-owner-uuid, +15555550111' }),
-    { id: 'wa-owner-uuid', email: LOGIN_OFF_OWNER_EMAIL },
+    { id: houstonId, email: LOGIN_OFF_OWNER_EMAIL },
   )
   assert.equal(
     disabledOwnerUser({ AUTH_DISABLED_USER_EMAIL: 'EshwarJay05@Gmail.com', AUTH_DISABLED_USER_ID: houstonId }).email,
@@ -79,7 +85,7 @@ test('owner identity uses the Houston email and AUTH_DISABLED_USER_ID, never Sai
   assert.equal(disabledOwnerUser({ AUTH_DISABLED_EMAIL: 'jayeshwar44@gmail.com' }).email, LOGIN_OFF_OWNER_EMAIL)
   assert.equal(disabledOwnerUser({ OWNER_EMAIL: 'jayeshwar44@gmail.com' }).email, LOGIN_OFF_OWNER_EMAIL)
   const src = readFileSync(new URL('../../src/lib/authDisabled.ts', import.meta.url), 'utf8')
-  assert.doesNotMatch(src, /67f02d95-f7fe-4058-9b0d-9363221e7c61/)
+  assert.match(src, /67f02d95-f7fe-4058-9b0d-9363221e7c61/)
   assert.doesNotMatch(src, /listUsers|getUserByEmail|from\("profiles"\)/)
 })
 
@@ -91,7 +97,7 @@ test('login-off routes /login and /auth into the app and never opens Supabase OA
   assert.equal(safeDisabledAuthNext('https://evil.example/login'), '/dashboard')
 
   const session = readFileSync(new URL('../../src/lib/supabase/update-session.ts', import.meta.url), 'utf8')
-  assert.match(session, /if \(isAuthDisabled\(\)\)/)
+  assert.match(session, /if \(isAuthDisabled\(\) \|\| hasOwnerSkipCookie\(request\.cookies\.getAll\(\)\)\)/)
   assert.match(session, /safeDisabledAuthNext/)
   assert.doesNotMatch(session, /Leave \/login/)
   assert.doesNotMatch(session, /Skip login/)
@@ -104,11 +110,14 @@ test('login-off routes /login and /auth into the app and never opens Supabase OA
   }
 
   const login = readFileSync(new URL('../../src/app/login/page.tsx', import.meta.url), 'utf8')
-  assert.match(login, /Skip login/)
-  assert.match(login, /\{skipLogin &&/)
+  const googleAt = login.indexOf('Continue with Google')
+  const skipAt = login.indexOf('Skip sign-in')
+  assert.ok(googleAt > 0 && skipAt > googleAt)
+  assert.match(login, /action="\/api\/auth\/skip-sign-in"/)
+  assert.match(login, /method="post"/)
+  assert.doesNotMatch(login, /\{skipLogin &&/)
   assert.match(login, /serverReportsAuthDisabled\(\)/)
   assert.match(login, /window\.location\.replace\("\/dashboard"\)/)
-  assert.match(login, /window\.location\.assign\("\/dashboard"\)/)
   assert.doesNotMatch(login, /useState\(true\)/)
   const google = readFileSync(new URL('../../src/lib/google-auth.ts', import.meta.url), 'utf8')
   assert.match(google, /if \(await serverReportsAuthDisabled\(\)\)/)
@@ -258,20 +267,20 @@ test('Kompas skips keepAuthAlive and the login wall when auth is disabled', () =
 })
 
 
-test('capabilities reports authDisabled from the flag, which defaults to false', () => {
+test('capabilities reports authDisabled from the flag, which defaults to owner mode', () => {
   const route = readFileSync(new URL('../../src/app/api/kompas/capabilities/route.ts', import.meta.url), 'utf8')
   assert.match(route, /authDisabled: isAuthDisabled\(\)/)
-  assert.equal(isAuthDisabled({}), false)
+  assert.equal(isAuthDisabled({}), true)
   assert.equal(isAuthDisabled({ AUTH_DISABLED: 'true' }), true)
-  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), false)
+  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false' }), true)
+  assert.equal(isAuthDisabled({ AUTH_DISABLED: 'off-confirmed-by-eshwar' }), false)
 })
 
 
-test('auth-flag and stamp default to auth on; a missing window flag is auth on', () => {
+test('auth-flag and stamp default to skip-login; only the confirmed-off value restores sign-in', () => {
   const flag = readFileSync(new URL('../../public/kompas/auth-flag.js', import.meta.url), 'utf8')
-  assert.match(flag, /window\.KOMPAS_AUTH_DISABLED = false/)
-  assert.match(appSrc, /function isKompasAuthDisabled\(/)
-  assert.match(appSrc, /return false;/)
+  assert.match(flag, /window\.KOMPAS_AUTH_DISABLED = true/)
+  assert.match(appSrc, /function isKompasAuthDisabled\(\) \{\n  if \(typeof window !== "undefined" && typeof window\.KOMPAS_AUTH_DISABLED === "boolean"\) return window\.KOMPAS_AUTH_DISABLED;\n  return true;\n\}/)
   const stamp = readFileSync(new URL('../stamp-version.mjs', import.meta.url), 'utf8')
-  assert.match(stamp, /return raw === "true"/)
+  assert.match(stamp, /return raw !== "off-confirmed-by-eshwar"/)
 })

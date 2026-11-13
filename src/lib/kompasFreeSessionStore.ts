@@ -1,5 +1,5 @@
 // Account-scoped Kompas session catalog on a free Vercel Blob store (Hobby, $0).
-// Used only when AUTH_DISABLED is exactly "true", so login-off traffic never
+// Used when owner mode is on (the default), so login-off traffic never
 // touches the egress-restricted Supabase project. Same record shape as
 // /api/kompas/account-sessions and public/kompas/account-sync.js.
 import { isAuthDisabled } from "./authDisabled.ts"
