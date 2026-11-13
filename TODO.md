@@ -1,3 +1,7 @@
+## 2026-11-13 — Intro side-talk is not the question (visible: question box and the intro answer)
+
+A heard line like "Your introduction know, I'm not sure if I'm going to be able to get to the end of this. introduce yourself." is shown and answered as "Introduce yourself." The introduction is one paragraph. It does not get Claim or Context headings, and it does not start a bullet with "First,". Other questions still use the existing card. Not a phone click-through.
+
 ## 2026-11-13 — Skip-login is on in code (visible: /login redirects; the sign-in card keeps Skip sign-in)
 
 Owner mode is the default. `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` turn it off only when the value is exactly `off-confirmed-by-eshwar`. `false`, empty, and unset stay on. The Houston owner is eshwarjay05@gmail.com, id `67f02d95-f7fe-4058-9b0d-9363221e7c61` when `AUTH_DISABLED_USER_ID` is unset. `/login`, `/signup`, and `/auth/*` redirect to `/dashboard`. The login card shows **Skip sign-in** under Continue with Google on narrow screens too. That posts to `/api/auth/skip-sign-in`, sets the synthetic-owner cookie, and opens `/dashboard` even if owner mode is off. Admin routes still return 401 for that owner. The Google-only rule that flipped the Vercel flags to false is not on master; it is commits `6e7a2fc8`, `fe649106`, and `c9edd57a` on `fix/google-only-login-production-auth-20261113`. Desktop `envForcesSignIn` no longer treats `false` as force-sign-in. No Vercel env write in this change.
