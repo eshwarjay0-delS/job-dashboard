@@ -16,7 +16,7 @@ import { isSupabaseRestricted, softenSupabaseDataAccess } from '../../src/lib/su
 import { PRODUCT_OWNER_EMAIL } from '../../src/lib/owner.ts'
 
 function withEnv(vars, fn) {
-  const keys = ['AUTH_DISABLED', 'NEXT_PUBLIC_AUTH_DISABLED', 'AUTH_DISABLED_USER_ID', 'AUTH_DISABLED_USER_EMAIL', 'OWNER_USER_ID', 'AUTH_DISABLED_EMAIL', 'OWNER_EMAIL', 'WHATSAPP_OWNER_NUMBERS']
+  const keys = ['NODE_ENV', 'AUTH_DISABLED', 'NEXT_PUBLIC_AUTH_DISABLED', 'AUTH_DISABLED_USER_ID', 'AUTH_DISABLED_USER_EMAIL', 'OWNER_USER_ID', 'AUTH_DISABLED_EMAIL', 'OWNER_EMAIL', 'WHATSAPP_OWNER_NUMBERS']
   const previous = Object.fromEntries(keys.map(key => [key, Object.prototype.hasOwnProperty.call(process.env, key) ? process.env[key] : undefined]))
   try {
     for (const key of keys) delete process.env[key]
@@ -39,12 +39,53 @@ test('AUTH_DISABLED is unset, false, or true only: anything else keeps today\'s 
     assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'false' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'true' }), true)
     assert.equal(isAuthDisabled({ NEXT_PUBLIC_AUTH_DISABLED: 'true' }), true)
+    assert.equal(isAuthDisabled({ NODE_ENV: 'development', AUTH_DISABLED: 'true' }), true)
+    assert.equal(isAuthDisabled({ NODE_ENV: 'production', AUTH_DISABLED: 'true' }), false)
+    assert.equal(isAuthDisabled({ NODE_ENV: 'production', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), false)
+    assert.equal(isAuthDisabled({ NODE_ENV: 'production', AUTH_DISABLED: 'true', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'TRUE' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: '1' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'on' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'yes' }), false)
     assert.equal(isAuthDisabled({ AUTH_DISABLED: 'false', NEXT_PUBLIC_AUTH_DISABLED: 'true' }), false)
   })
+})
+
+test('production process environment cannot be overridden by a development test config', () => {
+  withEnv({ NODE_ENV: 'production', AUTH_DISABLED: 'true', NEXT_PUBLIC_AUTH_DISABLED: 'true' }, () => {
+    assert.equal(isAuthDisabled(), false)
+
+    const getUser = async () => ({ data: { user: null }, error: { message: 'no real session' } })
+    const getSession = async () => ({ data: { session: null }, error: { message: 'no real session' } })
+    const client = { auth: { getUser, getSession } }
+    const guarded = attachDisabledAuthFallback(client, {
+      skipNetwork: true,
+      env: { NODE_ENV: 'development', AUTH_DISABLED: 'true' },
+    })
+    assert.equal(guarded, client)
+    assert.equal(guarded.auth.getUser, getUser)
+    assert.equal(guarded.auth.getSession, getSession)
+  })
+})
+
+test('production never attaches a synthetic owner when login-off flags are true', async () => {
+  const getUser = async () => ({ data: { user: null }, error: { message: 'no real session' } })
+  const getSession = async () => ({ data: { session: null }, error: { message: 'no real session' } })
+  const client = { auth: { getUser, getSession } }
+  const guarded = attachDisabledAuthFallback(client, {
+    skipNetwork: true,
+    env: { NODE_ENV: 'production', AUTH_DISABLED: 'true', NEXT_PUBLIC_AUTH_DISABLED: 'true' },
+  })
+
+  assert.equal(guarded, client)
+  assert.equal(guarded.auth.getUser, getUser)
+  assert.equal(guarded.auth.getSession, getSession)
+  const userResult = await guarded.auth.getUser()
+  const sessionResult = await guarded.auth.getSession()
+  assert.equal(userResult.data.user, null)
+  assert.equal(sessionResult.data.session, null)
+  assert.ok(userResult.error)
+  assert.ok(sessionResult.error)
 })
 
 test('owner identity uses the Houston email and AUTH_DISABLED_USER_ID, never Saint Louis', () => {
@@ -104,12 +145,10 @@ test('login-off routes /login and /auth into the app and never opens Supabase OA
   }
 
   const login = readFileSync(new URL('../../src/app/login/page.tsx', import.meta.url), 'utf8')
-  assert.match(login, /Skip login/)
-  assert.match(login, /\{skipLogin &&/)
-  assert.match(login, /serverReportsAuthDisabled\(\)/)
-  assert.match(login, /window\.location\.replace\("\/dashboard"\)/)
-  assert.match(login, /window\.location\.assign\("\/dashboard"\)/)
-  assert.doesNotMatch(login, /useState\(true\)/)
+  assert.match(login, /signInWithOAuth/)
+  assert.match(login, /provider:"google"/)
+  assert.match(login, /Continue with Google/)
+  assert.doesNotMatch(login, /Skip login|skip-login|signInWithPassword|resetPasswordForEmail|email and password|mf-email|mf-password|serverReportsAuthDisabled/)
   const google = readFileSync(new URL('../../src/lib/google-auth.ts', import.meta.url), 'utf8')
   assert.match(google, /if \(await serverReportsAuthDisabled\(\)\)/)
   assert.match(google, /signInWithOAuth/)
