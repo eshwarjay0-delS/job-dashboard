@@ -1,5 +1,10 @@
 # MFit Completion Watch
 
+## 13 November 2026 — WhatsApp pair-CAS regression fixture repair
+
+The exact-head full CI on PR #368 head `325e4def14e3f91951eb8a36a9b3325c67ee2ade` failed only in `scripts/tests/whatsapp-single-request.test.mjs`: 51/52 passed. The test mock omitted `saveTailored`, so the route threw before the intended provider-message-ID plus signed-callback-rejection case. Commit `6925ebdd3375c46e639c50c00fdebe5d48781ce2` adds the missing no-op test stub; no runtime behavior changed. Fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are required on that new head. PR #368 remains DRAFT, and its base `9032d5bd` is three commits behind current master `024177889d092f30aaeada20fab649aa41c9d1f4`; restack while preserving the newer Kompas changes. The authorized protected preview still requires private `KOMPAS_VERCEL_API_TOKEN`. No production deploy, real WhatsApp send, R2 write or historical replay occurred.
+
+
 ## 13 November 2026 — pair consumption moved behind provider acceptance
 
 Continue: verify the approved WhatsApp offline fallback and lossless pair CAS in PR #368. Code review found a real ordering defect in the restack: the normal rewrite path consumed the matching JD/resume pair before tailoring/upload, and the fallback path consumed even when the signed delivery callback rejected the document. The code now consumes only after markResumeDocumentAccepted confirms provider acceptance; rejected uploads and callback-scheduled retries retain the pair. New mocked tests cover both tailored+fallback HTTP rejection and a message-ID-then-callback-rejection case.
