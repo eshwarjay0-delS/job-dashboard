@@ -36,6 +36,8 @@ test('candidate-confirmed skills may be mapped into existing projects without ch
   assert.match(prompt, /never borrow another account's resume or profile/)
   assert.match(prompt, /new employer, project, title, date, location, contact, metric, credential/)
   assert.match(prompt, /conflicts with resume education, employment dates, employer, tenure or credential status/)
+  assert.match(prompt, /JOB DESCRIPTION \(target requirements, not candidate evidence\)/)
+  assert.doesNotMatch(prompt, /ORIGINAL SUBMITTED TEXT/)
 })
 
 
