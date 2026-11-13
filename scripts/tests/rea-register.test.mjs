@@ -73,6 +73,6 @@ test('current WhatsApp offline-pair CAS restack is recorded separately from hist
  const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-current-master-restack-2026-11-13-watch12')
  assert.ok(entry)
  assert.equal(entry.state,'Implemented, verification pending')
- assert.match(entry.limits,/No real Meta send/)
+ assert.match(entry.limits,/no real Meta send/i)
  assert.match(entry.next,/exact-head full CI/)
 })

@@ -48,3 +48,8 @@ The first documentation correction did not satisfy the exact assertion: the new 
 
 
 The current-master restack branch is tracked by PR #362. The previous exact-head REA assertion mismatch was corrected in commit d931eb5b7a42c40ba1b4dbae3fe3b5865da5f15a; fresh checks must be attached to the latest PR head, not reused from PR #358 or the earlier restack heads.
+
+
+## 13 November 2026 — case-insensitive REA assertion
+
+The second Plan/REA run `43425775972` failed because the REA limit used lowercase `no real Meta send`, while the test asserted uppercase `No real Meta send`. The recorded limit is accurate; the test is changed to case-insensitive matching. This does not relax the no-send requirement. All checks must rerun on the next exact head.

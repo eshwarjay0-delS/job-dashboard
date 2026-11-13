@@ -428,3 +428,8 @@ PR #360 head 3a3dcb41f35b95690c38d0a74f63723a006c4e79 is based on current master
 ## 13 November 2026 — second WhatsApp Plan/REA assertion correction
 
 The corrected PR #361 head 5bf054926e7cb7eaadb91f585b1f73d99a995123 passed WhatsApp recovery 43425775852 and Kompas baseline 43425775871. Plan/REA 43425775972 repeated the single assertion failure because the new REA limit said `No production R2 write, model call, real Meta send` rather than the test's expected contiguous phrase `No real Meta send`; the other 13 tests passed. The REA limit is being changed to the explicit phrase and will be rerun on a fresh exact head. Full CI 43425775853 is still running. Do not call the restack green yet.
+
+
+## 13 November 2026 — third WhatsApp Plan/REA assertion correction
+
+The second Plan/REA failure on PR #362 head d931eb5b7a42c40ba1b4dbae3fe3b5865da5f15a was a case-sensitive test mismatch: the REA limit correctly said `no real Meta send` in lowercase after a preceding clause, while the test expected uppercase `No real Meta send`. The assertion is now case-insensitive; no product behavior or evidence was weakened. The next exact head must rerun Plan/REA, WhatsApp recovery, Kompas baseline and full CI. Earlier successful workflows on older heads are not substituted.
