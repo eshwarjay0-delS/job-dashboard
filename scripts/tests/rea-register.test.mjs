@@ -77,3 +77,13 @@ test('profile gap-fill acceptance is tracked separately from role evidence and l
  assert.match(entry.limits, /No live Gemini\/model call/)
  assert.match(entry.next, /protected preview/)
 })
+
+
+test('authentication decision records the direct Gmail-only login instruction, not assistant-inferred skip-login approval', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'auth-login-gmail-only-owner-wording-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.state, 'Owner instruction recorded, runtime verification pending')
+ assert.match(entry.request, /No just the login/)
+ assert.match(entry.request, /only Gmail sign in/)
+ assert.match(entry.limits, /does not prove every prior chat/)
+})
