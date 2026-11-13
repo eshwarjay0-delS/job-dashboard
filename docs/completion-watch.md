@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 13 November 2026 — WhatsApp Oct 17 incident and current-master restack
+
+Continue: carry the owner-approved offline fallback and lossless resume/JD pair-consumption CAS through exact-head validation and the protected release gate. The source implementation is in the stacked PR #365 branch, which includes parent PR #364's webhook, R2 ETag/If-Match adapter, bounded CAS retry, selected-library-only NOT TAILORED fallback, text-only swipe-refinement failure behavior, and interleaving regressions. Parent PR #364 head 29d82ffc352e153a7c7b76ae23f56bc469ff50a9 passed its four recorded checks (full CI 43426407953, WhatsApp recovery 43426408103, Kompas baseline 43426408264, Plan/REA schema 43426407983); those results do not validate the later #365 documentation restack. The combined PR must run fresh exact-head checks and remain DRAFT until an authorized protected preview exists. The private KOMPAS_VERCEL_API_TOKEN is not available to this run; do not bypass the preview gate.
+
+Current source evidence: PR #365 and the REA register record a prior read-only extraction of the exact 17 Oct source DOCX and private inventory digest match, plus a read-only matching JD lookup. This run's recursive Library DOCX listing and semantic search did not re-resolve the exact source artifact, so the bytes were not rematerialized or rehashed here. No alternate resume was substituted. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, and signed delivered/read receipt remain missing. No historical replay, model call, R2 write, real WhatsApp send, or production mutation occurred. Source education, employer chronology, experience length, and credential conflicts remain quarantined until owner reconciliation.
+
+The 6 Nov WhatsApp policy remains authoritative: 70% delivery floor, 95% supported clean-pass threshold, and 98% as an evidence target rather than a hard WhatsApp hold. A no-provider fallback may send only the exact selected same-account library original, visibly labeled NOT TAILORED; any mismatch fails closed. Swipe-reply failures stay text-only and never send the original or a partial baseline. Resume and JD are one pair; a completed send may clear only the matching pair. R2 writes use conditional ETag/If-Match semantics; no unconditional fallback.
+
+Repository/deployment reconciliation: current master is 9032d5bd18854c8fd1e61fc781b51085e3af2a26; the canonical production alias last resolves to READY deployment dpl_4C5Znu8QPqcQUo9FTfQFJa3Sm4tP at SHA 9032d5bd18854c8fd1e61fc781b51085e3af2a26. The WhatsApp restack is not in that deployment. No production release or live WhatsApp acceptance is claimed. Next: finish exact-head checks, obtain the authorized protected preview, then require a generated DOCX and correlated provider acceptance/delivery receipt before any historical-delivery claim.
+
+
 Owner instruction: 17 October 2026. Keep unfinished approved commitments moving until deployed and verified, or report a concrete blocker. Recover accessible prior requests and respect later corrections. Do not ask the owner to repeat known requirements.
 
 ## Scheduled execution
@@ -8,13 +19,21 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — saved Gmail while Supabase egress is restricted
+
+Owner Eshwar: the Jobs inbox and the Gmail accounts list must show the saved mail for eshwarjay05 (67f02d95-f7fe-4058-9b0d-9363221e7c61) with no spend while the project is `exceed_egress_quota`. He exports `mfit_gmail_threads` and `mfit_gmail_sync` and posts them to `/api/gmail/snapshot-import`. The fallback is only for that restricted error. A working database read wins. Skip-login was not edited. Local secret and fallback tests passed. Not verified on the live site in this note. Next: one production deploy with `[ship]`, then one check of the import route, `/api/health`, and `/login`.
+
+## 13 November 2026 — skip-login is permanent in code
+
+Owner Eshwar: the app opens as eshwarjay05@gmail.com with no sign-in screen. Owner mode is on unless `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `off-confirmed-by-eshwar`. `false`, empty, and unset stay on. The login card keeps a Skip sign-in button that sets the synthetic-owner cookie and opens `/dashboard`. Admin stays 401 for that owner. The Google-only rule that set the production flags to false lives on unmerged branch `fix/google-only-login-production-auth-20261113` (policy commits 6e7a2fc8, fe649106, c9edd57a). It is not the rule. Do not call the Vercel env API to turn skip-login off.
+
 ## 13 November 2026 — answer length and the stuttering telecom card
 
 Owner Eshwar, 11:03 PM and 11:04 PM CT, on production. The telecom card prepended `First, -` onto bullets that already started with First, Then, or Finally, drew a stray ellipsis, and hid the question. Both formatters now keep one connector. The question box stays rendered. Have-you-done, how-have-you-used, and how-do-you use the measured word bands, and Long raises the spoken ceiling. Local focused suites passed. Not merged in this note. No ship marker on the branch commit.
 
 ## 13 November 2026 — Skip login button
 
-Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.
+Superseded the same day by the permanent skip-login note above. The earlier button waited for AUTH_DISABLED to be exactly true. That is no longer the rule.
 
 ## 13 November 2026 — rounds 36-55 and the desktop shell
 
@@ -62,7 +81,7 @@ After the logout fix was on the production alias, the desktop loopback still nam
 
 ## 12 November 2026 — Sign in again after a full logout
 
-Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. AUTH_DISABLED stays false in production. Merged as e8ce442051c1cbee1fbbeb6a26aa75200a1ddf97. GitHub production deployment 7745002467 completed. The alias /version.json commitFull matches that SHA. Unsigned refresh returned 401 invalid_grant, not 402. No live Google round trip.
+Owner request: after Supabase logout everywhere, Kompas and MarketFit sessions must start again once a new sign-in completes, unless Auth is still HTTP 402. A live interview must not open Chrome or the login page. The line in this note that said AUTH_DISABLED stays false is superseded (13 Nov 2026): skip-login stays on unless the value is exactly off-confirmed-by-eshwar. Merged as e8ce442051c1cbee1fbbeb6a26aa75200a1ddf97. GitHub production deployment 7745002467 completed. The alias /version.json commitFull matches that SHA. Unsigned refresh returned 401 invalid_grant, not 402. No live Google round trip.
 
 ## 11 November 2026 — Desktop sign-in
 
@@ -409,27 +428,3 @@ The first production Git deployment dpl_AHuMVDuxLUvJZVFtZsaVsgbo3Qji cloned the 
 PR #359 is merged as master commit 14bc372f579b87197df77d48c8645759a12d7caa. Exact-head full CI 43419089019, Plan Journal/REA schema 43419089029 and Kompas baseline 43419089067 all succeeded. The source now protects the legacy notify-rules export with a scheduler flag plus constant-time CRON_SECRET bearer check, preserves owner/inbox rule identity, and keeps the tick worker fail-closed until the scheduler and approved template are configured. No environment variables, scheduler, template or outbound notifications were changed.
 
 The first Vercel Git deployment dpl_AHuMVDuxLUvJZVFtZsaVsgbo3Qji was canceled by the repository Ignored Build Step because the merge commit lacked [ship]. A release-marker commit 5fe6e8181f7a4366ae61a07a70f0d822fcb0e07c then began a production build; it was canceled before completion to honor the active MFit Safe Merge Gate restriction on security-gate changes without an explicit owner decision. Canonical production alias remains READY on 4c01951. The source is merged but not live. Do not retry or promote until the owner explicitly approves this specific security-boundary rollout. The 48 prior HTTP 402 requests from the public export route have no identified caller; none was contacted.
-
-
-## 13 November 2026 — WhatsApp offline fallback and session-pair CAS restack
-
-Continue: restack the approved PR #358 implementation from its old base 4c01951 onto current master 6e18cdd, preserving the current Gmail security and Plan/REA history. The change keeps the initial no-provider fallback limited to the exact selected same-account library original after owner-root, safe-path, byte-equality and selected-profile checks, labelled NOT TAILORED. Swipe refinement failures stay text-only. Resume and JD are consumed as one pair only when both still match, using R2 ETag/If-Match CAS with bounded retries and no unconditional fallback.
-
-The old-base PR #358 head 91848189 passed full CI 43421184710, WhatsApp recovery 43421184715, Kompas baseline 43421184842 and Plan/REA schema 43421184835, but it has no Vercel preview deployment. The current-master restack is on branch fix/whatsapp-offline-cas-current-master-6e18cdd-watch12-20261113; fresh exact-head checks are pending. The protected preview currently has zero deployments and requires owner/authorized-admin configuration of private KOMPAS_VERCEL_API_TOKEN. Do not bypass it.
-
-Production runtime summary for POST /api/whatsapp/webhook shows two quality-held drafts on 12 Nov: one with draft_parts_missing, quality_incomplete and quality_not_deliverable; another also includes roles_unrewritten. These are rejected/held drafts, not confirmed document sends. The 17 Oct 17:28 Chicago incident still lacks the generated output DOCX, per-run R2/webhook/Meta correlation and signed delivery/read receipt; current Library access did not resolve the exact source DOCX bytes. Do not substitute another resume, reconcile conflicting facts by inference, replay or send a real WhatsApp test.
-
-
-## 13 November 2026 — WhatsApp restack first exact-head check correction
-
-PR #360 head 3a3dcb41f35b95690c38d0a74f63723a006c4e79 is based on current master 6e18cdd. WhatsApp recovery 43425563387 and Kompas baseline 43425563574 passed on that exact head. The first Plan/REA schema run 43425563489 failed only because the new REA test expected the literal phrase `No real Meta send` while the REA limit used `real WhatsApp send`; the other 13 schema/REA tests passed. The wording is being aligned and the schema suite will rerun on the new exact head. Full CI 43425563351 remains in progress. Do not call the restack fully green until the rerun and full CI finish.
-
-
-## 13 November 2026 — second WhatsApp Plan/REA assertion correction
-
-The corrected PR #361 head 5bf054926e7cb7eaadb91f585b1f73d99a995123 passed WhatsApp recovery 43425775852 and Kompas baseline 43425775871. Plan/REA 43425775972 repeated the single assertion failure because the new REA limit said `No production R2 write, model call, real Meta send` rather than the test's expected contiguous phrase `No real Meta send`; the other 13 tests passed. The REA limit is being changed to the explicit phrase and will be rerun on a fresh exact head. Full CI 43425775853 is still running. Do not call the restack green yet.
-
-
-## 13 November 2026 — third WhatsApp Plan/REA assertion correction
-
-The second Plan/REA failure on PR #362 head d931eb5b7a42c40ba1b4dbae3fe3b5865da5f15a was a case-sensitive test mismatch: the REA limit correctly said `no real Meta send` in lowercase after a preceding clause, while the test expected uppercase `No real Meta send`. The assertion is now case-insensitive; no product behavior or evidence was weakened. The next exact head must rerun Plan/REA, WhatsApp recovery, Kompas baseline and full CI. Earlier successful workflows on older heads are not substituted.
