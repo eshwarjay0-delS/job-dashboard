@@ -1100,3 +1100,22 @@ Fresh read-only iZap status for its only business `eshwarjay0`: no WhatsApp numb
 - Local clone failed because this container could not resolve `github.com`; AGENTS.md also requires the installed Next.js guide before runtime code edits, and `node_modules` is unavailable. No local code tests were run. This continuation updated documentation/evidence only; no real email/WhatsApp test, model call, DOCX generation/write, R2 write, database mutation, manual crawl, billing change, secret exposure or device acceptance occurred.
 
 **Continue:** obtain the private `KOMPAS_VERCEL_API_TOKEN` through the owner/authorized repository administrator, then rerun the protected preview on exact PR #333 head. Keep #333 draft and do not merge/deploy until that gate and the owner's release instruction are satisfied. Then rerun exact-head full CI on #330/#323, execute the combined #335 resume-guards suite, reconcile #331 auth scope, and restack #315 only after its package/test overlap is reviewed. Restore Supabase Auth only through the project owner/admin. Recover the exact 17 Oct source/output and signed R2/Meta evidence before any historical replay.
+
+
+## 13 November 2026 00:40 UTC — Safe Merge Gate result and owner-authored auth correction
+
+**Authentication approval correction**
+
+The 00:27 continuation said the personal-context search did not recover a direct user-authored skip-login message. That search miss is now superseded by direct owner-authored GitHub evidence: [PR #319 comment #6838197882](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6838197882), posted 12 Nov 22:54:44 UTC, explicitly records production `AUTH_DISABLED=true` and `NEXT_PUBLIC_AUTH_DISABLED=true` for READY deployment `a247ddf`. Preserve this approved login-off behavior. PR #331 removes auth-disabled handling and must be corrected before merge. The current public auth-flag route was not reachable in this run; no env values were changed and actual account-sessions API/device convergence remains unverified.
+
+**Completed Safe Merge Gate audit — no eligible PR**
+
+- The latest Safe Merge Gate run `586bc6ad-43ec-8322-9b09-6c58367b681f` completed at 13 Nov 00:31:47 UTC. It made no merge, branch mutation or production deployment and found no PR eligible for merge.
+- GitHub reports 50 open PRs, zero outstanding review requests, default branch unprotected and no applicable rulesets returned. Continue to enforce the manual exact-head gate; do not infer that GitHub branch protection will stop an unsafe merge.
+- PR #334 head `1c8cc42`: full CI `43325802090`, baseline `43325802208`, cross-device `43325802170`, Windows executable `43325802214` all SUCCESS. Its 208 focused tests and 150 offline drafts contain no live model call or independent human review. Keep out of production.
+- PR #337 head `31e53f9`: full CI `43335367703`, baseline `43335367839`, Plan/REA `43335367698` SUCCESS. The 50 offline folds scored 4/4, but 78 question-mode pairs still have a content gap below 0.50 (highest Jaccard 0.647); no real interviewer responses or human scoring exist. Owner hold: leave open, do not merge or deploy.
+- PR #339 head `e23feb5`: full CI `43336392733`, baseline `43336392714`, cross-device `43336392751`, Windows `43336392786`, Plan/REA `43336392842` SUCCESS. No exact-head Vercel preview exists; the owner's instruction recorded in its Plan Journal says no merge/production call.
+- PR #333 remains the closest low-risk integration candidate but is not eligible: full CI/baseline/cross-device/Windows passed; protected preview failed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable, and the owner explicitly said keep draft/no merge/no deploy.
+- PR #330/#335/#323/#331 remain blocked by the release-stamp dependency or incomplete exact-head tests. Preserve the owner-approved login-off behavior in #331; do not remove it.
+
+Kompas Continuous Voice Delivery remains disabled; this run made no voice/caption changes. No real email/WhatsApp tests, model calls, DOCX writes, R2 writes, database mutations, manual crawl, billing changes, secret exposure or device acceptance occurred.
