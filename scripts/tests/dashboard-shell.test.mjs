@@ -88,3 +88,15 @@ test("normal-flow navigation preserves the existing account and authentication c
   assert.match(nav, /Log out/)
   assert.match(nav, /window.matchMedia\("\\(min-width: 1025px\\)"\)/)
 })
+
+
+test("Gmail Plan & Vision records the approved normal-flow decision and pending device acceptance", () => {
+  const plan = read("src/lib/plan-vision.ts")
+  const journal = read("src/lib/plan-vision-journal.ts")
+  assert.match(plan, /hamburger expands below the sticky top bar in normal flow/)
+  assert.match(plan, /no phone acceptance exists/)
+  assert.match(journal, /gmail-mobile-normal-flow-nav-2026-11-13/)
+  assert.match(journal, /"area":"gmail"/)
+  assert.match(journal, /"approval":"approved","delivery":"in progress"/)
+  assert.match(journal, /f3c31cb276e7d8598f8159d4933cb4ac69855bab/)
+})
