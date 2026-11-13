@@ -8,6 +8,14 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — run 11: WhatsApp fallback and pair-CAS current-master restack
+
+Continue: restack the approved WhatsApp offline fallback and lossless resume/JD pair-consumption work onto the latest reconciled master. The current-master branch is `fix/whatsapp-offline-cas-master-026c729-run11-20261113`, based on `026c72968e45314ff0a99f701942c966e79f0a1e`, with implementation commits `32a5fd790e51d445a7c5a18fad5f77772423ab6f` and `ece00f236103c74cfd1dcca28131593135fdc428`. It carries the exact selected same-account library-byte fallback for initial-JD provider-unavailable cases (clearly labelled **Original resume — NOT TAILORED**), keeps swipe-reply failures text-only, consumes pairs only after acceptance of the exact document, and uses R2 ETag/If-Match CAS. The storage regression adds explicit HTTP 409/404 conflict cases and 500 propagation while retaining 412/concurrent-writer coverage.
+
+The former PR #368 branch remains stale and DRAFT; no stale Plan/REA or Completion Watch records were copied. The new restack still requires exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA schema and the legitimate protected Vercel preview. The private `KOMPAS_VERCEL_API_TOKEN` is unavailable to this run, so protected preview is not claimed and the PR must remain DRAFT. The production alias is still READY at the previous SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; the new code is not live.
+
+The 17 Oct 17:28 Chicago incident remains historically unverified: source/JD were recovered in prior private review, but generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain missing. Source facts still conflict with the owner-confirmed profile. No historical replay, model call, production R2 write, real WhatsApp send or handset test occurred.
+
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 
 Owner Eshwar, final approved pass. Answer generation, prompting, question detection, and the left card are the `01ceb1dc` files. Skip-login, the Gmail snapshot, the mic stop, and the intro paragraph stay. Generation is unchanged. The left card does not show Claim, Context, Action, Result, Close, or the ellipsis. The right panel does not write the left answer. Next: one pull request, squash-merge with [ship] when CI is green, then one deployment check.
@@ -453,3 +461,35 @@ The current-master review confirms these are still separate, gated items:
 | Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
 
 These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
+
+
+## 13 November 2026 — WhatsApp signed-callback test fixture correction
+
+The first exact-head full CI for PR #374 failed one assertion in `scripts/tests/whatsapp-single-request.test.mjs`. The fixture had combined an ambiguous initial upload failure with a simulated signed callback rejection, so the code correctly refused a possible duplicate and no fallback message ID existed. The corrected commit `cdf62de950b80ff9762ac82ff1656af98c11885f` models a successful upload/message ID followed by `markResumeDocumentAccepted=false`, then asserts that the JD/resume pair remains. This is a test-fixture correction; the new exact-head CI is still pending. No real Meta send or callback occurred.
+
+
+## 13 November 2026 — run 11 exact-head WhatsApp gates passed
+
+Continue: the current-master WhatsApp fallback/pair-CAS restack in PR #374 has now passed all four source gates on exact head `7575b5d7cd18287ba93b064a7e0f201edcf064c9`: full CI `43491356874`, WhatsApp recovery `43491357092`, Kompas baseline `43491356934`, and Plan/REA schema `43491357225`. Full CI executes the dedicated `whatsapp-single-request` test, including provider-acceptance pair retention, R2 CAS interleaving, 409/404 conflict handling and 500 propagation. These are source tests, not live delivery evidence.
+
+PR #374 remains DRAFT because the legitimate protected Vercel preview needs the private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. The canonical production alias remains READY at deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb` / SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; no WhatsApp code from #374 is live. No real Meta send, production R2 write, historical replay or handset test occurred. The historical generated DOCX, R2/webhook/Meta correlation and signed receipt remain missing; source facts remain quarantined. Do not merge or deploy until the protected preview and the Safe Merge Gate's shared Plan/REA sequencing are satisfied.
+
+## 13 November 2026 — run 11 current-master reconciliation
+
+- PR #373 is merged as 026c72968e45314ff0a99f701942c966e79f0a1e; all five exact-head checks passed. It quarantines the unapproved #372 answer-filtering behavior. #372's deployment remains canceled.
+- job-dashboard-fawn.vercel.app and marketfit-app.vercel.app both independently resolve to READY deployment dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb, SHA 024177889d092f30aaeada20fab649aa41c9d1f4. GitHub compare shows master is two commits ahead and the net difference is only five Plan/REA/completion documentation files. The production runtime is therefore still the restored pre-#372 runtime; this run did not force a docs-only deployment.
+- Four current-master approved restacks are exact-head source-green but still DRAFT and not deployed: WhatsApp #374 932f846e8f6b9d7382bcf3360268cdf419b5d5be (CI 43494278285, recovery 43494278118, baseline 43494278324, Plan/REA 43494278232); confirmed-skill resume #377 37ec0e359f2e3d8f4135e2846e5c0b6ce05e21d6 (CI 43496457901, recovery 43496458157, baseline 43496457917, Plan/REA 43496457946); Gmail/mobile #375 8b4a480313504240c5f5ad69596074c7ecedf549 (CI 43494969062, baseline 43494968954, Plan/REA 43494969251); and contract-to-hire #376 6f566197d763b6137c8608c2db3cd670a2278c5b (CI 43494635050, crawler 43494635586, baseline 43494635138, Plan/REA 43494635014). The protected Vercel preview list returned zero deployments for each branch; the private KOMPAS_VERCEL_API_TOKEN is not accessible to this run. Do not bypass the preview gate.
+- PR #353 profile-gap acceptance remains stale with no exact-head workflows. Older source PRs #368/#352/#357/#355 are superseded as merge candidates by #374/#377/#375/#376.
+- The Library inventory returned 149 DOCX files, none created 17–18 Oct and none matching the previously recorded 27,724-byte source size. The exact Oct 17 input/output, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable in this execution. Earlier private-review source/JD recovery is preserved but was not re-resolved here. No replay or real send occurred.
+- The contract crawler remains manual/on-demand only; no daily cron was restored and no crawl was triggered. No real Gmail API/OAuth, email, WhatsApp, model, R2 write, phone or Windows device test was performed.
+- Coordination: MFit Completion Watch and MFit Safe Merge Gate are enabled. Kompas Continuous Voice Delivery is disabled, so no voice/caption files were edited. No separate Bible-Keeper automation was found in the accessible automation list.
+
+Continue: close the historical Oct 17 WhatsApp evidence chain only when the exact source and generated DOCX plus per-run R2/webhook/Meta signed evidence are made available through authorized access. Meanwhile keep #374 first in the protected-preview sequence, then #377/#375/#376, with Safe Merge Gate sequencing shared Plan/REA updates and each remaining branch restacked after the preceding merge.
+
+## 13 November 2026 — run 11 Kompas production/session snapshot
+
+- Current production remains READY at dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb / SHA 024177889d092f30aaeada20fab649aa41c9d1f4 on both canonical aliases. The deployed build stamp is kompas-20261112-output; the source at that exact SHA contains the restored AI Answer and audio-tail path markers from PR #350. This is source/deployment evidence, not a live browser or native-device test.
+- Fresh read-only Supabase SQL: 22 account-session rows, 15 not deleted, 7 tombstones, 9 without endedAt, 6 with endedAt, 28 artifacts, one owner. All 15 not-deleted payloads have resume/JD/instructions keys and 13 have a transcripts key. Latest session/artifact updates remain 9 Nov 2026 21:47:34/35 UTC. No payload content was read or written.
+- Persisted records confirm backend data exists, but do not prove second-browser, Windows, phone or WhatsApp convergence. The owner-consented same-account device test, tombstone/no-resurrection, transcript propagation and signout/account-isolation acceptance remain open.
+
+Continue: obtain owner-consented browser A/B and installed-Windows acceptance for the existing account-session catalog; do not infer cross-device success from row counts.

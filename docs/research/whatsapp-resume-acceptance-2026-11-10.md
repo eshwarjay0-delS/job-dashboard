@@ -137,3 +137,30 @@ The 6 Nov owner correction remains authoritative: web downloads stay strict at 9
 The current #368 adapter's use of `GetObject` ETag followed by `PutObject` with `If-Match` is supported by Cloudflare's current S3 API documentation. Cloudflare states that `PutObject` accepts `If-Match` and that the condition is evaluated atomically against committed bucket state; competing conditional writes are serialized. References: [Conditional operations](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) and [Consistency model](https://developers.cloudflare.com/r2/reference/consistency/).
 
 The visible PR test suite exercises stale ETag/412 and a concurrent winner, while the implementation also treats 409 and 404 as compare-and-swap failure. Add explicit mocked 409 and 404 cases (or document why they cannot arise on this path) before final acceptance. This is a documentation/source review only; no R2 write or live webhook was run.
+
+
+## 13 November 2026 — run 11 current-master implementation status
+
+The approved WhatsApp fallback/session-pair implementation from PR #368 has been restacked on current canonical master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/whatsapp-offline-cas-master-026c729-run11-20261113` (implementation commits `32a5fd790e51d445a7c5a18fad5f77772423ab6f` and `ece00f236103c74cfd1dcca28131593135fdc428`). The restack does not replay the historical request or overwrite current Kompas/Plan/REA changes.
+
+The initial-JD offline fallback is allowed only when the exact selected resume bytes are verified against the same authenticated account's selected library file; the outgoing document is explicitly marked **Original resume — NOT TAILORED**. A swipe-reply refinement is a separate operation: provider failure, missing source, incomplete output, failed quality gate, or identity/contact/date mismatch must send text only and leave the prior delivered resume unchanged. A JD/resume pair is consumed only after acceptance of the exact document. Conditional R2 writes use bounded If-Match compare-and-swap; HTTP 409/412/404 are retry conflicts, while unexpected storage errors propagate.
+
+Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending. A protected Vercel preview is still required and cannot be accessed without the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted. The production alias remains at the prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`, so this implementation is not live.
+
+The historical 17 Oct 17:28 Chicago request remains unverified. The exact generated DOCX, per-run R2 key/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/credential facts remain quarantined pending owner reconciliation. No model call, R2 production write, historical replay, real WhatsApp send or handset acceptance occurred.
+
+
+## 13 November 2026 — signed callback retention fixture correction
+
+The first exact-head full CI failed only the callback-retention assertion because the test combined an ambiguous initial upload failure with a simulated signed failure callback. That combination correctly blocks a duplicate send, so the expected fallback message ID was impossible. Correction commit `cdf62de950b80ff9762ac82ff1656af98c11885f` now models a successful upload followed by `markResumeDocumentAccepted=false` and verifies the pair remains. The corrected exact-head CI has not yet completed. No real Meta message, callback or historical replay occurred.
+
+
+## 13 November 2026 — current Library inventory recheck for the 17 Oct incident
+
+This run performed a read-only recursive Library metadata inventory and semantic search. The inventory returned 149 DOCX files. None was created on 17 or 18 October 2026, and no listed DOCX matched the previously recorded 27,724-byte source size. Searches for the resume name and the incident description did not identify the incident's exact source file or generated output.
+
+This does **not** erase the earlier private-review record that the original source DOCX and matching JD had been recovered. It means those artifacts were not re-resolvable from this run's accessible Library surface. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, and signed delivered/read receipt remain unavailable. The source education, employment chronology, tenure and credential conflicts remain quarantined.
+
+No document bytes were opened or materialized. No R2 read/write, model call, historical replay, WhatsApp send, replacement send, or handset test occurred. Do not infer that the historical message was delivered or undelivered from the current Library listing alone.
+
+**Exact unblock:** the owner or authorized archive custodian must make the exact original and generated DOCX files available through an authorized Files surface and provide or authorize read-only access to the per-run R2 object/version, webhook correlation, Meta message ID, and signed delivery/read receipt. Until then, keep the historical incident blocked and do not replay it.
