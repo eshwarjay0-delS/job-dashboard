@@ -85,3 +85,12 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Confirmed-skill role relevance — 13 November 2026
 
 An explicit first-person skill confirmation may be mapped into an existing project across roles, including an earlier role, but the project must fit the skill family. Generic wording such as “marketing automation,” “API,” or “service” alone does not establish cloud-infrastructure context for AWS/Azure/GCP. Unknown skills still require direct source support. This relevance guard does not create a project, employer, action, outcome, date, title, location, contact, metric or credential. Source/JD conflicts remain unresolved until the candidate reconciles them.
+
+
+## Current-master confirmed-skill restack — 13 November 2026, run 11
+
+The owner-approved 6 Nov correction, reaffirmed in PR #319 comment `6817645128`, permits an explicitly first-person-confirmed skill to be mapped into a relevant existing project bullet across roles, including earlier roles, without same-role source wording. The confirmation supports only the skill. It does not create a new employer, project, action, outcome, date, title, location, contact, metric or credential. JD wording, target match scores and editing instructions remain non-evidence. The project context must fit the confirmed skill family; unknown skills require direct source support.
+
+This rule is restacked from PR #352 onto current master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/resume-confirmed-skill-role-mapping-master-026c729-run11-20261113`. The branch contains the candidate-evidence helper, writer prompt, tailor orchestration, deterministic unsupported-term restoration, focused regressions and research handoffs. It does not include WhatsApp storage/send changes or the separate profile-gap PR #353.
+
+Exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA schema and protected preview are pending. No authenticated model call, DOCX export/inspection, measured 95–100% match, 98% result, email/WhatsApp send or production deployment is claimed. After the protected preview, the next acceptance is an owner-authorized baseline + JD + explicit-confirmation run, inspect the exported DOCX for structure and unsupported facts, record unrounded raw/weighted coverage, and perform the separate approved Gemini final-DOCX `Give me an ATS score` review.
