@@ -51,3 +51,15 @@ test("Robert Half remains a manual cybersecurity directory link, not an active c
   assert.ok(vendors.includes('firm: "Robert Half Technology", url: "https://www.roberthalf.com/us/en/jobs/all/cyber-security"'))
   assert.ok(vendors.includes("manual-only until express prior written consent for automated collection"))
 })
+
+ 
+test("contract crawler has no automatic schedule and manual trigger remains admin-gated", () => {
+  const vercel = JSON.parse(read("../../vercel.json"))
+  assert.equal((vercel.crons || []).some(job => job.path === "/api/crawl/run"), false)
+  const workflow = read("../../.github/workflows/crawl-freshness.yml")
+  assert.doesNotMatch(workflow, /^\s*schedule\s*:/m)
+  assert.match(workflow, /workflow_dispatch:/)
+  const manualRoute = read("../../src/app/api/crawl/jobs/route.ts")
+  assert.match(manualRoute, /export async function POST\(req: NextRequest\)/)
+  assert.match(manualRoute, /adminOf\(req\)/)
+})
