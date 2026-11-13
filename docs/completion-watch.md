@@ -398,3 +398,19 @@ Reviewable code/test commits on the restack include route 1104a5d9, storage e2d3
 The 17 Oct 2026 17:28 Chicago incident remains a separate historical replay blocker. The original source DOCX and matching JD are recorded as recovered privately, but the generated output DOCX, correlated R2 object, webhook/request record, Meta message ID and signed delivery/read receipt remain unavailable. Later incidents are not substitutes. No cause, delivery or 98% live-match result is inferred.
 
 Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline, cross-device, Windows packaging and Plan/REA checks; review any failures on this branch; keep it DRAFT until the legitimate protected preview passes. Do not merge or deploy before those gates. After release, use an owner-authorized baseline/JD/confirmation artifact review; do not send a real WhatsApp test from this automation.
+
+
+## 13 November 2026 — WhatsApp exact-head gates and protected-preview blocker
+
+PR #358 (branch fix/whatsapp-offline-cas-current-master-watch11-20261113) now passes every workflow actually triggered on exact head 1cf2f3c303ba2d004e06869cea5f17362edd0b75:
+
+- Full CI: 43417729793 — SUCCESS
+- WhatsApp resume recovery: 43417729642 — SUCCESS
+- Kompas baseline: 43417729726 — SUCCESS
+- Plan Journal / REA schema: 43417729917 — SUCCESS
+
+The protected preview is still absent: Vercel branch lookup returned zero preview deployments. The canonical production alias remains READY at master 4c01951; PR #358 is not deployed. Cross-device and Windows packaging workflows were not present on this WhatsApp-only head, so those checks are not claimed.
+
+The 17 Oct 17:28 Chicago historical incident still lacks its generated output DOCX and correlated R2/webhook/Meta delivery/read evidence. The recovered source/JD conflict remains quarantined. No model call, production R2 write or real WhatsApp send occurred.
+
+Continue: keep #358 DRAFT until a legitimate protected preview is available, then verify production SHA/alias and owner-authorized DOCX acceptance. Do not use a real WhatsApp send from automation.
