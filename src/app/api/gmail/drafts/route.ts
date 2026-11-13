@@ -37,6 +37,9 @@ export async function GET() {
     const rl = checkRateLimit(`gmail-drafts:${ctx.userId}`, { max: 10, windowMs: 60 * 1000 })
     if (!rl.ok) return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
 
+    if (ctx.quotaFallback) {
+      return NextResponse.json({ ok: true, count: 0, drafts: [], ...(ctx.quotaFallback.notice ? { snapshotNotice: ctx.quotaFallback.notice } : {}) })
+    }
     const accounts = await listGoogleWorkspaceAccounts(ctx.userId)
     const enabled = accounts.filter(a => a.gmail_enabled)
     const drafts: Array<{

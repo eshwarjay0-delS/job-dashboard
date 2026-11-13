@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { findSnapshotThread } from "@/lib/gmailSnapshot"
 import { requireAuth, isAuthContext, threadsToMails, type ClassifiedThread } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
 
@@ -21,6 +22,14 @@ export async function GET(req: Request) {
     if (!/^[A-Za-z0-9_-]{1,200}$/.test(id)) return NextResponse.json({ ok: false, error: "Say which conversation: ?id=" }, { status: 400 })
 
     const enabled = new Set(ctx.accounts.filter(a => a.gmail_enabled).map(a => a.google_email.toLowerCase()))
+    if (ctx.quotaFallback) {
+      const found = await findSnapshotThread(ctx.userId, id, account) as ClassifiedThread | null
+      if (!found || !enabled.has(String(found.accountEmail || "").toLowerCase())) {
+        return NextResponse.json({ ok: false, error: "That conversation is not among the mail MarketFit keeps." }, { status: 404 })
+      }
+      const mail = threadsToMails([found])[0]
+      return NextResponse.json({ ok: true, mail, ...(ctx.quotaFallback.notice ? { snapshotNotice: ctx.quotaFallback.notice } : {}) })
+    }
     const rows = await ctx.supabase.from("mfit_gmail_threads").select("data, account_email").eq("user_id", ctx.userId).eq("thread_id", id).limit(8)
     const found = ((rows.data || []) as Array<{ data: ClassifiedThread; account_email: string }>)
       .filter(r => Array.isArray(r.data?.messages) && r.data.messages.length > 0 && enabled.has(String(r.account_email || "").toLowerCase()))

@@ -21,6 +21,7 @@ interface GmailData {
   loading: boolean
   connected: boolean
   error: string | null
+  snapshotNotice: string | null
   refresh: () => void
   /** When the shared copy was last checked (Date.now()), null before the first load. Drives the "Live" indicator. */
   updatedAt: number | null
@@ -52,7 +53,7 @@ const PULSE_MS = 120_000
 type Loaded = Omit<GmailData, "loading" | "refresh" | "updatedAt">
 const EMPTY: Loaded = {
   mails: [], applications: [], interviews: [], steps: [], unfollowed: [], drafts: [], radar: [], issues: [],
-  connected: false, error: null,
+  connected: false, error: null, snapshotNotice: null,
 }
 
 let shared: { data: Loaded; at: number } | null = null
@@ -121,11 +122,14 @@ export function forgetGmailData(): void {
 
 async function fetchAll(force: boolean): Promise<Loaded> {
   // Check the Gmail connection first.
-  const status = await getJSON<{ connected: boolean; reason?: string }>("/api/gmail-sync")
+  const status = await getJSON<{ connected: boolean; reason?: string; snapshotNotice?: string | null }>("/api/gmail-sync")
   if (!status.data) {
     // The check itself failed (a dropped connection, a server hiccup): keep what is on screen and say why.
     const msg = `Couldn't check Gmail just now: ${status.error}. Tap refresh to retry.`
     return shared ? { ...shared.data, error: msg } : { ...EMPTY, error: msg }
+  }
+  if (status.data.snapshotNotice && !status.data.connected) {
+    return { ...EMPTY, snapshotNotice: status.data.snapshotNotice, error: null }
   }
   if (!status.data.connected) {
     // Say WHY, not just "not connected".
@@ -140,7 +144,7 @@ async function fetchAll(force: boolean): Promise<Loaded> {
 
   const [threadsRes, trackerRes, interviewsRes, stepsRes, unfollowedRes, draftsRes, radarRes] =
     await Promise.all([
-      getJSON<{ mails: Mail[]; issues?: GmailData["issues"] }>(`/api/gmail/threads?days=30&max=50${force ? "&fresh=1" : ""}`),
+      getJSON<{ mails: Mail[]; issues?: GmailData["issues"]; snapshotNotice?: string | null }>(`/api/gmail/threads?days=30&max=50${force ? "&fresh=1" : ""}`),
       getJSON<{ applications: App[] }>("/api/gmail/tracker?days=60"),
       getJSON<{ interviews: Interview[] }>("/api/gmail/interviews?days=60"),
       getJSON<{ steps: Step[] }>("/api/gmail/workflow-steps"),
@@ -160,11 +164,14 @@ async function fetchAll(force: boolean): Promise<Loaded> {
     radar: radarRes.data?.radar || [],
     connected: true,
     error: null,
+    snapshotNotice: status.data.snapshotNotice || threadsRes.data?.snapshotNotice || null,
   }
 
   // Surface the first real failure instead of showing a silent empty inbox.
   const firstErr = threadsRes.error || draftsRes.error || radarRes.error
-  if (data.issues.length > 0 && data.mails.length === 0) {
+  if (data.snapshotNotice) {
+    data.error = null
+  } else if (data.issues.length > 0 && data.mails.length === 0) {
     const throttled = data.issues.some(i => /throttling|wait .* refresh/i.test(i.reason))
     data.error =
       `Couldn't read ${data.issues.length === 1 ? "this account" : "these accounts"}: ` +
