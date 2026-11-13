@@ -2,8 +2,7 @@
 // The historical tag names come from qa.jsonl. This file does not call a model.
 
 import { readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { join } from "node:path"
 import { draftSpokenAnswer, wordCount } from "./kompasDissection.ts"
 
 export type ReplayRow = {
@@ -13,7 +12,7 @@ export type ReplayRow = {
   expected?: { length_band_words?: [number, number] }
 }
 
-const DIR = join(dirname(fileURLToPath(import.meta.url)), "../../scripts/fixtures/kompas-evaluation")
+const DIR = join(process.cwd(), "scripts/fixtures/kompas-evaluation")
 const FILLER = /\b(?:and then|from there|after that|great question|in conclusion|basically|delve|leverage|the way i look at it|at the end of the day|i check the evidence before i call it done)\b/i
 const CHOPPY = /\b(?:and then|from there|after that)\b/gi
 const PROFILE = /\b(?:houston|saint louis|st\. louis|jayeshwar44|eshwarjay05|eshwarjay06)\b/i

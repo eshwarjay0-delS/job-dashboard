@@ -2,8 +2,7 @@
 // someone else's job, city, or years is not offered to the candidate.
 
 import { readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { join } from "node:path"
 
 export type ClarifySeed = {
   text: string
@@ -11,7 +10,9 @@ export type ClarifySeed = {
   question_types?: string[]
 }
 
-const FILE = join(dirname(fileURLToPath(import.meta.url)), "../../scripts/fixtures/kompas-evaluation/clarify-bank.jsonl")
+function bankFile() {
+  return join(process.cwd(), "scripts/fixtures/kompas-evaluation/clarify-bank.jsonl")
+}
 
 const EXPERIENCE = /\b(?:I (?:worked|spent|started my career|was working|lived|was able to move)|years? in|Cincinnati|Seattle|QNXT|DVLA|unloader|packer|back in India)\b/i
 
@@ -20,7 +21,7 @@ export function assertsCandidateExperience(text: string): boolean {
   return EXPERIENCE.test(bare)
 }
 
-export function loadClarifyBank(raw = readFileSync(FILE, "utf8")): ClarifySeed[] {
+export function loadClarifyBank(raw = readFileSync(bankFile(), "utf8")): ClarifySeed[] {
   return raw.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => JSON.parse(line) as ClarifySeed)
 }
 
