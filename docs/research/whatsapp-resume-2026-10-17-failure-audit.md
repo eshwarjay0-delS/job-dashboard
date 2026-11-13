@@ -33,3 +33,12 @@ These later drafts are not proven to be the 17 October run and must not be used 
 5. Keep actual WhatsApp delivery blocked until protected preview, a verified linked number and owner-authorized device acceptance are available.
 
 No email or WhatsApp messages were sent during this audit.
+
+
+## 13 November 2026 — current-master continuation boundary
+
+The owner-approved resume confirmed-skill mapping is being restacked independently in `fix/resume-confirmed-skill-role-mapping-master-026c729-run11-20261113`; it does not authorize replay or replacement delivery for this historical WhatsApp request. The 6 Nov WhatsApp delivery policy remains separate: initial-JD no-provider fallback may use only the exact selected same-account library original, visibly labelled NOT TAILORED; swipe-reply failures remain text-only; a JD/resume pair is consumed only after provider acceptance of the exact document.
+
+The earlier private review records recovery of the 27,724-byte source DOCX and matching Risk & Controls JD, but this scheduled execution did not re-materialize or rehash the DOCX. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. Source education, employment chronology, tenure and credential conflicts remain quarantined pending owner reconciliation. The matching JD's 5+ years and preferred tools/credentials are not candidate evidence. The accessible prior-context retrieval did not recover the original user message verbatim; do not claim access to every prior chat.
+
+No model call, new DOCX, R2 production write, historical replay, real Meta send, email, handset test or delivery claim occurred. Do not substitute another resume or send a replacement from the quarantined facts. Historical closure requires the original generated output, correlated provider/R2 evidence and owner reconciliation.
