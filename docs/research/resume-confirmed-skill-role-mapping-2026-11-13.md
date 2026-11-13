@@ -76,3 +76,15 @@ CyberArk now has its own context family: endpoint, local administrator, privileg
 This narrows relevance only. It does not restore the superseded same-role source-wording requirement, and it does not create an employer, project, action, outcome, date, title, location, contact, metric or credential. No model call, DOCX export, live match score or user-library write occurred.
 
 Implementation commit: 185d0252c19c3eb3c2ef49fbe5e2c760fe3fc88b. Regression commit: f92c007f6407101fcf5a36f105c2a8fb90abbc21. Exact-head CI and the protected preview must still pass before this remains eligible for release.
+
+
+## Exact-head validation of the specificity correction — 13 November 2026
+
+The final current-master PR #377 head `fa971b90c702e1cb96ebae161a1fdd1aa7ab1728` passed all four source gates:
+
+- Full CI `43500406071` — SUCCESS, including lint, type-check, the twenty varied evidence-bound resume export suite, synthetic DOCX identity round-trip and production build.
+- WhatsApp recovery `43500406031` — SUCCESS.
+- Kompas baseline `43500405833` — SUCCESS.
+- Plan/REA schema `43500406062` — SUCCESS.
+
+The new CyberArk EPM negative cases are part of the full CI test suite. This validates the source change and tests only. The protected Vercel preview is still unavailable, and no owner-authorized baseline/JD/confirmation model call, exported DOCX, final-DOCX Gemini ATS review, production deployment or live match score occurred. Keep the PR DRAFT.
