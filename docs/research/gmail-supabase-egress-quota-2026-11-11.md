@@ -32,3 +32,9 @@ The latest recorded production runtime aggregate for `/api/gmail/notify-rules/ex
 ## 12 November 2026 — live restriction recheck (07:13 UTC) <!-- gmail-egress-402-0713z -->
 
 The latest 24-hour production aggregation has increased to 38 HTTP 402 `exceed_egress_quota` errors across 30 users on `/api/gmail/notify-rules/export`, latest `2026-11-12T07:07:19Z`, on current production deployment `dpl_amu7rE9qzAEG6N7iYjEpnu7BDAwj`. A 30-minute query returned one event. The Supabase Auth service is still restricted; the owner/project administrator must upgrade the plan or remove the spend cap. No billing change, alternate-auth workaround, credential swap, manual export or email send was attempted.
+
+## 13 November 2026 — current-deployment attribution correction
+
+The 12 November 23:02:47 UTC owner-authored correction on [PR #319 comment #6838375980](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6838375980) supersedes any wording that attributes the earlier Auth 402 events to the new `a247ddf` production deployment. The returned 30-minute events had `lastDeployment` values of the two previous deployments, with last events 22:33–22:37 UTC. The later `a247ddf` deployment's first 30-minute error-level query returned no entries, and no `/api/kompas/account-sessions` request was logged.
+
+Therefore the Supabase Auth restriction is neither confirmed cleared nor confirmed reproducing on `a247ddf`. The current live Gmail/credits status is unverified; no safe read-only API request or owner-device test was made in this continuation. Keep the Gmail worker disabled. Do not attribute the historical 402s to the current deployment, send a real email, change billing or use an alternate identity.
