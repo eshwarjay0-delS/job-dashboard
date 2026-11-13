@@ -44,3 +44,9 @@ Authorized Vercel project/environment reads were repeated against the current jo
 - Only the two boolean flag states were inspected; no synthetic-owner identity, user email, token, credential or other environment value was read or recorded. No variable was changed.
 
 This recheck resolves the current flag-state uncertainty: the synthetic fallback is not enabled by these production flags. Issue #308 remains open because the code path is present without owner approval, production fail-closed tests are still required, and owner/admin plus ordinary-account and desktop continuity acceptance have not been exercised. Keep both flags false. READY plus alias metadata and false flags do not prove public HTTP reachability or authenticated UX while the project reports live=false.
+
+## 13 November 2026 — direct owner-authored approval correction
+
+The earlier conclusion that no direct owner approval for login-off could be found is superseded by the owner's public GitHub comment [#6838197882](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6838197882), posted 12 November 2026 at 22:54:44 UTC. The owner explicitly recorded the production login-off environment as configured with `AUTH_DISABLED=true` and `NEXT_PUBLIC_AUTH_DISABLED=true` for the READY `a247ddf6042385d12a19bfd7e893983c1bcf9087` deployment. This is direct owner-authored approval, not an inference from assistant-written journal text.
+
+Preserve that approved login-off behavior. PR #331's removal of auth-disabled handling is incompatible and must be corrected before merge. The public auth-flag endpoint was inaccessible in this continuation, so the current runtime value was not independently re-read; no environment values were changed. Account-sessions API 200, first catalog sync and actual phone/desktop convergence remain unverified.
