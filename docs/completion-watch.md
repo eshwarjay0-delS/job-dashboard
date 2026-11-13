@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — left answer cleanup
+
+Owner Eshwar widened the 10:08 AM pass. The left presentation drops connectors, section labels, ellipsis, generic third person, dictionary openers, duplicate sentences, and "I would" on a past question when a past sentence is present. The 10:18 AMI card is ordered as owned work, requirements, choice, then the check. Names outside the active profile resume are dropped. Generation prompts were not rewritten.
+
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 
 Owner Eshwar, final approved pass. Answer generation, prompting, question detection, and the left card are the `01ceb1dc` files. Skip-login, the Gmail snapshot, the mic stop, and the intro paragraph stay. Generation is unchanged. The left card does not show Claim, Context, Action, Result, Close, or the ellipsis. The right panel does not write the left answer. Next: one pull request, squash-merge with [ship] when CI is green, then one deployment check.
