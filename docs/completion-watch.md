@@ -1070,3 +1070,33 @@ Continue: obtain the protected-preview token privately through the owner/authori
 ## 12 November 2026 23:24 UTC — WhatsApp evidence-source blocker
 
 Fresh read-only iZap status for its only business `eshwarjay0`: no WhatsApp number is linked; registration is disconnected; no inbound webhook, history backfill or outbound delivery has ever been recorded. iZap therefore cannot retrieve the 17 Oct incident evidence now. This does not establish the status of MarketFit's separate Meta integration. A 59-result Library search did not surface the generated DOCX or correlated receipt, but is not proof no copy exists elsewhere. No connect link, message, replay or resend was initiated.
+
+
+## 13 November 2026 00:27 UTC — current master, production and approved-backlog reconciliation
+
+**Source and release state**
+
+- Current master: `6a11128a873deca351f5107c8bb58cb3d1a7145d`. It changes only the Kompas voice-preview workflow to manual dispatch because Vercel Hobby previews are disabled. Its production deployment `dpl_GYF4jE43XNrNPzF8xaBXZR3DSpb` is CANCELED.
+- Canonical production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_GvafduzBBMywoKSSfJriJTRTgg8H`, SHA `a247ddf6042385d12a19bfd7e893983c1bcf9087`. Public route fetches were inaccessible in this run. Do not call the newer master deployed.
+- PR #319 remains the active documentation branch, head `f2cdf01e8c0291f2855b41476015ac232b4c6ab7`, base `da1db145`, DRAFT and mergeable=false; it is 8 commits behind and contains 209 commits not on current master. This update stays on that branch; no merge or deployment was attempted.
+
+**Highest-priority WhatsApp and resume gates**
+
+- PR #330 head `b6ab0cd`: WhatsApp recovery regression `43323716384` and Kompas baseline `43323716380` SUCCESS; full CI `43323716285` FAILED at the existing Kompas page/version release-stamp mismatch.
+- PR #333 head `a656793` fixes that stamp only. Full CI `43323903866`, baseline `43323904568`, cross-device `43323904286`, Windows executable `43323903956` SUCCESS; protected preview `43323903963` fails closed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. The owner explicitly said keep #333 DRAFT, no merge/deploy until the preview gate passes.
+- PR #335 head `650453aa` depends on #330. Its exact-head recovery run does not execute the combined `resume-guards` suite. PR #317 head `79816427` passes full CI `43308813566`, baseline `43308813534`, WhatsApp recovery `43308813554`, but is based on older `cd70190` and overlaps #335 in `src/lib/tailor.ts`. Preserve the 6 Nov confirmed-skill cross-role exception; do not blindly restack or merge.
+- The exact 17 Oct source DOCX is not currently retrievable from available Library surfaces. A DOCX listing for 17 Oct returned zero items; semantic search did not surface the source or generated output. The earlier 27,724-byte recovery remains a historical claim, not reproducible evidence in this run. The matching JD was recovered earlier but not re-opened. Generated output DOCX, per-run R2 key, webhook correlation, Meta message ID and signed delivery/read receipt remain missing. No replay or resend.
+
+**Poke Gmail/mobile and contract crawler**
+
+- Read-only Gmail state: 3 account IDs, 2,002 account-keyed threads, 3 sync rows; last sync 10 Nov 14:44:44Z and last thread update 14:46:49Z. The latest Vercel aggregation recorded 48 Supabase Auth HTTP 402 `exceed_egress_quota` failures on notify-rules export across 41 users, latest 23:37Z on the current production deployment. The project owner/admin must resolve the Auth spend-cap/plan restriction; no workaround.
+- PR #323 head `0e6c332`: baseline `43324324226` SUCCESS; full CI `43324324211` fails at the earlier release-stamp check, so the Gmail isolation test was SKIPPED. A stale-marker concurrency race remains unresolved. PR #331 head `13380ca`: baseline `43323752081` SUCCESS; full CI `43323752065` fails at the same stamp check, and its diff removes auth-disabled handling. Reconcile that scope before merge; no two-inbox or phone acceptance.
+- Read-only crawler state: 14,566 rows, 12,407 active, 11,019 fresh within 14 days. Latest run remains 10 Nov 11:00:24–11:01:11Z, 20 portals, 6,818 found/upserted, one Inspyr abort. PR #315 head `f6b7a8c` passes full CI `43309005180`, crawler regression `43309005009` and baseline `43309005158`, but is based on `cd70190`, overlaps #331 in `package.json` and `scripts/tests/kompas-deploy-build.test.mjs`, and has no protected preview. Right To Hire / Contract To Perm → C2H is not live. Keep the crawler manual/on-demand; no crawl, cron or row rewrite.
+
+**Kompas and execution limits**
+
+- PR #334 plus stacked #337/#339 change spoken-answer behavior and are not approved for promotion. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were made. The authenticated 50-pair Kompas/ChatGPT comparison, independent human scoring and native Windows/phone/WhatsApp acceptance remain open.
+- The Plan Journal contains a claim of owner-approved skip-login, but this run's personal-context search did not recover a direct user-authored instruction and the public auth-flag endpoint was inaccessible. Do not change auth environment values or accept #331's removal of auth handling until the approval and current live state are independently verified.
+- Local clone failed because this container could not resolve `github.com`; AGENTS.md also requires the installed Next.js guide before runtime code edits, and `node_modules` is unavailable. No local code tests were run. This continuation updated documentation/evidence only; no real email/WhatsApp test, model call, DOCX generation/write, R2 write, database mutation, manual crawl, billing change, secret exposure or device acceptance occurred.
+
+**Continue:** obtain the private `KOMPAS_VERCEL_API_TOKEN` through the owner/authorized repository administrator, then rerun the protected preview on exact PR #333 head. Keep #333 draft and do not merge/deploy until that gate and the owner's release instruction are satisfied. Then rerun exact-head full CI on #330/#323, execute the combined #335 resume-guards suite, reconcile #331 auth scope, and restack #315 only after its package/test overlap is reviewed. Restore Supabase Auth only through the project owner/admin. Recover the exact 17 Oct source/output and signed R2/Meta evidence before any historical replay.
