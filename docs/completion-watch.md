@@ -417,3 +417,6 @@ Implementation: resume-evidence.ts commit 054372d8. Regressions: resume-confirma
 Fresh exact-head CI and the protected preview are pending. Earlier green checks on PR #352's old head do not validate this correction. No live model generation, exported DOCX inspection, measured 95–100% match or 98% claim has occurred.
 
 Continue: verify the exact updated PR #352 head, require fresh full CI/WhatsApp recovery/baseline/Plan-REA gates, and keep it DRAFT until the legitimate protected preview and owner-authorized DOCX acceptance are complete.
+
+
+The confirmed-skill role relevance regression is now included in package.json prebuild (commit 9c3fb444), so it executes in the full CI build rather than remaining an unreferenced test file. The updated exact-head full CI must pass before PR #352 can advance.
