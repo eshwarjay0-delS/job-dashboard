@@ -392,3 +392,6 @@ The unattended /api/gmail/updates/tick route now returns 503 before reading the 
 Implementation commits: notify rules f0a16831, private export 0b2c1466, cron auth e1074dbf, tick off switch 9f68656c/63bab295, regression 8709d7f3. Full CI and protected preview are pending. PR #357's Gmail digest/mobile UI remains separate; its real two-inbox and mobile-device acceptance is still open.
 
 Continue: run exact-head CI for the security branch, keep the worker disabled, and preserve the account/thread identity and normal-flow mobile navigation requirements. Do not enable notifications or create a recurring scheduler without explicit approval.
+
+
+Production runtime review on 13 Nov found 48 HTTP 402 responses from GET /api/gmail/notify-rules/export in the preceding 24 hours; the latest was 2026-11-13T11:06:54Z. No in-repository caller was found, so the source of the external requests is unknown. The export is not safe to leave public merely because the current tick route does not call it. The new scheduler/CRON_SECRET gate blocks the request before the Supabase service-role listUsers call, and the user-list page is bounded to 50. No external caller was identified or contacted.
