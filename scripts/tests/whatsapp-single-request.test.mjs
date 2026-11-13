@@ -149,7 +149,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp-trace': { trace: () => {} },
     // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
-    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': { markUsed: async () => {} }, '@/lib/resume-library': {}, '@/lib/made-floor': {},
+    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': { markUsed: async () => {}, saveTailored: async () => null }, '@/lib/resume-library': {}, '@/lib/made-floor': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
     '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
     '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
