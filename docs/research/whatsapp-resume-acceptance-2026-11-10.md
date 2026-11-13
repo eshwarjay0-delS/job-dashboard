@@ -117,3 +117,14 @@ PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 427950
 ## 13 November 2026 — source-availability correction
 
 This later correction supersedes the 10 Nov private-archive verification above for current accessibility. The 12 Nov Library recheck did not resolve the recorded original DOCX path, so the exact 17 Oct source DOCX bytes are **not currently accessible from this execution context**. The matching JD remains retrievable from the user's private inbox. Do not claim the original bytes are available, do not substitute another resume, and do not replay the historical run until the exact input is re-established. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain missing. Conflicting education/employment/credential facts remain quarantined pending owner reconciliation.
+
+
+## 13 November 2026 — archive re-verification supersedes the path-lookup failure
+
+The 12 Nov direct Library-folder lookup did not resolve the source path; it did not establish that the source archive was absent. A read-only full Library archive listing located the owner-provided original-resume archive. The exact 17 Oct input DOCX was extracted and its SHA-256 matched the private inventory. Its size is 27,724 bytes. The exact archive member path and digest remain private and are intentionally omitted from this repository. No adjacent resume variant was substituted.
+
+The matching Risk & Controls JD remains recovered from the private inbox. The source's education, employer chronology, experience length and credential claims still conflict with owner-confirmed profile facts and remain quarantined. Do not count the JD's 5+ years or preferred certifications/platforms as candidate evidence. The 6 Nov WhatsApp policy remains authoritative; this does not restore the superseded 98% hard hold.
+
+The historical generated DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain missing. The archive recovery resolves only source-byte availability; it does not prove what was generated, sent, delivered or read. No model call, resume write, R2 write, real WhatsApp send or historical replay occurred.
+
+Continue: obtain the original generated output and correlated R2/webhook/Meta receipt evidence, and reconcile the conflicting source facts with the owner before any exact replay. Do not generate or send a replacement from the quarantined facts.
