@@ -1,39 +1,29 @@
-// Per-sender notify controls (Poke parity): "always" boosts a sender past the
-// normal nudge bar, "never" mutes them entirely. The UI writes these to
-// Supabase user_metadata via /api/gmail/notify-rules (GET/PUT). The 30-minute
-// inbox worker has no user session and no service key, so it cannot read
-// user_metadata — the worker-readable export at /api/gmail/notify-rules/export
-// serves it only what triage needs (sender emails + mode; account addresses
-// stay server-side).
-
 export type NotifyRule = { account: string; email: string; mode: "always" | "never" }
-/** The worker's view: sender email + mode only. */
-export type PublicNotifyRule = { email: string; mode: "always" | "never" }
+export type WorkerNotifyOwner = { ownerId: string; rules: NotifyRule[] }
 
-export function validNotifyRule(r: unknown): r is NotifyRule {
-  if (!r || typeof r !== "object") return false
-  const { account, email, mode } = r as Record<string, unknown>
-  return typeof account === "string" && account.includes("@")
-    && typeof email === "string" && email.includes("@")
-    && (mode === "always" || mode === "never")
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export function validNotifyRule(value: unknown): value is NotifyRule {
+  if (!value || typeof value !== "object") return false
+  const rule = value as Record<string, unknown>
+  return typeof rule.account === "string" && EMAIL.test(rule.account)
+    && typeof rule.email === "string" && EMAIL.test(rule.email)
+    && (rule.mode === "always" || rule.mode === "never")
 }
 
-/** Strip a rule list down to what the worker needs: sender emails + mode. */
-export function toPublicRules(rules: readonly NotifyRule[]): PublicNotifyRule[] {
-  const seen = new Map<string, PublicNotifyRule>()
-  for (const r of rules) {
-    if (!validNotifyRule(r)) continue
-    const email = r.email.toLowerCase()
-    if (!seen.has(email)) seen.set(email, { email, mode: r.mode })
+/** Keep the worker's view grouped by owner and receiving inbox. Never merge
+ * identical sender addresses across accounts or owners. */
+export function toWorkerNotifyOwner(ownerId: string, value: unknown): WorkerNotifyOwner | null {
+  if (!ownerId || ownerId.length > 128 || !Array.isArray(value)) return null
+  const byInboxAndSender = new Map<string, NotifyRule>()
+  for (const item of value) {
+    if (!validNotifyRule(item)) continue
+    const account = item.account.trim().toLowerCase()
+    const email = item.email.trim().toLowerCase()
+    if (!EMAIL.test(account) || !EMAIL.test(email)) continue
+    byInboxAndSender.set(`${account}\u0000${email}`, { account, email, mode: item.mode })
   }
-  return [...seen.values()]
-}
-
-/** Merge raw rule lists from several owners into one public list. */
-export function mergePublicRules(perOwner: readonly (readonly unknown[])[]): PublicNotifyRule[] {
-  const all: NotifyRule[] = []
-  for (const list of perOwner) for (const r of list) if (validNotifyRule(r)) all.push(r)
-  return toPublicRules(all)
+  return byInboxAndSender.size ? { ownerId, rules: [...byInboxAndSender.values()] } : null
 }
 
 /** Does a rule's sender email cover this sender? Exact address or same domain. */
