@@ -1,3 +1,13 @@
+## 2026-11-13 — Fifty answer-quality folds on the human-voice stack
+
+No new screen. The folds sit on the length branch, which already contains the human-voice work. Experience length and the STAR format were not changed. The fictional sample resume is the only source. Saint Louis and jayeshwar44 do not appear.
+
+Each fold is an offline draft, then a 0–4 score on relevance, voice, length, artifacts, psychology, consistency, and elevation. All 50 folds scored 4.00 on every factor. That is the check passing, not a live interviewer. Mean scores: relevance 4, voice 4, length 4, artifacts 4, psychology 4, consistency 4, elevation 4.
+
+**Remaining gap.** The 50-question stand-in still has 78 mode pairs whose content overlap leaves a gap under 0.50. Incident walkthroughs and the decision-owner frame still share wording across modes. Those pairs were not padded. 0 pairs at Jaccard >= 0.7 (highest 0.647). 0 same-answer failures. 0 answers over the ceiling.
+
+**Checked locally. Not merged. Not a production deploy.** Fold, length, and rounds 11–13: 66 pass, 0 fail. `tsc --noEmit` clean. No production URL was called.
+
 ## 2026-11-12 — Answer length follows the question, then the mode
 
 No new screen. A design question is one stage and a named checkpoint. "How would you design X" and a bare "Design X" are a design ask, read before a scenario. The length table is aim and ceiling by question type and mode. A director is often shorter. The mode changes the stance. Ceilings still scale with the number of parts and stop at 300. The spoken prompt no longer gives a second word quota. A named-layer checkpoint stays. An empty "happy to go deeper" and "in conclusion" still come out. The narration version is kompas-workbench-v4.

@@ -130,6 +130,28 @@ export const QUESTION_LENGTH: Record<LengthKind, Record<AnswerLevel, { aim: numb
 const DEPTH: Record<AnswerLevel, number> = { engineer: 0.4, director: 0.22, architect: 0.72 }
 const CONFIDENCE: Record<AnswerLevel, number> = { engineer: 0.3, director: 0.84, architect: 0.48 }
 const DEEPER_ON = /\b(?:go deeper|dig deeper|deeper on)\b/i
+const BLAME_ASK = /\b(?:whose fault|who(?:'s| is) to blame|post-?mortem|blame you|why did you (?:miss|fail|drop)|what did you miss)\b/i
+
+/** A one-word or empty prompt. The answer names the assumption and stops. */
+export function vagueAsk(question: string): boolean {
+  const q = String(question || "").trim()
+  if (!q) return false
+  if (/^(?:thoughts|and|so|well|ok(?:ay)?|security|stuff|the usual)[?.!]*$/i.test(q)) return true
+  return /^(?:what do you think|any thoughts|your take)\b/i.test(q) && q.split(/\s+/).filter(Boolean).length <= 6
+}
+
+/** "Wait, forget that. What is least privilege?" keeps the ask after the cancel. */
+export function afterInterruption(question: string): string {
+  const text = String(question || "").trim()
+  const parts = text.split(/(?<=[.?!])\s+/).filter(Boolean)
+  if (parts.length < 2) return text
+  const cancel = /^(?:wait|sorry|hold on|actually|forget that|never mind|new question)\b[,:]?\s*/i
+  const ask = /^(?:what|how|why|when|who|define|design|tell|describe|explain)\b/i
+  const last = parts[parts.length - 1].replace(cancel, "")
+  const earlierCancel = parts.slice(0, -1).some((part) => cancel.test(part))
+  if ((earlierCancel || cancel.test(parts[parts.length - 1])) && ask.test(last)) return last
+  return text
+}
 const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 
 export function lengthKind(question: string, shape: AnswerShape): LengthKind {
@@ -151,7 +173,7 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
     case "acknowledgement":
     case "closing": return "yes-no"
     case "direct":
-      if (!q.trim() || /^(?:(?:so|and|ok(?:ay)?|well)[, ]+)*(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /\b(?:brief(?:ly)?|quick(?:ly)?|in (?:one|a) sentence|in a nutshell|one-liner)\b/i.test(q)) return "yes-no"
+      if (!q.trim() || vagueAsk(q) || /^(?:(?:so|and|ok(?:ay)?|well)[, ]+)*(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /\b(?:brief(?:ly)?|quick(?:ly)?|in (?:one|a) sentence|in a nutshell|one-liner)\b/i.test(q)) return "yes-no"
       if (/\b(?:your experience|tell me about your|what did you do at)\b/i.test(q)) return "star"
       if ((q.match(/,/g) || []).length >= 1) return "compare"
       return "definition"
@@ -1235,7 +1257,7 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: () => `Yes, I can hear you clearly, thank you, and I am glad to talk through the work.`,
   },
   scenario: {
-    engineer: (l) => `For ${l}, here is the first thing I would do.`,
+    engineer: (l) => `For ${l}, I would check the first failing step.`,
     director: (l) => `For ${l}, I would make the first decision quickly and name who owns it.`,
     architect: (l) => `For ${l}, I would walk the steps in order and note where each one can fail.`,
   },
@@ -1245,12 +1267,12 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: (l) => `For ${l}, the boundary comes first. One short look at what sits beside it, then I come back.`,
   },
   "technical-deep-dive": {
-    engineer: (l) => `On ${l}, here is what I do in practice.`,
+    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
   direct: {
-    engineer: (l) => `On ${l}, here is my answer from my own work.`,
+    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
@@ -1365,8 +1387,9 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
 // Each mode drafts to its own aim and stops at its own ceiling. A short mode is not padded, and a long mode is
 // not cut, to manufacture a word-count gap. Content overlap is measured later.
 function draftLadder(question: string, resume: string, previous: string[]): Record<AnswerLevel, string> {
-  const cut = dissectQuestion(question, resume)
-  const one = (level: AnswerLevel) => draftAtLevel(question, level, resume, previous, cut.modes[level].minWords)
+  const heard = afterInterruption(question)
+  const cut = dissectQuestion(heard, resume)
+  const one = (level: AnswerLevel) => draftAtLevel(heard, level, resume, previous, cut.modes[level].minWords)
   return {
     engineer: compactEngineer(one("engineer")),
     director: one("director"),
@@ -1520,6 +1543,23 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // Stop at this mode's own aim. Do not shorten it so another mode can look longer.
   const stop = mode.aimWords
   const parts = [naturalOpener(opener(premiseLead(lead)))]
+  if (BLAME_ASK.test(question)) {
+    parts[0] = `The pressure was real, and the miss was mine: ${leadPhrase(question)}.`
+    parts.splice(1, 0, level === "director"
+      ? "The decision and the risk still sit with me."
+      : level === "architect"
+        ? "The break is the step I failed to check."
+        : "I check the evidence again before I call it done.")
+  }
+  if (vagueAsk(question)) {
+    parts[0] = level === "director"
+      ? `Assuming you mean ${lead}, the decision is still open, and I stop.`
+      : level === "architect"
+        ? `Assuming you mean ${lead}, I name the boundary and stop.`
+        : `Assuming you mean ${lead}, I name the check and stop.`
+  }
+  if (/\b(?:strategy|govern|change your mind)\b/i.test(question)) parts.push("The owner holds the decision, and the risk is what would change my mind.")
+  if (/\b(?:war room|failed overnight|duplicate row|customers are waiting|disagrees with the live)\b/i.test(question)) parts.push("I check the live evidence before I change the path.")
   // Round 13 (read by eye): a trick ask for a figure ("What percentage…", "ROI in dollars") got a resume line and no
   // word on the number, which reads as dodging. The stand-in says once that it will not guess. Failsafe: a figure the
   // interviewer gave, or one on the resume, is not refused.
@@ -1674,14 +1714,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     const extra = sides
       ? pairSideLines(sides)
       : bareTerm
-      ? [
-          `I mean ${lead} when I say ${lead}.`,
-          `I say ${lead}, and I mean ${lead}.`,
-          `I do mean ${lead}.`,
-          `I say ${lead} again.`,
-          `I mean ${lead} here.`,
-          `I say ${lead} once more.`,
-        ]
+      ? []
       : namedDesign
       ? []
       : [
