@@ -112,3 +112,12 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 13 November 2026 — current evidence recheck
+
+The 10 November archive review recorded the 17 October source DOCX and matching JD, but the 12 November accessible Library recheck did not resolve the exact source bytes. Treat current source availability as unverified until the bytes are rechecked. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. No historical replay or resend is justified.
+
+The 13 November Safe Merge Gate production aggregation found two rejected WhatsApp drafts in the 24-hour window, latest 12 November 18:18:32 UTC. Both had 100% raw and supported keyword coverage but remained partial, incomplete and needs-review; blockers included `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable` and `roles_unrewritten`. The new profile-part acceptance restack addresses only `draft_parts_missing`; PR #352 addresses the separate confirmed-skill cross-role boundary. Neither result proves a live 95–100% match or successful delivery.
+
+The owner-approved 6 November channel-specific delivery policy remains authoritative. Do not restore the superseded 98% hard hold. Keep the initial no-provider fallback limited to the exact selected same-account original, labelled NOT TAILORED; swipe-reply refinement failures remain text-only and preserve the last delivered version.
