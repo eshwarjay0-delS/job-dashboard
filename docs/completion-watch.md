@@ -444,3 +444,6 @@ The matching Security Engineer – Risk & Controls JD remains recovered from the
 The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. No exact historical replay or delivery can be claimed. No model call, resume write, R2 write, WhatsApp send, or production mutation was performed.
 
 Continue: retrieve the exact generated output and correlated R2/webhook/Meta evidence, and obtain owner reconciliation of the conflicting source facts. Until then, keep historical replay blocked and do not send a replacement or live test message.
+
+
+Implementation and gate status at 13 Nov 2026 13:01 UTC: the source-availability correction is in stacked draft PR #365 (head 85e77daa1cf9d9c1ccc830ba323894fc3d845289); Plan Journal/REA schema run 43429933415 completed SUCCESS. Parent WhatsApp code PR #364 head 29d82ffc352e153a7c7b76ae23f56bc469ff50a9 has exact-head full CI 43426407953, WhatsApp recovery 43426408103, Kompas baseline 43426408264 and Plan/REA schema 43426407983 all SUCCESS. PR #364 remains DRAFT because no protected Vercel preview exists; the private KOMPAS_VERCEL_API_TOKEN must be configured by an authorized repository administrator. Neither PR is deployed, and no production or real-device acceptance is claimed.
