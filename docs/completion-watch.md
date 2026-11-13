@@ -461,3 +461,8 @@ The current-master review confirms these are still separate, gated items:
 | Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
 
 These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
+
+
+## 13 November 2026 — run 11 Gmail/mobile exact-head gates passed
+
+Continue: current-master PR #375 at head `9aa80221fe4c05d1265e649061ea4fe0dae518fe` passed full CI `43490945879`, Kompas baseline `43490945884` and Plan/REA schema `43490945912`. It preserves the Gmail snapshot fallback while adding receiving-inbox + provider-thread identity for digest/radar/mute and normal-flow mobile navigation. The PR remains DRAFT pending the protected Vercel preview and Safe Merge Gate's shared Plan/REA sequence. No real Gmail API/OAuth call, inbox mutation, outbound email, two-inbox test or narrow-phone device acceptance occurred. Do not enable the proposed sync-health card or unattended notification worker.
