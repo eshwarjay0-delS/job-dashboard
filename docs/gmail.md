@@ -204,3 +204,12 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+
+
+## Production access and mobile acceptance — 13 November 2026
+
+The Poke-inspired multi-account direction remains approved, but live acceptance is blocked. The MFit Safe Merge Gate reported HTTP 402 exceed_egress_quota on /api/gmail/important and /api/gmail/notify-rules/export, with 83 quota-related errors across Gmail and Kompas. Read-only database access still works; that does not prove Gmail API calls or phone delivery.
+
+The unattended /api/gmail/updates/tick worker remains disabled until an approved external scheduler, CRON_SECRET and Meta template are configured. The specific sync-health card remains proposed, not approved to ship. Do not change billing or spend caps, enable a scheduler, send email or send WhatsApp notifications to work around the provider restriction. After the owner resolves the quota legitimately, verify two authorized inboxes, account-scoped reconnect, selected-From preservation and a narrow-mobile device flow. No live mobile acceptance is claimed.

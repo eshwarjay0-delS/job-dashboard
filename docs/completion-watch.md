@@ -381,3 +381,57 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+
+
+## 13 November 2026 — independent resume confirmed-skill restack and backlog reconciliation
+
+Continue: extract the owner-approved confirmed-skill mapping from PR #345 onto current master without its blocked WhatsApp dependency. New branch: fix/resume-confirmed-skill-role-mapping-restack-4c01951-20261113. It contains only the resume evidence helper, writer prompt, tailor integration and quality test. Code commits: 66df191e652cdde26bcf76399cfaaf3d009de2e6, b28846643c6a2e8913cab51f67db3d04297c9eb8, 28e1af2ee8515637d79df492d0d08e6dc905363d and 79df24a6c9678b469118fbad01e675bb8d0b9a10. The source PR #345 exact head 3390272c passed full CI, baseline, cross-device, WhatsApp recovery, Windows packaging and Plan/REA schema; those are not exact-head checks for this independent restack. Fresh checks and protected preview remain pending. No merge or deployment is claimed.
+
+The owner correction (6 Nov 09:55 CT; reiterated in owner-authored comment 6817645128 on 12 Nov) allows a positive first-person candidate-confirmed skill to be mapped into relevant existing project bullets across roles, including earlier roles, without same-role source wording. It never authorizes a new employer, project, action, outcome, date, title, location, contact, metric, credential or unsupported project fact. JD wording, target scores and editing instructions remain non-evidence.
+
+The 17 Oct 17:28 CT WhatsApp failure remains unreplayed. The source DOCX and matching JD are recorded as recovered privately, but the generated output and per-run R2/webhook/Meta correlation are missing; source chronology, education and credential conflicts remain quarantined. Accessible prior-context search did not recover the original user message. Two later rejected drafts on 12 Nov had 100% raw/support coverage but remained partial/incomplete and needs_review with draft_parts_missing, quality_incomplete, quality_not_deliverable and roles_unrewritten. They are not proof of the original incident. Latest connection check found zero linked WhatsApp numbers. No real Meta send or handset acceptance is claimed.
+
+Gmail/mobile: the Poke-inspired multi-account direction remains approved, but the sync-health card remains proposed. Safe Merge Gate reported HTTP 402 exceed_egress_quota on /api/gmail/important and /api/gmail/notify-rules/export, with 83 quota-related errors across Gmail and Kompas. The unattended updates worker remains disabled pending the approved scheduler, CRON_SECRET and Meta template; no email or phone notification was sent.
+
+Contract crawler: owner-approved Right To Hire and Contract To Perm → C2H correction is not in production. Negated labels remain unknown; generic contract administration/negotiation/lifecycle text is not employment evidence; structured employmentType stays separate. Latest crawl remains 10 Nov 11:00 UTC, 20 portals, 6,818 found/upserted, one Inspyr abort. No later run exists in the database. There is no contract-crawl cron in vercel.json; manual/on-demand only supersedes historical daily-crawl wording. PR #343's old head failed full CI on a stale build-stamp assertion; its dedicated crawler and baseline gates passed.
+
+Kompas: PR #350 is merged and production READY at exact master SHA 4c01951 on deployment dpl_BJvUK2kwPCUE6oCLcmTWPa5Dm25d; both canonical aliases were verified. This is web production only. The actual PR #351 diff deletes 193,478 lines across 1,735 files and remains blocked. PR #346 is stacked. Kompas Continuous Voice Delivery is disabled; no parallel voice edits were made. No native Windows, phone, WhatsApp, 50-pair live model or human grading acceptance is claimed.
+
+Coordination: MFit Completion Watch and MFit Safe Merge Gate are enabled. No separate Bible-Keeper automation was listed in the active task inventory at 13 Nov 05:43 UTC. Kompas Continuous Voice Delivery is disabled. Preserve its ownership if it is re-enabled; do not duplicate voice work.
+
+Next: after this resume-only restack passes exact-head checks and protected preview, continue with a clean current-master restack of the approved C2H classifier correction, then the missing WhatsApp output/trace recovery and Gmail quota/device acceptance. Do not promote unapproved Kompas behavior or bypass provider restrictions.
+
+### Resume restack follow-up — 13 Nov 2026 06:01 UTC
+
+A source review found the candidate-evidence helper labeled the JD as “ORIGINAL SUBMITTED TEXT”. The value is opts.jd, so the label was misleading. It now says “JOB DESCRIPTION (target requirements, not candidate evidence)”, with a regression asserting the new label and rejecting the old one. Code/test commits 08065f4bcfc2cc2b7ca3b6436c9b6b715f562a7d and d31b599cf7d2121878e7a0f78275cf0e2fcdfd7c. Exact-head full CI, WhatsApp recovery and baseline/schema checks must rerun after this follow-up.
+
+
+## 13 November 2026 — confirmed-skill role relevance review correction
+
+The first current-master resume restack (#352) passed its four source gates, but Safe Merge Gate identified a substantive overreach: the final guard allowed every confirmed JD term in every role. The owner-approved 6 Nov exception is cross-role, not global-to-every-role. The branch now restricts a confirmed term to a relevant existing project bullet using conservative skill-family/context checks; unknown skills require direct source support. It still does not require the same role's original bullet to name the confirmed tool.
+
+Implementation: resume-evidence.ts commit 054372d8. Regressions: resume-confirmation-quality.test.mjs commit 35684402. Positive cases cover CyberArk EPM in an earlier local-admin/endpoint project and Canton in a ledger project; negative cases restore CyberArk from an unrelated Salesforce-marketing bullet and restore an unknown unsupported skill.
+
+Fresh exact-head CI and the protected preview are pending. Earlier green checks on PR #352's old head do not validate this correction. No live model generation, exported DOCX inspection, measured 95–100% match or 98% claim has occurred.
+
+Continue: verify the exact updated PR #352 head, require fresh full CI/WhatsApp recovery/baseline/Plan-REA gates, and keep it DRAFT until the legitimate protected preview and owner-authorized DOCX acceptance are complete.
+
+
+The confirmed-skill role relevance regression is now included in package.json prebuild (commit 9c3fb444), so it executes in the full CI build rather than remaining an unreferenced test file. The updated exact-head full CI must pass before PR #352 can advance.
+
+
+## 13 November 2026 — Confirmed cloud-skill role context guard
+
+PR #352's approved cross-role confirmation exception remains in force, but a review found the cloud-family matcher was too broad: generic “automation,” “API,” or “service” language could make a Salesforce marketing bullet look relevant to AWS. The guard now requires clearer cloud/infrastructure/container/serverless/hosting/IaC/VPC/EC2/S3/RDS/Lambda/CloudWatch/CI-CD context.
+
+- Code/test/docs commit: 6bfb881e29ce6bf3410f809b2470816f92bbb268
+- Added a negative regression for AWS in a Salesforce email-marketing automation bullet.
+- Added a positive regression preserving AWS in an existing cloud-infrastructure/CI-CD project.
+- The previous exact-head checks on 4f611897 passed: full CI 43419187956, WhatsApp recovery 43419187860, Kompas baseline 43419188024 and Plan/REA schema 43419187989. They do not validate the new commit.
+- Fresh exact-head workflows are pending.
+- PR #352 remains DRAFT. No protected preview exists for its branch; the private KOMPAS_VERCEL_API_TOKEN is unavailable to this environment.
+- Production remains READY at master 4c01951; this PR is not deployed. No authenticated model call, exported DOCX, real WhatsApp/email send or device acceptance occurred.
+
+Continue: wait for fresh exact-head CI and Plan/REA checks, then require the protected preview. Keep the historical 17 Oct WhatsApp output/R2/Meta receipt gap separate from this resume-mapping fix.
