@@ -57,3 +57,8 @@ The source implementation was previously tested on PR #325 head `513be212e693d45
 Current production remains READY on `dpl_BJvUK2kwPCUE6oCLcmTWPa5Dm25d`, exact SHA `4c01951af59f7d64eecd2b39da32d75c607d9eea`, with both canonical aliases verified. This branch is not deployed. The protected preview gate still requires the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it.
 
 The latest 12 Nov Library recheck did not resolve the exact 17 Oct source DOCX bytes. The matching JD remains retrievable, but the generated output DOCX, per-run R2/webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. No historical replay, model call, DOCX write, R2 mutation, real WhatsApp send or email send occurred.
+
+
+## Exact-head restack verification — 13 November 2026 08:39 UTC
+
+PR #353 `97c6fbf2caec1507059b44a1237f397263f27b95` passed all four source gates: full CI `43393676889`, Kompas baseline `43393676888`, WhatsApp recovery `43393676957`, and Plan/REA schema `43393676967`. The branch remains DRAFT. No protected-preview pass is recorded; the private `KOMPAS_VERCEL_API_TOKEN` remains unavailable to this run. This is source/test validation only, not a production deployment, authenticated model run, exported DOCX review, live 95–100% match, or WhatsApp delivery. The fix is limited to requested profile-part acceptance; it does not claim to resolve `roles_unrewritten`.
