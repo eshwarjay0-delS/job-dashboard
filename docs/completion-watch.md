@@ -406,3 +406,14 @@ Next: after this resume-only restack passes exact-head checks and protected prev
 ### Resume restack follow-up — 13 Nov 2026 06:01 UTC
 
 A source review found the candidate-evidence helper labeled the JD as “ORIGINAL SUBMITTED TEXT”. The value is opts.jd, so the label was misleading. It now says “JOB DESCRIPTION (target requirements, not candidate evidence)”, with a regression asserting the new label and rejecting the old one. Code/test commits 08065f4bcfc2cc2b7ca3b6436c9b6b715f562a7d and d31b599cf7d2121878e7a0f78275cf0e2fcdfd7c. Exact-head full CI, WhatsApp recovery and baseline/schema checks must rerun after this follow-up.
+
+
+## 13 November 2026 — confirmed-skill role relevance review correction
+
+The first current-master resume restack (#352) passed its four source gates, but Safe Merge Gate identified a substantive overreach: the final guard allowed every confirmed JD term in every role. The owner-approved 6 Nov exception is cross-role, not global-to-every-role. The branch now restricts a confirmed term to a relevant existing project bullet using conservative skill-family/context checks; unknown skills require direct source support. It still does not require the same role's original bullet to name the confirmed tool.
+
+Implementation: resume-evidence.ts commit 054372d8. Regressions: resume-confirmation-quality.test.mjs commit 35684402. Positive cases cover CyberArk EPM in an earlier local-admin/endpoint project and Canton in a ledger project; negative cases restore CyberArk from an unrelated Salesforce-marketing bullet and restore an unknown unsupported skill.
+
+Fresh exact-head CI and the protected preview are pending. Earlier green checks on PR #352's old head do not validate this correction. No live model generation, exported DOCX inspection, measured 95–100% match or 98% claim has occurred.
+
+Continue: verify the exact updated PR #352 head, require fresh full CI/WhatsApp recovery/baseline/Plan-REA gates, and keep it DRAFT until the legitimate protected preview and owner-authorized DOCX acceptance are complete.
