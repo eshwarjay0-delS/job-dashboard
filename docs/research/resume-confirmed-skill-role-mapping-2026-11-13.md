@@ -48,3 +48,20 @@ The guard now checks the original bullet's project context:
 - This does not reintroduce the old same-role source-wording requirement: an earlier endpoint project can receive a confirmed CyberArk EPM skill even when the original bullet does not name CyberArk, and an earlier ledger project can receive a confirmed Canton skill.
 
 Regression coverage includes both positive relevant earlier-role cases and negative unrelated Salesforce-marketing and unknown-skill cases. Implementation commit 054372d8; test commit 35684402. Exact-head full CI, baseline, WhatsApp recovery and Plan/REA checks must rerun; the previous PR #352 green checks predate this correction. Protected preview and actual owner-authorized DOCX acceptance remain pending.
+
+
+## Current-master restack — 13 November 2026, run 11
+
+The source PR #352 branch is based on older master `4c01951` and is merge-conflicting. Its reviewed resume-only changes have been extracted onto current canonical master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/resume-confirmed-skill-role-mapping-master-026c729-run11-20261113`.
+
+Copied runtime/test scope:
+- `src/lib/resume-evidence.ts`: explicit first-person confirmation parser, JD-as-target label, role-scoped evidence and relevance-family checks for confirmed skills.
+- `src/lib/claude.ts`: writer prompt permits confirmed skills in relevant existing project context across roles without requiring same-role source wording.
+- `src/lib/tailor.ts`: cache generation 28, role-scoped gap repair, cross-role confirmed-skill placement, deterministic restoration of unsupported JD terms, and a diagnostic count of reverted role-unsupported bullets.
+- `scripts/tests/resume-confirmation-quality.test.mjs` and `scripts/tests/resume-guards.test.mjs`: positive relevant earlier-role cases, negative unrelated-project/unknown-skill cases, prompt-label and identity-fact boundaries.
+
+The restack also carries `docs/resume.md` and the Oct 17 evidence audit, but does not copy stale WhatsApp code or profile-gap PR #353. Implementation commits: `e34a1215f535e153f041bfd1ae86b4db3b33044d`, `788a7ca0e75885c2f36888006f2fe86b5d3a745a`, `e6d72488ad26afc666f8471c75429fe9a8794580`, `e9e27573e82c520a03c3e81d9226f9189b961fa6`, and `4a72102e6dc0b5cc1b0a1ed219b2e64181ee048c`.
+
+The exact-head GitHub Actions checks are pending. Local `npm ci` and tests could not run because the Vercel sandbox API returned HTTP 400 and the container could not resolve GitHub; no local execution is claimed. The legitimate protected Vercel preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted.
+
+The actual 17 Oct source/JD case remains separate: prior private review recorded the source DOCX and matching JD recovery, but current execution did not rematerialize the source bytes; the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/tenure/credential facts remain quarantined. No model call, DOCX export, historical replay, R2 write, real send or handset acceptance occurred. No 95–100% or 98% live-match claim is supported by these source tests.
