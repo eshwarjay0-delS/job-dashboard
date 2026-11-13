@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 
 const login = readFileSync(new URL("../../src/app/login/page.tsx", import.meta.url), "utf8")
 const adminAccess = readFileSync(new URL("../../src/lib/adminAccess.ts", import.meta.url), "utf8")
+const owner = readFileSync(new URL("../../src/lib/owner.ts", import.meta.url), "utf8")
 
 test("MarketFit login exposes Google OAuth only", () => {
   assert.match(login, /signInWithOAuth/)
@@ -21,7 +22,9 @@ test("MarketFit login exposes Google OAuth only", () => {
   ]) assert.doesNotMatch(login, forbidden)
 })
 
-test("admin access remains a server-side membership decision", () => {
-  assert.match(adminAccess, /admin_memberships/)
-  assert.doesNotMatch(login, /admin_memberships|eshwarjay0@gmail\.com/i)
+test("owner admin remains a server-side verified Google identity", () => {
+  assert.match(adminAccess, /isAdminEmail\(user\.email\)/)
+  assert.match(owner, /PRODUCT_OWNER_EMAIL = "eshwarjay0@gmail\.com"/)
+  assert.match(owner, /mine === PRODUCT_OWNER_EMAIL/)
+  assert.doesNotMatch(login, /PRODUCT_OWNER_EMAIL|ADMIN_EMAILS|eshwarjay0@gmail\.com/i)
 })
