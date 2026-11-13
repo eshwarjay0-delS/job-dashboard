@@ -469,3 +469,12 @@ The three run-11 PRs #374/#375/#376 and the new resume restack all touch shared 
 Canonical production alias `job-dashboard-fawn.vercel.app` remains READY at deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb`, SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; current master is `026c72968e45314ff0a99f701942c966e79f0a1e`. No new runtime slice above is live. The legitimate protected Vercel preview still requires the private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this execution. No preview bypass, production deploy, R2 write, real Meta send, email send, historical replay, live model call, DOCX export or handset test occurred.
 
 Execution note: a Vercel sandbox creation attempt returned HTTP 400; the local container could not resolve `github.com`. No local `npm ci` or tests are claimed. GitHub Actions is the available source-validation path. After the latest exact-head runs complete, update each PR's Plan/REA status and keep the protected-preview gate separate from source CI. The 17 Oct generated output DOCX and correlated R2/webhook/Meta signed delivery/read evidence remain missing; source education/employment/tenure/credential conflicts remain quarantined pending owner reconciliation.
+
+## 13 November 2026 — run 11 confirmed-skill relevance tightening
+
+- Static review of current-master PR #377 found CyberArk EPM shared a broad security context containing generic administrator, access, audit and compliance terms. That could qualify a generic Salesforce Administrator or compliance-audit bullet for a confirmed CyberArk EPM skill.
+- PR #377 now separates CyberArk EPM into a dedicated endpoint/local-administrator/privilege/elevation/application-control/least-privilege context. The broader security-tool family remains separate.
+- Source commit 185d0252c19c3eb3c2ef49fbe5e2c760fe3fc88b; regression commit f92c007f6407101fcf5a36f105c2a8fb90abbc21. The new test rejects generic CRM administration and audit/compliance bullets while preserving the endpoint/local-administrator positive case.
+- This remains source-level evidence only. Fresh exact-head CI, WhatsApp recovery, Kompas baseline, Plan/REA schema, protected preview, owner-authorized model run and exported-DOCX inspection are still required. No 95–100% or 98% live match is claimed.
+
+Continue: validate this narrow relevance correction on the final PR #377 head, then keep it DRAFT until the legitimate protected preview and owner-authorized DOCX acceptance are complete.
