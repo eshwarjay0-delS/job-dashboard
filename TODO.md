@@ -1,3 +1,13 @@
+## 2026-11-13 — Actions storage cleanup (no visible UI)
+
+No new website screen. The account had filled its 0.5 GB Actions storage with `Kompas-Windows-Caption-Once-<sha>` artifacts (~162 MB, 14-day retention, including pull requests). Owner Eshwar approved deleting every old Actions artifact except the newest caption build.
+
+**Verified on GitHub, not in the website.** Cleanup run [43339668406](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43339668406) deleted 150 non-expired artifacts (24,300,087,723 bytes, 24.300 GB) and 3 Actions caches (417,444,083 bytes). One artifact remains: `Kompas-Windows-Caption-Once-36053e2a02bb8b648bec40ebd71449d86902f127` (id 13996119819, 162,041,140 bytes, created 2026-11-13T00:22:25Z). Caches remaining: 0. Release `kompas-desktop-latest` / `Kompas.exe` was not modified (`updated_at` 2026-11-12T22:50:32Z, 162,248,232 bytes). The pull-request Windows build skipped both the upload step and the release step.
+
+Uploads of that executable now use `retention-days: 1` and run only on a push to `master` or `workflow_dispatch`. A master push that does not change `legacy/perfact/desktop/**` or `public/kompas/**` does not build. `ci.yml` already had `retention-days: 1`. `nextjs-ci.yml` already had `retention-days: 3`. The cleanup workflow is manual-only again after the one-shot backlog delete.
+
+**Not done.** `eshwarjay0-delS/parfAct` is private. This environment's Actions token returns HTTP 404, so its artifacts were not listed or deleted and its workflows were not edited. Those workflows still upload `kompas-desktop-windows-x64` and `kompas-desktop-candidate` with `retention-days: 14`. No production deploy. No commit message contains a ship marker.
+
 ## 2026-11-12 — Login-off sessions on the free Blob store, and Android keeps the last audio chunk
 
 No new screen. Three reviewed patches landed on master `27f600ef`: when `AUTH_DISABLED` is exactly true, `/api/kompas/account-sessions` and `/api/kompas/account-artifacts` use the private Hobby Blob store, and the first successful login-off catalog read uploads this origin's local sessions. Signed-in accounts still use Supabase and still need an explicit Import. Chrome on Android waits briefly after `MediaRecorder.onstop` so the last `dataavailable` chunk is included, and a timeslice `start` falls back to an untimed start. `AUTH_DISABLED` was not changed.
