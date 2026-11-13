@@ -54,12 +54,23 @@ function hasKeyword(question: string, answer: string): boolean {
   return lead.some((word) => low.includes(word))
 }
 
+/** Keyword echo alone is not a 4. The answer needs a move of its own. */
+export function contentRelevance(question: string, answer: string): number {
+  const text = String(answer || "")
+  if (!hasKeyword(question, text)) return 0
+  const move = /\b(?:I (?:check|would|mean|start|hold|leave|record|can|keep|added|reviewed|worked)|decision|boundary|trade-?off|example|rather|plain|owner|result|because|means)\b/i
+  if (move.test(text)) return 4
+  const q = new Set(question.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= 4))
+  const extra = text.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length >= 4 && !q.has(word))
+  return extra.length >= 6 ? 2 : 1
+}
+
 export function scoreSpokenAnswer(fold: QualityFold, answer: string): Record<QualityFactor, number> {
   const text = String(answer || "")
   const cut = dissectQuestion(fold.question)
   const words = wordCount(text)
   const ceiling = cut.modes[fold.level].maxWords
-  const relevance = hasKeyword(fold.question, text) ? 4 : 0
+  const relevance = contentRelevance(fold.question, text)
   const voice = META.test(text) || ARROGANCE.test(text) ? 0 : /\bI\b/.test(text) ? 4 : 2
   const length = words > ceiling ? 0 : words >= 8 ? 4 : 2
   let artifacts = 2

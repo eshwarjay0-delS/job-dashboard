@@ -29,6 +29,7 @@ import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { defensibilityPrompt, defensibilityReport } from "@/lib/kompasDefensibility"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
 import { answerAside, shortFactAnswer, type AnswerAside } from "@/lib/kompasAnswerAside"
+import { claimPrompt, screenSuggestion } from "@/lib/kompasSessionMind"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
@@ -364,6 +365,8 @@ type AnswerJob = {
   groundingTimedOut: boolean
   // Context panel. Built with the answer from the resume already on this job. Not a second model call.
   aside?: AnswerAside
+  // Mic and caption text already heard. Used only to keep a new line from contradicting it.
+  heard?: string
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -406,9 +409,20 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
   // Presentation is separate from the retrieved passage text. Unsupported detail is dropped, not guessed.
   try {
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
-    if (grounded.presentation.trim()) return { text: grounded.presentation, providerError: false }
+    if (grounded.presentation.trim()) return { text: claimSafe(job, grounded.presentation), providerError: false }
   } catch { /* the settled answer stands */ }
-  return { text: settled.text, providerError: false }
+  return { text: claimSafe(job, settled.text), providerError: false }
+}
+
+function claimSafe(job: AnswerJob, text: string): string {
+  if (!job.heard) return text
+  const said = job.previousTurns.map((turn) => turn.a)
+  const next = text.split(/(?<=[.?!])\s+/).map((sentence) => {
+    const screened = screenSuggestion(sentence, job.heard || "", said)
+    return screened.blocked ? "" : screened.line
+  }).filter(Boolean)
+  const joined = next.join(" ").trim()
+  return joined || text
 }
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
@@ -936,9 +950,11 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const fastResume = str(earlyConfig.resume, 60000)
   const fast = shortFactAnswer(question, fastResume)
   if (fast) {
-    const aside = answerAside({ question, transcript: [tailWindow(body.transcript).text, heardAll].filter(Boolean).join("\n"), resume: fastResume })
+    const heardFast = [tailWindow(body.transcript).text, heardAll].filter(Boolean).join("\n")
+    const aside = answerAside({ question, transcript: heardFast, resume: fastResume })
     if (fast.booster) aside.boosters = [fast.booster, ...aside.boosters.filter((b) => b !== fast.booster)].slice(0, 3)
-    return fastFactResponse(body.stream === true, fast.text, aside, question)
+    const screenedFact = screenSuggestion(fast.text, heardFast)
+    return fastFactResponse(body.stream === true, screenedFact.line || fast.text, aside, question)
   }
 
   // Speed r6: on an answer turn the key vault is read WHILE the question, sources, dossier race and prompt are prepared
@@ -1283,7 +1299,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}${tier === 0 ? "" : `\n\n${defensibilityPrompt(question)}`}\n\n${TITLE_INSTRUCTION}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}${tier === 0 ? "" : `\n\n${defensibilityPrompt(question)}`}${claimPrompt([transcript, heardAll].filter(Boolean).join("\n")) ? `\n\n${claimPrompt([transcript, heardAll].filter(Boolean).join("\n"))}` : ""}\n\n${TITLE_INSTRUCTION}`,
     plan,
     interviewer,
     level,
@@ -1315,6 +1331,7 @@ ${INTERVIEW}`
     previousAnswer,
     previousTurns,
     groundingTimedOut: generalDossierTimedOut || bibleTimedOut,
+    heard: [transcript, heardAll].filter(Boolean).join("\n"),
   }
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"

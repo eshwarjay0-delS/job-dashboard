@@ -2345,7 +2345,8 @@ function endSegment(cap, keep, restart = true, force = false, includeTail = fals
   let settle;
   const done = new Promise(r => { settle = r; });
   finals.add(done); done.then(() => finals.delete(done));
-  const takeTail = () => includeTail && Array.isArray(cap.tail) ? cap.tail.map(item => item && item.blob).filter(blob => blob && blob.size && chunks.indexOf(blob) < 0) : [];
+  const withTail = includeTail || !!keep;
+  const takeTail = () => withTail && Array.isArray(cap.tail) ? cap.tail.map(item => item && item.blob).filter(blob => blob && blob.size && chunks.indexOf(blob) < 0) : [];
   const flush = () => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(takeTail().concat(chunks), { type: rec.mimeType || MIME || "audio/webm" });
@@ -2359,7 +2360,7 @@ function endSegment(cap, keep, restart = true, force = false, includeTail = fals
   };
   const stopNow = () => { try { rec.stop(); } catch { setTimeout(flush, 80); } };
   const canRequest = typeof rec.requestData === "function" && rec.state && rec.state !== "inactive";
-  if (includeTail && canRequest) {
+  if (withTail && canRequest) {
     let stopped = false;
     const finish = () => { if (stopped) return; stopped = true; clearTimeout(wait); stopNow(); };
     const prev = rec.ondataavailable;
@@ -4606,7 +4607,7 @@ function deriveBody(question, card, opts) { return { deriveOnly: true, client: B
 // it as formed instead of cutting the heard text a second time (review of 398f299: the second cut glued his reply and
 // the "You (context keywords)" label back in front of the question the model was told to answer).
 function selectAnswerContext(lines) {
-  const ASK = /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design)\b|\?/i;
+  const ASK = /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design|have you|do you|can you)\b|\?/i;
   const sentences = [];
   for (const line of lines || []) {
     const who = line && line.who === "You" ? "You" : "Them";
@@ -4617,8 +4618,9 @@ function selectAnswerContext(lines) {
   for (let i = sentences.length - 1; i >= 0; i--) if (sentences[i].who !== "You" && ASK.test(sentences[i].text)) { ask = i; break; }
   if (ask < 0) for (let i = sentences.length - 1; i >= 0; i--) if (sentences[i].who !== "You") { ask = i; break; }
   if (ask < 0) return { question: "", passages: "", words: 0 };
+  const partial = !/[.?!]$/.test(sentences[ask].text) && ASK.test(sentences[ask].text) && sentences[ask].text.split(/\s+/).length < 14;
   let start = ask, words = sentences[ask].text.split(/\s+/).length;
-  while (start > 0 && words < 140) {
+  if (!partial) while (start > 0 && words < 140) {
     const prev = sentences[start - 1], n = prev.text.split(/\s+/).length;
     if ((prev.who === "You" && n > 8) || words + n > 180) break;
     words += n; start--;
@@ -4627,7 +4629,8 @@ function selectAnswerContext(lines) {
   while (end + 1 < sentences.length && end - ask < 2 && sentences[end + 1].who === sentences[ask].who && !ASK.test(sentences[end + 1].text)) end++;
   const picked = sentences.slice(start, end + 1);
   const passages = picked.map(s => s.who + ": " + s.text).join("\n");
-  return { question: sentences[ask].text, passages, words: passages.split(/\s+/).filter(Boolean).length };
+  const question = partial ? sentences[ask].text.replace(/\s+$/, "") + "?" : sentences[ask].text;
+  return { question, passages, words: passages.split(/\s+/).filter(Boolean).length };
 }
 function linesFromPayload(text) {
   return String(text || "").split("\n").map(line => {

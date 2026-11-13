@@ -4,7 +4,15 @@
  */
 export type ContextLine = { who?: string; text?: string; at?: number }
 
-const ASK = /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design)\b|\?/i
+const ASK = /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design|have you|do you|can you)\b|\?/i
+
+/** A stem in progress is already the question. Do not wait for the closing punctuation. */
+export function captureEarly(partial: string): string {
+  const text = String(partial || "").replace(/\s+/g, " ").trim()
+  if (!text || !ASK.test(text)) return ""
+  if (/[.?!]$/.test(text)) return text
+  return `${text}?`
+}
 
 export function selectAnswerContext(lines: readonly ContextLine[]): { question: string; passages: string; words: number } {
   const sentences: { who: string; text: string }[] = []
@@ -21,9 +29,11 @@ export function selectAnswerContext(lines: readonly ContextLine[]): { question: 
     for (let i = sentences.length - 1; i >= 0; i--) if (sentences[i].who !== "You") { ask = i; break }
   }
   if (ask < 0) return { question: "", passages: "", words: 0 }
+  const early = captureEarly(sentences[ask].text)
+  const partial = early.endsWith("?") && !/[.?!]$/.test(sentences[ask].text) && sentences[ask].text.split(/\s+/).length < 14
   let start = ask
   let words = sentences[ask].text.split(/\s+/).length
-  while (start > 0 && words < 140) {
+  if (!partial) while (start > 0 && words < 140) {
     const prev = sentences[start - 1]
     const n = prev.text.split(/\s+/).length
     if ((prev.who === "You" && n > 8) || words + n > 180) break
@@ -33,5 +43,5 @@ export function selectAnswerContext(lines: readonly ContextLine[]): { question: 
   let end = ask
   while (end + 1 < sentences.length && end - ask < 2 && sentences[end + 1].who === sentences[ask].who && !ASK.test(sentences[end + 1].text)) end++
   const passages = sentences.slice(start, end + 1).map((s) => `${s.who}: ${s.text}`).join("\n")
-  return { question: sentences[ask].text, passages, words: passages.split(/\s+/).filter(Boolean).length }
+  return { question: partial ? early : sentences[ask].text, passages, words: passages.split(/\s+/).filter(Boolean).length }
 }

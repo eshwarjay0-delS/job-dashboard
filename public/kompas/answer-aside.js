@@ -3,6 +3,8 @@
 (function () {
   var KEY = "kompas-answer-aside-open";
   var byQuestion = [];
+  var history = [];
+  var view = 0;
   var lastStem = "";
   var manual = null;
   var current = null;
@@ -141,7 +143,7 @@
     var mode = shownMode(aside);
     list.textContent = "";
     var lines = mode === "boosters" ? (aside.boosters || []) : (aside.questions || []);
-    lines.forEach(function (line) { list.appendChild(el("li", "", line)); });
+    lines.forEach(function (line) { addLi(list, line, whyFor(current, line)); });
     if (!lines.length) list.appendChild(el("li", "", mode === "boosters" ? "No booster for this line." : "No question for this line."));
     if (title) title.textContent = mode === "boosters" ? "Booster statements" : "Clarifying questions";
     var qBtn = document.getElementById("asideModeQuestions");
@@ -152,19 +154,66 @@
     if (autoBtn) autoBtn.setAttribute("aria-pressed", manual ? "false" : "true");
   }
 
+  function whyFor(aside, line) {
+    var trace = aside && aside.trace || [];
+    for (var i = 0; i < trace.length; i++) if (trace[i] && trace[i].line === line && trace[i].why) return trace[i].why;
+    return "";
+  }
+
+  function addLi(list, line, why) {
+    var li = el("li", "", line);
+    if (why) li.title = why;
+    list.appendChild(li);
+  }
+
+  function showHistory(index) {
+    if (!history.length) return;
+    view = Math.max(0, Math.min(history.length - 1, index));
+    render(history[view]);
+  }
+
   function render(aside) {
     var panel = document.getElementById("answerAside");
     if (!panel) return;
     current = aside;
     panel.textContent = "";
+    var bar = el("div", "aside-hist");
+    var prev = el("button", "aside-mode", "Previous");
+    prev.id = "asidePrev";
+    prev.type = "button";
+    prev.disabled = view <= 0;
+    var label = el("span", "aside-hist-label", history.length ? (view === history.length - 1 ? "Live" : "Earlier " + (view + 1) + " of " + history.length) : "Live");
+    label.id = "asideHistLabel";
+    var next = el("button", "aside-mode", "Next");
+    next.id = "asideNext";
+    next.type = "button";
+    next.disabled = view >= history.length - 1;
+    prev.addEventListener("click", function () { showHistory(view - 1); });
+    next.addEventListener("click", function () { showHistory(view + 1); });
+    bar.appendChild(prev);
+    bar.appendChild(label);
+    bar.appendChild(next);
+    panel.appendChild(bar);
+    if (aside.summary) {
+      var sum = el("p", "aside-summary", aside.summary);
+      var sumWhy = whyFor(aside, aside.summary);
+      if (sumWhy) sum.title = sumWhy;
+      panel.appendChild(sum);
+    }
+    if (aside.sayNow) {
+      var now = el("p", "aside-say", aside.sayNow);
+      var nowWhy = whyFor(aside, aside.sayNow);
+      if (nowWhy) now.title = nowWhy;
+      panel.appendChild(now);
+    }
     var context = el("section");
     context.appendChild(el("h3", "", "Context"));
     var leads = el("ul", "aside-leads");
-    (aside.context.leads || []).forEach(function (line) { leads.appendChild(el("li", "", line)); });
+    (aside.context.leads || []).forEach(function (line) { addLi(leads, line, whyFor(aside, line)); });
     context.appendChild(leads);
     context.appendChild(el("div", "aside-kicker", "Touch points"));
     var touches = el("ul", "aside-touches");
-    (aside.context.touchPoints || []).forEach(function (line) { touches.appendChild(el("li", "", line)); });
+    (aside.context.touchPoints || []).forEach(function (line) { addLi(touches, line, whyFor(aside, line)); });
     context.appendChild(touches);
     var back = el("section");
     var head = el("div", "aside-switch");
@@ -212,7 +261,113 @@
     else if (stemNow) { current = null; renderWaiting(); }
   }
 
+  var brain = { claims: [], topics: [], threads: [], questions: [], answers: [], prewarm: "", log: [], last: "" };
+
+  function lineIntent(text) {
+    var t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return "other";
+    if (/\b(?:any questions|to wrap up|that covers|that's all|we'll stop|last thing|in summary)\b/i.test(t)) return "wrap-up";
+    if (/^(?:have you|did you|do you|are you|were you)\b/i.test(t)) return "yes-no";
+    if (/\?\s*$/.test(t) || /^(?:what|why|how|who|when|where|which|tell me|walk me|describe|design)\b/i.test(t)) return "question";
+    var n = t.split(/\s+/).length;
+    if (n >= 28) return "long-statement";
+    if (n >= 12) return "explanation";
+    return "other";
+  }
+
+  function partialQuestion(text) {
+    var t = String(text || "").replace(/\s+/g, " ").trim();
+    return !!t && !/[.?!]$/.test(t) && t.split(/\s+/).length < 14 && /^(?:what|why|how|who|when|where|which|tell me|walk me|describe|design)\b/i.test(t);
+  }
+
+  function brainContradicts(text) {
+    var t = String(text || "");
+    for (var i = 0; i < brain.claims.length; i++) {
+      var claim = brain.claims[i];
+      if (claim.onSite && /\b(?:remote only|only(?:\s+\w+){0,2}\s+remote|not on[\s-]?site)\b/i.test(t)) return claim;
+      if (claim.place && new RegExp("\\bnot\\b[^.]{0,40}\\b" + claim.place + "\\b", "i").test(t)) return claim;
+    }
+    return null;
+  }
+
+  function chooseBrainAction(intent, contradiction, partial) {
+    if (contradiction) return "flag-contradiction";
+    if (partial) return "prewarm";
+    if (intent === "yes-no") return "short-answer";
+    if (intent === "question" || intent === "wrap-up") return "clarify";
+    if (intent === "long-statement") return "summarize";
+    if (intent === "explanation") return "booster";
+    return "hold";
+  }
+
+  function brainShown(action, text, claim) {
+    if (action === "summarize") return String(text || "").split(/\s+/).slice(0, 12).join(" ") + ".";
+    if (action === "booster") return "Yeah, I'd stay with that point.";
+    if (action === "clarify") return "Want me to take that in one pass?";
+    if (action === "short-answer") return "Not directly.";
+    if (action === "flag-contradiction" && claim) return "I'll stay with what I already said: " + claim.span.replace(/[.?!]+$/, "") + ".";
+    return "";
+  }
+
+  function rememberClaim(text) {
+    var m = String(text || "").match(/\bavailable in(?: the)?\s+([A-Za-z]+)/i);
+    var onSite = /\bon[\s-]?site\b/i.test(text);
+    if (!m && !onSite) return;
+    brain.claims.push({ span: String(text).replace(/\s+/g, " ").trim(), place: m ? m[1].toLowerCase() : "", onSite: onSite });
+    if (brain.claims.length > 12) brain.claims.shift();
+  }
+
+  function perceive(who, text, resume) {
+    var started = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    var speaker = who === "You" ? "You" : "Them";
+    var clean = String(text || "").replace(/\s+/g, " ").trim();
+    var intent = lineIntent(clean);
+    var claim = brainContradicts(clean);
+    var partial = speaker === "Them" && partialQuestion(clean);
+    var action = chooseBrainAction(intent, !!claim, partial);
+    if (speaker === "You" && !claim) rememberClaim(clean);
+    if (action === "prewarm") brain.prewarm = /[?]$/.test(clean) ? clean : clean + "?";
+    var topic = clean.toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length >= 5; }).slice(0, 3).join(" ");
+    if (topic && brain.topics.indexOf(topic) < 0) brain.topics.push(topic);
+    if (intent === "question" || intent === "yes-no" || intent === "wrap-up") brain.questions.push(clean);
+    if (speaker === "You") brain.answers.push(clean);
+    var shown = brainShown(action, clean, claim);
+    if (action === "short-answer" && resume) {
+      var name = clean.match(/\b(?:worked with|used|familiar with|experience with)\s+([A-Za-z][\w&.'-]*(?:\s+[A-Za-z][\w&.'-]*)?)/i);
+      shown = name && String(resume).toLowerCase().indexOf(name[1].toLowerCase()) >= 0 ? "Yes, " + name[1] + " is on the resume." : "Not directly.";
+    }
+    if (shown && shown.split(/\s+/).length > 18) shown = "";
+    var ms = ((typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now()) - started;
+    brain.log.push({ who: speaker, intent: intent, action: action, shown: shown, ms: ms });
+    if (brain.log.length > 40) brain.log.shift();
+    if (brain.topics.length > 24) brain.topics = brain.topics.slice(-24);
+    if (brain.questions.length > 24) brain.questions = brain.questions.slice(-24);
+    return { intent: intent, action: action, shown: shown, ms: ms, prewarm: brain.prewarm };
+  }
+
+  function paintSay(shown) {
+    var panel = document.getElementById("answerAside");
+    if (!panel || !shown || view !== history.length - 1) return;
+    var node = panel.querySelector(".aside-say");
+    if (!node) {
+      node = el("p", "aside-say", shown);
+      var bar = panel.querySelector(".aside-hist");
+      if (bar && bar.nextSibling) panel.insertBefore(node, bar.nextSibling);
+      else panel.insertBefore(node, panel.firstChild);
+    } else node.textContent = shown;
+  }
+
   function onTranscript() {
+    var live = transcriptText();
+    var parts = String(live || "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    var last = parts.length ? parts[parts.length - 1] : "";
+    var body = last.replace(/^(?:Them|You):\s*/i, "").trim();
+    var who = /^You:/i.test(last) ? "You" : "Them";
+    if (body && body !== brain.last) {
+      brain.last = body;
+      var step = perceive(who, body);
+      if (step.shown) paintSay(step.shown);
+    }
     if (!current || manual) return;
     paintMode(current);
   }
@@ -222,6 +377,9 @@
     var key = stem(aside.question);
     byQuestion.push({ key: key, aside: aside });
     if (byQuestion.length > 8) byQuestion.shift();
+    history.push(aside);
+    if (history.length > 12) history.shift();
+    view = history.length - 1;
     var q = document.getElementById("question");
     var stemNow = stem(q && q.textContent);
     if (lookup(stemNow || key) === aside || !stemNow) render(aside);
@@ -273,7 +431,7 @@
     };
   }
 
-  window.KompasAnswerAside = { mount: mount, setOpen: setOpen, accept: accept, watch: watch, stem: stem, modeFrom: modeFrom, applyPrivate: applyPrivate };
+  window.KompasAnswerAside = { mount: mount, setOpen: setOpen, accept: accept, watch: watch, stem: stem, modeFrom: modeFrom, applyPrivate: applyPrivate, perceive: perceive, brain: function () { return brain; } };
   installFetch();
   if (document.getElementById("answer")) mount();
   else document.addEventListener("DOMContentLoaded", mount);

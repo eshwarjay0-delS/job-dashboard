@@ -94,6 +94,10 @@
   font-size:12.5px;
   line-height:1.3;
 }
+.aside-hist{display:flex;align-items:center;gap:6px;margin:0 0 10px}
+.aside-hist-label{font:600 11px/1.2 var(--sans);letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
+.aside-summary,.aside-say{margin:0 0 10px;font-size:13.5px;line-height:1.45;color:var(--ink)}
+.aside-say{font-weight:650}
 .aside-empty{
   margin:0;
   color:var(--muted);

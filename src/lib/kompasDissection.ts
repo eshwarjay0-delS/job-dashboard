@@ -104,7 +104,7 @@ const JARGON: Jargon[] = [
 // Plain instructions only. The v1 wording ("I would not open a build walk", "One because is enough") was written to
 // hit the depth and confidence word counters, and a model copies odd phrasing into the spoken answer.
 const VOICE: Record<AnswerLevel, string> = {
-  engineer: "Plain and accessible, for technical HR or an engineer screen. Say what it is, why the role needs it, and one example from my own work. Then stop.",
+  engineer: "Plain and accessible. For technical HR, say what it is in plain words and one example, then stop. For an engineer on a mechanism or a design stage, go to the check, then leave a checkpoint.",
   director: "Decision first, then the business risk and who owns it. At most one sentence on how it works. No build walkthrough.",
   architect: "Precise. Say how it works, where it breaks, and what contains it. Use only the technical terms the question or my resume already uses.",
 }
@@ -606,6 +606,9 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
     // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
     questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
     "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
+    /\btechnical HR\b/i.test(question) ? "Technical HR: one plain sentence for what it is and why it matters, then stop. No build walk." : "",
+    cut.shape === "design" ? "Architect: if a thought is optional, label it as a tangent and leave it out of scope. Director: own one tradeoff in a single sentence." : "",
+    cut.shape === "personal-experience" ? "After the result, one short line may offer to keep going. Do not restart the story." : "",
   ].filter(Boolean).join("\n")
 }
 
@@ -1657,8 +1660,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // A definition with no resume line was filled from one honest sentence and one approach
   // sentence, so two different terms shared almost every content word.
   const bareTerm = !used && cut.shape === "definition" && !pairSides
+  const hrAsk = /\btechnical HR\b/i.test(question)
   if (bareTerm) {
-    parts[0] = `I mean ${lead} when I say ${lead}.`
+    parts[0] = plainDefinition(level, lead, hrAsk)
     words = wordCount(parts.join(" "))
   } else if (!used && !pairSides && !designAsk) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
@@ -1786,7 +1790,46 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       words += n
     }
   }
+  const shortFact = /^(?:have you|did you|do you|are you|were you)\b/i.test(question) && /\b(?:worked|used|use|familiar|experience|been|done|know)\b/i.test(question)
+  if (!(hrAsk && level !== "architect")) {
+    const stance = modeStance(level, lead, { design: cut.shape === "design", story: cut.shape === "personal-experience" || cut.shape === "scenario" || /\btell me about a time\b/i.test(question) })
+    const placed = placeStance(parts, stance, mode.maxWords)
+    parts.splice(0, parts.length, ...placed)
+  }
+  if (shortFact) return trimToWords(parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28))
   return trimToWords(parts.join(" "), mode.maxWords)
+}
+
+function plainDefinition(level: AnswerLevel, lead: string, hr: boolean): string {
+  if (level === "director") {
+    return hr
+      ? `I would rather name the call on ${lead} in plain words than walk the build.`
+      : `On ${lead}, the decision is whether the leftover risk is acceptable, and I do not walk the mechanism.`
+  }
+  if (level === "architect") return `${lead} is the boundary where the plan and the live setting can disagree.`
+  return hr
+    ? `${lead} means a plain look at what could go wrong, and why that check matters. I stop there.`
+    : `${lead} means the check I run, and I say what that check is for before I stop.`
+}
+
+function modeStance(level: AnswerLevel, lead: string, flags: { design: boolean; story: boolean }): string {
+  const bit = lead.split(/\s+/).filter(Boolean).slice(0, 6).join(" ") || "this"
+  if (level === "architect") return `I was also thinking of a neighboring tangent on ${bit}, and we can leave that out of scope.`
+  if (level === "director") return `I would rather record the tradeoff on ${bit} than leave that residual unsigned.`
+  if (flags.story) return `I can keep going on the result of ${bit}.`
+  if (flags.design) return `The check I run on ${bit} is the live setting against the written record.`
+  return `The check I run on ${bit} is the live setting against the written record.`
+}
+
+function placeStance(parts: string[], stance: string, maxWords: number): string[] {
+  if (!stance || parts.includes(stance)) return parts
+  const n = wordCount(stance)
+  const words = wordCount(parts.join(" "))
+  // Leave room for the spoken pause marks the blend pass inserts.
+  if (words + n + 4 > maxWords) return parts
+  const next = parts.slice()
+  next.splice(Math.min(1, next.length), 0, stance)
+  return next
 }
 
 /**

@@ -1,12 +1,15 @@
 // Context panel for the live answer (owner, 12 Nov 2026, 8:32 PM CT).
 // Deterministic. Built from the resume already on the answer request.
 // No second model call, no poll. The spoken answer is untouched.
+import { extractClaims, longStatementCue, screenSuggestion } from "./kompasSessionMind.ts"
 //
 // Leads and touch points may name a team size, a title, an employer, a tool,
 // or a stakeholder only when that string is in this resume. A second profile
 // in the same text is dropped. Email, phone, city, visa, and pay are not spoken.
 
 export type AsideMode = "questions" | "boosters"
+
+export type AsideTrace = { line: string; why: string }
 
 export type AnswerAside = {
   question: string
@@ -15,6 +18,14 @@ export type AnswerAside = {
   context: { leads: string[]; touchPoints: string[] }
   questions: string[]
   boosters: string[]
+  /** One-line read of a long turn. Empty when the last line is short. */
+  summary: string
+  /** A line he can say now. Empty when nothing new finished. */
+  sayNow: string
+  /** Spans he already said. The panel must not contradict these. */
+  claims: string[]
+  /** Internal only. Hover text, not a spoken line, not stored. */
+  trace: AsideTrace[]
 }
 
 export type ShortFact = { text: string; booster: string }
@@ -286,12 +297,13 @@ export function asideModeFromTranscript(transcript: string, question = ""): Asid
 function buildBoosters(transcript: string, resume: string): string[] {
   const last = lastHeardLine(transcript)
   const bag = resume.toLowerCase()
-  const out = ["Yeah, that's true."]
-  if (/\bhandoffs?\b/i.test(bag)) out.push("I've seen that bottleneck too, systems with a lot of handoffs.")
-  const noun = wordsOf(last).find((w) => bag.includes(w) && w.length >= 5)
-  if (noun) out.push(`I've seen that with ${noun} too.`)
-  out.push("I'd stay with what you just said.")
-  return out
+  const noun = wordsOf(last).find((w) => bag.includes(w) && w.length >= 5) || wordsOf(last).find((w) => w.length >= 5)
+  if (!noun) return ["Yeah, that's true.", "I'd stay with what you just said.", "That matches the part I can speak to."]
+  return [
+    `Yeah, ${noun} is the part I'd stay with.`,
+    `I've seen that with ${noun} too.`,
+    `I'd stay with ${noun}.`,
+  ]
 }
 
 function squash(s: string): string {
@@ -362,12 +374,27 @@ export function shortFactAnswer(question: string, resumeRaw: string): ShortFact 
   return { text, booster }
 }
 
+function triggerSpan(transcript: string, question: string): string {
+  const last = lastHeardLine(transcript)
+  if (last) return `Them: ${last.slice(0, 140)}`
+  if (question) return `Question: ${question.slice(0, 140)}`
+  return "resume touch already on this answer"
+}
+
+function keepLine(line: string, transcript: string, said: string[], fallbackWhy: string): { line: string; why: string } | null {
+  const screened = screenSuggestion(line, transcript, said)
+  if (!screened.line) return null
+  return { line: screened.line, why: screened.why || fallbackWhy }
+}
+
 /** Context, questions, and boosters. Pure. Same input, same panel. No model call. */
-export function answerAside(input: { question?: string; transcript?: string; resume?: string }): AnswerAside {
+export function answerAside(input: { question?: string; transcript?: string; resume?: string; said?: string[] }): AnswerAside {
   const question = String(input.question || "").replace(/\s+/g, " ").trim()
-  const transcript = String(input.transcript || "").slice(0, 4000)
+  const transcript = String(input.transcript || "").slice(0, 12000)
+  const said = (input.said || []).map((line) => String(line || "")).filter(Boolean)
   const resume = cleanResume(String(input.resume || ""))
   const facts = factsFrom(resume, question)
+  const why = triggerSpan(transcript, question)
   const leads = fill(buildLeads(facts), safeLeads(!!facts.team), resume, 2, 3)
   const touches = fill(buildTouches(facts), ["so the way I approached it", "the reason that mattered", "the part they asked", "where I would start"], resume, 3, 4)
   const curious = ["Why do you think that's happening?"]
@@ -382,24 +409,54 @@ export function answerAside(input: { question?: string; transcript?: string; res
     "I'd stay with what you just said.",
     "That matches the part I can speak to.",
   ], resume, 2, 3)
+  const mode = asideModeFromTranscript(transcript, question)
+  const cue = longStatementCue(lastHeardLine(transcript), mode)
+  const trace: AsideTrace[] = []
+  const take = (lines: string[], min: number, fallback: string[]) => {
+    const out: string[] = []
+    for (const line of lines) {
+      const kept = keepLine(line, transcript, said, why)
+      if (!kept || out.includes(kept.line)) continue
+      out.push(kept.line)
+      trace.push(kept)
+      if (out.length === 4) break
+    }
+    for (const line of fallback) {
+      if (out.length >= min) break
+      const kept = keepLine(line, transcript, said, why)
+      if (!kept || out.includes(kept.line)) continue
+      out.push(kept.line)
+      trace.push(kept)
+    }
+    return out
+  }
+  const say = cue.sayNow ? keepLine(cue.sayNow, transcript, said, why) : null
+  const summary = cue.summary ? keepLine(cue.summary, transcript, said, why) : null
+  if (summary) trace.push(summary)
+  if (say) trace.push(say)
+  const claimSpans = extractClaims(transcript, said).map((claim) => claim.span)
   return {
     question,
-    mode: asideModeFromTranscript(transcript, question),
+    mode,
     context: {
-      leads: leads.length >= 2 ? leads : safeLeads(false).slice(0, 3),
-      touchPoints: touches.length >= 3 ? touches : ["so the way I approached it", "the reason that mattered", "the part they asked"],
+      leads: take(leads.length >= 2 ? leads : safeLeads(false).slice(0, 3), 2, safeLeads(false)).slice(0, 3),
+      touchPoints: take(touches.length >= 3 ? touches : ["so the way I approached it", "the reason that mattered", "the part they asked"], 3, ["so the way I approached it", "the reason that mattered", "the part they asked"]).slice(0, 4),
     },
-    questions: questions.length >= 2 ? questions.slice(0, 3) : [
+    questions: take(questions.length >= 2 ? questions.slice(0, 3) : [
       "What part of this do you want first?",
       "Want me to keep this short and stop for you?",
-    ],
-    boosters: boosters.length >= 2 ? boosters.slice(0, 3) : ["Yeah, that's true.", "I'd stay with what you just said."],
+    ], 2, ["What part of this do you want first?", "Want me to keep this short and stop for you?"]).slice(0, 3),
+    boosters: take(boosters.length >= 2 ? boosters.slice(0, 3) : ["Yeah, that's true.", "I'd stay with what you just said."], 2, ["Yeah, that's true.", "I'd stay with what you just said."]).slice(0, 3),
+    summary: summary?.line || "",
+    sayNow: say?.line || "",
+    claims: claimSpans,
+    trace,
   }
 }
 
-/** Names and numbers in the panel that the kept resume does not contain. */
-export function asideViolations(aside: AnswerAside, resume: string): string[] {
-  const kept = cleanResume(resume)
-  const lines = [...aside.context.leads, ...aside.context.touchPoints, ...aside.questions, ...(aside.boosters || [])]
+/** Names and numbers in the panel that the kept resume and the already-said claims do not contain. */
+export function asideViolations(aside: AnswerAside, resume: string, transcript = ""): string[] {
+  const kept = `${cleanResume(resume)}\n${transcript}\n${(aside.claims || []).join("\n")}`
+  const lines = [...aside.context.leads, ...aside.context.touchPoints, ...aside.questions, ...(aside.boosters || []), aside.summary || "", aside.sayNow || ""]
   return lines.flatMap((line) => foreignTokens(line, kept))
 }
