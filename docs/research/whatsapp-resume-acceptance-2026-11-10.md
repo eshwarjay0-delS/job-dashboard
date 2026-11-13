@@ -130,3 +130,10 @@ The current combined implementation is [PR #368](https://github.com/eshwarjay0-d
 The 6 Nov owner correction remains authoritative: web downloads stay strict at 95% raw JD overlap; WhatsApp may send a completed readable file below 95% with gaps disclosed; a clean 70–94.9% pass requires at least 95% supported coverage; a finished result below 70% is not a clean pass but may still be sent with gaps. 98% is an evidence target, not a universal WhatsApp hard hold. Incomplete, skills-only, unreadable, failed or identity-mismatched rewrites use the selected same-account resume under the approved fallback rules; no unsupported experience or qualification may be invented.
 
 **Next:** after the unrelated PR #372 rollback is reconciled, restack #368 on the latest approved master without overwriting concurrent changes; require exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA and legitimate protected preview. Historical closure still requires owner fact reconciliation and the exact output plus signed provider evidence. A real handset test is separate and owner-consented. No real WhatsApp message was sent.
+
+
+### R2 conditional-write source check — 13 November 2026
+
+The current #368 adapter's use of `GetObject` ETag followed by `PutObject` with `If-Match` is supported by Cloudflare's current S3 API documentation. Cloudflare states that `PutObject` accepts `If-Match` and that the condition is evaluated atomically against committed bucket state; competing conditional writes are serialized. References: [Conditional operations](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) and [Consistency model](https://developers.cloudflare.com/r2/reference/consistency/).
+
+The visible PR test suite exercises stale ETag/412 and a concurrent winner, while the implementation also treats 409 and 404 as compare-and-swap failure. Add explicit mocked 409 and 404 cases (or document why they cannot arise on this path) before final acceptance. This is a documentation/source review only; no R2 write or live webhook was run.
