@@ -81,3 +81,8 @@ Exact-head GitHub CI, WhatsApp recovery, Kompas baseline, Plan/REA and the prote
 ## 13 November 2026 — test fixture boundary correction
 
 The current PR branch includes test-only correction commit `83c81db42877b70227191ba90640521761575d4f`, which closes the original filesystem/CAS test before declaring the independent 409/404/500 adapter test. Evaluate workflows on the latest PR head only; earlier checks on `b7fed671999ad850f1a926351974b1eb4c10231c` do not validate the corrected head.
+
+
+## 13 November 2026 — REA schema alignment
+
+The REA now records this run's current-master restack under `whatsapp-offline-cas-restack-run11-2026-11-13`, including the explicit consume-after-provider-acceptance step. A separate blocked REA entry records that this execution's Library search did not re-resolve the exact 27,724-byte input DOCX, while preserving the earlier private-review recovery evidence. The schema tests assert these current IDs and the no-real-Meta-send boundary.
