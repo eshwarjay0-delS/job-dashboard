@@ -62,3 +62,12 @@ The latest 12 Nov Library recheck did not resolve the exact 17 Oct source DOCX b
 ## Exact-head restack verification — 13 November 2026 08:39 UTC
 
 PR #353 `97c6fbf2caec1507059b44a1237f397263f27b95` passed all four source gates: full CI `43393676889`, Kompas baseline `43393676888`, WhatsApp recovery `43393676957`, and Plan/REA schema `43393676967`. The branch remains DRAFT. No protected-preview pass is recorded; the private `KOMPAS_VERCEL_API_TOKEN` remains unavailable to this run. This is source/test validation only, not a production deployment, authenticated model run, exported DOCX review, live 95–100% match, or WhatsApp delivery. The fix is limited to requested profile-part acceptance; it does not claim to resolve `roles_unrewritten`.
+
+
+## 13 November 2026 — exact-head REA taxonomy correction
+
+PR #353 current head f20baebe08aecbb05e31084fc3b6275339f88df4 failed full CI 43399137055 and WhatsApp recovery 43399137726 at TypeScript. The exact errors were three TS2322 literals in the new REA decision entry: method Conversation evidence review, state Owner instruction recorded, runtime verification pending, and step status Recorded were not admitted by the existing literal unions. Plan/REA schema 43399137054 and Kompas baseline 43399137187 passed. This is a register-schema mismatch, not evidence of a tailoring behavior failure.
+
+Commit 3964e4aa0fab94ccae2167a393f771f1ef6195e8 adds those explicit method/state/status values to ReaSession. This continuation also exposes the conversation-evidence method in the admin filter and adds a regression that checks the entry remains filterable with its recorded status. It does not change resume generation, source evidence, identity, coverage thresholds, WhatsApp send eligibility, account isolation, or auth.
+
+No local clone or test runtime was available in this scheduled environment. GitHub Actions must rerun on the new exact PR head. PR #353 remains DRAFT. The protected preview still requires the private KOMPAS_VERCEL_API_TOKEN to be configured by an authorized repository administrator; no credential is requested, printed or bypassed. No model call, DOCX export, R2 mutation, real WhatsApp send or production deployment is claimed.
