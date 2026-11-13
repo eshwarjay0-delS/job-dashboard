@@ -126,21 +126,23 @@ type Session = {
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
+async function parseSession(from: string, raw: string | null, cleanupExpired = true): Promise<Session> {
+  if (!raw) return {}
+  const s = JSON.parse(raw) as Session
+  // Old versions kept resumes indefinitely. Do not reuse them after the rollback.
+  if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }
+  const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
+  if (s.updatedAt && Date.now() - s.updatedAt > ttl) {
+    if (cleanupExpired && s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
+      await deletePath(s.resumePath).catch(() => {})
+    return { version: 3, seen: s.seen?.slice(-40) }
+  }
+  return s
+}
+
 async function loadSession(from: string): Promise<Session> {
-  try {
-    const raw = await blob.getText(sessionKey(from))
-    if (!raw) return {}
-    const s = JSON.parse(raw) as Session
-    // Old versions kept resumes indefinitely. Do not reuse them after the rollback.
-    if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }
-    const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
-    if (s.updatedAt && Date.now() - s.updatedAt > ttl) {
-      if (s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
-        await deletePath(s.resumePath).catch(() => {})
-      return { version: 3, seen: s.seen?.slice(-40) }
-    }
-    return s
-  } catch { return {} }
+  try { return await parseSession(from, await blob.getText(sessionKey(from))) }
+  catch { return {} }
 }
 
 async function saveSession(from: string, s: Session): Promise<void> {
@@ -807,10 +809,6 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, said)
   }
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) {
-    await deferResumeRecovery(job, "provider_unavailable")
-    return quiet ? undefined : sendText(from, "Your resume request is saved. Tailoring is unavailable; MarketFit will retry automatically.")
-  }
   // One claim per JD across workers.
   const claimKey = `whatsapp/jobs/${job}`
   const claimToken = randomBytes(6).toString("hex")
@@ -843,12 +841,69 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Assigned inside the run, after the job text is known. The outer catch can
   // still send the already-chosen resume if the run throws before a file goes out.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
-  const sendClosest = async (why: string): Promise<boolean> => {
+  const consumeSessionPair = async (): Promise<void> => {
+    const key = sessionKey(from)
+    // R2's If-Match is evaluated atomically by the object store. If a newer webhook
+    // writes between this read and the conditional put, retry against that newer pair.
+    // A conflict never falls back to an unconditional write; after bounded retries the
+    // pair stays available for recovery rather than risking data loss.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const snapshot = await blob.getWithEtag(key)
+      const cur = await parseSession(from, snapshot?.data.toString("utf8") ?? null, false)
+      // Treat JD + resume as one pair. Clearing either field independently can
+      // strand a newer JD that reused the same resume, or a newer resume attached
+      // to the same JD, after an in-flight document send completes.
+      const jdMatches = session.jdId
+        ? cur.jdId === session.jdId
+        : !cur.jdId && cur.jd === session.jd
+      const resumeMatches = session.resumePath
+        ? cur.resumePath === session.resumePath
+        : !cur.resumePath
+      const pairMatches = jdMatches && resumeMatches
+      let changed = false
+      if (pairMatches) {
+        if (cur.jd !== undefined || cur.jdId !== undefined) {
+          delete cur.jd
+          delete cur.jdId
+          changed = true
+        }
+        if (cur.resumePath !== undefined || cur.resumeName !== undefined || cur.resumeAt !== undefined) {
+          delete cur.resumePath
+          delete cur.resumeName
+          delete cur.resumeAt
+          changed = true
+        }
+        if (session.jdId && cur.pending?.jdId === session.jdId) {
+          delete cur.pending
+          changed = true
+        }
+      }
+      // Keep the last-used resume record even when a newer JD/resume pair arrived
+      // while this document was being accepted; this does not mutate that pair.
+      if (files && !quiet && session.jd) {
+        cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
+        changed = true
+      }
+      const seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
+      if (seen.length !== (cur.seen || []).length || seen.some((value, index) => value !== cur.seen?.[index])) {
+        cur.seen = seen
+        changed = true
+      }
+      if (!changed) return
+      const next = JSON.stringify({ ...cur, version: 3, updatedAt: Date.now() })
+      const saved = snapshot
+        ? await blob.putIfMatch(key, snapshot.etag, next)
+        : await blob.putIfAbsent(key, next)
+      if (saved) return
+    }
+    throw new Error("WhatsApp session changed repeatedly while consuming a delivered resume pair")
+  }
+  const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
     if (!resumePath || !jd) return false
-    const source = await readPath(resumePath).catch(() => null)
+    const source = verifiedSource || await readPath(resumePath).catch(() => null)
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
@@ -864,7 +919,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       if (!sentId) throw new Error("WhatsApp document send returned no message id")
       const accepted = await markResumeDocumentAccepted(job, sentId)
       finished = true
-      if (accepted && files) await markUsed(files.userDir, files.abs).catch(() => {})
+      // A signed failed-delivery callback keeps this exact pair queued for recovery.
+      // Consume only when the provider-acceptance contract confirms this document.
+      if (accepted) {
+        await consumeSessionPair().catch(() => {})
+        if (files) await markUsed(files.userDir, files.abs).catch(() => {})
+      }
       return true
     } catch (error) {
       const refused = /WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))
@@ -876,17 +936,35 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       return false
     }
   }
+  const sendOfflineOriginal = async (): Promise<boolean> => {
+    if (!files || !files.email || !files.userDir || !files.abs || !files.rel || !session.resumePath) return false
+    const expectedRoot = filesOf(userId)
+    if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return false
+    const root = path.resolve(files.userDir)
+    const selected = path.resolve(files.abs)
+    const relative = path.normalize(files.rel)
+    if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(".." + path.sep)) return false
+    if (path.resolve(root, relative) !== selected || !selected.startsWith(root + path.sep)) return false
+    const [libraryBytes, sessionBytes] = await Promise.all([
+      readPath(selected).catch(() => null),
+      readPath(session.resumePath).catch(() => null),
+    ])
+    if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return false
+    return sendClosest("NOT TAILORED — AI provider unavailable.", libraryBytes)
+  }
   try {
-  // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
-  // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
-  const cur = await loadSession(from)
-  if (cur.jdId === session.jdId) { delete cur.jd; delete cur.jdId }
-  if (cur.resumePath === session.resumePath) { delete cur.resumePath; delete cur.resumeName; delete cur.resumeAt }
-  if (cur.pending?.jdId === session.jdId) delete cur.pending
-  cur.seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
-  if (files && !quiet) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
-  await saveSession(from, cur)
-
+    if (!hasAnyKey(keys)) {
+      failureCode = "provider_unavailable"
+      if (files && await sendOfflineOriginal()) return
+      const latest = await readResumeRecovery(job).catch(() => null)
+      const uncertain = sending || latest?.status === "sending" || latest?.status === "uncertain"
+      await sayOutcome(uncertain
+        ? "WhatsApp did not confirm the selected original resume. I will not send a duplicate; your request is saved."
+        : files
+          ? "I could not verify or send the selected same-account resume, so no file was sent. Your request is saved for retry."
+          : "AI tailoring is unavailable and no same-account library resume was selected, so no file was sent. Your request is saved for retry.")
+      return
+    }
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
     : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`)
@@ -1118,6 +1196,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
   const accepted = await markResumeDocumentAccepted(job, sentId)
   if (!accepted) { finished = true; return } // Signed failed-delivery callback already scheduled a retry.
+  // Consume only after Meta accepted this exact document. Rejected or ambiguous sends keep the pair recoverable.
+  await consumeSessionPair().catch(() => {})
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
@@ -1471,7 +1551,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
   const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
+  if (!hasAnyKey(keys)) return sendText(from, "AI rewriting is unavailable right now. No file was sent; your previous resume is unchanged.")
   if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
 
   await sendText(from, `Updating your resume: "${clip(request, 200)}"…`)
@@ -1487,12 +1567,6 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(request)
   const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(request)
 
-  const sendBaseline = async (why: string, baseline: Buffer, meta: Meta) => {
-    const name = await outputNameFor(baseline)
-    await deliver(from, baseline, name, closestResumeCaption(name, "the resume already chosen for this job", why), {
-      userId, jd: gen.jd, meta, changes: gen.changes || [], source: gen.source,
-    })
-  }
   let result: TailorResult
   try {
     result = await runTailor({
@@ -1514,14 +1588,10 @@ async function refine(from: string, replyTo: string, request: string, userId: st
       sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
     })
   } catch (error) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      const timedOut = /timed out/i.test(String(error))
-      await sendBaseline(timedOut ? "The rewrite ran out of time just now." : "The rewrite stopped before it finished.", baseline, meta)
-      return
-    }
-    return sendText(from, "The rewrite stopped before it finished, and the resume already chosen for this job could not be opened. Send the job again.")
+    const timedOut = /timed out/i.test(String(error))
+    return sendText(from, timedOut
+      ? "The update timed out. No file was sent; your previous resume is unchanged."
+      : "The update could not be completed. No file was sent; your previous resume is unchanged.")
   }
 
   const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
@@ -1529,34 +1599,23 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     return sendText(from, `Nothing needed changing for "${clip(request, 200)}". Try naming the exact skill, section, or bullet.`)
   }
 
-  // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is not:
-  // the file this reply started from goes out instead, labelled as unchanged.
+  // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is never sent;
+  // the previously delivered version remains unchanged.
   if (!whatsappRewriteUsable(result)) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      await sendBaseline(unfinishedRewriteWhy(result), baseline, meta)
-      return
-    }
-    return sendText(from, qualityStop(result))
+    return sendText(from, `${qualityStop(result)} No file was sent; your previous resume is unchanged.`)
   }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
   const meta = await metaPromise
   const source = await readPath(gen.file)
   if (!file) {
-    if (source) {
-      await sendBaseline("The updated Word file could not be opened.", source, meta)
-      return
-    }
-    return sendText(from, "The update generated but the file could not be read back. Please try again.")
+    return sendText(from, "The updated Word file could not be opened. No file was sent; your previous resume is unchanged.")
   }
   if (!source) {
-    return sendText(from, "I could not verify the original resume for this update, so no file was sent.")
+    return sendText(from, "I could not verify the original resume for this update, so no file was sent. Your previous resume is unchanged.")
   }
   if (!(await sameResumeFacts(source, file))) {
-    await sendBaseline("The update failed identity/contact/date verification, so I sent your original resume instead.", source, meta)
-    return
+    return sendText(from, "The update failed name, contact or employment-date verification. No file was sent; your previous resume is unchanged.")
   }
   const changes = [...(gen.changes || []), request]
   const name = await outputNameFor(file)
@@ -1697,9 +1756,12 @@ function unfinishedRewriteWhy(result: TailorResult): string {
 }
 
 function closestResumeCaption(name: string, label: string, why: string): string {
+  const notTailored = /^NOT TAILORED\b/i.test(why)
   return [
     `*${name}*`,
-    `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
+    notTailored
+      ? `Original resume — NOT TAILORED. ${why.replace(/^NOT TAILORED\\s*[—-]\\s*/i, "")} This is the original resume you selected (${label}); no edits were applied.`
+      : `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
     "Reply to this file to request changes.",
   ].join("\n")
 }
