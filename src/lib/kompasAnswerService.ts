@@ -26,13 +26,7 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
-import { defensibilityPrompt, defensibilityReport } from "@/lib/kompasDefensibility"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
-import { answerAside, shortFactAnswer, type AnswerAside } from "@/lib/kompasAnswerAside"
-import { claimPrompt, screenSuggestion } from "@/lib/kompasSessionMind"
-import { readInterviewer } from "@/lib/kompasIntegration"
-import { instantSpokenLine } from "@/lib/kompasLatency"
-import { runSession } from "@/lib/kompasNervousSystem"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
@@ -366,11 +360,6 @@ type AnswerJob = {
   // the prompt carries a DOSSIER NOTE for it and the response flags it,
   // so a silently ungrounded answer is never mistaken for a grounded one.
   groundingTimedOut: boolean
-  // Context panel. Built with the answer from the resume already on this job. Not a second model call.
-  aside?: AnswerAside
-  // Mic and caption text already heard. Used only to keep a new line from contradicting it.
-  heard?: string
-  brainMs?: number
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -413,20 +402,9 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
   // Presentation is separate from the retrieved passage text. Unsupported detail is dropped, not guessed.
   try {
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
-    if (grounded.presentation.trim()) return { text: claimSafe(job, grounded.presentation), providerError: false }
+    if (grounded.presentation.trim()) return { text: grounded.presentation, providerError: false }
   } catch { /* the settled answer stands */ }
-  return { text: claimSafe(job, settled.text), providerError: false }
-}
-
-function claimSafe(job: AnswerJob, text: string): string {
-  if (!job.heard) return text
-  const said = job.previousTurns.map((turn) => turn.a)
-  const next = text.split(/(?<=[.?!])\s+/).map((sentence) => {
-    const screened = screenSuggestion(sentence, job.heard || "", said)
-    return screened.blocked ? "" : screened.line
-  }).filter(Boolean)
-  const joined = next.join(" ").trim()
-  return joined || text
+  return { text: settled.text, providerError: false }
 }
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
@@ -570,12 +548,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
       }
       try {
-        emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy, brain_ms: job.brainMs || 0 })
-        const instant = instantSpokenLine(job.question)
-        if (instant) {
-          emit({ type: "instant", text: instant })
-          if (!timing.visible_first_ms) timing.visible_first_ms = Date.now() - startedAt
-        }
+        emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
         if (job.orKey) {
@@ -703,9 +676,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           type: "done", degraded, guarded: g.guarded, verified, repaired, repair, groundingTimedOut: job.groundingTimedOut,
           card: { ...toCard(finalText, job.format || "script_bullets", job.lengthPref), title: titler.title || fallbackTitle(job.question) },
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...notebookCausalFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
-          defensibility: defensibilityReport(job.question, finalText),
           ledger: job.ledger,
-          aside: job.aside,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
         })
@@ -810,7 +781,6 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     resumeState: job.resumeState,
     transcriptClipped: !!job.transcriptClipped,
     polished: true,
-    defensibility: defensibilityReport(job.question, out),
     precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...notebookCausalFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, out).map(t => `missing-named-term:${t}`)] },
     degraded,
     groundingTimedOut: job.groundingTimedOut,
@@ -819,7 +789,6 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     repaired,
     repair,
     ledger: job.ledger,
-    aside: job.aside,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
       interviewer: job.interviewer, tier: job.tier, kind: job.plan.kind, words: job.plan.words,
@@ -953,19 +922,6 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   }
   question = stripLogistics(question) || question   // "What is your visa status and tell me about PAM": only PAM is answered
 
-  // A yes/no or "have you worked with X" ask is one sentence from the resume already on
-  // this request. No model call, no long passage. A name the resume does not show stays "Not directly".
-  const earlyConfig = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
-  const fastResume = str(earlyConfig.resume, 60000)
-  const fast = shortFactAnswer(question, fastResume)
-  if (fast) {
-    const heardFast = [tailWindow(body.transcript).text, heardAll].filter(Boolean).join("\n")
-    const aside = answerAside({ question, transcript: heardFast, resume: fastResume })
-    if (fast.booster) aside.boosters = [fast.booster, ...aside.boosters.filter((b) => b !== fast.booster)].slice(0, 3)
-    const screenedFact = screenSuggestion(fast.text, heardFast)
-    return fastFactResponse(body.stream === true, screenedFact.line || fast.text, aside, question)
-  }
-
   // Speed r6: on an answer turn the key vault is read WHILE the question, sources, dossier race and prompt are prepared
   // (awaited just before the answer is built), instead of before all of it. Same keysFor, same 4 s ceiling, same
   // fail-closed rule for paid keys and the same 503 when no key. Logistics already returned above.
@@ -1001,10 +957,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     } catch { /* optional historical context must not block a live turn */ }
     finally { if (timer) clearTimeout(timer) }
   }
-  const explicitLevel = str(config.level, 40)
-  const explicitVoice = str(config.interviewer, 40)
-  const autoMode = readInterviewer(`${jdSrc}\n${question}`, [question]).mode
-  const interviewer = explicitVoice || (!explicitLevel ? autoMode : "") || "engineer"
+  const interviewer = str(config.interviewer, 40) || "engineer"
   // The answering LEVEL (owner, 22 Oct 2026: exactly three levels). The client
   // sends the level the user has selected RIGHT NOW on every request, so a
   // level switch changes the very next answer — nothing is pinned at session
@@ -1080,8 +1033,6 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const band = spokenCut.modes[spokenLevel] || modeBand(spokenShape, spokenLevel)
     const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
     plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
-    if (cardControls.length === "long") plan.words = Math.min(300, Math.round(plan.words * 1.5))
-    else if (cardControls.length === "short") plan.words = Math.max(16, Math.round(plan.words * 0.65))
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
   }
@@ -1312,8 +1263,8 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText, cardControls.length)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}${tier === 0 ? "" : `\n\n${defensibilityPrompt(question)}`}${claimPrompt([transcript, heardAll].filter(Boolean).join("\n")) ? `\n\n${claimPrompt([transcript, heardAll].filter(Boolean).join("\n"))}` : ""}\n\n${TITLE_INSTRUCTION}`,
+    system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}\n\n${TITLE_INSTRUCTION}`,
     plan,
     interviewer,
     level,
@@ -1345,41 +1296,11 @@ ${INTERVIEW}`
     previousAnswer,
     previousTurns,
     groundingTimedOut: generalDossierTimedOut || bibleTimedOut,
-    heard: [transcript, heardAll].filter(Boolean).join("\n"),
   }
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
-  const heardForBrain = [transcript, heardAll].filter(Boolean).join("\n")
-  const brainStarted = Date.now()
-  let sessionClaims: string[] = []
-  let sessionNudge = ""
-  let sessionClarify = ""
-  try {
-    const session = runSession({
-      transcript: heardForBrain,
-      resume: resumeSrc,
-      jd: jdSrc,
-      dossier: priorBibleContext,
-      question,
-      answer: previousAnswer,
-    })
-    sessionClaims = session.claims
-    sessionNudge = session.nudge
-    sessionClarify = session.clarify
-    job.brainMs = Date.now() - brainStarted
-    job.heard = heardForBrain
-  } catch { /* the answer still runs if the bus fails */ }
-  job.aside = answerAside({ question, transcript: heardForBrain, resume: resumeSrc, said: sessionClaims, nudge: sessionNudge, clarify: sessionClarify })
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
-}
-
-function fastFactResponse(stream: boolean, text: string, aside: AnswerAside, question: string): Response | NextResponse {
-  const card = { ...toCard(text, "full_script"), title: question.replace(/\s+/g, " ").trim().slice(0, 140) }
-  const payload = { text, fast: true, card, aside, title: card.title, polished: false, degraded: false, provider: "code", model: "" }
-  if (!stream) return NextResponse.json(payload, { headers: NO_STORE })
-  const sse = `data: ${JSON.stringify({ type: "meta", derived: question, fast: true })}\n\ndata: ${JSON.stringify({ type: "replace", text })}\n\ndata: ${JSON.stringify({ type: "done", ...payload, derived: question })}\n\n`
-  return new Response(sse, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
 }
 
 function answerFailure(message: string) {

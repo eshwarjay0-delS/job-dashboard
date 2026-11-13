@@ -1,3 +1,9 @@
+## 2026-11-13 — Main answer path restored from 01ceb1dc (visible on the left answer card)
+
+Answer generation, prompting, question detection, and the left card are the files from commit `01ceb1dc` again. Skip-login (`return true` in the page, `src/lib/authDisabled.ts` untouched), the Gmail snapshot fallback, the mic stop (`includeTail` only), and the intro cleanup stay. "Your introduction … introduce yourself." still shows and answers as "Introduce yourself." as one paragraph. Generation still sections a complex answer. The left card does not draw Claim, Context, Action, Result, Close, or the ellipsis between them. Those sentences stay as bullets, and a non-list line stays a paragraph. The right panel files were not reverted. A transcript line still calls `hear`, and saved cards drop an `aside` field. The panel does not write the left answer.
+
+**Checked locally. Not a phone click-through.** `npx tsc --noEmit` exit 0. The 891-test Kompas group passed. The panel and answer-card group passed (83). Replay counts on the restored generator: filler 146, generic 10, too-short 42.
+
 ## 2026-11-13 — Phone mic segment stop matches the pre-#350 recorder (no new screen)
 
 `getUserMedia` constraints, the Default microphone picker, `startMic`, and the speaking class on the mic button are the same as commit `01ceb1dc`. The one STT stop change since then waited on `requestData` for every kept phrase, not only when AI Answer flushed the last slice. A normal phrase now stops the recorder immediately again, and Chrome Android can still deliver the last chunk after `onstop`. AI Answer still flushes the tail. Not a phone recording.

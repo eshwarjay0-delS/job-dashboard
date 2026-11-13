@@ -55,8 +55,7 @@ test("every answer includes context and 2–3 questions", () => {
     shape(answerAside({ question, resume: HOUSTON, transcript: "Them: earlier they asked about the catalog.\nYou: sure." }))
     shape(answerAside({ question, resume: "", transcript: "" }))
   }
-  assert.equal(SERVICE.match(/aside: job\.aside/g).length, 2)
-  assert.match(SERVICE, /job\.aside = answerAside\(/)
+  assert.doesNotMatch(SERVICE, /answerAside\(/)
   assert.doesNotMatch(ASIDE, /fetch\(|fetchOpenRouter/)
 })
 
@@ -142,7 +141,5 @@ Citi Bank — Senior ServiceNow Developer | Jul 2023 – Present
   assert.equal(yes.text.split(/(?<=[.?!])\s+/).length, 1)
   assert.equal(yes.booster, "Yeah, that's true.")
   assert.deepEqual(asideViolations(answerAside({ question: "Have you worked with Citibank before?", resume: HOUSTON }), HOUSTON), [])
-  assert.match(SERVICE, /shortFactAnswer\(question, fastResume\)/)
-  const fastAt = SERVICE.indexOf("shortFactAnswer(question, fastResume)")
-  assert.ok(fastAt > 0 && SERVICE.indexOf("const keysPromise = keysFor", fastAt) > fastAt)
+  assert.doesNotMatch(SERVICE, /shortFactAnswer\(/)
 })
