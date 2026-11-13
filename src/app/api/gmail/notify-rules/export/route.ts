@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto"
+import { hasCronBearer } from "@/lib/cronAuth"
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { isAdminEmail } from "@/lib/owner"
@@ -10,15 +10,6 @@ export const dynamic = "force-dynamic"
 
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
 
-function cronAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET || ""
-  const actual = req.headers.get("authorization") || ""
-  const expected = `Bearer ${secret}`
-  return secret.length >= 16
-    && Buffer.byteLength(actual) === Buffer.byteLength(expected)
-    && timingSafeEqual(Buffer.from(actual), Buffer.from(expected))
-}
-
 /** Private worker-only export. It remains disabled until the owner explicitly
  * enables a configured scheduler. Rules stay grouped by owner and receiving
  * inbox; identical senders in different accounts are never merged. */
@@ -26,7 +17,7 @@ export async function GET(req: NextRequest) {
   if (process.env.GMAIL_UPDATES_SCHEDULER_ENABLED !== "true") {
     return NextResponse.json({ ok: false, error: "Background inbox updates are disabled." }, { status: 503, headers: PRIVATE_HEADERS })
   }
-  if (!cronAuthorized(req)) {
+  if (!hasCronBearer(req.headers.get("authorization"), process.env.CRON_SECRET || "")) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401, headers: PRIVATE_HEADERS })
   }
   if (!checkRateLimit("notify-rules-export", { max: 30, windowMs: 60_000 }).ok) {
