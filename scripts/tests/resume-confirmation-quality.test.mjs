@@ -230,3 +230,25 @@ test('confirmed cloud skills do not transfer through generic marketing-automatio
   ])
   assert.deepEqual(guarded.blockedTerms, ['AWS'])
 })
+
+test('CyberArk EPM does not transfer into generic IAM privilege or mail allowlist projects', () => {
+  const roles = [
+    { bullets: [{ idx: 10, text: 'Reviewed privileged access assignments and quarterly IAM access recertification for finance applications.' }] },
+    { bullets: [{ idx: 11, text: 'Maintained email allowlist and greylist controls for marketing communications.' }] },
+    { bullets: [{ idx: 12, text: 'Hardened Windows endpoints and controlled application allowlisting for local administrator accounts.' }] },
+  ]
+  const edits = [
+    { idx: 10, text: 'Reviewed privileged access assignments and quarterly IAM access recertification for finance applications using CyberArk EPM.' },
+    { idx: 11, text: 'Maintained email allowlist and greylist controls for marketing communications using CyberArk EPM.' },
+    { idx: 12, text: 'Hardened Windows endpoints and controlled application allowlisting for local administrator accounts using CyberArk EPM.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['CyberArk EPM'], cover, new Set(['CyberArk EPM']))
+  assert.equal(guarded.reverted, 2)
+  assert.deepEqual(guarded.edits, [
+    { idx: 10, text: roles[0].bullets[0].text },
+    { idx: 11, text: roles[1].bullets[0].text },
+    edits[2],
+  ])
+  assert.deepEqual(guarded.blockedTerms, ['CyberArk EPM'])
+})
