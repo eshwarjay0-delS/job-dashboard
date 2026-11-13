@@ -936,7 +936,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       return false
     }
   }
-  const sendOfflineOriginal = async (): Promise<boolean> => {
+  const sendOfflineOriginal = async (why = "NOT TAILORED — AI provider unavailable."): Promise<boolean> => {
     if (!files || !files.email || !files.userDir || !files.abs || !files.rel || !session.resumePath) return false
     const expectedRoot = filesOf(userId)
     if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return false
@@ -950,7 +950,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       readPath(session.resumePath).catch(() => null),
     ])
     if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return false
-    return sendClosest("NOT TAILORED — AI provider unavailable.", libraryBytes)
+    return sendClosest(why, libraryBytes)
   }
   try {
     if (!hasAnyKey(keys)) {
@@ -1115,8 +1115,13 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       bulletsReverted: result.bullets_reverted_for_jd_terms ?? 0,
       cached: !!result.cached,
     })
-    if (await sendClosest(unfinishedRewriteWhy(result))) return
-    // No chosen file could be sent (missing, or it belongs to another profile).
+    const incomplete = !!(result.partial || result.quality?.incomplete || result.skills_only)
+    if (incomplete) {
+      // An unfinished initial JD run may fall back only to the exact selected
+      // same-account library bytes. Never send an unverified session copy.
+      if (await sendOfflineOriginal("NOT TAILORED — AI rewrite incomplete.")) return
+    } else if (await sendClosest(unfinishedRewriteWhy(result))) return
+    // No exact selected same-account file could be verified or sent.
     await sayOutcome(qualityStop(result))
     return;
   }
