@@ -94,3 +94,18 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+
+## 13 November 2026 — Right To Hire classification evidence and release gate
+
+Canonical production is READY at master SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; `job-dashboard-fawn.vercel.app` independently resolves to deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb`. The deployed classifier does not yet include the Right To Hire aliases in PR #355.
+
+Read-only production data on 13 Nov:
+
+- `mfit_crawl_jobs`: 14,566 rows, 12,407 active; newest `last_seen_at` 10 Nov 11:01:11 UTC; 0 rows seen in the preceding 24 hours and 8,103 in the preceding seven days.
+- `mfit_crawl_runs`: 21 records. Latest run 10 Nov 11:00:24–11:01:11 UTC, 20 portals, 6,818 found/upserted, one error.
+- 144 rows with `engagement` equal to `Right To Hire` / `Right to Hire` remain `work_type=unknown`; 131 are active. PR #355 maps explicit Right To Hire and Contract To Perm to C2H, with negation and generic-contract-vocabulary tests. Existing rows are not rewritten; a later permitted manual crawl must see them again.
+
+PR #355 exact head `28c3f3ce97fe79721623f29c6252a727ea7c81c8` passes full CI `43421622026`, Kompas baseline `43421622062`, and crawler classification regression `43421622095`. It remains DRAFT. Vercel branch preview lookup returned zero deployments, and the non-decrypted project environment inventory does not contain `KOMPAS_VERCEL_API_TOKEN`; the protected preview gate is therefore not executable in this run.
+
+The 12 Nov owner correction remains authoritative: `/api/crawl/run` is manual/on-demand only, `vercel.json` has no crawl cron and `crawl-freshness.yml` has no schedule trigger. Apply search reads the index and does not start a crawl. No manual crawl, external portal request, DB mutation, billing change or deployment was performed. The previously recorded Supabase API egress restriction was not re-tested. Robert Half remains manual navigation only; no adapter or scraping is authorized.
