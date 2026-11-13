@@ -10,7 +10,7 @@ const normalizeIdentity = (value: string) => String(value || "").trim().toLowerC
 export function notifyRuleKey(account: string, email: string): string {
   const inbox = normalizeIdentity(account)
   const sender = normalizeIdentity(email)
-  return inbox && sender ? `${inbox}:${sender}` : ""
+  return inbox.includes("@") && sender.includes("@") ? `${inbox}:${sender}` : ""
 }
 
 /** The digest UI applies a mute only to the inbox where the user set it. */
@@ -29,7 +29,7 @@ export function toggleDigestSenderMute(rules: readonly NotifyRule[], account: st
   const retained = rules.filter(rule => notifyRuleKey(rule.account, rule.email) !== key)
   return currentlyMuted
     ? retained
-    : [...retained, { account: normalizedAccount, email: normalizedEmail, mode: "never" }]
+    : [...retained, { account: normalizedAccount, email: normalizedEmail, mode: "never" as const }]
 }
 
 /** Radar entries are per inbox; a provider thread ID alone is not a global key. */
