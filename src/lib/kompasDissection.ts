@@ -1828,8 +1828,8 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     parts.push(line)
     words += n
   }
-  if (!shortFact && !bareTerm && !(hrAsk && level === "engineer")) {
-    for (const line of perspectiveDraft(question, level, resume, previous)) {
+  if (!shortFact && !bareTerm && !storyAsk && !(hrAsk && level === "engineer")) {
+    for (const line of perspectiveDraft(question, level, resume, previous, bit)) {
       const n = wordCount(line)
       const now = wordCount(parts.join(" "))
       if (parts.includes(line)) continue
@@ -1846,22 +1846,27 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       if (delta <= 0 && now + delta + 4 <= mode.maxWords) parts[idx] = line
     }
   }
-  if (shortFact) return withKnownTerm(question, parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28))
+  if (shortFact) return withKnownTerm(question, parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28), bit, resume)
   if (hrAsk && level === "engineer" && (cut.shape === "definition" || cut.shape === "direct" || cut.shape === "comparison")) {
-    return withKnownTerm(question, parts.join(" "), Math.min(mode.maxWords, 48))
+    return withKnownTerm(question, parts.join(" "), Math.min(mode.maxWords, 48), bit, resume)
   }
-  return withKnownTerm(question, parts.join(" "), mode.maxWords)
+  return withKnownTerm(question, parts.join(" "), mode.maxWords, bit, resume)
 }
 
-function withKnownTerm(question: string, text: string, cap: number): string {
-  const trimmed = trimToWords(text, cap)
-  const clause = lexiconClause("eshwarjay05", question)
+function lexiconFocus(question: string, bit: string): string {
+  if (/,/.test(question) && /\b(?:thinking about|considering|with|so with)\b/i.test(question)) return bit
+  return question
+}
+
+function withKnownTerm(question: string, text: string, cap: number, focus = "", resume = ""): string {
+  const trimmed = trimToWords(text, cap, (sentence) => /\bI (?:\w+ed|sent|wrote|led|took|held|told|kept|made|found|had)\b/.test(sentence))
+  const clause = lexiconClause("eshwarjay05", lexiconFocus(question, focus))
   const joined = clause && wordCount(trimmed) + wordCount(clause) + 4 <= cap && !trimmed.toLowerCase().includes(clause.slice(0, 24).toLowerCase())
     ? `${trimmed} ${clause}`
     : trimmed
   const sentences = joined.split(/(?<=[.!?])\s+/)
   const kept = sentences.flatMap((sentence) => {
-    const check = validateStatement(sentence)
+    const check = validateStatement(sentence, resume)
     if (!check.ok && !check.line) return []
     return [check.ok ? sentence : check.line]
   })

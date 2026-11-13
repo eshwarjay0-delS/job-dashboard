@@ -79,8 +79,9 @@ const MIX: Record<string, PerspectiveBeat[]> = {
 }
 
 /** One or two beats. The mode changes the pool, and the question changes which beat is used. */
-export function perspectiveDraft(question: string, level: string, resume: string, said: readonly string[] = []): string[] {
-  const bit = bitOf(question)
+export function perspectiveDraft(question: string, level: string, resume: string, said: readonly string[] = [], spoken = ""): string[] {
+  const fromSpoken = String(spoken || "").replace(/\byourself\b/gi, "this work").replace(/\byour\b/gi, "").replace(/\s+/g, " ").trim()
+  const bit = fromSpoken || bitOf(question).replace(/\byourself\b/g, "this work")
   const reason = reasonFromResume(question, resume)
   const pool = MIX[level] || MIX.engineer
   const bank = linesFor(level, bit, reason)
@@ -91,7 +92,7 @@ export function perspectiveDraft(question: string, level: string, resume: string
   for (let i = 0; i < pool.length && out.length < count; i++) {
     const beat = pool[(start + i) % pool.length]
     const line = bank[beat]
-    if (!line || HYPE.test(line) || PROFILE.test(line)) continue
+    if (!line || HYPE.test(line) || PROFILE.test(line) || /\byour(?:self)?\b/i.test(line)) continue
     const screened = screenSuggestion(line, "", said)
     if (!screened.line || screened.blocked || screened.rewritten) continue
     const check = validateStatement(screened.line, resume)
