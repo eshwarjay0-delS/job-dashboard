@@ -1111,7 +1111,7 @@ function peelBullet(sentence) {
   let connector = "";
   let prev = "";
   const mark = /^(?:[-•*]|\d+[.)]|—|–)\s+/;
-  const lead = /^(?:first|then|next|finally),\s+|^(?:the result)[:,]\s+|^(?:in addition|once that is established),\s+/i;
+  const lead = /^(?:first|then|next|finally),\s+|^(?:first|then|next|finally)\s+(?=(?:i|we|so|the|a|an)\b)|^(?:the result)[:,]\s+|^(?:in addition|once that is established),\s+/i;
   while (s && s !== prev) {
     prev = s;
     s = s.replace(mark, "").trim();
@@ -1155,9 +1155,55 @@ function tidySentence(sentence) {
   if (/^[a-z]/.test(text)) text = text.charAt(0).toUpperCase() + text.slice(1);
   return text;
 }
-function finishLeftAnswer(question, text) {
+const LEFT_META = /\b(?:not in the (?:sources|resume)|that part is not|sources or evidence|no evidence for)\b/i;
+const FRAGMENT_LABEL = /^(?:failure mode|root cause|touch ?point)\s*:\s*/i;
+function profileResume(raw) {
+  const text = String(raw || "");
+  const lower = text.toLowerCase();
+  const ids = ["eshwarjay05", "jayeshwar44", "jayeshwar24", "eshwarjay06"];
+  const hits = ids.map(id => ({ id, at: lower.indexOf(id) })).filter(hit => hit.at >= 0).sort((a, b) => a.at - b.at);
+  if (!hits.length) return { text, profile: "eshwarjay05", marked: false };
+  const mine = hits.find(hit => hit.id === "eshwarjay05") || hits[0];
+  const next = hits.find(hit => hit.at > mine.at);
+  return { text: text.slice(mine.at, next ? next.at : text.length), profile: mine.id, marked: true };
+}
+function contentWords(sentence) {
+  return sentence.toLowerCase().replace(/[^a-z0-9\s-]+/g, " ").split(/\s+/).filter(word => word.length >= 5 && !/^(?:there|their|about|would|could|should|before|after|because|leave|increase|within|still|reach|which|where|while|other|these|those)$/.test(word));
+}
+function namedTokens(sentence) {
+  return [...(sentence.match(/\b[A-Z][A-Z0-9]{1,}\b/g) || []), ...(sentence.match(/\b\d[\d,.]*\b/g) || []), ...(sentence.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g) || [])];
+}
+function supportedSentence(sentence, resume, marked) {
+  const hay = resume.toLowerCase();
+  for (const token of namedTokens(sentence)) if (!hay.includes(token.toLowerCase())) return false;
+  if (!marked) return true;
+  const words = contentWords(sentence);
+  const hits = words.filter(word => hay.includes(word));
+  if (hits.length >= 2) return true;
+  for (let i = 0; i < words.length - 1; i++) if (hay.includes(words[i] + " " + words[i + 1])) return true;
+  return false;
+}
+function splitClauses(sentence) {
+  return sentence.split(/\s+[-–—]\s+|,\s+(?=(?:ran|using|built|and then)\b)/i).map(part => part.replace(FRAGMENT_LABEL, "").trim()).filter(part => part && !LEFT_META.test(part));
+}
+function speakRank(sentence) {
+  const text = sentence.toLowerCase();
+  const rejected = /\b(?:dismissed|rejected|instead of|rather than|cellular-only)\b/.test(text);
+  if (!rejected && /\b(?:owned|i led|didn't design it alone)\b/.test(text)) return 0;
+  if (/\b(?:requirement|started by defining|i defined|meter-to-head-end)\b/.test(text)) return 1;
+  if (rejected || /\b(?:chose|kept the|hybrid mesh)\b/.test(text)) return 2;
+  if (/\b(?:built|implemented|configured|drafted|deployed|added)\b/.test(text)) return 3;
+  if (/\b(?:validat|in the lab|failover|tested|confirmed)\b/.test(text)) return 4;
+  if (/\b(?:before rollout|outcome|stopped dropping)\b/.test(text)) return 5;
+  return 3;
+}
+function spokenQuestion(question) {
+  return /\b(?:ownership|architecture|how would you design|design the)\b/i.test(question);
+}
+function finishLeftAnswer(question, text, source) {
   const raw = String(text || "").trim();
   if (!raw) return raw;
+  const asked = String(question || "").trim();
   const lines = raw.split("\n").map(line => line.trim()).filter(Boolean);
   const bulleted = lines.some(line => /^(?:[-•*]|\d+[.)])\s+/.test(line));
   const pieces = [];
@@ -1165,25 +1211,28 @@ function finishLeftAnswer(question, text) {
     if (/^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(line)) continue;
     if (/^(?:…|\.{3})$/.test(line)) continue;
     const body = line.replace(/^(?:[-•*]|\d+[.)])\s+/, "");
-    for (const bit of body.split(/(?<=[.!?])\s+/)) {
-      const peeled = peelBullet(bit).body;
-      if (peeled) pieces.push(peeled);
-    }
+    for (const bit of body.split(/(?<=[.!?])\s+/)) for (const clause of splitClauses(peelBullet(bit).body)) pieces.push(clause);
   }
-  const pastQuestion = /^(?:did you|what did you|have you|had you)\b/i.test(String(question || "").trim());
+  const resume = profileResume(source || "");
+  const pastQuestion = /^(?:did you|what did you|have you|had you)\b/i.test(asked);
   const hasPast = pieces.some(pastWork);
   const kept = [], seen = [];
   for (const piece of pieces) {
-    if (dictionaryOpener(piece) || genericThirdPerson(piece)) continue;
+    if (dictionaryOpener(piece) || genericThirdPerson(piece) || LEFT_META.test(piece)) continue;
     if (pastQuestion && hasPast && hypothetical(piece)) continue;
+    if (String(source || "").trim() && !supportedSentence(piece, resume.text, resume.marked)) continue;
     const key = sentenceKey(piece);
     if (!key || seen.some(prior => nearDuplicate(prior, key))) continue;
     seen.push(key);
     const tidy = tidySentence(piece);
     if (tidy) kept.push(tidy);
   }
-  if (!kept.length) return "";
-  return bulleted ? kept.map(line => "- " + line).join("\n") : kept.join(" ");
+  const intro = /^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\b/i.test(asked);
+  const ordered = intro ? kept : kept.map((line, index) => ({ line, index, rank: speakRank(line) })).sort((a, b) => a.rank - b.rank || a.index - b.index).map(item => item.line);
+  if (!ordered.length) return String(source || "").trim() ? "I have not done that." : "";
+  const speech = ordered.map(line => /[.!?]$/.test(line) ? line : line + ".").join(" ");
+  if (spokenQuestion(asked)) return speech;
+  return bulleted ? ordered.map(line => "- " + line).join("\n") : speech;
 }
 function signBullet(title, sentence, first) {
   const peeled = peelBullet(sentence);
@@ -1210,15 +1259,15 @@ function repairSectioned(raw) {
 function presentAnswer(question, answer, source) {
   const raw = String(answer || "").trim();
   if (!raw) return raw;
-  if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return finishLeftAnswer(question, plainIntroAnswer(raw));
-  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return finishLeftAnswer(question, repairSectioned(raw));
+  if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return finishLeftAnswer(question, plainIntroAnswer(raw), source);
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return finishLeftAnswer(question, repairSectioned(raw), source);
   const allowed = String(source || "") + "\n" + String(question || "");
   const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3 && !genericThirdPerson(s));
   const words = sentences.join(" ").split(/\s+/).filter(Boolean).length;
   const q = String(question || "");
   const simple = /^(?:what is|what does|what's|define|do you|are you|have you|can you hear)\b/i.test(q.trim()) && words < 55 && sentences.length < 3;
   const complex = !simple && ((/\b(?:design|tell me about a time|walk me through|incident|war room|contributions|proud of|strategy)\b/i.test(q) && (sentences.length >= 2 || words >= 36)) || sentences.length >= 4 || words >= 70);
-  if (!complex || sentences.length < 2) return finishLeftAnswer(question, sentences.join(" ") || raw);
+  if (!complex || sentences.length < 2) return finishLeftAnswer(question, sentences.join(" ") || raw, source);
   const groups = { Claim: [sentences[0]], Context: [], Action: [], Result: [], Close: [] };
   for (const sentence of sentences.slice(1)) {
     const nums = sentence.match(/\d[\d,.]*/g) || [];
@@ -1238,7 +1287,7 @@ function presentAnswer(question, answer, source) {
       if (line) blocks.push("- " + line);
     });
   }
-  return finishLeftAnswer(question, blocks.join("\n"));
+  return finishLeftAnswer(question, blocks.join("\n"), source);
 }
 function answerLines(answer, question) {
   // He is rehearsing as himself. The stored introduction can still say his name; the line he reads cannot.

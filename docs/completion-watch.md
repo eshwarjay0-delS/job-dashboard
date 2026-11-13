@@ -10,7 +10,7 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 ## 13 November 2026 — left answer cleanup
 
-Owner Eshwar widened the 10:08 AM pass. The left presentation drops connectors, section labels, ellipsis, generic third person, dictionary openers, duplicate sentences, and "I would" on a past question when a past sentence is present. Generation prompts were not rewritten.
+Owner Eshwar widened the 10:08 AM pass. The left presentation drops connectors, section labels, ellipsis, generic third person, dictionary openers, duplicate sentences, and "I would" on a past question when a past sentence is present. The 10:18 AMI card is ordered as owned work, requirements, choice, then the check. Names outside the active profile resume are dropped. Generation prompts were not rewritten.
 
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 

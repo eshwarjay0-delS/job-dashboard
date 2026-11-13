@@ -1,6 +1,6 @@
 ## 2026-11-13 — Left answer cleanup (visible on the answer card)
 
-The left card no longer shows First/Then/Next/Finally, "Once that is established", "In addition", a leading dash, Claim/Context/Action/Result/Close, or an ellipsis. Generic third person and a dictionary opener are dropped. First-person lines stay, including "field-ops teams". Duplicate sentences collapse. A past question drops "I would" when a past sentence is already there. Generation prompts were not rewritten. Fixtures are the 9:04, 9:09, 9:14, 9:27, and 10:08 screenshots.
+The left card no longer shows First/Then/Next/Finally, "Once that is established", "In addition", a leading dash, Claim/Context/Action/Result/Close, or an ellipsis. Generic third person and a dictionary opener are dropped. First-person lines stay, including "field-ops teams". Duplicate sentences collapse. A past question drops "I would" when a past sentence is already there. Generation prompts were not rewritten. The 10:18 AMI card leads with the owned work, then the requirements, the choice, and the check. IEEE, failure-mode labels, and "not in the sources" are gone. A name that is not on the active profile resume is dropped. If nothing remains, the line is "I have not done that." Fixtures include 9:04, 9:09, 9:14, 9:27, 10:08, and 10:18.
 
 ## 2026-11-13 — Main answer path restored from 01ceb1dc (visible on the left answer card)
 

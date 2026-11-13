@@ -103,10 +103,52 @@ test("duplicate sentences, a lowercase start, and doubled punctuation are cleane
   ].join(" "))
   assert.equal(card.match(/vendor-supplied blueprint/gi).length, 1)
   assert.equal(card.match(/SD-WAN design/gi).length, 1)
-  assert.match(card, /^- We rejected/m)
+  assert.match(card, /^- I led/m)
   assert.match(card, /I sized the backup links\./)
   assert.doesNotMatch(card, /\.\./)
-  assert.ok(card.indexOf("vendor-supplied") < card.indexOf("SD-WAN"))
+  assert.ok(card.indexOf("SD-WAN") < card.indexOf("vendor-supplied"))
+})
+
+const AMI_RESUME = [
+  "eshwarjay05",
+  "I owned the AMI telecom design end to end.",
+  "I defined the meter-to-head-end requirements.",
+  "I chose a hybrid mesh over a cellular-only design to cover rural gaps.",
+  "I validated failover in the lab before rollout.",
+  "jayeshwar44",
+  "I used Burp Suite at Saint Louis University.",
+].join("\n")
+
+test("AMI ownership is a spoken answer in order, with hallucinations and meta lines gone", () => {
+  const question = "Design Ownership for AMI Telecom Architecture."
+  const messy = [
+    "I dismissed a pure cellular-only approach because it would leave rural gaps and increase carrier cost.",
+    "First, - So I kept the hybrid mesh to meet coverage and capacity targets.",
+    "First, - First I defined the meter-to-head-end requirements, ran IEEE g/e coverage simulations.",
+    "First, failure mode: a backhaul link loss causes the mesh to switch to alternate hops.",
+    "First, - I validate this by injecting packet loss in the lab. That part is not in the sources.",
+    "I owned the AMI telecom design end to end.",
+    "I chose a hybrid mesh over a cellular-only design to cover rural gaps.",
+    "I validated failover in the lab before rollout.",
+  ].join(" ")
+  const card = presentSpokenAnswer(question, messy, AMI_RESUME)
+  assert.match(card, /^I owned the AMI telecom design end to end\./)
+  assert.ok(card.indexOf("meter-to-head-end requirements") < card.indexOf("hybrid mesh"))
+  assert.ok(card.indexOf("hybrid mesh") < card.indexOf("failover in the lab"))
+  assert.doesNotMatch(card, /IEEE|failure mode|not in the sources|First,|Burp Suite|Saint Louis/)
+  assert.doesNotMatch(card, /backhaul|packet loss/)
+  const bare = presentSpokenAnswer(question, "I ran IEEE g/e coverage simulations for twelve sites.", AMI_RESUME)
+  assert.equal(bare, "I have not done that.")
+})
+
+test("a hallucinated tool from the other profile is not spoken for eshwarjay05", () => {
+  const card = presentSpokenAnswer(
+    "What tools did you use?",
+    "I used Burp Suite at Saint Louis University. I owned the AMI telecom design end to end.",
+    AMI_RESUME,
+  )
+  assert.doesNotMatch(card, /Burp Suite|Saint Louis/)
+  assert.match(card, /AMI telecom design/)
 })
 
 test("a past question drops I would when a first-person past sentence is present", () => {
