@@ -1,0 +1,151 @@
+name: Cleanup Actions artifacts
+
+# Manual only. Deletes Actions artifacts and large Actions caches.
+# Does not call the Releases API and does not change kompas-desktop-latest.
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cleanup-actions-artifacts
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete old artifacts and large caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Delete non-expired artifacts except the newest caption build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const PREFIX = 'Kompas-Windows-Caption-Once'
+            const CACHE_TOTAL_BYTES = 100 * 1024 * 1024
+            const CACHE_ONE_BYTES = 50 * 1024 * 1024
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+
+            async function withRetry(label, fn) {
+              let waitMs = 2000
+              for (let attempt = 1; attempt <= 6; attempt++) {
+                try {
+                  return await fn()
+                } catch (error) {
+                  const status = error.status || (error.response && error.response.status)
+                  const message = String(error.message || error)
+                  const retryable = status === 429 || status === 502 || status === 503 || (status === 403 && /rate limit|secondary/i.test(message))
+                  if (!retryable || attempt === 6) throw error
+                  core.warning(`${label} attempt ${attempt} got HTTP ${status}; retrying`)
+                  await new Promise(resolve => setTimeout(resolve, waitMs))
+                  waitMs *= 2
+                }
+              }
+            }
+
+            async function listAll(route, key) {
+              const items = []
+              for (let page = 1; page <= 50; page++) {
+                const response = await withRetry(`list ${key} page ${page}`, () => github.request(route, {
+                  owner,
+                  repo,
+                  per_page: 100,
+                  page,
+                }))
+                const batch = response.data[key] || []
+                items.push(...batch)
+                if (batch.length < 100) break
+              }
+              return items
+            }
+
+            const artifacts = await listAll('GET /repos/{owner}/{repo}/actions/artifacts', 'artifacts')
+            const live = artifacts.filter(artifact => artifact.expired !== true)
+            const kompas = live.filter(artifact => artifact.name === PREFIX || artifact.name.startsWith(`${PREFIX}-`))
+            kompas.sort((a, b) => {
+              if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1
+              return b.id - a.id
+            })
+            const keep = kompas[0] || null
+            const doomed = live.filter(artifact => !keep || artifact.id !== keep.id)
+            if (keep && doomed.some(artifact => artifact.id === keep.id)) {
+              throw new Error('Refusing to delete the newest Kompas-Windows-Caption-Once artifact')
+            }
+
+            let freed = 0
+            let deleted = 0
+            for (const artifact of doomed) {
+              try {
+                await withRetry(`delete artifact ${artifact.id}`, () => github.request('DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id}', {
+                  owner,
+                  repo,
+                  artifact_id: artifact.id,
+                }))
+                deleted += 1
+                freed += artifact.size_in_bytes || 0
+                console.log(`deleted artifact ${artifact.id} ${artifact.size_in_bytes} ${artifact.name}`)
+              } catch (error) {
+                const status = error.status || (error.response && error.response.status)
+                if (status === 404) {
+                  console.log(`already gone ${artifact.id} ${artifact.name}`)
+                  continue
+                }
+                throw error
+              }
+              await new Promise(resolve => setTimeout(resolve, 200))
+            }
+
+            const caches = await listAll('GET /repos/{owner}/{repo}/actions/caches', 'actions_caches')
+            const cacheTotal = caches.reduce((sum, cache) => sum + (cache.size_in_bytes || 0), 0)
+            const dropCaches = cacheTotal >= CACHE_TOTAL_BYTES
+              ? caches
+              : caches.filter(cache => (cache.size_in_bytes || 0) >= CACHE_ONE_BYTES)
+            let cachesDeleted = 0
+            let cacheFreed = 0
+            for (const cache of dropCaches) {
+              try {
+                await withRetry(`delete cache ${cache.id}`, () => github.request('DELETE /repos/{owner}/{repo}/actions/caches/{cache_id}', {
+                  owner,
+                  repo,
+                  cache_id: cache.id,
+                }))
+                cachesDeleted += 1
+                cacheFreed += cache.size_in_bytes || 0
+                console.log(`deleted cache ${cache.id} ${cache.size_in_bytes} ${cache.key}`)
+              } catch (error) {
+                const status = error.status || (error.response && error.response.status)
+                if (status === 404) continue
+                throw error
+              }
+            }
+
+            const remaining = (await listAll('GET /repos/{owner}/{repo}/actions/artifacts', 'artifacts'))
+              .filter(artifact => artifact.expired !== true)
+            const remainingKompas = remaining.filter(artifact => artifact.name === PREFIX || artifact.name.startsWith(`${PREFIX}-`))
+            const remainingOther = remaining.filter(artifact => artifact.name !== PREFIX && !artifact.name.startsWith(`${PREFIX}-`))
+            if (remainingOther.length > 0 || remainingKompas.length > 1) {
+              console.log(`REMAINING_NON_EXPIRED=${remaining.length}`)
+              for (const artifact of remaining) console.log(`remaining ${artifact.id} ${artifact.created_at} ${artifact.size_in_bytes} ${artifact.name}`)
+              throw new Error('Artifacts remain besides the single newest Kompas-Windows-Caption-Once build. Run this workflow again.')
+            }
+
+            const kept = remainingKompas[0] || null
+            const freedGb = (freed / 1e9).toFixed(3)
+            const summary = [
+              `Deleted ${deleted} non-expired Actions artifacts, freeing ${freed} bytes (${freedGb} GB).`,
+              kept
+                ? `Kept ${kept.name} (${kept.id}), ${kept.size_in_bytes} bytes, created ${kept.created_at}.`
+                : 'No Kompas-Windows-Caption-Once artifact was present to keep.',
+              `Deleted ${cachesDeleted} Actions caches, freeing ${cacheFreed} bytes. Cache total before deletion was ${cacheTotal} bytes.`,
+              `Non-expired artifacts remaining: ${remaining.length}.`,
+              'Releases were not changed.',
+            ]
+            console.log(summary.join('\n'))
+            try {
+              await core.summary.addRaw(summary.join('\n')).write()
+            } catch (error) {
+              core.warning(`Could not write the step summary: ${error.message}`)
+            }
