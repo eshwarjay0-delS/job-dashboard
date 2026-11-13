@@ -109,3 +109,10 @@ Restacked PR #355 head `dcbd2400fccff83c771a23a75b14f0200df1224a` passed:
 - Full CI `43398189469`: SUCCESS.
 
 The code-only PR does not change Plan/REA files; its Plan & Vision decision and evidence are recorded in the companion MFit Plan update. Protected preview and first post-release crawl/API smoke remain pending. No live crawl, portal request, DB mutation or application submission occurred.
+
+
+## 13 November 2026 — Manual/on-demand-only correction and Supabase egress blocker
+
+The owner correction from 12 November 2026 21:25 UTC supersedes older scheduled-crawl wording. Contract crawling is manual/on-demand only: vercel.json has no /api/crawl/run cron, and crawl-freshness.yml has no schedule trigger. The admin POST /api/crawl/jobs remains the manual trigger; the Apply search currently reads the index and does not start a crawl. No crawl or portal request was triggered.
+
+The live production GET /api/crawl/jobs?limit=5 returned HTTP 200 but JSON ok:false, jobs empty, reason exceed_egress_quota from the Supabase service restriction. The endpoint is reachable, but the database service is not available for this query. This is not a Vercel deployment blocker. Do not change billing or spend caps; the project owner must restore Supabase service. No post-release crawl, fresh listing or classification result is claimed.
