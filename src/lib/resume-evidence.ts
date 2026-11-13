@@ -8,7 +8,9 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
     "- Treat the uploaded resume as candidate-provided evidence, not proof that every statement is current or accurate.",
     "- If explicit candidate input conflicts with resume education, employment dates, employer, tenure or credential status, do not merge, average or silently choose; mark the fact unresolved and request correction before using it.",
     "- A credential described as pursuing, in progress, planned or studying for is not earned.",
-    "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence.",
+    "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence; only explicit first-person candidate confirmations can support a skill.",
+    "- An explicitly confirmed skill may be mapped naturally into relevant existing project bullets across the selected resume's roles, including earlier roles, even when the original bullet does not name the tool. The confirmation supports the skill, not a new employer, project, title, date, location, contact, metric, credential or unsupported project detail.",
+    "- Apply confirmations only to this request's selected account, resume and JD; never borrow another account's resume or profile.",
     `ORIGINAL SUBMITTED TEXT (distinguish job requirements from candidate statements):\n${jd}`,
   ].join("\n\n")
 }
@@ -26,8 +28,10 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
   ].some(pattern => pattern.test(text))
 }
 
-/** Only explicit candidate assertions can expand deterministic evidence. Naming a
- * tool in an editing instruction, a question or a negation is not confirmation. */
+/** Only explicit candidate assertions can expand skill evidence. A confirmed skill may be
+ * mapped into a relevant existing project bullet across roles, but this parser never supplies
+ * an employer, project, date, title, location, contact or metric. Naming a tool in an editing
+ * instruction, a question or a negation is not confirmation. */
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
@@ -35,5 +39,72 @@ export function confirmedCandidateStatements(statements: readonly string[]): str
     if (/^i\s+(?:have|possess)\s+(?:no|not|never)\b/i.test(line)) return []
     const positive = line.split(/\b(?:except|excluding|but|however|not|never|without)\b/i)[0].trim()
     return positive ? [positive] : []
+  })
+}
+
+/** Return only JD terms supported by this specific role's original bullets and
+ * still missing from its current bullets. A globally missing term from another
+ * role must never be copied into this role's experience. */
+export function missingRoleEvidenceTerms(
+  sourceTerms: ReadonlySet<string>,
+  currentTerms: ReadonlySet<string>,
+  requiredTerms: readonly string[],
+): string[] {
+  const candidates = [...new Set([...requiredTerms, ...sourceTerms])]
+  return candidates.filter(term => sourceTerms.has(term) && !currentTerms.has(term))
+}
+
+
+/** Restore an edited experience bullet when it introduces a JD term unsupported by
+ * that role's original bullets and not explicitly confirmed by the candidate. Explicit
+ * confirmations are the owner-approved cross-role exception; the existing bullet/project
+ * frame must still be preserved. */
+export function restoreUnsupportedRoleEdits<T extends { idx: number; text: string }>(
+  edits: readonly T[],
+  roles: readonly { bullets: readonly { idx: number; text: string }[] }[],
+  terms: string[],
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+  confirmedTerms: ReadonlySet<string> = new Set(),
+): { edits: T[]; reverted: number; blockedTerms: string[] } {
+  const sourceByIdx = new Map<number, string>()
+  const allowedByIdx = new Map<number, ReadonlySet<string>>()
+  for (const role of roles) {
+    const allowed = new Set([...cover(role.bullets.map(b => b.text).join("\n"), terms), ...confirmedTerms])
+    for (const bullet of role.bullets) {
+      sourceByIdx.set(bullet.idx, bullet.text)
+      allowedByIdx.set(bullet.idx, allowed)
+    }
+  }
+  let reverted = 0
+  const blocked = new Set<string>()
+  const guarded = edits.map(edit => {
+    const source = sourceByIdx.get(edit.idx)
+    const allowed = allowedByIdx.get(edit.idx)
+    if (source === undefined || !allowed) return { ...edit }
+    const unsupported = [...cover(edit.text, terms)].filter(term => !allowed.has(term))
+    if (!unsupported.length) return { ...edit }
+    reverted++
+    unsupported.forEach(term => blocked.add(term))
+    return { ...edit, text: source }
+  })
+  return { edits: guarded, reverted, blockedTerms: [...blocked] }
+}
+
+
+/** Return only the missing JD terms supported by each role's own original bullets. */
+export function roleScopedMissingTerms(
+  roles: readonly { bullets: readonly { idx: number; text: string }[] }[],
+  current: readonly { idx: number; text: string }[],
+  requiredTerms: string[],
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+): { roleIndex: number; terms: string[] }[] {
+  const currentByIdx = new Map(current.map(b => [b.idx, b.text]))
+  return roles.flatMap((role, roleIndex) => {
+    const sourceText = role.bullets.map(b => b.text).join("\n")
+    const currentText = role.bullets.map(b => currentByIdx.get(b.idx) || b.text).join("\n")
+    const sourceTerms = cover(sourceText, requiredTerms)
+    const currentTerms = cover(currentText, requiredTerms)
+    const terms = missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredTerms)
+    return terms.length ? [{ roleIndex, terms }] : []
   })
 }
