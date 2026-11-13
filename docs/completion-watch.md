@@ -12,9 +12,9 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 Owner Eshwar, 11:03 PM and 11:04 PM CT, on production. The telecom card prepended `First, -` onto bullets that already started with First, Then, or Finally, drew a stray ellipsis, and hid the question. Both formatters now keep one connector. The question box stays rendered. Have-you-done, how-have-you-used, and how-do-you use the measured word bands, and Long raises the spoken ceiling. Local focused suites passed. Not merged in this note. No ship marker on the branch commit.
 
-## 13 November 2026 — Skip login button
+## 13 November 2026 — Skip-login claim is unverified
 
-Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.
+An assistant-generated repo note claims that Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. The accessible prior-conversation search did not retrieve a direct owner-authored message approving that behavior. The only direct owner-authored authentication wording retrieved is from 2026-11-12T19:09:10Z: “No just the login. Still the give admin for eshwarjay0@gmail.com but only Gmail sign in.” Treat the later Skip login claim as unapproved; preserve it as historical context but do not implement a public synthetic-owner bypass. No auth code or environment variables were changed by this documentation reconciliation.
 
 ## 13 November 2026 — rounds 36-55 and the desktop shell
 
@@ -40,9 +40,9 @@ Owner request the same day: apply the three reviewed format-patch files onto `27
 
 Owner, 12 Nov 2026, 4:18 PM America/Chicago: question stripping and capture are the top Kompas priority. Pull request 234 was rebased onto current master. The caption and mic frame stays. The last-four window runs when the framed chunks hold more than one question. One question keeps its setup. Offline stand-in: 150 drafts, 0 pairs at Jaccard >= 0.7, 0 same-answer failures. Focused suites 208 pass, 0 fail. Baseline 15 checks hold. `tsc --noEmit` clean. Not a production deploy. No ship marker.
 
-## 12 November 2026 — skip-login
+## 12 November 2026 — assistant-reported skip-login decision (unverified)
 
-Owner approval the same day supersedes the session-recovery note that said to leave `AUTH_DISABLED` off. Production still served `window.KOMPAS_AUTH_DISABLED = false` from commit `e8ce442`. Skip-login must not call Supabase Auth, must not open `/login`, and must let Kompas Start and MarketFit open. The Houston user id was not read because the project returned HTTP 402. Draft PR #324 stays unmerged. PR #327 is a different branch and is not part of this slice.
+A prior assistant-generated note claimed owner approval to disable login and use a synthetic owner. The accessible direct owner wording retrieved later in the same day is: “No just the login. Still the give admin for eshwarjay0@gmail.com but only Gmail sign in.” No direct user message approving public skip-login was retrieved. Mark the skip-login claim unapproved/superseded, preserve this historical note, and keep the login screen plus Gmail-only admin sign-in. Do not read a synthetic-owner ID or change the allowlist. Draft PR #324 remains unmerged; no runtime change is authorized by this note.
 
 ## Active development loop
 
@@ -410,7 +410,7 @@ Continue: after the PR #284 documentation refresh, require exact-head crawler re
 ### Kompas and auth correction
 - PR #350 is live at production SHA `4c01951`. The actual 50-pair Kompas/ChatGPT comparison, independent human grading, and native Windows/mobile/WhatsApp voice acceptance remain open.
 - No active automation with the exact title Kompas Continuous Voice Delivery appeared in the accessible automation inventory; this run made no microphone, caption or voice edits. No separate Bible-Keeper automation was found in the accessible inventory.
-- Latest owner correction requires a login screen and Gmail-only sign-in, superseding the earlier skip-login approval claim. Safe Merge Gate changed `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` to false in a READY config-only deployment on source `a247ddf`; the alias later advanced to `4c01951`, so recheck the current public auth flag and anonymous 401 contracts before claiming the latest deployment's auth behavior. Do not enable a public synthetic-owner bypass or change the admin allowlist.
+- The only direct owner-authored wording retrieved in accessible prior context is from 2026-11-12T19:09:10Z: “No just the login. Still the give admin for eshwarjay0@gmail.com but only Gmail sign in.” The 13 Nov Skip login button claim appears only in assistant-generated repo notes; no direct user message supporting it was retrieved. Treat it as unapproved and do not implement a public synthetic-owner bypass. Safe Merge Gate changed `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` to false in a READY config-only deployment on source `a247ddf`; the alias later advanced to `4c01951`, so recheck the current public auth flag and anonymous 401 contracts before claiming the latest deployment's auth behavior. Do not enable a public synthetic-owner bypass or change the admin allowlist.
 
 Continue: obtain the legitimate protected preview for PR #353; the exact missing prerequisite is the private `KOMPAS_VERCEL_API_TOKEN`. After that, inspect an owner-authorized exported DOCX and run a consented baseline + JD + explicit-confirmation case. The exact missing prerequisite is the private `KOMPAS_VERCEL_API_TOKEN`, which the owner or authorized repository administrator must configure without exposing it. After release, inspect an owner-authorized exported DOCX and perform a consented baseline + JD + explicit-confirmation run; do not claim a live 98% match from tests.
 
