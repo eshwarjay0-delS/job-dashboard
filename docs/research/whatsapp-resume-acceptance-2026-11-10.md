@@ -112,3 +112,24 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 13 November 2026 — source-availability correction
+
+This later correction supersedes the 10 Nov private-archive verification above for current accessibility. The 12 Nov Library recheck did not resolve the recorded original DOCX path, so the exact 17 Oct source DOCX bytes are **not currently accessible from this execution context**. The matching JD remains retrievable from the user's private inbox. Do not claim the original bytes are available, do not substitute another resume, and do not replay the historical run until the exact input is re-established. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain missing. Conflicting education/employment/credential facts remain quarantined pending owner reconciliation.
+
+
+## 13 November 2026 — archive re-verification supersedes the path-lookup failure
+
+The 12 Nov direct Library-folder lookup did not resolve the source path; it did not establish that the source archive was absent. A read-only full Library archive listing located the owner-provided original-resume archive. The exact 17 Oct input DOCX was extracted and its SHA-256 matched the private inventory. Its size is 27,724 bytes. The exact archive member path and digest remain private and are intentionally omitted from this repository. No adjacent resume variant was substituted.
+
+The matching Risk & Controls JD remains recovered from the private inbox. The source's education, employer chronology, experience length and credential claims still conflict with owner-confirmed profile facts and remain quarantined. Do not count the JD's 5+ years or preferred certifications/platforms as candidate evidence. The 6 Nov WhatsApp policy remains authoritative; this does not restore the superseded 98% hard hold.
+
+The historical generated DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain missing. The archive recovery resolves only source-byte availability; it does not prove what was generated, sent, delivered or read. No model call, resume write, R2 write, real WhatsApp send or historical replay occurred.
+
+Continue: obtain the original generated output and correlated R2/webhook/Meta receipt evidence, and reconcile the conflicting source facts with the owner before any exact replay. Do not generate or send a replacement from the quarantined facts.
+
+
+## Current execution recheck — 13 November 2026
+
+The earlier private archive extraction and SHA-256 inventory match remain recorded in the REA handoff. This run performed a recursive Library DOCX listing and semantic search but did not resolve the exact 27,724-byte source artifact; no bytes were materialized or rehashed in this execution. This is a current-access limitation, not a claim that the earlier extraction did not occur. The matching 16 Oct JD was retrieved read-only from Gmail; no email was sent. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. No model call, historical replay, R2 write, or WhatsApp send occurred. Do not substitute another resume. Source education/employment/tenure/credential conflicts remain quarantined pending owner reconciliation.
