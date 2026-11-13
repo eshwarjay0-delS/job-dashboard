@@ -460,3 +460,10 @@ These are prior exact-head workflow results, not current production or user-acce
 Continue: the owner-approved contract-to-hire classification slice from PR #355 is restacked onto current master `026c72968e45314ff0a99f701942c966e79f0a1e` in `fix/contract-c2h-classifier-master-026c729-run11-20261113`, implementation commit `e7a54477ee30e48b84df36ec9e754ff81b34c9b9`. It requires explicit conversion/right-to-hire language, suppresses negated signals, and does not infer C2H from W2 payroll or contract duration. The crawl runner remains manual/on-demand; no daily cron, live portal crawl or external side effect is introduced.
 
 Source PR #355 full CI, Kompas baseline and crawler regression were green. The new exact-head CI, Plan/REA and protected preview are pending. The private `KOMPAS_VERCEL_API_TOKEN` remains unavailable; no preview bypass or production deployment was attempted. This is a classifier slice, not proof of complete contract crawler coverage.
+
+
+## 13 November 2026 — run 11 C2H exact-head gates passed
+
+Continue: the current-master contract-to-hire classifier restack in PR #376 now passes exact-head full CI `43491614601`, crawler regression `43491614548`, Kompas baseline `43491614613` and Plan/REA schema `43491614636` on `fb1aaad17b982dc323342cea87313a27ce7b3ad7`. The classifier still requires explicit Right To Hire / Contract To Perm / conversion intent, treats negation as negative evidence, and never infers C2H from W2 payroll, duration or generic contract wording. The crawl remains manual/on-demand only.
+
+PR #376 remains DRAFT pending the protected Vercel preview and Safe Merge Gate's shared Plan/REA sequence. No live crawl, portal request, cron, production deployment, application submission or account-side write occurred. After release, use only authorized sample postings; do not enable a schedule or scrape unapproved sources.
