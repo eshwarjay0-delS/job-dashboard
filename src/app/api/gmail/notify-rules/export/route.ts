@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const admin = createServiceClient(url, key)
-    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 50 })
     if (error) throw error
     const owners = []
     for (const user of data?.users || []) {
