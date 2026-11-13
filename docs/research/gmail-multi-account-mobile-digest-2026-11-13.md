@@ -44,3 +44,10 @@ After an approved release, acceptance needs two authorized inboxes with a delibe
 This approved slice is restacked from PR #357 onto canonical master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/gmail-digest-mobile-master-026c729-run11-20261113`, implementation commit `5e3391b9c9cb60d1d8f8281566854d94e9e3abd5`. The stale source page was not copied: its eight account-thread changes were applied to the current-master `src/app/dashboard/mail/page.tsx`, preserving the live Gmail snapshot fallback and `snapshotNotice`.
 
 Exact-head full CI, Kompas baseline, Plan/REA schema and protected preview are pending. The production alias remains on prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; this code is not live. No real Gmail API/OAuth call, inbox mutation, email send, two-inbox or phone acceptance occurred.
+
+
+## 13 November 2026 — run 11 exact-head source gates passed
+
+The current-master restack PR #375 at head `9aa80221fe4c05d1265e649061ea4fe0dae518fe` passed full CI `43490945879`, Kompas baseline `43490945884` and Plan/REA schema `43490945912`. The source gates cover account-scoped digest identity and mobile shell behavior; they do not prove live two-inbox or device acceptance.
+
+PR #375 remains DRAFT pending the legitimate protected Vercel preview. The canonical production alias remains on prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; no Gmail/mobile changes from this branch are live. No Gmail API/OAuth call, inbox mutation or outbound email occurred. After a reviewed deployment, require two authorized inboxes with a deliberately colliding provider thread ID and a narrow-phone check before claiming acceptance.
