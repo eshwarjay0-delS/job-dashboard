@@ -4,6 +4,8 @@ Method: source analysis, one read of the live static flag, and one read-only Sup
 
 ## What put login back
 
+Superseded 13 Nov 2026: owner mode stays on unless the flag is exactly `off-confirmed-by-eshwar`. The observation below is what production served on 12 Nov, not the current rule.
+
 Production `https://job-dashboard-fawn.vercel.app/kompas/auth-flag.js` served `window.KOMPAS_AUTH_DISABLED = false`. `/kompas/version.json` named build `kompas-20261112-reauth`, commit `e8ce442051c1cbee1fbbeb6a26aa75200a1ddf97` (PR #326). That commit's message says `AUTH_DISABLED` stays off, and its page sends a signed-out start to `/login?next=/kompas/index.html`. The 11 November skip-login commit `65bdf2f8` is still in the tree. The flag file is stamped at build time and is `false` unless `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `true`. Draft PR #324, which would ignore those flags in production, was not merged.
 
 ## Why sessions and MarketFit failed while skip-login was on

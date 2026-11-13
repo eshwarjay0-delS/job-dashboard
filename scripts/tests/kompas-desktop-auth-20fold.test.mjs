@@ -39,6 +39,7 @@ function requestClient(header,{configured=true}={}){
    }}
    if(id==="@/lib/authDisabled")return {
      isAuthDisabled:()=>false,
+     hasOwnerSkipCookie:()=>false,
      hasSupabaseAuthMaterial:()=>false,
      attachDisabledAuthFallback:(client)=>client,
    }

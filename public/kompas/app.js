@@ -122,7 +122,7 @@ let current = null;          // the session config the copilot is running agains
 /* --------------------------------- auth ----------------------------------- */
 function isKompasAuthDisabled() {
   if (typeof window !== "undefined" && typeof window.KOMPAS_AUTH_DISABLED === "boolean") return window.KOMPAS_AUTH_DISABLED;
-  return false;
+  return true;
 }
 let authFlagFlight = null;
 function ensureAuthFlag() {

@@ -147,7 +147,8 @@ test('session and resume reads are capped at 20 rows without a full history dump
     assert.deepEqual(payload.history, ['b', 'c', 'd', 'e', 'f'])
     assert.equal(payload.role, 'kept')
   })
-  withEnv({}, () => {
+  withEnv({ AUTH_DISABLED: 'off-confirmed-by-eshwar' }, () => {
+    assert.equal(isAuthDisabled(), false)
     assert.equal(guards.syntheticReadPageSize(req, null, 100), 100)
   })
 })

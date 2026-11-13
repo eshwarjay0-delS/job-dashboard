@@ -33,22 +33,15 @@ function LoginContent() {
   const [resetMode,setResetMode]=useState(false)
   const [emailOpen,setEmailOpen]=useState(false)
   const [error,setError]=useState<string|null>(searchParams.get("reason") === "egress" ? AUTH_EGRESS_BLOCKED : null)
-  const [skipLogin,setSkipLogin]=useState(false)
 
   useEffect(() => {
     let gone = false
     void serverReportsAuthDisabled().then(off => {
       if (gone || !off) return
-      setSkipLogin(true)
       window.location.replace("/dashboard")
     })
     return () => { gone = true }
   }, [])
-
-  async function skipToOwner() {
-    if (!(await serverReportsAuthDisabled())) { setSkipLogin(false); return }
-    window.location.assign("/dashboard")
-  }
 
   async function signIn() {
     if (loading) return
@@ -156,12 +149,12 @@ function LoginContent() {
               <GoogleIcon /> {loading ? "Opening Google…" : "Continue with Google"}
             </button>
 
-            {skipLogin && (
-              <button type="button" onClick={() => { void skipToOwner() }}
-                className="mt-3 flex h-12 w-full cursor-pointer items-center justify-center rounded-[12px] border border-[var(--border-strong)] bg-[var(--surface-2)] text-[15.5px] font-semibold text-[var(--text)] transition-colors hover:border-[var(--text-soft)]">
-                Skip login
+            <form action="/api/auth/skip-sign-in" method="post" className="mt-3">
+              <button type="submit"
+                className="flex h-12 w-full cursor-pointer items-center justify-center rounded-[12px] border border-[var(--border-strong)] bg-[var(--surface-2)] text-[15.5px] font-semibold text-[var(--text)] transition-colors hover:border-[var(--text-soft)]">
+                Skip sign-in
               </button>
-            )}
+            </form>
 
             <div className="my-6 flex items-center gap-3 text-[13px] text-[var(--text-soft)]"><span className="h-px flex-1 bg-[var(--border)]" />or<span className="h-px flex-1 bg-[var(--border)]" /></div>
 

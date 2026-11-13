@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authGateRedirect } from "@/lib/authGate";
 import { safeDisabledAuthNext } from "@/lib/authRedirect";
 import { userFromAuthClient } from "@/lib/kompasAuthSession";
-import { isAuthDisabled } from "@/lib/authDisabled";
+import { hasOwnerSkipCookie, isAuthDisabled } from "@/lib/authDisabled";
 
 // The trust variable, read server-side on every gated page request: Supabase
 // getUser() verifies the token with the identity provider instead of trusting
@@ -19,7 +19,7 @@ import { isAuthDisabled } from "@/lib/authDisabled";
 // (which authenticate themselves) and the static Kompas app at /kompas —
 // passes through untouched.
 export async function updateSession(request: NextRequest) {
-  if (isAuthDisabled()) {
+  if (isAuthDisabled() || hasOwnerSkipCookie(request.cookies.getAll())) {
     // Treat the single owner as signed in, including /login, so every sign-in
     // screen routes straight into the app. Do not call Supabase.
     const redirect = authGateRedirect(

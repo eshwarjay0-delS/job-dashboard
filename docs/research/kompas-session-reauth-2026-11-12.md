@@ -16,7 +16,7 @@ The shell opens the existing Chrome handoff only when that renewal truly ends th
 
 The Kompas page uses the same decision. Outside an interview, a dead token or a 401 followed by a failed refresh goes to sign-in. On the website that is `/login?next=/kompas/index.html`. After Google, that path is allowed and nothing else on the query is. During an interview the page does not navigate. A 402 shows the egress sentence and a Sign in button the person can press once Auth answers again.
 
-`AUTH_DISABLED` is not turned on. Production flags stay false. No synthetic owner is used to get past 402.
+This note left `AUTH_DISABLED` off. That instruction is superseded (13 Nov 2026): skip-login stays on unless the flag is exactly `off-confirmed-by-eshwar`. Do not set the flags to false.
 
 ## Limits
 

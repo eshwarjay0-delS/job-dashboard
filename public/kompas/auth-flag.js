@@ -1,1 +1,1 @@
-window.KOMPAS_AUTH_DISABLED = false;
+window.KOMPAS_AUTH_DISABLED = true;

@@ -11,10 +11,10 @@ import { fileURLToPath } from "node:url"
 
 export const STAMP_FILES = ["../public/version.json", "../public/kompas/version.json"].map((p) => new URL(p, import.meta.url))
 
-/** Login is lifted only when AUTH_DISABLED / NEXT_PUBLIC_AUTH_DISABLED is exactly "true". */
+/** Owner mode stays on unless the flag is exactly off-confirmed-by-eshwar. */
 export function authDisabledStamp(env = process.env) {
   const raw = env.AUTH_DISABLED ?? env.NEXT_PUBLIC_AUTH_DISABLED
-  return raw === "true"
+  return raw !== "off-confirmed-by-eshwar"
 }
 
 export const AUTH_FLAG_FILE = new URL("../public/kompas/auth-flag.js", import.meta.url)
