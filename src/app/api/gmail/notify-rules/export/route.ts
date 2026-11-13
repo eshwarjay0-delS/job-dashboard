@@ -1,47 +1,57 @@
-import { NextResponse } from "next/server"
+import { timingSafeEqual } from "node:crypto"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { isAdminEmail } from "@/lib/owner"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { mergePublicRules } from "@/lib/notify-rules"
+import { toWorkerNotifyOwner } from "@/lib/notify-rules"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// Worker-readable export of the per-sender notify controls (Poke parity).
-//
-// The 30-minute inbox worker has no user session and no service key, so it
-// cannot read Supabase user_metadata where the UI stores the rules. This
-// route is the credential path: the app reads the owner's rules with its
-// service-role key and serves the worker only what triage needs — sender
-// emails and their always/never mode. Account addresses, message content
-// and everything else stay server-side. Nothing here needs auth to read:
-// it is the owner's own curation of recruiter business emails, and the
-// route is rate-limited. If this ever carries anything more sensitive,
-// gate it behind the cron secret instead.
-export async function GET() {
-  const rl = checkRateLimit("notify-rules-export", { max: 30, windowMs: 60_000 })
-  if (!rl.ok) return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
+const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+
+function cronAuthorized(req: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET || ""
+  const actual = req.headers.get("authorization") || ""
+  const expected = `Bearer ${secret}`
+  return secret.length >= 16
+    && Buffer.byteLength(actual) === Buffer.byteLength(expected)
+    && timingSafeEqual(Buffer.from(actual), Buffer.from(expected))
+}
+
+/** Private worker-only export. It remains disabled until the owner explicitly
+ * enables a configured scheduler. Rules stay grouped by owner and receiving
+ * inbox; identical senders in different accounts are never merged. */
+export async function GET(req: NextRequest) {
+  if (process.env.GMAIL_UPDATES_SCHEDULER_ENABLED !== "true") {
+    return NextResponse.json({ ok: false, error: "Background inbox updates are disabled." }, { status: 503, headers: PRIVATE_HEADERS })
+  }
+  if (!cronAuthorized(req)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401, headers: PRIVATE_HEADERS })
+  }
+  if (!checkRateLimit("notify-rules-export", { max: 30, windowMs: 60_000 }).ok) {
+    return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429, headers: PRIVATE_HEADERS })
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
-    return NextResponse.json({ ok: false, error: "Notify export is not configured on this deployment." }, { status: 503 })
+    return NextResponse.json({ ok: false, error: "Notify export is not configured on this deployment." }, { status: 503, headers: PRIVATE_HEADERS })
   }
+
   try {
     const admin = createServiceClient(url, key)
-    const { data, error } = await admin.auth.admin.listUsers()
+    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
     if (error) throw error
-    const perOwner: unknown[][] = []
-    for (const u of data?.users || []) {
-      if (!isAdminEmail(u.email)) continue
-      const stored = (u.user_metadata as Record<string, unknown> | null)?.gmail_notify_rules
-      if (Array.isArray(stored)) perOwner.push(stored)
+    const owners = []
+    for (const user of data?.users || []) {
+      if (!isAdminEmail(user.email)) continue
+      const scoped = toWorkerNotifyOwner(user.id, user.user_metadata?.gmail_notify_rules)
+      if (scoped) owners.push(scoped)
     }
-    return NextResponse.json(
-      { ok: true, updatedAt: Date.now(), rules: mergePublicRules(perOwner) },
-      { headers: { "Cache-Control": "public, max-age=300" } },
-    )
+    return NextResponse.json({ ok: true, updatedAt: Date.now(), owners }, { headers: PRIVATE_HEADERS })
   } catch (err) {
     console.error("notify-rules/export error:", err)
-    return NextResponse.json({ ok: false, error: "Could not read notify rules." }, { status: 500 })
+    return NextResponse.json({ ok: false, error: "Could not read notify rules." }, { status: 500, headers: PRIVATE_HEADERS })
   }
 }
