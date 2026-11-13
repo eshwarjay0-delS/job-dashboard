@@ -402,3 +402,7 @@ Kompas: PR #350 is merged and production READY at exact master SHA 4c01951 on de
 Coordination: MFit Completion Watch and MFit Safe Merge Gate are enabled. No separate Bible-Keeper automation was listed in the active task inventory at 13 Nov 05:43 UTC. Kompas Continuous Voice Delivery is disabled. Preserve its ownership if it is re-enabled; do not duplicate voice work.
 
 Next: after this resume-only restack passes exact-head checks and protected preview, continue with a clean current-master restack of the approved C2H classifier correction, then the missing WhatsApp output/trace recovery and Gmail quota/device acceptance. Do not promote unapproved Kompas behavior or bypass provider restrictions.
+
+### Resume restack follow-up — 13 Nov 2026 06:01 UTC
+
+A source review found the candidate-evidence helper labeled the JD as “ORIGINAL SUBMITTED TEXT”. The value is opts.jd, so the label was misleading. It now says “JOB DESCRIPTION (target requirements, not candidate evidence)”, with a regression asserting the new label and rejecting the old one. Code/test commits 08065f4bcfc2cc2b7ca3b6436c9b6b715f562a7d and d31b599cf7d2121878e7a0f78275cf0e2fcdfd7c. Exact-head full CI, WhatsApp recovery and baseline/schema checks must rerun after this follow-up.
