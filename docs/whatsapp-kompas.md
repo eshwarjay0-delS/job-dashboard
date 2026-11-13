@@ -166,3 +166,8 @@ The profile-part acceptance repair is isolated in branch `fix/resume-profile-gap
 PR #344 carries the separate offline fallback and R2 pair compare-and-swap correction. Its source CI passed on a stale base, but the protected preview still needs the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it or copy its old Kompas stamp hunk over current master.
 
 The 17 October 17:28 incident remains unverified: the 12 November Library recheck did not resolve exact source DOCX bytes, and the generated output, R2/webhook/Meta correlation and signed delivery/read receipt remain missing. No replay or real WhatsApp message was sent.
+
+
+## 13 November 2026 — exact-head source validation
+
+PR #353 `97c6fbf2caec1507059b44a1237f397263f27b95` passed full CI `43393676889`, Kompas baseline `43393676888`, WhatsApp recovery `43393676957`, and Plan/REA schema `43393676967`. It remains DRAFT pending the protected preview, actual exported-DOCX inspection and later production release. No live model call or real WhatsApp send occurred.
