@@ -466,3 +466,10 @@ These are prior exact-head workflow results, not current production or user-acce
 ## 13 November 2026 — WhatsApp signed-callback test fixture correction
 
 The first exact-head full CI for PR #374 failed one assertion in `scripts/tests/whatsapp-single-request.test.mjs`. The fixture had combined an ambiguous initial upload failure with a simulated signed callback rejection, so the code correctly refused a possible duplicate and no fallback message ID existed. The corrected commit `cdf62de950b80ff9762ac82ff1656af98c11885f` models a successful upload/message ID followed by `markResumeDocumentAccepted=false`, then asserts that the JD/resume pair remains. This is a test-fixture correction; the new exact-head CI is still pending. No real Meta send or callback occurred.
+
+
+## 13 November 2026 — run 11 exact-head WhatsApp gates passed
+
+Continue: the current-master WhatsApp fallback/pair-CAS restack in PR #374 has now passed all four source gates on exact head `7575b5d7cd18287ba93b064a7e0f201edcf064c9`: full CI `43491356874`, WhatsApp recovery `43491357092`, Kompas baseline `43491356934`, and Plan/REA schema `43491357225`. Full CI executes the dedicated `whatsapp-single-request` test, including provider-acceptance pair retention, R2 CAS interleaving, 409/404 conflict handling and 500 propagation. These are source tests, not live delivery evidence.
+
+PR #374 remains DRAFT because the legitimate protected Vercel preview needs the private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. The canonical production alias remains READY at deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb` / SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; no WhatsApp code from #374 is live. No real Meta send, production R2 write, historical replay or handset test occurred. The historical generated DOCX, R2/webhook/Meta correlation and signed receipt remain missing; source facts remain quarantined. Do not merge or deploy until the protected preview and the Safe Merge Gate's shared Plan/REA sequencing are satisfied.
