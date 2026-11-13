@@ -1,5 +1,23 @@
 # MFit Completion Watch
 
+## 13 November 2026 — pair consumption moved behind provider acceptance
+
+Continue: verify the approved WhatsApp offline fallback and lossless pair CAS in PR #368. Code review found a real ordering defect in the restack: the normal rewrite path consumed the matching JD/resume pair before tailoring/upload, and the fallback path consumed even when the signed delivery callback rejected the document. The code now consumes only after markResumeDocumentAccepted confirms provider acceptance; rejected uploads and callback-scheduled retries retain the pair. New mocked tests cover both tailored+fallback HTTP rejection and a message-ID-then-callback-rejection case.
+
+PR #368 current exact head: 7bfcb488bc26e9f46294e4f4dcca46036337bc50. The new branch is based directly on current master 9032d5bd18854c8fd1e61fc781b51085e3af2a26, which is also the independently verified READY production alias. This WhatsApp work is not deployed. Fresh exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema checks are pending. The protected preview still requires an authorized private KOMPAS_VERCEL_API_TOKEN; keep the PR DRAFT and do not bypass it. No real Meta send, R2 production write, historical replay or handset test occurred.
+
+
+## 13 November 2026 — WhatsApp Oct 17 incident and current-master restack
+
+Continue: carry the owner-approved offline fallback and lossless resume/JD pair-consumption CAS through exact-head validation and the protected release gate. The source implementation is in the stacked PR #365 branch, which includes parent PR #364's webhook, R2 ETag/If-Match adapter, bounded CAS retry, selected-library-only NOT TAILORED fallback, text-only swipe-refinement failure behavior, and interleaving regressions. Parent PR #364 head 29d82ffc352e153a7c7b76ae23f56bc469ff50a9 passed its four recorded checks (full CI 43426407953, WhatsApp recovery 43426408103, Kompas baseline 43426408264, Plan/REA schema 43426407983); those results do not validate the later #365 documentation restack. The combined PR must run fresh exact-head checks and remain DRAFT until an authorized protected preview exists. The private KOMPAS_VERCEL_API_TOKEN is not available to this run; do not bypass the preview gate.
+
+Current source evidence: PR #365 and the REA register record a prior read-only extraction of the exact 17 Oct source DOCX and private inventory digest match, plus a read-only matching JD lookup. This run's recursive Library DOCX listing and semantic search did not re-resolve the exact source artifact, so the bytes were not rematerialized or rehashed here. No alternate resume was substituted. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, and signed delivered/read receipt remain missing. No historical replay, model call, R2 write, real WhatsApp send, or production mutation occurred. Source education, employer chronology, experience length, and credential conflicts remain quarantined until owner reconciliation.
+
+The 6 Nov WhatsApp policy remains authoritative: 70% delivery floor, 95% supported clean-pass threshold, and 98% as an evidence target rather than a hard WhatsApp hold. A no-provider fallback may send only the exact selected same-account library original, visibly labeled NOT TAILORED; any mismatch fails closed. Swipe-reply failures stay text-only and never send the original or a partial baseline. Resume and JD are one pair; a completed send may clear only the matching pair. R2 writes use conditional ETag/If-Match semantics; no unconditional fallback.
+
+Repository/deployment reconciliation: current master is 9032d5bd18854c8fd1e61fc781b51085e3af2a26; the canonical production alias last resolves to READY deployment dpl_4C5Znu8QPqcQUo9FTfQFJa3Sm4tP at SHA 9032d5bd18854c8fd1e61fc781b51085e3af2a26. The WhatsApp restack is not in that deployment. No production release or live WhatsApp acceptance is claimed. Next: finish exact-head checks, obtain the authorized protected preview, then require a generated DOCX and correlated provider acceptance/delivery receipt before any historical-delivery claim.
+
+
 Owner instruction: 17 October 2026. Keep unfinished approved commitments moving until deployed and verified, or report a concrete blocker. Recover accessible prior requests and respect later corrections. Do not ask the owner to repeat known requirements.
 
 ## Scheduled execution

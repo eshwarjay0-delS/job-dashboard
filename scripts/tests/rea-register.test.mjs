@@ -67,3 +67,34 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
+
+
+test('current WhatsApp offline-pair CAS restack is recorded separately from historical replay', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-current-master-restack-2026-11-13-watch12')
+ assert.ok(entry)
+ assert.equal(entry.state,'Implemented, verification pending')
+ assert.match(entry.limits,/no real Meta send/i)
+ assert.match(entry.next,/exact-head full CI/)
+})
+
+
+test('Oct 17 source archive recheck records the current access limit without exposing private material', () => {
+  const session = REA_SESSIONS.find(item => item.id === 'whatsapp-oct17-source-reverified-2026-11-13')
+  assert.ok(session)
+  const step = session.steps.find(item => item.label === 'Current execution archive recheck')
+  assert.ok(step)
+  assert.equal(step.status, 'Blocked')
+  assert.match(step.finding, /did not resolve the exact 27,724-byte source artifact/)
+  assert.doesNotMatch(JSON.stringify(session), /[a-f0-9]{64}|\/mnt\/data\/|C:\\\\Users\\\\/i)
+})
+
+
+test('WhatsApp pair CAS records consumption only after provider acceptance', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-current-master-restack-2026-11-13-watch12')
+ assert.ok(entry)
+ const step=entry.steps.find(s=>s.label==='Consume only after accepted delivery')
+ assert.ok(step)
+ assert.equal(step.status,'Implemented')
+ assert.match(step.finding,/only after markResumeDocumentAccepted confirms provider acceptance/)
+ assert.match(entry.next,/exact-head full CI/)
+})
