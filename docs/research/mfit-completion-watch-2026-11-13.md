@@ -36,7 +36,7 @@ A read-only follow-up also found the matching Security Engineer – Risk & Contr
 
 - Approved product direction: up to four connected accounts; per-account Gmail/Calendar targeting; user + receiving-account + provider-thread identity; preserve selected From; reconnect only the affected inbox; keep mobile navigation reachable.
 - New isolated draft PR #351 (`f3c31cb...`) implements the approved normal-flow mobile menu and adds source regression coverage to `prebuild`. It is based on current master and excludes auth, WhatsApp and resume changes. Exact-head CI, protected preview, production release and actual phone viewport remain pending.
-- PR #323 (`0e6c332...`) covers account-scoped digest actions and sender mutes but remains draft. Its recorded full CI failed on an old Kompas release-stamp assertion; the current master stamp correction does not automatically validate that stale branch. Source review also found stale pending-marker deletion is not concurrency-safe. Require a current-master restack and a reviewed conditional-lock design before merging.
+- PR #323 (`0e6c332...`) covers account-scoped digest actions and sender mutes but remains draft. Its recorded full CI failed on an old Kompas release-stamp assertion; the current master stamp correction does not automatically validate that stale branch. Its stale pending-marker cleanup needs the ETag CAS already implemented in PR #321; after #321 is accepted, restack #323 on that dependency and use getWithEtag/putIfMatch. Do not create a duplicate CAS helper.
 - The unattended Gmail update worker remains disabled. It requires an external scheduler, `CRON_SECRET`, an approved Meta template and explicit enablement. No email or Meta message was sent; no live Gmail API call or two-inbox acceptance was performed.
 
 ### 4. Contract job search and crawler
@@ -53,6 +53,12 @@ A read-only follow-up also found the matching Security Engineer – Risk & Contr
 - The owner-approved skip-login requirement remains distinct from implementation: `AUTH_DISABLED` was not changed in the current release and the last observed production flag was false. PR #350 has no protected preview or human review, and its complete login/private-state behavior is not explicitly approved for promotion. Review it without weakening admin/session boundaries.
 - The real 50-pair same-question Kompas-versus-ChatGPT comparison and independent human 0–4 grades still require the private `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. No real paired answers or human grades are available.
 - Native Windows, Live Captions, Android, WhatsApp and mobile voice/session E2E are unverified. The separate Kompas Continuous Voice Delivery automation is currently disabled; this run made no voice changes.
+
+Read-only recovery results: connected Gmail contains the matching Security Engineer – Risk & Controls JD thread received 16 Oct 19:49Z, but the targeted 17 Oct sent-DOCX search returned zero threads. Files Library search for DOCX created 17 Oct 22:00Z–18 Oct 06:00Z returned zero results after a broad retry. iZap has one business and zero linked WhatsApp numbers; connection=false, webhooks=never and sending=never. The historical WhatsApp chat and signed delivery/read receipt are therefore inaccessible through iZap until the intended number is connected. No message was sent.
+
+PR #321 (head `9708d548dafbba1cae2fdaaa7770da2f6550e2a3`) is the existing approved fallback/CAS implementation. Full CI 43304922873, WhatsApp recovery 43304922912 and Kompas baseline 43304922862 passed. Protected voice-preview gate 43304921045 failed closed because the private KOMPAS_VERCEL_API_TOKEN secret is missing. The branch adds `getWithEtag`/`putIfMatch`; use this after #321 is accepted instead of implementing another CAS primitive.
+
+PR #351's first full CI 43365305559 failed TypeScript only because two journal entries used the unsupported area `platform`; the allowed `all` area is being applied before a fresh exact-head run. No mobile runtime assertion failure was reported.
 
 ## Coordination and automation state
 
