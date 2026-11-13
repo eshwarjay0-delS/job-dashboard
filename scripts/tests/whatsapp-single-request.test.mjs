@@ -282,6 +282,25 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(consumedPartial.jd, undefined, 'the old pair is consumed only after the fallback is accepted')
   assert.equal(consumedPartial.resumePath, undefined)
 
+  // If the selected library file no longer matches the session copy, a partial
+  // draft must not fall back to the unverified session bytes.
+  const partialMismatchSession = { ...offlineSession, jdId: 'partial-byte-mismatch' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: partialMismatchSession.jdId, jd: partialMismatchSession.jd,
+    resumePath: partialMismatchSession.resumePath, resumeName: partialMismatchSession.resumeName,
+    seen: ['partial-byte-mismatch'], updatedAt: Date.now(),
+  }))
+  providerAvailable = true
+  partialMode = true
+  offlineMismatch = true
+  const docsBeforePartialMismatch = docs.length
+  await generate('123', partialMismatchSession, offlineUser, undefined, offlineFiles)
+  partialMode = false
+  offlineMismatch = false
+  assert.equal(docs.length, docsBeforePartialMismatch, 'a partial draft cannot send when selected and session bytes differ')
+  const retainedPartialMismatch = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(retainedPartialMismatch.jdId, partialMismatchSession.jdId, 'an unaccepted fallback leaves the pair available for retry')
+
   providerAvailable = false
   entries.set('whatsapp/session-123.json', JSON.stringify({
     version: 3, jdId: offlineSession.jdId, jd: offlineSession.jd,
