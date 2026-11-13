@@ -148,3 +148,8 @@ The initial-JD offline fallback is allowed only when the exact selected resume b
 Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending. A protected Vercel preview is still required and cannot be accessed without the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted. The production alias remains at the prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`, so this implementation is not live.
 
 The historical 17 Oct 17:28 Chicago request remains unverified. The exact generated DOCX, per-run R2 key/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/credential facts remain quarantined pending owner reconciliation. No model call, R2 production write, historical replay, real WhatsApp send or handset acceptance occurred.
+
+
+## 13 November 2026 — signed callback retention fixture correction
+
+The first exact-head full CI failed only the callback-retention assertion because the test combined an ambiguous initial upload failure with a simulated signed failure callback. That combination correctly blocks a duplicate send, so the expected fallback message ID was impossible. Correction commit `cdf62de950b80ff9762ac82ff1656af98c11885f` now models a successful upload followed by `markResumeDocumentAccepted=false` and verifies the pair remains. The corrected exact-head CI has not yet completed. No real Meta message, callback or historical replay occurred.

@@ -91,3 +91,8 @@ The REA now records this run's current-master restack under `whatsapp-offline-ca
 ## 13 November 2026 — REA fixture corrections
 
 The first current-master REA run found two fixture issues, not runtime failures: a non-repository Files search label was used where the schema requires a repository source path, and an extra array comma created a skipped step. The REA source now points to the public historical acceptance handoff, and the provider-acceptance step is a real ordered item. The next exact-head Plan/REA run must confirm the correction.
+
+
+## 13 November 2026 — signed callback fixture correction
+
+The first exact-head full CI run failed one assertion because the fixture combined `failNextDocument=true` (an ambiguous first upload failure) with `acceptedByProvider=false` (a signed failed-delivery result). The production path correctly avoids a duplicate when the first upload is ambiguous, so the fixture could not produce the message ID its assertion expected. Commit `cdf62de950b80ff9762ac82ff1656af98c11885f` removes that ambiguous failure from this specific scenario: the upload succeeds, the mock acceptance helper returns false because the signed failure callback already won, and the JD/resume pair must remain. This correction changes only the test fixture; exact-head CI is pending.

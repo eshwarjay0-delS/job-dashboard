@@ -461,3 +461,8 @@ The current-master review confirms these are still separate, gated items:
 | Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
 
 These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
+
+
+## 13 November 2026 — WhatsApp signed-callback test fixture correction
+
+The first exact-head full CI for PR #374 failed one assertion in `scripts/tests/whatsapp-single-request.test.mjs`. The fixture had combined an ambiguous initial upload failure with a simulated signed callback rejection, so the code correctly refused a possible duplicate and no fallback message ID existed. The corrected commit `cdf62de950b80ff9762ac82ff1656af98c11885f` models a successful upload/message ID followed by `markResumeDocumentAccepted=false`, then asserts that the JD/resume pair remains. This is a test-fixture correction; the new exact-head CI is still pending. No real Meta send or callback occurred.
