@@ -1,6 +1,6 @@
 # WhatsApp resume hold — exact source recovery and evidence boundary
 
-Updated: 10 November 2026. Method: read-only Library, Gmail, GitHub and database review plus local DOCX metadata/text inspection. No model call, real email, WhatsApp send, R2 write, or production mutation was performed.
+Updated: 13 November 2026. Method: read-only Library, Gmail, GitHub and database review plus local DOCX metadata/text inspection. No model call, real email, WhatsApp send, R2 write, or production mutation was performed.
 
 ## Recovered 17 October incident
 
@@ -10,9 +10,9 @@ The archived Library screenshot was created at `2026-10-17T22:28:39Z` (5:28 PM A
 - At 5:28 PM, the bot replied: “The rewrite did not reach your 98% coverage target after automatic repair. I have held the file.”
 - The visible missing-term list was `ccsp`, `cism`, `crisc`, `cisa`, `canton`, `sol`, `specialty`, `attributes`.
 
-### Original resume bytes recovered
+### Original resume bytes — current evidence correction (13 November 2026)
 
-The exact input DOCX was recovered from a private Library archive. It is 27,724 bytes; its digest was verified locally and is retained with the private artifact, not published in this repository. This is the original source file, not a generated output.
+A prior 10 November audit reported that the exact input DOCX had been recovered from a private Library archive and recorded a 27,724-byte size. That is preserved as a historical audit claim, not current reproducible artifact evidence. The bounded 12–13 November recheck could not retrieve the exact source bytes: a Library DOCX listing for 17 October returned zero items, and semantic searches did not surface the exact source or generated output. Similar-name documents uploaded later are not evidence of the original and must not be substituted. The exact source DOCX is currently inaccessible from the available Library surfaces. The matching full JD was recovered in the earlier audit, but was not re-opened in this continuation. Conflicting candidate facts remain quarantined pending exact-source recovery and owner reconciliation.
 
 ### Full job description recovered
 
@@ -279,3 +279,13 @@ A read-only iZap check on the only business, `eshwarjay0` (business ID `1e8ba087
 A fresh two-page semantic Library search returned 59 results and did not surface the generated 17 Oct output DOCX or a correlated R2/Meta receipt. This is not proof that no copy exists under another filename, archive, or provider account. The source DOCX/JD recovery and conflicting-fact quarantine remain as previously recorded; no historical replay or resend is authorized.
 
 To make iZap a future evidence source, the owner would need to complete Meta Embedded Signup for the intended business/number. That cannot retroactively recreate the missing MarketFit R2 object, webhook correlation, Meta message ID, or signed delivery/read callback; those still need to be recovered from the original MarketFit provider/account or device archive.
+
+
+## 13 November 2026 00:27 UTC — current release and acceptance reconciliation
+
+- Canonical master is `6a11128a873deca351f5107c8bb58cb3d1a7145d`. Its only change is the Kompas voice-preview workflow becoming manual-only because Vercel Hobby previews are disabled. The production deployment for this SHA is CANCELED; do not treat the GitHub Vercel status as a production release.
+- The independently checked production alias `job-dashboard-fawn.vercel.app` remains READY on `dpl_GvafduzBBMywoKSSfJriJTRTgg8H`, runtime SHA `a247ddf6042385d12a19bfd7e893983c1bcf9087`. Public route fetches were inaccessible from this run.
+- WhatsApp PR #330 head `b6ab0cd9b55e0efd38704c5587a6772c82f5cea5`: WhatsApp recovery regression `43323716384` and Kompas baseline `43323716380` SUCCESS; full CI `43323716285` FAILED at the pre-existing Kompas page/version release-stamp mismatch before later full-suite steps. PR #333 head `a656793ab8d4632e2d7b3f5fe6fc0181d743eef0` fixes that stamp only; full CI `43323903866`, baseline `43323904568`, cross-device `43323904286`, and Windows executable `43323903956` SUCCESS, but protected preview `43323903963` fails closed because private `KOMPAS_VERCEL_API_TOKEN` is unavailable. The owner explicitly instructed that #333 remain draft with no merge or deployment until its gate is satisfied.
+- Profile-gap PR #335 head `650453aa82b8369ff610199e7ab433165d212045` depends on #330. Its only exact-head recovery run does not execute the combined `resume-guards` suite; that suite is still pending. Confirmed-skill/role-evidence PR #317 head `79816427c6b08c2c46e82d4c8662995960a2a8ae` has full CI `43308813566`, baseline `43308813534`, and WhatsApp recovery `43308813554` SUCCESS, but is based on older master `cd70190` and overlaps #335 in `src/lib/tailor.ts`. Preserve the 6 November cross-role explicit-skill confirmation rule; do not combine or restack these branches blindly.
+- The historical 17 October output DOCX, per-run R2 key, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. No historical replay or resend is authorized. No 95–100% live resume match or generated-output quality is claimed.
+- This continuation performed read-only Library, GitHub, Vercel metadata and Supabase checks only. No real email/WhatsApp test, model call, DOCX generation/write, R2 write, database mutation, manual crawl, billing change or device interaction occurred.
