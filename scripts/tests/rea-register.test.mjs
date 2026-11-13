@@ -83,3 +83,14 @@ test('Gmail and crawler scope details without direct owner approval stay blocked
  assert.match(plan,/manual\/on-demand only/i)
  assert.match(plan,/not directly owner-confirmed/)
 })
+
+test('WhatsApp offline fallback and confirmed-skill restacks remain blocked until acceptance', () => {
+ const whatsapp=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-pr374-current-master-2026-11-13')
+ const skills=REA_SESSIONS.find(s=>s.id==='resume-confirmed-skill-pr377-current-master-2026-11-13')
+ assert.ok(whatsapp && skills)
+ assert.equal(whatsapp.state,'Blocked')
+ assert.equal(skills.state,'Blocked')
+ assert.match(whatsapp.limits,/generated output|R2 object\/version|signed delivery/i)
+ assert.match(whatsapp.limits,/protected preview/i)
+ assert.match(skills.limits,/exported-DOCX acceptance/i)
+})
