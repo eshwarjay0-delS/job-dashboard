@@ -439,3 +439,17 @@ Accessible owner-authored context explicitly says to keep PR #372 pending an own
 PR [#368](https://github.com/eshwarjay0-delS/job-dashboard/pull/368) is the current combined WhatsApp implementation restack: exact selected same-account library bytes may be sent as **Original resume — NOT TAILORED** only when the initial JD has no provider; refinement failures remain text-only; resume/JD pair consumption is conditional and preserves newer arrivals; R2 session writes use ETag/If-Match CAS. The branch head `441874e6b3d1396e22e7bbeeea446c1536c26227` is based on `9032d5b`, three commits behind the verified `0241778` master, 38 commits ahead, draft, merge-conflicting, and has no exact-head workflow runs. Parent #364 checks do not transfer. The legitimate protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`, which this run cannot access.
 
 The 17 Oct 17:28 Chicago source DOCX and matching JD are documented as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable in the accessible Library search. No historical replay, model call, R2 write, real WhatsApp send or handset acceptance was performed. Keep the 6 Nov delivery policy; do not restore a universal 98% hard hold or waive factual/identity/quality gates. Next: restack #368 onto the latest master after the #372 rollback is reconciled, rerun exact-head CI/recovery/baseline/Plan-REA, and require the protected preview before any merge or deployment.
+
+
+## 13 November 2026 — resume, Gmail/mobile and contract crawler status
+
+The current-master review confirms these are still separate, gated items:
+
+| Work | Current PR/head | Source checks | Remaining gate |
+|---|---|---|---|
+| Confirmed-skill mapping | [#352](https://github.com/eshwarjay0-delS/job-dashboard/pull/352) `8c30adcc1c2a3a3acc95d92bb72466c00e8f1247` | Full CI `43421003670`, WhatsApp recovery `43421003721`, Kompas baseline `43421003774`, Plan/REA `43421003647` all SUCCESS | Draft; base `4c01951` is 8 commits behind and branch diverges; protected preview and exported-DOCX acceptance missing |
+| Profile-gap acceptance | [#353](https://github.com/eshwarjay0-delS/job-dashboard/pull/353) `3890e5d2c8ce150faab38fd2ed27c027aca3a8d2` | No exact-head workflows | Draft; 19-file mixed code/policy/docs scope; base 8 commits behind and merge-conflicting; restack into a minimal code slice first |
+| Contract-to-hire crawler | [#355](https://github.com/eshwarjay0-delS/job-dashboard/pull/355) `28c3f3ce97fe79721623f29c6252a727ea7c81c8` | Full CI `43421622026`, baseline `43421622062`, crawler regression `43421622095` all SUCCESS | Draft; base 8 commits behind; protected preview and post-release crawl acceptance missing. Manual/on-demand only; no live crawl or daily cron from this watch |
+| Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
+
+These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
