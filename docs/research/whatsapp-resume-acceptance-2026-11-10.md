@@ -121,3 +121,8 @@ The 10 November archive review recorded the 17 October source DOCX and matching 
 The 13 November Safe Merge Gate production aggregation found two rejected WhatsApp drafts in the 24-hour window, latest 12 November 18:18:32 UTC. Both had 100% raw and supported keyword coverage but remained partial, incomplete and needs-review; blockers included `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable` and `roles_unrewritten`. The new profile-part acceptance restack addresses only `draft_parts_missing`; PR #352 addresses the separate confirmed-skill cross-role boundary. Neither result proves a live 95–100% match or successful delivery.
 
 The owner-approved 6 November channel-specific delivery policy remains authoritative. Do not restore the superseded 98% hard hold. Keep the initial no-provider fallback limited to the exact selected same-account original, labelled NOT TAILORED; swipe-reply refinement failures remain text-only and preserve the last delivered version.
+
+
+## 13 November 2026 — profile-gap source gates
+
+PR #353 `97c6fbf2caec1507059b44a1237f397263f27b95` now passes full CI, Kompas baseline, WhatsApp recovery and Plan/REA schema on its current head. It remains DRAFT because the protected preview gate has no pass; the private `KOMPAS_VERCEL_API_TOKEN` is still required. The change addresses requested profile-part acceptance only. It is not deployed and does not establish a live model result, exported DOCX quality, or WhatsApp delivery.
