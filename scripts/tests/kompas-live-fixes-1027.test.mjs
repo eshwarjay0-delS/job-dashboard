@@ -62,7 +62,7 @@ test('the live transcript reads as a chat: one bubble per turn, fillers folded i
   ctx.appendDrawer('You', 'and', t0 + 4000)
   ctx.appendDrawer('You', 'First I inventory them.', t0 + 60000)
   const rows = [...dom.window.document.querySelectorAll('#drawerBody .tl')].map((d) => d.className + ': ' + d.querySelector('span').textContent)
-  assert.deepEqual(rows, ['tl you: Permanent. and and Evaluate', 'tl them: How would you rotate SSH keys?', 'tl you: and', 'tl you: First I inventory them.'])
+  assert.deepEqual(rows, ['tl you: Permanent. and', 'tl you: and Evaluate', 'tl them: How would you rotate SSH keys?', 'tl you: and', 'tl you: First I inventory them.'])
 })
 
 test('every live answer call is routed to the lowest-latency host', () => {

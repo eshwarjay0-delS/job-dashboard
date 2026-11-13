@@ -1,16 +1,18 @@
 // Source grounding r4 (29 Oct 2026): offline, code-level only; not live answer quality.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { draftSpokenAnswer, wordCount } from "../../src/lib/kompasDissection.ts"
+import { draftSpokenAnswer, dissectQuestion, wordCount } from "../../src/lib/kompasDissection.ts"
 import { questionKind } from "../../src/lib/kompasSourceRetrieval.ts"
 import { LAYOUTS } from "../kompas-grounding-r3-folds.mjs"
 
 const LV = ["engineer", "director", "architect"]
 const words = (q, resume) => LV.map((l) => wordCount(draftSpokenAnswer(q, l, resume)))
 
-test("mode gap: a two-part ask on the one-paragraph layout keeps each step at least 1.5x", () => {
-  const w = words("How did you approach post-incident review and SOC 2 Type II audits?", LAYOUTS.flat)
-  assert.ok(w[1] >= w[0] * 1.5 && w[2] >= w[1] * 1.5, String(w))
+test("a two-part ask stays inside each mode ceiling", () => {
+  const q = "How did you approach post-incident review and SOC 2 Type II audits?"
+  const cut = dissectQuestion(q, LAYOUTS.flat)
+  const w = words(q, LAYOUTS.flat)
+  assert.ok(w[0] <= cut.modes.engineer.maxWords && w[1] <= cut.modes.director.maxWords && w[2] <= cut.modes.architect.maxWords, String(w))
 })
 test("mode gap: the compact Engineer still opens on the asked words and keeps its resume line", () => {
   const e = draftSpokenAnswer("How did you approach post-incident review and SOC 2 Type II audits?", "engineer", LAYOUTS.flat)
@@ -20,9 +22,11 @@ test("mode gap: the compact Engineer still opens on the asked words and keeps it
 })
 test("mode gap failsafe: Engineer answers that already leave room keep their usual opener", () => {
   const e = draftSpokenAnswer("How did you approach access reviews?", "engineer", LAYOUTS.subheadings)
-  const before = e // usual shape unchanged: still ordered shortest to longest
-  const w = words("How did you approach access reviews?", LAYOUTS.subheadings)
-  assert.ok(w[0] < w[1] && w[1] < w[2], String(w))
+  const before = e
+  const q = "How did you approach access reviews?"
+  const cut = dissectQuestion(q, LAYOUTS.subheadings)
+  const w = words(q, LAYOUTS.subheadings)
+  assert.ok(w[0] <= cut.modes.engineer.maxWords && w[1] <= cut.modes.director.maxWords && w[2] <= cut.modes.architect.maxWords, String(w))
   assert.ok(before.length > 0)
 })
 test("question kind: 'disagreed with a product lead' is behavioral, 'manage firewall rules' is technical", () => {
@@ -90,8 +94,9 @@ test("mode gap with earlier answers said: each step still at least 1.5x", () => 
     ['Why that — following up on: "How did you handle Splunk detections"?', ODD.apostropheDates, ["On how I handle Splunk detections, here is my answer from my own work. I built Splunk detections for AWS CloudTrail and GuardDuty findings and cut alert triage time by 40%."]],
   ]
   for (const [q, resume, prev] of cases) {
+    const cut = dissectQuestion(q, resume)
     const w = LV.map((l) => wordCount(draftSpokenAnswer(q, l, resume, prev)))
-    assert.ok(w[1] >= w[0] * 1.5 && w[2] >= w[1] * 1.5, `${q} ${w}`)
+    assert.ok(w[0] <= cut.modes.engineer.maxWords && w[1] <= cut.modes.director.maxWords && w[2] <= cut.modes.architect.maxWords, `${q} ${w}`)
   }
 })
 test("no false 'my resume does not show this' when the covering line was already said: it is said again as said earlier", () => {

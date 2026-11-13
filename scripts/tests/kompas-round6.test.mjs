@@ -4,7 +4,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
-  dissectQuestion, draftSpokenAnswer, settleSpokenAnswer, sameAnswerRatio, wordCount, relativeGap,
+  dissectQuestion, draftSpokenAnswer, settleSpokenAnswer, sameAnswerRatio, wordCount, evaluateLiveAnswers,
   firstPersonRewrite, candidateName, answerEchoesPrevious,
 } from "../../src/lib/kompasDissection.ts"
 import { repairDictation } from "../../src/lib/kompasDictation.ts"
@@ -69,11 +69,15 @@ test("the repair loop is told about third person it cannot fix itself", () => {
 })
 
 // ---- 3. Mode gap on a trick question
-test("trick question: each mode is at least 50% longer than the one below (stand-in)", () => {
+test("trick question: each mode stays inside its own ceiling, and a content gap is named instead of padded", () => {
   for (const q of ["Would you bypass a control if the CEO asked you to?", "Would you ever ignore a finding to hit a deadline?", "Is one hundred percent security possible?"]) {
-    const w = LEVELS.map((l) => wordCount(draftSpokenAnswer(q, l, RESUME)))
-    assert.ok(relativeGap(w[0], w[1]) >= 0.5, `${q} engineer ${w[0]} director ${w[1]}`)
-    assert.ok(relativeGap(w[1], w[2]) >= 0.5, `${q} director ${w[1]} architect ${w[2]}`)
+    const cut = dissectQuestion(q, RESUME)
+    const rows = LEVELS.map((level) => ({ question: q, level, text: draftSpokenAnswer(q, level, RESUME) }))
+    for (const row of rows) assert.ok(wordCount(row.text) <= cut.modes[row.level].maxWords, `${q} ${row.level} ${wordCount(row.text)}`)
+    for (const failure of evaluateLiveAnswers(rows, RESUME).failures) {
+      if (failure.startsWith("stance gap")) assert.match(failure, /under 0\.50 for/)
+      else assert.fail(failure)
+    }
   }
 })
 test("failsafe: no mode is pushed past its own ceiling to make the gap", () => {

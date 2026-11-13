@@ -151,7 +151,7 @@ export function desktopResponsePolicy(audience: string, question: string) {
   // Master Rules §2 T4, a direct experience fact ("Have you configured CyberArk EPM?"): the fact first, one proof point.
   const directFact = kind === "general" && /^(?:so,?\s+|and\s+)?(?:have|has|did|do|are|were) you\b/i.test(question.trim())
   const surface = (kind === "definition" || kind === "comparison" || kind === "general") && !directFact
-  const words = modeBand(desktopShape(kind), level).targetWords
+  const words = modeBand(desktopShape(kind), level).aimWords
   const angle = surface
     ? (level === "architect"
       ? "Name the mechanism in one precise sentence: the check that fails, or the boundary that is missing. Then stop. Do not build it, set it up, or integrate it."

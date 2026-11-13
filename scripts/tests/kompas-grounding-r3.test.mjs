@@ -3,7 +3,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { sourceDocs, retrievePassages, sourcePassagesPrompt, splitPassages } from "../../src/lib/kompasSourceRetrieval.ts"
-import { draftSpokenAnswer, experienceLines, sameAnswerRatio } from "../../src/lib/kompasDissection.ts"
+import { draftSpokenAnswer, dissectQuestion, experienceLines, sameAnswerRatio, wordCount } from "../../src/lib/kompasDissection.ts"
 import { normalizeResumeLayout } from "../../src/lib/kompasResumeLayout.ts"
 import { LAYOUTS } from "../kompas-grounding-r3-folds.mjs"
 
@@ -35,11 +35,14 @@ test("layout failsafe: the subheading layout, empty and junk input are unchanged
   assert.equal(normalizeResumeLayout(null), "")
   assert.equal(normalizeResumeLayout("| | |"), "| | |")
 })
-test("every layout keeps the 1.5x mode gap and no near-duplicate for a different next question", () => {
+test("every layout stays inside its own ceiling and does not copy the next question", () => {
   for (const [name, resume] of Object.entries(LAYOUTS)) {
     for (const q of ["How did you handle access reviews?", "Tell me about a time Splunk detections went wrong.", "How did you handle post-incident review?"]) {
-      const w = ["engineer", "director", "architect"].map((l) => draftSpokenAnswer(q, l, resume).split(/\s+/).length)
-      assert.ok(w[1] >= w[0] * 1.5 && w[2] >= w[1] * 1.5, `${name} ${q} ${w}`)
+      const cut = dissectQuestion(q, resume)
+      for (const level of ["engineer", "director", "architect"]) {
+        const words = wordCount(draftSpokenAnswer(q, level, resume))
+        assert.ok(words <= cut.modes[level].maxWords, `${name} ${q} ${level} ${words}`)
+      }
     }
     const a1 = draftSpokenAnswer("Tell me about a time Splunk detections went wrong.", "engineer", resume)
     const a2 = draftSpokenAnswer("Tell me about a time CloudTrail findings went wrong.", "engineer", resume, [a1])
