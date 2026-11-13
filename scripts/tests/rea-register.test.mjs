@@ -64,8 +64,8 @@ test('Oct 17 public REA record avoids private source locators', () => {
  const publicRecord = JSON.stringify(entry)
  assert.match(publicRecord, /private Library(?: resume)? archive/)
  assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{16}\\b/i)
- assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
- assert.doesNotMatch(publicRecord, /\\.docx/i)
+ assert.doesNotMatch(publicRecord, /\b\d{13}\b/)
+ assert.doesNotMatch(publicRecord, /\.docx/i)
 })
 
 
@@ -101,9 +101,9 @@ test('17 Oct source recovery REA record keeps private artifact locators out of t
  const entry = REA_SESSIONS.find(s => s.id === 'whatsapp-17-oct-resume-source-recovery-2026-11-13')
  assert.ok(entry)
  const publicRecord = JSON.stringify(entry)
- assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{64}\\b/i)
+ assert.doesNotMatch(publicRecord, /\b[a-f0-9]{64}\b/i)
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
- assert.doesNotMatch(publicRecord, /Library ZIP|J_Eshwar_44|Resume_Inventory\\.csv|Gmail message retrieved/i)
+ assert.doesNotMatch(publicRecord, /Library ZIP|J_Eshwar_44|Resume_Inventory\.csv|Gmail message retrieved/i)
  assert.ok(entry.sources.every(source => !source.path || existsSync(path.join(root, source.path))))
 })
