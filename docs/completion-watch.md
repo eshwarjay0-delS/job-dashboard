@@ -1,5 +1,21 @@
 # MFit Completion Watch
 
+## 13 November 2026 — 04:52 UTC continuation reconciliation
+
+Canonical master `01ceb1dc79a86473c932861b8dddfa120077fc57` is READY in production as deployment `dpl_GH2UBvDyArm6beC93exvQLtjYfiK`; independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to that exact deployment with no alias error. This supersedes the earlier 13 Nov note that the alias check was pending and the historical Vercel quota alerts for older commits. The current master includes answer-stack PRs #334, #337, #339 and #347.
+
+The 17 Oct screenshot records a five-page, 27,724-byte Word resume, but the original source DOCX bytes are not currently retrievable. The matching Security Engineer – Risk & Controls JD thread is available in Gmail (received 16 Oct 19:49Z); no sent DOCX attachment was found on 17 Oct. Current Library DOCX search in the incident time window returned zero results, so the earlier private-recovery claim is not reproducible. Source facts that conflict with owner-confirmed education, chronology, experience length and credentials remain quarantined. The generated final DOCX, per-run R2 key, webhook correlation ID, Meta message ID and signed delivery/read receipt are still missing. The old 98% hard WhatsApp hold is superseded by the 6 Nov channel policy; no replay, send or 98% live match is claimed.
+
+A further read-only recovery check found the matching Security Engineer – Risk & Controls JD email in Gmail (received 16 Oct 19:49Z), but no sent DOCX attachment on 17 Oct. A Library DOCX search for the incident window returned zero results. The connected iZap business still has zero linked WhatsApp numbers; a fresh 13 Nov 04:44Z status read reports connection false, webhooks never and sending never, so its historical chat/receipt cannot be read until the intended number is connected. No WhatsApp test or message was sent.
+
+A read-only recovery check found the matching Security Engineer – Risk & Controls JD thread in connected Gmail (received 16 Oct 19:49Z), but no sent DOCX attachment on 17 Oct. Library DOCX search for 17 Oct 22:00Z–18 Oct 06:00Z returned zero results after a broad retry. The connected iZap business still has zero linked WhatsApp numbers; a fresh 13 Nov 04:44Z status read reports connection false, webhooks never and sending never, so its historical chat/receipt cannot be read until the intended number is connected. No WhatsApp test or message was sent.
+
+PR #321 is the existing approved 6 Nov fallback/CAS dependency: full CI 43304922873, WhatsApp recovery 43304922912 and baseline 43304922862 passed; protected preview 43304921045 failed closed because KOMPAS_VERCEL_API_TOKEN is not configured privately. Its getWithEtag/putIfMatch implementation is the CAS to reuse in #323 after #321 is accepted; do not duplicate it.
+
+PR #351 first exact-head CI 43365305559 failed because two Plan Journal entries used the unsupported area `platform`; that was corrected. A later full CI 43366439214 failed on an overescaped `window.matchMedia` regex in the mobile navigation test. Test-only commit e6984fa0d209733af8caa0491f174843fe0f7087 corrects the regex to match the actual source expression. The docs/Plan/REA reconciliation is commit 021d93fb. On exact head 021d93fb, Plan/REA schema 43368474728 and Kompas baseline 43368474676 pass; full CI 43368474666 remains in progress. The mobile runtime code was not changed by the test fix.
+
+Continue: verify the exact-head CI for PR #351 after test-only commit e6984fa; the Plan/REA schema and Kompas baseline gates pass, while full CI 43367133248 is still running. Protected preview, reviewed merge, production release and real phone acceptance remain pending. PR #344/#345/#346 remain draft/stale-base despite their recorded green full CI; PR #323's stale-marker cleanup needs the ETag CAS already implemented in PR #321; #321 has green full CI/WhatsApp recovery/baseline but its protected preview fails closed because the private KOMPAS_VERCEL_API_TOKEN secret is missing; PR #343/#288 remain conflicting crawler work; PR #350 exact-head full CI 43363877609 completed SUCCESS (baseline, cross-device, schema and Windows packaging gates also passed), but it still has no protected preview or human review and the complete 70-file login/private-state/answer behavior is not approved for promotion. See `docs/research/mfit-completion-watch-2026-11-13.md` for the deduplicated evidence ledger.
+
 Owner instruction: 17 October 2026. Keep unfinished approved commitments moving until deployed and verified, or report a concrete blocker. Recover accessible prior requests and respect later corrections. Do not ask the owner to repeat known requirements.
 
 ## Scheduled execution
@@ -10,7 +26,7 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 ## 13 November 2026 — Kompas answer release
 
-Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were not in this environment, so they are not included. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. Production alias check is the next step. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
+Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were not in this environment, so they are not included. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. Production alias check was subsequently completed; see the 13 November 04:20 UTC reconciliation at the top of this file. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
 
 ## 13 November 2026 — Actions artifact storage
 
@@ -148,7 +164,7 @@ Master and production were both `90cdd1dd` (`kompas-20261105-call-audio`, `/api/
 
 ## Current highest-priority wall
 
-The 17:28 Chicago WhatsApp resume run was held after repair. The screenshot is available, but this agent has not inspected its complete JD, original Word file, generated artifact or execution trace. Obtain that exact evidence through authorized storage or user-provided inputs. Do not declare the 98% output goal achieved from the 84 passing regression tests.
+The 17:28 Chicago WhatsApp resume run was held after repair. The original 27,724-byte Word DOCX and matching JD have since been recovered privately, but the source education, employment chronology, experience length and credentials conflict with owner-confirmed profile facts and remain quarantined. The generated final DOCX, per-run R2 object key, webhook correlation ID, Meta message ID and signed delivered/read receipt remain missing. The old 98% hard WhatsApp hold is superseded by the 6 Nov channel-specific policy. Do not claim exact replay, delivery or a 98% live match.
 
 Other independently trackable work includes Poke-inspired Gmail/mobile updates, crawler schema access, contract search acceptance, resume library reconciliation and Kompas review/voice verification.
 
@@ -365,3 +381,12 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 13 November 2026 — current WhatsApp quality-gate evidence
+
+Vercel's 24-hour error aggregate for `/api/whatsapp/webhook` shows two `[whatsapp] tailoring quality gate rejected draft` events, last at 2026-11-12T18:18:32Z on older deployment `dpl_3dGzPgCiswSpmhVPohywQFc2vY5R` / SHA `a7b2334b87f2edc2c21cc1197938dd9ba1904ed6`. Both had 100% raw/supported coverage but `partial=true`, `status=needs_review`, and completion blockers including `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable` and `roles_unrewritten`. The current READY production alias is 01ceb1dc; the last-hour error aggregate returned no matching WhatsApp/tailor/Gmail errors. The quality gate intentionally rejects incomplete drafts; the webhook attempts the exact selected profile's existing resume fallback when available. No delivery receipt was available to prove whether that fallback succeeded. PR #345 contains the approved cross-role explicit-confirmation mapping but remains draft/unmerged; do not weaken the incomplete-draft gate.
+
+## 13 November 2026 — contract crawler policy correction
+
+Owner correction on 12 Nov 2026: the daily contract-crawler cron was deliberately removed under Hobby reduction; crawling is manual/on-demand only. Current `vercel.json` has no `/api/crawl/run` cron. External scheduler configuration is not accessible, so inventory external callers before claiming complete manual-only enforcement. Do not restore a daily cron. The last database crawl row remains the 10 Nov 11:00 UTC historical run; no automatic post-release run is expected.
