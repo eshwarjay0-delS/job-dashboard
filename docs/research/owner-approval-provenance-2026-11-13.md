@@ -11,7 +11,7 @@
 
 ### Gmail/mobile
 
-Prior conversation retrieval returned assistant-authored statements (10–12 November) about a four-account cap, per-account Gmail/Calendar targeting, digest/radar behavior, and a specific hamburger layout. It did not retrieve a direct owner message approving those details. The high-level Poke-inspired multi-account Gmail/mobile direction is requested; the detailed scope remains proposed. Keep PR #375 DRAFT and preserve account identity / selected-From isolation without assuming the exact cap, Calendar targeting, digest/radar, or hamburger design.
+The historical owner-vision document docs/gmail.md, labelled as captured 17 October 2026, records 3–4 connected accounts, four mobile account toggles, per-account identity/From, inbox digest and Poke-style proactive mail. Preserve that as historical product direction; do not turn the range into a hard cap. The current 13 Nov owner instruction directly reaffirms Poke-inspired multi-account Gmail/mobile updates. Accessible prior-conversation retrieval did not recover a direct owner message specifying per-account Calendar targeting, exact waiting-on-them radar semantics or the exact hamburger interaction/layout; those details remain proposed. Keep PR #375 DRAFT.
 
 PR #375 head 8b4a480313504240c5f5ad69596074c7ecedf549 passed full CI 43494969062, Kompas baseline 43494968954, and Plan/REA schema 43494969251. There is no protected preview, two-inbox acceptance, real Gmail API call, inbox mutation, outbound email, or narrow-phone test.
 
