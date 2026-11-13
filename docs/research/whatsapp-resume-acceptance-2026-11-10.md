@@ -153,3 +153,14 @@ The historical 17 Oct 17:28 Chicago request remains unverified. The exact genera
 ## 13 November 2026 — signed callback retention fixture correction
 
 The first exact-head full CI failed only the callback-retention assertion because the test combined an ambiguous initial upload failure with a simulated signed failure callback. That combination correctly blocks a duplicate send, so the expected fallback message ID was impossible. Correction commit `cdf62de950b80ff9762ac82ff1656af98c11885f` now models a successful upload followed by `markResumeDocumentAccepted=false` and verifies the pair remains. The corrected exact-head CI has not yet completed. No real Meta message, callback or historical replay occurred.
+
+
+## 13 November 2026 — current Library inventory recheck for the 17 Oct incident
+
+This run performed a read-only recursive Library metadata inventory and semantic search. The inventory returned 149 DOCX files. None was created on 17 or 18 October 2026, and no listed DOCX matched the previously recorded 27,724-byte source size. Searches for the resume name and the incident description did not identify the incident's exact source file or generated output.
+
+This does **not** erase the earlier private-review record that the original source DOCX and matching JD had been recovered. It means those artifacts were not re-resolvable from this run's accessible Library surface. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, and signed delivered/read receipt remain unavailable. The source education, employment chronology, tenure and credential conflicts remain quarantined.
+
+No document bytes were opened or materialized. No R2 read/write, model call, historical replay, WhatsApp send, replacement send, or handset test occurred. Do not infer that the historical message was delivered or undelivered from the current Library listing alone.
+
+**Exact unblock:** the owner or authorized archive custodian must make the exact original and generated DOCX files available through an authorized Files surface and provide or authorize read-only access to the per-run R2 object/version, webhook correlation, Meta message ID, and signed delivery/read receipt. Until then, keep the historical incident blocked and do not replay it.
