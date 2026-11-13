@@ -485,3 +485,11 @@ PR #374 remains DRAFT because the legitimate protected Vercel preview needs the 
 - Coordination: MFit Completion Watch and MFit Safe Merge Gate are enabled. Kompas Continuous Voice Delivery is disabled, so no voice/caption files were edited. No separate Bible-Keeper automation was found in the accessible automation list.
 
 Continue: close the historical Oct 17 WhatsApp evidence chain only when the exact source and generated DOCX plus per-run R2/webhook/Meta signed evidence are made available through authorized access. Meanwhile keep #374 first in the protected-preview sequence, then #377/#375/#376, with Safe Merge Gate sequencing shared Plan/REA updates and each remaining branch restacked after the preceding merge.
+
+## 13 November 2026 — run 11 Kompas production/session snapshot
+
+- Current production remains READY at dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb / SHA 024177889d092f30aaeada20fab649aa41c9d1f4 on both canonical aliases. The deployed build stamp is kompas-20261112-output; the source at that exact SHA contains the restored AI Answer and audio-tail path markers from PR #350. This is source/deployment evidence, not a live browser or native-device test.
+- Fresh read-only Supabase SQL: 22 account-session rows, 15 not deleted, 7 tombstones, 9 without endedAt, 6 with endedAt, 28 artifacts, one owner. All 15 not-deleted payloads have resume/JD/instructions keys and 13 have a transcripts key. Latest session/artifact updates remain 9 Nov 2026 21:47:34/35 UTC. No payload content was read or written.
+- Persisted records confirm backend data exists, but do not prove second-browser, Windows, phone or WhatsApp convergence. The owner-consented same-account device test, tombstone/no-resurrection, transcript propagation and signout/account-isolation acceptance remain open.
+
+Continue: obtain owner-consented browser A/B and installed-Windows acceptance for the existing account-session catalog; do not infer cross-device success from row counts.
