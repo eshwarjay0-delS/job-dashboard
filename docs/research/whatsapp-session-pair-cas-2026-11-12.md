@@ -35,3 +35,8 @@ The reviewed WhatsApp runtime, storage and regression changes are being restacke
 No Vercel preview deployment is listed for the new branch. The protected preview requires the repository owner's private `KOMPAS_VERCEL_API_TOKEN`; this run did not read, change or bypass it. Keep the PR DRAFT until a legitimate protected preview is available. Production remains on the previous READY alias; no release is claimed.
 
 Cloudflare's current R2 documentation confirms that `PutObject` accepts atomic `If-Match` conditional writes. The exact 17 Oct generated DOCX, per-run R2/webhook/Meta correlation and signed delivery/read receipt remain missing. The 12 Nov Library recheck did not resolve the source DOCX path in this execution context, despite an earlier audit reporting private-archive recovery. No historical replay, model call, production R2 write or real WhatsApp send occurred.
+
+
+## 13 November 2026 — first exact-head regression result
+
+On PR #360 initial head `3a3dcb41f35b95690c38d0a74f63723a006c4e79`, WhatsApp recovery `43425563387` and Kompas baseline `43425563574` passed. Plan/REA run `43425563489` had one assertion-only failure: the new test expected `No real Meta send`, while the REA limit said `real WhatsApp send`; the other 13 checks passed. The record wording is corrected in the next commit. Full CI `43425563351` was still running at this point. No runtime source behavior was changed by this correction.
