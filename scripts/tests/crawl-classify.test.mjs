@@ -44,6 +44,26 @@ test("negated right-to-hire and contract-to-perm labels do not create contract e
   }
 })
 
+test("postposed negations do not classify C2H labels as contract work", () => {
+  for (const value of [
+    "Right To Hire is not available",
+    "Right-to-Hire isn't offered",
+    "Contract To Perm is currently not available",
+    "Contract To Permanent is not an option",
+    "C2H not yet offered",
+    "Right To Hire not applicable",
+  ]) {
+    assert.deepEqual(contractTypes(value), [], value)
+    assert.equal(classifyWorkType(value), "unknown", value)
+  }
+})
+
+test("a postposed C2H negation does not erase separate positive contract evidence", () => {
+  assert.deepEqual(contractTypes("Right To Hire is not available; six month contract"), ["Contract"])
+  assert.deepEqual(contractTypes("Contract To Perm not offered; C2C"), ["C2C"])
+  assert.ok(contractTypes("Right To Hire is available").includes("C2H"))
+})
+
 test("contract administration and generic contract vocabulary are not employment evidence", () => {
   for (const value of [
     "Contract management and contract negotiations.",
