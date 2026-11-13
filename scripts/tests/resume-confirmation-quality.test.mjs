@@ -125,23 +125,42 @@ test('final caller scopes deterministic weaving per employer and restores cross-
   assert.match(tailor, /restoreUnsupportedRoleEdits\(/)
 })
 
-test('an explicit skill confirmation is the only cross-role exception to the deterministic evidence guard', () => {
+test('confirmed skills cross roles only when the existing project context is relevant', () => {
   const roles = [
-    { bullets: [{ idx: 1, text: 'Used Splunk for SIEM alert triage' }] },
-    { bullets: [{ idx: 2, text: 'Managed Okta access reviews' }] },
+    { bullets: [{ idx: 1, text: 'Removed local admin rights and hardened Windows endpoints.' }] },
+    { bullets: [{ idx: 2, text: 'Built Salesforce email campaigns and marketing automation.' }] },
+    { bullets: [{ idx: 3, text: 'Supported distributed ledger settlement and blockchain transaction controls.' }] },
   ]
   const edits = [
-    { idx: 1, text: 'Used Splunk for SIEM alert triage and Canton blockchain controls' },
-    { idx: 2, text: 'Managed Okta access reviews and Splunk alerting' },
+    { idx: 1, text: 'Removed local admin rights and hardened Windows endpoints using CyberArk EPM.' },
+    { idx: 2, text: 'Built Salesforce email campaigns and marketing automation using CyberArk EPM.' },
+    { idx: 3, text: 'Supported distributed ledger settlement and blockchain transaction controls on Canton.' },
   ]
   const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
-  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['Splunk', 'Okta', 'Canton'], cover, new Set(['Canton']))
+  const guarded = restoreUnsupportedRoleEdits(
+    edits,
+    roles,
+    ['CyberArk EPM', 'Canton'],
+    cover,
+    new Set(['CyberArk EPM', 'Canton']),
+  )
   assert.equal(guarded.reverted, 1)
   assert.deepEqual(guarded.edits, [
     edits[0],
     { idx: 2, text: roles[1].bullets[0].text },
+    edits[2],
   ])
-  assert.deepEqual(guarded.blockedTerms, ['Splunk'])
+  assert.deepEqual(guarded.blockedTerms, ['CyberArk EPM'])
+})
+
+test('an unknown confirmed skill is not transferred into a project without source or family evidence', () => {
+  const roles = [{ bullets: [{ idx: 4, text: 'Coordinated routine business operations and vendor updates.' }] }]
+  const edits = [{ idx: 4, text: 'Coordinated routine business operations and vendor updates using MuleSoft.' }]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['MuleSoft'], cover, new Set(['MuleSoft']))
+  assert.equal(guarded.reverted, 1)
+  assert.deepEqual(guarded.edits, [{ idx: 4, text: roles[0].bullets[0].text }])
+  assert.deepEqual(guarded.blockedTerms, ['MuleSoft'])
 })
 
 test('role-scoped generated gap pass never asks every employer for the same global terms', () => {
