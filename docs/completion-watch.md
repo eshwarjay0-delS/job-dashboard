@@ -381,3 +381,14 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 13 November 2026 — Gmail notify export and background-worker safety
+
+A source review found that /api/gmail/notify-rules/export was unauthenticated, used the Supabase service-role key, and merged sender rules across owners and receiving inboxes. The current repository has no callsite for that export; the tick worker reads its own per-user blob store. The export is now a private compatibility endpoint requiring GMAIL_UPDATES_SCHEDULER_ENABLED=true and a constant-time CRON_SECRET bearer token. Its payload keeps ownerId plus per-account sender rules and uses private/no-store caching. The obsolete merged-public helper was removed.
+
+The unattended /api/gmail/updates/tick route now returns 503 before reading the cursor, scanning user preferences or delivering anything unless both the scheduler flag and an approved WHATSAPP_GMAIL_UPDATE_TEMPLATE are present. It still requires CRON_SECRET. No environment variables were changed, no scheduler/template was configured, and no real email or WhatsApp message was sent.
+
+Implementation commits: notify rules f0a16831, private export 0b2c1466, cron auth e1074dbf, tick off switch 9f68656c/63bab295, regression 8709d7f3. Full CI and protected preview are pending. PR #357's Gmail digest/mobile UI remains separate; its real two-inbox and mobile-device acceptance is still open.
+
+Continue: run exact-head CI for the security branch, keep the worker disabled, and preserve the account/thread identity and normal-flow mobile navigation requirements. Do not enable notifications or create a recurring scheduler without explicit approval.
