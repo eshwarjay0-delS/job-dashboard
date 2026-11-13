@@ -423,3 +423,8 @@ Production runtime summary for POST /api/whatsapp/webhook shows two quality-held
 ## 13 November 2026 — WhatsApp restack first exact-head check correction
 
 PR #360 head 3a3dcb41f35b95690c38d0a74f63723a006c4e79 is based on current master 6e18cdd. WhatsApp recovery 43425563387 and Kompas baseline 43425563574 passed on that exact head. The first Plan/REA schema run 43425563489 failed only because the new REA test expected the literal phrase `No real Meta send` while the REA limit used `real WhatsApp send`; the other 13 schema/REA tests passed. The wording is being aligned and the schema suite will rerun on the new exact head. Full CI 43425563351 remains in progress. Do not call the restack fully green until the rerun and full CI finish.
+
+
+## 13 November 2026 — second WhatsApp Plan/REA assertion correction
+
+The corrected PR #361 head 5bf054926e7cb7eaadb91f585b1f73d99a995123 passed WhatsApp recovery 43425775852 and Kompas baseline 43425775871. Plan/REA 43425775972 repeated the single assertion failure because the new REA limit said `No production R2 write, model call, real Meta send` rather than the test's expected contiguous phrase `No real Meta send`; the other 13 tests passed. The REA limit is being changed to the explicit phrase and will be rerun on a fresh exact head. Full CI 43425775853 is still running. Do not call the restack green yet.

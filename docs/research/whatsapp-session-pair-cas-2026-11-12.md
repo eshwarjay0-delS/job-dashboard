@@ -40,3 +40,8 @@ Cloudflare's current R2 documentation confirms that `PutObject` accepts atomic `
 ## 13 November 2026 — first exact-head regression result
 
 On PR #360 initial head `3a3dcb41f35b95690c38d0a74f63723a006c4e79`, WhatsApp recovery `43425563387` and Kompas baseline `43425563574` passed. Plan/REA run `43425563489` had one assertion-only failure: the new test expected `No real Meta send`, while the REA limit said `real WhatsApp send`; the other 13 checks passed. The record wording is corrected in the next commit. Full CI `43425563351` was still running at this point. No runtime source behavior was changed by this correction.
+
+
+## 13 November 2026 — second Plan/REA wording correction
+
+The first documentation correction did not satisfy the exact assertion: the new REA limits said `No production R2 write, model call, real Meta send`, while the test expected the contiguous phrase `No real Meta send`. PR #361 Plan/REA run `43425775972` therefore repeated one assertion failure; the other 13 checks passed. The limit wording is being made explicit, then the schema gate will rerun on the next exact head. The WhatsApp recovery and Kompas baseline gates passed on `5bf054926e7cb7eaadb91f585b1f73d99a995123`.
