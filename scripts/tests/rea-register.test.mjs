@@ -70,7 +70,7 @@ test('Oct 17 public REA record avoids private source locators', () => {
 
 
 test('current WhatsApp offline-pair CAS restack is recorded separately from historical replay', () => {
- const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-current-master-restack-2026-11-13-watch12')
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-restack-run11-2026-11-13')
  assert.ok(entry)
  assert.equal(entry.state,'Implemented, verification pending')
  assert.match(entry.limits,/no real Meta send/i)
@@ -90,7 +90,7 @@ test('Oct 17 source archive recheck records the current access limit without exp
 
 
 test('WhatsApp pair CAS records consumption only after provider acceptance', () => {
- const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-current-master-restack-2026-11-13-watch12')
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-restack-run11-2026-11-13')
  assert.ok(entry)
  const step=entry.steps.find(s=>s.label==='Consume only after accepted delivery')
  assert.ok(step)
