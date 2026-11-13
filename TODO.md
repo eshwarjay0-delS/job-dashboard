@@ -1,3 +1,9 @@
+## 2026-11-13 — Parakeet-style answer card and utterance rows
+
+No new screen beyond the answer card and the transcript drawer. A complex answer shows a bold section heading and tight bullets, with a breath mark between sections. A short definition stays one block. The anchor card rows are unchanged. Experience length and the STAR format are unchanged. Each transcript row is its own item, labelled Interviewer or You, with a clock time and Question detected or No question. Overlapping clip tails are stitched. The recorder slice is 200 ms, and the last chunk still waits 80 ms.
+
+**Checked locally. Not merged. Not a production deploy.** Parakeet card tests: 7 pass, 0 fail. `tsc --noEmit` clean. Question derivation on the attached fragments: word error rate against the Parakeet question fell from 2.938 to 0.000. Acoustic word error rate and time-to-first-text were not measured. There is no recorded fixture audio and no Groq call. No production URL was called.
+
 ## 2026-11-13 — Fifty answer-quality folds on the human-voice stack
 
 No new screen. The folds sit on the length branch, which already contains the human-voice work. Experience length and the STAR format were not changed. The fictional sample resume is the only source. Saint Louis and jayeshwar44 do not appear.

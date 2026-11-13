@@ -1083,11 +1083,33 @@ function sayAnswer(text) {
   const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(String(text || ""));
   return bulleted && window.KompasCorrect.speak ? window.KompasCorrect.speak(cleaned) : cleaned;
 }
-function answerLines(answer) {
+function presentAnswer(question, answer) {
+  const raw = String(answer || "").trim();
+  if (!raw || /\*\*(?:Context|What I did|Result)\*\*/.test(raw)) return raw;
+  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1);
+  const words = raw.split(/\s+/).filter(Boolean).length;
+  const q = String(question || "");
+  const simple = /^(?:what is|what does|what's|define|do you|are you|have you|can you hear)\b/i.test(q.trim()) && words < 55 && sentences.length < 3;
+  const complex = !simple && ((/\b(?:design|tell me about a time|walk me through|incident|war room|contributions|proud of|strategy)\b/i.test(q) && (sentences.length >= 2 || words >= 36)) || sentences.length >= 4 || words >= 70);
+  if (!complex || sentences.length < 2) return raw;
+  const third = Math.max(1, Math.ceil(sentences.length / 3));
+  const groups = [["Context", sentences.slice(0, third)], ["What I did", sentences.slice(third, third * 2)], ["Result", sentences.slice(third * 2)]];
+  const blocks = [];
+  for (const [title, group] of groups) {
+    if (!group.length) continue;
+    const tight = group.length <= 4 ? group : group.slice(0, 3).concat(group.slice(3).join(" "));
+    if (blocks.length) blocks.push("…");
+    blocks.push("**" + title + "**");
+    for (const sentence of tight) blocks.push("- " + sentence);
+  }
+  return blocks.join("\n");
+}
+function answerLines(answer, question) {
   // He is rehearsing as himself. The stored introduction can still say his name; the line he reads cannot.
   if (Array.isArray(answer)) answer = answer.map(t => String(t).trim()).filter(Boolean).join("\n");
   if (window.KompasCorrect && window.KompasCorrect.asSpeaker) answer = window.KompasCorrect.asSpeaker(String(answer || ""), window.__speakerName);
   if (window.KompasCorrect) answer = sayAnswer(answer);
+  if (typeof question === "string") answer = presentAnswer(question, answer);
   if (Array.isArray(answer)) return answer.map(t => ({ t: String(t).trim().replace(/^(?:[-•]|\*(?!\*))\s*/, "").trim(), kind: "bullet" })).filter(x => x.t);
   // Code is visual content even when narration remains spoken. Never execute it.
   const out = []; let code = null, prose = [];
@@ -1110,6 +1132,8 @@ function proseLines(text) {
     .filter(l => l && !/^(EXPERIENCE|DESIGN|INTRODUCTION|DRILL-DOWN|SIMPLE|CONSOLIDATED)\b[A-Z /&-]*:?$/.test(l) && !/^<[A-Z][^>]*>$/.test(l))   // never show a template label
     .map(l => {
     if (/^#{1,6}\s+\S/.test(l)) return null;
+    if (/^\*\*[^*][^*]{0,40}\*\*$/.test(l)) return { t: l, kind: "head" };
+    if (/^(?:…|\.{3})$/.test(l)) return { t: "…", kind: "pauseline" };
     const b = l.match(/^(?:(?:[-•]|\*(?!\*)|\d+[.)])\s+)+(.*)$/);      // "- - text" too
     if (b) return { t: b[1], kind: "bullet" };
     if (new RegExp("^" + PAUSE_MARK + "\\.?$", "i").test(l)) return { t: l, kind: "pauseline" };
@@ -1166,7 +1190,7 @@ function renderCard() {
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
-  const lines = answerLines(shownAnswer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
+  const lines = answerLines(shownAnswer, qLabel);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
   if (c.pivot && !hasAnchorFields(c) && !lines.length) {
     const li = document.createElement("li");
@@ -1214,7 +1238,7 @@ function renderCard() {
       li.className = "codeblock"; const pre = document.createElement("pre"), code = document.createElement("code");
       if (lang) pre.dataset.lang = lang; code.textContent = t; pre.append(code); li.append(pre); ul.append(li); return;
     }
-    if (kind === "head") return;
+    if (kind === "head") { li.className = "minihead"; inline(li, t); ul.append(li); return; }
     if (kind === "passage") li.className = "passage";
     else if (kind === "pauseline") li.className = "pauseline";
     inline(li, t);
@@ -2257,7 +2281,7 @@ function startSegment(cap) {
     void stopSource(cap.who); reportSources();
     if (!captures.length) void stop(false);
   };
-  try { rec.start(250); } catch {
+  try { rec.start(200); } catch {
     try { rec.start(); } catch (error) { cap.rec = null; throw error; }
   }
   cap.rec = rec;
@@ -2717,17 +2741,42 @@ function showCaption(who, text, isInterim) {
 // lone filler ("and", "um") joins the bubble before it instead of standing on its own row. The stored transcript is
 // unchanged: this is only how the drawer shows it.
 const DRAWER_FILLER = /^(?:and|so|but|or|um+|uh+|er|erm|okay|ok|yeah|yes|right|hmm+|like)[.,!?]*$/i;
+function utteranceTag(text) {
+  return /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design|talk about|proud of|your role|contribut|project that you)\b|\?/i.test(String(text || "")) ? "Question detected" : "No question";
+}
+function stitchUtterance(previous, next) {
+  const cur = String(next || "").replace(/\s+/g, " ").trim();
+  const prev = String(previous || "").replace(/\s+/g, " ").trim();
+  if (!cur) return { part: "", next: prev };
+  if (!prev) return { part: cur, next: cur };
+  if (cur === prev) return { part: "", next: prev };
+  if (cur.startsWith(prev + " ")) return { part: cur.slice(prev.length).trim(), next: cur };
+  const prevWords = prev.split(" "), curWords = cur.split(" ");
+  let overlap = 0;
+  const max = Math.min(prevWords.length, curWords.length, 12);
+  for (let k = max; k >= 1; k--) {
+    if (prevWords.slice(-k).join(" ").toLowerCase() === curWords.slice(0, k).join(" ").toLowerCase() && k > 1) { overlap = k; break; }
+  }
+  if (overlap > 0) return { part: curWords.slice(overlap).join(" ").trim(), next: cur };
+  return { part: cur, next: cur };
+}
 function appendDrawer(who, text, at) {
   const body = $("drawerBody"); if (!body) return;
   const first = body.firstElementChild; if (first && first.classList.contains("muted")) body.innerHTML = "";
   const words = String(text || "").replace(/\s+/g, " ").trim(); if (!words) return;
   const side = who === "You" ? "you" : "them", when = Number(at) || Date.now(), last = body.lastElementChild;
+  const tagOf = (node, line) => { const tag = node.querySelector(".qtag"); if (tag) tag.textContent = utteranceTag(line); };
   if (last && last.classList.contains("tl") && last.classList.contains(side) && (DRAWER_FILLER.test(words) || when - Number(last.dataset.at || 0) < 20000)) {
     const span = last.querySelector("span"); span.textContent = span.textContent + " " + words;
     last.dataset.at = String(when);
+    tagOf(last, span.textContent);
   } else {
     const d = document.createElement("div"); d.className = "tl " + side; d.dataset.at = String(when);
-    d.innerHTML = "<b></b><span></span>"; d.querySelector("b").textContent = side === "you" ? "You" : "Them"; d.querySelector("span").textContent = words;
+    d.innerHTML = "<b></b><span></span><i class=\"qtag\"></i>";
+    const clock = new Date(when).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    d.querySelector("b").textContent = (side === "you" ? "You" : "Interviewer") + " · " + clock;
+    d.querySelector("span").textContent = words;
+    d.querySelector(".qtag").textContent = utteranceTag(words);
     body.append(d);
   }
   body.scrollTop = body.scrollHeight;
@@ -3943,7 +3992,12 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   }
   logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
-  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
+  const prior = transcript.length && transcript[transcript.length - 1].who === who ? transcript[transcript.length - 1].text : "";
+  const stitched = stitchUtterance(prior, text);
+  if (!stitched.part) return;
+  text = stitched.part;
+  const heardAt = Date.now();
+  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text) });
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
     const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question, shown);
