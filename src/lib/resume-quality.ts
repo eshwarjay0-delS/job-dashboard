@@ -1,6 +1,10 @@
-/** Shared acceptance baseline for web, WhatsApp, and cached generations.
- * 95% is the delivery floor (owner: "we should deliver 95 to 100% match resumes");
- * 98% is the target. Below 95% the file is held; 95-97% ships with gaps noted. */
+/** Shared quality measurement for web, WhatsApp, and cached generations.
+ * 95% is the clean-pass floor and 98% is the target. The web download gate is
+ * strict at 95%. WhatsApp applies its separate channel policy in
+ * whatsapp-resume-acceptance.ts: a completed, readable DOCX may be sent below
+ * 95% with gaps disclosed; 70–94.9% is a clean pass only at 95% supported
+ * coverage. Incomplete, skills-only, unreadable, failed, or identity-mismatched
+ * output still uses the selected same-account resume fallback. */
 export const RESUME_MIN_COVERAGE = 0.95
 export const RESUME_TARGET_COVERAGE = 0.98
 

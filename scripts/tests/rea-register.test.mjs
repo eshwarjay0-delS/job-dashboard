@@ -64,6 +64,48 @@ test('Oct 17 public REA record avoids private source locators', () => {
  const publicRecord = JSON.stringify(entry)
  assert.match(publicRecord, /private Library(?: resume)? archive/)
  assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{16}\\b/i)
- assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
- assert.doesNotMatch(publicRecord, /\\.docx/i)
+ assert.doesNotMatch(publicRecord, /\b\d{13}\b/)
+ assert.doesNotMatch(publicRecord, /\.docx/i)
+})
+
+
+test('profile gap-fill acceptance is tracked separately from role evidence and live WhatsApp acceptance', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'resume-profile-gap-fill-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.state, 'Implemented, verification pending')
+ assert.ok(entry.steps.some(s => s.label === 'Implement requested profile acceptance' && s.status === 'Implemented'))
+ assert.match(entry.limits, /No live Gemini\/model call/)
+ assert.match(entry.next, /protected preview/)
+})
+
+
+test('authentication decision records the direct Gmail-only login instruction, not assistant-inferred skip-login approval', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'auth-login-gmail-only-owner-wording-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.state, 'Owner instruction recorded, runtime verification pending')
+ assert.match(entry.request, /No just the login/)
+ assert.match(entry.request, /only Gmail sign in/)
+ assert.match(entry.limits, /does not prove every prior chat/)
+})
+
+test('conversation evidence decisions are filterable and retain their recorded status', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'auth-login-gmail-only-owner-wording-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.method, 'Conversation evidence review')
+ assert.equal(entry.state, 'Owner instruction recorded, runtime verification pending')
+ assert.ok(entry.steps.some(step => step.status === 'Recorded'))
+ assert.ok(filterReaSessions('', 'kompas', 'Conversation evidence review').some(s => s.id === entry.id))
+})
+
+test('17 Oct source recovery REA record keeps private artifact locators out of the public repository', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'whatsapp-17-oct-resume-source-recovery-2026-11-13')
+ assert.ok(entry)
+ const publicRecord = JSON.stringify(entry)
+ assert.doesNotMatch(publicRecord, /\b[a-f0-9]{64}\b/i)
+ assert.doesNotMatch(publicRecord, /\b\d{13}\b/)
+ assert.doesNotMatch(publicRecord, /\.docx/i)
+ assert.doesNotMatch(publicRecord, /Library ZIP|J_Eshwar_44|Resume_Inventory\.csv|Gmail message retrieved/i)
+ for (const privateTerm of ["CISSP","CCSK","Security+","PenTest+","AZ-500","CISM","CRISC","CISA","CCSP","AWS Security Specialty","Ethereum","Hyperledger Besu","Canton",'"Sol"']) assert.equal(publicRecord.includes(privateTerm), false, privateTerm)
+ assert.doesNotMatch(publicRecord, /@/)
+ assert.ok(entry.sources.every(source => !source.path || existsSync(path.join(root, source.path))))
 })

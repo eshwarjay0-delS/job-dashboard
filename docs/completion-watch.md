@@ -12,9 +12,9 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 Owner Eshwar, 11:03 PM and 11:04 PM CT, on production. The telecom card prepended `First, -` onto bullets that already started with First, Then, or Finally, drew a stray ellipsis, and hid the question. Both formatters now keep one connector. The question box stays rendered. Have-you-done, how-have-you-used, and how-do-you use the measured word bands, and Long raises the spoken ceiling. Local focused suites passed. Not merged in this note. No ship marker on the branch commit.
 
-## 13 November 2026 — Skip login button
+## 13 November 2026 — Skip-login claim is unverified
 
-Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.
+An assistant-generated repo note claims that Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. The accessible prior-conversation search did not retrieve a direct owner-authored message approving that behavior. The only direct owner-authored authentication wording retrieved is from 2026-11-12T19:09:10Z: “No just the login. Still the give admin for eshwarjay0@gmail.com but only Gmail sign in.” Treat the later Skip login claim as unapproved; preserve it as historical context but do not implement a public synthetic-owner bypass. No auth code or environment variables were changed by this documentation reconciliation.
 
 ## 13 November 2026 — rounds 36-55 and the desktop shell
 
@@ -40,9 +40,9 @@ Owner request the same day: apply the three reviewed format-patch files onto `27
 
 Owner, 12 Nov 2026, 4:18 PM America/Chicago: question stripping and capture are the top Kompas priority. Pull request 234 was rebased onto current master. The caption and mic frame stays. The last-four window runs when the framed chunks hold more than one question. One question keeps its setup. Offline stand-in: 150 drafts, 0 pairs at Jaccard >= 0.7, 0 same-answer failures. Focused suites 208 pass, 0 fail. Baseline 15 checks hold. `tsc --noEmit` clean. Not a production deploy. No ship marker.
 
-## 12 November 2026 — skip-login
+## 12 November 2026 — assistant-reported skip-login decision (unverified)
 
-Owner approval the same day supersedes the session-recovery note that said to leave `AUTH_DISABLED` off. Production still served `window.KOMPAS_AUTH_DISABLED = false` from commit `e8ce442`. Skip-login must not call Supabase Auth, must not open `/login`, and must let Kompas Start and MarketFit open. The Houston user id was not read because the project returned HTTP 402. Draft PR #324 stays unmerged. PR #327 is a different branch and is not part of this slice.
+A prior assistant-generated note claimed owner approval to disable login and use a synthetic owner. The accessible direct owner wording retrieved later in the same day is: “No just the login. Still the give admin for eshwarjay0@gmail.com but only Gmail sign in.” No direct user message approving public skip-login was retrieved. Mark the skip-login claim unapproved/superseded, preserve this historical note, and keep the login screen plus Gmail-only admin sign-in. Do not read a synthetic-owner ID or change the allowlist. Draft PR #324 remains unmerged; no runtime change is authorized by this note.
 
 ## Active development loop
 
@@ -227,7 +227,7 @@ Continue: verify the next scheduled crawl and public API freshness response; do 
 
 Continue: the original 27,724-byte DOCX has been recovered from a private Library archive; its exact digest was verified locally and remains with the private artifact, not in this public repository. The full matching Security Engineer – Risk & Controls JD was recovered from the user's private inbox. The screenshot is dated 17 Oct 17:28 Chicago. The exact generated output and per-run R2/webhook/Meta delivery trace are still missing. iZap has no configured WhatsApp number and no matching chat history.
 
-The eight screenshot terms are not eight missing candidate skills: CCSP/CISM/CRISC/CISA/AWS Security Specialty are credentials (never add); Canton/Solana are preferred but unsupported in the source; `sol` is a fragment of `Solana`; `attributes` does not appear in the full JD. The source DOCX also conflicts with the owner-confirmed profile's education/employment/credential facts. Quarantine those claims until the owner reconciles them; do not count the JD's 5+ years as confirmed. The new source-backed filter/test PR covers only the generic fragment boundary; no 98% live match is claimed.
+The screenshot terms mix preferred credential examples, a preferred DLT platform, an incomplete platform fragment and a section heading. None is evidence of candidate experience. The retrieved Gmail body ends at `Sol`; do not expand it to Solana or count it separately. The heading is not a skill. The source DOCX also conflicts with the owner-confirmed profile's education/employment/credential facts. Quarantine those claims until the owner reconciles them; do not count the JD's 5+ years as confirmed. The new source-backed filter/test PR covers only the generic fragment boundary; no 98% live match is claimed.
 
 The 6 Nov WhatsApp policy remains authoritative; do not restore the old 98% hard hold. No model call, real email, WhatsApp send, R2 write or production mutation was performed. Next: finish exact-head CI, obtain owner reconciliation and the exact output/R2/Meta trace before claiming historical replay or delivery.
 
@@ -381,3 +381,121 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 13 November 2026 — profile-gap continuation and cross-workstream evidence
+
+### Current release
+- Canonical master is `4c01951af59f7d64eecd2b39da32d75c607d9eea`.
+- Production deployment `dpl_BJvUK2kwPCUE6oCLcmTWPa5Dm25d` is READY at that exact SHA. Independent alias lookup confirms `job-dashboard-fawn.vercel.app`; `marketfit-app.vercel.app` is also assigned. This is the PR #350 Kompas release, not the new resume work.
+- No local clone/test execution was available in this runtime. GitHub Actions is the validation path.
+
+### WhatsApp resume / factual alignment
+- The 13 Nov production error aggregation contained two rejected drafts in 24 hours, latest 12 Nov 18:18:32 UTC. Both showed 100% raw and supported keyword coverage but `partial=true`, `incomplete=true`, `needs_review`; blockers included `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable` and `roles_unrewritten`. These are rejected drafts, not successful generation or delivery.
+- PR #353 branch `fix/resume-profile-gap-fill-current-master-4c019-20261113` restacks the owner-approved PR #325 profile-part acceptance fix onto current master. It accepts non-empty requested skills, summary or headline; merges only requested non-empty fields; preserves existing/disabled sections; and clears only the part actually accepted. Source commits: `45ea9757b00501f3a2adebdad7b504eefee95efe`, `f112f7422ab870500ec19067169a0fba5b968ca1`, `8ffce0c71f645c1c77b8446ddd7d2dbf5654811d`, `3da7d1e94e6ad62f360c263214562a7366945063`. The original PR #325 head passed full CI `43292578201`, Kompas baseline `43292578119`, and WhatsApp recovery `43292578125`. PR #353 exact head `97c6fbf2caec1507059b44a1237f397263f27b95` also passed full CI `43393676889`, Kompas baseline `43393676888`, WhatsApp recovery `43393676957`, and Plan/REA schema `43393676967`. Keep PR #353 DRAFT until the protected preview passes.
+- PR #352 confirmed-skill cross-role mapping passed exact-head full CI `43376058758`, baseline `43376058731`, WhatsApp recovery `43376058823`, and Plan/REA schema `43376058760`; it still lacks a protected preview and actual exported-DOCX acceptance. Only an explicit first-person confirmation supports the skill, and it may be mapped only into relevant existing project bullets.
+- PR #344's offline same-account fallback and session-pair CAS work passed exact-head source CI on its old base, but its base is stale and the protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. Its old Kompas build-stamp hunk must not be copied blindly: current master has the `20261112-output` page/version stamp with the new answer-aside asset. No real WhatsApp send was made.
+- The 6 Nov delivery policy remains authoritative: completed readable WhatsApp DOCX may be sent below 95% with gaps disclosed; 70% is the delivery-with-gaps floor and 95% supported coverage is the clean-pass criterion. Swipe-reply failure remains text-only; initial no-provider fallback is limited to the exact selected same-account original and must say NOT TAILORED.
+- The 17 Oct 17:28 incident remains unverified. The 10 Nov archive review recorded a source DOCX and matching JD, but the 12 Nov accessible Library recheck did not resolve the exact source bytes. The generated output DOCX, per-run R2/webhook correlation, Meta message ID and signed delivery/read receipt are missing. Do not replay or resend.
+
+### Poke-inspired Gmail/mobile
+- The 13 Nov Safe Merge Gate read-only production aggregation found 84 HTTP 402 `exceed_egress_quota` events in 24 hours across Gmail routes. This provider restriction blocks live refresh/updates; no billing or spend-cap change was attempted.
+- Up to four accounts, account+thread identity, selected-From preservation, per-account reconnect and normal-flow mobile hamburger remain approved requirements. Two-inbox healthy/partial-failure and narrow-mobile device acceptance remain open. The sync-health card is proposed, not separately approved; the unattended worker remains disabled pending external scheduler, `CRON_SECRET`, approved Meta template and explicit enablement.
+- PR #346 remains a draft stacked on earlier work; PR #351 is blocked because it deletes unrelated repository files. No email was sent.
+
+### Contract crawler
+- Current production SHA `4c01951` is a descendant of `864cb9e`, so the earlier classifier and exported-DOCX gap report are in the deployed ancestry. No post-release crawl/API smoke was verified in this run.
+- PR #343's Right To Hire / Contract To Perm classifier restack has a failed exact-head full CI and stale base. PR #307's scheduled crawl change conflicts with the current manual/on-demand-only policy. Robert Half remains manual navigation only; no scraping is authorized.
+
+### Kompas and auth correction
+- PR #350 is live at production SHA `4c01951`. The actual 50-pair Kompas/ChatGPT comparison, independent human grading, and native Windows/mobile/WhatsApp voice acceptance remain open.
+- No active automation with the exact title Kompas Continuous Voice Delivery appeared in the accessible automation inventory; this run made no microphone, caption or voice edits. No separate Bible-Keeper automation was found in the accessible inventory.
+- The only direct owner-authored wording retrieved in accessible prior context is from 2026-11-12T19:09:10Z: “No just the login. Still the give admin for eshwarjay0@gmail.com but only Gmail sign in.” The 13 Nov Skip login button claim appears only in assistant-generated repo notes; no direct user message supporting it was retrieved. Treat it as unapproved and do not implement a public synthetic-owner bypass. Safe Merge Gate changed `AUTH_DISABLED` and `NEXT_PUBLIC_AUTH_DISABLED` to false in a READY config-only deployment on source `a247ddf`; the alias later advanced to `4c01951`, so recheck the current public auth flag and anonymous 401 contracts before claiming the latest deployment's auth behavior. Do not enable a public synthetic-owner bypass or change the admin allowlist.
+
+Continue: obtain the legitimate protected preview for PR #353; the exact missing prerequisite is the private `KOMPAS_VERCEL_API_TOKEN`. After that, inspect an owner-authorized exported DOCX and run a consented baseline + JD + explicit-confirmation case. The exact missing prerequisite is the private `KOMPAS_VERCEL_API_TOKEN`, which the owner or authorized repository administrator must configure without exposing it. After release, inspect an owner-authorized exported DOCX and perform a consented baseline + JD + explicit-confirmation run; do not claim a live 98% match from tests.
+
+
+### PR #353 exact-head result — 13 November 2026 08:39 UTC
+- All four source gates on head `97c6fbf2caec1507059b44a1237f397263f27b95` passed: full CI `43393676889`, Kompas baseline `43393676888`, WhatsApp recovery `43393676957`, and Plan/REA schema `43393676967`.
+- PR #353 remains DRAFT and mergeable. No protected-preview pass exists for this head; the private `KOMPAS_VERCEL_API_TOKEN` remains the exact missing prerequisite. Do not merge, deploy, or call the fix live.
+- The profile acceptance change addresses `draft_parts_missing` only. The separate `roles_unrewritten` evidence gap, real DOCX review, and real WhatsApp delivery remain open.
+
+
+## 13 November 2026 — Completion Watch continuation, 03:47 America/Chicago
+
+### Canonical release and coordination
+- GitHub master and the production alias both resolve to 4c01951af59f7d64eecd2b39da32d75c607d9eea. Vercel deployment dpl_GXLCnhs7iDyAVw2iPwtxBVaFChwB is READY, target production, aliasError null; job-dashboard-fawn.vercel.app is assigned to that deployment.
+- MFit Completion Watch and MFit Safe Merge Gate are enabled. The accessible automation inventory shows Kompas Continuous Voice Delivery disabled; no voice/caption implementation was duplicated. No Bible-Keeper task appeared in that inventory, which is not proof that no other task exists.
+- Accessible prior-conversation retrieval is not an exhaustive archive. This run did not infer missing user instructions.
+
+### WhatsApp and resume
+- The 17 Oct 17:28 Chicago incident remains blocked for delivery verification. This run retrieved the private source bytes and verified them against the inventory, then fetched the matching 16 Oct JD through read-only Gmail. Exact artifact identifiers, file names, Library paths, hashes, full JD and resume content are withheld from the public repository. The generated output, per-run R2/webhook correlation, Meta message ID and signed delivered/read receipt remain missing; no replay or real WhatsApp send.
+- The 6 Nov channel-specific policy remains authoritative: 98% is not a hard WhatsApp send hold; web remains 95% raw JD overlap; WhatsApp may send a completed readable DOCX below 95% with gaps disclosed; 95% supported coverage is the clean-pass criterion for 70–94.9% raw overlap; below 70% is not a clean pass. Unsupported experience, dates, employers, credentials and metrics remain prohibited.
+- PR #353 head f20baebe08aecbb05e31084fc3b6275339f88df4 is a current-master profile-gap repair for summary/headline/skills-only acceptance. Full CI 43399137055 and WhatsApp recovery 43399137726 failed at TypeScript because the new REA decision entry used three literals absent from the register union; Plan/REA schema 43399137054 and Kompas baseline 43399137187 passed. Commit 3964e4aa0fab94ccae2167a393f771f1ef6195e8 adds the missing REA vocabulary; admin filter and a regression are being added. Fresh exact-head gates are required; PR remains DRAFT and protected preview still needs the authorized private KOMPAS_VERCEL_API_TOKEN. This repair addresses draft_parts_missing, not roles_unrewritten.
+- PR #352 confirmed-skill mapping is source-tested on exact head 81369a28f3a4c7a7e983cc6201d24adad1b40b34: full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline passed. Protected preview and actual exported-DOCX acceptance remain open. A first-person confirmation supports the skill only; it does not create employers, projects, actions, outcomes, dates, metrics or credentials.
+- The approved 3 Nov final-DOCX Gemini ATS review remains unimplemented on master; PR #289 is draft/conflicted. Its score and suggestions are diagnostic only, never candidate evidence.
+
+### Poke-inspired Gmail/mobile
+- PR #357 head 98afab1e1e658e7abf0a4dcfb2288656a1634bcf passes full CI and Kompas baseline. It adds receiving-inbox-scoped digest mutes and thread/radar keys, opens the correct inbox before the thread, and restores normal-flow mobile navigation. Protected preview and real two-inbox, selected-From, affected-inbox reconnect and narrow-phone acceptance remain pending. No Gmail API, OAuth, inbox mutation or outbound message was used.
+- The unattended notification worker remains disabled. No scheduler, CRON_SECRET, approved Meta template or explicit enablement was found for it; no real email or WhatsApp notification was sent.
+
+### Contract crawler
+- PR #355 code head dcbd2400fccff83c771a23a75b14f0200df1224a passes crawler regression 43398189311, Kompas baseline 43398189322, and full CI 43398189469. The latest head a45688ac8d8f76e7e394bc0f4086470c2059582f is documentation-only; no new code workflow ran. Protected preview and post-release crawl/API smoke remain pending.
+- Owner's latest crawler correction is manual/on-demand only. No daily cron, scheduled GitHub workflow, external crawl trigger, portal scraping or Robert Half adapter is authorized. No crawl or database mutation was performed.
+
+### Kompas
+- PR #350's rounds 36–55 answer/brain release is included in the READY production SHA above. Actual authenticated 50-pair Kompas/ChatGPT comparison, independent human grading, native Windows/WhatsApp/mobile voice latency and device acceptance remain unverified.
+- The latest journal records a separate live answer-card stutter/question-box correction. Its referenced local commit prefix 025656be was not found through the accessible GitHub commit/branch/PR searches in this run; no new PR or deployment is claimed. Do not duplicate an active contributor's branch.
+- Continue coordination with the disabled Voice Delivery task if it is re-enabled; do not duplicate its native capture work.
+
+Continue: rerun PR #353 exact-head full CI, WhatsApp recovery, Plan/REA schema and Kompas baseline after the REA taxonomy correction. Keep it DRAFT until the legitimate protected preview passes; then obtain an owner-authorized DOCX review. In parallel, preserve #352, #357 and #355 as separate source-tested but preview/acceptance-pending items. Do not replay the 17 Oct incident without its exact source/output/correlation/receipt and owner fact reconciliation.
+
+
+## 13 November 2026 — 17 Oct WhatsApp source/JD evidence (private artifacts withheld)
+
+- This run retrieved the private original resume bytes from the Library archive and verified them against the inventory record. A read-only Gmail search and full-thread fetch recovered the matching 16 Oct job description. The private bytes, exact digest, screenshot, message body and generated output were not copied into the repository.
+- Exact screenshot identifiers, attachment names, Library paths, file hashes, full JD text and resume content are intentionally excluded from this public repository.
+- The screenshot response described an old 98% target hold after automatic repair. The 6 Nov owner-approved WhatsApp policy supersedes that historical hold: completed readable output may be sent below 95% with gaps disclosed; the clean-pass and incomplete-output rules remain separate.
+- Accessible prior-conversation retrieval found no user-authored confirmation of the JD-specific blockchain, framework, cloud, IAM/key-management, audit or preferred-credential experience; assistant-generated introduction text and JD terms are not candidate evidence. The private source document's chronology/education claims conflict with the owner-confirmed profile and remain quarantined.
+- The generated output DOCX, R2 object/version/request key, webhook trace, Meta message ID and signed delivery/read receipt remain missing. No historical replay, model call, R2 mutation or WhatsApp send was performed.
+- Continue only through authorized source recovery and consented no-send acceptance. If exact output/correlation/receipt cannot be recovered, retain the historical delivery outcome as unverified; do not infer qualifications or personal history.
+
+
+## 13 November 2026 — Manual-only contract crawler and Supabase egress blocker
+
+Owner correction on 12 Nov 2026 at 21:25 UTC supersedes the older scheduled-crawler vision. Contract crawling is manual/on-demand only. Current master has no /api/crawl/run entry in vercel.json and no schedule trigger in crawl-freshness.yml. The admin POST /api/crawl/jobs remains the manual trigger; Apply search only reads the index and does not start a crawl.
+
+A read-only production GET /api/crawl/jobs?limit=5 returned HTTP 200 with ok:false, jobs empty, reason exceed_egress_quota from the Supabase service restriction. This is not a Vercel deployment failure. No crawl, portal request, database mutation, billing change or spend-cap change was made. The project owner must restore Supabase service before the index can return jobs or a manual crawl can persist results.
+
+PR #355 adds a regression that the contract crawler has no automatic schedule and that the manual POST remains admin-gated; its exact-head checks are pending after the new commit. Robert Half remains manual-only. No scraping or unauthorized feed is permitted.
+
+Continue: keep the crawler unscheduled. After Supabase egress is restored, run only an explicitly requested manual crawl and verify 14-day freshness, clearance exclusion and C2H classification.
+
+
+## 13 November 2026 — Kompas answer stack production verification
+
+The owner-approved answer stack is live through release commit 313c90a4b1e8c4c67a2454daa5027701aaeafedc. Current master 4c01951 is a descendant (2 ahead, 0 behind), and canonical production alias job-dashboard-fawn.vercel.app is READY at deployment dpl_GXLCnhs7iDyAVw2iPwtxBVaFChwB on exact SHA 4c01951.
+
+Public checks: /kompas/version.json HTTP 200 reports build kompas-20261112-output and commit 4c01951; /api/health HTTP 200 ok:true; /kompas/answer-aside.js HTTP 200. Do not redeploy this same release.
+
+PRs #334, #337, #339 and #347 remain OPEN as stale stacked branches and diverge from current master. Their code is already present through 313c90a4; do not merge or deploy them again. The actual 50-pair Kompas/ChatGPT answers and independent human scorecards remain unavailable pending authorized KOMPAS_API_TOKEN and approved source bundles. Native Windows/mobile/WhatsApp/cross-device acceptance is unverified. Kompas Continuous Voice Delivery exists but is disabled; no parallel voice edits were made.
+
+Continue: keep the live answer stack as released; pursue the authorized 50-pair comparison and human review when credentials and approved source bundles are available, and keep native platform acceptance open until real device evidence exists.
+
+
+## 13 November 2026 — Poke-style Gmail UI and export-security gates
+
+PR #357 exact head 98afab1e1e658e7abf0a4dcfb2288656a1634bcf passed full CI 43402024260 and Kompas baseline 43402024070. It scopes sender mutes and thread/radar identity to the receiving inbox, opens the correct inbox before thread selection and restores mobile navigation. No protected preview exists; two-inbox collision, selected-From, affected-inbox reconnect and real narrow-phone acceptance remain open.
+
+PR #359 exact head ab3e070aeb4ca8864f5f34ae26fd4c761a645792 passed full CI 43419089019, Kompas baseline 43419089067 and Plan/REA schema 43419089029. It gates notify-rules export behind GMAIL_UPDATES_SCHEDULER_ENABLED and CRON_SECRET and scopes export to the admin owner. It remains DRAFT and not deployed; owner security review is required. No preview exists for the branch.
+
+The unattended Gmail update worker remains disabled. No real Gmail API call, inbox mutation, email send or WhatsApp send was performed. Production remains on master 4c01951.
+
+Continue: require owner review for the security PR, protected preview and two authorized inboxes plus narrow-phone acceptance for the UI PR. Keep the worker off until the scheduler, CRON_SECRET, approved Meta template and explicit enablement consent exist.
+
+
+## 13 November 2026 — Plan/REA enum typecheck correction
+
+The first shared Plan/REA update on PR #353 passed the dedicated schema workflow but full TypeScript checking exposed invalid enum literals in the new records: journal delivery used an unsupported value, and REA methods/states used labels outside the canonical unions. The records are being normalized to the exact supported values: journal delivery deployed; REA method Source and artifact analysis; REA state Deployed, verification pending where production code is live; step states Tested/Observed/Blocked. No product behavior changed.
+
+The failing exact-head run was full CI 43422464858 on commit b705098e31699ebee347a0b46e8969ad91116acb; its typecheck errors are enumerated in the workflow log. The Plan/REA schema run 43422464571 and Kompas baseline 43422464569 passed. A fresh full CI and WhatsApp recovery run are required on the corrected head.

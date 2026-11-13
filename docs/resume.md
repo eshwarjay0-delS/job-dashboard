@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **Measure honestly; keep channel gates separate.** Web downloads require at least 95% raw JD overlap; 98% is the target. WhatsApp does not use 98% as a hard send hold: a completed, readable DOCX may be sent below 95% with missing terms disclosed. A 70–94.9% WhatsApp result is a clean pass only when resume-supported coverage is at least 95%; below 70% is not a clean pass but may still be sent with gaps disclosed. Incomplete, skills-only, failed, unreadable or identity-mismatched output uses the selected same-account resume fallback.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 

@@ -147,9 +147,9 @@ Responsibilities: PowerShell automation, Microsoft GraphAPI integrations, Python
 })
 
 test('generic specialty and attributes headings are not technical gaps; named technologies remain', () => {
-  const terms = extractJdKeywords('Required Specialty Attributes\nSPECIALTY ATTRIBUTES\nExperience with Canton and SOL blockchain technologies, NIST, ISO 27001, CIS Controls and COBIT.')
+  const terms = extractJdKeywords('Required Specialty Attributes\nSPECIALTY ATTRIBUTES\nExperience with Canton and Solana blockchain technologies, NIST, ISO 27001, CIS Controls and COBIT.')
   for (const word of ['specialty','attributes']) assert.ok(!terms.includes(word), word)
-  for (const term of ['canton','sol','nist','iso 27001','cobit']) assert.ok(terms.includes(term), term)
+  for (const term of ['canton','solana','nist','iso 27001','cobit']) assert.ok(terms.includes(term), term)
 })
 
 test('Nov4 extraction junk: prose fragments, adverbs and recruiter names are not JD terms', () => {
@@ -161,4 +161,37 @@ Best regards,
 Sai Kumar`)
   for (const term of ['cloud-based', 'government-issued', 'closely', 'opportunity-please', 'sai kumar']) assert.ok(!terms.includes(term), term)
   for (const term of ['siem', 'palo alto', 'data mover']) assert.ok(terms.includes(term), term)
+})
+
+test('an incomplete DLT platform token is not expanded into a candidate skill', () => {
+  const truncated = extractJdKeywords('Platforms: Ethereum, Hyperledger Besu, Canton, Sol.')
+  assert.ok(truncated.includes('canton'))
+  assert.ok(!truncated.includes('sol'))
+  assert.ok(!truncated.includes('solana'))
+  const complete = extractJdKeywords('Platforms: Ethereum, Hyperledger Besu, Canton, Solana.')
+  assert.ok(complete.includes('solana'))
+})
+
+test('a "such as" preferred credential list is one alternative and AWS Security Specialty stays compound', () => {
+  const jd = `Preferred Qualifications
+Professional certifications such as: CISSP, CISM, CRISC, CISA, CCSP.
+AWS Security Specialty (or equivalent) preferred.
+Knowledge of distributed ledger platforms (Ethereum, Hyperledger Besu, Canton, Sol).
+Desired Attributes
+Strong ownership, collaboration and continuous learning.`
+  const terms = extractJdKeywords(jd)
+  const group = 'cissp or cism or crisc or cisa or ccsp'
+  assert.ok(terms.includes(group))
+  for (const individual of ['cissp', 'cism', 'crisc', 'cisa', 'ccsp']) assert.ok(!terms.includes(individual), individual)
+  assert.ok(terms.includes('aws security specialty'))
+  for (const heading of ['specialty', 'attributes']) assert.ok(!terms.includes(heading), heading)
+  assert.ok(terms.includes('canton'))
+  assert.ok(!terms.includes('sol'))
+  assert.ok(!terms.includes('solana'))
+  const source = 'CISSP, CCSK, Security+, PenTest+, AZ-500. AWS, Azure, GCP. Smart contracts, cryptography, NIST, ISO 27001, CIS Controls, COBIT.'
+  assert.equal(present(source, group), true)
+  assert.equal(present(source, 'aws security specialty'), false)
+  assert.equal(present(source, 'canton'), false)
+  assert.equal(present(source, 'sol'), false)
+  assert.equal(present(source, 'solana'), false)
 })
