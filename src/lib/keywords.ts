@@ -60,7 +60,7 @@ export const TECH_TERMS: string[] = [
   "javascript",
   // certifications
   "cissp", "oscp", "ceh", "comptia", "security+", "cysa+", "pentest+", "az-500", "ccsp", "gsec", "gcih",
-  "aws certified", "azure certified", "gcp certified", "cka", "ckad",
+  "aws certified", "aws security specialty", "azure certified", "gcp certified", "cka", "ckad",
   // business analyst / systems / servicenow
   "business analyst", "system engineer", "requirements", "stakeholder", "process improvement",
   "bpmn", "uml", "agile", "scrum", "jira", "confluence",
@@ -455,7 +455,7 @@ function collapseCredentialAlternatives(jd: string, terms: string[]): string[] {
   const groups: { start: number; end: number; options: string[] }[] = []
   for (const match of jd.matchAll(pattern)) {
     const prefix = jd.slice(Math.max(0, match.index! - 50), match.index)
-    if (!/\bor\b/i.test(match[0]) && !/\b(?:one of|any of|either)\s*[:(]?\s*$/i.test(prefix)) continue
+    if (!/\bor\b/i.test(match[0]) && !/\b(?:one of|any of|either|such as)\s*[:(]?\s*$/i.test(prefix)) continue
     groups.push({ start: match.index!, end: match.index! + match[0].length, options: [...new Set(match[0].match(new RegExp(cert, 'gi'))!.map(s => s.toLowerCase()))] })
   }
   if (!groups.length) return terms
