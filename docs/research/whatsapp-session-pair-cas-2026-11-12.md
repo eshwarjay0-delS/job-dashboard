@@ -26,3 +26,12 @@ This follow-up is limited to the sender session persistence boundary. It does no
 No real WhatsApp message, Meta callback, model call, R2 production write, historical replay, DOCX generation, email or handset test was performed. The 17 October 2026 17:28 Chicago incident remains historically unverified: the full matching JD is available from Gmail, but the exact source DOCX bytes, generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt are not currently accessible.
 
 The source branch remains DRAFT pending exact-head full CI, WhatsApp recovery regression, Kompas baseline and the protected Vercel preview. The protected preview requires the private KOMPAS_VERCEL_API_TOKEN to be configured by the owner or an authorized repository administrator; this work does not bypass that gate. Production deployment and real WhatsApp acceptance are separate later steps.
+
+
+## 13 November 2026 — exact-head gates passed; protected preview remains blocked
+
+PR #344 current head is `1eb5e6c490179518fd7ae79748bc1cde31dd7d18`. Full CI `43350476035` passed and its Lint/typecheck/build job executed the explicit `Verify WhatsApp offline pair-consumption CAS interleaving` step successfully. WhatsApp recovery `43350476353`, Kompas baseline `43350476041`, cross-device `43350476098`, Windows Caption Capture `43350476128` and Plan/REA schema `43350476116` also passed on the exact head. The previous public build-stamp mismatch is resolved.
+
+No Vercel preview deployment is listed for this branch. The protected preview still requires the repository owner's private `KOMPAS_VERCEL_API_TOKEN`; this run did not read, change or bypass it. Production aliases remain READY on `dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS` at `a247ddf6042385d12a19bfd7e893983c1bcf9087`, not PR #344. Keep the PR DRAFT and do not claim production release.
+
+The latest 12 Nov accessible Library recheck did not resolve the original 17 Oct DOCX bytes. The matching JD is retrievable, but the generated DOCX, per-run R2/webhook/Meta correlation and signed delivery/read receipt remain missing. No historical replay, model call, production R2 write or real WhatsApp send occurred.
