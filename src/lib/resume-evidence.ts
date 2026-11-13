@@ -60,7 +60,7 @@ const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
     // CyberArk EPM is endpoint privilege management. Generic CRM administration,
     // access reviews or compliance audits alone are not evidence of that project context.
     skill: /\bcyberark(?:\s+epm)?\b/i,
-    context: /\b(?:endpoint(?:s)?|local admin(?:istrator)?|privilege|elevation|application control|least[- ]privilege|software restriction|application allowlist|application greylist|greylist|allowlist|windows hardening)\b/i,
+    context: /\b(?:endpoint(?:s)?|local admin(?:istrator)?|application control|software restriction|application allowlist|application greylist|windows hardening)\b/i,
   },
   {
     skill: /\b(?:splunk|siem|sentinel|defender|crowdstrike|qualys|nessus|rapid7|burp|zscaler|palo alto|edr|xdr|dlp)\b/i,
