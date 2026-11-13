@@ -470,3 +470,14 @@ A read-only production GET /api/crawl/jobs?limit=5 returned HTTP 200 with ok:fal
 PR #355 adds a regression that the contract crawler has no automatic schedule and that the manual POST remains admin-gated; its exact-head checks are pending after the new commit. Robert Half remains manual-only. No scraping or unauthorized feed is permitted.
 
 Continue: keep the crawler unscheduled. After Supabase egress is restored, run only an explicitly requested manual crawl and verify 14-day freshness, clearance exclusion and C2H classification.
+
+
+## 13 November 2026 — Kompas answer stack production verification
+
+The owner-approved answer stack is live through release commit 313c90a4b1e8c4c67a2454daa5027701aaeafedc. Current master 4c01951 is a descendant (2 ahead, 0 behind), and canonical production alias job-dashboard-fawn.vercel.app is READY at deployment dpl_GXLCnhs7iDyAVw2iPwtxBVaFChwB on exact SHA 4c01951.
+
+Public checks: /kompas/version.json HTTP 200 reports build kompas-20261112-output and commit 4c01951; /api/health HTTP 200 ok:true; /kompas/answer-aside.js HTTP 200. Do not redeploy this same release.
+
+PRs #334, #337, #339 and #347 remain OPEN as stale stacked branches and diverge from current master. Their code is already present through 313c90a4; do not merge or deploy them again. The actual 50-pair Kompas/ChatGPT answers and independent human scorecards remain unavailable pending authorized KOMPAS_API_TOKEN and approved source bundles. Native Windows/mobile/WhatsApp/cross-device acceptance is unverified. Kompas Continuous Voice Delivery exists but is disabled; no parallel voice edits were made.
+
+Continue: keep the live answer stack as released; pursue the authorized 50-pair comparison and human review when credentials and approved source bundles are available, and keep native platform acceptance open until real device evidence exists.

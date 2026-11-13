@@ -74,3 +74,14 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+
+## 13 November 2026 — Current production reconciliation
+
+The canonical production alias job-dashboard-fawn.vercel.app is READY at deployment dpl_GXLCnhs7iDyAVw2iPwtxBVaFChwB, exact master SHA 4c01951af59f7d64eecd2b39da32d75c607d9eea. The live version stamp reports build kompas-20261112-output and commit 4c01951; the health endpoint returns ok:true; the answer-aside asset is served with HTTP 200.
+
+The approved answer-stack release commit 313c90a4b1e8c4c67a2454daa5027701aaeafedc is an ancestor of current master (2 commits ahead, 0 behind). PRs #334, #337, #339 and #347 remain open stacked branches and their heads diverge from current master. Their code is already live via 313c90a4; do not merge or redeploy those stale branches.
+
+The real 50-pair same-question Kompas-versus-ChatGPT comparison and independent human scoring remain a hard acceptance gap. They require authorized KOMPAS_API_TOKEN and approved original resume/JD/reference bundles. Synthetic tests, source review and a READY deployment are not substitutes. Native Windows, mobile, WhatsApp speech latency and cross-device UX remain unverified. Kompas Continuous Voice Delivery exists but is disabled; coordinate with that task if it is reactivated and do not duplicate its voice/caption work.
+
+The anonymous auth probes in this run did not establish the correct contract: /api/kompas/sessions returned 404, GET /api/kompas/desktop-handoff returned 405, and another fetch was blocked by Vercel share-link authentication. Do not infer that auth is either secure or bypassed from those requests; identify the supported route and verify the intended 401 behavior before making an auth claim. The direct owner-authored login-only correction from 12 Nov remains authoritative; do not implement the unsupported public synthetic-owner login bypass.
