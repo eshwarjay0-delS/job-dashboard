@@ -189,3 +189,14 @@ PR #275 merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`. Production deploym
 The 10 Nov 11:00 UTC crawl occurred before this deployment on SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not a post-classifier run. The first expected post-release run is 11 Nov 11:00 UTC. Public `GET /api/crawl/jobs?limit=1` and `/api/health` HTTP smoke could not be reached from this runtime, so no API response is claimed.
 
 The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Half as a manual-only directory link. Its previous exact head `147a40e` passed full CI `42853441954`, crawler regression `42853441582`, Plan/REA schema `42853441401` and Kompas baseline `42853441467`; a subsequent documentation refresh requires a new exact-head run. Vercel reports the PR preview as `build-rate-limit`; no preview is available for that branch.
+
+
+
+
+## Owner correction — 11 November 2026: C2H evidence and manual-only crawler
+
+Owner-approved rule (11 Nov 2026 19:20:41 UTC): explicit “Right To Hire” and “Contract To Perm” classify as C2H. Negated forms remain unknown. Generic contract administration, negotiation and lifecycle wording alone is not employment-type evidence. Structured employmentType is separate from job-title text.
+
+This correction supersedes earlier broad substring matching. The later owner-approved crawl policy is manual/on-demand only: there is no contract-crawl cron in vercel.json, and historical daily-crawl wording is not current authorization. Do not create an external schedule or trigger a crawl without the approved operator path. Robert Half remains a manual navigation link only until express prior written consent or a sanctioned feed/API with commercial-aggregation rights is documented.
+
+Read-only production evidence on 13 Nov 2026 05:43 UTC: latest crawl 10 Nov 11:00 UTC, 20 portals, 6,818 found/upserted, one Inspyr abort; no newer run. Active rows were contract 8,850 (7,747 within 14 days), permanent 945 (845), unknown 2,612 (2,427). No crawl was triggered in this audit. The approved C2H correction is not yet in production; PR #343 remains unmerged after a full-CI failure on an old build-stamp assertion.
