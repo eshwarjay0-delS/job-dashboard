@@ -28,3 +28,11 @@ PR #373 restored the approved pre-#372 answer path and merged as 026c72968e45314
 ## Operational boundaries
 
 No secret or credential was read or exposed. No real email or WhatsApp message was sent. No R2 production write, live crawl, production-row mutation, historical replay, model call, or handset acceptance occurred. Exact approval, source implementation, deployment, and real-user acceptance remain separate states.
+
+## WhatsApp and confirmed-experience restacks — 13 November 2026
+
+PR #374 is the current-master WhatsApp offline fallback / pair-CAS restack at 794ba1151f8761720c55936d15bb0eb9a0a37c5c. Full CI 43503280817, WhatsApp recovery 43503280946, Kompas baseline 43503280979 and Plan/REA 43503280606 passed. Its authorized Vercel preview attempt dpl_6Ejh8tNfxR7pDYNcxWRp2f2thWV7 was canceled by the Ignored Build Step; the protected preview still needs the private KOMPAS_VERCEL_API_TOKEN. No send or R2 write occurred.
+
+PR #377 is the current-master confirmed-skill role-evidence restack at 20b1abf8cde16448900ed594d6f62366666097e4. Full CI 43503531707, WhatsApp recovery 43503532020, Kompas baseline 43503531666 and Plan/REA 43503531853 passed. Protected preview and exported-DOCX acceptance remain missing; no real model call or live ATS score is claimed.
+
+The historical 17 Oct 17:28 output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. The original source and JD recovery do not establish which file was generated or delivered. Do not replay or claim delivery.
