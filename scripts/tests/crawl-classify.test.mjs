@@ -55,7 +55,7 @@ test("contract administration and generic contract vocabulary are not employment
     assert.deepEqual(contractTypes(value, "Full-time"), [], value)
   }
   assert.deepEqual(contractTypes("Contract position for six months."), ["Contract"])
-  assert.deepEqual(contractTypes("W2 contract role."), ["W2", "Contract"])
+  assert.deepEqual(contractTypes("W2 contract role."), ["W2"])
   assert.deepEqual(contractTypes("No contract position."), [])
 })
 
@@ -67,13 +67,14 @@ test("structured engagement labels are recognized without relying on description
   assert.deepEqual(contractTypes("", "Temporary"), ["Temporary"])
   assert.deepEqual(contractTypes("W2", "W2"), [])
   assert.deepEqual(contractTypes("No W2; C2C only"), ["C2C"])
-  assert.deepEqual(contractTypes("Without 1099; W2 contract"), ["W2", "Contract"])
+  assert.deepEqual(contractTypes("Without 1099; W2 contract"), ["W2"])
   assert.deepEqual(contractTypes("No temporary role"), [])
 })
 
 test("crawler passes structured engagement separately from title", () => {
   assert.equal(classifyWorkType("Full-time", "Contract Administrator"), "permanent")
   assert.equal(classifyWorkType("Full-time", "Contract role"), "contract")
+  assert.equal(classifyWorkType("Full-time", "Right To Hire"), "contract")
   assert.equal(classifyWorkType("Full-time Contract", "Software Engineer"), "contract")
   assert.equal(classifyWorkType("No Contract", "Software Engineer"), "unknown")
 })
