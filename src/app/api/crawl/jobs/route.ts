@@ -53,8 +53,8 @@ export async function GET(req: NextRequest) {
   })
 }
 
-// POST /api/crawl/jobs — admin-only manual crawl trigger (body: { portals?: string[] }).
-// The daily Vercel cron hits GET /api/crawl/run instead.
+// POST /api/crawl/jobs — admin-only manual/on-demand crawl trigger (body: { portals?: string[] }).
+// Contract portal crawling is not scheduled. GET /api/crawl/run is a separate secret-gated operator endpoint.
 export async function POST(req: NextRequest) {
   if (!(await adminOf(req))) return NextResponse.json({ error: "Admins only." }, { status: 403 })
   if (!serviceClientAvailable()) {

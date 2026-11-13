@@ -6,8 +6,9 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300  // thirty portals, six at a time (runner.ts)
 
-// GET /api/crawl/run — daily portal crawl. Vercel cron (see vercel.json),
-// same secret pattern as the other crons.
+// GET /api/crawl/run — secret-gated operator endpoint for a manual/on-demand crawl.
+// No Vercel cron or scheduled GitHub workflow targets this route; do not restore a daily schedule.
+// The admin-facing manual trigger is POST /api/crawl/jobs.
 
 function timingSafeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a)
