@@ -211,7 +211,7 @@ const CAPS_STOP = new Set([
   "JOB","JD","ROLE","TEAM","YEAR","YEARS","PLUS","DAY","DAYS","WEEK","MONTH","MONTHS","FT","PT","W2","C2C","GC","USC","EAD","CFR","N/A","NA","OT","NEED",
   // Employer / client-agency acronyms that are not skills (State Corporation
   // Commission; Virginia Information Technologies Agency; VA Dept. of Transportation)
-  "SCC","VITA","VDOT",
+  "SCC","VITA","VDOT","SOL",
 ])
 const WORD_STOP = new Set([
   "the","and","for","with","you","are","our","etc","will","must","shall","should","this","that","their","them","from","into","across","various","daily",
