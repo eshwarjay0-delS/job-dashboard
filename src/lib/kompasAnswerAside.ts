@@ -344,7 +344,7 @@ function surfaceInResume(name: string, resume: string): string {
 export function isShortFactAsk(question: string): boolean {
   const q = String(question || "").replace(/\s+/g, " ").trim()
   if (!q || q.length > 160 || q.split(/\s+/).length > 18) return false
-  if (/\b(?:how would|walk me|tell me about a time|design|difference between|compare)\b/i.test(q)) return false
+  if (/\b(?:how would|walk me|tell me about a time|design|difference between|compare|have you done)\b/i.test(q)) return false
   return /^(?:have you|did you|do you|are you|were you)\b/i.test(q) && /\b(?:worked|used|use|familiar|experience|been|done|know)\b/i.test(q)
 }
 

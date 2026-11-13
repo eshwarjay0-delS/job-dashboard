@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — answer length and the stuttering telecom card
+
+Owner Eshwar, 11:03 PM and 11:04 PM CT, on production. The telecom card prepended `First, -` onto bullets that already started with First, Then, or Finally, drew a stray ellipsis, and hid the question. Both formatters now keep one connector. The question box stays rendered. Have-you-done, how-have-you-used, and how-do-you use the measured word bands, and Long raises the spoken ceiling. Local focused suites passed. Not merged in this note. No ship marker on the branch commit.
+
 ## 13 November 2026 — Skip login button
 
 Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.

@@ -197,7 +197,7 @@ export function controlsPrompt(k: AnswerControls): string {
   if (k.format === "bullets") lines.push(k.length === "short" ? "Three terse points, one sentence each, no opening line." : "Three or four points, one sentence each, no opening line.")
   if (k.format === "full_script") lines.push("A short spoken paragraph.")
   if (k.length === "short") lines.push("Keep it short: the fewest words that answer it.")
-  if (k.length === "long") lines.push("Go one level deeper than usual on the how, not on background.")
+  if (k.length === "long") lines.push("Length is long: a concrete example, the tool, a number from the resume when one is there, and a stance. Do not stop early.")
   lines.push(k.tone === "simple" ? "Tone: plain words, no jargon he would not say out loud." : k.tone === "formal" ? "Tone: formal and precise, still spoken, no slang." : "Tone: professional and direct.")
   lines.push(k.star ? "STAR is on: for a story, one sentence of situation and task, most of the words on his actions, one sentence on the result. Do not print the labels." : "STAR is off: do not structure it as situation-task-action-result and never print those labels.")
   return lines.join(" ")

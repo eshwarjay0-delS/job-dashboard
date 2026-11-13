@@ -218,7 +218,7 @@ html.kompas-auth-off #view-login{display:none !important}
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:4.65em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:max-height .5s cubic-bezier(.22,1,.36,1),margin-bottom .5s cubic-bezier(.22,1,.36,1),opacity .3s linear}
-.card.q-away .q{opacity:0;max-height:0;margin-bottom:0;overflow:hidden;pointer-events:none}
+.card.q-away .q{opacity:1;max-height:4.65em;margin-bottom:14px;overflow-x:hidden;overflow-y:auto;pointer-events:auto}
 /* The desktop panel (perfACT desktop/panel.css, injected by the shell) gives the question 6.2em with more weight than the
    two rules above and only fades it when it scrolls away, so on the desktop an invisible question held 99px plus margins
    over the answer (measured 27 Oct 2026 on its layout: answer top 342px collapsed vs 229px with this). These outweigh it:
@@ -236,7 +236,7 @@ html.desktop-focus #view-copilot .card .q{max-height:calc(4.65em + 15px)}
 #view-copilot .q .cap-text{display:block;flex:1 1 0;max-height:calc(3 * 1.45em);min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;overflow-wrap:anywhere;white-space:normal}
 #view-copilot .card .q.live{max-height:7em}
 html.desktop-focus #view-copilot .card .q.live{max-height:calc(7em + 15px)}
-#view-copilot .card.q-away .q{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important;overflow:hidden!important}
+#view-copilot .card.q-away .q{max-height:4.65em!important;margin-bottom:14px!important;overflow-x:hidden!important;overflow-y:auto!important;opacity:1!important}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}
 .a ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
@@ -1515,15 +1515,15 @@ html.desktop-focus #view-copilot .q{
 html.kd #view-copilot .card.q-away .q-row,
 html.kd #view-copilot .card.q-away .q,
 html.kd #view-copilot .card.q-away .q-row .q{
-  max-height:0 !important;
-  min-height:0 !important;
-  height:0 !important;
-  margin:0 !important;
-  padding:0 !important;
-  border:0 !important;
-  opacity:0 !important;
-  overflow:hidden !important;
-  pointer-events:none !important;
+  display:flex !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  max-height:34% !important;
+  min-height:4.2em !important;
+  height:auto !important;
+  pointer-events:auto !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
 }
 html.kd #view-copilot .a,
 html.kd #view-copilot .a-head{

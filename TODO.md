@@ -1,3 +1,11 @@
+## 2026-11-13 — Answer length and the 11:04 telecom card (visible on the answer card)
+
+The live card was stuttering. A bullet that already said First, Then, or Finally was shown as `First, - First I map...`, `First, - Then I build...`, and `First, - Finally I validate...`, with a lone `…` between Claim and Context and no question above ANSWER. Both the finished formatter and the page formatter now peel a prepended connector and keep the sentence's own word. A lone ellipsis line is not drawn. The question box stays at its normal height even if an old `q-away` class is still on the card.
+
+Length follows the measured mocks. "Have you done X?" is a yes plus a process, aim 85, not the 20–40 yes/no band. "How have you used X?" aims at 85. "How do you X?" aims at 91. A two-part definition or comparison is not clipped at the 70-word engineer ceiling. The engineer voice no longer says "then stop." The dissection prompt no longer says "Aim for about N words." The Long control multiplies the spoken ceiling by 1.5, capped at 300. A true clarifier such as "Do you use Splunk?" stays at 40.
+
+**Checked locally. Not merged in this entry. Not a phone click-through of the new build.** Live-card, Parakeet, answer order, question length, explain length, relevance folds, question focus, and the 27 Oct live-fixes file: 71 pass, 0 fail. `node --check public/kompas/app.js` passed. The desktop shell still loads the live page, so this is visible there only after the production deploy. No new exe.
+
 ## 2026-11-13 — Skip login button on /login (visible when the server flag is on)
 
 The sign-in card shows **Skip login** under Continue with Google only after `/api/kompas/capabilities` reports `authDisabled: true`. The click goes to `/dashboard` on the existing synthetic-owner path (`AUTH_DISABLED_USER_EMAIL`, Houston `eshwarjay05`). It does not call Google. `/` and `/login` still redirect to `/dashboard` on the server when `AUTH_DISABLED` is exactly true; the button is the fallback if a cached login page is what the browser shows. Admin APIs stay 401 for that synthetic owner. No environment variable was changed.

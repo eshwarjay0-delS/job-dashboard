@@ -1092,9 +1092,55 @@ function sayAnswer(text) {
   const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(String(text || ""));
   return bulleted && window.KompasCorrect.speak ? window.KompasCorrect.speak(cleaned) : cleaned;
 }
+function peelBullet(sentence) {
+  let s = String(sentence || "").trim();
+  let connector = "";
+  let prev = "";
+  const mark = /^(?:[-•*]|\d+[.)])\s+/;
+  const lead = /^(first|then|finally|the result)\b[:,]?\s+/i;
+  while (s && s !== prev) {
+    prev = s;
+    s = s.replace(mark, "").trim();
+    const hit = s.match(lead);
+    if (!hit) break;
+    connector = hit[1].toLowerCase();
+    s = s.slice(hit[0].length).trim();
+  }
+  return { connector, body: s.replace(mark, "").trim() };
+}
+function connectorLabel(name) {
+  return name === "first" ? "First," : name === "then" ? "Then," : name === "finally" ? "Finally," : name === "the result" ? "The result:" : "";
+}
+function signBullet(title, sentence, first) {
+  const peeled = peelBullet(sentence);
+  if (!peeled.body) return "";
+  const clean = peeled.body.replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
+  if (peeled.connector) return connectorLabel(peeled.connector) + " " + clean;
+  if (!first) return peeled.body;
+  if (title === "Context") return "First, " + clean;
+  if (title === "Action") return "Then, " + clean;
+  if (title === "Result") return "The result: " + clean;
+  return peeled.body;
+}
+function repairSectioned(raw) {
+  let section = "Claim";
+  let index = 0;
+  const out = [];
+  for (const line of String(raw || "").split("\n")) {
+    const t = line.trim();
+    if (!t || /^(?:…|\.{3})$/.test(t)) continue;
+    const head = t.match(/^\*\*(Claim|Context|Action|Result|Close|What I did)\*\*$/);
+    if (head) { section = head[1] === "What I did" ? "Action" : head[1]; index = 0; out.push("**" + head[1] + "**"); continue; }
+    const bullet = t.match(/^(?:[-•*]|\d+[.)])\s+(.+)$/);
+    if (bullet) { const spoken = signBullet(section, bullet[1], index === 0); index += 1; if (spoken) out.push("- " + spoken); continue; }
+    out.push(t);
+  }
+  return out.join("\n");
+}
 function presentAnswer(question, answer, source) {
   const raw = String(answer || "").trim();
-  if (!raw || /\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return raw;
+  if (!raw) return raw;
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw);
   const allowed = String(source || "") + "\n" + String(question || "");
   const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3);
   const words = sentences.join(" ").split(/\s+/).filter(Boolean).length;
@@ -1116,9 +1162,7 @@ function presentAnswer(question, answer, source) {
     const tight = group.length <= 4 ? group : group.slice(0, 3).concat(group.slice(3).join(" "));
     blocks.push("**" + title + "**");
     tight.forEach((sentence, index) => {
-      const bare = String(sentence || "").replace(/^(?:[-•*]|\d+[.)])\s+/, "").replace(/^(?:first|then|the result)\b[:,]?\s+(?:[-•]\s+)?/i, "").trim();
-      const clean = bare.replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
-      const line = index !== 0 ? bare : title === "Context" ? "First, " + clean : title === "Action" ? "Then, " + clean : title === "Result" ? "The result: " + clean : bare;
+      const line = signBullet(title, sentence, index === 0);
       if (line) blocks.push("- " + line);
     });
   }
@@ -1157,7 +1201,7 @@ function proseLines(text) {
     .map(l => {
     if (/^#{1,6}\s+\S/.test(l)) return null;
     if (/^\*\*[^*][^*]{0,40}\*\*$/.test(l)) return { t: l, kind: "head" };
-    if (/^(?:…|\.{3})$/.test(l)) return { t: "…", kind: "pauseline" };
+    if (/^(?:…|\.{3})$/.test(l)) return null;
     const b = l.match(/^(?:(?:[-•]|\*(?!\*)|\d+[.)])\s+)+(.*)$/);      // "- - text" too
     if (b) return { t: b[1], kind: "bullet" };
     if (new RegExp("^" + PAUSE_MARK + "\\.?$", "i").test(l)) return { t: l, kind: "pauseline" };

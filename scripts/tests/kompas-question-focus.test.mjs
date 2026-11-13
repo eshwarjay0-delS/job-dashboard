@@ -32,17 +32,17 @@ test("stall retries: first two stalls retry, the third says so plainly", () => {
   assert.equal(ctx.nextStallTry(undefined), 1);
 });
 
-test("question box is 2 lines tall, not the old 5-line box", () => {
+test("question box stays tall enough to read, not the old 5-line box", () => {
   const q = css.match(/\.q\{[^}]*\}/)[0];
-  assert.ok(q.includes("max-height:3.1em"), "2 lines at 1.55 line-height");
+  assert.ok(q.includes("max-height:4.65em"), "the question box keeps its height");
   assert.ok(!q.includes("max-height:7.75em"), "old 5-line height is gone");
 });
 
-test("hidden question collapses away (box gone), it does not just fade", () => {
+test("the question box stays rendered even when an old q-away class is present", () => {
   const rule = css.match(/\.card\.q-away \.q\{[^}]*\}/)[0];
-  assert.ok(rule.includes("max-height:0"), "box height collapses to zero");
-  assert.ok(rule.includes("margin-bottom:0"), "its gap collapses too");
-  assert.ok(rule.includes("overflow:hidden"), "nothing peeks out while collapsed");
+  assert.ok(rule.includes("opacity:1"), "the box stays visible");
+  assert.ok(rule.includes("max-height:4.65em"), "the box keeps its height");
+  assert.equal(rule.includes("max-height:0"), false);
 });
 
 test("collapse and reveal animate slowly and smoothly, not in a snap", () => {
@@ -51,19 +51,11 @@ test("collapse and reveal animate slowly and smoothly, not in a snap", () => {
   assert.ok(q.includes("margin-bottom .5s cubic-bezier(.22,1,.36,1)"), "gap animates on the same curve");
 });
 
-test("scrolling to the top alone never reveals the question; only an overscroll does", () => {
+test("scrolling never hides the question box", () => {
   const sync = src.match(/function syncQuestion\(\) \{[^}]*\}/)[0];
-  assert.ok(sync.includes('classList.add("q-away")'), "scrolling down hides");
-  assert.ok(!sync.includes("toggle"), "no toggle that would reveal on reaching the top");
-  assert.ok(!sync.includes('remove("q-away")'), "reaching the top alone never reveals");
-  assert.ok(src.includes('e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away")'), "wheel up at the very top reveals");
-  assert.ok(src.includes('touchReveal(touchStartTop, answerPane.scrollTop, y - touchStartY)) card.classList.remove("q-away")'), "touch reveal is two-phase: only a drag that starts at the top reveals (27 Oct)");
-});
-
-test("a generated answer collapses the question away on both answer paths", () => {
-  const hits = src.match(/classList\.add\("q-away"\)/g) || [];
-  assert.ok(hits.length >= 5, `hide sites: scroll, wheel, touch, generated, book (got ${hits.length})`);
-  assert.ok(!src.includes('first words in'), "no latency readout on the live screen (owner, 27 Oct: only show what he needs)");
+  assert.equal(sync.includes('classList.add("q-away")'), false);
+  assert.ok(sync.includes('remove("q-away")'));
+  assert.equal((src.match(/classList\.add\("q-away"\)/g) || []).length, 0);
 });
 
 test("heard-only re-presses go through the derive cut, never pinned", () => {

@@ -2,6 +2,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
+import vm from "node:vm"
 import { presentSpokenAnswer } from "../../src/lib/kompasAnswerPresentation.ts"
 import { repairDictation } from "../../src/lib/kompasDictation.ts"
 import { instantSpokenLine, stageGaps } from "../../src/lib/kompasLatency.ts"
@@ -24,6 +25,43 @@ test("a connector is used once per section and never in front of a dash", () => 
   assert.match(card, /\*\*Claim\*\*/)
 })
 
+const TELECOM = "My basic strategy is to turn business and operational needs into a telecom design that guarantees reliability, security, and scalability. - First I map those needs to coverage and capacity models, selecting appropriate wireless mesh or backup links where appropriate. - Then I build the architecture using routing policies, controls, and encryption to meet the defined targets. - Finally I validate the design in lab and pilot trials and confirm performance through continuous monitoring."
+const TELECOM_Q = "How would you design a telecom network for business and operational needs?"
+const STUTTERED = [
+  "**Claim**",
+  "- My basic strategy is to turn business and operational needs into a telecom design that guarantees reliability, security, and scalability.",
+  "…",
+  "**Context**",
+  "- First, - First I map those needs to coverage and capacity models, selecting appropriate wireless mesh or backup links where appropriate.",
+  "- First, - Then I build the architecture using routing policies, controls, and encryption to meet the defined targets.",
+  "- First, - Finally I validate the design in lab and pilot trials and confirm performance through continuous monitoring.",
+].join("\n")
+
+function assertTelecom(card) {
+  const bullets = card.split("\n").filter((line) => line.startsWith("- ")).map((line) => line.slice(2))
+  for (const bullet of bullets) {
+    assert.doesNotMatch(bullet, /^(?:First|Then|Finally|The result)\b[:,]?\s+-/)
+    assert.doesNotMatch(bullet, /^(?:First|Then|Finally),\s+(?:First|Then|Finally)\b/)
+  }
+  assert.equal(bullets.some((b) => b.startsWith("First, I map those needs")), true)
+  assert.equal(bullets.some((b) => b.startsWith("Then, I build the architecture")), true)
+  assert.equal(bullets.some((b) => b.startsWith("Finally, I validate the design")), true)
+  assert.doesNotMatch(card, /^…$/m)
+  assert.match(card, /\*\*Claim\*\*/)
+  assert.match(card, /\*\*Context\*\*/)
+}
+
+test("the 11:04 telecom card does not stutter a connector onto First, Then, or Finally", () => {
+  assertTelecom(presentSpokenAnswer(TELECOM_Q, TELECOM))
+  assertTelecom(presentSpokenAnswer(TELECOM_Q, STUTTERED))
+  const start = app.indexOf("function peelBullet(")
+  const end = app.indexOf("\nfunction answerLines(")
+  const ctx = {}
+  vm.runInContext(app.slice(start, end) + "\nthis.presentAnswer = presentAnswer;", vm.createContext(ctx))
+  assertTelecom(ctx.presentAnswer(TELECOM_Q, TELECOM, ""))
+  assertTelecom(ctx.presentAnswer(TELECOM_Q, STUTTERED, ""))
+})
+
 test("common speech mishearings become the domain term before the question is shown", () => {
   assert.equal(repairDictation("how do you use the cm?"), "how do you use the SIEM?")
   assert.equal(repairDictation("see em alerts"), "SIEM alerts")
@@ -37,6 +75,9 @@ test("the question box stays on a finished card and a one-word caption is not sh
   assert.match(app, /function framedQuestion/)
   assert.match(app, /classList\.remove\("q-away"\)/)
   assert.doesNotMatch(app, /classList\.add\("q-away"\)/)
+  const css = readFileSync(new URL("../../public/kompas/styles.css", import.meta.url), "utf8")
+  assert.match(css, /\.card\.q-away \.q\{[^}]*opacity:1/)
+  assert.doesNotMatch(css, /\.card\.q-away \.q\{[^}]*max-height:0/)
   assert.match(app, /function strayCaption/)
   assert.match(app, /instantSpokenLine/)
 })
