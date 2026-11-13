@@ -123,7 +123,7 @@ export const QUESTION_LENGTH: Record<LengthKind, Record<AnswerLevel, { aim: numb
   "yes-no": { engineer: { aim: 20, ceiling: 40 }, director: { aim: 18, ceiling: 36 }, architect: { aim: 22, ceiling: 40 } },
   done: { engineer: { aim: 85, ceiling: 120 }, director: { aim: 70, ceiling: 110 }, architect: { aim: 95, ceiling: 140 } },
   used: { engineer: { aim: 85, ceiling: 120 }, director: { aim: 70, ceiling: 110 }, architect: { aim: 95, ceiling: 140 } },
-  howto: { engineer: { aim: 91, ceiling: 140 }, director: { aim: 75, ceiling: 120 }, architect: { aim: 110, ceiling: 160 } },
+  howto: { engineer: { aim: 91, ceiling: 140 }, director: { aim: 60, ceiling: 100 }, architect: { aim: 140, ceiling: 220 } },
   definition: { engineer: { aim: 40, ceiling: 70 }, director: { aim: 30, ceiling: 50 }, architect: { aim: 55, ceiling: 90 } },
   compare: { engineer: { aim: 80, ceiling: 130 }, director: { aim: 60, ceiling: 90 }, architect: { aim: 110, ceiling: 160 } },
   "follow-up": { engineer: { aim: 80, ceiling: 140 }, director: { aim: 50, ceiling: 90 }, architect: { aim: 90, ceiling: 160 } },
@@ -188,7 +188,8 @@ export function afterInterruption(question: string): string {
 const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 
 export function lengthKind(question: string, shape: AnswerShape): LengthKind {
-  const q = String(question || "")
+  const tied = splitFollowUp(question)
+  const q = tied.previous ? tied.own : String(question || "")
   const design = shape === "design" || DESIGN_ASK.test(q)
   if (/\bhave you done\b/i.test(q)) return "done"
   if (/\bhow have you used\b/i.test(q)) return "used"
