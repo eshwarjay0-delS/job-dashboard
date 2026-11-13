@@ -218,8 +218,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     }
   }
 
-  // Closing the expanded panel from inside it (Escape or outside click) returns keyboard focus to the menu button. Left alone,
-  // the link that had it is hidden with the drawer and the keyboard is dropped at the top of the document.
+  // When a focused nav link is hidden, return focus to the hamburger. If focus is already outside the panel, leave it there.
   const closeMenu = useCallback(() => {
     const el = document.activeElement as HTMLElement | null
     const inside = !!el && !!drawerRef.current?.contains(el)
@@ -366,7 +365,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
-    <aside id="marketfit-navigation" aria-label="MarketFit navigation" ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+    <aside id="marketfit-navigation" aria-label="MarketFit navigation" ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) closeMenu() }} style={{
       background: "var(--surface)",
       display: "flex",
       flexDirection: "column",
