@@ -8,8 +8,10 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
     "- Treat the uploaded resume as candidate-provided evidence, not proof that every statement is current or accurate.",
     "- If explicit candidate input conflicts with resume education, employment dates, employer, tenure or credential status, do not merge, average or silently choose; mark the fact unresolved and request correction before using it.",
     "- A credential described as pursuing, in progress, planned or studying for is not earned.",
-    "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence.",
-    `ORIGINAL SUBMITTED TEXT (distinguish job requirements from candidate statements):\n${jd}`,
+    "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence; only explicit first-person candidate confirmations can support a skill.",
+    "- An explicitly confirmed skill may be mapped naturally into relevant existing project bullets across the selected resume's roles, including earlier roles, even when the original bullet does not name the tool. The confirmation supports the skill, not a new employer, project, title, date, location, contact, metric, credential or unsupported project detail.",
+    "- Apply confirmations only to this request's selected account, resume and JD; never borrow another account's resume or profile.",
+    `JOB DESCRIPTION (target requirements, not candidate evidence):\n${jd}`,
   ].join("\n\n")
 }
 
@@ -26,8 +28,10 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
   ].some(pattern => pattern.test(text))
 }
 
-/** Only explicit candidate assertions can expand deterministic evidence. Naming a
- * tool in an editing instruction, a question or a negation is not confirmation. */
+/** Only explicit candidate assertions can expand skill evidence. A confirmed skill may be
+ * mapped into a relevant existing project bullet across roles, but this parser never supplies
+ * an employer, project, date, title, location, contact or metric. Naming a tool in an editing
+ * instruction, a question or a negation is not confirmation. */
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
@@ -35,5 +39,109 @@ export function confirmedCandidateStatements(statements: readonly string[]): str
     if (/^i\s+(?:have|possess)\s+(?:no|not|never)\b/i.test(line)) return []
     const positive = line.split(/\b(?:except|excluding|but|however|not|never|without)\b/i)[0].trim()
     return positive ? [positive] : []
+  })
+}
+
+/** Return only JD terms supported by this specific role's original bullets and
+ * still missing from its current bullets. A globally missing term from another
+ * role must never be copied into this role's experience. */
+export function missingRoleEvidenceTerms(
+  sourceTerms: ReadonlySet<string>,
+  currentTerms: ReadonlySet<string>,
+  requiredTerms: readonly string[],
+): string[] {
+  const candidates = [...new Set([...requiredTerms, ...sourceTerms])]
+  return candidates.filter(term => sourceTerms.has(term) && !currentTerms.has(term))
+}
+
+
+const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
+  // Privileged endpoint administration is not inferred from generic audit/compliance work.
+  { skill: /\bcyberark\b/i, context: /\b(?:privilege|local admin|administrator|elevation|pam|vault|credential management|least privilege)\b/i },
+  // Detection and SIEM tools need operational logging, alerting, or response context.
+  { skill: /\b(?:splunk|siem|sentinel)\b/i, context: /\b(?:soc|security operations|log(?:ging)?|alert(?:ing)?|detection|incident|threat|monitoring|event correlation)\b/i },
+  { skill: /\b(?:defender|crowdstrike|edr|xdr)\b/i, context: /\b(?:endpoint|host|device|malware|threat protection|detection|response|security agent)\b/i },
+  // Vulnerability platforms are relevant to scanning, exposure, patching, or remediation work.
+  { skill: /\b(?:qualys|nessus|rapid7)\b/i, context: /\b(?:vulnerability|scan|assessment|patch|remediation|exposure|cve)\b/i },
+  { skill: /\bburp(?:\s+suite)?\b/i, context: /\b(?:application|web|api|penetration|owasp|xss|sql injection|sast|dast)\b/i },
+  { skill: /\b(?:zscaler|palo alto)\b/i, context: /\b(?:network|firewall|proxy|vpn|gateway|segmentation|traffic|tls)\b/i },
+  { skill: /\bdlp\b/i, context: /\b(?:data loss|exfiltration|sensitive data|endpoint|policy|classification)\b/i },
+  { skill: /\b(?:okta|sailpoint|forgerock|pingfederate|ping identity|active directory|entra id|iam|pam|sso|mfa)\b/i, context: /\b(?:identity|access|authentication|authorization|directory|provisioning|privilege|user|sso|mfa|account review)\b/i },
+  { skill: /\b(?:aws|amazon web services|azure|gcp|google cloud)\b/i, context: /\b(?:cloud|infrastructure|serverless|vpc|ec2|s3|rds|lambda|cloudwatch|cloud security|cloudformation|terraform|container|kubernetes)\b/i },
+  { skill: /\b(?:kubernetes|docker)\b/i, context: /\b(?:container|orchestration|cluster|pod|image|registry|kubernetes|docker)\b/i },
+  { skill: /\b(?:terraform|cloudformation|ansible)\b/i, context: /\b(?:infrastructure|provisioning|configuration management|deployment|iac|terraform|cloudformation|ansible)\b/i },
+  { skill: /\b(?:canton|solana|solidity|hyperledger|dlt|blockchain|distributed ledger)\b/i, context: /\b(?:blockchain|distributed ledger|ledger|transaction|settlement|token|smart contract|custody|digital asset|chain|payments)\b/i },
+  { skill: /\b(?:snowflake|sql|tableau|power bi|spark|kafka|databricks|redshift|bigquery|pandas)\b/i, context: /\b(?:data|database|analytics|report|dashboard|metrics|etl|warehouse|query|stream|event|pipeline|business intelligence)\b/i },
+  { skill: /\b(?:salesforce|pardot|servicenow|service cloud|sales cloud|dynamics 365)\b/i, context: /\b(?:crm|sales|customer|service|marketing|case|workflow|account|lead|opportunity|ticket|support|campaign|incident|change request|problem management)\b/i },
+  { skill: /\b(?:python|java|javascript|typescript|golang|rust|c\+\+|c#|ruby|bash|powershell)\b/i, context: /\b(?:software|application|script|automation|development|integration|api|pipeline|test|code|service|data|etl|database|tooling)\b/i },
+  { skill: /\b(?:nist|iso\s*27001|sox|pci\s*dss|soc\s*2|cobit|fedramp|hipaa)\b/i, context: /\b(?:audit|compliance|control|risk|governance|policy|assessment|regulatory|evidence|remediation|assurance)\b/i },
+]
+
+/** A confirmed skill crosses roles only when the original project bullet fits a
+ * known skill family. Unknown terms need direct source support. Multiple families
+ * are checked so a skill with legitimate overlapping domains is not misclassified. */
+function confirmedSkillFitsBullet(
+  term: string,
+  sourceBullet: string,
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+): boolean {
+  if (cover(sourceBullet, [term]).has(term)) return true
+  return CONFIRMED_SKILL_CONTEXTS.some(group => group.skill.test(term) && group.context.test(sourceBullet))
+}
+
+/** Restore an edited experience bullet when it introduces a JD term unsupported by
+ * that role's original bullets and not explicitly confirmed by the candidate. Explicit
+ * confirmations are the owner-approved cross-role exception; the existing bullet/project
+ * frame must still be preserved. */
+export function restoreUnsupportedRoleEdits<T extends { idx: number; text: string }>(
+  edits: readonly T[],
+  roles: readonly { bullets: readonly { idx: number; text: string }[] }[],
+  terms: string[],
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+  confirmedTerms: ReadonlySet<string> = new Set(),
+): { edits: T[]; reverted: number; blockedTerms: string[] } {
+  const sourceByIdx = new Map<number, string>()
+  const allowedByIdx = new Map<number, ReadonlySet<string>>()
+  for (const role of roles) {
+    for (const bullet of role.bullets) {
+      const allowed = new Set([
+        ...cover(bullet.text, terms),
+        ...[...confirmedTerms].filter(term => confirmedSkillFitsBullet(term, bullet.text, cover)),
+      ])
+      sourceByIdx.set(bullet.idx, bullet.text)
+      allowedByIdx.set(bullet.idx, allowed)
+    }
+  }
+  let reverted = 0
+  const blocked = new Set<string>()
+  const guarded = edits.map(edit => {
+    const source = sourceByIdx.get(edit.idx)
+    const allowed = allowedByIdx.get(edit.idx)
+    if (source === undefined || !allowed) return { ...edit }
+    const unsupported = [...cover(edit.text, terms)].filter(term => !allowed.has(term))
+    if (!unsupported.length) return { ...edit }
+    reverted++
+    unsupported.forEach(term => blocked.add(term))
+    return { ...edit, text: source }
+  })
+  return { edits: guarded, reverted, blockedTerms: [...blocked] }
+}
+
+
+/** Return only the missing JD terms supported by each role's own original bullets. */
+export function roleScopedMissingTerms(
+  roles: readonly { bullets: readonly { idx: number; text: string }[] }[],
+  current: readonly { idx: number; text: string }[],
+  requiredTerms: string[],
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+): { roleIndex: number; terms: string[] }[] {
+  const currentByIdx = new Map(current.map(b => [b.idx, b.text]))
+  return roles.flatMap((role, roleIndex) => {
+    const sourceText = role.bullets.map(b => b.text).join("\n")
+    const currentText = role.bullets.map(b => currentByIdx.get(b.idx) || b.text).join("\n")
+    const sourceTerms = cover(sourceText, requiredTerms)
+    const currentTerms = cover(currentText, requiredTerms)
+    const terms = missingRoleEvidenceTerms(sourceTerms, currentTerms, requiredTerms)
+    return terms.length ? [{ roleIndex, terms }] : []
   })
 }
