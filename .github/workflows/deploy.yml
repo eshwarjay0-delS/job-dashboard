@@ -15,6 +15,11 @@ concurrency:
 
 jobs:
   verify-production:
+    # Hobby builds production only when the master commit message contains
+    # [ship]. A push without that marker has no deployment to verify, and a
+    # failed check emails the owner. Skip (neutral) those commits. A manual
+    # run still verifies the current tip.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ship]')
     name: Verify exact-commit Vercel deployment status
     runs-on: ubuntu-latest
     timeout-minutes: 15

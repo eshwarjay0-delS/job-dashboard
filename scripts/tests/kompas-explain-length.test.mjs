@@ -6,7 +6,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { dissectQuestion, dissectionPrompt, relativeGap } from "../../src/lib/kompasDissection.ts"
+import { dissectQuestion, dissectionPrompt } from "../../src/lib/kompasDissection.ts"
 import { interviewIntent, focusPlan } from "../../src/lib/kompasRelevance.ts"
 
 const EXPLAIN = [
@@ -45,11 +45,12 @@ for (const q of EXPLAIN) {
   })
 }
 
-test("the three modes still differ by at least 50% on an explain-your-experience ask", () => {
+test("an explain-your-experience ask uses the STAR band, and the director is not padded past the engineer", () => {
   const m = dissectQuestion(EXPLAIN[0]).modes
-  assert.ok(relativeGap(m.engineer.targetWords, m.director.targetWords) >= 0.5)
-  assert.ok(relativeGap(m.director.targetWords, m.architect.targetWords) >= 0.5)
-  assert.ok(relativeGap(m.engineer.targetWords, m.architect.targetWords) >= 0.5)
+  assert.equal(m.engineer.maxWords, 280)
+  assert.equal(m.director.maxWords, 200)
+  assert.equal(m.architect.maxWords, 300)
+  assert.ok(m.director.aimWords < m.engineer.aimWords)
 })
 
 test("the first sentence still opens on the interviewer's keywords (narrowed, not generic)", () => {
@@ -64,7 +65,7 @@ for (const [q, intent] of SHORT) {
   test(`short, yes/no or brief ask stays short: ${q}`, () => {
     const cut = dissectQuestion(q)
     assert.notEqual(cut.intent, "experience-story", `was ${intent} before the fix`)
-    assert.ok(cut.modes.engineer.targetWords <= 44, `engineer ${cut.modes.engineer.targetWords}`)
+    assert.ok(cut.modes.engineer.targetWords <= 70, `engineer ${cut.modes.engineer.targetWords}`)
   })
 }
 

@@ -23,12 +23,13 @@ test("missing metrics never become invented qualitative achievements", () => {
   assert.equal(unbracket('Pause [beat] here.'), 'Pause [beat] here.')
 })
 
-test("spoken answers preserve prose and bullets while omitting template headings and code", () => {
+test("spoken answers preserve prose and bullets, omit template headings, and keep code visible", () => {
   const { answerLines } = renderer()
   const lines = answerLines('## Template heading\nA clear passage.\n- A **bold** point and *stress*.\n```js\nsecretCode()\n```')
   assert.deepEqual(JSON.parse(JSON.stringify(lines)), [
     { t: 'A clear passage.', kind: 'passage' },
     { t: 'A **bold** point and *stress*.', kind: 'bullet' },
+    { t: 'secretCode()', kind: 'code', lang: 'js' },
   ])
 })
 

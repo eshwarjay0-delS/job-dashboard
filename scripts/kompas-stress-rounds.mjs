@@ -527,7 +527,7 @@ const STUFFING = /\b(?:SOAR|XDR|CSPM|CNAPP|SBOM|SASE|microsegmentation|DevSecOps
 const BAD_LEAD = /^(?:if|when|would|will|should|could|can|do|did|is|are|what|how|why)\b|\b(?:no|the|a|an|but|and|of|to|there's)$/i
 function limitIssues(q, level, text) {
   const cut = dissectQuestion(q, RESUME)
-  const max = modeBand(cut.shape, level, partsScale(q)).maxWords
+  const max = modeBand(cut.shape, level, partsScale(q), q).maxWords
   return wordCount(text) > max ? [`${level}: ${wordCount(text)} words over the ${max}-word limit`] : []
 }
 

@@ -233,7 +233,7 @@
   {
     "id": 34,
     "domain": "software",
-    "intent": "technical-process",
+    "intent": "design",
     "question": "Design a retry mechanism for an asynchronous API.",
     "input": "Design a retry mechanism for an asynchronous API."
   },

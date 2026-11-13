@@ -3,7 +3,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { draftSpokenAnswer, relativeGap, sameAnswerRatio, settleSpokenAnswer, wordCount } from "../../src/lib/kompasDissection.ts"
+import { dissectQuestion, draftSpokenAnswer, relativeGap, sameAnswerRatio, settleSpokenAnswer, wordCount } from "../../src/lib/kompasDissection.ts"
 import { ungroundedLogisticsSentences } from "../../src/lib/kompasLogisticsPhrases.ts"
 import { logisticsBackstop } from "../../src/lib/kompasLogistics.ts"
 import { withoutLogistics } from "../../src/lib/kompasRelevance.ts"
@@ -53,8 +53,7 @@ test("ten desktop folds: logistics questions stay quiet, the other eight stay ap
       if (item.id === "pasted-code") assert.ok(settled.text.startsWith("```"), level)
       rows.push({ id: item.id, question: asked, level, text: settled.text, words: wordCount(spoken) })
     }
-    assert.ok(policy.director >= policy.engineer * 1.5 - 1, item.id)
-    assert.ok(policy.architect >= policy.director * 1.5 - 1, item.id)
+    assert.ok(policy.engineer <= 300 && policy.director <= 300 && policy.architect <= 300, item.id)
   }
   for (const level of LEVELS) {
     const mine = rows.filter((row) => row.level === level)
@@ -66,10 +65,9 @@ test("ten desktop folds: logistics questions stay quiet, the other eight stay ap
     }
   }
   for (const question of new Set(rows.map((row) => row.question))) {
-    const group = Object.fromEntries(rows.filter((row) => row.question === question).map((row) => [row.level, row.words]))
-    for (const [a, b] of [["engineer", "director"], ["director", "architect"]]) {
-      assert.ok(relativeGap(group[a], group[b]) >= 0.5, `${question.slice(0, 48)} ${a}=${group[a]} ${b}=${group[b]}`)
-    }
+    const cut = dissectQuestion(question)
+    const group = Object.fromEntries(rows.filter((row) => row.question === question).map((row) => [row.level, row]))
+    for (const level of LEVELS) assert.ok(group[level].words <= cut.modes[level].maxWords, `${question.slice(0, 48)} ${level} ${group[level].words}`)
   }
   const story = rows.find((row) => row.id === "spoken-story" && row.level === "engineer")
   assert.match(story.text, /\bI\b/)

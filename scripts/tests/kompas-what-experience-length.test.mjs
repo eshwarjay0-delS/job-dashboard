@@ -37,7 +37,7 @@ for (const q of SHORT) {
   test(`brief or yes/no ask stays short: ${q}`, () => {
     const cut = dissectQuestion(q)
     assert.notEqual(cut.intent, "experience-story")
-    assert.ok(cut.modes.engineer.targetWords <= 44, `engineer ${cut.modes.engineer.targetWords}`)
+    assert.ok(cut.modes.engineer.targetWords <= 70, `engineer ${cut.modes.engineer.targetWords}`)
   })
 }
 test("a comparison and an employer ask keep their route", () => {

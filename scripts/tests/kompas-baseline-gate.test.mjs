@@ -101,15 +101,15 @@ for (const [q, want] of MIXED) test(`mixed ask keeps only the technical half: ${
 // Values are the dissected band that sets spoken length in kompasAnswerService ("plan.words = ... band.targetWords").
 const band = (q) => { const c = dissectQuestion(q); return [c.intent, c.modes.engineer.targetWords, c.modes.director.targetWords, c.modes.architect.targetWords, focusPlan(q, 2, "engineer").maxWords] }
 const CAPS = [
-  ["What is MFA?", ["definition", 40, 60, 90, 75]],
-  ["What is your biggest strength?", ["direct", 44, 66, 99, 115]],
-  ["Do you use Splunk?", ["direct", 44, 66, 99, 115]],
-  ["Do you have experience with CyberArk?", ["direct", 44, 66, 99, 115]],
-  ["Briefly describe your experience with threat modeling.", ["direct", 44, 66, 99, 115]],
-  ["What is the difference between IDS and IPS?", ["comparison", 46, 70, 105, 100]],
-  ["Explain how SAML works", ["technical-process", 96, 144, 216, 215]],
-  ["Describe a project where you reduced alert noise.", ["experience-story", 110, 165, 248, 170]],
-  ["Tell me about yourself.", ["introduction", 90, 135, 204, 175]],
+  ["What is MFA?", ["definition", 70, 50, 90, 75]],
+  ["What is your biggest strength?", ["direct", 70, 50, 90, 115]],
+  ["Do you use Splunk?", ["direct", 40, 36, 40, 115]],
+  ["Do you have experience with CyberArk?", ["direct", 40, 36, 40, 115]],
+  ["Briefly describe your experience with threat modeling.", ["direct", 40, 36, 40, 115]],
+  ["What is the difference between IDS and IPS?", ["comparison", 130, 90, 160, 100]],
+  ["Explain how SAML works", ["technical-process", 180, 100, 220, 215]],
+  ["Describe a project where you reduced alert noise.", ["experience-story", 280, 200, 300, 170]],
+  ["Tell me about yourself.", ["introduction", 200, 170, 230, 175]],
 ]
 for (const [q, want] of CAPS) test(`length band locked: ${q}`, () => assert.deepEqual(band(q), want))
 test("explicit one-sentence ask stays short", () => {
@@ -121,10 +121,10 @@ test("explicit one-sentence ask stays short", () => {
 
 // Explain-your-experience asks get the full experience band (explain-length fix 40eec8d, 30 Oct 2026, 9:00 AM CT).
 const EXPLAIN = [
-  ["Can you explain your experience with threat modeling?", ["experience-story", 110, 165, 248, 170]],
-  ["Explain your experience with SIEM tuning", ["experience-story", 110, 165, 248, 170]],
-  ["Walk me through your experience with cloud security", ["experience-story", 110, 165, 248, 210]],
-  ["Tell me about your experience with incident response", ["experience-story", 110, 165, 248, 170]],
+  ["Can you explain your experience with threat modeling?", ["experience-story", 280, 200, 300, 170]],
+  ["Explain your experience with SIEM tuning", ["experience-story", 280, 200, 300, 170]],
+  ["Walk me through your experience with cloud security", ["experience-story", 280, 200, 300, 210]],
+  ["Tell me about your experience with incident response", ["experience-story", 280, 200, 300, 170]],
 ]
 for (const [q, want] of EXPLAIN) {
   test(`explain-your-experience gets the full band: ${q}`, () => assert.deepEqual(band(q), want))

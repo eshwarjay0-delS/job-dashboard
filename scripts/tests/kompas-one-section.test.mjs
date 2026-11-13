@@ -30,7 +30,7 @@ function page({ themVoiced = false, streaming = false, collapsed = false } = {})
   ctx.logDecision = () => {}
   ctx.appendDrawer = (who, text) => ctx.drawer.push(who + ': ' + text)
   vm.createContext(ctx)
-  vm.runInContext(['let themLines = [];', 'let lastSourceMode = "";', app.slice(app.indexOf('function roleOfSource('), app.indexOf('const TURN_CLOSING')), stop, fnSrc('applySttCorrections'), fnSrc('intakeWords'), fnSrc('echoShare'), fnSrc('noteThem'), fnSrc('themSpeaking'), fnSrc('echoOfThem'), fnSrc('showCaption'), fnSrc('questionSource'), fnSrc('onTranscript')].join('\n'), ctx)
+  vm.runInContext(['let themLines = [];', 'let lastSourceMode = "";', app.slice(app.indexOf('function roleOfSource('), app.indexOf('const TURN_CLOSING')), stop, app.slice(app.indexOf('function utteranceTag('), app.indexOf('function appendDrawer(')), fnSrc('applySttCorrections'), fnSrc('intakeWords'), fnSrc('echoShare'), fnSrc('noteThem'), fnSrc('themSpeaking'), fnSrc('echoOfThem'), fnSrc('showCaption'), fnSrc('questionSource'), fnSrc('onTranscript')].join('\n'), ctx)
   return { ctx, dom, timers, doc: dom.window.document }
 }
 

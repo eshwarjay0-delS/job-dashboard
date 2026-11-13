@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — Kompas answer release
+
+Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were not in this environment, so they are not included. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. Production alias check is the next step. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
+
 ## 13 November 2026 — Actions artifact storage
 
 Owner Eshwar approved deleting old Actions artifacts except the newest `Kompas-Windows-Caption-Once` build. No website screen changed. Cleanup run 43339668406 deleted 150 artifacts (24.300 GB) and 3 caches (417,444,083 bytes). One caption artifact remains (id 13996119819, 162,041,140 bytes, created 2026-11-13T00:22:25Z). `kompas-desktop-latest` `Kompas.exe` was not modified. `parfAct` returned HTTP 404 to the Actions token, so its 14-day desktop artifacts were not deleted. No production deploy.

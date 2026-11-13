@@ -1,7 +1,7 @@
 /**
  * Question dissection for Kompas.
- * The interviewer’s words choose the shape, the keywords, and the terms that
- * must not appear. The selected mode chooses length, depth, and confidence.
+ * The interviewer’s words choose the shape, the keywords, the terms that
+ * must not appear, and the length. The selected mode chooses stance, depth, and confidence.
  * This module does not call a model.
  */
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
@@ -16,6 +16,7 @@ export type AnswerShape =
   | "personal-experience"
   | "comparison"
   | "scenario"
+  | "design"
   | "technical-deep-dive"
   | "logistics"
   | "follow-up"
@@ -29,7 +30,7 @@ export type ModeBand = {
   minWords: number
   targetWords: number
   maxWords: number
-  /** What the prompt asks for. Below the ceiling by a per-mode share, so real answers land 50% apart, not only their ceilings. */
+  /** What the prompt aims for. The question type sets this. The mode does not pad up to it. */
   aimWords: number
   depth: number
   confidence: number
@@ -108,49 +109,131 @@ const VOICE: Record<AnswerLevel, string> = {
   architect: "Precise. Say how it works, where it breaks, and what contains it. Use only the technical terms the question or my resume already uses.",
 }
 
-/** Targets are the ceilings. Verbose answers trim to these, so the three modes land at least 50% apart. */
-const TARGETS: Record<AnswerShape, Record<AnswerLevel, number>> = {
-  logistics: { engineer: 16, director: 24, architect: 36 },
-  acknowledgement: { engineer: 18, director: 28, architect: 42 },
-  closing: { engineer: 24, director: 36, architect: 54 },
-  "follow-up": { engineer: 32, director: 48, architect: 72 },
-  definition: { engineer: 40, director: 60, architect: 90 },
-  direct: { engineer: 44, director: 66, architect: 99 },
-  comparison: { engineer: 46, director: 70, architect: 105 },
-  value: { engineer: 52, director: 78, architect: 117 },
-  scenario: { engineer: 64, director: 96, architect: 144 },
-  "technical-deep-dive": { engineer: 96, director: 144, architect: 216 },
-  intro: { engineer: 90, director: 135, architect: 204 },
-  "personal-experience": { engineer: 110, director: 165, architect: 248 },
+/**
+ * Aim and ceiling, in words, by question type then mode: engineer, director, architect.
+ * A director is often shorter. The mode changes the stance, not the padding.
+ * Ceilings scale with partsScale and never pass 300.
+ */
+export type LengthKind = "yes-no" | "definition" | "compare" | "follow-up" | "opener" | "star" | "design-first" | "design-later"
+
+export const QUESTION_LENGTH: Record<LengthKind, Record<AnswerLevel, { aim: number; ceiling: number }>> = {
+  "yes-no": { engineer: { aim: 20, ceiling: 40 }, director: { aim: 18, ceiling: 36 }, architect: { aim: 22, ceiling: 40 } },
+  definition: { engineer: { aim: 40, ceiling: 70 }, director: { aim: 30, ceiling: 50 }, architect: { aim: 55, ceiling: 90 } },
+  compare: { engineer: { aim: 80, ceiling: 130 }, director: { aim: 60, ceiling: 90 }, architect: { aim: 110, ceiling: 160 } },
+  "follow-up": { engineer: { aim: 80, ceiling: 140 }, director: { aim: 50, ceiling: 90 }, architect: { aim: 90, ceiling: 160 } },
+  opener: { engineer: { aim: 140, ceiling: 200 }, director: { aim: 120, ceiling: 170 }, architect: { aim: 160, ceiling: 230 } },
+  star: { engineer: { aim: 180, ceiling: 280 }, director: { aim: 140, ceiling: 200 }, architect: { aim: 200, ceiling: 300 } },
+  "design-first": { engineer: { aim: 90, ceiling: 160 }, director: { aim: 70, ceiling: 120 }, architect: { aim: 120, ceiling: 200 } },
+  "design-later": { engineer: { aim: 100, ceiling: 180 }, director: { aim: 60, ceiling: 100 }, architect: { aim: 140, ceiling: 220 } },
 }
 
-const AIM: Record<AnswerLevel, number> = { engineer: 0.75, director: 0.9, architect: 0.95 }
 const DEPTH: Record<AnswerLevel, number> = { engineer: 0.4, director: 0.22, architect: 0.72 }
 const CONFIDENCE: Record<AnswerLevel, number> = { engineer: 0.3, director: 0.84, architect: 0.48 }
+const DEEPER_ON = /\b(?:go deeper|dig deeper|deeper on)\b/i
+const BLAME_ASK = /\b(?:whose fault|who(?:'s| is) to blame|post-?mortem|blame you|why did you (?:miss|fail|drop)|what did you miss)\b/i
 
-function band(target: number, level: AnswerLevel): ModeBand {
+/** A one-word or empty prompt. The answer states the assumption, then answers in one sentence. */
+export function vagueReply(question: string, level: AnswerLevel): string {
+  const topic = leadPhrase(question)
+  if (level === "director") return `Assuming you mean ${topic}, I leave the decision with the owner.`
+  if (level === "architect") return `Assuming you mean ${topic}, I hold the boundary where the evidence stops matching the plan.`
+  return `Assuming you mean ${topic}, I check the live setting before I change it.`
+}
+
+/** The miss, as a grammatical clause. The opener names what was missed. */
+export function blameClause(question: string): string {
+  const text = String(question || "").replace(/\s+/g, " ").trim()
+  const parts: string[] = []
+  const dropped = text.match(/\bdrop(?:ped)?\s+((?:the|a|an)\s+[^?.!]+)/i)
+  const failed = text.match(/\bfail(?:ed)?\s+((?:the|a|an)\s+[^?.!]+)/i)
+  const missed = text.match(/\bmiss(?:ed)?\s+([^?.!]+)/i)
+  if (dropped) parts.push(`I dropped ${dropped[1].trim()}`)
+  if (failed && !/\b(?:rollback|batch)\b/i.test(failed[1])) parts.push(`I failed ${failed[1].trim()}`)
+  if (missed) {
+    const obj = missed[1].trim()
+    parts.push(/^in\b/i.test(obj) ? `I missed the check ${obj}` : `I missed ${/^(?:the|a|an)\b/i.test(obj) ? obj : `the ${obj}`}`)
+  }
+  if (parts.length) return parts.join(", and ")
+  const fault = text.match(/\bwhose fault is\s+(?:the\s+)?([^?.!]+)/i)
+  if (fault) return `I owned the ${fault[1].trim()}`
+  const blameFor = text.match(/\bblame you for\s+(?:the\s+)?([^?.!]+)/i)
+  if (blameFor) return `I owned the ${blameFor[1].trim()}`
+  return `I owned ${leadPhrase(text)}`
+}
+export function vagueAsk(question: string): boolean {
+  const q = String(question || "").trim()
+  if (!q) return false
+  if (/^(?:thoughts|and|so|well|ok(?:ay)?|security|stuff|the usual)[?.!]*$/i.test(q)) return true
+  return /^(?:what do you think|any thoughts|your take)\b/i.test(q) && q.split(/\s+/).filter(Boolean).length <= 6
+}
+
+/** "Wait, forget that. What is least privilege?" keeps the ask after the cancel. */
+export function afterInterruption(question: string): string {
+  const text = String(question || "").trim()
+  const parts = text.split(/(?<=[.?!])\s+/).filter(Boolean)
+  if (parts.length < 2) return text
+  const cancel = /^(?:wait|sorry|hold on|actually|forget that|never mind|new question)\b[,:]?\s*/i
+  const ask = /^(?:what|how|why|when|who|define|design|tell|describe|explain)\b/i
+  const last = parts[parts.length - 1].replace(cancel, "")
+  const earlierCancel = parts.slice(0, -1).some((part) => cancel.test(part))
+  if ((earlierCancel || cancel.test(parts[parts.length - 1])) && ask.test(last)) return last
+  return text
+}
+const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
+
+export function lengthKind(question: string, shape: AnswerShape): LengthKind {
+  const q = String(question || "")
+  const design = shape === "design" || DESIGN_ASK.test(q)
+  if (design && DEEPER_ON.test(q)) return "design-later"
+  if (design) return "design-first"
+  if (DEEPER_ON.test(q)) return "design-later"
+  switch (shape) {
+    case "definition": return "definition"
+    case "comparison": return "compare"
+    case "follow-up": return "follow-up"
+    case "intro":
+    case "value": return "opener"
+    case "personal-experience": return "star"
+    case "scenario": return "design-first"
+    case "technical-deep-dive": return "design-later"
+    case "logistics":
+    case "acknowledgement":
+    case "closing": return "yes-no"
+    case "direct":
+      if (!q.trim() || vagueAsk(q) || /^(?:(?:so|and|ok(?:ay)?|well)[, ]+)*(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /\b(?:brief(?:ly)?|quick(?:ly)?|in (?:one|a) sentence|in a nutshell|one-liner)\b/i.test(q)) return "yes-no"
+      if (/\b(?:your experience|tell me about your|what did you do at)\b/i.test(q)) return "star"
+      if ((q.match(/,/g) || []).length >= 1) return "compare"
+      return "definition"
+    default: return "yes-no"
+  }
+}
+
+function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand {
+  const row = QUESTION_LENGTH[kind][level]
+  const safe = Number.isFinite(scale) && scale > 0 ? scale : 1
+  const ceiling = Math.min(300, Math.round(row.ceiling * safe))
+  const aim = Math.min(ceiling, Math.round(row.aim * safe))
   return {
-    minWords: Math.max(8, Math.round(target * 0.4)),
-    targetWords: target,
-    maxWords: target,
-    aimWords: Math.round(target * AIM[level]),
+    minWords: Math.max(8, Math.round(aim * 0.25)),
+    targetWords: ceiling,
+    maxWords: ceiling,
+    aimWords: aim,
     depth: DEPTH[level],
     confidence: CONFIDENCE[level],
     voice: VOICE[level],
   }
 }
 
-export function modeBand(shape: AnswerShape, level: AnswerLevel, scale = 1): ModeBand {
-  const table = TARGETS[shape] || TARGETS.direct
-  return band(Math.round((table[level] || table.engineer) * scale), level)
+export function modeBand(shape: AnswerShape, level: AnswerLevel, scale = 1, question = ""): ModeBand {
+  return bandFor(lengthKind(question, shape), level, scale)
 }
 
-/** One scale for all three modes, so the 50% gaps between them hold for a long multi-part ask too. */
-export function modesFor(shape: AnswerShape, scale = 1): Record<AnswerLevel, ModeBand> {
+/** One scale for all three modes. A long ask raises the ceiling. It does not reorder the modes. */
+export function modesFor(shape: AnswerShape, scale = 1, question = ""): Record<AnswerLevel, ModeBand> {
   return {
-    engineer: modeBand(shape, "engineer", scale),
-    architect: modeBand(shape, "architect", scale),
-    director: modeBand(shape, "director", scale),
+    engineer: modeBand(shape, "engineer", scale, question),
+    architect: modeBand(shape, "architect", scale, question),
+    director: modeBand(shape, "director", scale, question),
   }
 }
 
@@ -180,13 +263,13 @@ export function relativeGap(a: number, b: number): number {
   return Math.abs(a - b) / floor
 }
 
+/** Depth and confidence stay apart. Word count does not: the question type sets the length. */
 export function modesFiftyApart(shape: AnswerShape): boolean {
   const modes = modesFor(shape)
   for (let i = 0; i < LEVELS.length; i++) {
     for (let j = i + 1; j < LEVELS.length; j++) {
       const a = modes[LEVELS[i]]
       const b = modes[LEVELS[j]]
-      if (relativeGap(a.targetWords, b.targetWords) < 0.5) return false
       if (relativeGap(a.depth, b.depth) < 0.5) return false
       if (relativeGap(a.confidence, b.confidence) < 0.5) return false
     }
@@ -362,6 +445,7 @@ function shapeFromIntent(intent: ReplyIntent): AnswerShape {
     case "experience-story": return "personal-experience"
     case "comparison": return "comparison"
     case "scenario": return "scenario"
+    case "design": return "design"
     case "technical-process": return "technical-deep-dive"
     case "logistics": return "logistics"
     case "follow-up": return "follow-up"
@@ -436,7 +520,7 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
     // Round 6: "what's the cooper netties control plane" asked about Kubernetes; the repaired ask decides what is grounded.
     banned: bannedTerms(repairDictation(ask), sources, shape),
     depthAsked: depthAsked(ask, shape),
-    modes: modesFor(shape, partsScale(ask)),
+    modes: modesFor(shape, partsScale(ask), ask),
   }
 }
 
@@ -891,10 +975,10 @@ const GAP_EXEMPT = new Set<AnswerShape>(["logistics", "acknowledgement"])
 
 /**
  * Hard failures: provider error text, outside the mode band, first sentence without the question's words, an
- * ungrounded tool, the same answer for different questions (same mode, Jaccard >= 0.7), or two modes under 50%
- * apart on length. Depth and confidence gaps are word-count heuristics, so they are warnings, not failures:
- * failing on them taught the offline draft to stuff "because" and "I would" into every sentence.
- * A yes-or-no logistics answer is not stretched to make Architect 50% longer than Engineer.
+ * ungrounded tool, or the same answer for different questions (same mode, Jaccard >= 0.7). Two modes of one
+ * question under 50% apart in content (1 - Jaccard) are warnings: the pair is named, and the draft is not padded
+ * to widen it. Depth and confidence gaps are word-count heuristics, so they are warnings too.
+ * A yes-or-no logistics answer is not stretched to make one mode longer than another.
  */
 function namesItsOwnAsk(question: string, text: string, otherQuestion: string): boolean {
   const mine = questionKeywords(cleanSpokenAsk(question))
@@ -947,11 +1031,13 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
         const a = byLevel.get(LEVELS[i])
         const b = byLevel.get(LEVELS[j])
         if (!a || !b) continue
-        const spoken = (row: LiveAnswer) => wordCount(asksForCode(question) ? row.text.replace(/```[\s\S]*?(?:```|$)/g, " ") : row.text)
-        const lengthGap = relativeGap(spoken(a), spoken(b))
+        const spokenText = (row: LiveAnswer) => asksForCode(question) ? row.text.replace(/```[\s\S]*?(?:```|$)/g, " ") : row.text
+        const overlap = sameAnswerRatio(spokenText(a), spokenText(b))
+        const contentGap = overlap >= 1 ? 0 : 1 - overlap
         const depthGap = relativeGap(scoreDepth(a.text), scoreDepth(b.text))
         const confidenceGap = relativeGap(scoreConfidence(a.text), scoreConfidence(b.text))
-        if (lengthGap < 0.5) (exempt ? warnings : failures).push(`length gap ${lengthGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
+        // Content overlap is reported, not padded. A short mode is not stretched to manufacture a word gap.
+        if (contentGap < 0.5) warnings.push(`stance gap ${contentGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
         if (depthGap < 0.5) warnings.push(`depth gap ${depthGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
         if (confidenceGap < 0.5) warnings.push(`confidence gap ${confidenceGap.toFixed(2)} under 0.50 for ${LEVELS[i]} vs ${LEVELS[j]}: ${question}`)
       }
@@ -1070,7 +1156,7 @@ export function askedPartList(question: string): string[] {
       // Round 13 (by eye): "and who signs off" was said "On and who signs off".
       const part = item.replace(/^(?:and|or|then)\s+/i, "").replace(/^(?:the|a|an)\s+/i, "").trim()
       if (/^(?:in (?:that|this) (?:design|case|scenario|setup)|in (?:that|this) situation)$/i.test(part)) continue
-      if (part && wordCount(part) <= 5) out.push(part.toLowerCase())
+      if (part && wordCount(part) <= 5) out.push(part.split(/\s+/).map((word) => /^[A-Z0-9]{2,}$/.test(word) ? word : word.toLowerCase()).join(" "))
     }
   }
   return [...new Set(out)]
@@ -1079,12 +1165,12 @@ export function askedPartList(question: string): string[] {
 const PART_LINES: Record<AnswerLevel, Array<(part: string) => string>> = {
   engineer: [(p) => `For ${p}, I say what it is in one line and why it matters here.`],
   director: [
-    (p) => `On ${p}, I name the owner and the risk if it slips.`,
+    (p) => `On ${p}, the owner and the risk if it slips go on the record.`,
     (p) => `For ${p}, I give the decision and the date it is due.`,
   ],
   architect: [
-    (p) => `For ${p}, I state what it covers and the check that proves it.`,
-    (p) => `On ${p}, I name where it can fail and what stops the failure from spreading.`,
+    (p) => `For ${p}, the line covers the check that proves it.`,
+    (p) => `On ${p}, the failure point is where it can fail and what keeps it from spreading.`,
     (p) => `With ${p}, I keep one result that confirms it before I move on.`,
   ],
 }
@@ -1198,17 +1284,22 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: () => `Yes, I can hear you clearly, thank you, and I am glad to talk through the work.`,
   },
   scenario: {
-    engineer: (l) => `For ${l}, here is the first thing I would do.`,
+    engineer: (l) => `For ${l}, I would check the first failing step.`,
     director: (l) => `For ${l}, I would make the first decision quickly and name who owns it.`,
     architect: (l) => `For ${l}, I would walk the steps in order and note where each one can fail.`,
   },
+  design: {
+    engineer: (l) => `For ${l}, the first behavior I would sketch is the check on the first layer.`,
+    director: (l) => `For ${l}, I would decide the tradeoff first and leave the rest of the map for later.`,
+    architect: (l) => `For ${l}, the boundary comes first. One short look at what sits beside it, then I come back.`,
+  },
   "technical-deep-dive": {
-    engineer: (l) => `On ${l}, here is what I do in practice.`,
+    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
   direct: {
-    engineer: (l) => `On ${l}, here is my answer from my own work.`,
+    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
@@ -1250,7 +1341,7 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
   ],
   director: [
     (l) => `On ${l}, the first call is whether the risk is acceptable today or needs action now.`,
-    () => "I name one owner for that call and a date for the next review.",
+    () => "One owner holds that call, with a date for the next review.",
     () => "The decision goes on record.",
     () => "The owner signs off in writing.",
     () => "If the owner accepts the risk, I record the reason and when it expires.",
@@ -1272,7 +1363,7 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     () => "After the change, I confirm the setting again later to make sure it stayed in place.",
     () => "I keep the steps short enough that someone new can run them the same way.",
     () => "Each part gets its own owner.",
-    () => "I name what would prove it wrong.",
+    () => "The proof that would show it wrong is written down.",
     () => "Every check is written down.",
     () => "Failures go back to the owner.",
     (l) => `For ${l}, I write down the inputs, the check, and the expected result before I start.`,
@@ -1320,23 +1411,18 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
   return asksForCode(question) ? `${standInFence(question)}\n\n${text}` : text
 }
 
-// Round 6: each mode is at least 1.5 times the one below it. The mode below is drafted first and the next fills to
-// that floor from more supported or approach lines, never past its own ceiling (failsafe: the ceiling wins).
-function ladderFrom(question: string, resume: string, previous: string[], engineer: string): Record<AnswerLevel, string> {
-  const dFloor = Math.ceil(wordCount(engineer) * 1.5)
-  let director = draftAtLevel(question, "director", resume, previous, dFloor)
-  // Round 13 (29 Oct 2026): a Director draft at its own ceiling left the Architect no room to be 1.5 times longer
-  // ("ROI … in dollars": 66 vs 94 words). Director is cut to the Architect ceiling over 1.5 on a sentence boundary.
-  // Failsafe: never below the Director floor from Engineer, so the lower gap holds too.
-  const cut = dissectQuestion(question, resume)
-  const room = Math.floor(cut.modes.architect.maxWords / 1.5)
-  const trimmed = wordCount(director) > room && room >= dFloor ? trimToWords(director, room) : director
-  if (wordCount(trimmed) >= dFloor) director = trimmed
-  const architect = draftAtLevel(question, "architect", resume, previous, Math.ceil(wordCount(director) * 1.5))
-  return { engineer, director, architect } as Record<AnswerLevel, string>
+// Each mode drafts to its own aim and stops at its own ceiling. A short mode is not padded, and a long mode is
+// not cut, to manufacture a word-count gap. Content overlap is measured later.
+function draftLadder(question: string, resume: string, previous: string[]): Record<AnswerLevel, string> {
+  const heard = afterInterruption(question)
+  const cut = dissectQuestion(heard, resume)
+  const one = (level: AnswerLevel) => draftAtLevel(heard, level, resume, previous, cut.modes[level].minWords)
+  return {
+    engineer: compactEngineer(one("engineer")),
+    director: one("director"),
+    architect: one("architect"),
+  }
 }
-const ladderHolds = (l: Record<AnswerLevel, string>) =>
-  wordCount(l.director) >= wordCount(l.engineer) * 1.5 && wordCount(l.architect) >= wordCount(l.director) * 1.5
 
 // r4 (29 Oct 2026): with ceilings exactly 1.5x apart (44/66/99) an Engineer near its ceiling can leave the Director one
 // word short (two-part ask, one-paragraph resume: 43/64/99). The Engineer then drops only the filler after its lead
@@ -1354,46 +1440,12 @@ export function compactEngineer(text: string): string {
     return text
   }
 }
-// r4: when the lines left after earlier answers run out, a mode can end short of 1.5x the one below. The longer mode is
-// never padded; the shorter one is cut on a sentence boundary instead: Director to the Architect over 1.5 (never below
-// its own floor from Engineer), then Engineer to the Director over 1.5 (keeping its opener and at least one more
-// sentence). Failsafe: a cut that would break either rule is not made.
-function settleLadder(l: Record<AnswerLevel, string>, compacted = false): Record<AnswerLevel, string> {
-  try {
-    let { engineer, director } = l
-    const architect = l.architect
-    if (wordCount(architect) < wordCount(director) * 1.5) {
-      const d = trimToWords(director, Math.floor(wordCount(architect) / 1.5))
-      if (sentencesOf(d).length >= 2) director = d
-    }
-    if (wordCount(director) < wordCount(engineer) * 1.5) {
-      const e = trimToWords(engineer, Math.floor(wordCount(director) / 1.5))
-      // the Engineer keeps its opener and one more sentence; a compact Engineer is one sentence that already holds both
-      if (sentencesOf(e).length >= (compacted ? 1 : 2) && wordCount(e) >= wordCount(sentencesOf(engineer)[0] || "") + (compacted ? 0 : 1)) engineer = e
-    }
-    return { engineer, director, architect } as Record<AnswerLevel, string>
-  } catch {
-    return l
-  }
-}
-function draftLadder(question: string, resume: string, previous: string[]): Record<AnswerLevel, string> {
-  const usual = ladderFrom(question, resume, previous, draftAtLevel(question, "engineer", resume, previous, 0))
-  if (ladderHolds(usual)) return usual
-  const short = compactEngineer(usual.engineer)
-  const compact = short === usual.engineer ? null : ladderFrom(question, resume, previous, short)
-  if (compact && ladderHolds(compact)) return compact
-  for (const [base, c] of (compact ? [[usual, false], [compact, true]] : [[usual, false]]) as Array<[Record<AnswerLevel, string>, boolean]>) {
-    const settled = settleLadder(base, c)
-    if (ladderHolds(settled)) return settled
-  }
-  return usual
-}
 
 export const NUMBER_ASK = /\b(?:what (?:percentage|percent|share|number|proportion)|by what percent|how many|how much (?:faster|money|time|did)|in dollars|dollar value|roi\b|pass rate|false-positive rate|give me (?:a|the) (?:number|percentage)|exact(?:ly)? how many|to the nearest)\b/i
 export const NO_GUESS = "I won't guess a figure I can't back up."
 
 const HONEST_LINES = [
-  "My resume does not show this exact work, so I answer from how I would approach it.",
+  "My resume does not show this exact work, so I walk through how I would handle it.",
   "I have not done this in a past role, so I will walk through how I would handle it.",
   "This is not something I have run before, so I will give the steps I would take.",
 ]
@@ -1467,11 +1519,32 @@ function lineMentionsPair(line: string, lead: string): boolean {
   return words.some((word) => low.includes(word))
 }
 
+/** First design stage only. Each line names this design, so two designs do not share one answer. */
+function designStageLines(level: AnswerLevel, lead: string): string[] {
+  if (level === "director") return [
+    `For ${lead}, the tradeoff is speed against a safe change, and the decision is made before the rest of the map.`,
+    `The owner of ${lead} hears what is still open, and the risk of waiting is the call on the record.`,
+    `The later layers of ${lead} wait until that decision is written down.`,
+  ]
+  if (level === "architect") return [
+    `For ${lead}, the boundary around the first layer is the part I sketch before any later path.`,
+    `The next layer of ${lead} starts only after that check has a failure point and a place the evidence can sit.`,
+    `I would keep ${lead} to one path in this pass, with the handoff written beside the boundary.`,
+    `A later pass on ${lead} can add the rest of the map once this layer holds.`,
+    `The step that can break ${lead} is the one I mark before I leave the first layer.`,
+  ]
+  return [
+    `For ${lead}, the first layer is one check on the request before it reaches the rest of the path.`,
+    `I would sketch that check for ${lead}, write down what it rejects, and leave the rest of the map for a later pass.`,
+    `The evidence for ${lead} sits next to that check so the next person can see why it fired.`,
+  ]
+}
+
 function draftAtLevel(question: string, level: AnswerLevel, resume: string, previous: string[], floor: number): string {
   const cut = dissectQuestion(question, resume)
   const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
   const pairSides = (cut.shape === "comparison" || cut.shape === "definition") ? versusSides(lead) : null
-  const designAsk = /^\s*design\b/i.test(question) && lead.split(/\s+/).filter(Boolean).length >= 3
+  const designAsk = cut.shape === "design" || (/^\s*design\b/i.test(question) && lead.split(/\s+/).filter(Boolean).length >= 3)
   const opener = (OPENERS[cut.shape] || OPENERS.direct)[level] || OPENERS.direct[level]
   // Round 6: as asked live, the previous answers are known. A sentence already said in them is not said again, as the
   // production prompt asks ("Do not reuse the previous answer") and settle enforces; the next line in the pool is used.
@@ -1493,6 +1566,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // A shared word such as access is not enough, or two incidents share the same lines.
   const incidentAsk = lead.split(/\s+/).filter(Boolean).length >= 6 && askedPartList(question).length >= 3
   if (incidentAsk) lines = lines.filter((line) => lineMentionsPair(line, lead))
+  // The director's stance is the decision. When several lines match, leave the first ones for the engineer.
+  // One or two lines stay, so a real resume line is not replaced by "does not show".
+  if (level === "director" && lines.length > 2 && askedPartList(rankOn).length < 2) lines = lines.slice(2)
   // r4: a three-part ask ("triage, access reviews, and HIPAA controls") spent Director's room on two lines for one part
   // and never named the third. With 2+ asked parts, the best line for each part goes first, in the asked order.
   // Failsafe: one part, or any error, keeps the ranked order.
@@ -1512,11 +1588,20 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     }
   } catch { /* failsafe: ranked order */ }
   const mode = cut.modes[level]
-  // Each mode stops about a third short of the next one up, so the three stay at least 50% apart in length.
-  const archStop = cut.modes.architect.aimWords
-  const dirStop = Math.min(cut.modes.director.aimWords, Math.floor(archStop / 1.55))
-  const stop = level === "architect" ? archStop : level === "director" ? dirStop : Math.max(cut.modes.engineer.minWords, Math.min(cut.modes.engineer.aimWords, Math.floor(dirStop / 1.7)))
+  // Stop at this mode's own aim. Do not shorten it so another mode can look longer.
+  const stop = mode.aimWords
   const parts = [naturalOpener(opener(premiseLead(lead)))]
+  if (vagueAsk(question)) return trimToWords(vagueReply(question, level), mode.maxWords)
+  if (BLAME_ASK.test(question)) {
+    parts[0] = `The pressure was real, and the miss was mine: ${blameClause(question)}.`
+    parts.splice(1, 0, level === "director"
+      ? "The decision and the risk still sit with me."
+      : level === "architect"
+        ? "The break is the step I failed to check."
+        : "I check the evidence again before I call it done.")
+  }
+  if (/\b(?:strategy|govern|change your mind)\b/i.test(question)) parts.push("The owner holds the decision, and the risk is what would change my mind.")
+  if (/\b(?:war room|failed overnight|duplicate row|customers are waiting|disagrees with the live)\b/i.test(question)) parts.push("I check the live evidence before I change the path.")
   // Round 13 (read by eye): a trick ask for a figure ("What percentage…", "ROI in dollars") got a resume line and no
   // word on the number, which reads as dodging. The stand-in says once that it will not guess. Failsafe: a figure the
   // interviewer gave, or one on the resume, is not refused.
@@ -1575,7 +1660,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   if (bareTerm) {
     parts[0] = `I mean ${lead} when I say ${lead}.`
     words = wordCount(parts.join(" "))
-  } else if (!used && !pairSides) {
+  } else if (!used && !pairSides && !designAsk) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
     parts.push(honest)
     words += wordCount(honest)
@@ -1601,13 +1686,13 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     if (namedDesign) {
       const line = `I would give ${spokenLead(part)} its own time.`
       const n = wordCount(line)
-      if (words + n <= stop) { parts.push(line); words += n }
+      if (words + n <= mode.maxWords) { parts.push(line); words += n }
       return
     }
     if (incident) {
       const line = `For ${spokenLead(part)}, I stay on ${lead}.`
       const n = wordCount(line)
-      if (words + n <= stop) { parts.push(line); words += n }
+      if (words + n <= mode.maxWords) { parts.push(line); words += n }
       return
     }
     const templates = PART_LINES[level]
@@ -1616,7 +1701,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       (_m, wh, aux, rest) => `${wh} I ${/^do$/i.test(aux) ? "" : aux + " "}${rest}`))
     const line = templates[i % templates.length](said)
     const n = wordCount(line)
-    if (words + n > stop) return
+    if (words + n > mode.maxWords) return
     parts.push(line)
     words += n
   })
@@ -1671,37 +1756,33 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     const extra = sides
       ? pairSideLines(sides)
       : bareTerm
-      ? [
-          `I mean ${lead} when I say ${lead}.`,
-          `I say ${lead}, and I mean ${lead}.`,
-          `I do mean ${lead}.`,
-          `I say ${lead} again.`,
-          `I mean ${lead} here.`,
-          `I say ${lead} once more.`,
-        ]
+      ? []
       : namedDesign
-      ? [
-          `I start from ${lead}.`,
-          `The case is ${lead}.`,
-          `I check ${lead} before I move on.`,
-          `What I watch is ${lead}.`,
-          `I would give ${lead} its own time.`,
-          `I keep ${lead} with ${lead}.`,
-          `I mean ${lead} when I say ${lead}.`,
-          `I have ${lead} here.`,
-          `On ${lead}, I would give it its own time.`,
-        ]
+      ? (cut.shape === "design" && !DEEPER_ON.test(question) && askedParts.length < 2 ? designStageLines(level, lead) : [])
       : [
           `I start from ${lead}.`,
           `The case is ${lead}.`,
           `I check ${lead} before I move on.`,
           `What I watch is ${lead}.`,
         ]
+    const designFirst = namedDesign && cut.shape === "design" && !DEEPER_ON.test(question) && askedParts.length < 2
+    const fillTo = designFirst ? Math.max(mode.minWords, stop - 8) : Math.max(stop, mode.minWords)
     for (const line of extra) {
-      if (words >= Math.max(stop, mode.minWords)) break
+      if (words >= fillTo) break
       const n = wordCount(line)
-      if (words + n > mode.maxWords || parts.includes(line)) continue
+      if (words + n > (designFirst ? fillTo : mode.maxWords) || parts.includes(line)) continue
       parts.push(line)
+      words += n
+    }
+  }
+  // A first design stage names the map, builds one layer, and stops at a checkpoint.
+  // A later "go deeper" turn does not start the map over.
+  if (cut.shape === "design" && !DEEPER_ON.test(question)) {
+    const layer = (spokenParts[0] && spokenLead(spokenParts[0])) || "the first layer"
+    const checkpoint = `Want me to go deeper on ${layer}, or shall I keep sketching the whole shape?`
+    const n = wordCount(checkpoint)
+    if (words + n <= mode.maxWords && !parts.includes(checkpoint)) {
+      parts.push(checkpoint)
       words += n
     }
   }

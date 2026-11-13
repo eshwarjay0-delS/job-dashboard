@@ -34,10 +34,10 @@ test('Prev and Next show where you are and look disabled at the ends', () => {
   assert.match(read('public/kompas/styles.css'), /\.pill:disabled\{opacity:\.42/)
 })
 
-test('on the desktop a scrolled-away question takes no space, and a shown one is two lines', () => {
+test('on the desktop a scrolled-away question takes no space, and a shown one can grow past two lines', () => {
   const css = read('public/kompas/styles.css')
   assert.match(css, /#view-copilot \.card\.q-away \.q\{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important/)
-  assert.match(css, /#view-copilot \.card \.q\{max-height:3\.1em\}/)
+  assert.match(css, /#view-copilot #card \.q,\s*#view-copilot #card \.q\.live\{\s*max-height:min\(16em, 42vh\);/)
 })
 
 test('"Shkivs" and "cyber-arc" are repaired before they reach a question', () => {
@@ -62,7 +62,7 @@ test('the live transcript reads as a chat: one bubble per turn, fillers folded i
   ctx.appendDrawer('You', 'and', t0 + 4000)
   ctx.appendDrawer('You', 'First I inventory them.', t0 + 60000)
   const rows = [...dom.window.document.querySelectorAll('#drawerBody .tl')].map((d) => d.className + ': ' + d.querySelector('span').textContent)
-  assert.deepEqual(rows, ['tl you: Permanent. and and Evaluate', 'tl them: How would you rotate SSH keys?', 'tl you: and', 'tl you: First I inventory them.'])
+  assert.deepEqual(rows, ['tl you: Permanent. and', 'tl you: and Evaluate', 'tl them: How would you rotate SSH keys?', 'tl you: and', 'tl you: First I inventory them.'])
 })
 
 test('every live answer call is routed to the lowest-latency host', () => {

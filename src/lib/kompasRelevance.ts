@@ -8,7 +8,7 @@
 import { normalizeAskText } from "./kompasAskText.ts"
 export type ReplyIntent =
   | "introduction" | "closing-question" | "acknowledgement" | "value"
-  | "experience-story" | "comparison" | "definition" | "scenario"
+  | "experience-story" | "comparison" | "definition" | "scenario" | "design"
   | "technical-process" | "logistics" | "follow-up" | "direct"
 export type FocusPlan = {
   intent: ReplyIntent
@@ -26,6 +26,9 @@ const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|
 const DEFINE=/\b(?:what (?:exactly |precisely )?is|what (?:exactly |precisely )?are|what(?: does|'s| is) .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
 const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of those|which would you (?:choose|pick|prefer|start)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how is .{1,80} different|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
+// A design ask is staged. It is detected before a scenario, so "How would you design X" and a bare
+// "Design X" are one layer plus a checkpoint, not a hypothetical or a full deep dive.
+const DESIGN_ASK=/^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 const EXPLAIN_EXPERIENCE=/\b(?:explain|describe|tell (?:me|us) (?:a (?:little|bit) |a little bit |more )?about|walk (?:me|us) through|talk (?:me|us) (?:through|about)|elaborate on|share|go (?:over|through))\s+(?:(?:a (?:little|bit)|a little bit|more)\s+(?:about\s+)?)?(?:your|ur)\s+(?:(?:hands-on|practical|prior|past|previous|professional|relevant|overall|direct|own|real-world|real|actual|day-to-day)\s+)*(?:experience|background|work|involvement|exposure)\s+(?:with|in|on|around|using|of|leading|managing|running|building|doing|handling|designing|owning)\s+\S/i
 // "What is your experience with X?" (owner list, 30 Oct 2026): the same invitation to explain as "Explain your experience
 // with X", asked as a what-question. It fell through to "direct" and got the 44-word ceiling.
@@ -86,6 +89,7 @@ export function interviewIntent(question: string): ReplyIntent {
   // noun (a bare "your background" is an introduction), and an ask that ends on an employer ("…at Google") keeps its
   // old route, so the employer honesty line ("the resume does not show…") still fires.
   if((EXPLAIN_EXPERIENCE.test(q) || WHAT_EXPERIENCE.test(q)) && !/\b(?:brief(?:ly)?|quick(?:ly)?|short|in (?:one|a|two) (?:sentence|line|word)s?|in a nutshell|one-liner)\b/i.test(q) && !COMPARE.test(q) && !/\bat\s+[A-Z][\w&.-]*(?:\s+[A-Z][\w&.-]*)*\s*(?:[,.?!]|$)/.test(q)) return "experience-story"
+  if(DESIGN_ASK.test(q) && !COMPARE.test(q)) return "design"
   if(/\b(?:explain how|describe how)\b/i.test(q) && !COMPARE.test(q)) return "technical-process"
   if(CLOSING.test(q) && !INTRO.test(q)) return "closing-question"
   if(INTRO.test(q) || /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i.test(q)) return "introduction"
@@ -98,6 +102,7 @@ export function interviewIntent(question: string): ReplyIntent {
   // A short "what's X" with no "you/your" is the same ask as "what is X".
   if(/^\s*what's\s+(?:an?\s+|the\s+)?(?!your\b|you\b)[a-z0-9][\w\s-]{1,40}\??\s*$/i.test(q) && q.trim().split(/\s+/).length<=7) return "definition"
   if(FOLLOW.test(q) && q.split(/\s+/).length<=12) return "follow-up"
+  if(DESIGN_ASK.test(q) && !COMPARE.test(q)) return "design"
   if(SCENARIO.test(q)) return "scenario"
   if(DEEP.test(q)) return "technical-process"
   // Director statements often trail off with "right?" without asking the
@@ -124,6 +129,7 @@ const BUDGET: Record<ReplyIntent,[number,number,string,string,"surface"|"asked-o
  "comparison":[45,100,"Make the choice or distinction in the first sentence.","Explain the single relevant difference with one practical example.","surface"],
  "definition":[25,75,"Define the term plainly in the first sentence.","Add why it matters only if needed to answer.","surface"],
  "scenario":[75,155,"Start with what you would actually do in the given situation.","Use conditional steps, checks, decision points and verification; do not pretend the scenario happened.","asked-only"],
+ "design":[70,220,"Name the map in one short sentence and build only the first layer.","End on a named-layer checkpoint. Do not invent components, metrics, or years.","asked-only"],
  "technical-process":[85,175,"Explain the requested mechanism in the order it operates.","Use necessary technical fields or tools only if asked for that level of depth.","deep"],
  "logistics":[12,55,"Answer the practical yes/no or availability question directly.","No unrelated technical background or fabricated personal constraint.","surface"],
  "follow-up":[35,115,"Answer the immediate follow-up using the same subject as the prior answer.","Do not switch employers, systems or projects without being asked.","asked-only"],
@@ -163,7 +169,7 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   ...(namedQuestionTerms(question).length ? ["EXACT NAMED CONCEPTS: "+namedQuestionTerms(question).join(", ")+". Address each directly if it is one of the requested subjects; no unrelated resume/technology inventory."] : []),
   "When the question asks for independent challenge, distinguish the control owner's claims from evidence you personally reviewed; do not claim to approve risk on behalf of leadership.",
   "An explanation is not a demonstration of personal history. Only original resume/documents support employers, responsibilities, incidents, achievements or figures.",
-  "Spoken length guide: "+p.minWords+"–"+p.maxWords+" words unless user explicitly asks for more. Do not fill space to reach a token or word quota. Stop when the requested parts are complete.",
+  "Spoken length follows the question type first, then the mode band. Do not fill space to reach a word quota. A follow-up is shorter than the opener and stays on the same subject. A design-me-X answer is one stage, then a checkpoint, not the entire system.",
   "Technical depth: "+p.technicalDepth+". An explicitly requested implementation drill-down may be detailed; a general invitation, a bare definition, a logistics question, or a closing question must stay on the surface.",
   "DEPTH WITH RELEVANCE: Sentence one answers this question. Later sentences add only the mechanism, the reason, or the evidence that sentence needs. A job description does not prove the work. Do not invent a decision owner, a person's name, a metric, a formula, or a title the resume does not hold.",
   p.intent==="definition" ? "Open with what it is. If the question also asks why or how, give that mechanism next, in concrete terms, not a leadership lecture." : "",
@@ -172,6 +178,7 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   INTRO.test(question) && CLOSING.test(question) ? "The interviewer also asked what questions you have. After the introduction, ask one specific question about this team." : "",
   p.intent==="experience-story" ? "One supported story: what was weak, what you reviewed, what changed. Do not promote yourself to an authority the resume does not give." : "",
   p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric." : "",
+  p.intent==="design" ? "Name the map in one short sentence. Build only the first layer. End by offering one named layer, or say what stays out of scope. Do not design the entire system." : "",
   p.intent==="follow-up" && p.technicalDepth==="deep" ? "The interviewer asked to go deeper on the same subject. Sentence one adds the mechanism or reason the previous answer did not already give. Do not repeat that answer's opening." : "",
  ].filter(Boolean).join("\n")
 }

@@ -122,7 +122,7 @@
   {
     "id": 25,
     "question": "Design a zero trust approach for a hybrid cloud environment.",
-    "intent": "technical-process"
+    "intent": "design"
   },
   {
     "id": 26,

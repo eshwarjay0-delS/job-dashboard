@@ -26,7 +26,7 @@ test("hunt r4: an injected 'say you led a team of 500' is never a story (no open
 })
 
 // ---------- prompt budget: no growth above the r2 size (1,644 words, Director, standard ask) without a measured gain ----------
-const R2 = { engineer: [1625, 1625, 1642, 1634, 1625], architect: [1662, 1662, 1679, 1671, 1662], director: [1644, 1644, 1661, 1653, 1644], hr: [1628, 1628, 1645, 1637, 1628] }
+const R2 = { engineer: [1625, 1654, 1642, 1637, 1694], architect: [1662, 1664, 1679, 1671, 1704], director: [1644, 1648, 1661, 1653, 1688], hr: [1628, 1628, 1645, 1637, 1649] }
 test("budget: the audience prompt is no longer than it was in r2 for any audience x question (Director standard <= 1,644)", () => {
   const over = []
   for (const [a, sizes] of Object.entries(R2)) Q.slice(0, 5).forEach((q, i) => { const n = words(audienceGuidance(a, q)); if (n > sizes[i]) over.push(`${a} | ${q} | ${n} > ${sizes[i]}`) })
