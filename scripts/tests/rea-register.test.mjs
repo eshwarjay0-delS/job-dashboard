@@ -31,7 +31,7 @@ test('Oct 17 WhatsApp source recovery separates deployed code from blocked histo
  const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-source-recovery-2026-11-10')
  assert.ok(entry)
  assert.equal(entry.state,'Deployed, verification pending')
- assert.ok(entry.steps.some(s=>s.status==='Tested' && s.evidence.includes('dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS')))
+ assert.ok(entry.steps.some(s=>s.status==='Tested' && s.evidence.includes('dpl_7gjdfRFeLjqcPdVC52NkaEatugKA')))
  assert.ok(entry.steps.some(s=>s.status==='Blocked' && s.finding.includes('generated output')))
  assert.match(entry.next,/owner reconciliation/)
  assert.match(entry.next,/signed delivery\/read receipt/)
@@ -66,4 +66,13 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\b[a-f0-9]{16}\\b/i)
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
+})
+
+
+test('current WhatsApp offline-pair CAS restack is recorded separately from historical replay', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-restack-2026-11-13-watch11')
+ assert.ok(entry)
+ assert.equal(entry.state,'Implemented, verification pending')
+ assert.match(entry.limits,/No real Meta send/)
+ assert.match(entry.next,/exact-head full CI/)
 })
