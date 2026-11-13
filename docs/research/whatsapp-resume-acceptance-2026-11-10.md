@@ -128,3 +128,8 @@ The matching Risk & Controls JD remains recovered from the private inbox. The so
 The historical generated DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain missing. The archive recovery resolves only source-byte availability; it does not prove what was generated, sent, delivered or read. No model call, resume write, R2 write, real WhatsApp send or historical replay occurred.
 
 Continue: obtain the original generated output and correlated R2/webhook/Meta receipt evidence, and reconcile the conflicting source facts with the owner before any exact replay. Do not generate or send a replacement from the quarantined facts.
+
+
+## Current execution recheck — 13 November 2026
+
+The earlier private archive extraction and SHA-256 inventory match remain recorded in the REA handoff. This run performed a recursive Library DOCX listing and semantic search but did not resolve the exact 27,724-byte source artifact; no bytes were materialized or rehashed in this execution. This is a current-access limitation, not a claim that the earlier extraction did not occur. The matching 16 Oct JD was retrieved read-only from Gmail; no email was sent. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. No model call, historical replay, R2 write, or WhatsApp send occurred. Do not substitute another resume. Source education/employment/tenure/credential conflicts remain quarantined pending owner reconciliation.
