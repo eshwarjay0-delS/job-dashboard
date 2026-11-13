@@ -478,3 +478,11 @@ Execution note: a Vercel sandbox creation attempt returned HTTP 400; the local c
 - This remains source-level evidence only. Fresh exact-head CI, WhatsApp recovery, Kompas baseline, Plan/REA schema, protected preview, owner-authorized model run and exported-DOCX inspection are still required. No 95–100% or 98% live match is claimed.
 
 Continue: validate this narrow relevance correction on the final PR #377 head, then keep it DRAFT until the legitimate protected preview and owner-authorized DOCX acceptance are complete.
+
+## 13 November 2026 — run 11 confirmed-skill source gates passed
+
+- PR #377 final head fa971b90c702e1cb96ebae161a1fdd1aa7ab1728 passed full CI 43500406071, WhatsApp recovery 43500406031, Kompas baseline 43500405833 and Plan/REA schema 43500406062.
+- The full CI includes the new CyberArk EPM negative generic Salesforce CRM administration/audit-compliance cases and the positive endpoint/local-administrator case. The correction is source-tested; it is not deployed.
+- Protected Vercel preview is still missing. Owner-authorized baseline/JD/confirmation model run, exported-DOCX inspection and final-DOCX Gemini ATS review remain pending. Keep PR #377 DRAFT.
+
+Continue: obtain the legitimate protected preview, then run the owner-authorized baseline/JD/confirmation and exported-DOCX acceptance before any release claim.
