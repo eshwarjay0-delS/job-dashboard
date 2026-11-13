@@ -3,6 +3,8 @@ export type ContractType = 'W2' | 'C2C' | '1099' | 'C2H' | 'Temporary' | 'Contra
 export function contractTypes(text:string, employmentType=''):ContractType[]{
  const normalize=(value:string)=>String(value||'').toLowerCase().replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ').trim()
  const stripNegations=(value:string)=>value
+  // Also reject a label that is explicitly negated after the phrase, not only before it.
+  .replace(/\b(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b(?:\s+(?:is|are|was|were|will be))?(?:\s+(?:currently|presently|now))?\s+(?:isn't|aren't|wasn't|weren't|not)\s+(?:(?:currently|presently|now|yet)\s+)?(?:available|offered|eligible|permitted|supported|applicable|an option|provided|included)\b/gi,' ')
   .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b/gi,' ')
   .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?(?:c2c|corp[ -]to[ -]corp)\b/gi,' ')
   .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?1099\b/gi,' ')
