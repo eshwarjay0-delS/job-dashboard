@@ -99,3 +99,13 @@ The restack keeps the contract crawler implementation, prebuild regression wirin
 The explicit contract taxonomy remains: Right To Hire / Contract To Perm / C2H -> C2H; negated phrases remain unknown; generic contract administration/negotiation vocabulary does not establish an employment contract; W2 payroll alone is not enough. Clearance exclusion remains default unless an authorized user explicitly includes it.
 
 No live crawl, portal scraping, row mutation, application submission or external request was made. The new restack requires fresh exact-head crawler regression, full CI, Kompas baseline and Plan/REA schema. A protected preview is still required before merge/release; no protected-preview pass is claimed.
+
+
+## Exact-head source verification — 13 November 2026
+
+Restacked PR #355 head `dcbd2400fccff83c771a23a75b14f0200df1224a` passed:
+- Crawler freshness / contract classification regression `43398189311`: SUCCESS.
+- Kompas baseline `43398189322`: SUCCESS.
+- Full CI `43398189469`: SUCCESS.
+
+The code-only PR does not change Plan/REA files; its Plan & Vision decision and evidence are recorded in the companion MFit Plan update. Protected preview and first post-release crawl/API smoke remain pending. No live crawl, portal request, DB mutation or application submission occurred.
