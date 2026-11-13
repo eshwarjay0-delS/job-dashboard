@@ -67,3 +67,13 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
+
+
+test('profile gap-fill acceptance is tracked separately from role evidence and live WhatsApp acceptance', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'resume-profile-gap-fill-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.state, 'Implemented, verification pending')
+ assert.ok(entry.steps.some(s => s.label === 'Implement requested profile acceptance' && s.status === 'Implemented'))
+ assert.match(entry.limits, /No live Gemini\/model call/)
+ assert.match(entry.next, /protected preview/)
+})
