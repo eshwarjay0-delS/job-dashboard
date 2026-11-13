@@ -357,19 +357,36 @@
     } else node.textContent = shown;
   }
 
+  var busSubs = {};
+  function publish(type, event) {
+    var list = busSubs[type] || [];
+    for (var i = 0; i < list.length; i++) { try { list[i](event); } catch (err) {} }
+  }
+  function subscribe(type, fn) {
+    if (!busSubs[type]) busSubs[type] = [];
+    busSubs[type].push(fn);
+  }
+  subscribe("ear.transcript", function (event) {
+    if (!event || !event.text || event.text === brain.last) return;
+    brain.last = event.text;
+    var step = perceive(event.who, event.text);
+    if (step.shown) paintSay(step.shown);
+    publish("brain.state", { question: brain.prewarm || event.text, topics: brain.topics.slice(), claims: brain.claims.length });
+    if (!current || manual) return;
+    paintMode(current);
+  });
+  function hear(who, text, source) {
+    var clean = String(text || "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    publish("ear.transcript", { who: who === "You" ? "You" : "Them", source: source || (who === "You" ? "mic" : "computer"), text: clean });
+  }
   function onTranscript() {
     var live = transcriptText();
     var parts = String(live || "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
     var last = parts.length ? parts[parts.length - 1] : "";
     var body = last.replace(/^(?:Them|You):\s*/i, "").trim();
     var who = /^You:/i.test(last) ? "You" : "Them";
-    if (body && body !== brain.last) {
-      brain.last = body;
-      var step = perceive(who, body);
-      if (step.shown) paintSay(step.shown);
-    }
-    if (!current || manual) return;
-    paintMode(current);
+    hear(who, body, who === "You" ? "mic" : "computer");
   }
 
   function accept(aside) {
@@ -431,7 +448,7 @@
     };
   }
 
-  window.KompasAnswerAside = { mount: mount, setOpen: setOpen, accept: accept, watch: watch, stem: stem, modeFrom: modeFrom, applyPrivate: applyPrivate, perceive: perceive, brain: function () { return brain; } };
+  window.KompasAnswerAside = { mount: mount, setOpen: setOpen, accept: accept, watch: watch, stem: stem, modeFrom: modeFrom, applyPrivate: applyPrivate, perceive: perceive, hear: hear, brain: function () { return brain; } };
   installFetch();
   if (document.getElementById("answer")) mount();
   else document.addEventListener("DOMContentLoaded", mount);

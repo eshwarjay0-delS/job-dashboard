@@ -4044,6 +4044,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   text = stitched.part;
   const heardAt = Date.now();
   transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text) });
+  try { if (window.KompasAnswerAside && typeof window.KompasAnswerAside.hear === "function") window.KompasAnswerAside.hear(who, text, who === "You" ? "mic" : "computer"); } catch (e) {}
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
     const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question, shown);

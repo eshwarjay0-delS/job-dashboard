@@ -27,6 +27,10 @@ The before column is one measurement of that stacked tree. The after column is t
 | 54 | Kompas brain. One pure action per transcript line: summarize, booster, clarify, short-answer, prewarm, flag-contradiction, or hold. Weak lines are dropped. No poll and no extra model call. | no replay | labeled accuracy 1.0 (8/8); padded replay max 0.515 ms; contradiction rate 0 | brain test pass | kept |
 | 55 | Desktop shell. The panel and the brain have to ride the window that already uses setContentProtection. | the exe loads the live page; the new files were not on that page yet | `loadURL("kompas://app" + "/kompas/index.html")` fetches `https://job-dashboard-fawn.vercel.app` with `cache: "no-store"`. The panel is not a second window. Preload still toggles `kd-private`. | desktop-brain test pass | kept; no new exe; no desktop release |
 
+## Nervous system
+
+After round 55 the brain is the hub. `src/lib/kompasBus.ts` is an in-memory pub/sub. `runSession` plays transcript lines through ears, question detection, the clarify policy, Lens, the attached dossier text, and answer quality plus defensibility. One local pass on the fixture in `kompas-nervous-system.test.mjs` stays under 150 ms. The page publishes each kept mic or computer-audio line with `KompasAnswerAside.hear`. The map is `docs/kompas-brain-map.md`.
+
 ## Still failing
 
 - 14 of 150 mode pairs are still under a 0.50 content gap. They were not padded.

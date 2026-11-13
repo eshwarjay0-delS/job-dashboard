@@ -30,6 +30,7 @@ import { defensibilityPrompt, defensibilityReport } from "@/lib/kompasDefensibil
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
 import { answerAside, shortFactAnswer, type AnswerAside } from "@/lib/kompasAnswerAside"
 import { claimPrompt, screenSuggestion } from "@/lib/kompasSessionMind"
+import { runSession } from "@/lib/kompasNervousSystem"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
@@ -1335,7 +1336,21 @@ ${INTERVIEW}`
   }
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
-  job.aside = answerAside({ question, transcript: [transcript, heardAll].filter(Boolean).join("\n"), resume: resumeSrc })
+  const heardForBrain = [transcript, heardAll].filter(Boolean).join("\n")
+  let sessionClaims: string[] = []
+  try {
+    const session = runSession({
+      transcript: heardForBrain,
+      resume: resumeSrc,
+      jd: jdSrc,
+      dossier: priorBibleContext,
+      question,
+      answer: previousAnswer,
+    })
+    sessionClaims = session.claims
+    job.heard = heardForBrain
+  } catch { /* the answer still runs if the bus fails */ }
+  job.aside = answerAside({ question, transcript: heardForBrain, resume: resumeSrc, said: sessionClaims })
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
 }

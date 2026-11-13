@@ -1,3 +1,7 @@
+## 2026-11-13 — The brain is the hub (no new screen beyond the panel)
+
+No second window. The side panel is the same one as the rounds entry below. What changed is invisible until a transcript line arrives: mic and computer-audio lines, question detection, Lens, dossier text, the answer-quality score, and the clarify action share one in-memory bus. The map is `docs/kompas-brain-map.md`. No new network call and no poll.
+
 ## 2026-11-13 — Rounds 36-55 and the Kompas brain (visible side panel)
 
 The answer card and the side panel both changed. Engineer, director, and architect drafts name different work. A keyword-only line no longer scores as a full relevance 4. Design answers from the architect label a tangent. Director drafts own one tradeoff when the ceiling allows it. A yes/no stand-in dropped from 33 words to 16. The panel keeps a session claim ledger, scores suggestions, and drops a line that contradicts what the candidate already said. Previous and Next browse earlier suggestions in memory only. Private mode is unchanged: the panel stays inside the overlay, and the desktop still calls setContentProtection on that same window.
