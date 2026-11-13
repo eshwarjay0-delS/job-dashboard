@@ -28,6 +28,7 @@ import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { defensibilityPrompt, defensibilityReport } from "@/lib/kompasDefensibility"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
+import { answerAside, shortFactAnswer, type AnswerAside } from "@/lib/kompasAnswerAside"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
@@ -361,6 +362,8 @@ type AnswerJob = {
   // the prompt carries a DOSSIER NOTE for it and the response flags it,
   // so a silently ungrounded answer is never mistaken for a grounded one.
   groundingTimedOut: boolean
+  // Context panel. Built with the answer from the resume already on this job. Not a second model call.
+  aside?: AnswerAside
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -679,6 +682,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...notebookCausalFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           defensibility: defensibilityReport(job.question, finalText),
           ledger: job.ledger,
+          aside: job.aside,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
         })
@@ -792,6 +796,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     repaired,
     repair,
     ledger: job.ledger,
+    aside: job.aside,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
       interviewer: job.interviewer, tier: job.tier, kind: job.plan.kind, words: job.plan.words,
@@ -924,6 +929,17 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     return NextResponse.json({ noQuestion: true, skipped }, { headers: NO_STORE })
   }
   question = stripLogistics(question) || question   // "What is your visa status and tell me about PAM": only PAM is answered
+
+  // A yes/no or "have you worked with X" ask is one sentence from the resume already on
+  // this request. No model call, no long passage. A name the resume does not show stays "Not directly".
+  const earlyConfig = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
+  const fastResume = str(earlyConfig.resume, 60000)
+  const fast = shortFactAnswer(question, fastResume)
+  if (fast) {
+    const aside = answerAside({ question, transcript: [tailWindow(body.transcript).text, heardAll].filter(Boolean).join("\n"), resume: fastResume })
+    if (fast.booster) aside.boosters = [fast.booster, ...aside.boosters.filter((b) => b !== fast.booster)].slice(0, 3)
+    return fastFactResponse(body.stream === true, fast.text, aside, question)
+  }
 
   // Speed r6: on an answer turn the key vault is read WHILE the question, sources, dossier race and prompt are prepared
   // (awaited just before the answer is built), instead of before all of it. Same keysFor, same 4 s ceiling, same
@@ -1302,8 +1318,17 @@ ${INTERVIEW}`
   }
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
+  job.aside = answerAside({ question, transcript: [transcript, heardAll].filter(Boolean).join("\n"), resume: resumeSrc })
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
+}
+
+function fastFactResponse(stream: boolean, text: string, aside: AnswerAside, question: string): Response | NextResponse {
+  const card = { ...toCard(text, "full_script"), title: question.replace(/\s+/g, " ").trim().slice(0, 140) }
+  const payload = { text, fast: true, card, aside, title: card.title, polished: false, degraded: false, provider: "code", model: "" }
+  if (!stream) return NextResponse.json(payload, { headers: NO_STORE })
+  const sse = `data: ${JSON.stringify({ type: "meta", derived: question, fast: true })}\n\ndata: ${JSON.stringify({ type: "replace", text })}\n\ndata: ${JSON.stringify({ type: "done", ...payload, derived: question })}\n\n`
+  return new Response(sse, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
 }
 
 function answerFailure(message: string) {
