@@ -87,3 +87,12 @@ test('authentication decision records the direct Gmail-only login instruction, n
  assert.match(entry.request, /only Gmail sign in/)
  assert.match(entry.limits, /does not prove every prior chat/)
 })
+
+test('conversation evidence decisions are filterable and retain their recorded status', () => {
+ const entry = REA_SESSIONS.find(s => s.id === 'auth-login-gmail-only-owner-wording-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.method, 'Conversation evidence review')
+ assert.equal(entry.state, 'Owner instruction recorded, runtime verification pending')
+ assert.ok(entry.steps.some(step => step.status === 'Recorded'))
+ assert.ok(filterReaSessions('', 'kompas', 'Conversation evidence review').some(s => s.id === entry.id))
+})
