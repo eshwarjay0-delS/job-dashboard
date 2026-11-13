@@ -30,6 +30,13 @@ test('a job-description or formatting instruction is not blanket experience conf
   }
 })
 
+test('the job description is never mislabeled as candidate evidence without a confirmation', () => {
+  const prompt = candidateEvidenceInput('Contract To Perm and Right To Hire are required', [])
+  assert.match(prompt, /JOB DESCRIPTION \(target requirements, not candidate evidence\)/)
+  assert.doesNotMatch(prompt, /ORIGINAL SUBMITTED TEXT/)
+  assert.match(prompt, /Job-description requirements[\s\S]*are never candidate evidence/)
+})
+
 test('candidate-confirmed skills may be mapped into existing projects without changing identity facts', () => {
   const prompt = candidateEvidenceInput('JD asks for Canton and AWS', ['I have experience with Canton and AWS'])
   assert.match(prompt, /mapped naturally into relevant existing project bullets across the selected resume's roles/)
