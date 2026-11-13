@@ -2,6 +2,8 @@
 // Deterministic. Built from the resume already on the answer request.
 // No second model call, no poll. The spoken answer is untouched.
 import { clarifySeedLine } from "./kompasClarifyBank.ts"
+import { validateStatement } from "./kompasGloss.ts"
+import { lookupTerm } from "./kompasLexicon.ts"
 import { extractClaims, longStatementCue, screenSuggestion } from "./kompasSessionMind.ts"
 //
 // Leads and touch points may name a team size, a title, an employer, a tool,
@@ -359,16 +361,25 @@ export function shortFactAnswer(question: string, resumeRaw: string): ShortFact 
       ? `Yes, that was ${facts.title} at ${facts.employer}.`
       : `Yes, ${surface} is on the resume.`
   } else if (name) {
-    const pivot = facts.title && facts.employer
-      ? `I was the ${facts.title} at ${facts.employer}`
-      : facts.owned
-        ? `I owned ${facts.owned}`
-        : "that name is not on the resume"
-    text = `Not directly, but ${pivot}.`
+    const known = lookupTerm("eshwarjay05", name)
+    if (known) {
+      text = `Yes, ${known.surface} is on the resume.`
+    } else {
+      const pivot = facts.title && facts.employer
+        ? `I was the ${facts.title} at ${facts.employer}`
+        : facts.owned
+          ? `I owned ${facts.owned}`
+          : "that name is not on the resume"
+      text = `Not directly, but ${pivot}.`
+    }
   } else {
     text = "Not directly. I won't add a name the resume doesn't have."
   }
-  if (!lineOk(text, resume)) text = "Not directly. I won't add a name the resume doesn't have."
+  const knownSurface = name ? lookupTerm("eshwarjay05", name)?.surface || "" : ""
+  if (!lineOk(text, knownSurface && text.includes(knownSurface) ? `${resume}\n${knownSurface}` : resume)) text = "Not directly. I won't add a name the resume doesn't have."
+  const checked = validateStatement(text, resumeRaw)
+  if (!checked.ok && !checked.line) return { text: "Not directly. I won't add a name the resume doesn't have.", booster: "" }
+  text = checked.ok ? text : checked.line
   const sentences = text.split(/(?<=[.?!])\s+/).filter(Boolean)
   text = sentences[0] || text
   const booster = surface ? "Yeah, that's true." : ""
@@ -382,14 +393,16 @@ function triggerSpan(transcript: string, question: string): string {
   return "resume touch already on this answer"
 }
 
-function keepLine(line: string, transcript: string, said: string[], fallbackWhy: string): { line: string; why: string } | null {
+function keepLine(line: string, transcript: string, said: string[], fallbackWhy: string, resume = ""): { line: string; why: string } | null {
   const screened = screenSuggestion(line, transcript, said)
   if (!screened.line) return null
-  return { line: screened.line, why: screened.why || fallbackWhy }
+  const checked = validateStatement(screened.line, resume)
+  if (!checked.ok && !checked.line) return null
+  return { line: checked.ok ? screened.line : checked.line, why: checked.ok ? screened.why || fallbackWhy : checked.reason }
 }
 
 /** Context, questions, and boosters. Pure. Same input, same panel. No model call. */
-export function answerAside(input: { question?: string; transcript?: string; resume?: string; said?: string[] }): AnswerAside {
+export function answerAside(input: { question?: string; transcript?: string; resume?: string; said?: string[]; nudge?: string; clarify?: string }): AnswerAside {
   const question = String(input.question || "").replace(/\s+/g, " ").trim()
   const transcript = String(input.transcript || "").slice(0, 12000)
   const said = (input.said || []).map((line) => String(line || "")).filter(Boolean)
@@ -425,7 +438,7 @@ export function answerAside(input: { question?: string; transcript?: string; res
   const take = (lines: string[], min: number, fallback: string[]) => {
     const out: string[] = []
     for (const line of lines) {
-      const kept = keepLine(line, transcript, said, why)
+      const kept = keepLine(line, transcript, said, why, resume)
       if (!kept || out.includes(kept.line)) continue
       out.push(kept.line)
       trace.push(kept)
@@ -433,15 +446,17 @@ export function answerAside(input: { question?: string; transcript?: string; res
     }
     for (const line of fallback) {
       if (out.length >= min) break
-      const kept = keepLine(line, transcript, said, why)
+      const kept = keepLine(line, transcript, said, why, resume)
       if (!kept || out.includes(kept.line)) continue
       out.push(kept.line)
       trace.push(kept)
     }
     return out
   }
-  const say = cue.sayNow ? keepLine(cue.sayNow, transcript, said, why) : null
-  const summary = cue.summary ? keepLine(cue.summary, transcript, said, why) : null
+  const nudgeKept = input.nudge ? keepLine(input.nudge, transcript, said, why, resume) : null
+  const say = nudgeKept || (cue.sayNow ? keepLine(cue.sayNow, transcript, said, why, resume) : null)
+  if (input.clarify) questions.unshift(input.clarify)
+  const summary = cue.summary ? keepLine(cue.summary, transcript, said, why, resume) : null
   if (summary) trace.push(summary)
   if (say) trace.push(say)
   const claimSpans = extractClaims(transcript, said).map((claim) => claim.span)

@@ -4,6 +4,9 @@
  * must not appear, and the length. The selected mode chooses stance, depth, and confidence.
  * This module does not call a model.
  */
+import { validateStatement } from "./kompasGloss.ts"
+import { lexiconClause } from "./kompasLexicon.ts"
+import { perspectiveDraft } from "./kompasPerspective.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
@@ -607,6 +610,7 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
     questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
     "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
     "BRAIN POLICY: Sentence one answers this question. Connect the next beat with once that was confirmed, not And then or From there. If the resume has no matching incident, say I would. Do not borrow another speaker's story. Never mix Houston and Saint Louis.",
+    "PERSPECTIVE: Vary one or two of these, and do not use the same pair every time: what he seems to care about, a lean-toward with a because from the resume or I would when the resume has no match, one follow-up, one plain note of what is worth a look, and one line of ownership. No hype words. No invented job.",
     /\btechnical HR\b/i.test(question) ? "Technical HR: one plain sentence for what it is and why it matters, then stop. No build walk." : "",
     cut.shape === "design" ? "Architect: if a thought is optional, label it as a tangent and leave it out of scope. Director: own one tradeoff in a single sentence." : "",
     cut.shape === "personal-experience" ? "After the result, one short line may offer to keep going. Do not restart the story." : "",
@@ -1824,11 +1828,44 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     parts.push(line)
     words += n
   }
-  if (shortFact) return trimToWords(parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28))
-  if (hrAsk && level === "engineer" && (cut.shape === "definition" || cut.shape === "direct" || cut.shape === "comparison")) {
-    return trimToWords(parts.join(" "), Math.min(mode.maxWords, 48))
+  if (!shortFact && !bareTerm && !(hrAsk && level === "engineer")) {
+    for (const line of perspectiveDraft(question, level, resume, previous)) {
+      const n = wordCount(line)
+      const now = wordCount(parts.join(" "))
+      if (parts.includes(line)) continue
+      if (now + n + 2 <= mode.maxWords) {
+        parts.push(line)
+        continue
+      }
+      let idx = -1
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (/^(?:Once that was confirmed|Because of that|That is why|The reason I would stop)/.test(parts[i])) { idx = i; break }
+      }
+      if (idx < 0) continue
+      const delta = n - wordCount(parts[idx])
+      if (delta <= 6 && now + delta <= mode.maxWords) parts[idx] = line
+    }
   }
-  return trimToWords(parts.join(" "), mode.maxWords)
+  if (shortFact) return withKnownTerm(question, parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28))
+  if (hrAsk && level === "engineer" && (cut.shape === "definition" || cut.shape === "direct" || cut.shape === "comparison")) {
+    return withKnownTerm(question, parts.join(" "), Math.min(mode.maxWords, 48))
+  }
+  return withKnownTerm(question, parts.join(" "), mode.maxWords)
+}
+
+function withKnownTerm(question: string, text: string, cap: number): string {
+  const trimmed = trimToWords(text, cap)
+  const clause = lexiconClause("eshwarjay05", question)
+  const joined = clause && wordCount(trimmed) + wordCount(clause) <= cap && !trimmed.toLowerCase().includes(clause.slice(0, 24).toLowerCase())
+    ? `${trimmed} ${clause}`
+    : trimmed
+  const sentences = joined.split(/(?<=[.!?])\s+/)
+  const kept = sentences.flatMap((sentence) => {
+    const check = validateStatement(sentence)
+    if (!check.ok && !check.line) return []
+    return [check.ok ? sentence : check.line]
+  })
+  return trimToWords(kept.join(" "), cap)
 }
 
 function plainDefinition(level: AnswerLevel, lead: string, hr: boolean): string {

@@ -261,7 +261,7 @@
     else if (stemNow) { current = null; renderWaiting(); }
   }
 
-  var brain = { claims: [], topics: [], threads: [], questions: [], answers: [], prewarm: "", log: [], last: "" };
+  var brain = { claims: [], topics: [], threads: [], questions: [], answers: [], prewarm: "", log: [], last: "", lastShown: "" };
 
   function lineIntent(text) {
     var t = String(text || "").replace(/\s+/g, " ").trim();
@@ -366,12 +366,30 @@
     if (!busSubs[type]) busSubs[type] = [];
     busSubs[type].push(fn);
   }
+  function devTimeline() {
+    var on = (typeof window !== "undefined") && (window.KOMPAS_DEV || /[?&]kompasDev=1/.test(String(location.search || "")));
+    if (!on) return;
+    var panel = document.getElementById("answerAside");
+    if (!panel) return;
+    var node = document.getElementById("kompas-timeline");
+    if (!node) {
+      node = el("pre", "kompas-timeline", "");
+      node.id = "kompas-timeline";
+      panel.appendChild(node);
+    }
+    node.textContent = brain.log.slice(-12).map(function (row) {
+      return (row.action || "hold") + " " + Math.round(row.ms || 0) + "ms";
+    }).join("\n");
+  }
   subscribe("ear.transcript", function (event) {
     if (!event || !event.text || event.text === brain.last) return;
     brain.last = event.text;
-    var step = perceive(event.who, event.text);
-    if (step.shown) paintSay(step.shown);
+    var step = null;
+    try { step = perceive(event.who, event.text); }
+    catch (err) { if (brain.lastShown) paintSay(brain.lastShown); return; }
+    if (step && step.shown) { brain.lastShown = step.shown; paintSay(step.shown); }
     publish("brain.state", { question: brain.prewarm || event.text, topics: brain.topics.slice(), claims: brain.claims.length });
+    devTimeline();
     if (!current || manual) return;
     paintMode(current);
   });

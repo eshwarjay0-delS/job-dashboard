@@ -30,6 +30,7 @@ import { defensibilityPrompt, defensibilityReport } from "@/lib/kompasDefensibil
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
 import { answerAside, shortFactAnswer, type AnswerAside } from "@/lib/kompasAnswerAside"
 import { claimPrompt, screenSuggestion } from "@/lib/kompasSessionMind"
+import { readInterviewer } from "@/lib/kompasIntegration"
 import { runSession } from "@/lib/kompasNervousSystem"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
@@ -993,7 +994,10 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     } catch { /* optional historical context must not block a live turn */ }
     finally { if (timer) clearTimeout(timer) }
   }
-  const interviewer = str(config.interviewer, 40) || "engineer"
+  const explicitLevel = str(config.level, 40)
+  const explicitVoice = str(config.interviewer, 40)
+  const autoMode = readInterviewer(`${jdSrc}\n${question}`, [question]).mode
+  const interviewer = explicitVoice || (!explicitLevel ? autoMode : "") || "engineer"
   // The answering LEVEL (owner, 22 Oct 2026: exactly three levels). The client
   // sends the level the user has selected RIGHT NOW on every request, so a
   // level switch changes the very next answer — nothing is pinned at session
@@ -1338,6 +1342,8 @@ ${INTERVIEW}`
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
   const heardForBrain = [transcript, heardAll].filter(Boolean).join("\n")
   let sessionClaims: string[] = []
+  let sessionNudge = ""
+  let sessionClarify = ""
   try {
     const session = runSession({
       transcript: heardForBrain,
@@ -1348,9 +1354,11 @@ ${INTERVIEW}`
       answer: previousAnswer,
     })
     sessionClaims = session.claims
+    sessionNudge = session.nudge
+    sessionClarify = session.clarify
     job.heard = heardForBrain
   } catch { /* the answer still runs if the bus fails */ }
-  job.aside = answerAside({ question, transcript: heardForBrain, resume: resumeSrc, said: sessionClaims })
+  job.aside = answerAside({ question, transcript: heardForBrain, resume: resumeSrc, said: sessionClaims, nudge: sessionNudge, clarify: sessionClarify })
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
 }
