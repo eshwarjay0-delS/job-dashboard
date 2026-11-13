@@ -76,3 +76,8 @@ The approved runtime and test changes are restacked onto canonical master `026c7
 The focused storage regression now distinguishes HTTP 412 (ETag precondition mismatch), HTTP 409 (conditional-write conflict), and HTTP 404 (object disappeared between read and conditional write). Unexpected 5xx errors must propagate rather than being treated as retryable conflicts. The 409/404 cases return a failed conditional write so the caller performs its bounded reread; there is still no unconditional-write fallback. The existing barrier test continues to verify that a newer JD/resume pair survives a stale consumer.
 
 Exact-head GitHub CI, WhatsApp recovery, Kompas baseline, Plan/REA and the protected preview are pending on the new PR. No local execution, production R2 write, real WhatsApp send, model call, or handset acceptance is claimed.
+
+
+## 13 November 2026 — test fixture boundary correction
+
+The current PR branch includes test-only correction commit `83c81db42877b70227191ba90640521761575d4f`, which closes the original filesystem/CAS test before declaring the independent 409/404/500 adapter test. Evaluate workflows on the latest PR head only; earlier checks on `b7fed671999ad850f1a926351974b1eb4c10231c` do not validate the corrected head.
