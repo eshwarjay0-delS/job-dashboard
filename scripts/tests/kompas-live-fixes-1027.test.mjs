@@ -34,10 +34,10 @@ test('Prev and Next show where you are and look disabled at the ends', () => {
   assert.match(read('public/kompas/styles.css'), /\.pill:disabled\{opacity:\.42/)
 })
 
-test('on the desktop a scrolled-away question takes no space, and a shown one is two lines', () => {
+test('on the desktop a scrolled-away question takes no space, and a shown one can grow past two lines', () => {
   const css = read('public/kompas/styles.css')
   assert.match(css, /#view-copilot \.card\.q-away \.q\{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important/)
-  assert.match(css, /#view-copilot \.card \.q\{max-height:3\.1em\}/)
+  assert.match(css, /#view-copilot #card \.q,\s*#view-copilot #card \.q\.live\{\s*max-height:min\(16em, 42vh\);/)
 })
 
 test('"Shkivs" and "cyber-arc" are repaired before they reach a question', () => {

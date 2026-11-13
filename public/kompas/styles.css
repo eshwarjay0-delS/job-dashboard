@@ -1580,6 +1580,25 @@ html.kd #view-copilot #answer{
     right:8px !important;
     z-index:260 !important;
   }
+  /* Web only. Stop (the live Start button) and AI Answer share one full
+     48px row. html.kd keeps the desktop bar above. */
+  html:not(.kd) #view-copilot .overlay .bar-actions{
+    flex-wrap:wrap;
+    height:auto;
+    min-height:48px;
+    max-height:none;
+    overflow-x:visible;
+    overflow-y:visible;
+    align-content:flex-start;
+  }
+  html:not(.kd) #view-copilot .overlay .bar-actions #startBtn,
+  html:not(.kd) #view-copilot .overlay .bar-actions #answerBtn{
+    flex:1 0 calc(50% - 4px);
+    height:48px;
+    min-height:48px;
+    max-height:48px;
+    order:-1;
+  }
 }
 
 /* Live shared-tab preview (PIP-style) inside the session overlay, top-left. */

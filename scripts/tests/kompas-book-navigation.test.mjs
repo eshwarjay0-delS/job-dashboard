@@ -28,11 +28,11 @@ test('flipping between cards never rewrites a stored answer (pages of a book)', 
   vm.runInNewContext(appJs.slice(start, end), context);
   context.renderCard();              // open page A
   context.idx = 1; context.renderCard();   // flip to page B while it is still generating
-  cardB.answer = fullB + ' And the finished ending.'; cardB.streaming = false;   // generation completes off-screen
+  cardB.answer = fullB + ' The finished ending is intact.'; cardB.streaming = false;   // generation completes off-screen
   context.idx = 0; context.renderCard();   // back to A
   context.idx = 1; context.renderCard();   // return to the latest page: the finished answer, intact
   assert.equal(cardA.answer, fullA, 'rendering page A never flattened or dropped part of its answer');
-  assert.equal(cardB.answer, fullB + ' And the finished ending.', 'the completed answer survived the round trip');
+  assert.equal(cardB.answer, fullB + ' The finished ending is intact.', 'the completed answer survived the round trip');
   assert.match(dom.window.document.getElementById('answer').textContent, /finished ending/);
   dom.window.close();
 });

@@ -1,3 +1,11 @@
+## 2026-11-13 — Kompas answer release onto current master
+
+No MarketFit page changed. Kompas did. Pull requests 334, 337, 339, and 347 (head `59c9b736`) are on this branch from master `313c90a4`. Conflicts were only `TODO.md` and `src/lib/plan-vision-journal.ts`; both the artifact-cleanup notes and the answer-stack notes stayed. On a web window at 900px or narrower, Stop and AI Answer share one full 48px row. `html.kd` is unchanged. The Vercel verify workflow skips when the master commit message lacks the ship marker.
+
+**Left out.** The eight defensibility mailbox patches (`0001`–`0008`, based on `65bdf2f8`) were not attached in this environment. They are not in the tree. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks were not merged. `AUTH_DISABLED` was not edited.
+
+**Checked locally. Production deploy is the next step.** `npx tsc --noEmit` exit 0. `npm run lint` exit 0. Order, audio-tail, long-context, Parakeet card, fifty-fold, relevance, question-length, fold-clarity, mobile-button, and auth-disabled tests passed, including the admin route staying locked for the synthetic owner. The two `kompas-voice` cases fail the same way as master `313c90a4`: web share prompt got `[]` instead of `['share','mic']`, and a repeated AI Answer click got `0` instead of `1`. The r4 audience-prompt budget is over the old ceiling because the approved voice prompts are longer. A full `kompas*.test.mjs` glob also fails cases that already fail on that master (screen-route module alias, missing perfact desktop file, and others).
+
 ## 2026-11-13 — Actions storage cleanup (no visible UI)
 
 No new website screen. The account had filled its 0.5 GB Actions storage with `Kompas-Windows-Caption-Once-<sha>` artifacts (~162 MB, 14-day retention, including pull requests). Owner Eshwar approved deleting every old Actions artifact except the newest caption build.

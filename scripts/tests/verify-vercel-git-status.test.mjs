@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { verifyVercelStatus } from "../verify-vercel-git-status.mjs"
 const sha="a".repeat(40),repo="owner/job-dashboard",token="synthetic-not-a-real-token"
 const proof="https://vercel.com/example/job-dashboard/deploy123"
@@ -34,4 +35,10 @@ test("Missing status, absent permissions, fake proof URL and unset token fail cl
  {const x=mock([res([{context:"Vercel",state:"success",target_url:"https://example.org/fake"}])]);await assert.rejects(verifyVercelStatus({sha,repo,token,fetcher:x.fetcher}),/unexpected proof URL/)}
  await assert.rejects(verifyVercelStatus({sha,repo,token:""}),/GITHUB_TOKEN is required/)
  await assert.rejects(verifyVercelStatus({sha:"not-sha",repo,token}),/40-hex/)
+})
+test("CD verify skips master commits whose message lacks the ship marker",()=>{
+ const workflow=readFileSync(new URL("../../.github/workflows/deploy.yml",import.meta.url),"utf8")
+ assert.match(workflow,/name: CD — Verify Vercel Git Deployment/)
+ assert.match(workflow,/if: github\.event_name == 'workflow_dispatch' \|\| contains\(github\.event\.head_commit\.message, '\[ship\]'\)/)
+ assert.match(workflow,/branches: \[master\]/)
 })
