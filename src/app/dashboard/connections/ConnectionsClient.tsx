@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Mail, CalendarDays, Link2, Plus, ArrowRight } from "lucide-react"
 import { connectGmail } from "@/lib/google-auth"
-import { checkGmailRead } from "@/lib/connectionCheck"
 import GoogleConsentExplainer from "./GoogleConsentExplainer"
 import ConnectedWrap from "./ConnectedWrap"
 import { navItem } from "../_components/nav"
@@ -203,6 +202,7 @@ export default function ConnectionsClient() {
   const [loadError, setLoadError] = useState(false)
   const [busy, setBusy] = useState("")
   const [message, setMessage] = useState("")
+  const [snapshotNotice, setSnapshotNotice] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -210,11 +210,27 @@ export default function ConnectionsClient() {
     try {
       const res = await fetch("/api/connections/status", { cache: "no-store" })
       const body = await res.json()
-      if (!res.ok) throw new Error(body.error || "Could not load connections.")
+      if (!res.ok) {
+        const msg = body.error || "Could not load connections."
+        if (/restrict|exceed_egress|egress quota/i.test(msg)) {
+          setSnapshotNotice(typeof body.snapshotNotice === "string" ? body.snapshotNotice : "Live sync resumes when the database is back.")
+          setMessage("")
+          return
+        }
+        throw new Error(msg)
+      }
       setStatus(body)
+      setSnapshotNotice(typeof body.snapshotNotice === "string" ? body.snapshotNotice : null)
+      setMessage("")
     } catch (e) {
-      setLoadError(true)
-      setMessage(e instanceof Error ? e.message : String(e))
+      const msg = e instanceof Error ? e.message : String(e)
+      if (/restrict|exceed_egress|egress quota/i.test(msg)) {
+        setSnapshotNotice("Live sync resumes when the database is back.")
+        setMessage("")
+      } else {
+        setLoadError(true)
+        setMessage(msg)
+      }
     } finally {
       setLoading(false)
     }
@@ -232,10 +248,21 @@ export default function ConnectionsClient() {
     setSyncError("")
     setSyncDone(false)
     try {
-      if (!(await checkGmailRead())) throw new Error("Gmail could not be read.")
+      const res = await fetch("/api/gmail-sync", { method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" }, body: "{}" })
+      const body = await res.json().catch(() => ({}))
+      if (typeof body?.snapshotNotice === "string" && body.snapshotNotice) {
+        setSnapshotNotice(body.snapshotNotice)
+        return
+      }
+      if (!res.ok || body?.ok !== true) throw new Error("Gmail could not be read.")
       setSyncDone(true)
-    } catch {
-      setSyncError("Gmail could not be read. Retry, or reconnect the account if Google access was revoked.")
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (/restrict|exceed_egress|egress quota/i.test(msg)) {
+        setSnapshotNotice("Live sync resumes when the database is back.")
+      } else {
+        setSyncError("Gmail could not be read. Retry, or reconnect the account if Google access was revoked.")
+      }
     } finally {
       setSyncing(false)
     }
@@ -298,6 +325,13 @@ export default function ConnectionsClient() {
 
   return (
     <div className="mf-home conn-redesign">
+      {(snapshotNotice || (params.get("mail_snapshot") === "1" && loading)) && (
+        <div className="mf-notice" role="status">
+          <p>{snapshotNotice || "Live sync resumes when the database is back."}</p>
+          <button className="btn-outline" type="button" onClick={() => void load()}>Refresh</button>
+        </div>
+      )}
+
       <header className="mf-home-heading">
         <h1>{navItem("/dashboard/connections").label}</h1>
         <p>
@@ -417,7 +451,7 @@ export default function ConnectionsClient() {
                 <button
                   className="conn-add-card"
                   disabled={loading || loadError}
-                  onClick={() => setShowConsentModal(true)}
+                  onClick={() => { if (snapshotNotice) return; setShowConsentModal(true) }}
                 >
                   <span className="plus"><Plus size={22} /></span>
                   Add Google account
@@ -471,7 +505,7 @@ export default function ConnectionsClient() {
 
       {showConsentModal && (
         <GoogleConsentExplainer
-          onContinue={() => { setShowConsentModal(false); void connectGmail("/dashboard/connections") }}
+          onContinue={() => { setShowConsentModal(false); if (snapshotNotice) return; void connectGmail("/dashboard/connections") }}
           onCancel={() => setShowConsentModal(false)}
         />
       )}

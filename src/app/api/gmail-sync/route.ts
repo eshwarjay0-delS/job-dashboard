@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
+import { getGoogleWorkspaceAccessToken } from "@/lib/googleWorkspace"
+import { loadWorkspaceAccounts } from "@/lib/gmailSnapshot"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gmail Sync — uses the Google OAuth provider_token stored in the Supabase
@@ -196,12 +197,14 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || user.is_anonymous) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
 
-    const accounts = await listGoogleWorkspaceAccounts(user.id)
+    const loaded = await loadWorkspaceAccounts(user.id)
+    const accounts = loaded.accounts
     return NextResponse.json({
       connected: accounts.some(a => a.gmail_enabled),
       accounts,
       maxAccounts: 4,
       primaryAccountId: accounts.find(a => a.is_primary)?.id || accounts[0]?.id || null,
+      ...(loaded.notice ? { snapshotNotice: loaded.notice } : {}),
     })
   } catch (err) {
     return NextResponse.json({ connected: false, reason: String(err), accounts: [] })
@@ -233,6 +236,11 @@ export async function POST(req: Request) {
         { ok: false, error: "Too many sync requests. Try again later." },
         { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
       )
+    }
+
+    const loaded = await loadWorkspaceAccounts(user.id)
+    if (loaded.source === "snapshot") {
+      return NextResponse.json({ ok: true, count: 0, applications: [], snapshotNotice: loaded.notice })
     }
 
     const accountId = typeof body.accountId === "string" && body.accountId ? body.accountId : null

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createGoogleOAuthState } from "@/lib/googleOAuthState"
+import { loadWorkspaceAccounts } from "@/lib/gmailSnapshot"
 
 export const runtime = "nodejs"
 
@@ -24,6 +25,16 @@ export async function GET(req: NextRequest) {
   }
 
   const returnTo = req.nextUrl.searchParams.get("return") || "/dashboard/connections"
+  try {
+    const loaded = await loadWorkspaceAccounts(user.id)
+    if (loaded.source === "snapshot") {
+      const dest = new URL(returnTo.startsWith("/dashboard") ? returnTo : "/dashboard/connections", req.url)
+      dest.searchParams.set("mail_snapshot", "1")
+      return NextResponse.redirect(dest)
+    }
+  } catch {
+    // A non-quota failure still starts the Google prompt.
+  }
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.nextUrl.origin}/api/identity/google-workspace/callback`
   const state = createGoogleOAuthState(user.id, returnTo)
 
