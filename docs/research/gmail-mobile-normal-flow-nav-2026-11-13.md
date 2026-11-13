@@ -23,6 +23,6 @@ The owner corrections from 4 October, 5 October and 11 November require the mobi
 
 ## Status and remaining gates
 
-Implementation is committed and open as draft PR #351. Exact-head full CI is pending. Do not merge or deploy until the exact head passes, the required protected preview/review gate succeeds, and a production deployment is READY on the intended commit with `job-dashboard-fawn.vercel.app` assigned.
+Implementation is committed and open as draft PR #351. The first exact-head full CI run 43365305559 failed at TypeScript because two new Plan Journal entries used the unsupported area `platform`; the focused mobile test and schema gate passed. Those entries are corrected to the allowed `all` area in the follow-up commit; a fresh exact-head full CI run is required. Do not merge or deploy until the exact head passes, the required protected preview/review gate succeeds, and a production deployment is READY on the intended commit with `job-dashboard-fawn.vercel.app` assigned.
 
 No actual phone/browser viewport, Gmail API call, OAuth request, inbox mutation, email send, WhatsApp send or production deployment was performed. A passing source test will not be called mobile acceptance.
