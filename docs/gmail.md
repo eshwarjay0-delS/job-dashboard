@@ -204,3 +204,15 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## 13 November 2026 — multi-account/mobile and notification security gates
+
+The canonical production alias is READY at `024177889d092f30aaeada20fab649aa41c9d1f4`. Neither current Gmail PR is merged or deployed.
+
+- PR #357 exact head `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` passes full CI `43402024260` and Kompas baseline `43402024070`. It scopes digest mutes and thread/radar identity to the receiving account and restores normal-flow mobile navigation. Vercel preview lookup returned zero deployments; two-inbox collision, selected-From, affected-inbox reconnect and actual narrow-phone acceptance remain pending.
+- PR #359 exact head `ab3e070aeb4ca8864f5f34ae26fd4c761a645792` passes full CI `43419089019`, Kompas baseline `43419089067` and Plan/REA schema `43419089029`. It gates notification export behind `GMAIL_UPDATES_SCHEDULER_ENABLED` and `CRON_SECRET`, and scopes export to the admin owner. It remains DRAFT pending explicit owner security review and a protected preview.
+- A read-only Vercel error query found 43 HTTP 402 `AuthApiError` / `exceed_egress_quota` failures from `/api/gmail/notify-rules/export`, first 11 Nov 13:06:59 UTC and last 13 Nov 13:36:55 UTC, all on prior production deployment `dpl_F8MzRGX8onnGACX5HK6xDLoeuJUc` at SHA `4c01951`. The current alias had no grouped runtime errors in the last 30 minutes. This does not prove Supabase service is restored or the export route is safe; no in-repository caller was found.
+- The non-decrypted project environment inventory contains `CRON_SECRET` but not `GMAIL_UPDATES_SCHEDULER_ENABLED` or `WHATSAPP_GMAIL_UPDATE_TEMPLATE`; the unattended worker remains disabled. No scheduler, Gmail API call, inbox mutation, email or WhatsApp send was performed.
+
+The broad Poke direction is approved; the sync-health card remains proposed. Keep all notification automation off until an external scheduler, approved Meta template and explicit enablement consent exist. Do not change billing/spend caps to clear the egress restriction. The current production alias is 024177; PRs #357 and #359 remain separate unshipped work.
