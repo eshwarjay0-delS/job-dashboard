@@ -99,3 +99,10 @@ The first exact-head full CI run failed one assertion because the fixture combin
 
 
 The callback-retention fixture correction is now recorded in the Plan Journal and REA. Exact-head CI must run on the branch head containing this documentation commit; prior failures on 40709a9 are superseded only for the test fixture, not treated as passing.
+
+
+## 13 November 2026 — run 11 exact-head gates passed
+
+PR #374 `fix/whatsapp-offline-cas-master-026c729-run11-20261113` is based on current master `026c72968e45314ff0a99f701942c966e79f0a1e`. Its final pre-documentation head `7575b5d7cd18287ba93b064a7e0f201edcf064c9` passed full CI `43491356874`, WhatsApp recovery `43491357092`, Kompas baseline `43491356934` and Plan/REA schema `43491357225`. The full CI includes `scripts/tests/whatsapp-single-request.test.mjs`, which exercises provider-acceptance pair retention, interleaving CAS, HTTP 409/404 retry conflicts and unexpected 500 propagation. This is source-level regression evidence only.
+
+The PR remains DRAFT because the legitimate protected Vercel preview requires the private `KOMPAS_VERCEL_API_TOKEN`, which this execution cannot access. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb` / SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; the restack is not deployed. No production R2 write, real Meta send, model call, historical replay or handset test occurred. The prior private archive review records the exact source DOCX and matching JD recovery, but the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain missing. Conflicting source facts remain quarantined.
