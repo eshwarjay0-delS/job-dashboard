@@ -85,3 +85,6 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Confirmed-skill role relevance — 13 November 2026
 
 An explicit first-person skill confirmation may be mapped into an existing project across roles, including an earlier role, but the project must fit the skill family. Generic wording such as “marketing automation,” “API,” or “service” alone does not establish cloud-infrastructure context for AWS/Azure/GCP. Unknown skills still require direct source support. This relevance guard does not create a project, employer, action, outcome, date, title, location, contact, metric or credential. Source/JD conflicts remain unresolved until the candidate reconciles them.
+
+
+Current-master restack: the confirmed-skill role-relevance implementation is on `fix/resume-confirmed-skill-role-mapping-master-9032-20261113` from master `9032d5bd18854c8fd1e61fc781b51085e3af2a26`. Fresh exact-head checks and protected preview are pending. No authenticated baseline/JD/confirmation output or live match percentage is claimed.
