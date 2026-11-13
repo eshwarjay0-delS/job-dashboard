@@ -153,6 +153,28 @@ test('confirmed skills cross roles only when the existing project context is rel
   assert.deepEqual(guarded.blockedTerms, ['CyberArk EPM'])
 })
 
+test('CyberArk EPM does not transfer into generic CRM administration or compliance-audit projects', () => {
+  const roles = [
+    { bullets: [{ idx: 7, text: 'Managed Salesforce CRM profiles, permission sets, marketing automation and account administration.' }] },
+    { bullets: [{ idx: 8, text: 'Reviewed audit evidence and compliance controls for finance reporting.' }] },
+    { bullets: [{ idx: 9, text: 'Removed local administrator rights and enforced least-privilege policies on Windows endpoints.' }] },
+  ]
+  const edits = [
+    { idx: 7, text: 'Managed Salesforce CRM profiles, permission sets, marketing automation and account administration using CyberArk EPM.' },
+    { idx: 8, text: 'Reviewed audit evidence and compliance controls for finance reporting using CyberArk EPM.' },
+    { idx: 9, text: 'Removed local administrator rights and enforced least-privilege policies on Windows endpoints using CyberArk EPM.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['CyberArk EPM'], cover, new Set(['CyberArk EPM']))
+  assert.equal(guarded.reverted, 2)
+  assert.deepEqual(guarded.edits, [
+    { idx: 7, text: roles[0].bullets[0].text },
+    { idx: 8, text: roles[1].bullets[0].text },
+    edits[2],
+  ])
+  assert.deepEqual(guarded.blockedTerms, ['CyberArk EPM'])
+})
+
 test('an unknown confirmed skill is not transferred into a project without source or family evidence', () => {
   const roles = [{ bullets: [{ idx: 4, text: 'Coordinated routine business operations and vendor updates.' }] }]
   const edits = [{ idx: 4, text: 'Coordinated routine business operations and vendor updates using MuleSoft.' }]
