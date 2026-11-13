@@ -1833,7 +1833,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       const n = wordCount(line)
       const now = wordCount(parts.join(" "))
       if (parts.includes(line)) continue
-      if (now + n + 2 <= mode.maxWords) {
+      if (now + n + 6 <= mode.maxWords) {
         parts.push(line)
         continue
       }
@@ -1843,7 +1843,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       }
       if (idx < 0) continue
       const delta = n - wordCount(parts[idx])
-      if (delta <= 6 && now + delta <= mode.maxWords) parts[idx] = line
+      if (delta <= 0 && now + delta + 4 <= mode.maxWords) parts[idx] = line
     }
   }
   if (shortFact) return withKnownTerm(question, parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28))
@@ -1856,7 +1856,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
 function withKnownTerm(question: string, text: string, cap: number): string {
   const trimmed = trimToWords(text, cap)
   const clause = lexiconClause("eshwarjay05", question)
-  const joined = clause && wordCount(trimmed) + wordCount(clause) <= cap && !trimmed.toLowerCase().includes(clause.slice(0, 24).toLowerCase())
+  const joined = clause && wordCount(trimmed) + wordCount(clause) + 4 <= cap && !trimmed.toLowerCase().includes(clause.slice(0, 24).toLowerCase())
     ? `${trimmed} ${clause}`
     : trimmed
   const sentences = joined.split(/(?<=[.!?])\s+/)

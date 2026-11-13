@@ -73,7 +73,7 @@ function linesFor(level: string, bit: string, reason: string): Record<Perspectiv
 }
 
 const MIX: Record<string, PerspectiveBeat[]> = {
-  engineer: ["interpretation", "impression", "interest", "curiosity"],
+  engineer: ["interpretation", "perspective", "impression", "interest", "curiosity"],
   director: ["perspective", "impression", "interest", "interpretation"],
   architect: ["curiosity", "interpretation", "perspective", "interest"],
 }
