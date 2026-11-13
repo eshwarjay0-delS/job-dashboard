@@ -1,3 +1,7 @@
+## 2026-11-13 — Left bullets no longer start with First, - (visible on the answer card)
+
+The 10:08 AM CT card for "Did you design it alone?" put `First, -` on every bullet and kept "In general, teams" plus "they build" / "they run". The #350 peel is back: a dash is not glued on after First, Then, or Finally, and a connector is not added to every bullet. A sentence that starts with "In general, teams", or that uses they/teams with no I/we, is dropped. "I led ... field-ops teams" stays. Generation prompts were not rewritten.
+
 ## 2026-11-13 — Main answer path restored from 01ceb1dc (visible on the left answer card)
 
 Answer generation, prompting, question detection, and the left card are the files from commit `01ceb1dc` again. Skip-login (`return true` in the page, `src/lib/authDisabled.ts` untouched), the Gmail snapshot fallback, the mic stop (`includeTail` only), and the intro cleanup stay. "Your introduction … introduce yourself." still shows and answers as "Introduce yourself." as one paragraph. Generation still sections a complex answer. The left card does not draw Claim, Context, Action, Result, Close, or the ellipsis between them. Those sentences stay as bullets, and a non-list line stays a paragraph. The right panel files were not reverted. A transcript line still calls `hear`, and saved cards drop an `aside` field. The panel does not write the left answer.

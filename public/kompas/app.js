@@ -1106,13 +1106,67 @@ function plainIntroAnswer(text) {
   }
   return sentences.join(" ");
 }
+function peelBullet(sentence) {
+  let s = String(sentence || "").trim();
+  let connector = "";
+  let prev = "";
+  const mark = /^(?:[-•*]|\d+[.)])\s+/;
+  const lead = /^(first|then|finally|the result)\b[:,]?\s+/i;
+  while (s && s !== prev) {
+    prev = s;
+    s = s.replace(mark, "").trim();
+    const hit = s.match(lead);
+    if (!hit) break;
+    connector = hit[1].toLowerCase();
+    s = s.slice(hit[0].length).trim();
+  }
+  return { connector, body: s.replace(mark, "").trim() };
+}
+function connectorLabel(name) {
+  return name === "first" ? "First," : name === "then" ? "Then," : name === "finally" ? "Finally," : name === "the result" ? "The result:" : "";
+}
+function genericThirdPerson(sentence) {
+  const text = peelBullet(sentence).body;
+  if (!text) return false;
+  if (/^in general,\s+teams\b/i.test(text)) return true;
+  if (/\b(?:I|we|my|our|me|I'm|I've|I'd|I'll|we're|we've|we'd|we'll)\b/i.test(text)) return false;
+  return /\b(?:they|teams)\b/i.test(text);
+}
+function signBullet(title, sentence, first) {
+  const peeled = peelBullet(sentence);
+  if (!peeled.body || genericThirdPerson(peeled.body)) return "";
+  const clean = peeled.body.replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
+  if (peeled.connector) return connectorLabel(peeled.connector) + " " + clean;
+  if (!first) return peeled.body;
+  if (title === "Context") return "First, " + clean;
+  if (title === "Action") return "Then, " + clean;
+  if (title === "Result") return "The result: " + clean;
+  return peeled.body;
+}
+function repairSectioned(raw) {
+  let section = "Claim";
+  let index = 0;
+  const out = [];
+  for (const line of String(raw || "").split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    if (/^(?:…|\.{3})$/.test(t)) { out.push(t); continue; }
+    const head = t.match(/^\*\*(Claim|Context|Action|Result|Close|What I did)\*\*$/);
+    if (head) { section = head[1] === "What I did" ? "Action" : head[1]; index = 0; out.push("**" + head[1] + "**"); continue; }
+    const bullet = t.match(/^(?:[-•*]|\d+[.)])\s+(.+)$/);
+    if (bullet) { const spoken = signBullet(section, bullet[1], index === 0); index += 1; if (spoken) out.push("- " + spoken); continue; }
+    if (genericThirdPerson(t)) continue;
+    out.push(t);
+  }
+  return out.join("\n");
+}
 function presentAnswer(question, answer, source) {
   const raw = String(answer || "").trim();
   if (!raw) return raw;
   if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw);
-  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return raw;
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw);
   const allowed = String(source || "") + "\n" + String(question || "");
-  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3);
+  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3 && !genericThirdPerson(s));
   const words = sentences.join(" ").split(/\s+/).filter(Boolean).length;
   const q = String(question || "");
   const simple = /^(?:what is|what does|what's|define|do you|are you|have you|can you hear)\b/i.test(q.trim()) && words < 55 && sentences.length < 3;
@@ -1132,11 +1186,10 @@ function presentAnswer(question, answer, source) {
     const tight = group.length <= 4 ? group : group.slice(0, 3).concat(group.slice(3).join(" "));
     if (blocks.length) blocks.push("…");
     blocks.push("**" + title + "**");
-    for (const sentence of tight) {
-      const clean = sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, "").replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
-      const line = title === "Context" ? (sentence.toLowerCase().startsWith("first") ? sentence : "First, " + clean) : title === "Action" ? (sentence.toLowerCase().startsWith("then") ? sentence : "Then, " + clean) : title === "Result" ? (sentence.toLowerCase().startsWith("the result") ? sentence : "The result: " + clean) : sentence;
-      blocks.push("- " + line);
-    }
+    tight.forEach((sentence, index) => {
+      const line = signBullet(title, sentence, index === 0);
+      if (line) blocks.push("- " + line);
+    });
   }
   return blocks.join("\n");
 }

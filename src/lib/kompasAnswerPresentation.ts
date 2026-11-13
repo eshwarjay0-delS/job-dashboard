@@ -55,12 +55,79 @@ function uncap(sentence: string): string {
   return sentence.replace(/^([A-Z])([a-z])/, (_, a: string, b: string) => a.toLowerCase() + b)
 }
 
-function signpost(section: AnswerSection, sentence: string): string {
-  const clean = uncap(sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, ""))
-  if (section === "Context") return /^first\b/i.test(sentence) ? sentence : `First, ${clean}`
-  if (section === "Action") return /^then\b/i.test(sentence) ? sentence : `Then, ${clean}`
-  if (section === "Result") return /^the result\b/i.test(sentence) ? sentence : `The result: ${clean}`
-  return sentence
+const LEADING_MARK = /^(?:[-•*]|\d+[.)])\s+/
+const LEADING_CONNECTOR = /^(first|then|finally|the result)\b[:,]?\s+/i
+
+function connectorLabel(name: string): string {
+  if (name === "first") return "First,"
+  if (name === "then") return "Then,"
+  if (name === "finally") return "Finally,"
+  return "The result:"
+}
+
+/** Peel every leading dash and every leading connector. A later connector wins, so a prepended "First," cannot cover "Then" or "Finally". */
+function peelBullet(sentence: string): { connector: string; body: string } {
+  let s = String(sentence || "").trim()
+  let connector = ""
+  let prev = ""
+  while (s && s !== prev) {
+    prev = s
+    s = s.replace(LEADING_MARK, "").trim()
+    const hit = s.match(LEADING_CONNECTOR)
+    if (!hit) break
+    connector = hit[1].toLowerCase()
+    s = s.slice(hit[0].length).trim()
+  }
+  return { connector, body: s.replace(LEADING_MARK, "").trim() }
+}
+
+function signpost(section: AnswerSection, sentence: string, first: boolean): string {
+  const peeled = peelBullet(sentence)
+  if (!peeled.body || genericThirdPerson(peeled.body)) return ""
+  const clean = uncap(peeled.body)
+  if (peeled.connector) return `${connectorLabel(peeled.connector)} ${clean}`
+  if (!first) return peeled.body
+  if (section === "Context") return `First, ${clean}`
+  if (section === "Action") return `Then, ${clean}`
+  if (section === "Result") return `The result: ${clean}`
+  return peeled.body
+}
+
+/** Drop a generic third-person line. A first-person sentence that only mentions a team stays. */
+function genericThirdPerson(sentence: string): boolean {
+  const text = peelBullet(sentence).body
+  if (!text) return false
+  if (/^in general,\s+teams\b/i.test(text)) return true
+  if (/\b(?:I|we|my|our|me|I'm|I've|I'd|I'll|we're|we've|we'd|we'll)\b/i.test(text)) return false
+  return /\b(?:they|teams)\b/i.test(text)
+}
+
+function repairSectioned(raw: string): string {
+  let section: AnswerSection = "Claim"
+  let index = 0
+  const out: string[] = []
+  for (const line of raw.split("\n")) {
+    const t = line.trim()
+    if (!t) continue
+    if (/^(?:…|\.{3})$/.test(t)) { out.push(t); continue }
+    const head = t.match(/^\*\*(Claim|Context|Action|Result|Close|What I did)\*\*$/)
+    if (head) {
+      section = head[1] === "What I did" ? "Action" : (head[1] as AnswerSection)
+      index = 0
+      out.push(`**${head[1]}**`)
+      continue
+    }
+    const bullet = t.match(/^(?:[-•*]|\d+[.)])\s+(.+)$/)
+    if (bullet) {
+      const spoken = signpost(section, bullet[1], index === 0)
+      index += 1
+      if (spoken) out.push(`- ${spoken}`)
+      continue
+    }
+    if (genericThirdPerson(t)) continue
+    out.push(t)
+  }
+  return out.join("\n")
 }
 
 function bucket(sentence: string, source: string): AnswerSection {
@@ -93,9 +160,9 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
   const raw = String(text || "").trim()
   if (!raw) return raw
   if (INTRO_ASK.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw)
-  if (/\*\*(?:Claim|Context|Action|Result|Close)\*\*/.test(raw)) return raw
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw)
   const allowed = `${source}\n${question}`
-  const sentences = answerSentences(raw).map((s) => withoutInventedNumbers(s, allowed)).filter((s) => answerWordCount(s) >= 3)
+  const sentences = answerSentences(raw).map((s) => withoutInventedNumbers(s, allowed)).filter((s) => answerWordCount(s) >= 3 && !genericThirdPerson(s))
   if (!answerIsComplex(question, sentences.join(" ")) || sentences.length < 2) return sentences.join(" ") || raw
   const groups: Record<AnswerSection, string[]> = { Claim: [], Context: [], Action: [], Result: [], Close: [] }
   groups.Claim.push(sentences[0])
@@ -107,7 +174,10 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
     if (blocks.length) blocks.push("…")
     blocks.push(`**${title}**`)
     const tight = group.length <= 4 ? group : [...group.slice(0, 3), group.slice(3).join(" ")]
-    for (const sentence of tight) blocks.push(`- ${signpost(title, sentence)}`)
+    tight.forEach((sentence, index) => {
+      const line = signpost(title, sentence, index === 0)
+      if (line) blocks.push(`- ${line}`)
+    })
   }
   return blocks.join("\n")
 }
