@@ -8,9 +8,25 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — answer length and the stuttering telecom card
+
+Owner Eshwar, 11:03 PM and 11:04 PM CT, on production. The telecom card prepended `First, -` onto bullets that already started with First, Then, or Finally, drew a stray ellipsis, and hid the question. Both formatters now keep one connector. The question box stays rendered. Have-you-done, how-have-you-used, and how-do-you use the measured word bands, and Long raises the spoken ceiling. Local focused suites passed. Not merged in this note. No ship marker on the branch commit.
+
+## 13 November 2026 — Skip login button
+
+Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.
+
+## 13 November 2026 — rounds 36-55 and the desktop shell
+
+The side panel and the Kompas brain are on the web page the Windows shell already loads from `https://job-dashboard-fawn.vercel.app/kompas/index.html` through `kompas://app`. Private mode remains `setContentProtection` on that window. No new exe. No ship marker. Not merged. STAR keep-going is still 0/10 on the offline stand-in. Not a Windows launch.
+
+## 13 November 2026 — answer context panel stacked on the answer release
+
+Owner Eshwar, 12 Nov 2026, 8:32 PM and 8:46 PM America/Chicago, plus the private-mode note. The panel is inside the answer overlay. Desktop private still sets content protection on that window, and `html.kd` receives `kd-private`. A short factual ask returns one resume sentence before the model. Stacked onto the shipped answer release for rounds 36–55. Not merged to master from this slice. Not a live screen share. No ship marker.
+
 ## 13 November 2026 — Kompas answer release
 
-Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were not in this environment, so they are not included. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. Production alias check is the next step. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
+Owner Eshwar, 12 Nov 2026, 8:23 PM America/Chicago: one production deploy of the open answer stack. Pull requests 334, 337, 339, and 347 are merged onto master 313c90a4. Narrow web windows put Stop and AI Answer on one 48px row. The desktop shell is unchanged. The Vercel verify workflow skips a master commit whose message lacks the ship marker. Pull requests 324, 333, 262, and the WhatsApp, Gmail, and resume restacks stay out. AUTH_DISABLED was not edited. The eight defensibility mailbox patches were applied later on the rounds branch. Local gates: tsc clean, lint exit 0, named answer and auth-disabled suites passed. The two voice cases fail the same way as master 313c90a4. No visible MarketFit screen changed. The Kompas answer card and the narrow live bar did.
 
 ## 13 November 2026 — Actions artifact storage
 

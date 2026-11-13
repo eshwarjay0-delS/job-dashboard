@@ -104,10 +104,12 @@ test('login-off routes /login and /auth into the app and never opens Supabase OA
   }
 
   const login = readFileSync(new URL('../../src/app/login/page.tsx', import.meta.url), 'utf8')
-  assert.doesNotMatch(login, /Skip login/)
-  assert.doesNotMatch(login, /skip-login/)
-  assert.match(login, /serverReportsAuthDisabled/)
-  assert.match(login, /window\.location\.replace\(next\)/)
+  assert.match(login, /Skip login/)
+  assert.match(login, /\{skipLogin &&/)
+  assert.match(login, /serverReportsAuthDisabled\(\)/)
+  assert.match(login, /window\.location\.replace\("\/dashboard"\)/)
+  assert.match(login, /window\.location\.assign\("\/dashboard"\)/)
+  assert.doesNotMatch(login, /useState\(true\)/)
   const google = readFileSync(new URL('../../src/lib/google-auth.ts', import.meta.url), 'utf8')
   assert.match(google, /if \(await serverReportsAuthDisabled\(\)\)/)
   assert.match(google, /signInWithOAuth/)

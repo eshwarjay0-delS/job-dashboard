@@ -2,7 +2,8 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { dissectQuestion, draftSpokenAnswer, lengthKind, QUESTION_LENGTH, wordCount } from "../../src/lib/kompasDissection.ts"
+import { dissectQuestion, dissectionPrompt, draftSpokenAnswer, lengthKind, QUESTION_LENGTH, wordCount } from "../../src/lib/kompasDissection.ts"
+import { controlsPrompt } from "../../src/lib/kompasAnswerContract.ts"
 import { focusPrompt, interviewIntent } from "../../src/lib/kompasRelevance.ts"
 import { blendSpoken } from "../../src/lib/kompasBlend.ts"
 
@@ -68,6 +69,31 @@ test("the prompt no longer gives a second word quota", () => {
   assert.match(prompt, /Spoken length follows the question type first, then the mode band/)
   assert.match(prompt, /A design-me-X answer is one stage, then a checkpoint, not the entire system/)
   assert.match(prompt, /A follow-up is shorter than the opener/)
+})
+
+test("measured mocks: done, used, and how-do-you are not the short yes/no band", () => {
+  const done = dissectQuestion("Have you done Splunk detections?")
+  assert.equal(lengthKind("Have you done Splunk detections?", done.shape), "done")
+  assert.equal(done.modes.engineer.aimWords, 85)
+  assert.ok(done.modes.engineer.maxWords >= 85)
+  const used = dissectQuestion("How have you used SailPoint?")
+  assert.equal(lengthKind("How have you used SailPoint?", used.shape), "used")
+  assert.equal(used.modes.engineer.aimWords, 85)
+  const howto = dissectQuestion("How do you validate a SIEM rule?")
+  assert.equal(lengthKind("How do you validate a SIEM rule?", howto.shape), "howto")
+  assert.equal(howto.modes.engineer.aimWords, 91)
+  assert.ok(howto.modes.engineer.maxWords > 91)
+  const two = dissectQuestion("What is a SIEM, and what is a SOAR?")
+  assert.ok(two.modes.engineer.maxWords >= 109)
+  const clarifier = dissectQuestion("Do you use Splunk?")
+  assert.equal(clarifier.modes.engineer.maxWords, 40)
+  const prompt = dissectionPrompt("How do you validate a SIEM rule?", "engineer", "", "long")
+  assert.equal(prompt.includes("Aim for about"), false)
+  assert.equal(prompt.includes("Then stop."), false)
+  assert.match(prompt, /Length is long/)
+  assert.match(controlsPrompt({ format: "bullets", length: "long", tone: "professional", star: false }), /Length is long/)
+  const svc = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
+  assert.match(svc, /cardControls\.length === "long"\) plan\.words = Math\.min\(300, Math\.round\(plan\.words \* 1\.5\)\)/)
 })
 
 test("a design draft keeps one named checkpoint and does not fill a second mode with padding", () => {

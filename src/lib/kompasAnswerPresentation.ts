@@ -53,12 +53,68 @@ function uncap(sentence: string): string {
   return sentence.replace(/^([A-Z])([a-z])/, (_, a: string, b: string) => a.toLowerCase() + b)
 }
 
-function signpost(section: AnswerSection, sentence: string): string {
-  const clean = uncap(sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, ""))
-  if (section === "Context") return /^first\b/i.test(sentence) ? sentence : `First, ${clean}`
-  if (section === "Action") return /^then\b/i.test(sentence) ? sentence : `Then, ${clean}`
-  if (section === "Result") return /^the result\b/i.test(sentence) ? sentence : `The result: ${clean}`
-  return sentence
+const LEADING_MARK = /^(?:[-•*]|\d+[.)])\s+/
+const LEADING_CONNECTOR = /^(first|then|finally|the result)\b[:,]?\s+/i
+
+function connectorLabel(name: string): string {
+  if (name === "first") return "First,"
+  if (name === "then") return "Then,"
+  if (name === "finally") return "Finally,"
+  return "The result:"
+}
+
+/** Peel every leading dash and every leading connector. A later connector wins, so a prepended "First," cannot cover "Then" or "Finally". */
+function peelBullet(sentence: string): { connector: string; body: string } {
+  let s = String(sentence || "").trim()
+  let connector = ""
+  let prev = ""
+  while (s && s !== prev) {
+    prev = s
+    s = s.replace(LEADING_MARK, "").trim()
+    const hit = s.match(LEADING_CONNECTOR)
+    if (!hit) break
+    connector = hit[1].toLowerCase()
+    s = s.slice(hit[0].length).trim()
+  }
+  return { connector, body: s.replace(LEADING_MARK, "").trim() }
+}
+
+function signpost(section: AnswerSection, sentence: string, first: boolean): string {
+  const peeled = peelBullet(sentence)
+  if (!peeled.body) return ""
+  const clean = uncap(peeled.body)
+  if (peeled.connector) return `${connectorLabel(peeled.connector)} ${clean}`
+  if (!first) return peeled.body
+  if (section === "Context") return `First, ${clean}`
+  if (section === "Action") return `Then, ${clean}`
+  if (section === "Result") return `The result: ${clean}`
+  return peeled.body
+}
+
+function repairSectioned(raw: string): string {
+  let section: AnswerSection = "Claim"
+  let index = 0
+  const out: string[] = []
+  for (const line of raw.split("\n")) {
+    const t = line.trim()
+    if (!t || /^(?:…|\.{3})$/.test(t)) continue
+    const head = t.match(/^\*\*(Claim|Context|Action|Result|Close|What I did)\*\*$/)
+    if (head) {
+      section = head[1] === "What I did" ? "Action" : (head[1] as AnswerSection)
+      index = 0
+      out.push(`**${head[1]}**`)
+      continue
+    }
+    const bullet = t.match(/^(?:[-•*]|\d+[.)])\s+(.+)$/)
+    if (bullet) {
+      const spoken = signpost(section, bullet[1], index === 0)
+      index += 1
+      if (spoken) out.push(`- ${spoken}`)
+      continue
+    }
+    out.push(t)
+  }
+  return out.join("\n")
 }
 
 function bucket(sentence: string, source: string): AnswerSection {
@@ -72,7 +128,7 @@ function bucket(sentence: string, source: string): AnswerSection {
 export function presentSpokenAnswer(question: string, text: string, source = ""): string {
   const raw = String(text || "").trim()
   if (!raw) return raw
-  if (/\*\*(?:Claim|Context|Action|Result|Close)\*\*/.test(raw)) return raw
+  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw)
   const allowed = `${source}\n${question}`
   const sentences = answerSentences(raw).map((s) => withoutInventedNumbers(s, allowed)).filter((s) => answerWordCount(s) >= 3)
   if (!answerIsComplex(question, sentences.join(" ")) || sentences.length < 2) return sentences.join(" ") || raw
@@ -83,10 +139,12 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
   for (const title of SECTION_ORDER) {
     const group = groups[title]
     if (!group.length) continue
-    if (blocks.length) blocks.push("…")
     blocks.push(`**${title}**`)
     const tight = group.length <= 4 ? group : [...group.slice(0, 3), group.slice(3).join(" ")]
-    for (const sentence of tight) blocks.push(`- ${signpost(title, sentence)}`)
+    tight.forEach((sentence, index) => {
+      const line = signpost(title, sentence, index === 0)
+      if (line) blocks.push(`- ${line}`)
+    })
   }
   return blocks.join("\n")
 }

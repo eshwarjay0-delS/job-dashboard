@@ -33,18 +33,26 @@ function LoginContent() {
   const [resetMode,setResetMode]=useState(false)
   const [emailOpen,setEmailOpen]=useState(false)
   const [error,setError]=useState<string|null>(searchParams.get("reason") === "egress" ? AUTH_EGRESS_BLOCKED : null)
+  const [skipLogin,setSkipLogin]=useState(false)
 
   useEffect(() => {
     let gone = false
     void serverReportsAuthDisabled().then(off => {
-      if (!gone && off) window.location.replace(next)
+      if (gone || !off) return
+      setSkipLogin(true)
+      window.location.replace("/dashboard")
     })
     return () => { gone = true }
-  }, [next])
+  }, [])
+
+  async function skipToOwner() {
+    if (!(await serverReportsAuthDisabled())) { setSkipLogin(false); return }
+    window.location.assign("/dashboard")
+  }
 
   async function signIn() {
     if (loading) return
-    if (await serverReportsAuthDisabled()) { window.location.replace(next); return }
+    if (await serverReportsAuthDisabled()) { window.location.replace("/dashboard"); return }
     setLoading(true)
     setError(null)
     try {
@@ -68,7 +76,7 @@ function LoginContent() {
   }
 
   async function emailSignIn() {
-    if (await serverReportsAuthDisabled()) { window.location.replace(next); return }
+    if (await serverReportsAuthDisabled()) { window.location.replace("/dashboard"); return }
     if(!["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("Password login is not enabled for this account.");return}
     if (loading) return
     setLoading(true)
@@ -84,7 +92,7 @@ function LoginContent() {
   }
 
   async function sendPasswordSetup() {
-    if (await serverReportsAuthDisabled()) { window.location.replace(next); return }
+    if (await serverReportsAuthDisabled()) { window.location.replace("/dashboard"); return }
     if(!["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("Password login is not enabled for this account.");return}
     if (loading) return
     setLoading(true)
@@ -148,6 +156,12 @@ function LoginContent() {
               <GoogleIcon /> {loading ? "Opening Google…" : "Continue with Google"}
             </button>
 
+            {skipLogin && (
+              <button type="button" onClick={() => { void skipToOwner() }}
+                className="mt-3 flex h-12 w-full cursor-pointer items-center justify-center rounded-[12px] border border-[var(--border-strong)] bg-[var(--surface-2)] text-[15.5px] font-semibold text-[var(--text)] transition-colors hover:border-[var(--text-soft)]">
+                Skip login
+              </button>
+            )}
 
             <div className="my-6 flex items-center gap-3 text-[13px] text-[var(--text-soft)]"><span className="h-px flex-1 bg-[var(--border)]" />or<span className="h-px flex-1 bg-[var(--border)]" /></div>
 

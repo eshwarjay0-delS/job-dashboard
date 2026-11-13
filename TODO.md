@@ -1,3 +1,43 @@
+## 2026-11-13 — Answer length and the 11:04 telecom card (visible on the answer card)
+
+The live card was stuttering. A bullet that already said First, Then, or Finally was shown as `First, - First I map...`, `First, - Then I build...`, and `First, - Finally I validate...`, with a lone `…` between Claim and Context and no question above ANSWER. Both the finished formatter and the page formatter now peel a prepended connector and keep the sentence's own word. A lone ellipsis line is not drawn. The question box stays at its normal height even if an old `q-away` class is still on the card.
+
+Length follows the measured mocks. "Have you done X?" is a yes plus a process, aim 85, not the 20–40 yes/no band. "How have you used X?" aims at 85. "How do you X?" aims at 91. A two-part definition or comparison is not clipped at the 70-word engineer ceiling. The engineer voice no longer says "then stop." The dissection prompt no longer says "Aim for about N words." The Long control multiplies the spoken ceiling by 1.5, capped at 300. A true clarifier such as "Do you use Splunk?" stays at 40.
+
+**Checked locally. Not merged in this entry. Not a phone click-through of the new build.** Live-card, Parakeet, answer order, question length, explain length, relevance folds, question focus, and the 27 Oct live-fixes file: 71 pass, 0 fail. `node --check public/kompas/app.js` passed. The desktop shell still loads the live page, so this is visible there only after the production deploy. No new exe. The question-cut check on `7e807201` failed because the Okta repair turns heard "okta" into "Okta"; the two-card split is unchanged, and the expected card now says Okta. Question-cut slices 2–4: 38 pass, 0 fail. A follow-up such as "How would you test that?" is timed from its own words, not from "how do you" inside the previous question. The director band for that process stays shorter than the engineer band. The fidelity step then passed locally, 891 of 891.
+
+## 2026-11-13 — Skip login button on /login (visible when the server flag is on)
+
+The sign-in card shows **Skip login** under Continue with Google only after `/api/kompas/capabilities` reports `authDisabled: true`. The click goes to `/dashboard` on the existing synthetic-owner path (`AUTH_DISABLED_USER_EMAIL`, Houston `eshwarjay05`). It does not call Google. `/` and `/login` still redirect to `/dashboard` on the server when `AUTH_DISABLED` is exactly true; the button is the fallback if a cached login page is what the browser shows. Admin APIs stay 401 for that synthetic owner. No environment variable was changed.
+
+## 2026-11-13 — Lexicon glosses, perspective lines, and the brain wiring (no new screen beyond the login button above)
+
+The keyword cache, reviewed glosses, the statement validator, the perspective lines, and the ten brain modules (prime, topics, interviewer, feedback, repetition, pace, confidence, debrief, health, dev timeline) are in the same branch. A wrong gloss relation is rewritten or dropped. The dev timeline is empty when `NODE_ENV` is production. Not a production deploy.
+
+## 2026-11-13 — Clarify seed and replay gate (no new screen)
+
+The side panel now seeds one booster and one clarifying question from `scripts/fixtures/kompas-evaluation/clarify-bank.jsonl` after dropping lines that state someone else's job or city. The 249-question replay gate is local. Before: filler 146, choppy-flow 0, generic 10, too-short 20. After: filler 0, choppy-flow 0, generic 10, too-short 18. STAR keep-going 0/10 → 10/10. Technical HR median 81 → 44. Not a production deploy.
+
+## 2026-11-13 — The brain is the hub (no new screen beyond the panel)
+
+No second window. The side panel is the same one as the rounds entry below. What changed is invisible until a transcript line arrives: mic and computer-audio lines, question detection, Lens, dossier text, the answer-quality score, and the clarify action share one in-memory bus. The map is `docs/kompas-brain-map.md`. No new network call and no poll.
+
+## 2026-11-13 — Rounds 36-55 and the Kompas brain (visible side panel)
+
+The answer card and the side panel both changed. Engineer, director, and architect drafts name different work. A keyword-only line no longer scores as a full relevance 4. Design answers from the architect label a tangent. Director drafts own one tradeoff when the ceiling allows it. A yes/no stand-in dropped from 33 words to 16. The panel keeps a session claim ledger, scores suggestions, and drops a line that contradicts what the candidate already said. Previous and Next browse earlier suggestions in memory only. Private mode is unchanged: the panel stays inside the overlay, and the desktop still calls setContentProtection on that same window.
+
+**The installed exe loads the live web page.** `kompas://app/kompas/index.html` is fetched from `https://job-dashboard-fawn.vercel.app` with `cache: "no-store"`. This page, the brain script, and the panel CSS are not inside the exe. After this branch is on production, the current exe picks them up on the next launch. A new exe would be required only for a change to `legacy/perfact/desktop/main.js`, `preload.js`, the injected `panel.css`, or the native audio path. None of those changed for the brain. No desktop release was published.
+
+**Checked locally. Not merged. Not a production deploy. Not a Windows click-through.** Before to after, same 150-draft stand-in: content gap under 0.50 went from 77/150 to 14/150. Pairs at Jaccard >= 0.7 went from 8 to 0 (max 1.000 to 0.592). Keyword-only relevance 4s went from 3/3 to 0/3. Architect tangent 0/20 to 20/20. Director tradeoff 10/50 to 41/50. Aside relevance 14/18 to 16/18. Brain replay accuracy 1, contradiction rate 0, max 0.515 ms. STAR "keep going" stayed 0/10. Technical-HR jargon hits 4 to 2, median still 81 words. Focused suites passed. The two `kompas-voice` cases still fail the same way as master `313c90a4`.
+
+## 2026-11-13 — Context panel beside the live answer (visible UI)
+
+A collapsible panel sits on the right edge of the answer box. Open or closed is remembered in this browser. On a window at 900px or narrower it opens under the answer. Context is two or three lead-in lines and three or four touch points from the resume already on the answer. Section 2 switches between clarifying questions and booster statements. Auto follows the newest transcript line. A short "have you worked with X" ask is one sentence from that resume, before the model. A client the resume does not name stays "Not directly."
+
+**Private mode is the same path as the answer.** The panel is inside `#overlay`, so the screen grab that hides the overlay hides the panel. Desktop private still uses `setContentProtection` on this window. `html.kd` gets `kd-private` from that flag. The lines are not saved on the card and are not written to localStorage. Only the open or closed bit is stored.
+
+**Checked locally. Not a production deploy. Not a live screen share.** Aside, layout, and private tests passed. `tsc --noEmit` exit 0. ESLint on the two TypeScript files exit 0. Headless Chrome does not emulate Windows display affinity. The installed exe does not change until the Windows workflow publishes it.
+
 ## 2026-11-13 — Kompas answer release onto current master
 
 No MarketFit page changed. Kompas did. Pull requests 334, 337, 339, and 347 (head `59c9b736`) are on this branch from master `313c90a4`. Conflicts were only `TODO.md` and `src/lib/plan-vision-journal.ts`; both the artifact-cleanup notes and the answer-stack notes stayed. On a web window at 900px or narrower, Stop and AI Answer share one full 48px row. `html.kd` is unchanged. The Vercel verify workflow skips when the master commit message lacks the ship marker.

@@ -4,6 +4,9 @@
  * must not appear, and the length. The selected mode chooses stance, depth, and confidence.
  * This module does not call a model.
  */
+import { validateStatement } from "./kompasGloss.ts"
+import { lexiconClause } from "./kompasLexicon.ts"
+import { perspectiveDraft } from "./kompasPerspective.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
@@ -104,7 +107,7 @@ const JARGON: Jargon[] = [
 // Plain instructions only. The v1 wording ("I would not open a build walk", "One because is enough") was written to
 // hit the depth and confidence word counters, and a model copies odd phrasing into the spoken answer.
 const VOICE: Record<AnswerLevel, string> = {
-  engineer: "Plain and accessible, for technical HR or an engineer screen. Say what it is, why the role needs it, and one example from my own work. Then stop.",
+  engineer: "Plain and accessible. For technical HR, say what it is in plain words and one example. For an engineer on a mechanism or a design stage, go to the check, then leave a checkpoint.",
   director: "Decision first, then the business risk and who owns it. At most one sentence on how it works. No build walkthrough.",
   architect: "Precise. Say how it works, where it breaks, and what contains it. Use only the technical terms the question or my resume already uses.",
 }
@@ -114,10 +117,13 @@ const VOICE: Record<AnswerLevel, string> = {
  * A director is often shorter. The mode changes the stance, not the padding.
  * Ceilings scale with partsScale and never pass 300.
  */
-export type LengthKind = "yes-no" | "definition" | "compare" | "follow-up" | "opener" | "star" | "design-first" | "design-later"
+export type LengthKind = "yes-no" | "done" | "used" | "howto" | "definition" | "compare" | "follow-up" | "opener" | "star" | "design-first" | "design-later"
 
 export const QUESTION_LENGTH: Record<LengthKind, Record<AnswerLevel, { aim: number; ceiling: number }>> = {
   "yes-no": { engineer: { aim: 20, ceiling: 40 }, director: { aim: 18, ceiling: 36 }, architect: { aim: 22, ceiling: 40 } },
+  done: { engineer: { aim: 85, ceiling: 120 }, director: { aim: 70, ceiling: 110 }, architect: { aim: 95, ceiling: 140 } },
+  used: { engineer: { aim: 85, ceiling: 120 }, director: { aim: 70, ceiling: 110 }, architect: { aim: 95, ceiling: 140 } },
+  howto: { engineer: { aim: 91, ceiling: 140 }, director: { aim: 60, ceiling: 100 }, architect: { aim: 140, ceiling: 220 } },
   definition: { engineer: { aim: 40, ceiling: 70 }, director: { aim: 30, ceiling: 50 }, architect: { aim: 55, ceiling: 90 } },
   compare: { engineer: { aim: 80, ceiling: 130 }, director: { aim: 60, ceiling: 90 }, architect: { aim: 110, ceiling: 160 } },
   "follow-up": { engineer: { aim: 80, ceiling: 140 }, director: { aim: 50, ceiling: 90 }, architect: { aim: 90, ceiling: 160 } },
@@ -182,8 +188,12 @@ export function afterInterruption(question: string): string {
 const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 
 export function lengthKind(question: string, shape: AnswerShape): LengthKind {
-  const q = String(question || "")
+  const tied = splitFollowUp(question)
+  const q = tied.previous ? tied.own : String(question || "")
   const design = shape === "design" || DESIGN_ASK.test(q)
+  if (/\bhave you done\b/i.test(q)) return "done"
+  if (/\bhow have you used\b/i.test(q)) return "used"
+  if (/\bhow do you\b/i.test(q) && !design) return "howto"
   if (design && DEEPER_ON.test(q)) return "design-later"
   if (design) return "design-first"
   if (DEEPER_ON.test(q)) return "design-later"
@@ -225,7 +235,14 @@ function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand 
 }
 
 export function modeBand(shape: AnswerShape, level: AnswerLevel, scale = 1, question = ""): ModeBand {
-  return bandFor(lengthKind(question, shape), level, scale)
+  const kind = lengthKind(question, shape)
+  let next = scale
+  const parts = askedParts(question)
+  if ((kind === "definition" || kind === "compare") && parts >= 2) {
+    const floor = kind === "definition" ? 1.56 : 1.37
+    next = Math.max(next, Math.min(1.6, floor + 0.02 * (parts - 2)))
+  }
+  return bandFor(kind, level, next)
 }
 
 /** One scale for all three modes. A long ask raises the ceiling. It does not reorder the modes. */
@@ -590,22 +607,32 @@ export function asksForCode(question: string): boolean {
   return requestIsCodeAsk(q)
 }
 
-export function dissectionPrompt(question: string, level: AnswerLevel, sources = ""): string {
+export function dissectionPrompt(question: string, level: AnswerLevel, sources = "", length: "short" | "balanced" | "long" = "balanced"): string {
   const cut = dissectQuestion(question, sources)
   const mode = cut.modes[level] || cut.modes.engineer
   const echo = cut.keywords.slice(0, 4).join(", ")
   const ban = cut.banned.slice(0, 20).join(", ")
+  const lengthLine = length === "long"
+    ? "Length is long: a concrete example, the tool, a number from the resume when one is there, and a stance. Do not stop at a one-line definition."
+    : length === "short"
+      ? "Length is short: one or two sentences, and only when this is a clarifier or a logistics question."
+      : "Be specific: a concrete example, a tool, a number from the resume when one is there, and a stance. No generic filler."
   return [
     `QUESTION DISSECTION. Shape: ${cut.shape}. Intent: ${cut.intent}.`,
     echo ? `The first sentence must use the interviewer's own words: ${echo}.` : "The first sentence answers the ask in the interviewer's own terms.",
     asksForCode(question)
       ? `Mode ${level}. Code first at every level: one fenced, runnable block in the language asked for, before any words. After the block, at most ${mode.aimWords} spoken words. ${mode.voice}`
-      : `Mode ${level}. Aim for about ${mode.aimWords} words and never more than ${mode.maxWords}. Stop as soon as the question is answered. ${mode.voice}`,
+      : `Mode ${level}. ${lengthLine} ${mode.voice}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
     // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
     questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
     "Do not state a visa, a home address, where you live, or personal relocation unless my resume already says it and this question asked.",
+    "BRAIN POLICY: Sentence one answers this question. Connect the next beat with once that was confirmed, not And then or From there. If the resume has no matching incident, say I would. Do not borrow another speaker's story. Never mix Houston and Saint Louis.",
+    "PERSPECTIVE: Vary one or two of these, and do not use the same pair every time: what he seems to care about, a lean-toward with a because from the resume or I would when the resume has no match, one follow-up, one plain note of what is worth a look, and one line of ownership. No hype words. No invented job.",
+    /\btechnical HR\b/i.test(question) ? "Technical HR: one plain sentence for what it is and why it matters, then stop. No build walk." : "",
+    cut.shape === "design" ? "Architect: if a thought is optional, label it as a tangent and leave it out of scope. Director: own one tradeoff in a single sentence." : "",
+    cut.shape === "personal-experience" ? "After the result, one short line may offer to keep going. Do not restart the story." : "",
   ].filter(Boolean).join("\n")
 }
 
@@ -1294,12 +1321,12 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: (l) => `For ${l}, the boundary comes first. One short look at what sits beside it, then I come back.`,
   },
   "technical-deep-dive": {
-    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
+    engineer: (l) => `On ${l}, once I confirm the evidence, I check the next step, because that decides it.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
   direct: {
-    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
+    engineer: (l) => `On ${l}, once I confirm the evidence, I check the next step, because that decides it.`,
     director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
@@ -1657,8 +1684,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   // A definition with no resume line was filled from one honest sentence and one approach
   // sentence, so two different terms shared almost every content word.
   const bareTerm = !used && cut.shape === "definition" && !pairSides
+  const hrAsk = /\btechnical HR\b/i.test(question)
   if (bareTerm) {
-    parts[0] = `I mean ${lead} when I say ${lead}.`
+    parts[0] = plainDefinition(level, lead, hrAsk)
     words = wordCount(parts.join(" "))
   } else if (!used && !pairSides && !designAsk) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
@@ -1786,7 +1814,114 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       words += n
     }
   }
-  return trimToWords(parts.join(" "), mode.maxWords)
+  const shortFact = /^(?:have you|did you|do you|are you|were you)\b/i.test(question) && /\b(?:worked|used|use|familiar|experience|been|done|know)\b/i.test(question)
+  const storyAsk = cut.shape === "personal-experience" || cut.shape === "scenario" || /\b(?:tell me about a time|describe a (?:time|situation)|a time you)\b/i.test(question)
+  if (!bareTerm && !(hrAsk && level !== "architect")) {
+    const stance = modeStance(level, lead, { design: cut.shape === "design", story: storyAsk })
+    const placed = placeStance(parts, stance, mode.maxWords)
+    parts.splice(0, parts.length, ...placed)
+  }
+  const keepGoing = storyAsk || cut.shape === "comparison" || /\bexplain the same incident\b/i.test(question)
+  if (keepGoing && level === "engineer" && !parts.some((line) => /keep going/i.test(line))) {
+    const line = `I can keep going on the result if you want the rest.`
+    if (wordCount(parts.join(" ")) + wordCount(line) + 2 <= mode.maxWords) parts.push(line)
+    else if (parts.length > 1) {
+      const swapped = parts.slice()
+      swapped[swapped.length - 1] = line
+      if (wordCount(swapped.join(" ")) <= mode.maxWords) parts.splice(0, parts.length, ...swapped)
+    }
+  }
+  const bit = lead.split(/\s+/).filter(Boolean).slice(0, 6).join(" ") || "this"
+  words = wordCount(parts.join(" "))
+  const causal = [
+    `Once that was confirmed, I would stay with ${bit}.`,
+    `Because of that, the next check on ${bit} is the one I would not skip.`,
+    `That is why I would not close ${bit} until the owner has seen it.`,
+    `The reason I would stop there is that ${bit} already has a check.`,
+  ]
+  const lengthFloor = Math.min(80, mode.maxWords - 4)
+  for (const line of causal) {
+    if (words >= lengthFloor || shortFact || bareTerm || (hrAsk && level === "engineer")) break
+    const n = wordCount(line)
+    if (words + n > mode.maxWords - 2 || parts.includes(line)) break
+    parts.push(line)
+    words += n
+  }
+  if (!shortFact && !bareTerm && !storyAsk && !(hrAsk && level === "engineer")) {
+    for (const line of perspectiveDraft(question, level, resume, previous, bit)) {
+      const n = wordCount(line)
+      const now = wordCount(parts.join(" "))
+      if (parts.includes(line)) continue
+      if (now + n + 6 <= mode.maxWords) {
+        parts.push(line)
+        continue
+      }
+      let idx = -1
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (/^(?:Once that was confirmed|Because of that|That is why|The reason I would stop)/.test(parts[i])) { idx = i; break }
+      }
+      if (idx < 0) continue
+      const delta = n - wordCount(parts[idx])
+      if (delta <= 0 && now + delta + 4 <= mode.maxWords) parts[idx] = line
+    }
+  }
+  if (shortFact) return withKnownTerm(question, parts.slice(0, 2).join(" "), Math.min(mode.maxWords, 28), bit, resume)
+  if (hrAsk && level === "engineer" && (cut.shape === "definition" || cut.shape === "direct" || cut.shape === "comparison")) {
+    return withKnownTerm(question, parts.join(" "), Math.min(mode.maxWords, 48), bit, resume)
+  }
+  return withKnownTerm(question, parts.join(" "), mode.maxWords, bit, resume)
+}
+
+function lexiconFocus(question: string, bit: string): string {
+  if (/,/.test(question) && /\b(?:thinking about|considering|with|so with)\b/i.test(question)) return bit
+  return question
+}
+
+function withKnownTerm(question: string, text: string, cap: number, focus = "", resume = ""): string {
+  const trimmed = trimToWords(text, cap, (sentence) => /\bI (?:\w+ed|sent|wrote|led|took|held|told|kept|made|found|had)\b/.test(sentence))
+  const clause = lexiconClause("eshwarjay05", lexiconFocus(question, focus))
+  const joined = clause && wordCount(trimmed) + wordCount(clause) + 4 <= cap && !trimmed.toLowerCase().includes(clause.slice(0, 24).toLowerCase())
+    ? `${trimmed} ${clause}`
+    : trimmed
+  const sentences = joined.split(/(?<=[.!?])\s+/)
+  const kept = sentences.flatMap((sentence) => {
+    const check = validateStatement(sentence, resume)
+    if (!check.ok && !check.line) return []
+    return [check.ok ? sentence : check.line]
+  })
+  return trimToWords(kept.join(" "), cap)
+}
+
+function plainDefinition(level: AnswerLevel, lead: string, hr: boolean): string {
+  if (level === "director") {
+    return hr
+      ? `I would rather name ${lead} in plain words than walk the build.`
+      : `I would rather decide ${lead} than walk past ${lead}.`
+  }
+  if (level === "architect") return `${lead} is the boundary I watch for ${lead}.`
+  return hr
+    ? `${lead} means a plain look at what could go wrong. I stop there.`
+    : `${lead} means the check I run on ${lead} before I stop.`
+}
+
+function modeStance(level: AnswerLevel, lead: string, flags: { design: boolean; story: boolean }): string {
+  const bit = lead.split(/\s+/).filter(Boolean).slice(0, 6).join(" ") || "this"
+  if (level === "architect") return `I was also thinking of a neighboring tangent on ${bit}, and we can leave that out of scope.`
+  if (level === "director") return `I would rather record the tradeoff on ${bit} than leave that residual unsigned.`
+  if (flags.story) return `I can keep going on the result of ${bit}.`
+  if (flags.design) return `The check I run on ${bit} is the live setting against the written record.`
+  return `The check I run on ${bit} is the live setting against the written record.`
+}
+
+function placeStance(parts: string[], stance: string, maxWords: number): string[] {
+  if (!stance || parts.includes(stance)) return parts
+  const n = wordCount(stance)
+  const words = wordCount(parts.join(" "))
+  // Leave room for the spoken pause marks the blend pass inserts.
+  if (words + n + 4 > maxWords) return parts
+  const next = parts.slice()
+  next.splice(Math.min(1, next.length), 0, stance)
+  return next
 }
 
 /**

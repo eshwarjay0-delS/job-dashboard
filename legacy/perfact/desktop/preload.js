@@ -60,6 +60,7 @@ function applyFade(opacity) {
 
 function paintState(s) {
   document.documentElement.classList.toggle("kd-collapsed", !!s.collapsed);
+  document.documentElement.classList.toggle("kd-private", !!s.isPrivate);
   const tgl = document.getElementById("kdPrivate"), pin = document.getElementById("kdPin");
   if (tgl) tgl.checked = !!s.isPrivate;
   if (pin) { pin.classList.toggle("on", !!s.onTop); pin.setAttribute("aria-pressed", String(!!s.onTop)); }

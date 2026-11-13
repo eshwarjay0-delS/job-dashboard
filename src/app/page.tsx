@@ -9,6 +9,7 @@
 // at Stripe" and "at Meta"), counts nobody had measured, a comparison table against a competitor, and prices for plans
 // and features that did not exist. None of that is here. The numbers that are here come from the product itself.
 
+import { enterAppIfAuthDisabled } from "@/lib/authDisabledEnter"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Check, Clock, FileText, FolderOpen, Inbox, Lock, MessageCircle, Mic, ShieldCheck, Sparkles, CalendarCheck } from "lucide-react"
@@ -97,6 +98,7 @@ const FAQ = [
 ]
 
 export default function Home() {
+  enterAppIfAuthDisabled()
   return (
     <div className="min-h-dvh bg-[var(--bg)] text-[var(--text)]">
       <LandingNav />
