@@ -87,3 +87,14 @@ test('Oct 17 source archive recheck records the current access limit without exp
   assert.match(step.finding, /did not resolve the exact 27,724-byte source artifact/)
   assert.doesNotMatch(JSON.stringify(session), /[a-f0-9]{64}|\/mnt\/data\/|C:\\\\Users\\\\/i)
 })
+
+
+test('WhatsApp pair CAS records consumption only after provider acceptance', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-pair-cas-current-master-restack-2026-11-13-watch12')
+ assert.ok(entry)
+ const step=entry.steps.find(s=>s.label==='Consume only after accepted delivery')
+ assert.ok(step)
+ assert.equal(step.status,'Implemented')
+ assert.match(step.finding,/only after markResumeDocumentAccepted confirms provider acceptance/)
+ assert.match(entry.next,/exact-head full CI/)
+})
