@@ -4,6 +4,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
+import { loadWorkspaceAccounts, snapshotThreads } from "@/lib/gmailSnapshot"
 import { classifyEmail, type EmailCategory } from "@/lib/email-classifier"
 import type { Mail, Stage, App, Interview } from "@/app/dashboard/_suite/sample"
 
@@ -16,6 +17,7 @@ export interface AuthContext {
   supabase: Awaited<ReturnType<typeof createClient>>
   userId: string
   accounts: Array<{ id: string; google_email: string; gmail_enabled: boolean }>
+  quotaFallback?: { notice: string | null; snapshotAt: string | null }
 }
 
 export async function requireAuth(): Promise<AuthContext | { error: string; status: number }> {
@@ -25,8 +27,13 @@ export async function requireAuth(): Promise<AuthContext | { error: string; stat
   // treats is_anonymous as signed out. An anon user has no linked Google
   // accounts, so this closes the gate without changing any data path.
   if (!user || user.is_anonymous) return { error: "Not logged in", status: 401 }
-  const accounts = await listGoogleWorkspaceAccounts(user.id)
-  return { supabase, userId: user.id, accounts }
+  const loaded = await loadWorkspaceAccounts(user.id)
+  return {
+    supabase,
+    userId: user.id,
+    accounts: loaded.accounts,
+    ...(loaded.source === "snapshot" ? { quotaFallback: { notice: loaded.notice, snapshotAt: loaded.snapshotAt } } : {}),
+  }
 }
 
 export function isAuthContext(ctx: unknown): ctx is AuthContext {
@@ -476,13 +483,18 @@ async function syncAccountCacheOnce(
 
 export async function fetchClassifiedThreads(
   userId: string,
-  opts: { days?: number; max?: number; query?: string; account?: string } = {},
+  opts: { days?: number; max?: number; query?: string; account?: string; offset?: number } = {},
   extra: { force?: boolean } = {},
-): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[] }> {
+): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[]; snapshotNotice?: string | null }> {
   const days = Math.min(Math.max(opts.days ?? 30, 1), TRACKING_DAYS)
   const max = Math.min(Math.max(opts.max ?? 50, 1), 300)
 
-  const accounts = await listGoogleWorkspaceAccounts(userId)
+  const loaded = await loadWorkspaceAccounts(userId)
+  if (loaded.source === "snapshot") {
+    const page = await snapshotThreads(userId, { days, account: opts.account, offset: opts.offset ?? 0, limit: max })
+    return { threads: page.threads as unknown as ClassifiedThread[], issues: [], snapshotNotice: page.notice }
+  }
+  const accounts = loaded.accounts
   const enabled = accounts.filter(a => a.gmail_enabled && (!opts.account || a.google_email.toLowerCase() === opts.account.toLowerCase()))
   if (enabled.length === 0) return { threads: [], issues: [] }
 

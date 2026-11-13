@@ -17,7 +17,13 @@ export type GoogleWorkspaceAccount = {
 export async function listGoogleWorkspaceAccounts(userId: string): Promise<GoogleWorkspaceAccount[]> {
   const service = createServiceClient()
   const { data, error } = await service.rpc("identity_list_google_workspace_accounts", { p_user_id: userId })
-  if (error) throw new Error(error.message)
+  if (error) {
+    const wrapped = new Error(error.message || String(error.code || "Supabase request failed")) as Error & { status?: number; code?: string }
+    if (typeof error.code === "string") wrapped.code = error.code
+    const status = (error as { status?: number }).status
+    if (typeof status === "number") wrapped.status = status
+    throw wrapped
+  }
   return (data || []) as GoogleWorkspaceAccount[]
 }
 

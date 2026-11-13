@@ -26,7 +26,11 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const days = Math.min(Math.max(Number(url.searchParams.get("days")) || TRACKING_DAYS, 1), TRACKING_DAYS)
 
-    const kept = await keptThreads(ctx, days, { fetchWhenEmpty: true })
+    const kept = await keptThreads(ctx, days, { fetchWhenEmpty: !ctx.quotaFallback })
+    if (ctx.quotaFallback) {
+      const interviews = threadsToInterviews(kept.threads)
+      return NextResponse.json({ ok: true, count: interviews.length, interviews, ...(ctx.quotaFallback.notice ? { snapshotNotice: ctx.quotaFallback.notice } : {}) })
+    }
     const enriched = await enrichInterviewEvidence(ctx.userId, kept.threads).catch(() => kept.threads)
     scheduleInterviewDiscovery(ctx.userId, enriched)
     const interviews = threadsToInterviews(enriched)

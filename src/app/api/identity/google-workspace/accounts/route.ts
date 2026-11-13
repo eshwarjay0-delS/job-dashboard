@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { decryptSecret } from "@/lib/secretCrypto"
+import { loadWorkspaceAccounts } from "@/lib/gmailSnapshot"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -16,14 +17,12 @@ export async function GET() {
   const user = await currentUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
 
-  const service = createServiceClient()
-  const { data, error } = await service.rpc("identity_list_google_workspace_accounts", { p_user_id: user.id })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
+  const loaded = await loadWorkspaceAccounts(user.id)
   return NextResponse.json({
-    accounts: data || [],
+    accounts: loaded.accounts,
     maxAccounts: 4,
-    canAdd: (data || []).length < 4,
+    canAdd: loaded.source === "supabase" && loaded.accounts.length < 4,
+    ...(loaded.notice ? { snapshotNotice: loaded.notice } : {}),
   })
 }
 

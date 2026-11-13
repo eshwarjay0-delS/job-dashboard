@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — saved Gmail while Supabase egress is restricted
+
+Owner Eshwar: the Jobs inbox and the Gmail accounts list must show the saved mail for eshwarjay05 (67f02d95-f7fe-4058-9b0d-9363221e7c61) with no spend while the project is `exceed_egress_quota`. He exports `mfit_gmail_threads` and `mfit_gmail_sync` and posts them to `/api/gmail/snapshot-import`. The fallback is only for that restricted error. A working database read wins. Skip-login was not edited. Local secret and fallback tests passed. Not verified on the live site in this note. Next: one production deploy with `[ship]`, then one check of the import route, `/api/health`, and `/login`.
+
 ## 13 November 2026 — skip-login is permanent in code
 
 Owner Eshwar: the app opens as eshwarjay05@gmail.com with no sign-in screen. Owner mode is on unless `AUTH_DISABLED` or `NEXT_PUBLIC_AUTH_DISABLED` is exactly `off-confirmed-by-eshwar`. `false`, empty, and unset stay on. The login card keeps a Skip sign-in button that sets the synthetic-owner cookie and opens `/dashboard`. Admin stays 401 for that owner. The Google-only rule that set the production flags to false lives on unmerged branch `fix/google-only-login-production-auth-20261113` (policy commits 6e7a2fc8, fe649106, c9edd57a). It is not the rule. Do not call the Vercel env API to turn skip-login off.

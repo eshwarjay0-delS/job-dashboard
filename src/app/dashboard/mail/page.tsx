@@ -227,7 +227,7 @@ export default function MailPage() {
   const [leaving, leave] = useLeaving(answer)
 
   // ── Live Gmail data ────────────────────────────────────────────────────
-  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt, interviews } = useGmailData()
+  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt, interviews, snapshotNotice } = useGmailData()
   // Submission follow-ups (7 Nov 2026): the same scheduling control as the Overview rows, on the thread in view.
   // Loaded once; a tap on the control reloads it. A thread that is not a tracked submission has no target, and
   // shows no control — the panel itself stays hidden until the recruiter's last word is answered, same as Overview.
@@ -380,7 +380,14 @@ export default function MailPage() {
 
       <InboxUpdates />
 
-      {error && !loading && (
+      {snapshotNotice && !loading && (
+        <div className="mf-notice" role="status">
+          <p>{snapshotNotice}</p>
+          <button className="btn-outline" type="button" onClick={() => refresh()}>Refresh</button>
+        </div>
+      )}
+
+      {error && !loading && !snapshotNotice && (
         <div className="mf-notice" role="status">
           <p>{error}</p>
           <button className="btn-outline" onClick={refresh}>Refresh</button>

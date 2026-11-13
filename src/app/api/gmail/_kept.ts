@@ -5,6 +5,7 @@
 // keeps doing must not cost a Gmail sync each time the Follow-ups page opens. Both read the kept copy.
 
 import { classifyEmail } from "@/lib/email-classifier"
+import { snapshotThreads } from "@/lib/gmailSnapshot"
 import { fetchClassifiedThreads, TRACKING_DAYS, type AuthContext, type ClassifiedThread } from "./_lib"
 
 // The same repair the list makes when the classifier has learned something since a thread was kept, here in memory only.
@@ -29,6 +30,13 @@ export async function keptThreads(ctx: AuthContext, days = TRACKING_DAYS, opts: 
   if (!enabled.size) return { threads: [], kept: true }
   const span = Math.min(Math.max(Number(days) || TRACKING_DAYS, 1), TRACKING_DAYS)
   const cutoff = Date.now() - span * 86_400_000
+  if (ctx.quotaFallback) {
+    const page = await snapshotThreads(ctx.userId, { days: span })
+    const threads = (page.threads as unknown as ClassifiedThread[])
+      .filter(t => Array.isArray(t?.messages) && t.messages.length > 0 && enabled.has(String(t.accountEmail || "").toLowerCase()))
+      .map(reclassified)
+    return { threads, kept: true }
+  }
   try {
     const rows: Array<{ data: unknown }> = []
     for (let offset = 0; offset < 3000; offset += 500) {

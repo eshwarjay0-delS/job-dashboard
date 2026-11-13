@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { findSnapshotThread } from "@/lib/gmailSnapshot"
 import { requireAuth, isAuthContext, fetchClassifiedThreads } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { readThread, type ThreadLike } from "@/lib/mail-reading"
@@ -24,6 +25,12 @@ export async function GET(req: Request) {
     if (!id) return NextResponse.json({ ok: false, error: "Say which conversation: ?id=" }, { status: 400 })
 
     let thread: ThreadLike | null = null
+    if (ctx.quotaFallback) {
+      thread = await findSnapshotThread(ctx.userId, id, account) as ThreadLike | null
+      if (!thread) return NextResponse.json({ ok: false, error: "This conversation is not in the saved mail." }, { status: 404 })
+      const mine = ctx.accounts.map(a => a.google_email)
+      return NextResponse.json({ ok: true, id, ...readThread(thread, mine), ...(ctx.quotaFallback.notice ? { snapshotNotice: ctx.quotaFallback.notice } : {}) })
+    }
     try {
       const rows = await ctx.supabase.from("mfit_gmail_threads").select("data, account_email").eq("user_id", ctx.userId).eq("thread_id", id).limit(8)
       const found = (rows.data || []) as Array<{ data: ThreadLike; account_email: string }>
