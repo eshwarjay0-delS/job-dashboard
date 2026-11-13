@@ -613,7 +613,7 @@ function logEvent(ev) {
 }
 // What is on the live screen, kept so that Continue brings it back: the cards, which one is showing, and what was heard.
 // A card's in-flight state (a request, a stream, a fill in progress) is not kept.
-const CARD_TRANSIENT = new Set(["streaming", "anchorFlight", "_flight", "_ledgerAt", "req"]);
+const CARD_TRANSIENT = new Set(["streaming", "anchorFlight", "_flight", "_ledgerAt", "req", "aside"]);
 let liveSavedAt = 0;
 function saveLive(withLog) {
   const s = current; if (!s || !s.id) return Promise.resolve();

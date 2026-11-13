@@ -1,3 +1,11 @@
+## 2026-11-13 — Context panel beside the live answer (visible UI)
+
+A collapsible panel sits on the right edge of the answer box. Open or closed is remembered in this browser. On a window at 900px or narrower it opens under the answer. Context is two or three lead-in lines and three or four touch points from the resume already on the answer. Section 2 switches between clarifying questions and booster statements. Auto follows the newest transcript line. A short "have you worked with X" ask is one sentence from that resume, before the model. A client the resume does not name stays "Not directly."
+
+**Private mode is the same path as the answer.** The panel is inside `#overlay`, so the screen grab that hides the overlay hides the panel. Desktop private still uses `setContentProtection` on this window. `html.kd` gets `kd-private` from that flag. The lines are not saved on the card and are not written to localStorage. Only the open or closed bit is stored.
+
+**Checked locally. Not a production deploy. Not a live screen share.** Aside, layout, and private tests passed. `tsc --noEmit` exit 0. ESLint on the two TypeScript files exit 0. Headless Chrome does not emulate Windows display affinity. The installed exe does not change until the Windows workflow publishes it.
+
 ## 2026-11-13 — Actions storage cleanup (no visible UI)
 
 No new website screen. The account had filled its 0.5 GB Actions storage with `Kompas-Windows-Caption-Once-<sha>` artifacts (~162 MB, 14-day retention, including pull requests). Owner Eshwar approved deleting every old Actions artifact except the newest caption build.

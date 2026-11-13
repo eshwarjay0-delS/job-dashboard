@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — answer context panel
+
+Owner Eshwar, 12 Nov 2026, 8:32 PM and 8:46 PM America/Chicago, plus the private-mode note. The panel is inside the answer overlay. Desktop private still sets content protection on that window, and `html.kd` receives `kd-private`. A short factual ask returns one resume sentence before the model. Not merged. Not a live screen share. No ship marker.
+
 ## 13 November 2026 — Actions artifact storage
 
 Owner Eshwar approved deleting old Actions artifacts except the newest `Kompas-Windows-Caption-Once` build. No website screen changed. Cleanup run 43339668406 deleted 150 artifacts (24.300 GB) and 3 caches (417,444,083 bytes). One caption artifact remains (id 13996119819, 162,041,140 bytes, created 2026-11-13T00:22:25Z). `kompas-desktop-latest` `Kompas.exe` was not modified. `parfAct` returned HTTP 404 to the Actions token, so its 14-day desktop artifacts were not deleted. No production deploy.
