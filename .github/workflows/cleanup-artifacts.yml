@@ -1,15 +1,9 @@
 name: Cleanup Actions artifacts
 
-# Deletes Actions artifacts and large Actions caches.
+# Manual only. Deletes Actions artifacts and large Actions caches.
 # Does not call the Releases API and does not change kompas-desktop-latest.
-# workflow_dispatch is the lasting trigger. A master push runs it only when the
-# commit message contains [cleanup-artifacts], which is how this backlog was cleared.
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
-    paths:
-      - '.github/workflows/cleanup-artifacts.yml'
 
 permissions:
   actions: write
@@ -22,7 +16,6 @@ concurrency:
 jobs:
   cleanup:
     name: Delete old artifacts and large caches
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[cleanup-artifacts]'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

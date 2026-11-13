@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — Actions artifact storage
+
+Owner Eshwar approved deleting old Actions artifacts except the newest `Kompas-Windows-Caption-Once` build. No website screen changed. Cleanup run 43339668406 deleted 150 artifacts (24.300 GB) and 3 caches (417,444,083 bytes). One caption artifact remains (id 13996119819, 162,041,140 bytes, created 2026-11-13T00:22:25Z). `kompas-desktop-latest` `Kompas.exe` was not modified. `parfAct` returned HTTP 404 to the Actions token, so its 14-day desktop artifacts were not deleted. No production deploy.
+
 ## 12 November 2026 — free account session sync and Android last chunk
 
 Owner request the same day: apply the three reviewed format-patch files onto `27f600ef` and ship one production deploy. `git am` had no conflicts. Login-off catalog reads and writes use the private Hobby Blob store. The first login-off read uploads local sessions. Android Chrome keeps a `dataavailable` chunk that arrives after `onstop`. `AUTH_DISABLED` was not edited. Local gates: lint 0 errors, `tsc --noEmit` clean, baseline 92/92, related Kompas suites 134 pass and 2 fail. Those two failures are the pre-existing `kompas-voice` cases (web share order, repeated AI Answer). Production `/kompas/version.json` and one `GET /api/kompas/account-sessions` are the ship check. Not a live phone recording.
