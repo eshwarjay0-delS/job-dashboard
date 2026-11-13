@@ -381,3 +381,36 @@ Continue: rerun the Plan Journal/REA schema and full CI on the corrected PR #275
 - MFit Safe Merge Gate and MFit Completion Watch are enabled. The WhatsApp Repair automation is disabled; no separate Bible-Keeper automation is listed.
 
 Continue: after the PR #284 documentation refresh, require exact-head crawler regression, Plan/REA schema, Kompas baseline and full CI success. Merge only through the normal path if all required checks are green; do not bypass a failed Vercel status if it is required. Then verify the 11 Nov post-release crawl and API smoke when available. Keep WhatsApp identity/storage/send gates and Gmail two-account/mobile acceptance pending their exact prerequisites.
+
+
+## 13 November 2026 — WhatsApp offline fallback and session-pair CAS current-master restack
+
+The previous Safe Merge Gate review assigned this restack to MFit Completion Watch. The stale PR #344 branch was based on 313c90a4, while current master is 4c01951. The restack branch is fix/whatsapp-offline-cas-current-master-watch11-20261113; it starts at current master and carries the reviewed WhatsApp-only runtime, storage, test and research files. The old Kompas page/version stamp changes were deliberately excluded so the shipped Kompas rounds 36–55 assets remain untouched.
+
+The approved 6 Nov WhatsApp policy is preserved:
+- Initial JD with no model provider may send only the exact selected same-account library original after owner-root, safe-path, byte-equality and selected-profile checks; the caption must say **NOT TAILORED**. If any check fails or no library item was selected, send no file and keep the request retryable.
+- A swipe-reply refinement failure, timeout, incomplete output, unreadable DOCX, missing source or failed identity/contact/date check is text-only. Never send the original or partial baseline; preserve the last delivered version.
+- Resume and JD are one pair. Clear only when both still match the completed run; preserve newer uploads. Consume an offline original only after a confirmed Meta document message ID. R2 writes use ETag/If-Match CAS with bounded conflict retries and no unconditional fallback.
+- The 6 Nov correction remains authoritative: 70% delivery floor, 95% supported clean-pass threshold, and no universal 98% hard hold. No threshold or identity guard was weakened here.
+
+Reviewable code/test commits on the restack include route 1104a5d9, storage e2d3794d, WhatsApp acceptance a4d0fb9c, and the additive CI CAS step ed78210c. The full WhatsApp recovery, CAS interleaving, library, fail-safe and single-request tests were carried forward. Exact-head CI has not yet run on this new branch; the earlier six green checks on PR #344's stale head do not validate this restack. No merge, deployment, production R2 write, model call, real WhatsApp send or handset acceptance has occurred.
+
+The 17 Oct 2026 17:28 Chicago incident remains a separate historical replay blocker. The original source DOCX and matching JD are recorded as recovered privately, but the generated output DOCX, correlated R2 object, webhook/request record, Meta message ID and signed delivery/read receipt remain unavailable. Later incidents are not substitutes. No cause, delivery or 98% live-match result is inferred.
+
+Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline, cross-device, Windows packaging and Plan/REA checks; review any failures on this branch; keep it DRAFT until the legitimate protected preview passes. Do not merge or deploy before those gates. After release, use an owner-authorized baseline/JD/confirmation artifact review; do not send a real WhatsApp test from this automation.
+
+
+## 13 November 2026 — WhatsApp exact-head gates and protected-preview blocker
+
+PR #358 (branch fix/whatsapp-offline-cas-current-master-watch11-20261113) now passes every workflow actually triggered on exact head 1cf2f3c303ba2d004e06869cea5f17362edd0b75:
+
+- Full CI: 43417729793 — SUCCESS
+- WhatsApp resume recovery: 43417729642 — SUCCESS
+- Kompas baseline: 43417729726 — SUCCESS
+- Plan Journal / REA schema: 43417729917 — SUCCESS
+
+The protected preview is still absent: Vercel branch lookup returned zero preview deployments. The canonical production alias remains READY at master 4c01951; PR #358 is not deployed. Cross-device and Windows packaging workflows were not present on this WhatsApp-only head, so those checks are not claimed.
+
+The 17 Oct 17:28 Chicago historical incident still lacks its generated output DOCX and correlated R2/webhook/Meta delivery/read evidence. The recovered source/JD conflict remains quarantined. No model call, production R2 write or real WhatsApp send occurred.
+
+Continue: keep #358 DRAFT until a legitimate protected preview is available, then verify production SHA/alias and owner-authorized DOCX acceptance. Do not use a real WhatsApp send from automation.
