@@ -57,7 +57,13 @@ export function missingRoleEvidenceTerms(
 
 const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
   {
-    skill: /\b(?:cyberark|splunk|siem|sentinel|defender|crowdstrike|qualys|nessus|rapid7|burp|zscaler|palo alto|edr|xdr|dlp)\b/i,
+    // CyberArk EPM is endpoint privilege management. Generic CRM administration,
+    // access reviews or compliance audits alone are not evidence of that project context.
+    skill: /\bcyberark(?:\s+epm)?\b/i,
+    context: /\b(?:endpoint(?:s)?|local admin(?:istrator)?|privilege|elevation|application control|least[- ]privilege|software restriction|application allowlist|application greylist|greylist|allowlist|windows hardening)\b/i,
+  },
+  {
+    skill: /\b(?:splunk|siem|sentinel|defender|crowdstrike|qualys|nessus|rapid7|burp|zscaler|palo alto|edr|xdr|dlp)\b/i,
     context: /\b(?:security|cyber|soc|endpoint|local admin|administrator|privilege|elevation|firewall|incident|threat|vulnerability|detection|response|monitoring|alert|log|network|identity|access|iam|sso|mfa|audit|compliance)\b/i,
   },
   {
