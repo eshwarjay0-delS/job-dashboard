@@ -133,3 +133,8 @@ Continue: obtain the original generated output and correlated R2/webhook/Meta re
 ## Current execution recheck — 13 November 2026
 
 The earlier private archive extraction and SHA-256 inventory match remain recorded in the REA handoff. This run performed a recursive Library DOCX listing and semantic search but did not resolve the exact 27,724-byte source artifact; no bytes were materialized or rehashed in this execution. This is a current-access limitation, not a claim that the earlier extraction did not occur. The matching 16 Oct JD was retrieved read-only from Gmail; no email was sent. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. No model call, historical replay, R2 write, or WhatsApp send occurred. Do not substitute another resume. Source education/employment/tenure/credential conflicts remain quarantined pending owner reconciliation.
+
+
+## 13 November 2026 — pair consumption after provider acceptance
+
+A focused review of the current-master restack found that the normal rewrite path consumed the JD/resume pair before the upload, while the original-resume fallback consumed it even when the signed delivery callback rejected the document. PR #368 moves normal consumption after markResumeDocumentAccepted confirms provider acceptance and makes the fallback preserve the pair when the callback schedules recovery. Mocked tests cover a tailored upload plus fallback both receiving HTTP rejection, and a fallback receiving a message ID followed by callback rejection. These are source-level regressions only; no real Meta send or R2 production write occurred.
