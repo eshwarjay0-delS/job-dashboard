@@ -99,3 +99,8 @@ Exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA schema and prot
 ## CyberArk EPM cross-role relevance guard — 13 November 2026
 
 A confirmed CyberArk EPM skill is now eligible for cross-role mapping only when the existing source bullet shows endpoint or privilege-management context (for example, local-administrator removal, endpoint privilege, elevation, application control or least privilege). Generic Salesforce administration and generic audit/compliance wording are not enough. The general security-tool context remains separate. Regression tests preserve the positive endpoint case and reject the unrelated CRM/audit cases. This changes relevance, not the owner-approved evidence boundary: confirmation supports the skill only, never a new employer, project, action, outcome, date, title, location, contact, metric or credential.
+
+
+## CyberArk EPM context regression — exact-head source validation
+
+PR #377 final head `fa971b90c702e1cb96ebae161a1fdd1aa7ab1728` passed full CI `43500406071`, WhatsApp recovery `43500406031`, Kompas baseline `43500405833` and Plan/REA schema `43500406062`. The full CI includes the new negative Salesforce CRM administration/audit-compliance cases and the positive endpoint/local-administrator case. The protected preview and owner-authorized exported-DOCX acceptance remain pending; this is not a live resume/JD match.
