@@ -11,7 +11,7 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
     "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence; only explicit first-person candidate confirmations can support a skill.",
     "- An explicitly confirmed skill may be mapped naturally into relevant existing project bullets across the selected resume's roles, including earlier roles, even when the original bullet does not name the tool. The confirmation supports the skill, not a new employer, project, title, date, location, contact, metric, credential or unsupported project detail.",
     "- Apply confirmations only to this request's selected account, resume and JD; never borrow another account's resume or profile.",
-    `ORIGINAL SUBMITTED TEXT (distinguish job requirements from candidate statements):\n${jd}`,
+    `JOB DESCRIPTION (target requirements, not candidate evidence):\n${jd}`,
   ].join("\n\n")
 }
 
