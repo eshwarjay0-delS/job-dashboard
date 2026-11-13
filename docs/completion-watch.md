@@ -481,3 +481,14 @@ Public checks: /kompas/version.json HTTP 200 reports build kompas-20261112-outpu
 PRs #334, #337, #339 and #347 remain OPEN as stale stacked branches and diverge from current master. Their code is already present through 313c90a4; do not merge or deploy them again. The actual 50-pair Kompas/ChatGPT answers and independent human scorecards remain unavailable pending authorized KOMPAS_API_TOKEN and approved source bundles. Native Windows/mobile/WhatsApp/cross-device acceptance is unverified. Kompas Continuous Voice Delivery exists but is disabled; no parallel voice edits were made.
 
 Continue: keep the live answer stack as released; pursue the authorized 50-pair comparison and human review when credentials and approved source bundles are available, and keep native platform acceptance open until real device evidence exists.
+
+
+## 13 November 2026 — Poke-style Gmail UI and export-security gates
+
+PR #357 exact head 98afab1e1e658e7abf0a4dcfb2288656a1634bcf passed full CI 43402024260 and Kompas baseline 43402024070. It scopes sender mutes and thread/radar identity to the receiving inbox, opens the correct inbox before thread selection and restores mobile navigation. No protected preview exists; two-inbox collision, selected-From, affected-inbox reconnect and real narrow-phone acceptance remain open.
+
+PR #359 exact head ab3e070aeb4ca8864f5f34ae26fd4c761a645792 passed full CI 43419089019, Kompas baseline 43419089067 and Plan/REA schema 43419089029. It gates notify-rules export behind GMAIL_UPDATES_SCHEDULER_ENABLED and CRON_SECRET and scopes export to the admin owner. It remains DRAFT and not deployed; owner security review is required. No preview exists for the branch.
+
+The unattended Gmail update worker remains disabled. No real Gmail API call, inbox mutation, email send or WhatsApp send was performed. Production remains on master 4c01951.
+
+Continue: require owner review for the security PR, protected preview and two authorized inboxes plus narrow-phone acceptance for the UI PR. Keep the worker off until the scheduler, CRON_SECRET, approved Meta template and explicit enablement consent exist.
