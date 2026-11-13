@@ -1,41 +1,39 @@
-// Per-sender notify controls: the worker-readable export shapes only what
-// triage needs (sender emails + mode), and sender matching covers exact
-// addresses and same-domain senders.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { validNotifyRule, toPublicRules, mergePublicRules, ruleMatchesSender } from '../../src/lib/notify-rules.ts'
+import { validNotifyRule, toWorkerNotifyOwner, ruleMatchesSender } from '../../src/lib/notify-rules.ts'
 
-test('validNotifyRule accepts only well-formed rules', () => {
+test('validNotifyRule accepts only complete account-scoped sender rules', () => {
   assert.equal(validNotifyRule({ account: 'a@x.com', email: 's@v.com', mode: 'always' }), true)
   assert.equal(validNotifyRule({ account: 'a@x.com', email: 's@v.com', mode: 'never' }), true)
   assert.equal(validNotifyRule({ account: 'a@x.com', email: 's@v.com', mode: 'sometimes' }), false)
   assert.equal(validNotifyRule({ account: 'no-at', email: 's@v.com', mode: 'always' }), false)
+  assert.equal(validNotifyRule({ account: 'a@x.com', email: 'not-an-email', mode: 'always' }), false)
   assert.equal(validNotifyRule(null), false)
 })
 
-test('toPublicRules strips accounts, lowercases, dedupes, drops invalid', () => {
-  const out = toPublicRules([
-    { account: 'A@X.com', email: 'S@V.com', mode: 'always' },
-    { account: 'a@x.com', email: 's@v.com', mode: 'never' },   // same sender: first wins
-    { account: 'a@x.com', email: 't@w.com', mode: 'never' },
-    { account: 'a@x.com', email: 'bad', mode: 'always' },
+test('worker rules preserve owner and receiving-inbox identity without cross-account merging', () => {
+  const ownerA = toWorkerNotifyOwner('user-a', [
+    { account: 'One@Example.com', email: 'Recruiter@Agency.com', mode: 'always' },
+    { account: 'Two@Example.com', email: 'Recruiter@Agency.com', mode: 'never' },
+    { account: 'one@example.com', email: 'recruiter@agency.com', mode: 'never' },
+    { account: 'one@example.com', email: 'bad', mode: 'always' },
   ])
-  assert.deepEqual(out, [
-    { email: 's@v.com', mode: 'always' },
-    { email: 't@w.com', mode: 'never' },
+  const ownerB = toWorkerNotifyOwner('user-b', [
+    { account: 'one@example.com', email: 'recruiter@agency.com', mode: 'always' },
   ])
-  assert.ok(out.every(r => !('account' in r)), 'no account addresses leak to the worker')
-})
-
-test('mergePublicRules combines several owners and dedupes', () => {
-  const out = mergePublicRules([
-    [{ account: 'a@x.com', email: 's@v.com', mode: 'always' }],
-    [{ account: 'b@y.com', email: 'S@V.com', mode: 'never' }, { account: 'b@y.com', email: 'u@z.com', mode: 'never' }],
-  ])
-  assert.deepEqual(out, [
-    { email: 's@v.com', mode: 'always' },
-    { email: 'u@z.com', mode: 'never' },
-  ])
+  assert.deepEqual(ownerA, {
+    ownerId: 'user-a',
+    rules: [
+      { account: 'one@example.com', email: 'recruiter@agency.com', mode: 'never' },
+      { account: 'two@example.com', email: 'recruiter@agency.com', mode: 'never' },
+    ],
+  })
+  assert.deepEqual(ownerB, {
+    ownerId: 'user-b',
+    rules: [{ account: 'one@example.com', email: 'recruiter@agency.com', mode: 'always' }],
+  })
+  assert.notDeepEqual(ownerA, ownerB)
+  assert.equal(toWorkerNotifyOwner('', [{ account: 'a@x.com', email: 's@v.com', mode: 'always' }]), null)
 })
 
 test('ruleMatchesSender covers exact addresses and same-domain senders', () => {

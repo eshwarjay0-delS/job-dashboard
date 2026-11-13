@@ -204,3 +204,12 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 ### Damaged event recovery — 23 October 2026
 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
+
+
+## Background worker security boundary — 13 November 2026
+
+The unattended worker remains disabled. The tick route now fails closed with HTTP 503 before scanning users or delivering anything unless both GMAIL_UPDATES_SCHEDULER_ENABLED=true and an approved WHATSAPP_GMAIL_UPDATE_TEMPLATE are configured. It still requires a constant-time CRON_SECRET bearer check. This code change does not set any environment variable, create a scheduler, approve a Meta template, or send a notification.
+
+The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
+
+Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
