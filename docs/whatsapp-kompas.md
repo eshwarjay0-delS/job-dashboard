@@ -155,3 +155,14 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+
+## 13 November 2026 — resume delivery and acceptance status
+
+The 6 November channel-specific WhatsApp policy remains in force. A completed readable DOCX may be sent below 95% with the gap disclosed; 70% is the delivery-with-gaps floor and 95% supported coverage is the clean-pass criterion. A no-provider initial JD run may send only the exact selected same-account original after root, path, profile and byte checks, clearly labelled NOT TAILORED. A failed swipe-reply refinement must send no file and preserve the previous delivered version.
+
+The profile-part acceptance repair is isolated in branch `fix/resume-profile-gap-fill-current-master-4c019-20261113` from current master `4c01951`. It accepts a non-empty requested skills, summary or headline part, merges only non-empty requested fields, and clears only the accepted pending part. It does not change role evidence, confirmed-skill policy, identity checks, delivery thresholds or external-send eligibility. It is not deployed and exact-head CI is pending.
+
+PR #344 carries the separate offline fallback and R2 pair compare-and-swap correction. Its source CI passed on a stale base, but the protected preview still needs the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it or copy its old Kompas stamp hunk over current master.
+
+The 17 October 17:28 incident remains unverified: the 12 November Library recheck did not resolve exact source DOCX bytes, and the generated output, R2/webhook/Meta correlation and signed delivery/read receipt remain missing. No replay or real WhatsApp message was sent.
