@@ -24,7 +24,7 @@ const PROFILES = new Set(["eshwarjay05", "jayeshwar44", "eshwarjay06", "jayeshwa
 type Index = Record<string, Record<string, LexiconEntry>>
 
 let index: Index | null = null
-let byProfile = new Map<string, Map<string, LexiconEntry>>()
+const byProfile = new Map<string, Map<string, LexiconEntry>>()
 
 function repoCwd(): string {
   return typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ""
