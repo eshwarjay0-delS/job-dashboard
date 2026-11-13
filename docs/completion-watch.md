@@ -433,3 +433,14 @@ The corrected PR #361 head 5bf054926e7cb7eaadb91f585b1f73d99a995123 passed Whats
 ## 13 November 2026 — third WhatsApp Plan/REA assertion correction
 
 The second Plan/REA failure on PR #362 head d931eb5b7a42c40ba1b4dbae3fe3b5865da5f15a was a case-sensitive test mismatch: the REA limit correctly said `no real Meta send` in lowercase after a preceding clause, while the test expected uppercase `No real Meta send`. The assertion is now case-insensitive; no product behavior or evidence was weakened. The next exact head must rerun Plan/REA, WhatsApp recovery, Kompas baseline and full CI. Earlier successful workflows on older heads are not substituted.
+
+
+## 13 November 2026 — exact 17 Oct source archive reverified
+
+This update supersedes only the 12 Nov statement that the exact source bytes were not currently accessible. The earlier direct Library-folder lookup did not resolve the archive member, but a full read-only Library archive listing located the owner-provided original-resume archive. The exact 17 Oct DOCX was extracted and its SHA-256 matched the private resume inventory; the source is 27,724 bytes. The exact archive path and digest remain private and are not published here. This was not a substitute resume.
+
+The matching Security Engineer – Risk & Controls JD remains recovered from the private inbox. The source's education, employment chronology, experience length and credential claims still conflict with owner-confirmed profile facts; they remain quarantined. The JD's 5+ years and preferred credentials/platforms are not candidate evidence. The 6 Nov channel-specific delivery policy remains authoritative; the old universal 98% hard hold stays superseded.
+
+The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. No exact historical replay or delivery can be claimed. No model call, resume write, R2 write, WhatsApp send, or production mutation was performed.
+
+Continue: retrieve the exact generated output and correlated R2/webhook/Meta evidence, and obtain owner reconciliation of the conflicting source facts. Until then, keep historical replay blocked and do not send a replacement or live test message.
