@@ -137,3 +137,14 @@ The 6 Nov owner correction remains authoritative: web downloads stay strict at 9
 The current #368 adapter's use of `GetObject` ETag followed by `PutObject` with `If-Match` is supported by Cloudflare's current S3 API documentation. Cloudflare states that `PutObject` accepts `If-Match` and that the condition is evaluated atomically against committed bucket state; competing conditional writes are serialized. References: [Conditional operations](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) and [Consistency model](https://developers.cloudflare.com/r2/reference/consistency/).
 
 The visible PR test suite exercises stale ETag/412 and a concurrent winner, while the implementation also treats 409 and 404 as compare-and-swap failure. Add explicit mocked 409 and 404 cases (or document why they cannot arise on this path) before final acceptance. This is a documentation/source review only; no R2 write or live webhook was run.
+
+
+## 13 November 2026 — run 11 current-master implementation status
+
+The approved WhatsApp fallback/session-pair implementation from PR #368 has been restacked on current canonical master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/whatsapp-offline-cas-master-026c729-run11-20261113` (implementation commits `32a5fd790e51d445a7c5a18fad5f77772423ab6f` and `ece00f236103c74cfd1dcca28131593135fdc428`). The restack does not replay the historical request or overwrite current Kompas/Plan/REA changes.
+
+The initial-JD offline fallback is allowed only when the exact selected resume bytes are verified against the same authenticated account's selected library file; the outgoing document is explicitly marked **Original resume — NOT TAILORED**. A swipe-reply refinement is a separate operation: provider failure, missing source, incomplete output, failed quality gate, or identity/contact/date mismatch must send text only and leave the prior delivered resume unchanged. A JD/resume pair is consumed only after acceptance of the exact document. Conditional R2 writes use bounded If-Match compare-and-swap; HTTP 409/412/404 are retry conflicts, while unexpected storage errors propagate.
+
+Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending. A protected Vercel preview is still required and cannot be accessed without the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted. The production alias remains at the prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`, so this implementation is not live.
+
+The historical 17 Oct 17:28 Chicago request remains unverified. The exact generated DOCX, per-run R2 key/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/credential facts remain quarantined pending owner reconciliation. No model call, R2 production write, historical replay, real WhatsApp send or handset acceptance occurred.
