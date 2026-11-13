@@ -65,3 +65,14 @@ The restack also carries `docs/resume.md` and the Oct 17 evidence audit, but doe
 The exact-head GitHub Actions checks are pending. Local `npm ci` and tests could not run because the Vercel sandbox API returned HTTP 400 and the container could not resolve GitHub; no local execution is claimed. The legitimate protected Vercel preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted.
 
 The actual 17 Oct source/JD case remains separate: prior private review recorded the source DOCX and matching JD recovery, but current execution did not rematerialize the source bytes; the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/tenure/credential facts remain quarantined. No model call, DOCX export, historical replay, R2 write, real send or handset acceptance occurred. No 95–100% or 98% live-match claim is supported by these source tests.
+
+
+## Context-specificity regression — 13 November 2026
+
+A source review of the confirmed-skill family map found that CyberArk shared a broad security-tool context containing generic terms such as administrator, access, audit and compliance. That could let an explicit CyberArk EPM confirmation qualify in a generic Salesforce Administrator or compliance-audit bullet, even though the owner-approved exception requires a relevant existing project context.
+
+CyberArk now has its own context family: endpoint, local administrator, privilege, elevation, application control, least privilege, software restriction, application allowlist/greylist and Windows hardening. The broader security context remains available to the other security tools. Regression coverage rejects generic CRM-administration and audit/compliance bullets while retaining the endpoint/local-administrator positive case.
+
+This narrows relevance only. It does not restore the superseded same-role source-wording requirement, and it does not create an employer, project, action, outcome, date, title, location, contact, metric or credential. No model call, DOCX export, live match score or user-library write occurred.
+
+Implementation commit: 185d0252c19c3eb3c2ef49fbe5e2c760fe3fc88b. Regression commit: f92c007f6407101fcf5a36f105c2a8fb90abbc21. Exact-head CI and the protected preview must still pass before this remains eligible for release.
