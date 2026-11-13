@@ -76,3 +76,14 @@ test('current WhatsApp offline-pair CAS restack is recorded separately from hist
  assert.match(entry.limits,/no real Meta send/i)
  assert.match(entry.next,/exact-head full CI/)
 })
+
+
+test('Oct 17 source archive recheck records the current access limit without exposing private material', () => {
+  const session = REA_SESSIONS.find(item => item.id === 'whatsapp-oct17-source-reverified-2026-11-13')
+  assert.ok(session)
+  const step = session.steps.find(item => item.label === 'Current execution archive recheck')
+  assert.ok(step)
+  assert.equal(step.status, 'Blocked')
+  assert.match(step.finding, /did not resolve the exact 27,724-byte source artifact/)
+  assert.doesNotMatch(JSON.stringify(session), /[a-f0-9]{64}|\/mnt\/data\/|C:\\\\Users\\\\/i)
+})
