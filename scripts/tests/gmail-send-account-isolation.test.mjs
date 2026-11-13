@@ -247,7 +247,7 @@ test('notify export is private, owner-scoped and disabled until scheduler author
 test('background tick refuses work before storage scan or delivery until flag and template are configured', () => {
   const gate = updateTickSource.indexOf('GMAIL_UPDATES_SCHEDULER_ENABLED')
   const list = updateTickSource.indexOf('blob.list')
-  const delivery = updateTickSource.indexOf('deliverInboxUpdates')
+  const delivery = updateTickSource.indexOf('deliverInboxUpdates(')
   assert.ok(gate >= 0 && gate < list && gate < delivery)
   assert.match(updateTickSource, /WHATSAPP_GMAIL_UPDATE_TEMPLATE/)
   assert.match(updateTickSource, /status:503/)
