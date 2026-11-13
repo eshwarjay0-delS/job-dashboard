@@ -24,6 +24,8 @@ test("toggling a mute changes only the matching account and sender", () => {
   const mutedTwo = toggleDigestSenderMute(unmutedOne, "two@example.com", "recruiter@example.com")
   assert.deepEqual(mutedTwo, [rules[2], { account: "two@example.com", email: "recruiter@example.com", mode: "never" }])
   assert.equal(notifyRuleKey(" TWO@EXAMPLE.COM ", " Recruiter@Example.com "), "two@example.com:recruiter@example.com")
+  assert.equal(notifyRuleKey("a2", "recruiter@example.com"), "")
+  assert.deepEqual(toggleDigestSenderMute(rules, "a2", "recruiter@example.com"), rules)
 })
 
 test("waiting-on-them radar matches account plus thread ID", () => {
