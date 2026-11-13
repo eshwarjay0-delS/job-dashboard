@@ -6,7 +6,7 @@ This is a scoped evidence snapshot from accessible GitHub, production, database 
 
 - Canonical repository: eshwarjay0-delS/job-dashboard.
 - Current master at the start of this continuation: 313c90a4b1e8c4c67a2454daa5027701aaeafedc.
-- Current production alias job-dashboard-fawn.vercel.app: READY deployment dpl_GvafduzBBMywoKSSfJriJTRTgg8H at SHA a247ddf6042385d12a19bfd7e893983c1bcf9087. The newer master commit is not live.
+- Current production aliases job-dashboard-fawn.vercel.app and marketfit-app.vercel.app: READY deployment dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS at runtime SHA a247ddf6042385d12a19bfd7e893983c1bcf9087. The newer master commit is not live.
 - The local container could not resolve github.com for git operations. GitHub repository and Actions APIs remained available, so source changes were committed through GitHub and validation is from Actions, not a local test run.
 - MFit Completion Watch and MFit Safe Merge Gate are enabled. Kompas Continuous Voice Delivery is disabled in the accessible automation list. No separate Bible-Keeper task was found in the accessible automation list or prior-context search; do not infer that an undiscoverable task is inactive.
 - The documentation restack PR #319 remains open and overlaps the Plan/REA files. This PR adds a current-master evidence update; #319 will need a deliberate restack/reconciliation before merge.
@@ -67,13 +67,13 @@ The latest accessible owner-authored correction requires a login screen and Gmai
 
 - Authorized Vercel inspection found production AUTH_DISABLED=true and NEXT_PUBLIC_AUTH_DISABLED=true. Only these two plain boolean flags were read; no synthetic-owner ID, email override, credential or token was read.
 - Both production flags were changed to false. Preview and development targets were not changed.
-- One config-only production redeploy of the same already-live runtime source SHA a247ddf6042385d12a19bfd7e893983c1bcf9087 was accepted as dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS. It is BUILDING; the canonical alias still points to the prior READY deployment. This is not yet live.
+- One config-only production redeploy of the same already-live runtime source SHA a247ddf6042385d12a19bfd7e893983c1bcf9087 is READY as dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS. Both job-dashboard-fawn.vercel.app and marketfit-app.vercel.app independently resolve to it. The Vercel build log explicitly records auth-flag.js KOMPAS_AUTH_DISABLED=false. This config correction is live.
 - Issue #308 remains open. PR #324 remains DRAFT as source-level defense in depth; its exact-head CI and protected preview must pass separately.
-- Acceptance after READY: independently verify job-dashboard-fawn.vercel.app maps to the new deployment, /kompas/auth-flag.js reports false, and anonymous account-session, desktop-handoff and Gmail export routes return 401. Real Google OAuth, owner/admin access and ordinary-account isolation still require an authenticated browser test. No such test was performed.
+- Remaining acceptance: the available HTTP viewer could not access the production host, so direct public checks of /kompas/auth-flag.js and anonymous account-session, desktop-handoff and Gmail export routes returning 401 were not performed. Real Google OAuth, owner/admin access and ordinary-account isolation still require an authenticated browser test. No such test was performed.
 
 ## Kompas and release gates
 
-- Current production alias remains READY at a247ddf. PR #234 question-window code is included in production, but this does not establish 50 authenticated same-question model pairs, independent human grades or native Windows/WhatsApp/mobile acceptance.
+- Current production alias remains READY at runtime SHA a247ddf on deployment dpl_Lv8uBWu1dAjRLC1dajubtdGFTcGS. PR #234 question-window code is included in production, but this does not establish 50 authenticated same-question model pairs, independent human grades or native Windows/WhatsApp/mobile acceptance.
 - PR #333 release-stamp correction head a656793ab8d4632e2d7b3f5fe6fc0181d743eef0: full CI 43323903866, Kompas baseline 43323904568, cross-device sync 43323904286 and Windows Caption Capture 43323903956 SUCCESS; protected preview run 43323903963 FAILED because the private preview credential is unavailable.
 - The same release-stamp mismatch caused the early full-CI failures on #330, #331 and #323. Do not weaken or remove the stamp test.
 - No Kompas voice changes were made in this run. The separate Continuous Voice Delivery task is disabled in the accessible task list; its work was not duplicated.
