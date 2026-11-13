@@ -962,9 +962,6 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           : "AI tailoring is unavailable and no same-account library resume was selected, so no file was sent. Your request is saved for retry.")
       return
     }
-  // Consume only the matching JD/resume pair; newer requests must survive.
-  await consumeSessionPair()
-
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
     : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`)
@@ -1196,6 +1193,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
   const accepted = await markResumeDocumentAccepted(job, sentId)
   if (!accepted) { finished = true; return } // Signed failed-delivery callback already scheduled a retry.
+  // Consume only after Meta accepted this exact document. Rejected or ambiguous sends keep the pair recoverable.
+  await consumeSessionPair().catch(() => {})
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
