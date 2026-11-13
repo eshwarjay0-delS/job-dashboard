@@ -492,3 +492,10 @@ PR #359 exact head ab3e070aeb4ca8864f5f34ae26fd4c761a645792 passed full CI 43419
 The unattended Gmail update worker remains disabled. No real Gmail API call, inbox mutation, email send or WhatsApp send was performed. Production remains on master 4c01951.
 
 Continue: require owner review for the security PR, protected preview and two authorized inboxes plus narrow-phone acceptance for the UI PR. Keep the worker off until the scheduler, CRON_SECRET, approved Meta template and explicit enablement consent exist.
+
+
+## 13 November 2026 — Plan/REA enum typecheck correction
+
+The first shared Plan/REA update on PR #353 passed the dedicated schema workflow but full TypeScript checking exposed invalid enum literals in the new records: journal delivery used an unsupported value, and REA methods/states used labels outside the canonical unions. The records are being normalized to the exact supported values: journal delivery deployed; REA method Source and artifact analysis; REA state Deployed, verification pending where production code is live; step states Tested/Observed/Blocked. No product behavior changed.
+
+The failing exact-head run was full CI 43422464858 on commit b705098e31699ebee347a0b46e8969ad91116acb; its typecheck errors are enumerated in the workflow log. The Plan/REA schema run 43422464571 and Kompas baseline 43422464569 passed. A fresh full CI and WhatsApp recovery run are required on the corrected head.
