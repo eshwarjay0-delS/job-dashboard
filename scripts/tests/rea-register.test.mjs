@@ -67,3 +67,17 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\b\\d{13}\\b/)
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
+
+test('Gmail and crawler scope details without direct owner approval stay blocked', () => {
+ const gmail=REA_SESSIONS.find(s=>s.id==='gmail-mobile-scope-provenance-2026-11-13')
+ const crawler=REA_SESSIONS.find(s=>s.id==='contract-c2h-scope-provenance-2026-11-13')
+ assert.ok(gmail && crawler)
+ assert.equal(gmail.state,'Blocked')
+ assert.equal(crawler.state,'Blocked')
+ assert.match(gmail.limits,/not directly confirmed|not owner-authored|proposed/i)
+ assert.match(crawler.limits,/not directly owner-confirmed|not owner-authored|proposed/i)
+ const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
+ assert.match(plan,/not owner-approved/)
+ assert.match(plan,/manual\/on-demand only/)
+ assert.match(plan,/not directly owner-confirmed/)
+})
