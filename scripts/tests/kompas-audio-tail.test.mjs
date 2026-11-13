@@ -53,6 +53,24 @@ function load() {
   return state
 }
 
+test("a normal mic segment stops immediately and does not wait on requestData", async () => {
+  const s = load()
+  let stopped = false
+  const chunks = [new Blob(["head"])]
+  const rec = {
+    mimeType: "audio/webm",
+    state: "recording",
+    requestData() { this.requested = true },
+    stop() { stopped = true; this.state = "inactive"; if (this.onstop) this.onstop() },
+  }
+  const pending = s.endSegment({ who: "You", rec, chunks, speechMs: 400, stopped: true, tail: [{ blob: new Blob(["preroll"]), at: 1 }] }, true, false, false, false)
+  assert.equal(stopped, true)
+  assert.equal(rec.requested, true)
+  await pending
+  assert.equal(s.sent.length, 1)
+  assert.doesNotMatch(s.sent[0].text, /preroll/)
+})
+
 test("a late final chunk is transcribed for the microphone and for computer audio", async () => {
   const s = load()
   const micChunks = [new Blob(["mic-head"])]

@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — phone mic stop matches the earlier recorder
+
+Owner Eshwar, Android Chrome, Default microphone, 9:27 AM CT. Constraints, the picker, startMic, and the speaking class were already the same as 01ceb1dc. A kept phrase no longer waits on requestData. That wait stays on the AI Answer flush. Not a phone recording.
+
 ## 13 November 2026 — introduce yourself drops the side-talk
 
 Owner Eshwar, 9:27 AM CT. The question box shows "Introduce yourself." The intro answer is one paragraph. Claim and Context headings are not used for that ask. No other question path was rewritten.
