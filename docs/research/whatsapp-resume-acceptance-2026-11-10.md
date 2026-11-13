@@ -112,3 +112,28 @@ The original 17 Oct source DOCX was independently verified in a private Library 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
+
+
+## 13 November 2026 — current-master offline fallback and acceptance recheck
+
+The current combined implementation is [PR #368](https://github.com/eshwarjay0-delS/job-dashboard/pull/368). It includes:
+
+- Initial-JD offline fallback only when the provider is unavailable and the exact selected same-account library bytes can be verified. The document is labelled **Original resume — NOT TAILORED**.
+- Text-only handling for swipe-reply/refinement failures; no original or partial baseline is sent after a failed refinement.
+- Conditional resume/JD pair consumption so newer resumes, newer JDs and newer pairs survive an in-flight send.
+- R2 ETag/If-Match conditional writes and serialized local compare-and-swap, with stale writers unable to overwrite a newer session unconditionally.
+
+**Release boundary:** PR #368 head 441874e6b3d1396e22e7bbeeea446c1536c26227 is based on 9032d5bd18854f30aaeada20fab649aa41c9d1f4; canonical production was READY at 024177889d092f30aaeada20fab649aa41c9d1f4. GitHub reports the branch 38 commits ahead, 3 behind, and merge-conflicting. No exact-head workflow runs were found. Earlier parent PR #364 green checks do not validate this head. The protected preview requires the private KOMPAS_VERCEL_API_TOKEN, unavailable to this run. Keep #368 DRAFT; no merge, production deployment, real send, R2 write or model call is claimed.
+
+**Historical 17 Oct 17:28 Chicago boundary:** the two scoped Library searches in this run did not surface the generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID or signed delivery/read receipt. Previously recorded source DOCX and matching JD recovery do not prove which output was sent or received. Do not replay the request. Conflicting source education/employment/credential facts remain quarantined pending owner reconciliation.
+
+The 6 Nov owner correction remains authoritative: web downloads stay strict at 95% raw JD overlap; WhatsApp may send a completed readable file below 95% with gaps disclosed; a clean 70–94.9% pass requires at least 95% supported coverage; a finished result below 70% is not a clean pass but may still be sent with gaps. 98% is an evidence target, not a universal WhatsApp hard hold. Incomplete, skills-only, unreadable, failed or identity-mismatched rewrites use the selected same-account resume under the approved fallback rules; no unsupported experience or qualification may be invented.
+
+**Next:** after the unrelated PR #372 rollback is reconciled, restack #368 on the latest approved master without overwriting concurrent changes; require exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA and legitimate protected preview. Historical closure still requires owner fact reconciliation and the exact output plus signed provider evidence. A real handset test is separate and owner-consented. No real WhatsApp message was sent.
+
+
+### R2 conditional-write source check — 13 November 2026
+
+The current #368 adapter's use of `GetObject` ETag followed by `PutObject` with `If-Match` is supported by Cloudflare's current S3 API documentation. Cloudflare states that `PutObject` accepts `If-Match` and that the condition is evaluated atomically against committed bucket state; competing conditional writes are serialized. References: [Conditional operations](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) and [Consistency model](https://developers.cloudflare.com/r2/reference/consistency/).
+
+The visible PR test suite exercises stale ETag/412 and a concurrent winner, while the implementation also treats 409 and 404 as compare-and-swap failure. Add explicit mocked 409 and 404 cases (or document why they cannot arise on this path) before final acceptance. This is a documentation/source review only; no R2 write or live webhook was run.

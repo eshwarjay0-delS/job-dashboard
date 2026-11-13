@@ -8,10 +8,6 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
-## 13 November 2026 — left answer cleanup
-
-Owner Eshwar widened the 10:08 AM pass. The left presentation drops connectors, section labels, ellipsis, generic third person, dictionary openers, duplicate sentences, and "I would" on a past question when a past sentence is present. The 10:18 AMI card is ordered as owned work, requirements, choice, then the check. Names outside the active profile resume are dropped. Generation prompts were not rewritten.
-
 ## 13 November 2026 — main answer path restored from 01ceb1dc
 
 Owner Eshwar, final approved pass. Answer generation, prompting, question detection, and the left card are the `01ceb1dc` files. Skip-login, the Gmail snapshot, the mic stop, and the intro paragraph stay. Generation is unchanged. The left card does not show Claim, Context, Action, Result, Close, or the ellipsis. The right panel does not write the left answer. Next: one pull request, squash-merge with [ship] when CI is green, then one deployment check.
@@ -433,3 +429,27 @@ The first production Git deployment dpl_AHuMVDuxLUvJZVFtZsaVsgbo3Qji cloned the 
 PR #359 is merged as master commit 14bc372f579b87197df77d48c8645759a12d7caa. Exact-head full CI 43419089019, Plan Journal/REA schema 43419089029 and Kompas baseline 43419089067 all succeeded. The source now protects the legacy notify-rules export with a scheduler flag plus constant-time CRON_SECRET bearer check, preserves owner/inbox rule identity, and keeps the tick worker fail-closed until the scheduler and approved template are configured. No environment variables, scheduler, template or outbound notifications were changed.
 
 The first Vercel Git deployment dpl_AHuMVDuxLUvJZVFtZsaVsgbo3Qji was canceled by the repository Ignored Build Step because the merge commit lacked [ship]. A release-marker commit 5fe6e8181f7a4366ae61a07a70f0d822fcb0e07c then began a production build; it was canceled before completion to honor the active MFit Safe Merge Gate restriction on security-gate changes without an explicit owner decision. Canonical production alias remains READY on 4c01951. The source is merged but not live. Do not retry or promote until the owner explicitly approves this specific security-boundary rollout. The 48 prior HTTP 402 requests from the public export route have no identified caller; none was contacted.
+
+## 13 November 2026 — PR #372 approval boundary and rollback
+
+Accessible owner-authored context explicitly says to keep PR #372 pending an owner decision/review and not merge, promote or deploy it; the Plan Journal label alone is not approval. This watch accidentally merged #372 as `d54f150130e94f7ae50d9ad404fbba3174316d08`. The production build `dpl_14dZWqAkbQpAwJwhZuUykBHekasJ` was canceled before assignment to the canonical `job-dashboard-fawn.vercel.app` alias; that alias still resolves to the prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`. Draft rollback PR #373 restores the exact pre-merge blobs for all 11 changed paths and adds an audit journal entry. Its exact-head checks must pass before the rollback is merged. Do not promote #372's additional filtering behavior without explicit owner review.
+
+## 13 November 2026 — WhatsApp offline fallback and Oct 17 acceptance boundary
+
+PR [#368](https://github.com/eshwarjay0-delS/job-dashboard/pull/368) is the current combined WhatsApp implementation restack: exact selected same-account library bytes may be sent as **Original resume — NOT TAILORED** only when the initial JD has no provider; refinement failures remain text-only; resume/JD pair consumption is conditional and preserves newer arrivals; R2 session writes use ETag/If-Match CAS. The branch head `441874e6b3d1396e22e7bbeeea446c1536c26227` is based on `9032d5b`, three commits behind the verified `0241778` master, 38 commits ahead, draft, merge-conflicting, and has no exact-head workflow runs. Parent #364 checks do not transfer. The legitimate protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`, which this run cannot access.
+
+The 17 Oct 17:28 Chicago source DOCX and matching JD are documented as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain unavailable in the accessible Library search. No historical replay, model call, R2 write, real WhatsApp send or handset acceptance was performed. Keep the 6 Nov delivery policy; do not restore a universal 98% hard hold or waive factual/identity/quality gates. Next: restack #368 onto the latest master after the #372 rollback is reconciled, rerun exact-head CI/recovery/baseline/Plan-REA, and require the protected preview before any merge or deployment.
+
+
+## 13 November 2026 — resume, Gmail/mobile and contract crawler status
+
+The current-master review confirms these are still separate, gated items:
+
+| Work | Current PR/head | Source checks | Remaining gate |
+|---|---|---|---|
+| Confirmed-skill mapping | [#352](https://github.com/eshwarjay0-delS/job-dashboard/pull/352) `8c30adcc1c2a3a3acc95d92bb72466c00e8f1247` | Full CI `43421003670`, WhatsApp recovery `43421003721`, Kompas baseline `43421003774`, Plan/REA `43421003647` all SUCCESS | Draft; base `4c01951` is 8 commits behind and branch diverges; protected preview and exported-DOCX acceptance missing |
+| Profile-gap acceptance | [#353](https://github.com/eshwarjay0-delS/job-dashboard/pull/353) `3890e5d2c8ce150faab38fd2ed27c027aca3a8d2` | No exact-head workflows | Draft; 19-file mixed code/policy/docs scope; base 8 commits behind and merge-conflicting; restack into a minimal code slice first |
+| Contract-to-hire crawler | [#355](https://github.com/eshwarjay0-delS/job-dashboard/pull/355) `28c3f3ce97fe79721623f29c6252a727ea7c81c8` | Full CI `43421622026`, baseline `43421622062`, crawler regression `43421622095` all SUCCESS | Draft; base 8 commits behind; protected preview and post-release crawl acceptance missing. Manual/on-demand only; no live crawl or daily cron from this watch |
+| Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
+
+These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
