@@ -23,7 +23,7 @@ PR #376 head 6f566197d763b6137c8608c2db3cd670a2278c5b passed full CI 43494635050
 
 ## Separate Kompas rollback release status
 
-PR #373 restored the approved pre-#372 answer path and merged as 026c72968e45314ff0a99f701942c966e79f0a1e. Its exact PR-head full CI, Kompas baseline, cross-device, Plan/REA and Windows packaging checks passed. The Vercel production deployment attempt was canceled by the project's Ignored Build Step because the merge commit lacked [ship]; the canonical alias remains on 024177889d092f30aaeada20fab649aa41c9d1f4. A preview attempt from PR #374 was also canceled by the same ignore gate. The project Git configuration enables deployments only on master; the protected preview workflow still requires the private KOMPAS_VERCEL_API_TOKEN. Do not change the ignore rule, bypass the token, or promote a preview.
+PR #373 restored the approved pre-#372 answer path and merged as 026c72968e45314ff0a99f701942c966e79f0a1e. Its exact PR-head full CI, Kompas baseline, cross-device, Plan/REA and Windows packaging checks passed. The runtime rollback code is already deployed in READY production deployment dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb at ancestor SHA 024177889d092f30aaeada20fab649aa41c9d1f4. GitHub compare 024177..026c729 shows only documentation/Plan/REA files differ; the redundant deployment request for 026c729 was canceled by the Ignored Build Step, so only the exact merge SHA's documentation is not live. A preview attempt from PR #374 was also canceled by the same ignore gate. The project Git configuration enables deployments only on master; the protected preview workflow still requires the private KOMPAS_VERCEL_API_TOKEN. Do not change the ignore rule, bypass the token, or promote a preview.
 
 ## Operational boundaries
 
