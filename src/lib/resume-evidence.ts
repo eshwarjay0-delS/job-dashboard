@@ -55,6 +55,53 @@ export function missingRoleEvidenceTerms(
 }
 
 
+const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
+  {
+    skill: /\b(?:cyberark|splunk|siem|sentinel|defender|crowdstrike|qualys|nessus|rapid7|burp|zscaler|palo alto|edr|xdr|dlp)\b/i,
+    context: /\b(?:security|cyber|soc|endpoint|local admin|administrator|privilege|elevation|firewall|incident|threat|vulnerability|detection|response|monitoring|alert|log|network|identity|access|iam|sso|mfa|audit|compliance)\b/i,
+  },
+  {
+    skill: /\b(?:okta|sailpoint|forgerock|pingfederate|ping identity|active directory|entra id|iam|pam|sso|mfa)\b/i,
+    context: /\b(?:identity|access|authentication|authorization|directory|provisioning|privilege|administrator|user|sso|mfa|iam|security|account review)\b/i,
+  },
+  {
+    skill: /\b(?:aws|amazon web services|azure|gcp|google cloud|kubernetes|docker|terraform|cloudformation|ansible)\b/i,
+    context: /\b(?:cloud|infrastructure|deployment|deploy|container|pipeline|platform|server|migration|automation|network|api|service|orchestration|hosting)\b/i,
+  },
+  {
+    skill: /\b(?:canton|solana|solidity|hyperledger|dlt|blockchain|distributed ledger)\b/i,
+    context: /\b(?:blockchain|distributed ledger|ledger|transaction|settlement|token|smart contract|custody|digital asset|chain|payments)\b/i,
+  },
+  {
+    skill: /\b(?:snowflake|sql|tableau|power bi|spark|kafka|databricks|redshift|bigquery|pandas)\b/i,
+    context: /\b(?:data|database|analytics|report|dashboard|metrics|etl|warehouse|query|stream|event|pipeline|business intelligence)\b/i,
+  },
+  {
+    skill: /\b(?:salesforce|pardot|servicenow|service cloud|sales cloud|dynamics 365)\b/i,
+    context: /\b(?:crm|sales|customer|service|marketing|case|workflow|account|lead|opportunity|ticket|support|campaign)\b/i,
+  },
+  {
+    skill: /\b(?:python|java|javascript|typescript|golang|rust|c\+\+|c#|ruby|bash|powershell)\b/i,
+    context: /\b(?:software|application|script|automation|development|integration|api|pipeline|test|code|service|data|etl|database|tooling)\b/i,
+  },
+  {
+    skill: /\b(?:nist|iso\s*27001|sox|pci\s*dss|soc\s*2|cobit|fedramp|hipaa)\b/i,
+    context: /\b(?:audit|compliance|control|risk|governance|policy|assessment|regulatory|evidence|remediation|assurance)\b/i,
+  },
+]
+
+/** A confirmed skill is cross-role evidence only where the original bullet's project
+ * context fits that skill family. Unknown terms need direct source support. */
+function confirmedSkillFitsBullet(
+  term: string,
+  sourceBullet: string,
+  cover: (text: string, terms: string[]) => ReadonlySet<string>,
+): boolean {
+  if (cover(sourceBullet, [term]).has(term)) return true
+  const family = CONFIRMED_SKILL_CONTEXTS.find(group => group.skill.test(term))
+  return Boolean(family && family.context.test(sourceBullet))
+}
+
 /** Restore an edited experience bullet when it introduces a JD term unsupported by
  * that role's original bullets and not explicitly confirmed by the candidate. Explicit
  * confirmations are the owner-approved cross-role exception; the existing bullet/project
@@ -69,8 +116,11 @@ export function restoreUnsupportedRoleEdits<T extends { idx: number; text: strin
   const sourceByIdx = new Map<number, string>()
   const allowedByIdx = new Map<number, ReadonlySet<string>>()
   for (const role of roles) {
-    const allowed = new Set([...cover(role.bullets.map(b => b.text).join("\n"), terms), ...confirmedTerms])
     for (const bullet of role.bullets) {
+      const allowed = new Set([
+        ...cover(bullet.text, terms),
+        ...[...confirmedTerms].filter(term => confirmedSkillFitsBullet(term, bullet.text, cover)),
+      ])
       sourceByIdx.set(bullet.idx, bullet.text)
       allowedByIdx.set(bullet.idx, allowed)
     }
