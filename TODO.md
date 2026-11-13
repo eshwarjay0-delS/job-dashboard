@@ -1,3 +1,7 @@
+## 2026-11-13 — Phone mic segment stop matches the pre-#350 recorder (no new screen)
+
+`getUserMedia` constraints, the Default microphone picker, `startMic`, and the speaking class on the mic button are the same as commit `01ceb1dc`. The one STT stop change since then waited on `requestData` for every kept phrase, not only when AI Answer flushed the last slice. A normal phrase now stops the recorder immediately again, and Chrome Android can still deliver the last chunk after `onstop`. AI Answer still flushes the tail. Not a phone recording.
+
 ## 2026-11-13 — Intro side-talk is not the question (visible: question box and the intro answer)
 
 A heard line like "Your introduction know, I'm not sure if I'm going to be able to get to the end of this. introduce yourself." is shown and answered as "Introduce yourself." The introduction is one paragraph. It does not get Claim or Context headings, and it does not start a bullet with "First,". Other questions still use the existing card. Not a phone click-through.

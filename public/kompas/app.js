@@ -2438,8 +2438,7 @@ function endSegment(cap, keep, restart = true, force = false, includeTail = fals
   let settle;
   const done = new Promise(r => { settle = r; });
   finals.add(done); done.then(() => finals.delete(done));
-  const withTail = includeTail || !!keep;
-  const takeTail = () => withTail && Array.isArray(cap.tail) ? cap.tail.map(item => item && item.blob).filter(blob => blob && blob.size && chunks.indexOf(blob) < 0) : [];
+  const takeTail = () => includeTail && Array.isArray(cap.tail) ? cap.tail.map(item => item && item.blob).filter(blob => blob && blob.size && chunks.indexOf(blob) < 0) : [];
   const flush = () => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(takeTail().concat(chunks), { type: rec.mimeType || MIME || "audio/webm" });
@@ -2453,7 +2452,7 @@ function endSegment(cap, keep, restart = true, force = false, includeTail = fals
   };
   const stopNow = () => { try { rec.stop(); } catch { setTimeout(flush, 80); } };
   const canRequest = typeof rec.requestData === "function" && rec.state && rec.state !== "inactive";
-  if (withTail && canRequest) {
+  if (includeTail && canRequest) {
     let stopped = false;
     const finish = () => { if (stopped) return; stopped = true; clearTimeout(wait); stopNow(); };
     const prev = rec.ondataavailable;
