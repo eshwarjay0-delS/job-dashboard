@@ -63,7 +63,7 @@ const FILLER = /^(?:um+|uh+|erm+|er|hmm+)[,.]?\s*/i
 export function deriveQuestion(fragments: readonly string[]): string {
   const kept: string[] = []
   for (const raw of fragments) {
-    let text = String(raw || "").replace(/\s+/g, " ").trim().replace(FILLER, "").replace(/\s+(?:um+|uh+)\b/gi, " ").trim()
+    const text = String(raw || "").replace(/\s+/g, " ").trim().replace(FILLER, "").replace(/\s+(?:um+|uh+)\b/gi, " ").trim()
     if (!text || /^(?:um+|uh+|right|yeah|ok(?:ay)?)[.!?]*$/i.test(text)) continue
     kept.push(text)
   }
