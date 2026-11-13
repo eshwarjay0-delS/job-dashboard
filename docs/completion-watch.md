@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — Skip login button
+
+Owner Eshwar asked for a Skip login button on /login, shown only when the server skip-login flag is on. It opens /dashboard as the configured synthetic owner. / and /login already redirect on the server when AUTH_DISABLED is exactly true; the home page now does too, and the button covers a cached login page. Admin stays 401 for that owner. Environment variables were not changed. Not merged. No ship marker.
+
 ## 13 November 2026 — rounds 36-55 and the desktop shell
 
 The side panel and the Kompas brain are on the web page the Windows shell already loads from `https://job-dashboard-fawn.vercel.app/kompas/index.html` through `kompas://app`. Private mode remains `setContentProtection` on that window. No new exe. No ship marker. Not merged. STAR keep-going is still 0/10 on the offline stand-in. Not a Windows launch.

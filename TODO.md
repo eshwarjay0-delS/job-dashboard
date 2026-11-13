@@ -1,3 +1,11 @@
+## 2026-11-13 — Skip login button on /login (visible when the server flag is on)
+
+The sign-in card shows **Skip login** under Continue with Google only after `/api/kompas/capabilities` reports `authDisabled: true`. The click goes to `/dashboard` on the existing synthetic-owner path (`AUTH_DISABLED_USER_EMAIL`, Houston `eshwarjay05`). It does not call Google. `/` and `/login` still redirect to `/dashboard` on the server when `AUTH_DISABLED` is exactly true; the button is the fallback if a cached login page is what the browser shows. Admin APIs stay 401 for that synthetic owner. No environment variable was changed.
+
+## 2026-11-13 — Lexicon glosses, perspective lines, and the brain wiring (no new screen beyond the login button above)
+
+The keyword cache, reviewed glosses, the statement validator, the perspective lines, and the ten brain modules (prime, topics, interviewer, feedback, repetition, pace, confidence, debrief, health, dev timeline) are in the same branch. A wrong gloss relation is rewritten or dropped. The dev timeline is empty when `NODE_ENV` is production. Not a production deploy.
+
 ## 2026-11-13 — Clarify seed and replay gate (no new screen)
 
 The side panel now seeds one booster and one clarifying question from `scripts/fixtures/kompas-evaluation/clarify-bank.jsonl` after dropping lines that state someone else's job or city. The 249-question replay gate is local. Before: filler 146, choppy-flow 0, generic 10, too-short 20. After: filler 0, choppy-flow 0, generic 10, too-short 18. STAR keep-going 0/10 → 10/10. Technical HR median 81 → 44. Not a production deploy.
