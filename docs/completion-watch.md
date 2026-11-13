@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 13 November 2026 — approval provenance and release-gate correction
+
+- PR #373 is merged as master 026c72968e45314ff0a99f701942c966e79f0a1e. Exact PR-head full CI, Kompas baseline, cross-device sync, Plan/REA and Windows packaging passed. Its attempted production deployment dpl_3coxkmqineawAoKLcaaT8Z2qtiHm was canceled by Vercel's Ignored Build Step because the merge commit did not contain [ship]; the canonical alias still points to READY SHA 024177889d092f30aaeada20fab649aa41c9d1f4. The rollback is merged, not live.
+- A Vercel preview request for PR #374 head 794ba1151f8761720c55936d15bb0eb9a0a37c5c was also canceled by the same Ignored Build Step. The project Git configuration enables deployments only for master; the protected PR preview still needs the private KOMPAS_VERCEL_API_TOKEN. Do not alter ignore/deployment rules or promote a preview.
+- PR #375's high-level Poke-inspired multi-account Gmail/mobile direction is owner-requested. The exact four-account cap, Calendar targeting, digest/radar behavior and hamburger layout were not found in owner-authored prior messages; they remain proposed. PR #375 stays DRAFT.
+- The owner directly corrected contract crawler cadence on 12 Nov: manual/on-demand only, daily cron removed, Robert Half manual-only. The exact C2H mapping and negation semantics in PR #376 were not found in owner-authored context; they remain proposed. PR #376 stays DRAFT.
+- Exact-head source gates for #375 and #376 are green, but they are not deployment or live UX evidence. No Gmail API call, email send, live crawl, cron run, WhatsApp send, R2 production write or handset test occurred.
+
+This provenance correction is recorded in docs/research/owner-approval-provenance-2026-11-13.md, Plan & Vision, Plan Journal and REA. Keep #374–#377 sequenced through the Safe Merge Gate; rebase shared Plan/REA branches after any preceding merge.
+
+
 Owner instruction: 17 October 2026. Keep unfinished approved commitments moving until deployed and verified, or report a concrete blocker. Recover accessible prior requests and respect later corrections. Do not ask the owner to repeat known requirements.
 
 ## Scheduled execution
