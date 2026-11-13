@@ -10,8 +10,9 @@ export type ClarifySeed = {
   question_types?: string[]
 }
 
-function bankFile() {
-  return join(process.cwd(), "scripts/fixtures/kompas-evaluation/clarify-bank.jsonl")
+function bankFile(): string {
+  const cwd = typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ""
+  return cwd ? join(cwd, "scripts/fixtures/kompas-evaluation/clarify-bank.jsonl") : ""
 }
 
 const EXPERIENCE = /\b(?:I (?:worked|spent|started my career|was working|lived|was able to move)|years? in|Cincinnati|Seattle|QNXT|DVLA|unloader|packer|back in India)\b/i
@@ -21,8 +22,14 @@ export function assertsCandidateExperience(text: string): boolean {
   return EXPERIENCE.test(bare)
 }
 
-export function loadClarifyBank(raw = readFileSync(bankFile(), "utf8")): ClarifySeed[] {
-  return raw.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => JSON.parse(line) as ClarifySeed)
+export function loadClarifyBank(raw?: string): ClarifySeed[] {
+  let text = raw
+  if (text == null) {
+    const file = bankFile()
+    if (!file) return []
+    try { text = readFileSync(file, "utf8") } catch { return [] }
+  }
+  return text.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => JSON.parse(line) as ClarifySeed)
 }
 
 /** Lines the panel may say. Experience claims from other speakers are dropped. */

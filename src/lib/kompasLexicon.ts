@@ -26,10 +26,16 @@ type Index = Record<string, Record<string, LexiconEntry>>
 let index: Index | null = null
 let byProfile = new Map<string, Map<string, LexiconEntry>>()
 
+function repoCwd(): string {
+  return typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ""
+}
+
 function loadIndex(): Index {
   if (index) return index
-  const file = join(process.cwd(), "src/lib/kompas-lexicon.json")
-  index = JSON.parse(readFileSync(file, "utf8")) as Index
+  const cwd = repoCwd()
+  if (!cwd) { index = {}; return index }
+  try { index = JSON.parse(readFileSync(join(cwd, "src/lib/kompas-lexicon.json"), "utf8")) as Index }
+  catch { index = {} }
   return index
 }
 
@@ -97,13 +103,16 @@ export function lexiconClause(profile: string, text: string): string {
 }
 
 /** JD terms that are not on the profile. Logged locally, not added to the index. */
-export function noteCandidateTerm(profile: string, term: string, file = join(process.cwd(), "data/kompas-lexicon-candidates.jsonl")): boolean {
+export function noteCandidateTerm(profile: string, term: string, file?: string): boolean {
   const key = norm(term)
   if (!key || lookupTerm(profile, key)) return false
-  if (process.env.KOMPAS_LEXICON_CANDIDATES === "0") return false
+  if (typeof process === "undefined" || process.env.KOMPAS_LEXICON_CANDIDATES === "0") return false
+  const cwd = repoCwd()
+  const path = file || (cwd ? join(cwd, "data/kompas-lexicon-candidates.jsonl") : "")
+  if (!path) return false
   try {
-    mkdirSync(dirname(file), { recursive: true })
-    appendFileSync(file, JSON.stringify({ profile: sessionProfile(profile), term: key, at: new Date().toISOString() }) + "\n")
+    mkdirSync(dirname(path), { recursive: true })
+    appendFileSync(path, JSON.stringify({ profile: sessionProfile(profile), term: key, at: new Date().toISOString() }) + "\n")
   } catch { /* a full disk must not block the answer */ }
   return true
 }

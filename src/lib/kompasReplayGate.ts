@@ -12,18 +12,25 @@ export type ReplayRow = {
   expected?: { length_band_words?: [number, number] }
 }
 
-const DIR = join(process.cwd(), "scripts/fixtures/kompas-evaluation")
+function replayDir(): string {
+  const cwd = typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ""
+  return cwd ? join(cwd, "scripts/fixtures/kompas-evaluation") : ""
+}
 const FILLER = /\b(?:and then|from there|after that|great question|in conclusion|basically|delve|leverage|the way i look at it|at the end of the day|i check the evidence before i call it done)\b/i
 const CHOPPY = /\b(?:and then|from there|after that)\b/gi
 const PROFILE = /\b(?:houston|saint louis|st\. louis|jayeshwar44|eshwarjay05|eshwarjay06)\b/i
 
 export function loadReplaySet(): ReplayRow[] {
-  return readFileSync(join(DIR, "replay-set.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as ReplayRow)
+  const dir = replayDir()
+  if (!dir) return []
+  return readFileSync(join(dir, "replay-set.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as ReplayRow)
 }
 
 export function historicalTagCounts(): Record<string, number> {
   const counts: Record<string, number> = {}
-  for (const line of readFileSync(join(DIR, "qa.jsonl"), "utf8").trim().split("\n")) {
+  const dir = replayDir()
+  if (!dir) return counts
+  for (const line of readFileSync(join(dir, "qa.jsonl"), "utf8").trim().split("\n")) {
     const row = JSON.parse(line) as { failure_tags?: string[] }
     for (const tag of row.failure_tags || []) counts[tag] = (counts[tag] || 0) + 1
   }
