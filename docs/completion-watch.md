@@ -8,6 +8,10 @@ The ChatGPT task **MFit Completion Watch** is enabled with an hourly schedule in
 
 The task reads GitHub and the plan journal, reconciles unfinished work against evidence, continues an approved slice where tools are available, and reports meaningful progress or blockers. It must say when its runtime cannot execute code, access a source or deploy. Do not represent a reminder as completed implementation. Avoid duplicate work with Kompas Continuous Voice Delivery. A concurrent developer recorded a Bible-Keeper auditing task; inspect its actual run state and coordinate ownership and alerts. Do not claim that separately reported scheduler was verified by this task.
 
+## 13 November 2026 — introduce yourself drops the side-talk
+
+Owner Eshwar, 9:27 AM CT. The question box shows "Introduce yourself." The intro answer is one paragraph. Claim and Context headings are not used for that ask. No other question path was rewritten.
+
 ## 13 November 2026 — saved Gmail while Supabase egress is restricted
 
 Owner Eshwar: the Jobs inbox and the Gmail accounts list must show the saved mail for eshwarjay05 (67f02d95-f7fe-4058-9b0d-9363221e7c61) with no spend while the project is `exceed_egress_quota`. He exports `mfit_gmail_threads` and `mfit_gmail_sync` and posts them to `/api/gmail/snapshot-import`. The fallback is only for that restricted error. A working database read wins. Skip-login was not edited. Local secret and fallback tests passed. Not verified on the live site in this note. Next: one production deploy with `[ship]`, then one check of the import route, `/api/health`, and `/login`.

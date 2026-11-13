@@ -1137,9 +1137,37 @@ function repairSectioned(raw) {
   }
   return out.join("\n");
 }
+function cleanHeardQuestion(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return "";
+  const intro = /(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))/i;
+  const side = /\b(?:not sure|get to the end of this|your introduction|i(?:'m| am) not going to|let me see|we(?:'ll| will) come back|i might not)\b/i;
+  const tail = raw.match(new RegExp("(?:^|[.?!]\\s+)((?:please\\s+)?" + intro.source + ")[.?!]*\\s*$", "i"));
+  const finish = (ask) => { const bare = String(ask || "").replace(/[.?!]+$/g, "").trim(); return bare ? bare.charAt(0).toUpperCase() + bare.slice(1) + "." : ""; };
+  if (tail) {
+    const before = raw.slice(0, tail.index).trim();
+    if (!before || side.test(before) || /^your introduction\b/i.test(before)) return finish(tail[1]);
+  }
+  return raw;
+}
+function plainIntroAnswer(text) {
+  const sentences = [];
+  for (const line of String(text || "").split("\n")) {
+    const t = line.trim();
+    if (!t || /^(?:…|\.{3})$/.test(t) || /^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(t)) continue;
+    for (const bit of t.split(/(?<=[.!?])\s+/)) {
+      let spoken = bit.replace(/^(?:[-•*]|\d+[.)])\s+/, "").replace(/^(?:first|then|finally|the result)\b[:,]?\s+/i, "").trim();
+      if (!spoken) continue;
+      spoken = spoken.replace(/^([a-z])/, (letter) => letter.toUpperCase());
+      if (spoken.split(/\s+/).filter(Boolean).length >= 3) sentences.push(spoken);
+    }
+  }
+  return sentences.join(" ");
+}
 function presentAnswer(question, answer, source) {
   const raw = String(answer || "").trim();
   if (!raw) return raw;
+  if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw);
   if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw);
   const allowed = String(source || "") + "\n" + String(question || "");
   const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3);
@@ -1245,11 +1273,11 @@ function stripUnaskedLogistics(question, answer) {
 }
 function framedQuestion(draft, card) {
   const typed = String(draft || "").trim();
-  if (typed) return typed;
-  const asked = String((card && (card.anchorQ || card.question)) || "").replace(/\s+/g, " ").trim();
+  const asked = typed || String((card && (card.anchorQ || card.question)) || "").replace(/\s+/g, " ").trim();
   if (!asked || isPlaceholderTitle(asked)) return "";
-  if (/^deep dive into\b/i.test(asked) && /\bexperience\b/i.test(asked)) return String(card.heard || card.fullSpokenQuestion || asked).replace(/\s+/g, " ").trim();
-  return typeof fixPhrases === "function" ? fixPhrases(asked) : asked;
+  if (!typed && /^deep dive into\b/i.test(asked) && /\bexperience\b/i.test(asked)) return String(card.heard || card.fullSpokenQuestion || asked).replace(/\s+/g, " ").trim();
+  const shown = typeof fixPhrases === "function" ? fixPhrases(asked) : asked;
+  return cleanHeardQuestion(shown);
 }
 function strayCaption(text) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
@@ -4852,7 +4880,8 @@ async function generateAnswer(question, card, opts = {}) {
 }
 function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
 async function generateAnswerRequest(question, card, opts = {}) {
-  question = String(question || "").trim(); if (!question) return;
+  question = cleanHeardQuestion(String(question || "").trim()); if (!question) return;
+  if (card && cleanHeardQuestion(card.question) === question) { card.question = question; if (!card.anchorQ || cleanHeardQuestion(card.anchorQ) === question) card.anchorQ = question; }
   card = card || addCard(question, ["…"]);
   if (!card.qid) card.qid = "q" + (cardSeq++);
   const qid = card.qid;

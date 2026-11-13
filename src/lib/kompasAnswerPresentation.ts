@@ -1,3 +1,5 @@
+import { cleanHeardQuestion } from "./kompasLongContext.ts"
+
 /**
  * Fixed card order: claim, context, action, result, close.
  * The same question and the same words always produce the same sections.
@@ -124,10 +126,29 @@ function bucket(sentence: string, source: string): AnswerSection {
   return "Context"
 }
 
+const INTRO_ASK = /^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i
+
+/** An introduction is one paragraph. Section headings and a prepended First are not spoken. */
+export function plainIntroAnswer(text: string): string {
+  const sentences: string[] = []
+  for (const line of String(text || "").split("\n")) {
+    const t = line.trim()
+    if (!t || /^(?:…|\.{3})$/.test(t) || /^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(t)) continue
+    for (const bit of t.split(/(?<=[.!?])\s+/)) {
+      let spoken = bit.replace(/^(?:[-•*]|\d+[.)])\s+/, "").replace(/^(?:first|then|finally|the result)\b[:,]?\s+/i, "").trim()
+      if (!spoken) continue
+      spoken = spoken.replace(/^([a-z])/, (letter) => letter.toUpperCase())
+      if (answerWordCount(spoken) >= 3) sentences.push(spoken)
+    }
+  }
+  return sentences.join(" ")
+}
+
 /** Format a finished answer for the card. Idempotent. No random choice. */
 export function presentSpokenAnswer(question: string, text: string, source = ""): string {
   const raw = String(text || "").trim()
   if (!raw) return raw
+  if (INTRO_ASK.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw)
   if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return repairSectioned(raw)
   const allowed = `${source}\n${question}`
   const sentences = answerSentences(raw).map((s) => withoutInventedNumbers(s, allowed)).filter((s) => answerWordCount(s) >= 3)

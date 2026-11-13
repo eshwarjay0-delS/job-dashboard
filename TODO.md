@@ -1,3 +1,7 @@
+## 2026-11-13 — Intro side-talk is not the question (visible: question box and the intro answer)
+
+A heard line like "Your introduction know, I'm not sure if I'm going to be able to get to the end of this. introduce yourself." is shown and answered as "Introduce yourself." The introduction is one paragraph. It does not get Claim or Context headings, and it does not start a bullet with "First,". Other questions still use the existing card. Not a phone click-through.
+
 ## 2026-11-13 — Saved Gmail while Supabase is restricted (visible banner on Jobs and Gmail accounts)
 
 The Jobs inbox (`/dashboard/mail`) and Gmail accounts (`/dashboard/connections`) read `mfit_gmail_threads` / `mfit_gmail_sync` and the Google account list from Supabase. While the project returns 402 / restricted / `exceed_egress_quota`, those screens read a private Blob snapshot for the signed-in user instead and show: "Showing your saved mail from <snapshot time>. Live sync resumes when the database is back." Connect Gmail and Refresh show that banner and do not throw. A successful Supabase read skips the snapshot. The import route is `POST /api/gmail/snapshot-import` (header `x-import-secret`, parts of at most 200 threads, body under 4 MB). No mail text is logged. Skip-login was not changed.
