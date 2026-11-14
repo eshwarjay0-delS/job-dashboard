@@ -1,0 +1,33 @@
+name: Gmail snapshot fallback security
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "src/lib/gmailSnapshot.ts"
+      - "scripts/tests/gmail-snapshot-fallback.test.mjs"
+      - ".github/workflows/gmail-snapshot-fallback.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "src/lib/gmailSnapshot.ts"
+      - "scripts/tests/gmail-snapshot-fallback.test.mjs"
+      - ".github/workflows/gmail-snapshot-fallback.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot-fallback:
+    name: Gmail snapshot fallback security
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run offline snapshot fallback and secret-boundary tests
+        run: node --experimental-strip-types --test scripts/tests/gmail-snapshot-fallback.test.mjs
