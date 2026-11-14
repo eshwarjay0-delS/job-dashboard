@@ -300,6 +300,26 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   const retainedPartialMismatch = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(retainedPartialMismatch.jdId, partialMismatchSession.jdId, 'an unaccepted fallback leaves the pair available for retry')
 
+  // Other original-fallback branches (for example an unchanged rewrite) must also
+  // reject a legacy session copy when it no longer matches the selected library bytes.
+  const unchangedMismatchSession = { ...offlineSession, jdId: 'unchanged-byte-mismatch' }
+  entries.set('whatsapp/session-123.json', JSON.stringify({
+    version: 3, jdId: unchangedMismatchSession.jdId, jd: unchangedMismatchSession.jd,
+    resumePath: unchangedMismatchSession.resumePath, resumeName: unchangedMismatchSession.resumeName,
+    seen: ['unchanged-byte-mismatch'], updatedAt: Date.now(),
+  }))
+  providerAvailable = true
+  offlineMismatch = true
+  unchangedNext = true
+  sessionReadCount = 0
+  const docsBeforeUnchangedMismatch = docs.length
+  await generate('123', unchangedMismatchSession, offlineUser, undefined, offlineFiles)
+  offlineMismatch = false
+  assert.equal(docs.length, docsBeforeUnchangedMismatch, 'an unchanged result cannot send a mismatched legacy session copy')
+  const retainedUnchangedMismatch = JSON.parse(entries.get('whatsapp/session-123.json'))
+  assert.equal(retainedUnchangedMismatch.jdId, unchangedMismatchSession.jdId, 'an unverified original keeps the pair retryable')
+  assert.match(said.at(-1), /The rewrite produced no changes/)
+
   providerAvailable = false
   entries.set('whatsapp/session-123.json', JSON.stringify({
     version: 3, jdId: offlineSession.jdId, jd: offlineSession.jd,

@@ -898,12 +898,31 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
     throw new Error("WhatsApp session changed repeatedly while consuming a delivered resume pair")
   }
+  // A Files-backed original fallback must be the exact selected, account-scoped library bytes.
+  // Older recovery records can still carry an inbox/session copy, so validate both its path and bytes
+  // on every fallback path, not only the no-provider branch.
+  const readSelectedLibraryBytes = async (): Promise<Buffer | null> => {
+    if (!files || !files.email || !files.userDir || !files.abs || !files.rel || !session.resumePath) return null
+    const expectedRoot = filesOf(userId)
+    if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return null
+    const root = path.resolve(files.userDir)
+    const selected = path.resolve(files.abs)
+    const relative = path.normalize(files.rel)
+    if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(".." + path.sep)) return null
+    if (path.resolve(root, relative) !== selected || !selected.startsWith(root + path.sep)) return null
+    const [libraryBytes, sessionBytes] = await Promise.all([
+      readPath(selected).catch(() => null),
+      readPath(session.resumePath).catch(() => null),
+    ])
+    if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return null
+    return libraryBytes
+  }
   const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
     if (!resumePath || !jd) return false
-    const source = verifiedSource || await readPath(resumePath).catch(() => null)
+    const source = verifiedSource || (files ? await readSelectedLibraryBytes() : await readPath(resumePath).catch(() => null))
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
@@ -937,22 +956,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
   }
   const sendOfflineOriginal = async (why = "NOT TAILORED — AI provider unavailable."): Promise<boolean> => {
-    if (!files || !files.email || !files.userDir || !files.abs || !files.rel || !session.resumePath) return false
-    const expectedRoot = filesOf(userId)
-    if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return false
-    const root = path.resolve(files.userDir)
-    const selected = path.resolve(files.abs)
-    const relative = path.normalize(files.rel)
-    if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(".." + path.sep)) return false
-    if (path.resolve(root, relative) !== selected || !selected.startsWith(root + path.sep)) return false
-    const [libraryBytes, sessionBytes] = await Promise.all([
-      readPath(selected).catch(() => null),
-      readPath(session.resumePath).catch(() => null),
-    ])
-    if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return false
+    const libraryBytes = await readSelectedLibraryBytes()
+    if (!libraryBytes) return false
     return sendClosest(why, libraryBytes)
-  }
-  try {
+  }  try {
     if (!hasAnyKey(keys)) {
       failureCode = "provider_unavailable"
       if (files && await sendOfflineOriginal()) return
