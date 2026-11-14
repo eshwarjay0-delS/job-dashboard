@@ -213,3 +213,16 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Poke-inspired account identity and mobile navigation — 13 November 2026
+
+The current implementation slice keeps the four-account direction and account boundary visible:
+
+- Digest sender mute = receiving Gmail account + sender address. Muting the same recruiter in one inbox does not mute another inbox.
+- Digest and waiting-on-them thread identity = receiving account + provider thread ID. A provider thread ID collision across inboxes is not a global identity.
+- Opening a digest, role-card or waiting-on-them item selects the receiving inbox before opening the thread.
+- Selected-From persistence and per-account OAuth token binding remain governed by the existing Gmail send isolation path; reconnect is scoped to the affected inbox.
+- On narrow screens, the hamburger expands below the sticky top bar in normal flow and pushes content down. It does not cover, dim or make the page inert; outside click, link selection and Escape close it and return focus to the hamburger.
+
+This source-level slice is not live acceptance. The exact-head CI and protected preview remain required. Real acceptance must use two authorized inboxes with a shared provider thread ID/sender and a narrow phone viewport. No Gmail API, OAuth, inbox mutation or outbound email test is part of this work.
