@@ -164,3 +164,21 @@ This does **not** erase the earlier private-review record that the original sour
 No document bytes were opened or materialized. No R2 read/write, model call, historical replay, WhatsApp send, replacement send, or handset test occurred. Do not infer that the historical message was delivered or undelivered from the current Library listing alone.
 
 **Exact unblock:** the owner or authorized archive custodian must make the exact original and generated DOCX files available through an authorized Files surface and provide or authorize read-only access to the per-run R2 object/version, webhook correlation, Meta message ID, and signed delivery/read receipt. Until then, keep the historical incident blocked and do not replay it.
+
+## 13 November 2026 — incomplete initial-run fallback correction
+
+A production quality-gate rejection was aggregated at `2026-11-13T21:45:42Z` on deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb`: one occurrence, one user, raw/supported coverage 100, `partial=true`, `incomplete=true`, five roles, and blockers `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable`, `role_evidence_gaps`. This does not prove a complete DOCX, factual 100% match or Meta delivery.
+
+The latest production alias is READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, master SHA `3e1033687972230de76747e063afe1a0c1cdea61`; that documentation-only release does not contain the new fallback code. The last-hour aggregate after deployment was empty, but request-level logs for the older event exceeded Hobby's one-hour retention.
+
+**Source finding:** the #374 branch's no-provider path already checked the exact selected same-account library bytes and labelled them NOT TAILORED, but a partial/incomplete provider result still called the looser `sendClosest(unfinishedRewriteWhy(result))` path.
+
+**Correction on PR #374, still unvalidated:**
+- `732bf2adffba938a8a701db3f3c108fafeb9f38b` routes partial, incomplete or skills-only *initial JD* results through the exact selected same-account library fallback, with `Original resume — NOT TAILORED` and `AI rewrite incomplete`.
+- `9f00de92475b707eabf4e2b78b560b4ee51746d0` adds the positive exact-byte/caption/pair-consumption regression.
+- `d77af573da00944156bc3b53dc3f3fa63a0c6484` adds the negative selected-byte-mismatch case: no file is sent and the pair remains available.
+- Swipe refinement is unchanged and remains strict. No real send, model call or R2 production write occurred.
+
+The new head has no fresh CI/recovery/baseline/Plan-REA results yet. Earlier green results for `794ba1151f8761720c55936d15bb0eb9a0a37c5c` do not apply. Protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; no bypass or production deployment is authorized before exact-head validation and the Safe Merge Gate.
+
+The 17 Oct 17:28 Chicago historical request remains separately blocked: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are missing. Do not replay or infer delivery.
