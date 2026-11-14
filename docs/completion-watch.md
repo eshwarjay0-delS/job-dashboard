@@ -1,3 +1,11 @@
+## 14 November 2026 — WhatsApp unverified-claim sendability correction
+
+- Continue: fix the source-level sendability mismatch in PR #392. `unverified_jd_terms` was present in `WHATSAPP_SHORTFALL_REASONS`, so `whatsappRewriteUsable()` could permit a draft that `acceptableWhatsAppResume()` rejected. The synthetic 30.8% fixture contained an unsupported JD-only term and expected that generated file to be sent. This is not evidence of a real production send.
+- The correction removes unverified terms from the shortfall allowlist, explicitly rejects both `unverified_added_keywords` and the `unverified_jd_terms` blocker, and excludes the code from `deliveredWithShortfall()`.
+- Rejected initial-JD drafts now fall back only to the exact selected same-account library bytes, labelled **NOT TAILORED**. No selected library means no file; `sendClosest()` no longer reads a session/inbox path. Honest missing-skill gaps remain disclosed under the approved 70% raw-overlap / 95% supported-coverage policy.
+- Updated regressions cover the hard hold, honest-gap delivery, selected-library fallback, no-library refusal and no session/inbox copy. Exact-head Actions are pending; local clone is unavailable due DNS resolution failure. No real WhatsApp send, R2 write, model call or historical replay occurred.
+- PR #392 remains DRAFT and dirty against current master. After exact-head gates, restack through Safe Merge Gate; protected preview still requires an authorized `KOMPAS_VERCEL_API_TOKEN`. No production or handset acceptance is claimed.
+
 ## 14 November 2026 — run 11: current-master WhatsApp restack and priority backlog
 
 **Continue: complete the approved WhatsApp same-account offline fallback and resume/JD pair-CAS restack on current master 3e710d5.** Keep the replacement draft until its own exact-head gates and legitimate protected preview pass. Do not merge, deploy or claim live acceptance from the predecessor branch's green checks.

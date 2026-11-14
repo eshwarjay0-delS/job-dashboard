@@ -255,3 +255,14 @@ A fresh Library search for the generated DOCX by incident date, role/title and D
 A read-only production query for 2026-10-17 22:20–22:40 UTC returned one `whatsapp:resume_tailor` usage row at 22:28:27.372685 UTC and no `resume_documents` or `resume_import_jobs` row in that 20-minute window. The usage row has no `source_event_key`; its metadata keys are only `calls`, `input_tokens`, `output_tokens` and `score`, with no request, document, R2 key/version, Meta message ID or delivery status. A fresh Library search did not find the generated output DOCX.
 
 The screenshot at 17:28 Chicago says the bot held the file. That is not a signed provider receipt. The missing correlation does not prove that no R2 object or Meta send exists. Keep the exact output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation as separate unresolved evidence. Do not replay the request or send a test message.
+
+
+## 14 November 2026 — unverified JD-only terms are a hard hold
+
+Source review of the current WhatsApp acceptance gate found that `unverified_jd_terms` was included in `WHATSAPP_SHORTFALL_REASONS`. That meant `whatsappRewriteUsable()` could treat a draft as sendable even though `acceptableWhatsAppResume()` rejected it. The synthetic failsafe fixture made the risk visible: it carried an unsupported JD-only term and expected the generated DOCX to be sent. This is a source/test defect, not evidence that a fabricated resume was sent in production.
+
+The correction removes unverified terms from the shortfall allowlist, adds an explicit hard rejection for both the unverified-keyword list and the corresponding quality blocker, and ensures `deliveredWithShortfall()` never reports such a draft as a shortfall delivery. Honest missing requirements remain separately disclosed under the approved WhatsApp policy.
+
+For an initial JD run that fails the delivery gate, the only file fallback is the exact selected same-account library bytes, after account-root, relative-path, resolved-path and byte-equality checks, with a clear **NOT TAILORED** label. `sendClosest()` no longer reads an unverified session/inbox path when no selected library context exists. Without a verified library original, the bot sends a text explanation and preserves retry. Swipe-reply refinement still sends no file on failure.
+
+Regression coverage now checks the acceptance gate, selected-library-only fallback, no-library refusal, and preservation of honest-gap delivery. Exact-head GitHub Actions are still required; this scheduled runtime cannot clone GitHub, and no local test execution, real WhatsApp send, production R2 write, model call, historical replay or handset test occurred.

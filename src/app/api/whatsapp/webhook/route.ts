@@ -922,7 +922,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     const resumePath = session.resumePath
     const jd = session.jd
     if (!resumePath || !jd) return false
-    const source = verifiedSource || (files ? await readSelectedLibraryBytes() : await readPath(resumePath).catch(() => null))
+    const source = verifiedSource || await readSelectedLibraryBytes()
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
@@ -1132,11 +1132,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       cached: !!result.cached,
     })
     const incomplete = !!(result.partial || result.quality?.incomplete || result.skills_only)
-    if (incomplete) {
-      // An unfinished initial JD run may fall back only to the exact selected
-      // same-account library bytes. Never send an unverified session copy.
-      if (await sendOfflineOriginal("NOT TAILORED — AI rewrite incomplete.")) return
-    } else if (await sendClosest(unfinishedRewriteWhy(result))) return
+    const unverifiedClaims = !!result.unverified_added_keywords?.length ||
+      !!result.quality_blockers?.includes("unverified_jd_terms")
+    const fallbackWhy = unverifiedClaims
+      ? "NOT TAILORED — AI draft contained unverified JD claims."
+      : incomplete
+        ? "NOT TAILORED — AI rewrite incomplete."
+        : "NOT TAILORED — AI draft did not pass delivery checks."
+    // A rejected initial-JD draft may fall back only to the exact selected
+    // same-account library bytes. Never send the generated draft or a session/inbox copy.
+    if (await sendOfflineOriginal(fallbackWhy)) return
     // No exact selected same-account file could be verified or sent.
     await sayOutcome(qualityStop(result))
     return;

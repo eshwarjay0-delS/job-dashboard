@@ -243,6 +243,8 @@ test('WhatsApp refine never sends the original or a partial baseline when an upd
   assert.match(route, /NOT TAILORED — AI provider unavailable/)
   assert.match(route, /why = "NOT TAILORED — AI provider unavailable\."/)
   assert.match(route, /return sendClosest\(why, libraryBytes\)/)
+  assert.match(route, /const source = verifiedSource \|\| await readSelectedLibraryBytes\(\)/)
+  assert.doesNotMatch(route, /const source = verifiedSource \|\| \(files \? await readSelectedLibraryBytes\(\) : await readPath\(resumePath\)/)
   assert.match(route, /sendOfflineOriginal\("NOT TAILORED — AI rewrite incomplete\."\)/)
   assert.match(route, /docxIdentityText\(source\)/)
   assert.match(route, /docxIdentityText\(file\)/)
