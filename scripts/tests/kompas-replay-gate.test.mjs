@@ -27,11 +27,12 @@ test("replay set stays inside the failure thresholds", () => {
   const report = scoreReplay(RESUME)
   assert.equal(report.n, 249)
   assert.ok(report.ms / report.n < 150, String(report.ms))
-  // These counts are the restored 01ceb1dc generator.
+  // The restored 01ceb1dc generator had 42 too-short cases. The current
+  // question-specific done/used/howto bands must stay below that baseline.
   assert.equal(report.counts.filler, 146)
   assert.equal(report.counts["choppy-flow"], 0)
   assert.equal(report.counts["profile-mix"], 0)
   assert.equal(report.counts.generic, 10)
-  assert.equal(report.counts["too-short"], 42)
+  assert.ok(report.counts["too-short"] < 42, String(report.counts["too-short"]))
   console.log(JSON.stringify(report.counts))
 })

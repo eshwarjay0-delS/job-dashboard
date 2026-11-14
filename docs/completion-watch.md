@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 14 November 2026 — exact-master Kompas replay gate correction
+
+- Current master `b94e1629c544048d84a2b048ae83b21b612ab9dd` is READY production at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, and the canonical alias resolves to that same deployment.
+- Exact-master full CI `43609557470` failed 1 of 72 cases in `scripts/tests/kompas-replay-gate.test.mjs`: expected `too-short=42`, actual `35`. The literal 42 came from the earlier restored-generator baseline. Current `kompasDissection.ts` has question-specific `done`, `used`, and `howto` bands; `kompas-question-length.test.mjs` separately checks those bands. The offline replay count is now an upper-bound regression gate (<42), not an exact historical output.
+- This is a test/docs correction only. No runtime answer, caption, authentication, session, provider, or production data behavior changed. The replay uses a local stand-in, not a live model.
+- The scheduled container could not clone GitHub because DNS resolution for `github.com` failed. GitHub Actions on the exact PR head must provide the execution evidence; no local test pass is claimed.
+- Next: exact-head full CI, Kompas baseline, and Plan/REA schema; Safe Merge Gate sequencing after green. No production redeploy is required for this test-only change. Keep the 50 real paired-answer, human review, native Windows/phone and authenticated WhatsApp acceptance gaps open.
+
+
 ## 14 November 2026 — spoken answer and live clarify popup
 
 Owner Eshwar, phone 9:04–10:18 AM CT and desktop 9:05 AM CT. The main answer keeps spoken order without inserted First/Claim headers. The clarify box is a separate live popup. Session memory is the last six turns plus stated facts. Grounding stays on the eshwarjay05 resume and that memory. Skip-login and the Gmail snapshot were not edited. Next: one pull request, squash-merge with [ship] when the Kompas checks are green, then one deployment check.
