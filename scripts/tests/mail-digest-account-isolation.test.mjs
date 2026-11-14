@@ -63,3 +63,13 @@ test("reply identity and saved drafts stay bound to the receiving inbox when dig
   assert.match(reply, /setAccountId\(typeof body\.accountId === "string" \? body\.accountId : null\)/)
   assert.match(reply, /\[mail\.id, mail\.account\]/)
 })
+
+
+test("mobile inbox toggles follow every connected account without a four-account cap", () => {
+  const page = readFileSync(new URL("../../src/app/dashboard/mail/page.tsx", import.meta.url), "utf8")
+  const data = readFileSync(new URL("../../src/lib/use-gmail-data.ts", import.meta.url), "utf8")
+  assert.match(page, /accounts\.map\(a =>/)
+  assert.match(data, /const unique = \[\.\.\.new Set\(emails\)\]/)
+  assert.match(data, /return unique\.map\(/)
+  assert.doesNotMatch(data, /(?:emails|unique)\.slice\(\s*0\s*,\s*4\s*\)/)
+})
