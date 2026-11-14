@@ -248,3 +248,10 @@ The production alias remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3
 ## 14 November 2026 — accessible Library recheck
 
 A fresh Library search for the generated DOCX by incident date, role/title and DOCX type did not surface a matching output. A broader search returned unrelated BNY/interview material rather than the 17 Oct artifact. This is a bounded search result only; it does not prove that no copy exists outside the indexed Library. The original output DOCX, per-run R2 key/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. No replay or real message was sent.
+
+
+## 14 November 2026 — run 11 correlation recheck
+
+A read-only production query for 2026-10-17 22:20–22:40 UTC returned one `whatsapp:resume_tailor` usage row at 22:28:27.372685 UTC and no `resume_documents` or `resume_import_jobs` row in that 20-minute window. The usage row has no `source_event_key`; its metadata keys are only `calls`, `input_tokens`, `output_tokens` and `score`, with no request, document, R2 key/version, Meta message ID or delivery status. A fresh Library search did not find the generated output DOCX.
+
+The screenshot at 17:28 Chicago says the bot held the file. That is not a signed provider receipt. The missing correlation does not prove that no R2 object or Meta send exists. Keep the exact output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation as separate unresolved evidence. Do not replay the request or send a test message.
