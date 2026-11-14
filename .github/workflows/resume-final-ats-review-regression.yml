@@ -1,0 +1,62 @@
+name: Resume final DOCX ATS review regression
+
+on:
+  push:
+    branches:
+      - feat/final-docx-gemini-current-20261114-run11
+    paths:
+      - "src/lib/tailor.ts"
+      - "src/lib/claude.ts"
+      - "src/lib/resume-final-ats-review.ts"
+      - "scripts/tests/resume-final-ats-review.test.mjs"
+      - "scripts/tests/resume-final-ats-loop.test.mjs"
+      - ".github/workflows/resume-final-ats-review-regression.yml"
+      - "src/lib/resume-evidence.ts"
+      - "scripts/tests/resume-confirmation-quality.test.mjs"
+      - "scripts/tests/whatsapp-resume-contract.test.mjs"
+      - "src/lib/plan-vision.ts"
+      - "src/lib/plan-vision-journal.ts"
+      - "src/lib/rea-register.ts"
+      - "docs/resume-quality-baseline.md"
+      - "docs/completion-watch.md"
+      - "docs/research/resume-final-docx-gemini-ats-2026-11-14.md"
+  pull_request:
+    paths:
+      - "src/lib/tailor.ts"
+      - "src/lib/claude.ts"
+      - "src/lib/resume-final-ats-review.ts"
+      - "scripts/tests/resume-final-ats-review.test.mjs"
+      - "scripts/tests/resume-final-ats-loop.test.mjs"
+      - ".github/workflows/resume-final-ats-review-regression.yml"
+      - "src/lib/resume-evidence.ts"
+      - "scripts/tests/resume-confirmation-quality.test.mjs"
+      - "scripts/tests/whatsapp-resume-contract.test.mjs"
+      - "src/lib/plan-vision.ts"
+      - "src/lib/plan-vision-journal.ts"
+      - "src/lib/rea-register.ts"
+      - "docs/resume-quality-baseline.md"
+      - "docs/completion-watch.md"
+      - "docs/research/resume-final-docx-gemini-ats-2026-11-14.md"
+
+permissions:
+  contents: read
+
+jobs:
+  final-docx-ats:
+    name: final DOCX ATS review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Final DOCX ATS review tests
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-loop.test.mjs scripts/tests/resume-confirmation-quality.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs

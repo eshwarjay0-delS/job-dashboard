@@ -1,7 +1,7 @@
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
+import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, confirmedSkillFitsBullet, missingRoleEvidenceTerms, roleScopedMissingTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
@@ -310,4 +310,12 @@ test('endpoint tools require endpoint/EDR context rather than a generic security
   assert.equal(guarded.reverted, 1)
   assert.deepEqual(guarded.edits, [roles[0].bullets[0], edits[1]])
   assert.deepEqual(guarded.blockedTerms, ['Defender'])
+})
+
+
+test('final Gemini corrections can map a confirmed skill only into a relevant existing project context', () => {
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  assert.equal(confirmedSkillFitsBullet('CyberArk EPM', 'Removed local admin rights and hardened Windows endpoints.', cover), true)
+  assert.equal(confirmedSkillFitsBullet('CyberArk EPM', 'Managed Salesforce CRM profiles and marketing automation.', cover), false)
+  assert.equal(confirmedSkillFitsBullet('MuleSoft', 'Managed Salesforce CRM profiles and marketing automation.', cover), false)
 })

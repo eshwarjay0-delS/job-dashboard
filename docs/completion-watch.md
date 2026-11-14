@@ -536,3 +536,19 @@ Continue: verify all required exact-head checks on the latest #381 branch head, 
 - Kompas Continuous Voice Delivery is disabled; do not duplicate its computer-audio/caption work. MFit Safe Merge Gate is active and reviewing PR #392; no parallel merge or branch rewrite was performed. No separate Bible-Keeper automation appeared in the accessible inventory.
 
 Continue: finish exact-head validation of `fix/resume-confirmed-skill-current-3e710-20261114-run13`, then obtain the legitimate protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance. Separately restack the approved final-DOCX Gemini loop; keep the historical WhatsApp incident open until its exact output and signed delivery evidence are recovered.
+
+
+## 14 November 2026 — run 11: continue the approved final-DOCX Gemini loop
+
+Continue: restack and validate the owner-approved final-DOCX Gemini ATS score/correction loop from stale PR #289 onto the current confirmed-skill implementation.
+
+- Canonical master is 3e710d50760b4a757d75ad2858ef508f3d36b388. Production alias job-dashboard-fawn.vercel.app is independently READY at deployment dpl_5X265CqeobnkUtiEH6xVA6yB5fXn, SHA 3e1033687972230de76747e063afe1a0c1cdea61. No new runtime release was created.
+- Parent PR #393 is a DRAFT current-master restack at 9cd81927b095289de0e4a39da74a8af2265cbc43; exact-head full CI 43589350262, WhatsApp recovery 43589350254, Kompas baseline 43589350277, and Plan/REA 43589350309 passed. Its protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance remain missing.
+- The new dependent branch feat/final-docx-gemini-current-20261114-run11 carries the approved final-DOCX loop from PR #289 onto the current confirmed-skill branch. It uses the exact first prompt, actual exported-DOCX text, canonical JD terms, a diagnostic-only score, at most two evidence-only corrections, re-export/re-review, and the latest relevant-context check for cross-role confirmed skills.
+- Weak terms are targeted only when the source role or an explicit first-person confirmation supports them in that existing project context. The final role guard receives the confirmed-skill set; unrelated roles and generic CRM/audit bullets remain protected.
+- Exact-head checks for the new branch are pending. The legitimate protected preview requires an authorized private KOMPAS_VERCEL_API_TOKEN; do not bypass deployment protection. No personal resume/JD was processed, no Gemini call or DOCX export occurred, and no production deployment or live 98% match is claimed.
+- The 17 Oct 17:28 Chicago WhatsApp incident remains separately blocked: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt are missing. PR #392's source fix does not prove historical delivery; no replay, real send or production R2 write was performed.
+- Poke-inspired Gmail/mobile PR #394 and Kompas question/voice harness PR #388 remain DRAFT pending protected preview and real inbox/device/native acceptance. Contract crawling remains manual/on-demand only; PR #381 merged, no daily contract-crawler cron is enabled, and Robert Half remains manual-only.
+- MFit Safe Merge Gate is enabled and has reviewed the current-master queue; it kept #392/#393/#394/#388 DRAFT because their separate preview/acceptance gates remain. Kompas Continuous Voice Delivery is disabled, so no audio/caption work was duplicated. No separate Bible-Keeper automation appeared in the accessible inventory.
+
+Continue: run the exact-head final-DOCX, confirmed-skill and WhatsApp regression workflows on the new dependent branch; keep it DRAFT until the legitimate protected preview and owner-authorized exported-DOCX acceptance are available.

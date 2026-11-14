@@ -126,7 +126,7 @@ const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
 
 /** A confirmed skill is cross-role evidence only where the original bullet's project
  * context fits that skill family. Unknown terms need direct source support. */
-function confirmedSkillFitsBullet(
+export function confirmedSkillFitsBullet(
   term: string,
   sourceBullet: string,
   cover: (text: string, terms: string[]) => ReadonlySet<string>,
