@@ -535,3 +535,12 @@ Production alias remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3e103
 The latest accessible owner correction references `/api/gmail/notify-rules/export` in the quota context; source shows that is a separate worker-only rules export requiring the scheduler flag and `CRON_SECRET`, not the `/api/gmail/snapshot-import` route. Do not conflate the endpoints. No owner-exported rows were imported. No email, WhatsApp message, inbox mutation, spend, or production deploy occurred. No explicit production `[ship]` approval was recovered; do not deploy.
 
 Continue: require exact-head full CI, the dedicated snapshot workflow, Kompas baseline and Plan/REA schema. Keep the PR DRAFT. Authenticated import/readback requires the exact owner-approved endpoint/data procedure and a verified non-empty secret without exposing its value. Keep the background worker disabled.
+
+
+## 14 November 2026 — exact current-master status correction
+
+PR #381 is MERGED as `3e710d50760b4a757d75ad2858ef508f3d36b388` (2026-11-14 08:40:29 UTC), after its final reviewed head `b1628bdf12b6d2eeb9189dc4b89ef495ef615c2e` passed full CI `43567745876`, manual-only regression `43567745860`, crawler regression `43567745899`, Kompas baseline `43567745858` and Plan/REA `43567745834`. The PR changes docs/comments/tests only. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn` / SHA `3e1033687972230de76747e063afe1a0c1cdea61`; compare against master shows no runtime or `vercel.json` change, so no deployment is required and the manual-only schedule is already live. Keep PR #376 C2H semantics proposed and do not run a live crawl.
+
+PR #396 is the independent Gmail snapshot-secret hardening branch. Its first dedicated workflow run `43609148747` caught a test fixture selecting the part payload rather than the manifest; commit `a02ef22c492889532ad3ba8e25f4db3152bfd1bb` corrects the selector. The corrected exact-head full CI, dedicated workflow, Kompas baseline and Plan/REA checks must pass before any merge review. Protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. No deployment/`[ship]` approval was recovered for the snapshot task, and no owner data was imported.
+
+Continue: complete exact-head checks on PR #396; keep it DRAFT and do not deploy without explicit owner approval. Then return to the higher-priority WhatsApp PR #392 protected-preview gate. Preserve the 17 Oct incident as unresolved until the original generated DOCX, per-run R2/request correlation and Meta delivery/read receipt are available.
