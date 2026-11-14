@@ -113,3 +113,7 @@ The first PR #399 rerun stopped before the WhatsApp test suite because the new R
 ## 14 November 2026 — selected-library timeout regression
 
 PR #399's timeout regression fixture is being corrected on the current-master branch. The pre-fix full CI run failed because the fixture expected the generic no-Files timeout message even though it supplied selected Files context. The corrected fixture makes the selected-library bytes differ from the session copy, clears the prior mocked provider error, and asserts that no document is sent and the request remains saved for retry. This is a test-only change; the same-account path/byte checks and fail-closed runtime behavior are unchanged. Exact-head gates, protected preview and Safe Merge Gate review remain pending. The 17 Oct historical delivery is still unverified; no replay or real message was sent.
+
+## 14 November 2026 — WhatsApp timeout fallback regression passed
+
+PR #399 test-correction commit `2b745bb2bd1939561909e6eee28e126cbac37b4d` now exercises a selected-library/session byte mismatch and asserts that no document is sent. Exact-head full CI `43638674249`, WhatsApp recovery `43638674273`, Kompas baseline `43638674258` and Plan/REA `43638674247` all passed. This is a test-fixture correction; runtime behavior is unchanged. Protected preview and Safe Merge Gate review remain pending. The 17 Oct historical delivery is still unverified and no replay or real send occurred.
