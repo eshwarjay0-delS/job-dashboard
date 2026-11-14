@@ -12,6 +12,9 @@
 
 ### WhatsApp and resume acceptance
 
+
+PR #389 is now open as a DRAFT current-master replacement at head `1e5de2d8ad2b7fb736d672938a8e0d7e86bf2863` (24 changed files), based on `3e710d50760b4a757d75ad2858ef508f3d36b388`. The old PR #380 is predecessor evidence only and must not be merged. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA runs for #389 are pending.
+
 - The 6 Nov channel correction remains authoritative: a completed readable WhatsApp rewrite may be sent below 95% raw JD overlap with gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp send gate. Unsupported employers, dates, credentials, skills and metrics must not be invented.
 - Initial-JD provider failure/incomplete output may use only the exact selected same-account library bytes, labelled **Original resume — NOT TAILORED**, after account-root, normalized relative path, resolved path and byte-equality checks. If verification fails, send no file and keep the request retryable. Swipe-reply refinement remains text-only on failure; the previously delivered file stays unchanged. Consume the JD/resume pair only after provider acceptance. R2 412/409/404 conflicts never become unconditional writes; unexpected 503 propagates.
 - The 17 Oct 17:28 Chicago screenshot says the bot held the file. Read-only production review found one `whatsapp:resume_tailor` usage row at 22:28:27.372685 UTC, no `resume_documents` or `resume_import_jobs` row in the 20-minute window, no `source_event_key`, and no request/document/R2/Meta/delivery correlation. A fresh Library search did not find the generated output DOCX. This does **not** prove no R2 object or Meta send exists. Exact output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. Do not replay or claim delivery.
