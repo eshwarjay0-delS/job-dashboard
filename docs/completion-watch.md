@@ -5,7 +5,7 @@
 - Current master `b94e1629c544048d84a2b048ae83b21b612ab9dd` is READY production at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, and the canonical alias resolves to that same deployment.
 - Exact-master full CI `43609557470` failed 1 of 72 cases in `scripts/tests/kompas-replay-gate.test.mjs`: expected `too-short=42`, actual `35`. The literal 42 came from the earlier restored-generator baseline. Current `kompasDissection.ts` has question-specific `done`, `used`, and `howto` bands; `kompas-question-length.test.mjs` separately checks those bands. The offline replay count is now an upper-bound regression gate (<42), not an exact historical output.
 - This is a test/docs correction only. No runtime answer, caption, authentication, session, provider, or production data behavior changed. The replay uses a local stand-in, not a live model.
-- The scheduled container could not clone GitHub because DNS resolution for `github.com` failed. GitHub Actions on the exact PR head must provide the execution evidence; no local test pass is claimed.
+- The scheduled container could not clone GitHub because DNS resolution for `github.com` failed. Draft PR [#398](https://github.com/eshwarjay0-delS/job-dashboard/pull/398), implementation commit `1460a7550c2c0f019e63c1503e391f42d08ac7c4`, carries the test/docs correction; GitHub Actions on its exact final head must provide execution evidence. No local test pass is claimed.
 - Next: exact-head full CI, Kompas baseline, and Plan/REA schema; Safe Merge Gate sequencing after green. No production redeploy is required for this test-only change. Keep the 50 real paired-answer, human review, native Windows/phone and authenticated WhatsApp acceptance gaps open.
 
 
