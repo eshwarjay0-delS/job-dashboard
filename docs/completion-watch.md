@@ -522,3 +522,16 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 14 November 2026 — Gmail snapshot secret-boundary hardening
+
+Continue: fail closed when the sealed snapshot secret is absent, while preserving the no-spend HMAC compatibility path only when the explicit secret exists.
+
+Branch `fix/gmail-snapshot-secret-required-20261114` contains code commit `e72346e45db578194e57b4218ac9b7049fb4a2fd`, offline test commits `98f2a6439ebaa7c06db9b187a7f363e7f4addbf0` and `4883f0512126e55f4cc079e8066d4e340e5ca5bd`, and dedicated workflow `07166a7e798247e9b90692bf5f09f9dcf816c08a`. The tests cover missing-secret write refusal, no predictable public read probe, explicit-secret HMAC path readback, and the distinction between snapshot import and notify-rules export. Exact-head checks have not yet been recorded.
+
+Production alias remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3e1033687972230de76747e063afe1a0c1cdea61`; master is `3e710d50760b4a757d75ad2858ef508f3d36b388`. The snapshot import route and library exist at both refs. Vercel environment metadata shows a sensitive production `GMAIL_SNAPSHOT_IMPORT_SECRET` entry, but its value was not read. Read-only Gmail aggregates: 3 accounts, 2,002 thread rows, 3 sync rows; latest sync `2026-11-10T14:44:44Z`, none synced in the preceding 24 hours.
+
+The latest accessible owner correction references `/api/gmail/notify-rules/export` in the quota context; source shows that is a separate worker-only rules export requiring the scheduler flag and `CRON_SECRET`, not the `/api/gmail/snapshot-import` route. Do not conflate the endpoints. No owner-exported rows were imported. No email, WhatsApp message, inbox mutation, spend, or production deploy occurred. No explicit production `[ship]` approval was recovered; do not deploy.
+
+Continue: require exact-head full CI, the dedicated snapshot workflow, Kompas baseline and Plan/REA schema. Keep the PR DRAFT. Authenticated import/readback requires the exact owner-approved endpoint/data procedure and a verified non-empty secret without exposing its value. Keep the background worker disabled.
