@@ -34,7 +34,7 @@ The code adds:
 ## Validation and release status
 
 - Parent PR #393 is a DRAFT current-master restack at 9cd81927b095289de0e4a39da74a8af2265cbc43; its exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks passed. It remains blocked on legitimate protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance.
-- The new Gemini branch is stacked on that parent. Current exact head `464a4007d769b5a0fedf62122ab8f7a5a6f1a0f5` passed final-DOCX ATS review workflow `43602430563` (including `npm run check` and focused tests), WhatsApp recovery `43602430544`, and Plan/REA schema `43602430550`. The predecessor `cc07f34` failed one Plan wording assertion (70/71) after `npm run check` passed; the exact preview-token phrase was restored without weakening the test. Full master-targeted CI remains deferred until the parent is accepted and the stack is retargeted.
+- The new Gemini branch is stacked on that parent. Current exact head `fb806e39adaf14580209185f98e040a205ed814f` passed final-DOCX ATS review workflow `43602721589` (including `npm run check` and focused tests), WhatsApp recovery `43602721602`, and Plan/REA schema `43602721766`. The predecessor `cc07f34` failed one Plan wording assertion (70/71) after `npm run check` passed; the exact preview-token phrase was restored without weakening the test. Full master-targeted CI remains deferred until the parent is accepted and the stack is retargeted.
 - The protected preview requires an authorized administrator to configure the private KOMPAS_VERCEL_API_TOKEN. Do not bypass deployment protection or change ignore rules.
 - After the parent is accepted and the stack can target master, run full CI on the exact final head. Then use an owner-authorized original resume, JD and explicit first-person confirmations; inspect the actual exported DOCX bytes and role-by-role evidence; verify Gemini's diagnostic review and supported-only corrections.
 - No personal resume/JD was processed, no Gemini model call was made, no DOCX was exported, no production deployment occurred, and no live 98% match is claimed.
@@ -50,3 +50,6 @@ The documentation/status update commit `cc07f34ae14bf8be645626fa17f4ddc274987c7f
 
 
 The corrected exact-head checks above are source/CI validation only. PR #395 remains DRAFT; no protected preview, owner-authorized personal resume/JD/confirmation run, actual DOCX export, Gemini model call, production deployment or live 98% match has occurred.
+
+
+These corrected exact-head checks are source/CI validation only. PR #395 remains DRAFT; no protected preview, owner-authorized personal resume/JD/confirmation run, actual DOCX export, Gemini model call, production deployment or live 98% match has occurred.

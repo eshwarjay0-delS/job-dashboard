@@ -581,3 +581,13 @@ Continue: verify the corrected exact head's final-DOCX workflow to SUCCESS, then
 - No personal resume/JD was processed, no Gemini model call or DOCX export occurred, no deployment or live 98% match is claimed.
 
 Continue: complete parent #393 protected preview and owner-authorized baseline/JD/confirmed-skill DOCX acceptance; then retarget #395 to master and run full CI on the final head before any release.
+
+
+## 14 November 2026 14:05 UTC — final-DOCX Gemini exact-head source gates all green
+
+- PR #395 head `fb806e39adaf14580209185f98e040a205ed814f` passed final-DOCX ATS workflow `43602721589` (including `npm run check` and focused tests), WhatsApp recovery `43602721602`, and Plan Journal/REA schema `43602721766`.
+- The immediately preceding `cc07f34` head had one Plan phrase assertion failure (70/71) after `npm run check` passed. The exact preview-token phrase was restored and the test was retained; the corrected `464a4007` and `fb806e39` heads both passed all three source gates.
+- PR #395 remains DRAFT and stacked on #393. Full master-targeted CI remains due after parent acceptance and retargeting. Protected preview still requires an authorized private `KOMPAS_VERCEL_API_TOKEN`.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, no deployment or live 98% match is claimed.
+
+Continue: complete parent #393 protected preview and owner-authorized baseline/JD/confirmed-skill DOCX acceptance, then retarget #395 to master and run full CI on the final head.
