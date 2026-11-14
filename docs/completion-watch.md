@@ -480,4 +480,4 @@ Continue: add and validate a regression guard for the canonical MFit Windows exe
 - This is a test-only branch; no runtime behavior changed. The test and Windows workflow are not yet run on the new branch. The exact installed EXE SHA/path, installed PE manifest, and Windows process/event trace remain unavailable. Do not call the UAC issue fixed; do not advise disabling UAC.
 - Coordination: Kompas Continuous Voice Delivery is disabled, so no audio/caption files were edited. MFit Safe Merge Gate is active and was already reviewing other PRs; this branch is isolated from #374–#377. No separate Bible-Keeper automation was present in the accessible automation list.
 
-Continue: open the draft PR and obtain exact-head full CI plus the Windows packaging result; keep issue #192 open until installed-binary and Windows-side evidence identifies the actual elevation requester.
+Continue: wait for exact-head full CI to complete on PR #379 and review the test-only guard; keep issue #192 open until installed-binary and Windows-side evidence identifies the actual elevation requester.
