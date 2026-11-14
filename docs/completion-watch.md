@@ -571,3 +571,13 @@ Continue: keep #395 DRAFT; satisfy the parent #393 preview and owner-authorized 
 - WhatsApp recovery `43602195328` and Plan/REA `43602195324` passed on `cc07f34`; those are still source tests, not delivery or DOCX acceptance.
 
 Continue: verify the corrected exact head's final-DOCX workflow to SUCCESS, then leave #395 DRAFT pending parent #393 preview and owner-authorized exported-DOCX acceptance. No personal data, Gemini model call, DOCX export, production deployment or live 98% claim occurred.
+
+
+## 14 November 2026 14:02 UTC — final-DOCX Gemini exact-head source gates green
+
+- Corrected PR #395 head `464a4007d769b5a0fedf62122ab8f7a5a6f1a0f5` passed final-DOCX ATS workflow `43602430563` (including `npm run check` and all focused tests), WhatsApp recovery `43602430544`, and Plan Journal/REA schema `43602430550`.
+- The prior `cc07f34` head passed `npm run check` but failed one focused Plan contract assertion (70/71). The preview-token wording was restored exactly and the test was preserved; no assertion was weakened.
+- PR #395 remains DRAFT and stacked on parent #393. Full master-targeted CI is still due after parent acceptance and retargeting. Protected preview still requires an authorized private `KOMPAS_VERCEL_API_TOKEN`.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, no deployment or live 98% match is claimed.
+
+Continue: complete parent #393 protected preview and owner-authorized baseline/JD/confirmed-skill DOCX acceptance; then retarget #395 to master and run full CI on the final head before any release.
