@@ -36,3 +36,8 @@ PR #374 is the current-master WhatsApp offline fallback / pair-CAS restack at 79
 PR #377 is the current-master confirmed-skill role-evidence restack at 20b1abf8cde16448900ed594d6f62366666097e4. Full CI 43503531707, WhatsApp recovery 43503532020, Kompas baseline 43503531666 and Plan/REA 43503531853 passed. Protected preview and exported-DOCX acceptance remain missing; no real model call or live ATS score is claimed.
 
 The historical 17 Oct 17:28 output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. The original source and JD recovery do not establish which file was generated or delivered. Do not replay or claim delivery.
+
+
+## 14 November 2026 — read-only WhatsApp incident correlation recheck
+
+A read-only production query for 2026-10-17 22:20–22:40 UTC found one `whatsapp:resume_tailor` usage event at 22:28:27.372685 UTC. No `resume_documents` or `resume_import_jobs` row existed in that window. The usage event has no `source_event_key`; its metadata keys are only `calls`, `input_tokens`, `output_tokens` and `score`, with no request ID, resume/document ID, R2 key/version, Meta message ID or delivery status. This is not proof that no R2 object or Meta message exists; it is proof that the available usage row cannot correlate them. Library searches did not return the generated output DOCX. The exact output, R2 version, webhook correlation, Meta wamid, signed delivered/read receipt and owner fact reconciliation remain missing. No historical replay or real send occurred.
