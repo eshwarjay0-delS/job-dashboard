@@ -155,7 +155,6 @@ test('legacy recovery uses stable JD identity and refuses a duplicate persisted 
 
 
 test('every Files-backed original fallback uses exact selected same-account library bytes', () => {
-  const webhook = src('src/app/api/whatsapp/webhook/route.ts')
   const generateStart = webhook.indexOf('async function generate(')
   const selectedStart = webhook.indexOf('const readSelectedLibraryBytes =', generateStart)
   const closestStart = webhook.indexOf('const sendClosest =', selectedStart)
