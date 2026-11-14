@@ -131,12 +131,12 @@ async function assertAsInvokerManifest(exeBytes, label) {
   if (!manifests.length) throw new Error(label + " has no RT_MANIFEST resource");
   for (let i = 0; i < manifests.length; i++) {
     const xml = Buffer.from(manifests[i].bin).toString("utf8");
-    const level = xml.match(/<requestedExecutionLevel\\b[^>]*\\blevel="([^"]+)"/i);
+    const level = xml.match(/<requestedExecutionLevel\b[^>]*\blevel="([^"]+)"/i);
     if (!level) throw new Error(label + " manifest " + (i + 1) + " has no requestedExecutionLevel");
     if (level[1].toLowerCase() !== "asinvoker") {
       throw new Error(label + " manifest " + (i + 1) + " requests " + level[1] + ", expected asInvoker");
     }
-    const uiAccess = xml.match(/<requestedExecutionLevel\\b[^>]*\\buiAccess="([^"]+)"/i);
+    const uiAccess = xml.match(/<requestedExecutionLevel\b[^>]*\buiAccess="([^"]+)"/i);
     if (uiAccess && uiAccess[1].toLowerCase() !== "false") {
       throw new Error(label + " manifest " + (i + 1) + " enables uiAccess");
     }
@@ -144,13 +144,18 @@ async function assertAsInvokerManifest(exeBytes, label) {
   return manifests.length;
 }
 
-export async function assertPackagedExe(exePath) {
+export async function assertPackagedExe(exePath, options = {}) {
+  const verifyManifests = options.verifyManifests !== false;
   const buf = fs.readFileSync(exePath);
-  const outerManifestResources = await assertAsInvokerManifest(buf, "outer SFX launcher");
   const files = readZip(buf);
-  const innerExe = [...files.entries()].find(([name]) => name === "Kompas.exe" || name.endsWith("/Kompas.exe"));
-  if (!innerExe) throw new Error("packaged launcher has no inner Kompas.exe");
-  const innerManifestResources = await assertAsInvokerManifest(innerExe[1], "inner Electron executable");
+  let manifestResources = null;
+  if (verifyManifests) {
+    const outer = await assertAsInvokerManifest(buf, "outer SFX launcher");
+    const innerExe = [...files.entries()].find(([name]) => name === "Kompas.exe" || name.endsWith("/Kompas.exe"));
+    if (!innerExe) throw new Error("packaged launcher has no inner Kompas.exe");
+    const inner = await assertAsInvokerManifest(innerExe[1], "inner Electron executable");
+    manifestResources = { outer, inner };
+  }
   const asar = [...files.entries()].find(([name]) => name === "resources/app.asar" || name.endsWith("/resources/app.asar"));
   if (!asar) throw new Error("packaged app has no resources/app.asar");
   const closure = assertAsarClosure(asar[1]);
@@ -158,7 +163,7 @@ export async function assertPackagedExe(exePath) {
     bytes: buf.length,
     required: closure.required,
     absent: closure.absent,
-    manifestResources: { outer: outerManifestResources, inner: innerManifestResources },
+    manifestResources,
   };
 }
 
@@ -171,6 +176,7 @@ if (process.argv[1] && /verify-packaged-app\.mjs$/.test(process.argv[1])) {
   try {
     const result = await assertPackagedExe(target);
     console.log("packaged runtime closure ok (" + result.required.length + " files, " + result.bytes + " bytes)");
+    console.log("asInvoker manifest resources: outer " + result.manifestResources.outer + ", inner " + result.manifestResources.inner);
     console.log(result.required.join("\n"));
   } catch (error) {
     console.error(String(error && error.message || error));
