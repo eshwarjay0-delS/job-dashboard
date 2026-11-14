@@ -1,4 +1,4 @@
-import { contractTypes } from "../contract-jobs.ts"
+import { contractTypes, stripNegatedC2HTerms } from "../contract-jobs.ts"
 import type { WorkType } from "./types"
 
 // Work-type classification from a portal's raw employment-type string.
@@ -9,7 +9,7 @@ import type { WorkType } from "./types"
 const PERMANENT = [/\bpermanent\b/i, /\bdirect hire\b/i, /\bdirect placement\b/i, /\bfull-?time\b/i]
 
 export function classifyWorkType(engagement?: string, title?: string): WorkType {
-  const s = `${engagement ?? ""} ${title ?? ""}`
+  const s = stripNegatedC2HTerms(`${engagement ?? ""} ${title ?? ""}`)
   if (contractTypes(s).length > 0) return "contract"
   if (PERMANENT.some(re => re.test(s))) return "permanent"
   return "unknown"
