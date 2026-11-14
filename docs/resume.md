@@ -80,3 +80,32 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## Confirmed-skill role relevance — 13 November 2026
+
+An explicit first-person skill confirmation may be mapped into an existing project across roles, including an earlier role, but the project must fit the skill family. Generic wording such as “marketing automation,” “API,” or “service” alone does not establish cloud-infrastructure context for AWS/Azure/GCP. Unknown skills still require direct source support. This relevance guard does not create a project, employer, action, outcome, date, title, location, contact, metric or credential. Source/JD conflicts remain unresolved until the candidate reconciles them.
+
+
+## Current-master confirmed-skill restack — 13 November 2026, run 11
+
+The owner-approved 6 Nov correction, reaffirmed in PR #319 comment `6817645128`, permits an explicitly first-person-confirmed skill to be mapped into a relevant existing project bullet across roles, including earlier roles, without same-role source wording. The confirmation supports only the skill. It does not create a new employer, project, action, outcome, date, title, location, contact, metric or credential. JD wording, target match scores and editing instructions remain non-evidence. The project context must fit the confirmed skill family; unknown skills require direct source support.
+
+This rule is restacked from PR #352 onto current master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/resume-confirmed-skill-role-mapping-master-026c729-run11-20261113`. The branch contains the candidate-evidence helper, writer prompt, tailor orchestration, deterministic unsupported-term restoration, focused regressions and research handoffs. It does not include WhatsApp storage/send changes or the separate profile-gap PR #353.
+
+Exact-head full CI, WhatsApp recovery, Kompas baseline, Plan/REA schema and protected preview are pending. No authenticated model call, DOCX export/inspection, measured 95–100% match, 98% result, email/WhatsApp send or production deployment is claimed. After the protected preview, the next acceptance is an owner-authorized baseline + JD + explicit-confirmation run, inspect the exported DOCX for structure and unsupported facts, record unrounded raw/weighted coverage, and perform the separate approved Gemini final-DOCX `Give me an ATS score` review.
+
+
+## CyberArk EPM cross-role relevance guard — 13 November 2026
+
+A confirmed CyberArk EPM skill is now eligible for cross-role mapping only when the existing source bullet shows endpoint or privilege-management context (for example, local-administrator removal, endpoint privilege, elevation, application control or least privilege). Generic Salesforce administration and generic audit/compliance wording are not enough. The general security-tool context remains separate. Regression tests preserve the positive endpoint case and reject the unrelated CRM/audit cases. This changes relevance, not the owner-approved evidence boundary: confirmation supports the skill only, never a new employer, project, action, outcome, date, title, location, contact, metric or credential.
+
+
+## CyberArk EPM context regression — exact-head source validation
+
+PR #377 final head `fa971b90c702e1cb96ebae161a1fdd1aa7ab1728` passed full CI `43500406071`, WhatsApp recovery `43500406031`, Kompas baseline `43500405833` and Plan/REA schema `43500406062`. The full CI includes the new negative Salesforce CRM administration/audit-compliance cases and the positive endpoint/local-administrator case. The protected preview and owner-authorized exported-DOCX acceptance remain pending; this is not a live resume/JD match.
+
+
+## Confirmed-skill mapping across roles — 14 November 2026
+
+The 6 November owner correction permits an explicit first-person candidate-confirmed skill to be mapped into relevant existing project bullets across roles, including earlier roles, even when the original bullet does not name the tool. The existing project frame must still fit the skill family. The confirmation does not create an employer, project, action, outcome, title, date, location, contact, metric or credential. Job-description wording, a target score and editing instructions are not candidate evidence. Unknown skills need direct source support; unrelated roles remain unchanged. Source facts that conflict with the owner-confirmed profile remain quarantined until reconciled.
