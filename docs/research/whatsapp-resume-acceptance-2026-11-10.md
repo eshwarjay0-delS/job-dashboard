@@ -150,3 +150,10 @@ PR #374 is the current-master restack of the offline original-resume fallback an
 **Historical 17 Oct 17:28 Chicago incident remains separately blocked.** The original 27,724-byte source DOCX and matching JD are recorded as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation ID, Meta message ID, and signed delivery/read receipt remain unavailable. The source's education/employment/credential facts conflict with the owner-confirmed profile and remain quarantined pending owner reconciliation. Do not replay the request or infer delivery from a source file or a mocked test.
 
 **Next:** keep #374 DRAFT until the legitimate protected preview and Safe Merge Gate approval. Historical closure requires the exact generated output plus per-run R2/webhook/Meta evidence and owner fact reconciliation before any authorized replay. Real handset delivery is a separate acceptance gate.
+
+
+## 14 November 2026 — read-only iZap history check
+
+The connected iZap account returned one business (`eshwarjay0`) with no linked WhatsApp numbers. Read-only `search_messages` queries for `98% coverage target` and `Eshwar_Resume` on 2026-10-17 in `America/Chicago` each returned zero results. This is only an iZap-side observation; it does not establish whether the separate MFit Meta Cloud API received, accepted, delivered or read a message. No WhatsApp message was sent or changed.
+
+A scoped Library search did not surface the generated output DOCX. The prior audit records the original source DOCX and matching JD as recovered in private storage, but they were not opened or processed in this run. The exact output, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. No historical replay or replacement send is authorized by this evidence.
