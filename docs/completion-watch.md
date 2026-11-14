@@ -569,3 +569,13 @@ PR #377's reviewed resume-only changes are restacked independently on `926bf3e2b
 The 17 Oct 17:28 Chicago incident remains historically unverified: the exact generated DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable; source education/employment/tenure/credential conflicts remain quarantined. No replay or replacement send.
 
 Continue: complete exact-head CI on the current-master confirmed-skill resume branch, then obtain the legitimate protected preview and owner-authorized baseline + JD + explicit-confirmation DOCX acceptance. Keep #380 draft until its protected preview is available; do not bypass the token gate.
+
+
+## 14 November 2026 — PR #382 first exact-head validation correction
+
+The first current-master restack head `16bd984118d61d7a813c7fa22f18a0906d34f405` failed full CI `43547980243` and WhatsApp recovery `43547980415` at `npm run typecheck`: two new REA entries used unsupported method value `Source review and GitHub Actions validation`. Both now use the schema-supported `Source and artifact analysis` in corrective commit `eb2cfca5e88a2dc0a71a9c4459a51392f6bb90c7`. The initial-head Plan/REA regression `43547980485` and Kompas baseline `43547980288` passed, but those do not validate the corrected head. All exact-head workflows on `eb2cfca` are pending at this note.
+
+
+## 14 November 2026 — 17 Oct Library recovery check
+
+The accessible Library search found several materially different resume DOCX versions created 16–19 Oct, but no 27,724-byte source candidate and no correlated output. The extracted variants contain conflicting chronology/credential claims; none is proven to be the exact 17 Oct source or generated artifact. Preserve them as uncorrelated evidence only. The per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. No replay or replacement send.

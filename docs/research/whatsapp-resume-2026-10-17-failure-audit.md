@@ -47,3 +47,18 @@ No model call, new DOCX, R2 production write, historical replay, real Meta send,
 ## 14 November 2026 — continuation boundary
 
 The current-master resume evidence restack is separate from the 17 October WhatsApp incident. It does not replay, regenerate or replace the historical output. The exact generated DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. The source resume's conflicting education/employment/tenure/credential facts remain quarantined. The historical incident stays open until the exact output and correlated provider/storage evidence are recovered and the owner reconciles the conflicting facts. No email, model call, DOCX write, R2 production write, WhatsApp send or replay occurred.
+
+
+## 14 November 2026 — Library artifact search and source-conflict finding
+
+A date-scoped Library metadata search (16–20 October 2026) and content inspection located several Eshwar resume DOCX versions, but none is correlated to the 17 October 17:28 Chicago WhatsApp request:
+
+- `Eshwar_Resume(1).docx` — 18,283 bytes, created 16 Oct 2026 19:49 UTC; extracted content states 9+ years of experience.
+- `Eshwar_Resume.docx` — 194,213 bytes, created 16 Oct 2026 19:41 UTC; extracted text is sparse because the document structure is not fully represented by the text extraction.
+- `Eshwar_Resume-226.docx` — 28,815 bytes, created 19 Oct 2026 00:35 UTC; extracted content includes a different chronology and CISSP/CCSK claims.
+- `Eshwar_Resume-227.docx` — 196,058 bytes, created 19 Oct 2026 01:09 UTC; extracted content includes 9+ years and extensive employer/tool claims.
+- `Eshwar_Resume-228.docx` — 194,036 bytes, created 19 Oct 2026 15:22 UTC; another materially different version.
+
+No 27,724-byte candidate appeared in the scoped Library DOCX list. These are candidate files, not proof of the source or generated output for the 17 Oct request. Their materially different chronology and credential claims make substitution unsafe. Keep all conflicting source facts quarantined; do not choose one based on filename, size or apparent completeness. The exact generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable in accessible evidence. This Library search does not prove that no copy exists in other authorized storage.
+
+No file was modified, uploaded, sent or replayed. No model call or DOCX regeneration occurred.
