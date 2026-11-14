@@ -42,3 +42,10 @@ test("final corrections preserve the confirmed-skill boundary and target weak su
   assert.match(tailor, /Gemini final-DOCX ATS score: /)
   assert.match(tailor, /deterministic exported-document coverage and evidence gates remain authoritative/)
 })
+
+test("weak-term context repairs may be accepted at equal deterministic coverage but never at lower quality", () => {
+  assert.match(tailor, /const qualityImproved = quality\(candidate\) > quality\(current\)/)
+  assert.match(tailor, /const roleTextChanged = JSON\.stringify\(candidate\.edits\.bullets/)
+  assert.match(tailor, /quality\(candidate\) === quality\(current\) && roleTextChanged/)
+  assert.match(tailor, /restored\.floor = candidate\.floor[\s\S]*restored\.floorSummary = candidate\.floorSummary/)
+})

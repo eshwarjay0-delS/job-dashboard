@@ -1349,10 +1349,14 @@ export async function runTailor(opts: {
             const restored = await applyEdits(cleaned.edits)
             restored.via = candidate.via
             restored.partial = candidate.partial
+            restored.floor = candidate.floor
+            restored.floorSummary = candidate.floorSummary
             candidate = restored
           }
         }
-        if (quality(candidate) <= quality(current)) {
+        const qualityImproved = quality(candidate) > quality(current)
+        const roleTextChanged = JSON.stringify(candidate.edits.bullets || []) !== JSON.stringify(current.edits.bullets || [])
+        if (!qualityImproved && !(quality(candidate) === quality(current) && roleTextChanged)) {
           geminiAtsReview.correction_status = "no_measured_improvement"
           break
         }
