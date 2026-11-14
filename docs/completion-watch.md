@@ -6,9 +6,9 @@ Continue: keep the owner-approved Contract To Perm / Right To Hire → C2H regre
 - Full CI `43637952500` failed at `scripts/tests/kompas-deploy-build.test.mjs:12`: the test expected the previous exact `prebuild` string, while the PR correctly appended `scripts/tests/crawl-classify.test.mjs`. The dedicated crawler regression `43637951983`, Kompas baseline `43637952007`, and Plan/REA `43637952015` passed on that pre-fix head.
 - The test expectation is updated to include the new classifier regression while retaining the entire existing prebuild chain. This is a test-only change; classifier runtime and crawler schedule are unchanged.
 - `/api/crawl/run` remains absent from `vercel.json` crons; contract crawling is manual/on-demand only. Robert Half remains manual-only. No crawl or portal request was run.
-- Protected preview, Safe Merge Gate review, exact-head validation and production release remain pending. No deployment, production-row mutation, email or WhatsApp send occurred.
+- Corrected exact-head full CI 43638829170, crawler regression 43638829173, Kompas baseline 43638829157 and Plan/REA schema 43638829190 all passed. Protected preview and Safe Merge Gate review remain pending. No deployment, production-row mutation, email or WhatsApp send occurred.
 
-**Next:** require full CI, crawler regression, Kompas baseline and Plan/REA schema on the corrected exact head, then legitimate protected preview and Safe Merge Gate review. Do not run a live crawl without a separate owner request.
+**Next:** legitimate protected preview and Safe Merge Gate review. Keep DRAFT until both pass. Do not run a live crawl without a separate owner request.
 
 # MFit Completion Watch
 
