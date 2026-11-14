@@ -166,3 +166,10 @@ The 27 October journal entry that said no runnable environment was available, an
 - The 6 Nov channel policy remains in force: 70% raw-overlap delivery floor; clean 70–94.9% pass requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp hard hold. Unsupported experience, employers, dates, credentials and metrics are never invented.
 
 Source implementation is in the current-master restack branch. CI, protected preview, production deployment and real handset acceptance are separate gates. The 17 Oct historical output and signed provider receipt remain unavailable; no replay or real send is claimed.
+
+
+## Provider failure fallback — 14 November 2026
+
+For an initial job-description run, a provider exception is handled the same way as an incomplete result: send only the exact selected same-account library bytes after verifying the account root, normalized relative path, resolved file path and byte equality with the session copy. The outgoing caption must say **Original resume — NOT TAILORED**. If no selected Files context exists or any check fails, send no document and keep the request available for retry. Do not use an arbitrary inbox/session copy as a fallback. Swipe-reply refinement remains text-only on provider failure or incomplete output; the previously delivered version stays unchanged.
+
+This correction is in draft PR #380. Exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA must all pass after the latest documentation commit, and the legitimate protected preview is still required. No real WhatsApp send or R2 production write is claimed.
