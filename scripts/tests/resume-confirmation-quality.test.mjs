@@ -278,6 +278,24 @@ test('SIEM skills require log or alert project context, not generic audit/compli
   assert.deepEqual(guarded.blockedTerms, ['Splunk'])
 })
 
+test('SIEM context recognizes plural log, event, detection, alert and incident evidence without accepting audit-only work', () => {
+  const roles = [
+    { bullets: [{ idx: 31, text: 'Correlated SIEM logs and investigated security alerts across monitored systems.' }] },
+    { bullets: [{ idx: 32, text: 'Reviewed SIEM events, detections, correlations, threats and incidents.' }] },
+    { bullets: [{ idx: 33, text: 'Reviewed audit evidence and compliance controls for finance reporting.' }] },
+  ]
+  const edits = [
+    { idx: 31, text: 'Correlated SIEM logs and investigated security alerts across monitored systems using Splunk.' },
+    { idx: 32, text: 'Reviewed SIEM events, detections, correlations, threats and incidents using Splunk.' },
+    { idx: 33, text: 'Reviewed audit evidence and compliance controls for finance reporting using Splunk.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['Splunk'], cover, new Set(['Splunk']))
+  assert.equal(guarded.reverted, 1)
+  assert.deepEqual(guarded.edits, [edits[0], edits[1], roles[2].bullets[0]])
+  assert.deepEqual(guarded.blockedTerms, ['Splunk'])
+})
+
 test('endpoint tools require endpoint/EDR context rather than a generic security assessment', () => {
   const roles = [
     { bullets: [{ idx: 23, text: 'Performed security risk assessments and documented compliance control gaps.' }] },

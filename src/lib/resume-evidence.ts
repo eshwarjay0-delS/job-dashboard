@@ -68,7 +68,7 @@ const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
   },
   {
     skill: /\b(?:splunk|siem|sentinel|qradar|arcsight|logrhythm)\b/i,
-    context: /\b(?:log|event|telemetry|detection|alert|monitoring|correlation|threat|incident|soc|security operations|security monitoring)\b/i,
+    context: /\b(?:logs?|events?|telemetry|detections?|alerts?|monitoring|correlations?|threats?|incidents?|soc|security operations|security monitoring)\b/i,
   },
   {
     skill: /\b(?:defender|crowdstrike|sentinelone|tanium|edr|xdr)\b/i,
