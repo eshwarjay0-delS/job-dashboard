@@ -498,3 +498,16 @@ Continue: wait for exact-head full CI to complete on PR #379 and review the test
 Safe Merge Gate run `34196b1e-b4d4-8328-9abd-572f4c39f622` completed at 00:25:27 UTC with no merge or branch edits. It confirmed the four priority restacks are not eligible for merge. Kompas Continuous Voice Delivery is disabled; do not duplicate its audio/caption work. No separate Bible-Keeper automation was present in the accessible inventory.
 
 Continue: restack the WhatsApp fallback on current master without discarding its code/tests, then require exact-head CI and the legitimate protected preview before merge/deploy. Keep #375/#376/#377 draft until conflict-free restacks and their respective real acceptance gates pass. Wait for #379 full CI. Keep the crawler manual/on-demand only.
+
+
+## 14 November 2026 — WhatsApp offline fallback restack on post-#379 master
+
+Continue: restack the approved WhatsApp fallback and lossless session-pair CAS work onto current master without dropping the latest partial-initial-run correction.
+
+- Source PR #374 head `1ce449dccb6116aad7ed671946bc31bed2c7887a` adds the partial/incomplete initial-JD fallback after the earlier green head `794ba115`. The new branch `fix/whatsapp-offline-cas-master-926bf3-20261114` is based on post-#379 master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` and carries forward the exact latest runtime/test files while preserving the newer master Plan/REA and UAC work.
+- Preserved behavior: initial JD run may send only exact selected same-account library bytes, labelled **NOT TAILORED**; failed swipe refinement sends no baseline/file and leaves the prior delivered resume unchanged; JD/resume pair is consumed only after provider acceptance; R2 ETag/If-Match CAS uses bounded retries and never falls back to unconditional overwrite.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending until the new PR is opened. Local clone/test execution is unavailable in this run because `github.com` DNS resolution failed. This is not a test pass.
+- Protected preview remains blocked by the private `KOMPAS_VERCEL_API_TOKEN`; no bypass, real WhatsApp send, R2 production write, model call or historical replay was attempted.
+- The 17 Oct 17:28 Chicago incident remains unverified: exact generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt are missing; conflicting source facts remain quarantined.
+
+Continue: open the restack as a draft PR, require exact-head CI/recovery/baseline/Plan-REA, then wait for the legitimate protected preview before merge or production. Keep the historical incident open until its exact artifact/delivery evidence and owner fact reconciliation are available.

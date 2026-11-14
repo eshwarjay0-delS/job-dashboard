@@ -138,15 +138,58 @@ The current #368 adapter's use of `GetObject` ETag followed by `PutObject` with 
 
 The visible PR test suite exercises stale ETag/412 and a concurrent winner, while the implementation also treats 409 and 404 as compare-and-swap failure. Add explicit mocked 409 and 404 cases (or document why they cannot arise on this path) before final acceptance. This is a documentation/source review only; no R2 write or live webhook was run.
 
-## 13 November 2026 — current-master offline fallback and pair-CAS restack (#374)
 
-PR #374 is the current-master restack of the offline original-resume fallback and R2 pair-CAS work. Exact head: 794ba1151f8761720c55936d15bb0eb9a0a37c5c, based on master 026c729.
+## 13 November 2026 — run 11 current-master implementation status
 
-- Full CI 43503280817, WhatsApp recovery regression 43503280946, Kompas baseline 43503280979, and Plan/REA 43503280606 all completed SUCCESS on that exact head.
-- The fallback verifies the selected same-account library path and exact source bytes before sending, labels the file NOT TAILORED, and does not substitute the original resume into a swipe-refinement result. R2 ETag/If-Match and local key serialization protect pair consumption; the pair is consumed only after provider acceptance.
-- PR #374 remains DRAFT. An authorized Vercel preview request dpl_6Ejh8tNfxR7pDYNcxWRp2f2thWV7 was CANCELED by the project's Ignored Build Step. The protected preview still requires the private KOMPAS_VERCEL_API_TOKEN. No ignore rule or protection setting was changed.
-- No real WhatsApp send, R2 production write, model call, or handset test occurred.
+The approved WhatsApp fallback/session-pair implementation from PR #368 has been restacked on current canonical master `026c72968e45314ff0a99f701942c966e79f0a1e` in branch `fix/whatsapp-offline-cas-master-026c729-run11-20261113` (implementation commits `32a5fd790e51d445a7c5a18fad5f77772423ab6f` and `ece00f236103c74cfd1dcca28131593135fdc428`). The restack does not replay the historical request or overwrite current Kompas/Plan/REA changes.
 
-**Historical 17 Oct 17:28 Chicago incident remains separately blocked.** The original 27,724-byte source DOCX and matching JD are recorded as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation ID, Meta message ID, and signed delivery/read receipt remain unavailable. The source's education/employment/credential facts conflict with the owner-confirmed profile and remain quarantined pending owner reconciliation. Do not replay the request or infer delivery from a source file or a mocked test.
+The initial-JD offline fallback is allowed only when the exact selected resume bytes are verified against the same authenticated account's selected library file; the outgoing document is explicitly marked **Original resume — NOT TAILORED**. A swipe-reply refinement is a separate operation: provider failure, missing source, incomplete output, failed quality gate, or identity/contact/date mismatch must send text only and leave the prior delivered resume unchanged. A JD/resume pair is consumed only after acceptance of the exact document. Conditional R2 writes use bounded If-Match compare-and-swap; HTTP 409/412/404 are retry conflicts, while unexpected storage errors propagate.
 
-**Next:** keep #374 DRAFT until the legitimate protected preview and Safe Merge Gate approval. Historical closure requires the exact generated output plus per-run R2/webhook/Meta evidence and owner fact reconciliation before any authorized replay. Real handset delivery is a separate acceptance gate.
+Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending. A protected Vercel preview is still required and cannot be accessed without the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted. The production alias remains at the prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`, so this implementation is not live.
+
+The historical 17 Oct 17:28 Chicago request remains unverified. The exact generated DOCX, per-run R2 key/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/credential facts remain quarantined pending owner reconciliation. No model call, R2 production write, historical replay, real WhatsApp send or handset acceptance occurred.
+
+
+## 13 November 2026 — signed callback retention fixture correction
+
+The first exact-head full CI failed only the callback-retention assertion because the test combined an ambiguous initial upload failure with a simulated signed failure callback. That combination correctly blocks a duplicate send, so the expected fallback message ID was impossible. Correction commit `cdf62de950b80ff9762ac82ff1656af98c11885f` now models a successful upload followed by `markResumeDocumentAccepted=false` and verifies the pair remains. The corrected exact-head CI has not yet completed. No real Meta message, callback or historical replay occurred.
+
+
+## 13 November 2026 — current Library inventory recheck for the 17 Oct incident
+
+This run performed a read-only recursive Library metadata inventory and semantic search. The inventory returned 149 DOCX files. None was created on 17 or 18 October 2026, and no listed DOCX matched the previously recorded 27,724-byte source size. Searches for the resume name and the incident description did not identify the incident's exact source file or generated output.
+
+This does **not** erase the earlier private-review record that the original source DOCX and matching JD had been recovered. It means those artifacts were not re-resolvable from this run's accessible Library surface. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, and signed delivered/read receipt remain unavailable. The source education, employment chronology, tenure and credential conflicts remain quarantined.
+
+No document bytes were opened or materialized. No R2 read/write, model call, historical replay, WhatsApp send, replacement send, or handset test occurred. Do not infer that the historical message was delivered or undelivered from the current Library listing alone.
+
+**Exact unblock:** the owner or authorized archive custodian must make the exact original and generated DOCX files available through an authorized Files surface and provide or authorize read-only access to the per-run R2 object/version, webhook correlation, Meta message ID, and signed delivery/read receipt. Until then, keep the historical incident blocked and do not replay it.
+
+## 13 November 2026 — incomplete initial-run fallback correction
+
+A production quality-gate rejection was aggregated at `2026-11-13T21:45:42Z` on deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb`: one occurrence, one user, raw/supported coverage 100, `partial=true`, `incomplete=true`, five roles, and blockers `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable`, `role_evidence_gaps`. This does not prove a complete DOCX, factual 100% match or Meta delivery.
+
+The latest production alias is READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, master SHA `3e1033687972230de76747e063afe1a0c1cdea61`; that documentation-only release does not contain the new fallback code. The last-hour aggregate after deployment was empty, but request-level logs for the older event exceeded Hobby's one-hour retention.
+
+**Source finding:** the #374 branch's no-provider path already checked the exact selected same-account library bytes and labelled them NOT TAILORED, but a partial/incomplete provider result still called the looser `sendClosest(unfinishedRewriteWhy(result))` path.
+
+**Correction on PR #374, still unvalidated:**
+- `732bf2adffba938a8a701db3f3c108fafeb9f38b` routes partial, incomplete or skills-only *initial JD* results through the exact selected same-account library fallback, with `Original resume — NOT TAILORED` and `AI rewrite incomplete`.
+- `9f00de92475b707eabf4e2b78b560b4ee51746d0` adds the positive exact-byte/caption/pair-consumption regression.
+- `d77af573da00944156bc3b53dc3f3fa63a0c6484` adds the negative selected-byte-mismatch case: no file is sent and the pair remains available.
+- Swipe refinement is unchanged and remains strict. No real send, model call or R2 production write occurred.
+
+The new head has no fresh CI/recovery/baseline/Plan-REA results yet. Earlier green results for `794ba1151f8761720c55936d15bb0eb9a0a37c5c` do not apply. Protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; no bypass or production deployment is authorized before exact-head validation and the Safe Merge Gate.
+
+The 17 Oct 17:28 Chicago historical request remains separately blocked: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are missing. Do not replay or infer delivery.
+
+
+## 14 November 2026 — current-master restack after the partial-initial-run correction
+
+The latest source PR #374 head `1ce449dccb6116aad7ed671946bc31bed2c7887a` added an important correction after the previously green head `794ba1151f8761720c55936d15bb0eb9a0a37c5c`: partial, incomplete or skills-only **initial JD** results now use the exact selected same-account library bytes and carry an explicit NOT TAILORED caption. A swipe-reply refinement remains strict: provider failure, incomplete output, missing source or failed identity/contact/date validation sends no file and leaves the previously delivered version unchanged. The session pair is consumed only after provider acceptance, with R2 If-Match compare-and-swap protecting concurrent updates.
+
+This run created a new current-master restack branch `fix/whatsapp-offline-cas-master-926bf3-20261114` from post-#379 master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` and copied the latest #374 runtime/test files without overwriting the newer master Plan/REA records. Exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA results are not yet available; they will run only after the draft PR is opened. Local test execution was unavailable because this environment could not resolve `github.com`.
+
+The protected preview remains unavailable without the private `KOMPAS_VERCEL_API_TOKEN`. No bypass, real WhatsApp send, R2 production write, model call, historical replay or handset test occurred.
+
+The 17 Oct 17:28 Chicago incident remains separately blocked. The exact generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivered/read receipt and owner reconciliation of conflicting source facts remain missing. No later-created DOCX is substituted for the original output. Do not infer delivery state or replay the historical request.
