@@ -47,3 +47,13 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 ## 14 November 2026 — manual-only guard exact-head validation
 
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
+
+
+## 14 November 2026 — corrected owner approval provenance
+
+Accessible prior owner-authored conversation context confirms:
+- 3 Nov 2026 16:20:28 UTC: Eshwar approved a mandatory final-export loop for every resume update: ask Gemini exactly “Give me an ATS score”, identify missing/weak JD terms, apply only source-resume or explicit first-person-confirmed corrections, re-export the DOCX and recheck until the highest defensible match or no truthful improvement. This is approved behavior, not a proposal. The Gemini score and suggestions remain diagnostics, never experience evidence.
+- 3 Nov 2026 16:04:16 UTC: the evidence-supported factual coverage target is 98% with a 95% minimum. Earlier assistant phrasing such as 95–100% or 95–98% does not supersede this direct owner target. Measure from the final exported DOCX; do not insert unsupported keywords.
+- 6 Nov 2026 09:55 CT: an explicit first-person-confirmed skill may be mapped into relevant existing project bullets across roles, including earlier roles, without same-role source wording. The confirmation supports the skill only, not a new employer, project, action, outcome, date, title, location, contact, metric or credential.
+
+The prior PR #385 body sentence that called the final-DOCX Gemini loop “proposed, not owner-approved” is superseded and incorrect. PR #289 records the direct 3 Nov approval; its code remains stale/stacked on superseded #287 and is not live.
