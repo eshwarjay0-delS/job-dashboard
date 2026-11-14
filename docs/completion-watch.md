@@ -1,5 +1,25 @@
 # MFit Completion Watch
 
+## 14 November 2026 — WhatsApp, Kompas and Gmail evidence refresh
+
+- Canonical repository: eshwarjay0-delS/job-dashboard. Current master: 46043ec6ca926b2ab82424d255367426685f294d. Production alias job-dashboard-fawn.vercel.app remains READY at dpl_7QVykeYoWSswLDgsQP99xF2piBn3, SHA b94e1629c544048d84a2b048ae83b21b612ab9dd. The six master commits after production are documentation/test-only; no production redeploy is needed for those commits.
+- PR #399 WhatsApp fallback/pair-CAS: exact head 7f7f54ad37cfb643c525ba5a73daab63e2114549; full CI 43639887773, WhatsApp recovery 43639887724, Kompas baseline 43639887728 and Plan/REA 43639887793 passed. Protected preview is still unavailable because the private KOMPAS_VERCEL_API_TOKEN is not available to this run. Keep draft; no real send or R2 write.
+- PR #400 resume/JD/confirmed-skill alignment: exact head a58cf550a1c21137db24e10a3bbe50d7c683b6ea; source gates passed. Protected preview, authorized source/JD/explicit confirmation, and exported-DOCX review remain open.
+- PR #401 Poke-inspired Gmail/mobile: exact head a327f3954a6f9c3d2df18f95d9ad69bb8121e337; 3/3 source gates passed. Protected preview, two-inbox collision, selected-From, reconnect and narrow-phone acceptance remain open.
+- PR #402 Contract To Perm / Right To Hire classifier: exact head d6c111d18d1b1f5ad782ff8089d3021834c3ed6a; 4/4 source gates passed. Protected preview/release review remains open. Only explicit Contract To Perm and Right To Hire map to C2H; negations remain unknown.
+- PR #403 Kompas question/voice CI restack: exact head 644ab0ede1133d63e279e3ef6ea7a7a305e19f72; full CI 43648412568, Plan/REA 43648412574 and Kompas baseline 43648412610 passed (72/72 TAP cases). Protected preview remains required. No runtime changes or native acceptance.
+- PR #381 is merged; the contract crawler is manual/on-demand only. Current master vercel.json has no /api/crawl/run cron; the separate Gmail schedule remains. Robert Half remains manual-only. No live crawl was run.
+- Read-only production Kompas snapshot: 22 account-session rows (15 non-tombstoned, 7 tombstones), 9 non-ended, 28 artifacts, zero orphan artifacts and one owner. anon/authenticated have no direct SELECT or desktop-handoff claim EXECUTE; service_role has the required privileges. These rows do not prove second-browser/Windows/phone/WhatsApp acceptance.
+- Read-only Gmail snapshot: 3 sync rows across 3 account IDs, 2,002 thread rows across 3 account IDs; latest sync 10 Nov 2026 14:44:44 UTC and latest thread update 14:46:49 UTC. This does not prove two-inbox collision, selected-From, reconnect or mobile acceptance.
+- Seven-day WhatsApp runtime-error aggregation: 14 historical quality-gate rejections across 12 users, last 13 Nov 2026 21:45:42 UTC on older deployment dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb / SHA 024177. Samples showed 100% coverage but incomplete drafts, missing parts and unrewritten roles. The current alias is b94e1629 and the one-hour error query had no groups; this is not proof a real request now succeeds.
+- PR #404 is a new documentation-only evidence handoff. Current head 41f67594fd4b143d12e429aa110d9aae5571b66d. Plan/REA 43651003195 and Kompas baseline 43651003146 passed; full CI 43651003165 was still running at the cross-device session-sync step at the time of this update. It adds no runtime code and does not need a protected runtime preview or deployment. Keep draft for Safe Merge Gate sequencing.
+- Historical 17 Oct 17:28 Chicago WhatsApp request remains open: the 27,724-byte source resume and matching JD were recovered in prior private review, but generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts remain missing. Do not replay or claim delivery.
+- No real WhatsApp or email messages, model calls, R2 production writes, live crawls, DOCX generation, or owner-device tests occurred. The local container still cannot resolve github.com; GitHub Actions is the executable validation path. Safe Merge Gate remains the owner of shared merge sequencing; no separate Bible-Keeper task was visible, and the Kompas Continuous Voice Delivery automation is disabled.
+
+Continue: PR #399 — obtain the authorized protected-preview credential, complete the exact-head preview and Safe Merge Gate, then validate same-account original fallback and pair-CAS without a real outbound test. Keep PR #400 gated on authorized source/JD/confirmation and exported-DOCX acceptance; keep #401/#402/#403 in draft until their specific protected-preview and real UX gates pass. PR #404 remains documentation-only until exact-head full CI completes.
+
+
+
 ## 14 November 2026 — exact-master Kompas replay gate correction
 
 - Current master `b94e1629c544048d84a2b048ae83b21b612ab9dd` is READY production at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, and the canonical alias resolves to that same deployment.
