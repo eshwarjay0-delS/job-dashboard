@@ -584,3 +584,8 @@ The accessible Library search found several materially different resume DOCX ver
 ### Corrected-head CI revalidation request — 14 November 2026
 
 The first PR #382 head `16bd984118d61d7a813c7fa22f18a0906d34f405` failed typecheck because the two new REA records used an unsupported method enum. The correction is in `eb2cfca5e88a2dc0a71a9c4459a51392f6bb90c7`; the subsequent `c24cda9461358fa31770a62de80091397cdd6693` commit records the 17 Oct Library search and failure/correction evidence. The corrected branch head must receive fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA runs; the initial-head runs are not accepted as validation of the corrected head.
+
+
+### Second exact-head typecheck correction — 14 November 2026
+
+PR #383 head `5ae1ecf83501d226251f9ec01e5a4325f911127a` failed full CI `43548271010` and WhatsApp recovery `43548271007` at TypeScript validation. The new historical REA record used an unsupported state value (`Historical evidence incomplete`), unsupported source fields (`library`, `note`), and step statuses (`Incomplete`, `Complete`). Correct the record to state `Blocked`, sources `label/path/url` only, and step statuses `Pending/Blocked/Observed/Implemented/Tested`; rerun exact-head gates. Plan/REA `43548271089` and Kompas baseline `43548271298` passed on the failed head but do not override the TypeScript failure.
