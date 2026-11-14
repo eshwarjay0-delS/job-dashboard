@@ -213,3 +213,32 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Poke-inspired account identity and mobile navigation — 13 November 2026
+
+The current implementation slice keeps the four-account direction and account boundary visible:
+
+- Digest sender mute = receiving Gmail account + sender address. Muting the same recruiter in one inbox does not mute another inbox.
+- Digest and waiting-on-them thread identity = receiving account + provider thread ID. A provider thread ID collision across inboxes is not a global identity.
+- Opening a digest, role-card or waiting-on-them item selects the receiving inbox before opening the thread.
+- Selected-From persistence and per-account OAuth token binding remain governed by the existing Gmail send isolation path; reconnect is scoped to the affected inbox.
+- On narrow screens, the hamburger expands below the sticky top bar in normal flow and pushes content down. It does not cover, dim or make the page inert; outside click, link selection and Escape close it and return focus to the hamburger.
+
+This source-level slice is not live acceptance. The exact-head CI and protected preview remain required. Real acceptance must use two authorized inboxes with a shared provider thread ID/sender and a narrow phone viewport. No Gmail API, OAuth, inbox mutation or outbound email test is part of this work.
+
+
+## Owner-authored scope confirmation recovered 14 November 2026
+
+Prior-context retrieval recovered the direct 17 October request: Poke-inspired multi-account inbox toggles; per-account identity and From selection; fold-style thread, reply and contact panes; CC/BCC/attachments; Important meaning “track this sender”; a combined Important inbox; an automation feed; and mobile controls/updates. The 3–4 connected-account range is a target, not a hard maximum. Gmail must retain regular Gmail capabilities while simplifying multiple inboxes.
+
+The 4 October mobile correction was that the menu must not block or cover the view. The current normal-flow expansion beneath the sticky header is an implementation choice, not a directly specified owner layout. Exact hamburger behavior remains subject to owner review and narrow-phone acceptance.
+
+PR #387 implements only a narrow account-scoped digest identity and non-covering navigation slice. It does not complete the full Gmail scope, change selected-From persistence or reply composition, enable automated sending, or establish two-inbox/mobile acceptance.
+
+
+## 14 November 2026 — current-master restack
+
+The account-scoped digest and mobile no-cover slice from PR #394 head `4121dc660c0cc6ff0938ddf21e353311403a64bf` is being restacked onto canonical master `46043ec6ca926b2ab82424d255367426685f294d` as `fix/gmail-poke-mobile-current-master-46043-20261114`. Predecessor full CI `43593882886`, Kompas baseline `43593882825` and Plan/REA `43593882833` passed, but the new exact-head checks must rerun. The new PR remains DRAFT pending exact-head gates and the legitimate protected preview.
+
+Live acceptance still requires two authorized inboxes with colliding sender/thread IDs, correct receiving-inbox selection, selected-From preservation, independent reconnect and an actual narrow-phone device check. The background worker, scheduler, Meta template and external notifications remain disabled. No Gmail API/OAuth, inbox mutation or email send occurred.

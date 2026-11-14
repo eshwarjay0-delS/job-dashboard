@@ -535,3 +535,17 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 14 November 2026 19:15 UTC — Poke-inspired Gmail/mobile restack
+
+Continue: carry the approved Poke-inspired account-scoped Gmail digest and mobile no-cover slice onto current master while preserving the existing security and approval boundaries.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`; production remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` / runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The Gmail/mobile changes are not in production.
+- Predecessor PR #394 head `4121dc660c0cc6ff0938ddf21e353311403a64bf` passed exact-head full CI `43593882886`, Kompas baseline `43593882825` and Plan/REA schema `43593882833`, but it remains DRAFT/mergeable=false on stale base `3e710d5`. These results do not validate the new restack.
+- The new branch `fix/gmail-poke-mobile-current-master-46043-20261114` carries the reviewed account+sender mute identity, account+provider-thread radar/React identity, selected-inbox opening, per-account From preservation, affected-inbox-only reconnect, and a mobile menu that expands in normal flow without a scrim or page inertness. The normal-flow menu is an implementation choice for the direct no-cover requirement.
+- The approved product direction remains 3–4 connected accounts as a target range, not a hard maximum; four mobile account toggles; separate account identities/From; inbox digest; Poke-inspired proactive mail; and regular Gmail capabilities. The current slice does not enable background sending or external notifications. Per-account Calendar targeting, exact waiting-on-them radar semantics, the sync-health card and exact hamburger interaction remain proposed unless separately approved.
+- Exact-head full CI, Kompas baseline and Plan/REA checks are pending on the new branch. Protected preview, two authorized inboxes (including colliding sender/thread IDs), selected-From preservation, independent reconnect and narrow-phone device acceptance remain open. No Gmail API/OAuth, inbox mutation, email send, worker enablement, scheduler, Meta template or notification delivery occurred.
+- The separate WhatsApp PR #399 and confirmed-skill PR #400 remain draft/current-master restacks; no unrelated Kompas voice/caption source is changed here.
+
+**Next:** require exact-head full CI, Kompas baseline and Plan/REA; keep DRAFT until the legitimate protected preview and Safe Merge Gate pass. Then use two authorized inboxes to test colliding thread/sender IDs, selected From, independent reconnect and actual narrow-phone layout. Keep the unattended worker disabled and do not send email or WhatsApp notifications.
