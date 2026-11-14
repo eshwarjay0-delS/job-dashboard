@@ -123,7 +123,7 @@ export function authorizeSnapshotImport(
   env: NodeJS.Dict<string | undefined> = process.env,
 ): AuthResult {
   const secret = String(env.GMAIL_SNAPSHOT_IMPORT_SECRET || "")
-  if (!secret) return { ok: false, status: 503, error: "Snapshot import is not configured." }
+  if (!secret.trim()) return { ok: false, status: 503, error: "Snapshot import is not configured." }
   const given = header ?? ""
   const a = createHash("sha256").update(given).digest()
   const b = createHash("sha256").update(secret).digest()
@@ -274,8 +274,8 @@ function partPath(userId: string, part: number): string {
 // Public Blob fallback paths are capability-like and must be keyed by an explicit
 // deployment secret. Never use a repository-known default when the secret is missing.
 function sealedPath(userId: string, name: string): string | null {
-  const secret = String(process.env.GMAIL_SNAPSHOT_IMPORT_SECRET || "").trim()
-  if (!secret) return null
+  const secret = String(process.env.GMAIL_SNAPSHOT_IMPORT_SECRET || "")
+  if (!secret.trim()) return null
   const mac = createHmac("sha256", secret).update(`${userId}:${name}`).digest("hex")
   return `gmail-snapshot/${mac}.json`
 }
