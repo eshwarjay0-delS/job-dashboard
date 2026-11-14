@@ -121,3 +121,8 @@ The current target is **98% factual keyword coverage**, not a promise that every
 The strict confirmed-skill mapping guard initially rejected a valid existing project bullet, "Correlated SIEM logs and investigated security alerts across monitored systems," because its context matcher recognized singular "log" and "alert" but not plural forms. The correction recognizes plural logs, events, detections, alerts, correlations, threats and incidents while keeping audit/compliance-only wording insufficient. A positive/negative regression was added to the resume confirmation suite. This preserves the owner-approved cross-role confirmed-skill rule without allowing unrelated project claims.
 
 Code/test commit: 71c2b46b2a7aad4fabe06e3d382f51d92b9ca975. The exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA gates are pending on the new PR #385 head. Protected preview and owner-authorized exported-DOCX acceptance remain separate; no live ATS match or 98% result is claimed.
+
+
+## Exact-head source validation — 14 November 2026
+
+The plural SIEM-context correction in PR #385 passed all four exact-head source gates on `96479e400cd56150d5cadff25bbf2609dc784e2c`: full CI `43555921651`, WhatsApp recovery `43555921612`, Kompas baseline `43555921660`, and Plan/REA schema `43555921622` all completed SUCCESS. The fix preserves the confirmed-skill evidence boundary and the audit/compliance-only negative case. These results do not establish a live ATS match, a 98% result, or an exported DOCX acceptance. The legitimate protected preview, owner-authorized baseline/JD/first-person-confirmation model run, DOCX identity/format review, and final-DOCX Gemini ATS review remain pending.

@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 14 November 2026 — confirmed-skill SIEM source gates passed
+
+- PR #385 code/test head `96479e400cd56150d5cadff25bbf2609dc784e2c` passed full CI `43555921651`, WhatsApp recovery `43555921612`, Kompas baseline `43555921660` and Plan/REA schema `43555921622`.
+- The plural SIEM context correction recognizes logs/events/detections/alerts/correlations/threats/incidents and retains the audit/compliance-only negative case. This validates source tests, not a live ATS score or a 98% result.
+- PR #385 remains DRAFT because the legitimate protected preview still requires private `KOMPAS_VERCEL_API_TOKEN`; owner-authorized baseline/JD/first-person-confirmation DOCX acceptance and final-DOCX Gemini ATS review remain outstanding.
+
 ## 14 November 2026 — confirmed-skill SIEM plural-context correction
 
 - Continue: finish the approved resume/JD/confirmed-experience alignment fix in PR #385. Exact-head full CI 43548859948 failed at the SIEM context test because a valid source bullet used plural "logs" and "alerts", while the matcher recognized singular-only forms; the positive edit was wrongly reverted (expected 1, actual 2).
