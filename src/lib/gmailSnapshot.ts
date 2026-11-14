@@ -271,8 +271,11 @@ function partPath(userId: string, part: number): string {
   return `gmail-snapshot/${userId}/part-${part}.json`
 }
 
-function sealedPath(userId: string, name: string): string {
-  const secret = String(process.env.GMAIL_SNAPSHOT_IMPORT_SECRET || "gmail-snapshot")
+// Public Blob fallback paths are capability-like and must be keyed by an explicit
+// deployment secret. Never use a repository-known default when the secret is missing.
+function sealedPath(userId: string, name: string): string | null {
+  const secret = String(process.env.GMAIL_SNAPSHOT_IMPORT_SECRET || "").trim()
+  if (!secret) return null
   const mac = createHmac("sha256", secret).update(`${userId}:${name}`).digest("hex")
   return `gmail-snapshot/${mac}.json`
 }
@@ -382,8 +385,9 @@ function mergeAccounts(existing: ManifestAccount[], threads: GmailThreadRow[]): 
 }
 
 async function readManifest(userId: string): Promise<GmailSnapshotManifest | null> {
+  const sealed = sealedPath(userId, "manifest")
   const text = await backendGet(manifestPath(userId), "private")
-    || await backendGet(sealedPath(userId, "manifest"), "public")
+    || (sealed ? await backendGet(sealed, "public") : null)
   if (!text) return null
   try {
     const parsed = JSON.parse(text) as GmailSnapshotManifest
@@ -412,8 +416,16 @@ async function writePart(userId: string, part: number, payload: unknown): Promis
 
 async function backendPut(userId: string, logicalPath: string, text: string, name: string): Promise<string> {
   if (testBackend) {
-    await testBackend.put(logicalPath, text, "private")
-    return logicalPath
+    try {
+      await testBackend.put(logicalPath, text, "private")
+      return logicalPath
+    } catch (error) {
+      if (!privateUnsupported(error)) throw error
+      const hidden = sealedPath(userId, name)
+      if (!hidden) throw new Error("SNAPSHOT_PRIVATE_UNAVAILABLE")
+      await testBackend.put(hidden, text, "public")
+      return hidden
+    }
   }
   const { put } = await import("@vercel/blob")
   if (privateSupported !== false) {
@@ -433,6 +445,7 @@ async function backendPut(userId: string, logicalPath: string, text: string, nam
     }
   }
   const hidden = sealedPath(userId, name)
+  if (!hidden) throw new Error("SNAPSHOT_PRIVATE_UNAVAILABLE")
   await put(hidden, text, {
     access: "public",
     addRandomSuffix: false,
