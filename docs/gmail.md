@@ -213,3 +213,14 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Saved-mail snapshot fallback — no-spend and secret boundary (14 November 2026)
+
+The saved-mail fallback is used only when the live Supabase read fails specifically with `exceed_egress_quota`; a working live read wins. It uses owner-exported `mfit_gmail_threads` and `mfit_gmail_sync` rows and must not trigger billing or spend-cap changes.
+
+The import endpoint is `POST /api/gmail/snapshot-import`, with `x-import-secret` matching a non-empty `GMAIL_SNAPSHOT_IMPORT_SECRET`. The similarly named `GET /api/gmail/notify-rules/export` is a separate worker-only export of notification rules, gated by `GMAIL_UPDATES_SCHEDULER_ENABLED=true` and `CRON_SECRET`; it does not import mail-thread/sync rows. Do not treat the two routes as interchangeable without an explicit owner correction.
+
+The sealed public-Blob compatibility path remains available only when an explicit deployment secret exists, preserving the no-spend design. If the secret is absent, the reader skips the public fallback and the writer fails closed with 503 when private Blob access is unsupported. No paid storage tier is enabled. The background update worker remains disabled.
+
+The snapshot route exists in the current READY production source, but the Vercel environment-name listing only proves that a sensitive secret entry exists; its value was not read and non-empty status was not asserted. No owner-exported rows were imported and no authenticated import/readback has been performed. No explicit production deployment/`[ship]` approval was recovered for this task. See `docs/research/gmail-snapshot-fallback-2026-11-14.md`.
