@@ -561,3 +561,13 @@ Continue: run the exact-head final-DOCX, confirmed-skill and WhatsApp regression
 - No personal resume/JD was processed, no Gemini model call or DOCX export occurred, and no deployment or live 98% match is claimed. The production alias remains on the earlier runtime SHA; this branch is not deployed.
 
 Continue: keep #395 DRAFT; satisfy the parent #393 preview and owner-authorized resume/JD/confirmed-skill DOCX acceptance first, then retarget and run full CI on the final master-based head. Do not bypass preview protection or substitute synthetic tests for the actual DOCX review.
+
+
+## 14 November 2026 13:58 UTC — final-DOCX Plan contract regression repair
+
+- PR #395 head `cc07f34ae14bf8be645626fa17f4ddc274987c7f` completed `npm run check` successfully, but its focused final-DOCX workflow `43602195377` ended FAILURE at 70/71 tests.
+- The only failure was the Plan contract test at `scripts/tests/resume-final-ats-review.test.mjs:86`: the updated Plan wording no longer contained the exact required phrase `the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN`. The test is correct and was not weakened.
+- The follow-up commit restores that exact blocker wording and increments `PLAN_REVISION` to `2026-11-14.8`. The corrected head must rerun the final-DOCX workflow; do not reuse the predecessor's partial result as a pass.
+- WhatsApp recovery `43602195328` and Plan/REA `43602195324` passed on `cc07f34`; those are still source tests, not delivery or DOCX acceptance.
+
+Continue: verify the corrected exact head's final-DOCX workflow to SUCCESS, then leave #395 DRAFT pending parent #393 preview and owner-authorized exported-DOCX acceptance. No personal data, Gemini model call, DOCX export, production deployment or live 98% claim occurred.

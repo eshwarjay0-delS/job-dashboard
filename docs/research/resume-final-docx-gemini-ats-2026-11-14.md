@@ -42,3 +42,8 @@ The code adds:
 ## Historical WhatsApp incident remains separate
 
 The 17 October 2026 17:28 Chicago WhatsApp resume incident remains unresolved. The exact generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, and signed delivered/read receipt are missing. Conflicting source facts remain quarantined. Do not replay, resend, substitute another DOCX, or claim delivery.
+
+
+## Exact-head test correction — 14 November 2026
+
+The documentation/status update commit `cc07f34ae14bf8be645626fa17f4ddc274987c7f` passed `npm run check` but its focused workflow `43602195377` failed one of 71 tests. The failure was a deliberate Plan contract assertion: the preview-blocker sentence had been reworded so it no longer contained the exact phrase `the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN`. The test was retained; the Plan wording was corrected and the revision incremented to `2026-11-14.8`. Re-run the focused final-DOCX workflow on the corrected head before reporting it green. WhatsApp recovery `43602195328` and Plan/REA `43602195324` passed on the preceding head only.
