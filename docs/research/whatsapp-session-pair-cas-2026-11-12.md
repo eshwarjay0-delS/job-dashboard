@@ -113,3 +113,8 @@ The PR remains DRAFT because the legitimate protected Vercel preview requires th
 PR #380's review found that the provider-exception catch still called `sendClosest(session.resumePath)`. That could send a session/inbox copy without proving it was the exact selected same-account library file. The catch now routes only a Files-selected initial JD run through `sendOfflineOriginal`, which verifies account root, normalized relative path, resolved path and byte equality. If any check fails, no document is sent. The explicit caption remains **Original resume — NOT TAILORED**. Swipe-reply refinement stays text-only on failure or incomplete output.
 
 The ETag/If-Match pair-consumption logic is unchanged: consume only after provider acceptance of the exact document, retry bounded 409/412/404 conflicts by rereading, propagate unexpected storage errors, and never use an unconditional overwrite. New exact-head CI and WhatsApp recovery checks must rerun after this documentation update. Protected preview and real provider/device acceptance remain separate and unverified.
+
+
+## 14 November 2026 — actual R2 adapter status mapping test
+
+The earlier in-memory pair-CAS regression covers 409/404 retry behavior, stale ETag conflicts and concurrent winners at the higher-level pair-consumption helper. It does not instantiate the production `R2Storage` class. PR #380 adds a dedicated mocked-S3 test for `R2Storage.putIfMatch`: HTTP 412/409/404 return `false` after one conditional request, HTTP 503 propagates, and an accepted `If-Match` write returns `true`. The test is wired into full CI and uses fake credentials; no network/R2 request is made. Commit: `98fafff9f095146a71f50500c9c520007be75fef`. Exact-head CI and the protected preview remain pending.

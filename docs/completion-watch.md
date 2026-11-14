@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 14 November 2026 — WhatsApp R2 adapter and historical incident evidence
+
+- Continue: complete the approved PR #380 same-account offline fallback and resume/JD pair-CAS slice. Commit `98fafff9f095146a71f50500c9c520007be75fef` adds a direct mocked-S3 regression for actual `R2Storage.putIfMatch`: 412/409/404 return false with no unconditional retry, 503 propagates, and accepted `If-Match` returns true. Full CI wiring is included; exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA are still pending.
+- The higher-level in-memory pair-CAS tests already exercise 409/404 retry behavior; the new test specifically closes the missing adapter-level coverage. It does not make a production R2 call. Keep PR #380 DRAFT until exact-head gates, the legitimate protected preview and Safe Merge Gate pass. The protected preview requires private `KOMPAS_VERCEL_API_TOKEN`; do not bypass Vercel protection or alter the ignore rule.
+- Historical 17 Oct 17:28 Chicago recheck: one `whatsapp:resume_tailor` usage event at 22:28:27.372685 UTC; no `resume_documents` or `resume_import_jobs` row in the 20-minute window; no `source_event_key`; metadata keys only `calls`, `input_tokens`, `output_tokens`, `score`. No request/resume/document/R2/Meta/delivery identifiers. Library search did not recover the generated output. This does not prove no R2 object or Meta send exists; it proves the available DB event cannot correlate one. Exact output DOCX, per-run R2 object/version, webhook correlation, Meta wamid, signed delivered/read receipt and owner fact reconciliation remain missing. Do not replay or claim delivery.
+- The separate iZap connector has no connected WhatsApp business number and zero chats; it is not the canonical MFit Meta system and cannot prove delivery or non-delivery. No real email/WhatsApp test was sent, no R2 production write occurred and no historical request was replayed.
+
 ## 14 November 2026 — PR #380 no-Files retry and timeout wording correction
 
 - Exact-head full CI run 43545490831 on PR #380 head 922fd0af123352a04d4ca335282d7ecba943db5a reached the WhatsApp tests and reported 52/54 passing. Two stale expectations failed: the single-request test expected a provider-failed upload-only inbox copy to be resent without a selected same-account Files source; the fivefold timeout test expected the older phrase "ran out of time just now."
