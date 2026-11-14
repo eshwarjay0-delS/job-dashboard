@@ -150,3 +150,18 @@ PR #374 is the current-master restack of the offline original-resume fallback an
 **Historical 17 Oct 17:28 Chicago incident remains separately blocked.** The original 27,724-byte source DOCX and matching JD are recorded as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation ID, Meta message ID, and signed delivery/read receipt remain unavailable. The source's education/employment/credential facts conflict with the owner-confirmed profile and remain quarantined pending owner reconciliation. Do not replay the request or infer delivery from a source file or a mocked test.
 
 **Next:** keep #374 DRAFT until the legitimate protected preview and Safe Merge Gate approval. Historical closure requires the exact generated output plus per-run R2/webhook/Meta evidence and owner fact reconciliation before any authorized replay. Real handset delivery is a separate acceptance gate.
+
+
+## 14 November 2026 — read-only production quality-gate follow-up
+
+A seven-day Vercel runtime-error aggregation for the WhatsApp webhook returned one historical quality-gate cluster: **14 rejected drafts across 12 users**, first seen 29 October and last seen **13 November 2026 at 21:45:42 UTC**. The last event was attributed to deployment dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb (SHA 024177889d092f30aaeada20fab649aa41c9d1f4), not the current production alias.
+
+The returned samples had raw coverage 100 and supported coverage 100, but also partial=true and incomplete=true. The recorded blockers included draft_parts_missing, quality_incomplete, quality_not_deliverable, role_evidence_gaps, and roles_unrewritten; unverifiedCount was 0. This is evidence that keyword coverage alone cannot make an unfinished multi-role document deliverable. It is **not** evidence that these events were caused by the 17 October request, and it is distinct from PR #399's hard hold for unsupported JD-only experience terms.
+
+At this observation, job-dashboard-fawn.vercel.app independently resolved to READY deployment dpl_7QVykeYoWSswLDgsQP99xF2piBn3 at SHA b94e1629c544048d84a2b048ae83b21b612ab9dd. A separate one-hour production error query returned no grouped errors. That short window does not prove the historical quality behavior is fixed or that the latest release has been exercised by a real request.
+
+The current-master candidates remain separate:
+- PR #399: exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA passed; protected preview remains unavailable.
+- PR #400: exact-head source gates passed; protected preview, authorized source/JD/confirmation and exported-DOCX acceptance remain outstanding.
+
+No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are available. Do not replay it or claim delivery.
