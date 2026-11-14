@@ -42,4 +42,4 @@ A per-user cap of **3 conditional polls per 60 seconds** returns 429 with `X-Kom
 
 ## 14 November 2026 schedule reconciliation
 
-The earlier table records the owner-approved removal of the contract crawler from Vercel scheduling. A current-master audit nevertheless found `/api/crawl/run` still present at `0 12 * * *` (the older table's `0 11 * * *` value was stale). PR #381 removes that remaining entry. The separate `/api/gmail/crawl` schedule is not the contract crawler and remains unchanged. No crawl was run during this correction.
+The `/api/crawl/run` row above is historical: it records the former schedule, not an active cron. Canonical master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` already excludes this path from `vercel.json`. PR #381 adds a regression guard and corrects stale route/product documentation; it does not edit the Vercel schedule. The separate `/api/gmail/crawl` schedule remains active and unchanged. No crawl was run during this correction.

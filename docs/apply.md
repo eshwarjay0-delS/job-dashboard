@@ -195,7 +195,7 @@ The restacked PR #284 adds classifier test/workflow coverage and keeps Robert Ha
 
 The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-crawler cron was deliberately removed; crawling is manual/on-demand only; do not restore a daily schedule; Robert Half remains manual-only. The 9–10 Nov crawl records above are historical evidence, not permission to keep or restore a recurring contract crawl.
 
-- Remove `/api/crawl/run` from Vercel's `crons` array. Keep the separate Gmail crawler schedule unchanged.
+- Preserve the current `vercel.json` invariant: `/api/crawl/run` is absent from Vercel's `crons` array. Keep the separate Gmail crawler schedule unchanged.
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
