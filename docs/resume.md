@@ -114,3 +114,10 @@ The 6 November owner correction permits an explicit first-person candidate-confi
 ## Current factual match target — 14 November 2026
 
 The current target is **98% factual keyword coverage**, not a promise that every JD term will be inserted. Older 95–100% wording is historical. The score must be measured from the final exported DOCX, with unsupported requirements left as gaps; report raw and weighted coverage separately without rounding. Synthetic tests, source-level checks and a green CI run are not live resume acceptance. The final DOCX still requires the approved Gemini “Give me an ATS score” review and correction/re-export loop.
+
+
+## SIEM plural-context regression correction — 14 November 2026
+
+The strict confirmed-skill mapping guard initially rejected a valid existing project bullet, "Correlated SIEM logs and investigated security alerts across monitored systems," because its context matcher recognized singular "log" and "alert" but not plural forms. The correction recognizes plural logs, events, detections, alerts, correlations, threats and incidents while keeping audit/compliance-only wording insufficient. A positive/negative regression was added to the resume confirmation suite. This preserves the owner-approved cross-role confirmed-skill rule without allowing unrelated project claims.
+
+Code/test commit: 71c2b46b2a7aad4fabe06e3d382f51d92b9ca975. The exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA gates are pending on the new PR #385 head. Protected preview and owner-authorized exported-DOCX acceptance remain separate; no live ATS match or 98% result is claimed.

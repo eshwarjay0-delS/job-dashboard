@@ -100,3 +100,10 @@ The new branch's exact-head full CI, WhatsApp recovery, Kompas baseline and Plan
 ## Strict confirmation follow-up — 14 November 2026
 
 A further review identified two parser hazards and a broad tool-context family before any protected preview. The strict branch removes second-person blanket confirmation, rejects blanket statements that include exceptions/negations rather than truncating them, and preserves specific positive statements only. It splits the broad security-tool context into SIEM/logging, endpoint/EDR, vulnerability, AppSec, network and DLP families. New positive/negative tests verify that generic audit/compliance or generic security-risk bullets do not justify Splunk/Defender, while log/alert and endpoint/EDR bullets do. The strict branch's exact-head CI/recovery/baseline/Plan-REA checks are pending. This is a safety refinement to the current-master restack, not a production release or live match score.
+
+
+## SIEM plural-context false negative — 14 November 2026
+
+Exact-head full CI 43548859948 failed the twenty-varied resume export suite at the SIEM context test: expected one unsupported audit/compliance edit to be restored, but two edits were restored. The positive project bullet contained plural "logs" and "alerts"; the context expression used singular-only alternatives. This was a morphology false negative, not a reason to broaden the guard to generic audit or compliance work.
+
+The correction recognizes plural logs, events, detections, alerts, correlations, threats and incidents while retaining the negative audit/compliance-only case. A separate regression covers plural evidence. Commit 71c2b46b2a7aad4fabe06e3d382f51d92b9ca975 updates src/lib/resume-evidence.ts and scripts/tests/resume-confirmation-quality.test.mjs. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks remain pending on the updated branch. No protected preview, model call, DOCX export, live score or production deployment occurred.

@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 14 November 2026 — confirmed-skill SIEM plural-context correction
+
+- Continue: finish the approved resume/JD/confirmed-experience alignment fix in PR #385. Exact-head full CI 43548859948 failed at the SIEM context test because a valid source bullet used plural "logs" and "alerts", while the matcher recognized singular-only forms; the positive edit was wrongly reverted (expected 1, actual 2).
+- Code/test commit 71c2b46b2a7aad4fabe06e3d382f51d92b9ca975 changes only the SIEM/logging context morphology and adds a positive/negative regression. It accepts plural logs, events, detections, alerts, correlations, threats and incidents; generic audit/compliance-only work remains rejected.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA are pending on the new head. Local clone/test execution remains unavailable because GitHub DNS does not resolve. Keep PR #385 DRAFT until all exact-head gates and the legitimate protected preview pass; then require owner-authorized baseline/JD/first-person-confirmation DOCX acceptance and final-DOCX Gemini ATS review. Do not claim a live 98% match.
+- The separate WhatsApp PR #380 remains draft behind the protected preview; do not send real WhatsApp tests or replay the 17 Oct incident. Gmail/mobile remains pending two-inbox and narrow-phone acceptance. Contract crawler remains manual/on-demand only; no daily cron or Robert Half automation.
+
 ## 14 November 2026 — PR #380 no-Files retry and timeout wording correction
 
 - Exact-head full CI run 43545490831 on PR #380 head 922fd0af123352a04d4ca335282d7ecba943db5a reached the WhatsApp tests and reported 52/54 passing. Two stale expectations failed: the single-request test expected a provider-failed upload-only inbox copy to be resent without a selected same-account Files source; the fivefold timeout test expected the older phrase "ran out of time just now."
