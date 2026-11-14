@@ -467,3 +467,17 @@ The current-master review confirms these are still separate, gated items:
 | Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
 
 These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
+
+ 
+## 14 November 2026 — Continue: Kompas Windows UAC manifest regression guard
+
+Continue: add and validate a regression guard for the canonical MFit Windows executable's administrator manifest while preserving the user's UAC protections.
+
+- Current master is `3e1033687972230de76747e063afe1a0c1cdea61`. The source already rewrites every Electron RT_MANIFEST to `asInvoker`; `package.mjs` stamps both the inner Electron executable and outer x64 SFX launcher.
+- The canonical `kompas-desktop-latest` release asset is 162,251,677 bytes, updated 13 Nov 2026 18:28:25 UTC, SHA-256 `22e5551df7cb1c3ce1f18a82b25c6bdee210d7c148d9aa40714affe98207fcbd`. Windows package workflow `43482749570` succeeded on master `026c72968e45314ff0a99f701942c966e79f0a1e`; package source version is 0.8.8.
+- Added `legacy/perfact/desktop/scripts/execution-level.test.mjs` for admin/highestAvailable rewriting, already-safe/no-manifest preservation, all manifest resources, and both packaged executable layers. Wired it into the existing Windows `npm run check`.
+- Research, Plan Journal, Plan & Vision and REA record the source evidence and exact limitations. Issue #192 was updated with the audit (comment 6868417213).
+- This is a test-only branch; no runtime behavior changed. The test and Windows workflow are not yet run on the new branch. The exact installed EXE SHA/path, installed PE manifest, and Windows process/event trace remain unavailable. Do not call the UAC issue fixed; do not advise disabling UAC.
+- Coordination: Kompas Continuous Voice Delivery is disabled, so no audio/caption files were edited. MFit Safe Merge Gate is active and was already reviewing other PRs; this branch is isolated from #374–#377. No separate Bible-Keeper automation was present in the accessible automation list.
+
+Continue: open the draft PR and obtain exact-head full CI plus the Windows packaging result; keep issue #192 open until installed-binary and Windows-side evidence identifies the actual elevation requester.
