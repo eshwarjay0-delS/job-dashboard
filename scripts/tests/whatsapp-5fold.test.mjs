@@ -78,6 +78,8 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   let sendError = null
   let hang = false
   const statuses = ['uncertain']
+  const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
+  const selectedFiles = { userDir: `/data/users/${TEST_USER_ID}`, email: 'eshwarjay05@gmail.com', said: 'Eshwar Resume', depth: 0, rel: 'selected.docx', abs: `/data/users/${TEST_USER_ID}/selected.docx` }
   const entries = new Map()
   const blob = {
     ...etagBlobMethods(entries),
@@ -93,7 +95,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('no voice') } },
     'next/server': {},
     '@/lib/storage': { blob, readPath: async () => Buffer.from('eshwarjay05@gmail.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
-    '@/lib/paths': { DATA_DIR: '/data' },
+    '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(acceptable) } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer', company: '', location: '' }) },
@@ -129,12 +131,12 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     },
   }, '\nexport { generate };')
 
-  await generate('15550021', { jdId: 'stuck', jd: 'Cloud security job', resumePath: '/resume.docx' }, 'user')
+  await generate('15550021', { jdId: 'stuck', jd: 'Cloud security job', resumePath: '/resume.docx' }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 0, 'an uncertain Meta upload is not sent again')
   assert.match(said.at(-1), /document upload is unconfirmed/)
 
   file = null
-  await generate('15550021', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
+  await generate('15550021', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 1)
   assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
   assert.match(docs[0].caption, /updated Word file could not be opened/)
@@ -145,7 +147,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   docs.length = 0
   file = Buffer.from('jayeshwar44@gmail.com')
   samePerson = false
-  await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
+  await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 2)
   assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
   assert.match(docs[0].body, /eshwarjay05@gmail.com/)
@@ -156,13 +158,13 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   file = Buffer.from('eshwarjay05@gmail.com')
   samePerson = true
   sendError = new Error('WA sendDoc 500: no')
-  await generate('15550021', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
+  await generate('15550021', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 3)
   assert.match(said.at(-1), /WhatsApp refused it/)
   assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
 
   hang = true
-  const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
+  const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, TEST_USER_ID, 300, selectedFiles)
   const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
   assert.equal(timed, 'done')
   assert.match(said.at(-1), /ran out of time just now/) // Nov4: a timeout says so, instead of the generic tailor failure line.

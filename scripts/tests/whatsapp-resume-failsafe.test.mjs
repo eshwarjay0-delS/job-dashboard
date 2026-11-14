@@ -191,7 +191,7 @@ test('a draft with unverified JD-only claims is held and falls back only to the 
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000)
   assert.equal(noLibrary.docs.length, 0, 'an inbox/session copy is not a fallback')
-  assert.match(noLibrary.said.join('\\n'), /No file was sent/)
+  assert.match(noLibrary.said.join('\\n'), /I did not send a file/)
   assert.match(noLibrary.said.join('\\n'), /saved for retry/)
 })
 

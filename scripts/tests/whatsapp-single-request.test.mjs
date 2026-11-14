@@ -42,7 +42,7 @@ test('concurrent storage claims produce exactly one winner and propagate storage
   const root = await mkdtemp(path.join(tmpdir(), 'wa-claim-'))
   try {
     const { FsStorage, R2Storage } = load('src/lib/storage.ts', {
-      '@/lib/paths': { DATA_DIR: root },
+      '@/lib/paths': { DATA_DIR: root, USER_RESUMES_DIR: `${root}/users` },
       '@/lib/storagePolicy': { storageSegments: key => key.split('/'), storageMode: () => 'local' },
     }, '\nexport { FsStorage, R2Storage };')
     const fs = new FsStorage(root)
@@ -170,7 +170,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
-    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
+    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Eshwar_Resume.docx' },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
     '@/lib/whatsapp-trace': { trace: () => {} },
@@ -216,8 +216,10 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   await generate('123', session, 'user')
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
   assert.equal(deliveries, deliveriesBeforeFailure + 1, 'a successful retry may deliver the completed rewrite')
+  const selectedUser = '00000000-0000-4000-8000-000000000001'
+  const selectedFiles = { userDir: `${root}/users/${selectedUser}`, email: 'same@email.com', said: 'the selected resume', depth: 0, rel: 'selected.docx', abs: `${root}/users/${selectedUser}/selected.docx` }
   unchangedNext = true
-  await generate('123', session, 'user')
+  await generate('123', session, selectedUser, 60_000, selectedFiles)
   assert.equal(runs, 5)
   assert.equal(deliveries, deliveriesBeforeFailure + 2, 'an unchanged rewrite sends only after a successful provider response')
   assert.match(docs.at(-1).caption, /The rewrite produced no changes/)
