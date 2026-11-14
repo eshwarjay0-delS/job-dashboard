@@ -522,3 +522,14 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 14 November 2026 11:25 UTC — Kompas question and voice regression harness repair
+
+**Continue: repair the extracted question/voice test harness on PR #388, then rerun the exact-head source gates.**
+
+- Canonical master is `3e710d50760b4a757d75ad2858ef508f3d36b388`; production alias remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3e1033687972230de76747e063afe1a0c1cdea61`. PR #381's merge `3e710d5` is documentation/tests/Plan/REA only; its Vercel deployment was canceled by the existing Ignored Build Step, and no web runtime difference needs release.
+- PR #388 `40d51772a49c69c7a9f8b0ce71b2d3bcc4bbdf6b` wires five question-framing, one-press, typed-input and voice suites into CI. Full CI `43577901312` reported 60/72 TAP cases passing and 12 failing. The typed tests' VM slices omitted the QW question-window helper block containing `mergeQuestionSpans`; the voice VM's extracted `start()` invoked `currentOutputKey()` without a stub. This branch repairs only those test harness dependencies; it does not change production behavior.
+- Re-run exact-head full CI, Kompas baseline and Plan/REA schema. Inspect all 72 TAP results; do not weaken assertions to make the gate green.
+- Keep PR #388 DRAFT until exact-head source gates and a legitimate protected preview are satisfied. No runtime deployment, real model call, authenticated preview, native Windows/phone test or voice latency claim is made.
+- Kompas Continuous Voice Delivery is disabled; this slice changes only CI test harnesses and does not duplicate its audio/caption runtime work.
