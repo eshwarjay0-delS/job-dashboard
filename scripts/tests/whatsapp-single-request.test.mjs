@@ -42,7 +42,7 @@ test('concurrent storage claims produce exactly one winner and propagate storage
   const root = await mkdtemp(path.join(tmpdir(), 'wa-claim-'))
   try {
     const { FsStorage, R2Storage } = load('src/lib/storage.ts', {
-      '@/lib/paths': { DATA_DIR: root, USER_RESUMES_DIR: `${root}/users` },
+      '@/lib/paths': { DATA_DIR: root },
       '@/lib/storagePolicy': { storageSegments: key => key.split('/'), storageMode: () => 'local' },
     }, '\nexport { FsStorage, R2Storage };')
     const fs = new FsStorage(root)
@@ -217,7 +217,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
   assert.equal(deliveries, deliveriesBeforeFailure + 1, 'a successful retry may deliver the completed rewrite')
   const selectedUser = '00000000-0000-4000-8000-000000000001'
-  const selectedFiles = { userDir: `${root}/users/${selectedUser}`, email: 'same@email.com', said: 'the selected resume', depth: 0, rel: 'selected.docx', abs: `${root}/users/${selectedUser}/selected.docx` }
+  const selectedFiles = { userDir: `/data/users/${selectedUser}`, email: 'same@email.com', said: 'the selected resume', depth: 0, rel: 'selected.docx', abs: `/data/users/${selectedUser}/selected.docx` }
   unchangedNext = true
   await generate('123', session, selectedUser, 60_000, selectedFiles)
   assert.equal(runs, 5)
