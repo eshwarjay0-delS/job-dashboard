@@ -493,3 +493,19 @@ Continue: close the historical Oct 17 WhatsApp evidence chain only when the exac
 - Persisted records confirm backend data exists, but do not prove second-browser, Windows, phone or WhatsApp convergence. The owner-consented same-account device test, tombstone/no-resurrection, transcript propagation and signout/account-isolation acceptance remain open.
 
 Continue: obtain owner-consented browser A/B and installed-Windows acceptance for the existing account-session catalog; do not infer cross-device success from row counts.
+
+## 13 November 2026 — run 11 WhatsApp incomplete-draft recurrence and fallback correction
+
+- Read-only production error aggregation found one new WhatsApp rejection at **2026-11-13T21:45:42Z** on deployment `dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb`: raw/supported coverage 100, `partial=true`, `incomplete=true`, five roles, zero unverified additions, zero JD terms placed, and blockers `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable`, `role_evidence_gaps`. This is not a complete factual match or a delivery receipt.
+- The latest production alias is READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, master SHA `3e1033687972230de76747e063afe1a0c1cdea61`, with both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app`. This is a documentation-only release and does not include the PR #374 runtime fix.
+- The last-hour production error aggregate after that deployment was empty. No warning/error logs were returned for the latest 30-minute window. Request-level logs for the older event could not be fetched because Hobby retains only one hour; the error aggregate remains the available evidence.
+- Source review found PR #374's exact-byte original fallback was only called when no provider key existed. Partial/incomplete provider results still used the looser session-path fallback without an explicit NOT TAILORED label.
+- **PR #374 was extended** on `fix/whatsapp-offline-cas-master-026c729-run11-20261113`:
+  - Route commit `732bf2adffba938a8a701db3f3c108fafeb9f38b` sends partial/incomplete/skills-only initial JD runs only through the exact selected same-account library fallback, labelled `Original resume — NOT TAILORED` and `AI rewrite incomplete`.
+  - Regression commits `9f00de92475b707eabf4e2b78b560b4ee51746d0` and `d77af573da00944156bc3b53dc3f3fa63a0c6484` cover exact bytes, pair consumption after provider acceptance, and no send/pair retention when selected-library and session bytes differ.
+  - Swipe refinement remains unchanged and strict. No real WhatsApp send, model call or R2 production write occurred.
+- The new exact head `d77af573da00944156bc3b53dc3f3fa63a0c6484` has no fresh workflow records yet. The previous green checks on `794ba1151f8761720c55936d15bb0eb9a0a37c5c` do not validate the new commits. Local clone/test execution is blocked by unresolved GitHub DNS.
+- PR #374 remains DRAFT. Its protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; the previous attempt was canceled by the Ignored Build Step. Do not bypass project protection or deploy this unvalidated head.
+- The separate 17 Oct 17:28 Chicago incident remains blocked by the missing generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts.
+
+Continue: obtain exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA checks for `d77af57` through the authorized Safe Merge Gate path; then obtain the legitimate protected preview. Keep #374 DRAFT until those gates pass. Only then use the normal production release and verify the READY alias. Keep #377, #375 and #376 sequenced behind the WhatsApp slice.
