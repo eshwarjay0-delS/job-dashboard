@@ -959,7 +959,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     const libraryBytes = await readSelectedLibraryBytes()
     if (!libraryBytes) return false
     return sendClosest(why, libraryBytes)
-  }  try {
+  }
+  try {
     if (!hasAnyKey(keys)) {
       failureCode = "provider_unavailable"
       if (files && await sendOfflineOriginal()) return
