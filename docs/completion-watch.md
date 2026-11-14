@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 14 November 2026 — spoken answer and live clarify popup
+
+Owner Eshwar, phone 9:04–10:18 AM CT and desktop 9:05 AM CT. The main answer keeps spoken order without inserted First/Claim headers. The clarify box is a separate live popup. Session memory is the last six turns plus stated facts. Grounding stays on the eshwarjay05 resume and that memory. Skip-login and the Gmail snapshot were not edited. Next: one pull request, squash-merge with [ship] when the Kompas checks are green, then one deployment check.
+
 ## 13 November 2026 — approval provenance and release-gate correction
 
 - PR #374 WhatsApp offline fallback / pair-CAS restack: head 794ba1151f8761720c55936d15bb0eb9a0a37c5c; full CI 43503280817, WhatsApp recovery 43503280946, Kompas baseline 43503280979 and Plan/REA 43503280606 all SUCCESS. It remains DRAFT because protected preview dpl_6Ejh8tNfxR7pDYNcxWRp2f2thWV7 was canceled by Ignored Build Step; private KOMPAS_VERCEL_API_TOKEN is still required. No real send or R2 write.

@@ -42,7 +42,9 @@
   function transcriptText() {
     var drawer = document.getElementById("drawerBody");
     var cap = document.getElementById("capText");
-    return [drawer && drawer.textContent, cap && cap.textContent].filter(Boolean).join("\n");
+    var live = [drawer && drawer.textContent, cap && cap.textContent].filter(Boolean).join("\n");
+    if (lastLine && live.indexOf(lastLine) < 0) return live ? live + "\n" + lastLine : lastLine;
+    return live || lastLine;
   }
 
   function applyPrivate(on) {
@@ -59,10 +61,7 @@
     if (!box || box.dataset.asideMounted) return;
     if (overlay && !overlay.contains(box)) return;
     box.dataset.asideMounted = "1";
-    var stage = el("div", "answer-stage");
-    stage.id = "answerStage";
-    box.parentNode.insertBefore(stage, box);
-    stage.appendChild(box);
+    var host = (overlay && overlay.contains(box)) ? overlay : document.body;
 
     var btn = el("button", "aside-toggle");
     btn.id = "asideToggle";
@@ -71,14 +70,14 @@
     btn.setAttribute("aria-expanded", "false");
     btn.title = "Context and questions to ask back";
     btn.textContent = "›";
-    box.appendChild(btn);
+    host.appendChild(btn);
 
     var panel = el("aside", "answer-aside");
     panel.id = "answerAside";
     panel.setAttribute("aria-label", "Answer context");
     panel.hidden = true;
     panel.appendChild(el("p", "aside-empty", "Context shows up with the next answer."));
-    stage.appendChild(panel);
+    host.appendChild(panel);
 
     btn.addEventListener("click", function () { setOpen(!panel.classList.contains("is-open")); });
     setOpen(readOpen());
@@ -194,6 +193,16 @@
     bar.appendChild(label);
     bar.appendChild(next);
     panel.appendChild(bar);
+    if (aside.partial) panel.appendChild(el("p", "aside-live", aside.partial));
+    var breakdown = aside.breakdown || {};
+    ["Claim", "Context", "Result"].forEach(function (name) {
+      var line = breakdown[name.toLowerCase()];
+      if (!line) return;
+      var section = el("section", "aside-break");
+      section.appendChild(el("h3", "", name));
+      section.appendChild(el("p", "aside-breakdown", line));
+      panel.appendChild(section);
+    });
     if (aside.summary) {
       var sum = el("p", "aside-summary", aside.summary);
       var sumWhy = whyFor(aside, aside.summary);
@@ -302,7 +311,7 @@
 
   function brainShown(action, text, claim) {
     if (action === "summarize") return String(text || "").split(/\s+/).slice(0, 12).join(" ") + ".";
-    if (action === "booster") return "Yeah, I'd stay with that point.";
+    if (action === "booster") return "I can speak to that from the work on the resume.";
     if (action === "clarify") return "Want me to take that in one pass?";
     if (action === "short-answer") return "Not directly.";
     if (action === "flag-contradiction" && claim) return "I'll stay with what I already said: " + claim.span.replace(/[.?!]+$/, "") + ".";
@@ -393,10 +402,136 @@
     if (!current || manual) return;
     paintMode(current);
   });
+  var lastLine = "";
   function hear(who, text, source) {
     var clean = String(text || "").replace(/\s+/g, " ").trim();
     if (!clean) return;
-    publish("ear.transcript", { who: who === "You" ? "You" : "Them", source: source || (who === "You" ? "mic" : "computer"), text: clean });
+    var speaker = who === "You" ? "You" : "Them";
+    lastLine = speaker + ": " + clean;
+    publish("ear.transcript", { who: speaker, source: source || (speaker === "You" ? "mic" : "computer"), text: clean });
+    noteLive();
+  }
+
+  var liveOn = false;
+  var resumeText = "";
+  var liveTimer = 0;
+  var liveKey = "";
+  var liveDirty = false;
+  var FILLER = /the reason that mattered|the pressure on it was|i'?d stay with|the part i'?d stay with|sat on that seat|so the way (?:we|i) approached it|is the part i'?d stay with/i;
+
+  function sessionOn() {
+    if (liveOn) return true;
+    var btn = document.getElementById("startBtn");
+    return !!(btn && (btn.classList.contains("on") || String(btn.textContent || "") === "Stop"));
+  }
+  function questionText() {
+    var q = document.getElementById("question");
+    return String(q && q.textContent || "").replace(/\s+·\s+.*$/, "").replace(/\s+/g, " ").trim();
+  }
+  function memoryFacts() {
+    try {
+      var id = (typeof current !== "undefined" && current && current.id) || "live";
+      var raw = sessionStorage.getItem("kompas-memory:" + id);
+      var mem = raw ? JSON.parse(raw) : null;
+      return mem && Array.isArray(mem.facts) ? "\n" + mem.facts.join("\n") : "";
+    } catch (e) { return ""; }
+  }
+  function pageResume() {
+    if (resumeText) return resumeText;
+    try {
+      if (typeof docsGet === "function") return docsGet().filter(function (d) { return d && d.kind === "resume" && d.text; }).map(function (d) { return d.text; }).join("\n");
+    } catch (e) {}
+    return "";
+  }
+  function resumeLines(resume) {
+    return String(resume || "").split("\n").map(function (line) {
+      return line.replace(/^[\s•▪●\-*]+/, "").trim();
+    }).filter(function (line) {
+      if (!line || line.split(/\s+/).length < 6) return false;
+      if (/^[^:]{0,56}:\s+\S/.test(line)) return false;
+      if (/\b(?:using|via|with|for|and|to|of|the|a|an)\.?$/i.test(line)) return false;
+      if (/\b(?:19|20)\d{2}\b/.test(line)) return false;
+      return !FILLER.test(line);
+    }).map(function (line) {
+      var spoken = /^(?:owned|built|worked|checked|led|ran|wrote|designed|handled|monitored|validated)\b/i.test(line)
+        ? "I " + line.charAt(0).toLowerCase() + line.slice(1)
+        : line;
+      return /[.!?]$/.test(spoken) ? spoken : spoken.replace(/[,:;]+$/, "") + ".";
+    });
+  }
+  function liveAside(question, transcript, resume) {
+    var lines = resumeLines(resume);
+    var heard = String(transcript || "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    var last = heard.length ? heard[heard.length - 1].replace(/^(?:Them|You):\s*/i, "") : "";
+    var bag = (question + " " + last).toLowerCase();
+    lines.sort(function (a, b) {
+      var score = function (line) { return line.toLowerCase().split(/\s+/).filter(function (w) { return w.length > 4 && bag.indexOf(w) >= 0; }).length; };
+      return score(b) - score(a);
+    });
+    return {
+      question: question,
+      partial: last,
+      mode: /\?$/.test(last) ? "questions" : "boosters",
+      breakdown: { claim: lines[0] || "", context: lines[1] || "", result: lines[2] || "" },
+      context: { leads: lines.slice(0, 3), touchPoints: lines.slice(0, 4).map(function (line) { return line.split(/\s+/).slice(0, 8).join(" "); }) },
+      questions: ["What part of this do you want first?", "Want me to keep this short and stop for you?"],
+      boosters: lines.slice(0, 2),
+      summary: "",
+      sayNow: "",
+    };
+  }
+  function paintLocal() {
+    var aside = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
+    if (!aside.partial && !aside.breakdown.claim && !aside.question) return;
+    if (!aside.breakdown.claim && aside.question) aside.breakdown.claim = aside.question;
+    acceptFresh(aside);
+  }
+  function acceptFresh(aside) {
+    if (!aside || !aside.context || !Array.isArray(aside.context.leads) || !Array.isArray(aside.questions)) return;
+    var key = stem(aside.question);
+    var last = history[history.length - 1];
+    if (last && stem(last.question) === key) {
+      history[history.length - 1] = aside;
+      if (byQuestion.length) byQuestion[byQuestion.length - 1] = { key: key, aside: aside };
+      else byQuestion.push({ key: key, aside: aside });
+      if (view === history.length - 1) render(aside);
+      return;
+    }
+    accept(aside);
+  }
+  function flushLive() {
+    liveTimer = 0;
+    if (!liveDirty) return;
+    if (!sessionOn() || (typeof document !== "undefined" && document.visibilityState === "hidden")) return;
+    var key = transcriptText() + "\n" + questionText();
+    if (key === liveKey) { liveDirty = false; return; }
+    liveKey = key;
+    liveDirty = false;
+    var local = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
+    if (!local.breakdown.claim && local.question) local.breakdown.claim = local.question;
+    acceptFresh(local);
+    if (typeof fetch !== "function") return;
+    var payload = JSON.stringify({ question: questionText(), transcript: transcriptText(), resume: pageResume() + memoryFacts() });
+    fetch("/api/kompas/aside", { method: "POST", headers: { "content-type": "application/json" }, body: payload }).then(function (res) {
+      return res && res.ok && res.json ? res.json() : null;
+    }).then(function (data) {
+      if (data && data.aside) acceptFresh(data.aside);
+    }).catch(function () {});
+  }
+  function noteLive() {
+    if (!sessionOn()) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") { liveDirty = true; return; }
+    liveDirty = true;
+    paintLocal();
+    if (liveTimer) return;
+    liveTimer = setTimeout(flushLive, 1000);
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible" && liveDirty) noteLive();
+    });
+    var start = document.getElementById("startBtn");
+    if (start) start.addEventListener("click", function () { setTimeout(function () { liveOn = start.classList.contains("on") || start.textContent === "Stop"; }, 0); });
   }
   function onTranscript() {
     var live = transcriptText();
@@ -466,7 +601,7 @@
     };
   }
 
-  window.KompasAnswerAside = { mount: mount, setOpen: setOpen, accept: accept, watch: watch, stem: stem, modeFrom: modeFrom, applyPrivate: applyPrivate, perceive: perceive, hear: hear, brain: function () { return brain; } };
+  window.KompasAnswerAside = { mount: mount, setOpen: setOpen, accept: accept, watch: watch, stem: stem, modeFrom: modeFrom, applyPrivate: applyPrivate, perceive: perceive, hear: hear, brain: function () { return brain; }, markLive: function (on) { liveOn = !!on; }, setResume: function (text) { resumeText = String(text || ""); }, flushLive: flushLive, liveAside: liveAside, noteLive: noteLive };
   installFetch();
   if (document.getElementById("answer")) mount();
   else document.addEventListener("DOMContentLoaded", mount);

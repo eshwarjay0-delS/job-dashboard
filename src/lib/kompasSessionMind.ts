@@ -127,7 +127,7 @@ export function longStatementCue(text: string, mode: "questions" | "boosters" = 
     ? ""
     : mode === "questions"
       ? "Want me to answer that in one pass, or take the last part first?"
-      : "Yeah, I'd stay with that point."
+      : "I can speak to that from the work on the resume."
   return { long, words: list.length, seconds: Math.round(seconds * 10) / 10, summary, sayNow, mode }
 }
 

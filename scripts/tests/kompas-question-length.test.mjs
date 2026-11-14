@@ -70,6 +70,23 @@ test("the prompt no longer gives a second word quota", () => {
   assert.match(prompt, /A follow-up is shorter than the opener/)
 })
 
+test("measured mocks: done, used, and how-do-you are not the short yes/no band", () => {
+  const done = dissectQuestion("Have you done Splunk detections?")
+  assert.equal(lengthKind("Have you done Splunk detections?", done.shape), "done")
+  assert.equal(done.modes.engineer.aimWords, 85)
+  assert.ok(done.modes.engineer.maxWords >= 85)
+  const used = dissectQuestion("How have you used SailPoint?")
+  assert.equal(lengthKind("How have you used SailPoint?", used.shape), "used")
+  assert.equal(used.modes.engineer.aimWords, 85)
+  const howto = dissectQuestion("How do you validate a SIEM rule?")
+  assert.equal(lengthKind("How do you validate a SIEM rule?", howto.shape), "howto")
+  assert.equal(howto.modes.engineer.aimWords, 91)
+  const clarifier = dissectQuestion("Do you use Splunk?")
+  assert.equal(clarifier.modes.engineer.maxWords, 40)
+  const svc = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
+  assert.match(svc, /cardControls\.length === "long"\) plan\.words = Math\.min\(300, Math\.round\(plan\.words \* 1\.5\)\)/)
+})
+
 test("a design draft keeps one named checkpoint and does not fill a second mode with padding", () => {
   const q = "Design a rate limiter for the public API."
   const director = draftSpokenAnswer(q, "director", RESUME)

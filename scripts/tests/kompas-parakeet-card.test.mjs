@@ -25,17 +25,16 @@ test("a simple definition stays one block with no section headings", () => {
   assert.doesNotMatch(presentSpokenAnswer(q, a), /\*\*/)
 })
 
-test("a complex contribution answer becomes headed bullets and a breath mark", () => {
+test("a complex contribution answer keeps sentence order and does not add section headings", () => {
   const q = "What was the state of the system when you joined and what were your specific contributions?"
   const a = "I joined two months before launch. Downstream calls were failing. I implemented queue-based staging and an object storage backup. I added a circuit breaker and request batching. The nightly path stopped dropping rows."
   assert.equal(answerIsComplex(q, a), true)
   const card = presentSpokenAnswer(q, a)
-  assert.match(card, /\*\*Claim\*\*/)
-  assert.match(card, /\*\*Context\*\*/)
-  assert.match(card, /\*\*Action\*\*/)
-  assert.match(card, /\*\*Close\*\*/)
-  assert.match(card, /^-\s/m)
-  assert.match(card, /^…$/m)
+  assert.doesNotMatch(card, /\*\*(?:Claim|Context|Action|Result|Close)\*\*/)
+  assert.doesNotMatch(card, /^…$/m)
+  assert.doesNotMatch(card, /\b(?:First|Then|Finally),/)
+  assert.ok(card.indexOf("joined two months") < card.indexOf("Downstream calls"))
+  assert.ok(card.indexOf("circuit breaker") < card.indexOf("stopped dropping rows"))
   assert.equal(presentSpokenAnswer(q, card), card)
 })
 
@@ -46,8 +45,8 @@ test("the left card never shows Claim, Context, Action, Result, or Close as labe
   const source = "**Claim**\n- I joined two months before launch.\n…\n**Context**\n- First, downstream calls were failing.\n**Action**\n- Then, I implemented queue-based staging.\n**Result**\n- The result: the path stopped dropping rows.\n**Close**\n- The nightly path held."
   const lines = ctx.answerLines(source, "What were your contributions?")
   assert.equal(lines.some((line) => line.kind === "head" || line.kind === "pauseline"), false)
-  assert.ok(lines.some((line) => line.kind === "bullet" && /joined two months/.test(line.t)))
-  assert.ok(lines.some((line) => line.kind === "bullet" && /nightly path held/.test(line.t)))
+  assert.ok(lines.some((line) => /joined two months/.test(line.t)))
+  assert.ok(lines.some((line) => /nightly path held/.test(line.t)))
   const ul = dom.window.document.getElementById("answer")
   for (const line of lines) {
     const li = dom.window.document.createElement("li")
@@ -59,7 +58,7 @@ test("the left card never shows Claim, Context, Action, Result, or Close as labe
   assert.equal(ul.querySelector(".pauseline"), null)
   assert.doesNotMatch(ul.textContent, /\b(?:Claim|Context|Action|Result|Close)\b/)
   assert.match(ul.textContent, /I joined two months before launch/)
-  assert.match(ul.textContent, /The result: the path stopped dropping rows/)
+  assert.match(ul.textContent, /path stopped dropping rows/)
   assert.equal(ul.textContent.includes("…"), false)
   assert.equal(ul.textContent.includes("**"), false)
 })

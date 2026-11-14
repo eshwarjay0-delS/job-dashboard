@@ -87,29 +87,21 @@ test("every answer request carries config.format, length, tone and star from liv
   assert.match(css, /\.card-prefs/);
 });
 
-test("mid-call control changes persist on the session and apply to the next card", () => {
+test("stored format and simple/off prefs do not force the next card", () => {
   const els = {
     liveFormat: { value: "full_script" },
     liveLength: { value: "short" },
     liveTone: { value: "formal" },
     liveStar: { value: "on" },
   };
-  const saved = [];
-  const current = { id: "s1", length: "balanced", tone: "simple", format: "script_bullets", star: false };
+  const current = { id: "s1", length: "long", tone: "formal", format: "bullets", star: true };
   const s = load({
     current,
     els,
     $: (id) => els[id] || null,
-    saveSession: (sess) => saved.push({ ...sess }),
+    saveSession: () => {},
   });
-  const k = s.persistLiveAnswerControls();
-  assert.equal(JSON.stringify(k), JSON.stringify({ format: "full_script", length: "short", tone: "formal", star: true }));
-  assert.equal(current.format, "full_script");
-  assert.equal(current.length, "short");
-  assert.equal(current.tone, "formal");
-  assert.equal(current.star, true);
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0].star, true);
+  assert.equal(JSON.stringify(s.readLiveAnswerControls()), JSON.stringify({ format: "full_script", length: "balanced", tone: "simple", star: false }));
 });
 
 test("stream: title first, then a partial card (opening line), then done.card (script + 2–4 bullets)", () => {

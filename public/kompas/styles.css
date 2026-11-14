@@ -218,7 +218,7 @@ html.kompas-auth-off #view-login{display:none !important}
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:4.65em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:max-height .5s cubic-bezier(.22,1,.36,1),margin-bottom .5s cubic-bezier(.22,1,.36,1),opacity .3s linear}
-.card.q-away .q{opacity:0;max-height:0;margin-bottom:0;overflow:hidden;pointer-events:none}
+.card.q-away .q{opacity:1;max-height:4.65em;margin-bottom:14px;overflow-x:hidden;overflow-y:auto;pointer-events:auto}
 /* The desktop panel (perfACT desktop/panel.css, injected by the shell) gives the question 6.2em with more weight than the
    two rules above and only fades it when it scrolls away, so on the desktop an invisible question held 99px plus margins
    over the answer (measured 27 Oct 2026 on its layout: answer top 342px collapsed vs 229px with this). These outweigh it:
@@ -236,7 +236,7 @@ html.desktop-focus #view-copilot .card .q{max-height:calc(4.65em + 15px)}
 #view-copilot .q .cap-text{display:block;flex:1 1 0;max-height:calc(3 * 1.45em);min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;overflow-wrap:anywhere;white-space:normal}
 #view-copilot .card .q.live{max-height:7em}
 html.desktop-focus #view-copilot .card .q.live{max-height:calc(7em + 15px)}
-#view-copilot .card.q-away .q{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important;overflow:hidden!important}
+#view-copilot .card.q-away .q{max-height:4.65em!important;margin-bottom:14px!important;overflow-x:hidden!important;overflow-y:auto!important;opacity:1!important}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}
 .a ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
@@ -1096,6 +1096,8 @@ html.kd .kd-grip-ne,html.kd .kd-grip-nw,html.kd .kd-grip-se,html.kd .kd-grip-sw{
   max-width:12rem;
   font-size:13px;
 }
+.card-prefs,#liveFormat,#liveLength,#liveTone,#liveStar{display:none !important}
+html.kd .card-prefs,html.kd #liveFormat,html.kd #liveLength,html.kd #liveTone,html.kd #liveStar{display:none !important}
 #view-copilot .overlay .bar-actions .card-prefs{
   gap:6px;
 }
@@ -1110,8 +1112,8 @@ html.kd .kd-grip-ne,html.kd .kd-grip-nw,html.kd .kd-grip-se,html.kd .kd-grip-sw{
 
 /* The manually initiated desktop screen capture has its own visible action.
    Keep AI Answer most prominent; the single-row toolbar may scroll on narrow panels. */
-html.kd #screenCaptureAnswerBtn{display:inline-flex !important;align-items:center;justify-content:center;white-space:nowrap;flex:0 0 auto;font-size:13px;padding:0 10px;height:32px;min-height:32px;max-height:32px;gap:4px}
-html.kd #screenCaptureAnswerBtn:hover{border-color:var(--line-strong);background:var(--surface-2)}
+html.kd #screenCaptureAnswerBtn,
+html.kd #screenBtn{display:none !important}
 
 /* Phone: native-like full-screen live view (owner, 31 Oct 2026: the mobile
    version was unusable — controls wrapped and cramped, the Level select
@@ -1142,22 +1144,33 @@ html.kd .kd-bar{
 html.kd .kd-left{flex:0 0 auto !important}
 html.kd #view-copilot{transform:none !important}
 html.kd #view-copilot .overlay{overflow:visible !important}
+html.kd .kd-bar,html.kd #kdBar{
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  display:flex !important;
+  justify-content:space-between !important;
+  overflow:visible !important;
+}
+html.kd .kd-left,html.kd .kd-livetools,html.kd .kd-right{flex:1 1 0 !important;min-width:0 !important}
+html.kd .kd-livetools,html.kd .kd-right{justify-content:space-evenly !important}
 html.kd #view-copilot .overlay .bar-actions{
-  position:absolute !important;
-  top:-48px !important;
-  left:200px !important;
-  right:250px !important;
+  position:relative !important;
+  top:auto !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
   z-index:140 !important;
-  flex:0 0 48px !important;
-  height:48px !important;
+  flex:0 0 auto !important;
+  height:auto !important;
   min-height:48px !important;
-  max-height:48px !important;
-  flex-wrap:nowrap !important;
+  max-height:none !important;
+  flex-wrap:wrap !important;
   align-items:center !important;
-  justify-content:flex-start !important;
-  gap:4px !important;
-  padding:0 4px !important;
-  overflow:hidden !important;
+  justify-content:space-evenly !important;
+  gap:6px !important;
+  padding:4px 8px !important;
+  overflow:visible !important;
   background:transparent !important;
   pointer-events:none !important;
   font-size:12px !important;
@@ -1249,12 +1262,18 @@ html.kd.desktop-focus #view-copilot .content{
 html.kd #view-copilot #card,
 html.kd.desktop-focus #view-copilot #card,
 html.kd #view-copilot .q,
-html.kd #view-copilot .a,
-html.kd #view-copilot #answer{
+html.kd #view-copilot .a{
   opacity:1 !important;
-  background:#fdfcf9 !important;
-  background-color:#fdfcf9 !important;
+  background:rgba(253,252,249,var(--panel-a)) !important;
+  background-color:rgba(253,252,249,var(--panel-a)) !important;
   background-image:none !important;
+}
+html.kd #view-copilot #answer,
+html.kd #view-copilot #answer li{
+  color:#15140f !important;
+  font-weight:var(--answer-weight, 560) !important;
+  text-shadow:0 0 0.8px rgba(21,20,15,var(--answer-shadow, 0));
+  background:transparent !important;
 }
 html.kd #view-copilot .q,
 html.kd #view-copilot .q span,
@@ -1269,18 +1288,25 @@ html.kd #kdBar,
 html.kd #view-copilot .bar,
 html.kd #view-copilot .manual,
 html.kd #view-copilot .statusline{
-  background-color:rgba(253,252,249,max(var(--panel-a),0.94)) !important;
+  background-color:rgba(253,252,249,var(--panel-a)) !important;
 }
 html.kd #view-copilot #card,
 html.kd.desktop-focus #view-copilot #card,
 html.kd #view-copilot .q,
 html.kd #view-copilot .a,
-html.kd #view-copilot .a-head,
-html.kd #view-copilot #answer{
+html.kd #view-copilot .a-head{
   opacity:1 !important;
-  background:#fdfcf9 !important;
-  background-color:#fdfcf9 !important;
+  background:transparent !important;
+  background-color:rgba(253,252,249,var(--panel-a)) !important;
   background-image:none !important;
+}
+html.kd #view-copilot #answer,
+html.kd #view-copilot #answer li{
+  opacity:1 !important;
+  color:#15140f !important;
+  font-weight:var(--answer-weight, 560) !important;
+  text-shadow:0 0 0.8px rgba(21,20,15,var(--answer-shadow, 0));
+  background:transparent !important;
 }
 html.kd #view-copilot .q,
 html.kd #view-copilot .q span,
@@ -1515,15 +1541,16 @@ html.desktop-focus #view-copilot .q{
 html.kd #view-copilot .card.q-away .q-row,
 html.kd #view-copilot .card.q-away .q,
 html.kd #view-copilot .card.q-away .q-row .q{
-  max-height:0 !important;
-  min-height:0 !important;
-  height:0 !important;
-  margin:0 !important;
-  padding:0 !important;
+  max-height:34% !important;
+  min-height:4.2em !important;
+  height:auto !important;
+  margin:0 0 12px !important;
+  padding:0 2px !important;
   border:0 !important;
-  opacity:0 !important;
-  overflow:hidden !important;
-  pointer-events:none !important;
+  opacity:1 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  pointer-events:auto !important;
 }
 html.kd #view-copilot .a,
 html.kd #view-copilot .a-head{
@@ -1534,7 +1561,7 @@ html.kd #view-copilot .a-head{
   margin:0 0 2px !important;
   position:relative !important;
   z-index:1 !important;
-  background:#fdfcf9 !important;
+  background:rgba(253,252,249,var(--panel-a)) !important;
 }
 /* The question is the whole ask, not a three-line tail. The answer uses the space under it.
    On a narrow window the session buttons wrap onto a second row instead of covering each other
@@ -1571,7 +1598,7 @@ html.kd #view-copilot #answer{
     overflow:visible !important;
     row-gap:6px !important;
     padding:6px 8px !important;
-    background:#fdfcf9 !important;
+    background:rgba(253,252,249,var(--panel-a)) !important;
     z-index:40 !important;
   }
   html.kd .update-pill{
@@ -1602,7 +1629,7 @@ html.kd #view-copilot #answer{
 }
 
 /* Live shared-tab preview (PIP-style) inside the session overlay, top-left. */
-.tab-preview{position:absolute;left:12px;top:56px;z-index:8;width:280px;background:#111;border:1px solid var(--line,#2a2a30);border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.tab-preview,#tabPreview{display:none !important;position:absolute;left:12px;top:56px;z-index:8;width:280px;background:#111;border:1px solid var(--line,#2a2a30);border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .tab-preview.hidden,[hidden].tab-preview{display:none}
 .tab-preview-stage{position:relative}
 .tab-preview video{display:block;width:100%;height:158px;object-fit:contain;background:#000}

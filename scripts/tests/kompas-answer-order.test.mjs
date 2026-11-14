@@ -13,26 +13,22 @@ const QUESTION = "What was the state of the system when you joined and what were
 const DRAFT = "I joined two months before launch. Downstream calls were failing. I implemented queue-based staging and an object storage backup. I added a circuit breaker and request batching. The nightly path stopped dropping rows. I cut the open queue by 40 percent."
 const RESUME = "Cut the open queue by 40 percent after the staging change."
 
-test("the same answer is ordered the same way twice", () => {
+test("the same answer is ordered the same way twice, without section headers", () => {
   const once = presentSpokenAnswer(QUESTION, DRAFT, RESUME)
   const twice = presentSpokenAnswer(QUESTION, DRAFT, RESUME)
   assert.equal(once, twice)
-  assert.deepEqual(sectionOrder(once), ["Claim", "Context", "Action", "Result", "Close"])
-  assert.deepEqual(sectionOrder(once).filter((name) => SECTION_ORDER.includes(name)), sectionOrder(once))
+  assert.deepEqual(sectionOrder(once), [])
+  assert.ok(SECTION_ORDER.includes("Claim"))
+  assert.doesNotMatch(once, /\*\*(?:Claim|Context|Result)\*\*/)
 })
 
-test("the claim comes before the evidence, and a resume number lands in the result", () => {
+test("bullet order stays, a sourced number stays, and First is not inserted", () => {
   const card = presentSpokenAnswer(QUESTION, DRAFT, RESUME)
-  const order = sectionOrder(card)
-  assert.ok(order.indexOf("Claim") < order.indexOf("Context"))
-  assert.ok(order.indexOf("Context") < order.indexOf("Action"))
-  assert.ok(order.indexOf("Action") < order.indexOf("Result"))
-  const result = card.split("**Result**")[1] || ""
-  assert.match(result, /\b40\b/)
-  assert.doesNotMatch(card.split("**Result**")[0], /\b40\b/)
-  assert.match(card, /First, /)
-  assert.match(card, /Then, /)
-  assert.match(card, /The result: /)
+  assert.ok(card.indexOf("joined two months") < card.indexOf("Downstream calls"))
+  assert.ok(card.indexOf("queue-based staging") < card.indexOf("40 percent"))
+  assert.match(card, /\b40\b/)
+  assert.doesNotMatch(card, /\b(?:First|Then|Finally),/)
+  assert.doesNotMatch(card, /The result:/)
 })
 
 test("a number the resume does not hold is not spoken", () => {

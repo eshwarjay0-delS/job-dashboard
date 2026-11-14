@@ -6,18 +6,19 @@ const html = readFileSync("public/kompas/index.html", "utf8")
 const app = readFileSync("public/kompas/app.js", "utf8")
 const styles = readFileSync("public/kompas/styles.css", "utf8")
 
-test("desktop live toolbar contains Screen Answer immediately next to AI Answer", () => {
+test("desktop live toolbar keeps questions and answers, and does not show screen sharing", () => {
   const answer = html.indexOf('id="answerBtn"')
-  const screen = html.indexOf('id="screenCaptureAnswerBtn"')
+  const start = html.indexOf('id="startBtn"')
   const auto = html.indexOf('id="autoBtn"')
-  assert.ok(answer > 0 && screen > answer && auto > screen)
-  assert.match(html, /id="screenCaptureAnswerBtn"[^>]*title="Caption Capture:[^"]*"/)
+  assert.ok(start > 0 && answer > start && auto > answer)
+  assert.match(html, /class="pill action hidden" id="screenCaptureAnswerBtn"/)
 })
-test("screen capture is enabled in desktop even when computer audio is unsupported", () => {
+test("screen sharing stays hidden on the desktop window", () => {
   const audioBlock = app.slice(app.indexOf("const NO_SYS_AUDIO"), app.indexOf("function syncSrc()"))
   assert.match(audioBlock, /if \(NO_SYS_AUDIO\) \$\("sysBtn"\)\.classList\.add\("hidden"\)/)
-  assert.doesNotMatch(audioBlock, /\$\("screenBtn"\)\.classList\.add\("hidden"\)/)
-  assert.match(audioBlock, /if \(window\.kompasDesktop\) \{[\s\S]*?\$\("screenCaptureAnswerBtn"\)\?\.classList\.remove\("hidden"\)/)
+  assert.match(audioBlock, /\$\("screenBtn"\)\?\.classList\.add\("hidden"\)/)
+  assert.match(audioBlock, /\$\("screenCaptureAnswerBtn"\)\?\.classList\.add\("hidden"\)/)
+  assert.doesNotMatch(audioBlock, /screenCaptureAnswerBtn"\)\?\.classList\.remove\("hidden"\)/)
 })
 test("visible button, menu and keyboard shortcut share the same capture flow", () => {
   assert.match(app, /\$\("screenBtn"\)\.onclick = analyseScreen/)
@@ -30,9 +31,9 @@ test("visible button, menu and keyboard shortcut share the same capture flow", (
   assert.doesNotMatch(app, /window\.KompasScreenReview\(\{/)
   assert.match(app, /generateAnswer\(first\.display, card, \{ pinned: true, derived: first\.answerQuestion, source: "screen", frameKind: first\.kind \}\)/)
 })
-test("desktop-only styling does not expose the extra toolbar button in web mode", () => {
+test("desktop styling hides the screen-share button and the visible focus stays on the answer", () => {
   assert.match(html, /class="pill action hidden" id="screenCaptureAnswerBtn"/)
-  assert.match(styles, /html\.kd #screenCaptureAnswerBtn\{display:inline-flex !important/)
+  assert.match(styles, /html\.kd #screenCaptureAnswerBtn,\s*html\.kd #screenBtn\{display:none !important/)
 })
 
 test("native Windows screenshot bridge precedes browser display capture fallback", () => {

@@ -1,3 +1,4 @@
+import { dissectQuestion, formatForBand, lengthKind } from "./kompasDissection.ts"
 import { cleanHeardQuestion } from "./kompasLongContext.ts"
 
 /**
@@ -31,16 +32,6 @@ export function answerIsComplex(question: string, text: string): boolean {
   return sentences.length >= 4 || words >= 70
 }
 
-function digitsIn(text: string): string[] {
-  return String(text || "").match(/\d[\d,.]*/g) || []
-}
-
-function numberIsSourced(sentence: string, source: string): boolean {
-  const nums = digitsIn(sentence)
-  if (!nums.length) return false
-  return nums.every((n) => source.includes(n.replace(/[.,]+$/, "")))
-}
-
 /** Drop a figure the resume and the question do not already contain. */
 export function withoutInventedNumbers(sentence: string, source: string): string {
   return String(sentence || "")
@@ -51,23 +42,54 @@ export function withoutInventedNumbers(sentence: string, source: string): string
     .trim()
 }
 
-function uncap(sentence: string): string {
-  return sentence.replace(/^([A-Z])([a-z])/, (_, a: string, b: string) => a.toLowerCase() + b)
+const HEADER = /^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/
+const META_LINE = /\b(?:that (?:part|detail) is not in the sources|not in the (?:sources|resume)|no evidence for|sources or evidence)\b/i
+const DICTIONARY = /,\s+or\s+[“"'][^”"']{1,90}[”"'],?\s+is\b/i
+const GENERIC_THIRD = /(?:^|\b)(?:(?:first|then|next|finally)\b[:,]?\s+)?in general,\s+teams\b|\bteams (?:start|see|design|build|run)\b|\b(?:next|finally) they\b|\bthey (?:build|run)\b/i
+
+/** Peel a renderer artifact. A First the model actually wrote stays. */
+export function peelDisplayArtifact(sentence: string): string {
+  let s = String(sentence || "").trim()
+  let guard = 0
+  while (s && guard++ < 8) {
+    const next = s
+      .replace(/^(?:[-•*]|\d+[.)])\s+/, "")
+      .replace(/^(?:first|then|next|finally|the result)\b[:,]\s+[-–—]\s+/i, "")
+      .replace(/^(?:first|then|next|finally),\s+(?=(?:first|then|next|finally)\b)/i, "")
+      .replace(/^(?:first|then|next|finally)\b[:,]?\s+(?=once that is established\b)/i, "")
+      .replace(/^once that is established\b[:,]?\s+/i, "")
+      .replace(/^in addition\b[:,]?\s+/i, "")
+      .replace(/^the result\s*:\s+/i, "")
+      .replace(/^(?:first|then|next|finally)\b[:,]?\s+(?=(?:failure mode|root cause|touch ?point)\s*:)/i, "")
+      .replace(/^(?:failure mode|root cause|touch ?point)\s*:\s*/i, "")
+      .trim()
+    if (next === s) break
+    s = next
+  }
+  return s.replace(/^in general,\s+(?=(?:I|we|my|our)\b)/i, "").trim()
 }
 
-function signpost(section: AnswerSection, sentence: string): string {
-  const clean = uncap(sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, ""))
-  if (section === "Context") return /^first\b/i.test(sentence) ? sentence : `First, ${clean}`
-  if (section === "Action") return /^then\b/i.test(sentence) ? sentence : `Then, ${clean}`
-  if (section === "Result") return /^the result\b/i.test(sentence) ? sentence : `The result: ${clean}`
-  return sentence
+function genericThirdPerson(sentence: string): boolean {
+  if (/\bin general,\s+teams\b/i.test(sentence) || /\bteams (?:start|see|design|build|run)\b/i.test(sentence)) return true
+  if (/\b(?:I|we|my|our)\b/.test(sentence)) return false
+  return GENERIC_THIRD.test(sentence)
 }
 
-function bucket(sentence: string, source: string): AnswerSection {
-  if (numberIsSourced(sentence, source)) return "Result"
-  if (/\b(?:result|stopped|outcome)\b/i.test(sentence)) return "Close"
-  if (/\b(?:I|we)\s+(?:checked|built|added|implemented|sent|reviewed|mapped|held|would|joined|ran)\b/i.test(sentence)) return "Action"
-  return "Context"
+function ordinalStart(sentence: string): boolean {
+  return /^first\b/i.test(sentence)
+}
+
+/** At most one leading First. Later ones were the repeated signpost. */
+function oneLeadingFirst(lines: string[]): string[] {
+  let seen = false
+  const out: string[] = []
+  for (const line of lines) {
+    if (!ordinalStart(line)) { out.push(line); continue }
+    if (!seen) { seen = true; out.push(line); continue }
+    const rest = line.replace(/^first\b[:,]?\s+/i, "").trim()
+    if (rest) out.push(rest.replace(/^([a-z])/, (letter) => letter.toUpperCase()))
+  }
+  return out
 }
 
 const INTRO_ASK = /^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i
@@ -88,28 +110,38 @@ export function plainIntroAnswer(text: string): string {
   return sentences.join(" ")
 }
 
-/** Format a finished answer for the card. Idempotent. No random choice. */
+/**
+ * The card keeps the model's order. It does not insert First, Then, or Finally,
+ * and it does not regroup sentences under Claim, Context, or Result.
+ */
 export function presentSpokenAnswer(question: string, text: string, source = ""): string {
+  const asked = cleanHeardQuestion(question)
   const raw = String(text || "").trim()
   if (!raw) return raw
-  if (INTRO_ASK.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw)
-  if (/\*\*(?:Claim|Context|Action|Result|Close)\*\*/.test(raw)) return raw
-  const allowed = `${source}\n${question}`
-  const sentences = answerSentences(raw).map((s) => withoutInventedNumbers(s, allowed)).filter((s) => answerWordCount(s) >= 3)
-  if (!answerIsComplex(question, sentences.join(" ")) || sentences.length < 2) return sentences.join(" ") || raw
-  const groups: Record<AnswerSection, string[]> = { Claim: [], Context: [], Action: [], Result: [], Close: [] }
-  groups.Claim.push(sentences[0])
-  for (const sentence of sentences.slice(1)) groups[bucket(sentence, allowed)].push(sentence)
-  const blocks: string[] = []
-  for (const title of SECTION_ORDER) {
-    const group = groups[title]
-    if (!group.length) continue
-    if (blocks.length) blocks.push("…")
-    blocks.push(`**${title}**`)
-    const tight = group.length <= 4 ? group : [...group.slice(0, 3), group.slice(3).join(" ")]
-    for (const sentence of tight) blocks.push(`- ${signpost(title, sentence)}`)
+  const intro = INTRO_ASK.test(asked)
+  const allowed = `${source}\n${asked}`
+  const pieces: string[] = []
+  for (const line of raw.split("\n")) {
+    const t = line.trim()
+    if (!t || HEADER.test(t) || /^(?:…|\.{3})$/.test(t)) continue
+    const chunks = peelDisplayArtifact(t).split(/(?<=[.!?])\s+|\s+-\s+(?=I\b)/)
+    for (const chunk of chunks) {
+      let s = peelDisplayArtifact(chunk)
+      if (!s || DICTIONARY.test(s) || genericThirdPerson(s) || META_LINE.test(s)) continue
+      s = withoutInventedNumbers(s, allowed).replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()
+      if (answerWordCount(s) < 3) continue
+      if (/^[a-z]/.test(s)) s = s.charAt(0).toUpperCase() + s.slice(1)
+      pieces.push(s)
+    }
   }
-  return blocks.join("\n")
+  const ordered = oneLeadingFirst(intro ? pieces.map((s) => s.replace(/^(?:first|then|finally|the result)\b[:,]?\s+/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase())) : pieces)
+    .filter((s) => answerWordCount(s) >= 3 && !META_LINE.test(s) && !genericThirdPerson(s))
+  if (!ordered.length) return ""
+  if (intro) return ordered.join(" ")
+  const band = formatForBand(lengthKind(asked, dissectQuestion(asked).shape), asked)
+  const lines = band === "sentences" ? ordered.slice(0, 2) : ordered
+  if (band !== "script_bullets" || lines.length < 2) return lines.join(" ")
+  return [lines[0], ...lines.slice(1).map((s) => `- ${s}`)].join("\n")
 }
 
 export function sectionOrder(card: string): string[] {

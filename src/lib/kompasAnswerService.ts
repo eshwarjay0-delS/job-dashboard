@@ -19,6 +19,7 @@ import {
 import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasIntent"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
+import { emptyMemory, expandFollowUp, groundToProfile, memoryPrompt, readSessionMemory, type SessionMemory } from "@/lib/kompasSessionMemory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
@@ -27,7 +28,7 @@ import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
-import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
+import { dissectQuestion, dissectionPrompt, formatForBand, isProviderErrorAnswer, lengthKind, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
@@ -349,6 +350,7 @@ type AnswerJob = {
   transcriptClipped?: boolean
   unpinned?: string
   sourceText: string
+  sessionMemory?: SessionMemory
   sourceDocs: SourceDoc[]
   // Speed r6: the retrieved passages (for the per-sentence source check) and an optional Lens sourced opener.
   passages?: Passage[]
@@ -402,7 +404,9 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
   // Presentation is separate from the retrieved passage text. Unsupported detail is dropped, not guessed.
   try {
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
-    if (grounded.presentation.trim()) return { text: grounded.presentation, providerError: false }
+    const stripped = grounded.presentation.replace(/\s*That (?:part|detail) is not in the sources\.?/gi, "").trim()
+    const profiled = groundToProfile(job.question, stripped || settled.text, job.sourceText, job.sessionMemory || emptyMemory(""))
+    if (profiled.trim()) return { text: profiled, providerError: false }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }
 }
@@ -907,7 +911,9 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // yields to the ask inside that line. "Okay" stays unanswered. Anything else
   // typed or heard is the question — dropping it left the card on the previous answer.
   const again = body.again === true
+  const sessionMemory = readSessionMemory(body.memory)
   let question = latestInterviewerAsk(questionForAnswer(heardAll, asked, body.pinned === true, again, body.history))
+  question = expandFollowUp(question, sessionMemory)
   // Owner rule 29 Oct: personal logistics is never answered, even on a re-press. Voice's clause-level
   // helper (kompasRelevance) runs first; the server helper (kompasLogistics) is a belt-and-braces backstop.
   // Salary, visa, address, relocation, availability, and notice return here, before keysFor and before any model call.
@@ -1028,11 +1034,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const spokenLevel = level === "architect" || level === "director" ? level : "engineer"
   const spokenCut = dissectQuestion(question, sourceText)
   const spokenShape = spokenCut.shape
+  cardControls.format = formatForBand(lengthKind(question, spokenShape), question) === "script_bullets" ? "script_bullets" : "full_script"
   if (plan.kind !== "code") {
     // The dissected band already carries the multi-part scale, so a five-part design ask is not cut at a one-part ceiling.
     const band = spokenCut.modes[spokenLevel] || modeBand(spokenShape, spokenLevel)
     const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
     plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
+    if (cardControls.length === "long") plan.words = Math.min(300, Math.round(plan.words * 1.5))
+    else if (cardControls.length === "short") plan.words = Math.max(16, Math.round(plan.words * 0.65))
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
   }
@@ -1264,7 +1273,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}\n\n${TITLE_INSTRUCTION}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${memoryPrompt(sessionMemory) ? `${memoryPrompt(sessionMemory)}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question.split("\n")[0]}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}\n\n${TITLE_INSTRUCTION}`,
     plan,
     interviewer,
     level,
@@ -1290,6 +1299,7 @@ ${INTERVIEW}`
     transcriptClipped: transcriptWindow.clipped,
     unpinned: unpin.unpinned,
     sourceText,
+    sessionMemory,
     sourceDocs: groundingDocs,
     passages: sourceRetrieval.passages,
     opener: personalEvidence ? sourcedOpenerFor(question, groundingDocs) : null,
