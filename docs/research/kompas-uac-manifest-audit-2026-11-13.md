@@ -10,8 +10,8 @@ This audit used only the canonical `job-dashboard` repository, GitHub release me
 
 - `legacy/perfact/desktop/scripts/execution-level.mjs` exports `asInvokerManifest`, which rewrites an existing `requestedExecutionLevel` to `asInvoker`. Its comment explicitly says it does not sign the executable.
 - `legacy/perfact/desktop/scripts/runtime.mjs` imports that helper and applies it to every RT_MANIFEST resource while stamping the unpacked Electron executable.
-- `legacy/perfact/desktop/scripts/package.mjs` stamps the unpacked Electron executable in `afterPack` and separately stamps the outer x64 SFX launcher before packaging. Both source-built executable layers are therefore intended to use `asInvoker`.
-- Static search of current `legacy/perfact/desktop/main.js` and `package.json` found no explicit `runas`, `ShellExecute`, `requireAdministrator`, or elevation invocation.
+- `legacy/perfact/desktop/scripts/package.mjs` stamps the unpacked Electron executable in `afterPack` and separately stamps the outer x64 SFX launcher before packaging. Both source-built executable layers are therefore intended to use `asInvoker`; the helper rewrites an existing `requestedExecutionLevel` entry and leaves a manifest without that entry unchanged.
+- Static search of current `main.js`, `package.json`, `desktop-update.cjs`, `chrome-handoff.cjs` and `desktop-handoff.cjs` found no explicit `runas`, `ShellExecute`, `requireAdministrator`, or elevation invocation. `scripts/start.mjs` uses ordinary `spawn(exe, ...)` without a runas option. The SFX launcher uses `Process.Start` with `UseShellExecute = false` and no `Verb = "runas"`.
 - Current desktop source package version is `0.8.8`.
 
 ## Published artifact evidence
