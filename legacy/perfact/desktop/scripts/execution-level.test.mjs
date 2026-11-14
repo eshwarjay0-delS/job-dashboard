@@ -25,6 +25,7 @@ test("an existing asInvoker manifest and a manifest without an execution level s
 test("packaging stamps both Electron and outer SFX executables and rewrites every manifest resource", () => {
   const runtime = fs.readFileSync(path.join(root, "scripts", "runtime.mjs"), "utf8");
   const packager = fs.readFileSync(path.join(root, "scripts", "package.mjs"), "utf8");
+  const verifier = fs.readFileSync(path.join(root, "scripts", "verify-packaged-app.mjs"), "utf8");
 
   assert.match(runtime, /const RT_MANIFEST = 24/);
   assert.match(runtime, /for \(const e of res\.entries\)/);
@@ -33,4 +34,7 @@ test("packaging stamps both Electron and outer SFX executables and rewrites ever
 
   assert.match(packager, /afterPack: async \(ctx\) => \{ await stampExe\(path\.join\(ctx\.appOutDir, "Kompas\.exe"\)\); \}/);
   assert.match(packager, /await stampExe\(sfxExe\)/);
+  assert.match(verifier, /assertAsInvokerManifest\(buf, "outer SFX launcher"\)/);
+  assert.match(verifier, /assertAsInvokerManifest\(innerExe\[1\], "inner Electron executable"\)/);
+  assert.match(verifier, /verifyManifests !== false/);
 });
