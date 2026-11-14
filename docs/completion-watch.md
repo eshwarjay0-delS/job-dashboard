@@ -1,6 +1,12 @@
 # MFit Completion Watch
 
 ## 14 November 2026 — WhatsApp provider-failure fallback correction
+## 14 November 2026 — no-Files and cross-profile fallback negatives
+
+- Current PR #380 head advanced to `c566583c6b925fbd96001f663904dd4c99d2326e`. This supersedes code head `2ec3356e74ae4ca26bcfcb9b850c57b8176a11fd`; the earlier baseline, Plan/REA and WhatsApp recovery results do not validate the new test commit.
+- Added two negative cases: provider failure with no selected same-account Files context sends no inbox/session copy; a Saint Louis session copy cannot replace the selected Houston library file. The positive Houston fallback remains exact same-account bytes with **Original resume — NOT TAILORED**.
+- Test commit: `c566583c6b925fbd96001f663904dd4c99d2326e`. Continue: run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on this exact head. Keep the PR DRAFT pending the protected preview and Safe Merge Gate.
+
 
 - Continue: rerun the exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA gates for PR #380 after the Plan/REA documentation commit. Current branch: `fix/whatsapp-offline-cas-master-926bf3-20261114`; code head before this documentation update: `2ec3356e74ae4ca26bcfcb9b850c57b8176a11fd`; base: `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`.
 - Review of failed run 43539392627 found a real source gap as well as stale fixtures: provider exceptions called `sendClosest(session.resumePath)`, which could send an unverified inbox copy. The catch now calls `sendOfflineOriginal` only for a selected Files context and only after same-account root, normalized path, resolved path and byte equality checks. Otherwise it sends no file and reports retry. Swipe-refinement behavior remains text-only.
