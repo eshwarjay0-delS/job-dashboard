@@ -192,7 +192,7 @@ test('a draft with unverified JD-only claims is held and falls back only to the 
   }, TEST_USER_ID, 60_000)
   assert.equal(noLibrary.docs.length, 0, 'an inbox/session copy is not a fallback')
   assert.match(noLibrary.said.join('\\n'), /I did not send a file/)
-  assert.match(noLibrary.said.join('\\n'), /saved for retry/)
+  assert.match(noLibrary.said.join('\\n'), /saved for another try/)
 })
 
 test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {

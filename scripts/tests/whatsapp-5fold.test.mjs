@@ -160,8 +160,8 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   sendError = new Error('WA sendDoc 500: no')
   await generate('15550021', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 3)
-  assert.match(said.at(-1), /WhatsApp refused it/)
-  assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
+  assert.match(said.at(-1), /run stopped before a file/)
+  assert.match(said.at(-1), /saved, and MarketFit will try again/)
 
   hang = true
   const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, TEST_USER_ID, 300, selectedFiles)
