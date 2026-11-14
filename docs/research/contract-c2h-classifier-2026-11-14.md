@@ -29,3 +29,9 @@ The same retrieval did **not** find owner-authored wording that generic contract
 ## Verification and pending gates
 
 This branch starts from canonical master `46043ec6ca926b2ab82424d255367426685f294d`. Implementation commit `b24076e48ff3dc63f2d959bc8ae85cbb68f420ec` adds the focused classifier change; Plan/REA commit `b230f87bbd1241c95d8856099a88e1eb0ac74bf1` records approval and scope. The implementation is source-only until the exact current head passes full CI, crawler regression, Kompas baseline, Plan/REA schema, and the legitimate protected preview. The active Safe Merge Gate must review the PR before any merge. Production acceptance requires READY on the exact approved merge SHA, the canonical alias, and public classification behavior; no post-change crawl is claimed. A live crawl requires a separate explicit owner request.
+
+## 14 November 2026 20:42 UTC — prebuild exact-command regression correction
+
+PR #402 correctly adds `node --test scripts/tests/crawl-classify.test.mjs` to the existing `package.json` `prebuild` chain so the owner-approved Contract To Perm / Right To Hire → C2H aliases and direct-negation cases run before a build. Full CI `43637952500` failed at `scripts/tests/kompas-deploy-build.test.mjs:12` because that guard still asserted the previous exact command string. The guard now expects the full updated command, retaining every prior baseline and regression step plus the crawler classifier suite.
+
+This is a test-only correction. The C2H implementation and crawler schedule are unchanged. On the pre-fix head, crawler regression `43637951983`, Kompas baseline `43637952007`, and Plan/REA schema `43637952015` passed; full CI did not. Exact-head reruns are required. No crawl, portal request, production-row mutation, application submission, email or WhatsApp send occurred. Protected preview and Safe Merge Gate review remain pending.
