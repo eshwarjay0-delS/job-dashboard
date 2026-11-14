@@ -83,6 +83,6 @@ test('resume plan records the approved current-master final-DOCX restack without
   const plan = readFileSync(new URL('../../src/lib/plan-vision.ts', import.meta.url), 'utf8')
   assert.match(plan, /PLAN_REVISION = "2026-11-14.6"/)
   assert.match(plan, /On 14 Nov, the implementation from stale PR #289 is restacked on the current evidence-bound confirmed-skill branch PR #393 as a dependent draft/)
-  assert.match(plan, /protected preview requires an authorized private KOMPAS_VERCEL_API_TOKEN/)
+  assert.match(plan, /the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN/)
   assert.match(plan, /No personal DOCX export or Gemini model call occurred/)
 })
