@@ -37,7 +37,20 @@ export function cleanHeardQuestion(text: string): string {
   const intros = parts.filter((part) => INTRO_ONLY.test(part.replace(lead, "")))
   const rest = parts.filter((part) => !INTRO_ONLY.test(part.replace(lead, "")))
   if (intros.length === 1 && rest.every((part) => SIDE_TALK.test(part) || /^your introduction\b/i.test(part))) return finishAsk(intros[0])
-  return raw
+  return stripChatter(raw)
+}
+
+const CHATTER = /^(?:you|them|speaker(?:\s*\d+)?)(?:\s+all)?$|^(?:thank you(?: all)?|thanks(?: all| so much)?|you all|you'?re welcome|goodbye|bye|nice to meet you|appreciate it)$/i
+
+/** Speaker labels and closers ("YOU all. Thank you.") are not part of the question. */
+export function stripChatter(text: string): string {
+  const parts = String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  const kept = parts.filter((part) => {
+    const bare = part.replace(/^(?:you|them):\s*/i, "").replace(/[.?!]+$/g, "").trim()
+    return !CHATTER.test(bare)
+  })
+  if (!kept.length || kept.length === parts.length) return kept.length ? kept.join(" ") : String(text || "").trim()
+  return kept.join(" ")
 }
 
 export function selectAnswerContext(lines: readonly ContextLine[]): { question: string; passages: string; words: number } {

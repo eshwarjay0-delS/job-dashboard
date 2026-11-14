@@ -6,13 +6,16 @@ import { presentSpokenAnswer } from "../../src/lib/kompasAnswerPresentation.ts"
 
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
 
-test("a complex answer uses the pre-350 card, and an introduction stays a paragraph", () => {
+test("a complex answer keeps the model's sentences, and an introduction stays a paragraph", () => {
   const card = presentSpokenAnswer(
     "What was the state of the system when you joined and what were your specific contributions?",
     "I joined two months before launch. Downstream calls were failing. I implemented queue-based staging and an object storage backup.",
   )
-  assert.match(card, /\*\*Claim\*\*/)
-  assert.match(card, /^…$/m)
+  assert.doesNotMatch(card, /\*\*(?:Claim|Context|Action|Result|Close)\*\*/)
+  assert.doesNotMatch(card, /^…$/m)
+  assert.doesNotMatch(card, /\bFirst,/)
+  assert.ok(card.indexOf("joined two months") < card.indexOf("Downstream calls"))
+  assert.ok(card.indexOf("Downstream calls") < card.indexOf("queue-based staging"))
   const intro = presentSpokenAnswer(
     "Your introduction know, I'm not sure if I'm going to be able to get to the end of this. introduce yourself.",
     "**Claim**\n- I am a Senior Cybersecurity Engineer at Citi Bank, where I design and operate security controls.\n**Context**\n- First, previously I secured healthcare systems at CVS Health.",

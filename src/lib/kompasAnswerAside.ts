@@ -25,6 +25,10 @@ export type AnswerAside = {
   summary: string
   /** A line he can say now. Empty when nothing new finished. */
   sayNow: string
+  /** Resume sentences for the question being heard. Empty fields stay empty. */
+  breakdown: { claim: string; context: string; result: string }
+  /** The newest heard line, shown before the debounced breakdown. */
+  partial: string
   /** Spans he already said. The panel must not contradict these. */
   claims: string[]
   /** Internal only. Hover text, not a spoken line, not stored. */
@@ -125,54 +129,71 @@ function factsFrom(resume: string, question: string): Facts {
   }
 }
 
-function safeLeads(team: boolean): string[] {
-  const way = team ? "So the way we approached it starts from what they just asked." : "So the way I approached it starts from what they just asked."
-  return [
-    way,
-    "The reason that mattered is the part of the question I can actually answer.",
-    "If I stall, I come back to the part they asked.",
-  ]
+const FILLER = /the reason that mattered|the pressure on it was|i'?d stay with|i would stay with|the part i'?d stay with|sat on that seat|so the way (?:we|i) approached it|yeah,?\s+\S[\s\S]{0,40}is the part/i
+const DANGLING = /\b(?:using|via|with|for|and|to|of|the|a|an)\.?$/i
+const CATEGORY = /^[^:]{0,56}:\s+\S/
+
+function speakResumeLine(line: string): string {
+  let text = line.replace(/\s+/g, " ").trim()
+  if (/^(?:owned|built|worked|checked|led|ran|wrote|designed|handled|monitored|validated|reduced|chose|defined|expanded|secured)\b/i.test(text)) {
+    text = `I ${text.charAt(0).toLowerCase()}${text.slice(1)}`
+  }
+  text = text.replace(/[,:;]+$/, "")
+  if (!/[.!?]$/.test(text)) text = `${text}.`
+  return text
 }
 
-function buildLeads(f: Facts): string[] {
+/** Complete resume sentences. Category labels and cut-off fragments stay out. */
+export function resumeSentences(resume: string): string[] {
   const out: string[] = []
-  const way = f.team ? "we" : "I"
-  if (f.team && f.owned && f.stakeholder) {
-    out.push(`I was on a team of ${f.team} and owned ${f.owned}, so I was checking in with ${f.stakeholder} constantly.`)
-  } else if (f.team && f.owned) {
-    out.push(`I was on a team of ${f.team} and owned ${f.owned}, so the way we approached it started there.`)
-  } else if (f.owned && f.stakeholder) {
-    out.push(`I owned ${f.owned}, so I was checking in with ${f.stakeholder} as that moved.`)
-  } else if (f.owned) {
-    out.push(`I owned ${f.owned}, so the reason that mattered was keeping that piece honest.`)
+  for (const raw of String(resume || "").split("\n")) {
+    const line = raw.replace(/^[\s•▪●\-*]+/, "").trim()
+    if (!line || PERSONAL_LINE.test(line) || OTHER_PROFILE.test(line)) continue
+    if (/\b(?:19|20)\d{2}\b/.test(line) || CATEGORY.test(line) || DANGLING.test(line)) continue
+    if (line.split(/\s+/).length < 6) continue
+    const spoken = speakResumeLine(line)
+    if (FILLER.test(spoken) || !lineOk(spoken, resume)) continue
+    if (!out.includes(spoken)) out.push(clip(spoken, 180))
   }
-  if (f.title && f.employer) out.push(`I was the ${f.title} at ${f.employer}, so the reason that mattered sat on that seat.`)
-  else if (f.title) out.push(`I was in the ${f.title} seat, so the way ${way === "we" ? "we" : "I"} approached it came from that work.`)
-  if (f.pressure && out.length < 3) out.push(`The pressure on it was the ${f.pressure}, so the reason that mattered was getting that part right.`)
-  if (f.phrases[0] && out.length < 3) {
-    const phrase = f.phrases[0].replace(/[.]+$/, "")
-    out.push(`So the way ${way} approached it was ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}.`)
-  }
-  for (const s of safeLeads(!!f.team)) {
-    if (out.length >= 2 && out.length >= 3) break
-    if (out.length >= 3) break
-    if (!out.includes(s)) out.push(s)
-    if (out.length >= 3) break
-  }
-  return out.slice(0, 3)
+  return out
 }
 
-function buildTouches(f: Facts): string[] {
-  const out = [
-    f.team ? "so the way we approached it" : "so the way I approached it",
-    "the reason that mattered",
-  ]
-  if (f.owned) out.push("what I owned")
-  else out.push("where I would start")
-  const phrase = f.phrases[0] ? clip(f.phrases[0], 42) : ""
-  if (phrase) out.push(phrase.charAt(0).toLowerCase() + phrase.slice(1))
-  else out.push("the part they asked")
-  return out.slice(0, 4)
+function rankLines(question: string, transcript: string, lines: string[]): string[] {
+  const bag = new Set(wordsOf(`${question} ${lastHeardLine(transcript)}`))
+  return [...lines].sort((a, b) => {
+    const score = (line: string) => wordsOf(line).filter((word) => bag.has(word)).length
+    return score(b) - score(a) || a.length - b.length
+  })
+}
+
+function buildBreakdown(lines: string[]): { claim: string; context: string; result: string } {
+  const claim = lines[0] || ""
+  const context = lines.find((line) => line !== claim) || ""
+  const result = lines.find((line) => line !== claim && line !== context && /\b(?:reduced|validated|stopped|improved|cut|dropped|checked)\b/i.test(line))
+    || lines.find((line) => line !== claim && line !== context)
+    || ""
+  return { claim, context, result }
+}
+
+function touchFrom(line: string): string {
+  const words = line.replace(/[.]+$/, "").split(/\s+/).slice(0, 10)
+  while (words.length > 4 && DANGLING.test(words[words.length - 1])) words.pop()
+  return words.join(" ")
+}
+
+function buildLeads(lines: string[]): string[] {
+  return lines.filter((line) => !FILLER.test(line)).slice(0, 3)
+}
+
+function buildTouches(lines: string[]): string[] {
+  const out: string[] = []
+  for (const line of lines) {
+    const touch = touchFrom(line)
+    if (!touch || FILLER.test(touch) || touch.split(/\s+/).length < 4 || out.includes(touch)) continue
+    out.push(touch)
+    if (out.length === 4) break
+  }
+  return out
 }
 
 type Kind = "design" | "story" | "compare" | "definition" | "follow" | "work"
@@ -297,16 +318,11 @@ export function asideModeFromTranscript(transcript: string, question = ""): Asid
   return "boosters"
 }
 
-function buildBoosters(transcript: string, resume: string): string[] {
-  const last = lastHeardLine(transcript)
-  const bag = resume.toLowerCase()
-  const noun = wordsOf(last).find((w) => bag.includes(w) && w.length >= 5) || wordsOf(last).find((w) => w.length >= 5)
-  if (!noun) return ["Yeah, that's true.", "I'd stay with what you just said.", "That matches the part I can speak to."]
-  return [
-    `Yeah, ${noun} is the part I'd stay with.`,
-    `I've seen that with ${noun} too.`,
-    `I'd stay with ${noun}.`,
-  ]
+function buildBoosters(transcript: string, lines: string[]): string[] {
+  const bag = new Set(wordsOf(lastHeardLine(transcript)))
+  const hit = lines.filter((line) => wordsOf(line).some((word) => bag.has(word)))
+  const pool = (hit.length ? hit : lines).filter((line) => !FILLER.test(line)).slice(0, 3)
+  return pool
 }
 
 function squash(s: string): string {
@@ -407,14 +423,14 @@ export function answerAside(input: { question?: string; transcript?: string; res
   const transcript = String(input.transcript || "").slice(0, 12000)
   const said = (input.said || []).map((line) => String(line || "")).filter(Boolean)
   const resume = cleanResume(String(input.resume || ""))
-  const facts = factsFrom(resume, question)
   const why = triggerSpan(transcript, question)
-  const leads = fill(buildLeads(facts), safeLeads(!!facts.team), resume, 2, 3)
-  const touches = fill(buildTouches(facts), ["so the way I approached it", "the reason that mattered", "the part they asked", "where I would start"], resume, 3, 4)
+  const spoken = rankLines(question, transcript, resumeSentences(resume))
+  const breakdown = buildBreakdown(spoken)
+  const leads = buildLeads(spoken)
+  const touches = buildTouches(spoken)
   const curious = ["Why do you think that's happening?"]
   if (/control owners/i.test(`${transcript}\n${resume}`)) curious.push("Are there a lot of control owners there?")
   const seededQuestion = clarifySeedLine(question, "clarifying_question")
-  const seededBooster = clarifySeedLine(question, "booster")
   const questions = fill([...curious, ...buildQuestions(question, transcript, resume)], [
     "What part of this do you want first?",
     "Want me to keep this short and stop for you?",
@@ -424,14 +440,10 @@ export function answerAside(input: { question?: string; transcript?: string; res
     if (questions.length >= 3) questions[2] = seededQuestion
     else questions.push(seededQuestion)
   }
-  const boosters = fill([seededBooster, ...buildBoosters(transcript, resume)].filter((line): line is string => {
-    if (!line) return false
+  const boosters = buildBoosters(transcript, spoken).filter((line) => {
+    if (!line || FILLER.test(line)) return false
     return !/handoff|bottleneck/i.test(line) || /handoff|bottleneck/i.test(transcript)
-  }), [
-    "Yeah, that's true.",
-    "I'd stay with what you just said.",
-    "That matches the part I can speak to.",
-  ], resume, 2, 3)
+  }).slice(0, 3)
   const mode = asideModeFromTranscript(transcript, question)
   const cue = longStatementCue(lastHeardLine(transcript), mode)
   const trace: AsideTrace[] = []
@@ -464,17 +476,19 @@ export function answerAside(input: { question?: string; transcript?: string; res
     question,
     mode,
     context: {
-      leads: take(leads.length >= 2 ? leads : safeLeads(false).slice(0, 3), 2, safeLeads(false)).slice(0, 3),
-      touchPoints: take(touches.length >= 3 ? touches : ["so the way I approached it", "the reason that mattered", "the part they asked"], 3, ["so the way I approached it", "the reason that mattered", "the part they asked"]).slice(0, 4),
+      leads: take(leads, 0, []).filter((line) => !FILLER.test(line)).slice(0, 3),
+      touchPoints: take(touches, 0, []).filter((line) => !FILLER.test(line)).slice(0, 4),
     },
     questions: take(questions.length >= 2 ? questions.slice(0, 3) : [
       "What part of this do you want first?",
       "Want me to keep this short and stop for you?",
     ], 2, ["What part of this do you want first?", "Want me to keep this short and stop for you?"]).slice(0, 3),
-    boosters: take(boosters.length >= 2 ? boosters.slice(0, 3) : ["Yeah, that's true.", "I'd stay with what you just said."], 2, ["Yeah, that's true.", "I'd stay with what you just said."]).slice(0, 3),
-    summary: summary?.line || "",
-    sayNow: say?.line || "",
+    boosters: take(boosters, 0, []).filter((line) => !FILLER.test(line)).slice(0, 3),
+    summary: summary?.line && !FILLER.test(summary.line) ? summary.line : "",
+    sayNow: say?.line && !FILLER.test(say.line) ? say.line : "",
     claims: claimSpans,
+    breakdown,
+    partial: lastHeardLine(transcript),
     trace,
   }
 }

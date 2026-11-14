@@ -20,7 +20,7 @@ const both = (text) => {
 const words = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim();
 
 test("1. no punctuation: two questions in one breath are two cards", () => {
-  assert.deepEqual(both("what is cyberark what is okta"), ["what is cyberark", "what is okta"]);
+  assert.deepEqual(both("what is cyberark what is okta"), ["what is cyberark", "what is Okta"]);
   assert.equal(both("what is saml what is oidc").length, 2);
   assert.equal(both("why did you leave your last job what are you looking for next").length, 2);
   assert.equal(both("um what is cyberark um what is okta").length, 2);

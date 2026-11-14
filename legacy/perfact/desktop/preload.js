@@ -54,8 +54,11 @@ function paintScreen() {
 function applyFade(opacity) {
   const a = Math.min(1, Math.max(0.15, Number(opacity) || 1));
   document.documentElement.style.setProperty("--panel-a", String(a));
+  document.documentElement.style.setProperty("--answer-weight", String(Math.round(560 + (1 - a) * 280)));
+  document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
   const input = document.getElementById("kdFade");
   if (input && document.activeElement !== input) input.value = String(Math.round(a * 100));
+  try { localStorage.setItem("kompas-opacity", String(a)); } catch (e) {}
 }
 
 function paintState(s) {

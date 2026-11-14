@@ -12,7 +12,8 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
   const { window } = dom
   window.localStorage.clear()
   window.eval(js)
-  assert.doesNotMatch(js, /setInterval\(|setTimeout\(\s*perceive|new WebSocket|fetch\(/)
+  assert.doesNotMatch(js, /setInterval|setTimeout\(\s*perceive|new WebSocket|\/api\/(?:kompas\/)?answer/)
+  assert.match(js, /\/api\/kompas\/aside/)
   const step = window.KompasAnswerAside.perceive("You", "I'm available in the Pittsburgh area, on site.")
   assert.equal(step.action, "hold")
   const next = window.KompasAnswerAside.perceive("Them", "So you would only work remote, right?")

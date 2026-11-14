@@ -39,14 +39,16 @@ const ASKS = [
 
 function shape(aside) {
   assert.ok(aside.context, "context")
-  assert.ok(aside.context.leads.length >= 2 && aside.context.leads.length <= 3, `leads ${aside.context.leads.length}`)
-  assert.ok(aside.context.touchPoints.length >= 3 && aside.context.touchPoints.length <= 4, `touches ${aside.context.touchPoints.length}`)
+  assert.ok(aside.context.leads.length <= 3, `leads ${aside.context.leads.length}`)
+  assert.ok(aside.context.touchPoints.length <= 4, `touches ${aside.context.touchPoints.length}`)
   assert.ok(aside.questions.length >= 2 && aside.questions.length <= 3, `questions ${aside.questions.length}`)
-  assert.ok(aside.boosters.length >= 2 && aside.boosters.length <= 3, `boosters ${aside.boosters.length}`)
+  assert.ok(aside.boosters.length <= 3, `boosters ${aside.boosters.length}`)
+  assert.ok(aside.breakdown && typeof aside.breakdown.claim === "string")
   assert.ok(aside.mode === "questions" || aside.mode === "boosters")
   for (const q of aside.questions) assert.match(q, /\?$/)
-  const blob = [...aside.context.leads, ...aside.context.touchPoints, ...aside.questions].join("\n")
+  const blob = [...aside.context.leads, ...aside.context.touchPoints, ...aside.questions, ...aside.boosters, aside.breakdown.claim, aside.breakdown.context, aside.breakdown.result, aside.summary, aside.sayNow].join("\n")
   assert.doesNotMatch(blob, /\bHaving\b/)
+  assert.doesNotMatch(blob, /the reason that mattered|the pressure on it was|I'd stay with|the part I'd stay with|sat on that seat|so the way (?:we|I) approached it/i)
   assert.doesNotMatch(blob, /@|gmail|555-0100|visa|salary|houston|saint louis|jayeshwar44|eshwarjay06|fabrikam|burp|splunk|twelve|nine|cigna/i)
 }
 
@@ -70,7 +72,8 @@ test("a grounded lead uses the team size and the owned work, and nothing from th
   assert.match(leads, /service catalog/i)
   assert.match(leads, /users/i)
   assert.deepEqual(asideViolations(aside, HOUSTON), [])
-  assert.ok(aside.context.touchPoints.some((t) => /so the way we approached it|the reason that mattered/i.test(t)))
+  assert.match(aside.breakdown.claim, /service catalog/i)
+  assert.doesNotMatch(JSON.stringify(aside), /sOAR|using\.$/)
 })
 
 test("names and numbers absent from the profile stay out", () => {

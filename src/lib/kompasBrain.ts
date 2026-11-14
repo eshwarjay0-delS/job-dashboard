@@ -110,7 +110,7 @@ export function summarizeLine(text: string): string {
 export function draftBooster(text: string, resume = ""): string {
   const bag = resume.toLowerCase()
   const noun = String(text || "").toLowerCase().split(/[^a-z0-9]+/).find((w) => w.length >= 5 && bag.includes(w))
-  return noun ? `I've seen that with ${noun} too.` : "Yeah, I'd stay with that point."
+  return noun ? `I can speak to ${noun} from the work on the resume.` : "I can speak to that from the work on the resume."
 }
 
 export function draftClarify(text: string): string {

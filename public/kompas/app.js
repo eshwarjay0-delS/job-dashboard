@@ -1106,39 +1106,67 @@ function plainIntroAnswer(text) {
   }
   return sentences.join(" ");
 }
+function peelDisplayArtifact(sentence) {
+  let s = String(sentence || "").trim();
+  let guard = 0;
+  while (s && guard++ < 8) {
+    const next = s
+      .replace(/^(?:[-•*]|\d+[.)])\s+/, "")
+      .replace(/^(?:first|then|next|finally|the result)\b[:,]\s+[-–—]\s+/i, "")
+      .replace(/^(?:first|then|next|finally),\s+(?=(?:first|then|next|finally)\b)/i, "")
+      .replace(/^(?:first|then|next|finally)\b[:,]?\s+(?=once that is established\b)/i, "")
+      .replace(/^once that is established\b[:,]?\s+/i, "")
+      .replace(/^in addition\b[:,]?\s+/i, "")
+      .replace(/^the result\s*:\s+/i, "")
+      .replace(/^(?:first|then|next|finally)\b[:,]?\s+(?=(?:failure mode|root cause|touch ?point)\s*:)/i, "")
+      .replace(/^(?:failure mode|root cause|touch ?point)\s*:\s*/i, "")
+      .trim();
+    if (next === s) break;
+    s = next;
+  }
+  return s.replace(/^in general,\s+(?=(?:I|we|my|our)\b)/i, "").trim();
+}
 function presentAnswer(question, answer, source) {
+  const asked = cleanHeardQuestion(question);
   const raw = String(answer || "").trim();
   if (!raw) return raw;
-  if (/^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(cleanHeardQuestion(question))) return plainIntroAnswer(raw);
-  if (/\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*/.test(raw)) return raw;
-  const allowed = String(source || "") + "\n" + String(question || "");
-  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 1 && !/^(?:and|but|or|which|that)\b/i.test(s)).map(s => s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 3);
-  const words = sentences.join(" ").split(/\s+/).filter(Boolean).length;
-  const q = String(question || "");
-  const simple = /^(?:what is|what does|what's|define|do you|are you|have you|can you hear)\b/i.test(q.trim()) && words < 55 && sentences.length < 3;
-  const complex = !simple && ((/\b(?:design|tell me about a time|walk me through|incident|war room|contributions|proud of|strategy)\b/i.test(q) && (sentences.length >= 2 || words >= 36)) || sentences.length >= 4 || words >= 70);
-  if (!complex || sentences.length < 2) return sentences.join(" ") || raw;
-  const groups = { Claim: [sentences[0]], Context: [], Action: [], Result: [], Close: [] };
-  for (const sentence of sentences.slice(1)) {
-    const nums = sentence.match(/\d[\d,.]*/g) || [];
-    const sourced = nums.length && nums.every(n => allowed.includes(n.replace(/[.,]+$/, "")));
-    const key = sourced ? "Result" : (/\b(?:result|stopped|outcome)\b/i.test(sentence) ? "Close" : (/\b(?:I|we)\s+(?:checked|built|added|implemented|sent|reviewed|mapped|held|would|joined|ran)\b/i.test(sentence) ? "Action" : "Context"));
-    groups[key].push(sentence);
-  }
-  const blocks = [];
-  for (const title of ["Claim", "Context", "Action", "Result", "Close"]) {
-    const group = groups[title];
-    if (!group.length) continue;
-    const tight = group.length <= 4 ? group : group.slice(0, 3).concat(group.slice(3).join(" "));
-    if (blocks.length) blocks.push("…");
-    blocks.push("**" + title + "**");
-    for (const sentence of tight) {
-      const clean = sentence.replace(/^(?:first|then|the result)\b[:,]?\s+/i, "").replace(/^([A-Z])([a-z])/, (_, a, b) => a.toLowerCase() + b);
-      const line = title === "Context" ? (sentence.toLowerCase().startsWith("first") ? sentence : "First, " + clean) : title === "Action" ? (sentence.toLowerCase().startsWith("then") ? sentence : "Then, " + clean) : title === "Result" ? (sentence.toLowerCase().startsWith("the result") ? sentence : "The result: " + clean) : sentence;
-      blocks.push("- " + line);
+  const intro = /^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(asked);
+  const allowed = String(source || "") + "\n" + asked;
+  const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(raw);
+  const meta = /\b(?:that (?:part|detail) is not in the sources|not in the (?:sources|resume)|no evidence for|sources or evidence)\b/i;
+  const dictionary = /,\s+or\s+[“"'][^”"']{1,90}[”"'],?\s+is\b/i;
+  const third = (s) => /\bin general,\s+teams\b|\bteams (?:start|see|design|build|run)\b/i.test(s) || (!/\b(?:I|we|my|our)\b/.test(s) && /\b(?:next|finally) they\b|\bthey (?:build|run)\b/i.test(s));
+  const pieces = [];
+  for (const line of raw.split("\n")) {
+    const t = line.trim();
+    if (!t || /^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(t) || /^(?:…|\.{3})$/.test(t)) continue;
+    for (const chunk of peelDisplayArtifact(t).split(/(?<=[.!?])\s+|\s+-\s+(?=I\b)/)) {
+      let s = peelDisplayArtifact(chunk);
+      if (!s || dictionary.test(s) || third(s) || meta.test(s)) continue;
+      s = s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+      if (s.split(/\s+/).filter(Boolean).length < 3) continue;
+      if (/^[a-z]/.test(s)) s = s.charAt(0).toUpperCase() + s.slice(1);
+      pieces.push(s);
     }
   }
-  return blocks.join("\n");
+  let seenFirst = false;
+  const ordered = [];
+  for (let s of (intro ? pieces.map((bit) => bit.replace(/^(?:first|then|finally|the result)\b[:,]?\s+/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase())) : pieces)) {
+    if (/^first\b/i.test(s)) {
+      if (seenFirst) s = s.replace(/^first\b[:,]?\s+/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase());
+      else seenFirst = true;
+    }
+    if (s && s.split(/\s+/).filter(Boolean).length >= 3 && !meta.test(s) && !third(s)) ordered.push(s);
+  }
+  if (!ordered.length) return "";
+  if (intro) return ordered.join(" ");
+  const q = String(asked || "");
+  const band = (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /^(?:what is|what does|what's|define)\b/i.test(q))
+    ? "sentences"
+    : (/\b(?:tell me about yourself|introduce yourself|tell me about a time|walk me through|go deeper|how do you)\b/i.test(q) ? "script_bullets" : "script");
+  const lines = band === "sentences" ? ordered.slice(0, 2) : ordered;
+  if (band !== "script_bullets" || lines.length < 2) return lines.join(" ");
+  return [lines[0], ...lines.slice(1).map((s) => "- " + s)].join("\n");
 }
 function answerLines(answer, question) {
   // He is rehearsing as himself. The stored introduction can still say his name; the line he reads cannot.
@@ -1174,6 +1202,8 @@ function proseLines(text) {
     if (/^#{1,6}\s+\S/.test(l)) return null;
     if (/^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/.test(l)) return null;
     if (/^(?:…|\.{3})$/.test(l)) return null;
+    if (/\b(?:that (?:part|detail) is not in the sources|not in the (?:sources|resume))\b/i.test(l)) return null;
+    l = l.replace(/^((?:[-•*]|\d+[.)])\s+)(?:First|Then|Next|Finally),\s+[-–—]\s+/i, "$1");
     if (/^\*\*[^*][^*]{0,40}\*\*$/.test(l)) return { t: l, kind: "head" };
     const b = l.match(/^(?:(?:[-•]|\*(?!\*)|\d+[.)])\s+)+(.*)$/);      // "- - text" too
     if (b) return { t: b[1], kind: "bullet" };
@@ -1227,7 +1257,9 @@ function cleanHeardQuestion(text) {
     const before = raw.slice(0, tail.index).trim();
     if (!before || side.test(before) || /^your introduction\b/i.test(before)) return finish(tail[1]);
   }
-  return raw;
+  const chatter = /^(?:you|them|speaker(?:\s*\d+)?)(?:\s+all)?$|^(?:thank you(?: all)?|thanks(?: all| so much)?|you all|you'?re welcome|goodbye|bye|nice to meet you|appreciate it)$/i;
+  const kept = raw.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).filter((part) => !chatter.test(part.replace(/^(?:you|them):\s*/i, "").replace(/[.?!]+$/g, "").trim()));
+  return kept.length ? kept.join(" ") : raw;
 }
 function renderCard() {
   const c = cards[idx]; if (!c) return;
@@ -1373,8 +1405,17 @@ const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
 const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
 if (NO_SYS_AUDIO) $("sysBtn").classList.add("hidden");
 if (window.kompasDesktop) {
-  $("screenBtn").classList.remove("hidden");
-  $("screenCaptureAnswerBtn")?.classList.remove("hidden");
+  $("screenBtn")?.classList.add("hidden");
+  $("screenCaptureAnswerBtn")?.classList.add("hidden");
+}
+function placeAskRow() {
+  const ask = $("barAsk");
+  const chat = $("chatBtn");
+  const level = document.querySelector("#overlay .asking:not(.card-prefs)");
+  if (!ask) return;
+  if (chat && chat.parentElement !== ask) ask.insertBefore(chat, ask.firstChild);
+  if (level && level.parentElement !== ask) ask.append(level);
+  document.querySelectorAll(".card-prefs").forEach((el) => { el.hidden = true; });
 }
 function placeDesktopControls() {
   if (!window.kompasDesktop) return;
@@ -1396,9 +1437,9 @@ function placeDesktopControls() {
     end.append(next);
     if (count) end.append(count);
   }
-  if (ask && chat && chat.parentElement !== ask) ask.insertBefore(chat, ask.firstChild);
-  if (ask && level && level.parentElement !== ask) ask.append(level);
+  placeAskRow();
 }
+placeAskRow();
 if (window.kompasDesktop) {
   const runPlace = () => placeDesktopControls();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", runPlace);
@@ -1502,6 +1543,8 @@ function applyLook() {
   if (!desk) {
     const a = Math.min(1, Math.max(0.15, Number(LS.get("opacity", 1)) || 1));
     document.documentElement.style.setProperty("--panel-a", String(a));
+    document.documentElement.style.setProperty("--answer-weight", String(Math.round(560 + (1 - a) * 280)));
+    document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
     if (fade && document.activeElement !== fade) fade.value = String(Math.round(a * 100));
   }
   const fontSel = $("lookFont"); if (fontSel) fontSel.value = font;
@@ -1523,7 +1566,7 @@ $("textMinus")?.addEventListener("click", () => stepText(-2));
 $("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
 const answerPane = $("answer");
-function syncQuestion() { const card = $("card"); if (card && answerPane && answerPane.scrollTop > 2) card.classList.add("q-away"); }   // scrolling down hides the question; only an overscroll gesture brings it back
+function syncQuestion() { const card = $("card"); if (card) card.classList.remove("q-away"); }   // the question stays above the answer
 answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
 // Overscroll reveal (owner, 26 Oct): at the very top, one more scroll up shows the
 // question again — reaching the top alone never does. Wheel-up at the top reveals
@@ -1534,10 +1577,10 @@ answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
 // the card hides it, smoothly, so only the response box stays in view.
 function touchReveal(startTop, top, pull) { return startTop <= 0 && top <= 0 && pull > 24; }
 // Touch reveal wiring ends here.
-$("card")?.addEventListener("wheel", (e) => { const card = $("card"); if (!card) return; if (e.deltaY > 0) card.classList.add("q-away"); else if (e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away"); }, { passive: true });
+$("card")?.addEventListener("wheel", () => { const card = $("card"); if (card) card.classList.remove("q-away"); }, { passive: true });
 let touchStartY = 0, touchStartTop = 0;
 $("card")?.addEventListener("touchstart", (e) => { touchStartY = (e.touches[0] && e.touches[0].clientY) || 0; touchStartTop = answerPane ? answerPane.scrollTop : 0; }, { passive: true });
-$("card")?.addEventListener("touchmove", (e) => { const card = $("card"); if (!card) return; const y = (e.touches[0] && e.touches[0].clientY) || 0; if (answerPane && touchReveal(touchStartTop, answerPane.scrollTop, y - touchStartY)) card.classList.remove("q-away"); else if (touchStartY - y > 24) card.classList.add("q-away"); }, { passive: true });
+$("card")?.addEventListener("touchmove", () => { const card = $("card"); if (card) card.classList.remove("q-away"); }, { passive: true });
 $("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
 // The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
 const LIVE_MODELS = ["", "gpt-5.6-luna"];
@@ -2087,20 +2130,14 @@ async function applyRawAudioConstraints(stream) {
   }
 }
 function showTabPreview(owner) {
+  // Computer audio stays on the capture stream. The thumbnail must not cover the answer.
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
   const track = owner && owner.getVideoTracks ? owner.getVideoTracks()[0] : null;
-  if (!box || !video || !track || track.readyState !== "live") { hideTabPreview(); return; }
-  try {
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "");
-    video.srcObject = typeof MediaStream === "function" ? new MediaStream([track]) : owner;
-    const play = video.play && video.play();
-    if (play && typeof play.catch === "function") play.catch(() => {});
-    box.hidden = false;
-    box.classList.remove("hidden");
-  } catch { hideTabPreview(); }
+  if (video && track && track.readyState === "live") {
+    try { video.muted = true; video.srcObject = typeof MediaStream === "function" ? new MediaStream([track]) : owner; } catch {}
+  }
+  if (box) { box.hidden = true; box.classList.add("hidden"); }
 }
 function hideTabPreview() {
   const box = $("tabPreview");
@@ -3950,6 +3987,14 @@ const PHRASE_FIXES = [
   [/\bsee[\s-]*em\b/gi, "SIEM"],
   [/\bi\s+a\s+m\b(?=\s+(?:roles?|policies|policy|controls?|tools?|platforms?|systems?))/gi, "IAM"],
   [/\bsas\s+dast\b/gi, "SAST and DAST"],
+  [/\bcm\b(?=\s*[?.!,]|\s+(?:alerts?|logs?|rules?|tools?|platforms?|dashboards?|correlation))/gi, "SIEM"],
+  [/\bsim\b(?=\s*[?.!]|$)/gi, "SIEM"],
+  [/\bsoar\b/gi, "SOAR"],
+  [/\bsore\b(?=\s+(?:playbooks?|platforms?|tools?|automation|workflows?|integrations?))/gi, "SOAR"],
+  [/\bi\s+am\b(?=\s+(?:solutions?|integrations?|reviews?|access|controls?|programs?))/gi, "IAM"],
+  [/\bokta\b/gi, "Okta"],
+  [/\bsail\s*point\b/gi, "SailPoint"],
+  [/\bentra\b/gi, "Entra"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -4061,8 +4106,21 @@ function onCaptionText(text) {
     onTranscript("Them", r.part, false, Date.now());
   } catch {}
 }
+function dedupeCaptionTokens(text) {
+  const seen = [];
+  const out = [];
+  for (const part of String(text || "").split(/(\s+)/)) {
+    const letters = part.replace(/[^A-Za-z]/g, "");
+    const shouty = letters.length >= 4 && letters === letters.toUpperCase();
+    const key = letters.toLowerCase();
+    if (shouty && seen.includes(key)) continue;
+    if (shouty) seen.push(key);
+    out.push(part);
+  }
+  return out.join("").replace(/[,\s]{2,}/g, (gap) => gap.includes("\n") ? gap : (gap.includes(",") ? ", " : " ")).replace(/,\s*(?=,|$)/g, "").replace(/\s{2,}/g, " ").trim();
+}
 function onTranscript(who, text, lookedAgain, spokenAt) {
-  text = applySttCorrections(fixTerms(fixPhrases(text)));
+  text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
@@ -4481,6 +4539,60 @@ function composeIntake(lines, opts = {}) {
 }
 // ── end question intake ──
 // The last two answered questions before this card (owner, 2026-09-30): the next question may follow up on them.
+function sessionMemoryId() { return (current && current.id) || "live"; }
+function emptySessionMemory(id) { return { id: id || sessionMemoryId(), turns: [], facts: [] }; }
+function loadSessionMemory() {
+  const id = sessionMemoryId();
+  try {
+    const raw = sessionStorage.getItem("kompas-memory:" + id);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  if (current && current.id === id && current.memory && Array.isArray(current.memory.recent)) {
+    return { id, turns: current.memory.recent, facts: current.memory.facts || [] };
+  }
+  return emptySessionMemory(id);
+}
+function sessionMemoryPayload() {
+  const mem = loadSessionMemory();
+  return { id: mem.id, recent: (mem.turns || []).slice(-6), facts: (mem.facts || []).slice(-24) };
+}
+function saveSessionMemory(mem) {
+  const id = mem.id || sessionMemoryId();
+  const stored = { id, turns: (mem.turns || []).slice(-12), facts: (mem.facts || []).slice(-24) };
+  try { sessionStorage.setItem("kompas-memory:" + id, JSON.stringify(stored)); } catch {}
+  try {
+    const open = indexedDB.open("kompas-memory", 1);
+    open.onupgradeneeded = () => { const db = open.result; if (!db.objectStoreNames.contains("sessions")) db.createObjectStore("sessions"); };
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction("sessions", "readwrite");
+      tx.objectStore("sessions").put(stored, id);
+    };
+  } catch {}
+  if (current && current.id === id) {
+    current.memory = { recent: stored.turns.slice(-6), facts: stored.facts };
+    try {
+      const all = LS.get("sessions", []);
+      const i = all.findIndex((row) => row && row.id === id);
+      if (i >= 0) { all[i] = { ...all[i], memory: current.memory }; LS.set("sessions", all); sessions = all; }
+    } catch {}
+  }
+}
+function clearSessionMemory(id) {
+  const key = id || sessionMemoryId();
+  try { sessionStorage.removeItem("kompas-memory:" + key); } catch {}
+  if (current && current.id === key) current.memory = { recent: [], facts: [] };
+}
+function noteAnswerMemory(question, answer) {
+  const q = String(question || "").replace(/\s+/g, " ").trim();
+  const a = String(answer || "").replace(/\s+/g, " ").trim();
+  if (!q || a.length < 8) return;
+  const mem = loadSessionMemory();
+  mem.turns = [...(mem.turns || []), { q: q.slice(0, 240), a: a.slice(0, 500) }].slice(-12);
+  const first = a.split(/(?<=[.!?])\s+/)[0];
+  if (first && first.split(/\s+/).length >= 6) mem.facts = [...new Set([...(mem.facts || []), first.slice(0, 180)])].slice(-24);
+  saveSessionMemory(mem);
+}
 function recentQA(card) {
   const i = cards.indexOf(card), prev = (i < 0 ? cards : cards.slice(0, i)).filter(c => c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) && typeof c.answer === "string" && c.answer.trim().length > 40);
   return prev.slice(-2).map(c => ({ q: String(c.question).slice(0, 240), a: headAndTail(plainAnswer(c.answer), 2400) }));
@@ -4554,14 +4666,8 @@ function sessionAnswerControls(s) {
   };
 }
 function readLiveAnswerControls() {
-  const fromUi = {
-    format: $("liveFormat") && $("liveFormat").value,
-    length: $("liveLength") && $("liveLength").value,
-    tone: $("liveTone") && $("liveTone").value,
-    star: $("liveStar") && $("liveStar").value,
-  };
-  const merged = { ...(current || {}), ...Object.fromEntries(Object.entries(fromUi).filter(([, v]) => v != null && v !== "")) };
-  return sessionAnswerControls(merged);
+  // Format, tone, length and STAR are not chosen from the row or from old saved prefs.
+  return { format: "full_script", length: "balanced", tone: "simple", star: false };
 }
 function syncLiveAnswerControls(s) {
   const k = sessionAnswerControls(s || current || {});
@@ -4690,6 +4796,7 @@ function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
     stream: true, client: BUILD, liveModel: typeof liveModel === "function" ? (liveModel() || undefined) : undefined, consolidated: !!opts.consolidated,
     ...(inline ? { derive: true } : {}),
     ...fields,
+    memory: typeof sessionMemoryPayload === "function" ? sessionMemoryPayload() : undefined,
     ...(rest || {}),
   };
 }
@@ -4772,7 +4879,7 @@ function serveBook(card, hit, depthKey) {
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
   status("Answered.", "live");
-  if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }
+  if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   if (window.KompasDiamond) {
     card.anchorQ = card.question;
     for (const a of window.KompasDiamond.questionPlan(card.anchors || {}).levels) fillAnchor(card, a);
@@ -4810,6 +4917,11 @@ async function generateAnswer(question, card, opts = {}) {
   }
 }
 function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
+function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
+  if (hasToken) return "keep";
+  if (Number(elapsedMs) < 8000) return "wait";
+  return alreadyRetried ? "status" : "retry";
+}
 async function generateAnswerRequest(question, card, opts = {}) {
   question = cleanHeardQuestion(String(question || "").trim()); if (!question) return;
   card = card || addCard(question, ["…"]);
@@ -4940,9 +5052,31 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }, Math.max(500, retryAfterMs));
   };
   let fetchTimer = null;
+  let firstTokenTimer = null;
   try {
     let responded = false;
     fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
+    firstTokenTimer = setTimeout(() => {
+      if (first || card.req !== ctl) return;
+      const decision = firstTokenDecision(8000, !!first, !!opts.firstTokenRetry);
+      if (decision === "retry") {
+        status("No words yet. Retrying once.", "live");
+        try { ctl.abort(); } catch {}
+        card.req = null;
+        if (answerCtl === ctl) answerCtl = null;
+        generateAnswer(question, card, { ...opts, firstTokenRetry: true });
+        return;
+      }
+      if (decision === "status") {
+        card.streaming = false;
+        card.req = null;
+        if (answerCtl === ctl) answerCtl = null;
+        const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
+        if (!partial) writeAnswer(card, qid, ["The answer did not start. Press AI Answer to try again."]);
+        if (cards[idx] === card) renderCard();
+        status("Still no words. Press AI Answer to try again.", "live");
+      }
+    }, 8000);
     const paintTitle = (title, fromDerived) => {
       if (!title || isPlaceholderTitle(title) || card.req !== ctl) return false;
       if (fromDerived) {
@@ -4987,8 +5121,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (applied.title) paintTitle(applied.title, false);
       } else if (ev.type === "card") {
         if (applied.card) paintLayout(applied.card);
-      } else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; if (!card.cardLayout) show(text); }
-      else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; card.cardLayout = null; show(text); }
+      } else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; if (!card.cardLayout) show(text); }
+      else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = ev.text; card.cardLayout = null; show(text); }
       else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
       else if (ev.type === "done") {
         meta = { ...meta, ...ev };
@@ -5096,9 +5230,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (!card.anchors[other]) fillAnchor(card, other);
       }
     }
+    try { noteAnswerMemory(card.question, typeof card.answer === "string" ? card.answer : text); } catch {}
     status("Answered.", "live");
     healAuthSilently();
-    if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
+    if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — wait silently if renewal fails
       if (await recoverLiveAuth()) { recoverAnswer("", 800); return; }
@@ -5114,7 +5249,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
-  } finally { inflight.delete(ctl); clearTimeout(hardTimer); clearTimeout(fetchTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
+  } finally { inflight.delete(ctl); clearTimeout(hardTimer); clearTimeout(fetchTimer); clearTimeout(firstTokenTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */

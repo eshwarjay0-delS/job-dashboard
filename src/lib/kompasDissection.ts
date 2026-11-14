@@ -114,10 +114,13 @@ const VOICE: Record<AnswerLevel, string> = {
  * A director is often shorter. The mode changes the stance, not the padding.
  * Ceilings scale with partsScale and never pass 300.
  */
-export type LengthKind = "yes-no" | "definition" | "compare" | "follow-up" | "opener" | "star" | "design-first" | "design-later"
+export type LengthKind = "yes-no" | "done" | "used" | "howto" | "definition" | "compare" | "follow-up" | "opener" | "star" | "design-first" | "design-later"
 
 export const QUESTION_LENGTH: Record<LengthKind, Record<AnswerLevel, { aim: number; ceiling: number }>> = {
   "yes-no": { engineer: { aim: 20, ceiling: 40 }, director: { aim: 18, ceiling: 36 }, architect: { aim: 22, ceiling: 40 } },
+  done: { engineer: { aim: 85, ceiling: 120 }, director: { aim: 70, ceiling: 110 }, architect: { aim: 95, ceiling: 140 } },
+  used: { engineer: { aim: 85, ceiling: 120 }, director: { aim: 70, ceiling: 110 }, architect: { aim: 95, ceiling: 140 } },
+  howto: { engineer: { aim: 91, ceiling: 140 }, director: { aim: 60, ceiling: 100 }, architect: { aim: 140, ceiling: 220 } },
   definition: { engineer: { aim: 40, ceiling: 70 }, director: { aim: 30, ceiling: 50 }, architect: { aim: 55, ceiling: 90 } },
   compare: { engineer: { aim: 80, ceiling: 130 }, director: { aim: 60, ceiling: 90 }, architect: { aim: 110, ceiling: 160 } },
   "follow-up": { engineer: { aim: 80, ceiling: 140 }, director: { aim: 50, ceiling: 90 }, architect: { aim: 90, ceiling: 160 } },
@@ -181,9 +184,21 @@ export function afterInterruption(question: string): string {
 }
 const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 
+/** Short and yes/no stay plain sentences. Medium is a script. Long is a script plus bullets. */
+export function formatForBand(kind: string, question = ""): "sentences" | "script" | "script_bullets" {
+  const words = String(question || "").trim().split(/\s+/).filter(Boolean).length
+  if ((kind === "yes-no" || kind === "definition") && words <= 12) return "sentences"
+  if (kind === "star" || kind === "opener" || kind === "design-later" || kind === "howto" || words >= 16) return "script_bullets"
+  return "script"
+}
+
 export function lengthKind(question: string, shape: AnswerShape): LengthKind {
-  const q = String(question || "")
+  const tied = splitFollowUp(question)
+  const q = tied.previous ? tied.own : String(question || "")
   const design = shape === "design" || DESIGN_ASK.test(q)
+  if (/\bhave you done\b/i.test(q)) return "done"
+  if (/\bhow have you used\b/i.test(q)) return "used"
+  if (/\bhow do you\b/i.test(q) && !design) return "howto"
   if (design && DEEPER_ON.test(q)) return "design-later"
   if (design) return "design-first"
   if (DEEPER_ON.test(q)) return "design-later"
@@ -225,7 +240,14 @@ function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand 
 }
 
 export function modeBand(shape: AnswerShape, level: AnswerLevel, scale = 1, question = ""): ModeBand {
-  return bandFor(lengthKind(question, shape), level, scale)
+  const kind = lengthKind(question, shape)
+  let next = scale
+  const parts = askedParts(question)
+  if ((kind === "definition" || kind === "compare") && parts >= 2) {
+    const floor = kind === "definition" ? 1.56 : 1.37
+    next = Math.max(next, Math.min(1.6, floor + 0.02 * (parts - 2)))
+  }
+  return bandFor(kind, level, next)
 }
 
 /** One scale for all three modes. A long ask raises the ceiling. It does not reorder the modes. */
@@ -590,17 +612,22 @@ export function asksForCode(question: string): boolean {
   return requestIsCodeAsk(q)
 }
 
-export function dissectionPrompt(question: string, level: AnswerLevel, sources = ""): string {
+export function dissectionPrompt(question: string, level: AnswerLevel, sources = "", length: "short" | "balanced" | "long" = "balanced"): string {
   const cut = dissectQuestion(question, sources)
   const mode = cut.modes[level] || cut.modes.engineer
   const echo = cut.keywords.slice(0, 4).join(", ")
   const ban = cut.banned.slice(0, 20).join(", ")
+  const lengthLine = length === "long"
+    ? "Length is long: a concrete example, the tool, a number from the resume when one is there, and a stance."
+    : length === "short"
+      ? "Length is short: one or two sentences, and only when this is a clarifier or a logistics question."
+      : "Spoken length follows the question type first, then the mode band."
   return [
     `QUESTION DISSECTION. Shape: ${cut.shape}. Intent: ${cut.intent}.`,
     echo ? `The first sentence must use the interviewer's own words: ${echo}.` : "The first sentence answers the ask in the interviewer's own terms.",
     asksForCode(question)
       ? `Mode ${level}. Code first at every level: one fenced, runnable block in the language asked for, before any words. After the block, at most ${mode.aimWords} spoken words. ${mode.voice}`
-      : `Mode ${level}. Aim for about ${mode.aimWords} words and never more than ${mode.maxWords}. Stop as soon as the question is answered. ${mode.voice}`,
+      : `Mode ${level}. ${lengthLine} ${mode.voice}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
     // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
