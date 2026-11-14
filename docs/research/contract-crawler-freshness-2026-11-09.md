@@ -99,3 +99,10 @@ PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previo
 ## 12–14 November 2026 — owner correction and schedule audit
 
 The owner correction on 12 Nov 2026 is authoritative: the contract crawler is manual/on-demand only; do not restore a daily schedule; Robert Half remains manual-only. A 14 Nov source audit of canonical master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` confirmed that `vercel.json` already excludes `/api/crawl/run`. The remaining mismatch was stale route comments and product/research/Plan/REA text, not an active cron. Draft PR #381 adds a regression guard and corrects those comments and records; it does not change `vercel.json` or the deployed schedule. The separate Gmail crawler schedule and admin-only manual trigger are preserved. No crawl, external request or production-row mutation was performed. The proposed classifier changes in PR #376 remain unapproved and are not part of this fix.
+
+
+## 14 November 2026 — read-only production freshness snapshot
+
+The latest row in `public.mfit_crawl_runs` is still the 10 Nov 2026 11:00 UTC run: 6,818 found/upserted across 20 portals, with one Inspyr abort. There is no later completed crawl in the table. A read-only aggregate of `public.mfit_crawl_jobs` shows 14,566 rows total, 12,407 active, 10,573 active with `last_seen_at` within 14 days, 1,834 stale active rows, and latest `last_seen_at` `2026-11-10T11:01:11.191Z`. The eTeam subset has 907 rows / 818 active, latest seen `2026-11-08T11:01:01.281Z`; eTeam remains retired from active adapters.
+
+This is a database snapshot, not a crawl. The owner-approved manual/on-demand policy remains: no `/api/crawl/run` cron, separate Gmail schedule unchanged, admin-only manual trigger, Robert Half manual-only. No portal request, live crawl or production-row mutation was performed.

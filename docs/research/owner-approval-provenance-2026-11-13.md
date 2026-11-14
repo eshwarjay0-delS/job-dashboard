@@ -47,3 +47,12 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 ## 14 November 2026 — manual-only guard exact-head validation
 
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
+
+
+## 14 November 2026 — direct C2H approval recovered from accessible prior conversation
+
+The earlier statement in this document that no direct owner approval for Right To Hire / Contract To Perm → C2H had been retrieved is superseded by a later accessible prior-conversation retrieval. It returned an owner-authored message at `2026-11-12T07:41:33Z` with the exact instruction: **'Contract To Perm and Right To Hire map to C2H; negations remain unknown.'** This directly approves those two mappings and the negative-evidence rule.
+
+The same retrieval did **not** find owner-authored wording that generic contract administration, negotiation, lifecycle, or duration language alone is not employment-type evidence. That broader statement appeared only in prior assistant output at `2026-11-12T05:03:03Z`; it is not treated as owner approval and is deliberately excluded from this restack. Existing W2/C2C/1099/Temporary/generic Contract behavior remains unchanged.
+
+This correction is based on accessible prior-conversation context, not a claim that every historical chat was searched. The manual/on-demand crawler policy, absent `/api/crawl/run` cron, and Robert Half manual-only boundary remain unchanged. No live crawl or production-row mutation occurred.

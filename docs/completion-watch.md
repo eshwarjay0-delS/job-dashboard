@@ -1,5 +1,34 @@
 # MFit Completion Watch
 
+## 14 November 2026 — current backlog reconciliation and recovered C2H approval
+
+### Canonical source and production
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`. The production alias `job-dashboard-fawn.vercel.app` is READY at deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Master is one test/docs-only merge ahead via PR #398 (`46043ec`); no runtime deployment is required for that documentation/test commit.
+- The approved spoken Kompas answer and separate clarify popup are included in production commit `b94e1629`. The public HTTP route smoke could not be reached from this runtime; native phone/Windows/WhatsApp acceptance and real 50-pair human grading remain open.
+- The active MFit Safe Merge Gate remains responsible for sequencing. No PR was merged and no deployment was started in this run.
+
+### WhatsApp resume failure and factual alignment
+- The 17 Oct 17:28 incident still lacks the generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt. Source resume and JD recovery do not prove which file was generated or delivered; no replay or real send was performed.
+- PR #399 remains DRAFT on current-master branch `fix/whatsapp-offline-cas-current-46043-20261114`, latest head `21ad504592e8b81e5c60f630db7d11a6b6cb31c5`. It removes unverified JD-only terms from the shortfall-acceptance set and uses only exact same-account selected library bytes for fallback; inbox/session copies are not fallback evidence. The first exact-head CI exposed stale fixture/message assertions; commits `1f084373`, `4d426136`, `0152477d`, and `21ad5045` correct those tests without changing runtime behavior. New exact-head full CI/recovery runs must be checked before review. No protected preview exists; the private preview token is unavailable to this run.
+- PR #400 confirmed-skill role mapping is DRAFT at `a58cf550a1c21137db24e10a3bbe50d7c683b6ea`; full CI `43629917653`, WhatsApp recovery `43629917630`, Kompas baseline `43629917579`, and Plan/REA `43629917580` are green. The code allows explicitly confirmed skills to map only into relevant existing employer/project evidence, without inventing roles, actions, outcomes or metrics. Protected preview and exported-DOCX acceptance are still missing; no 95–100% live match is claimed.
+- The target remains 95–100% factual JD alignment, but a false 100% based on irrelevant insertion is rejected. Confirmed skills may enrich matching existing role bullets; JD-only requirements are not candidate experience.
+
+### Gmail / Poke-inspired mobile
+- PR #401 is DRAFT at `ab1ad5017adfe089b47cefc1072679f8426b49f5`; full CI `43630283482`, Kompas baseline `43630283491`, Plan/REA `43630283497` passed. No protected preview, two-inbox collision/selected-From/reconnect acceptance, or narrow-phone device test is available.
+- The explicit inbox direction is All Inboxes plus per-account toggles, account-scoped Important senders, and surfacing Important on Home before Overview. Background notifications, automatic email sends, and scheduling remain disabled without explicit consent.
+- Read-only production aggregates show 3 connected account IDs, 2,002 account+thread rows, 3 sync rows, and latest sync `2026-11-10T14:44:44Z`; no provider thread-ID collisions across accounts were observed. No Gmail API call, inbox mutation or email send was made.
+
+### Contract crawler
+- The owner-approved manual/on-demand policy is live in configuration: `vercel.json` has no `/api/crawl/run` cron; the separate Gmail crawler schedule is not the contract crawler. Robert Half remains pending/manual-only; eTeam is retired.
+- Read-only production snapshot: latest crawl `2026-11-10T11:00:01Z`, 6,818 found/upserted across 20 portals, one Inspyr abort; 14,566 total job rows, 12,407 active, 10,573 active within 14 days, 1,834 stale active, latest seen `2026-11-10T11:01:11Z`. eTeam has 907 rows / 818 active, latest seen `2026-11-08T11:01:01Z`. No crawl was run.
+- New current-master C2H restack branch `fix/c2h-right-to-hire-current-master-20261114` is based on `46043ec`, implementation commit `b24076e48ff3dc63f2d959bc8ae85cbb68f420ec`, Plan/REA commit `b230f87bbd1241c95d8856099a88e1eb0ac74bf1`. Accessible prior conversation retrieval surfaced the owner-authored 12 Nov 07:41:33 UTC instruction: **'Contract To Perm and Right To Hire map to C2H; negations remain unknown.'** This supersedes the older approval-pending note in PR #376. The restack implements only those aliases and direct negations; the broader generic contract-admin/negotiation/lifecycle filter came from prior assistant wording and is excluded. PR #376's old branch remains stale and must not be merged.
+- No live crawl, portal request, production-row mutation or daily schedule was performed or enabled.
+
+### Remaining release/acceptance gates
+- For PR #399 and the C2H restack: exact-head full CI, crawler/WhatsApp regression, Kompas baseline, Plan/REA schema, legitimate protected preview, then Safe Merge Gate review. Do not merge or deploy while these gates are missing.
+- For PR #400/#401: obtain the legitimate protected preview and actual exported-DOCX / two-inbox / mobile acceptance evidence; keep all real sends disabled.
+- For Kompas: route HTTP smoke and owner-consented phone/Windows/WhatsApp capture/answer continuity remain unverified; 50 real paired answers and human scoring remain open.
+
 ## 14 November 2026 — exact-master Kompas replay gate correction
 
 - Current master `b94e1629c544048d84a2b048ae83b21b612ab9dd` is READY production at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, and the canonical alias resolves to that same deployment.
