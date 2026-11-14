@@ -511,3 +511,8 @@ Continue: restack the approved WhatsApp fallback and lossless session-pair CAS w
 - The 17 Oct 17:28 Chicago incident remains unverified: exact generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt are missing; conflicting source facts remain quarantined.
 
 PR #380 is open as a draft at head 607ca82750a8aa5098db96a0265f9ede5fbbc868 (restack commit from post-#379 master 926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c). Exact-head CI/recovery/baseline/Plan-REA have not yet appeared. Keep #380 draft and wait for the legitimate protected preview before merge or production. Keep the historical incident open until its exact artifact/delivery evidence and owner fact reconciliation are available.
+
+
+## 14 November 2026 — first PR #380 exact-head gate correction
+
+PR #380 head `236b6de4d530384b660af0431b7d2b7c5da0eafe` started its exact-head workflows. Kompas baseline `43538106417` passed. Full CI `43538106431` and WhatsApp recovery `43538106427` were still running at this check. Plan/REA schema `43538106423` failed three new REA lookups: the restack had copied the new PR #380 entry but omitted five earlier #374 evidence entries that the copied regression suite intentionally checks. This was an incomplete evidence-registry restack, not a runtime test failure. The correction imports those missing source-backed REA and journal entries, while marking older #374 gate results as superseded so they cannot be mistaken for current-head validation. Rerun all exact-head checks on the corrected head; keep #380 draft and the protected-preview gate unchanged.

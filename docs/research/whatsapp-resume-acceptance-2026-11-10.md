@@ -193,3 +193,8 @@ This run created draft [PR #380](https://github.com/eshwarjay0-delS/job-dashboar
 The protected preview remains unavailable without the private `KOMPAS_VERCEL_API_TOKEN`. No bypass, real WhatsApp send, R2 production write, model call, historical replay or handset test occurred.
 
 The 17 Oct 17:28 Chicago incident remains separately blocked. The exact generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivered/read receipt and owner reconciliation of conflicting source facts remain missing. No later-created DOCX is substituted for the original output. Do not infer delivery state or replay the historical request.
+
+
+## 14 November 2026 — current-head REA schema correction
+
+The first PR #380 head `236b6de4d530384b660af0431b7d2b7c5da0eafe` ran the Plan/REA schema workflow `43538106423`, which failed three assertions because the initial current-master restack included the new #380 REA entry but omitted five historical evidence entries already present in PR #374. The failed assertions were for `whatsapp-offline-cas-restack-run11-2026-11-13`, `whatsapp-oct17-source-reverified-2026-11-13`, and the pair-CAS acceptance step; no runtime WhatsApp test failure was reported by this workflow. The missing REA entries and their related journal records are being merged additively. Older exact-head green runs remain historical and are marked superseded; they do not validate PR #380. All source gates must rerun on the corrected PR head.
