@@ -498,3 +498,30 @@ Continue: wait for exact-head full CI to complete on PR #379 and review the test
 Safe Merge Gate run `34196b1e-b4d4-8328-9abd-572f4c39f622` completed at 00:25:27 UTC with no merge or branch edits. It confirmed the four priority restacks are not eligible for merge. Kompas Continuous Voice Delivery is disabled; do not duplicate its audio/caption work. No separate Bible-Keeper automation was present in the accessible inventory.
 
 Continue: restack the WhatsApp fallback on current master without discarding its code/tests, then require exact-head CI and the legitimate protected preview before merge/deploy. Keep #375/#376/#377 draft until conflict-free restacks and their respective real acceptance gates pass. Wait for #379 full CI. Keep the crawler manual/on-demand only.
+
+
+## 14 November 2026 04:50 UTC — MFit Completion Watch run 11
+
+Current canonical master is `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`. PR #379 merged as this SHA; its full CI `43535689833`, Plan/REA `43535689818`, Kompas baseline `43535689981`, and Windows package `43535689824` all succeeded. PR #379 is a test/package guard only. Production alias `job-dashboard-fawn.vercel.app` remains READY at deployment `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, parent SHA `3e1033687972230de76747e063afe1a0c1cdea61`; no web runtime redeploy is needed. Issue #192 remains open pending installed EXE SHA/path, installed PE manifest, and Windows process/event evidence.
+
+### Priority work and exact gates
+
+| Work | Current PR/head | Exact source gates | Remaining wall |
+|---|---|---|---|
+| WhatsApp resume fallback / lossless pair CAS | [#380](https://github.com/eshwarjay0-delS/job-dashboard/pull/380) `8c5e712c39e438bf5a6a81a078dd6efe0c6d39c4` | Full CI `43557076691`, WhatsApp recovery `43557076621`, Kompas baseline `43557076622`, Plan/REA `43557076630` SUCCESS | Protected preview still requires private `KOMPAS_VERCEL_API_TOKEN`. No real send, R2 write or model call. Historical 17 Oct output DOCX, per-run R2/version, webhook correlation, Meta message ID and signed delivery/read receipt are missing; conflicting source facts remain quarantined. |
+| Confirmed-skill resume/JD alignment | [#385](https://github.com/eshwarjay0-delS/job-dashboard/pull/385) `4df2f8bc67a79a70191fb749688c4605ec1870a5` | Full CI `43556721159`, WhatsApp recovery `43556721076`, Kompas baseline `43556721106`, Plan/REA `43556721108` SUCCESS | Protected preview and owner-authorized exported-DOCX acceptance missing. No live ATS score or 95%+ match is claimed. |
+| Manual-only contract crawler guard | [#381](https://github.com/eshwarjay0-delS/job-dashboard/pull/381) `2a158873c3a410b12111788a76e9a91878fe69c3` | Full CI `43539201500`, freshness/classification `43539201471`, manual-only `43539201542`, baseline `43539201518`, Plan/REA `43539201702` SUCCESS | Ready for Safe Merge Gate. No live crawl. Keep manual/on-demand only; Robert Half manual-only. Right-To-Hire/Contract-To-Perm classifier semantics remain unapproved. |
+| Poke-inspired Gmail/mobile slice | [#387](https://github.com/eshwarjay0-delS/job-dashboard/pull/387) code commit `80a8f9ef32f55887f913655bce4400994159850b` | New PR; exact-head full CI, Plan/REA and Kompas baseline pending | Protected preview, two-inbox collision/selected-From/reconnect, and narrow-phone acceptance missing. No Gmail API/OAuth, inbox mutation or email send. |
+| UAC manifest regression guard | [#379](https://github.com/eshwarjay0-delS/job-dashboard/pull/379) merged `926bf3e` | All four exact-head gates above SUCCESS | Test/package guard only; installed Windows acceptance remains open. |
+| Shared Plan/REA reconciliation | [#386](https://github.com/eshwarjay0-delS/job-dashboard/pull/386) `01fcbb03ac2e419b3984cd4efaf85f1fe46d2bd3` | Full CI `43557208922`, Plan/REA `43557208921`, baseline `43557209069` SUCCESS | DRAFT; shared documentation sequence must be coordinated with Safe Merge Gate. |
+
+### Owner approval corrections recovered
+
+- Gmail: direct 17 Oct request includes account toggles, per-account identity/From, fold-style thread/reply/contact panes, CC/BCC/attachments, Important=track sender, combined Important inbox, automation feed and mobile controls/updates. The 3–4 account range is a target, not a hard cap.
+- Mobile menu: direct 4 Oct constraint is that it must not block or cover the view. The current normal-flow expansion is an assistant implementation choice, not a user-specified exact layout.
+- Resume: direct 6 Nov correction requires exact-JD tailoring, preserving actual titles/employers/dates/accomplishments, removing unsupported keywords, adding DR/BIA/RTO/RPO/testing only when actually performed, preserving formatting, and targeting 95%+ only where real experience supports. The 3 Nov Gemini final-DOCX ATS-score loop has no direct owner approval in accessible prior context; keep it proposed.
+- Apply: centralized contract search across W2, C2C, 1099, temporary/permanent and C2H, not staffing-firm search. Latest correction: manual/on-demand only, no daily cron, Robert Half manual-only, no unauthorized scraper/adapter. Right-To-Hire/Contract-To-Perm mapping semantics are not owner-stated and remain proposed.
+
+MFit Safe Merge Gate is active; do not merge shared Plan/REA branches in parallel. Kompas Continuous Voice Delivery is disabled, and no separate Bible-Keeper automation appeared in the accessible automation inventory. No real email/WhatsApp was sent, no live crawler was run, and no user Windows/phone device was accessed.
+
+Continue: verify exact-head CI/Plan-REA/baseline for PR #387; keep it DRAFT until the protected preview and real two-inbox/narrow-phone acceptance. Keep #380/#385 gated on protected preview and their separate acceptance requirements; let Safe Merge Gate sequence #381/#386. Do not bypass credentials, send test messages, crawl unauthorized sources, or equate unit tests with live ATS quality.
