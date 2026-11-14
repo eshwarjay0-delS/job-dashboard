@@ -1,14 +1,31 @@
 export type ContractType = 'W2' | 'C2C' | '1099' | 'C2H' | 'Temporary' | 'Contract'
 /** Employment evidence, not guesses from company names or ordinary W2 payroll. */
 export function contractTypes(text:string, employmentType=''):ContractType[]{
- const t=text.toLowerCase(),out:ContractType[]=[]
- if(/\b(?:c2c|corp[ -]to[ -]corp)\b/.test(t)&&!/\b(?:no|not|without)\s+(?:c2c|corp[ -]to[ -]corp)\b/.test(t))out.push('C2C')
- if(/\b1099\b/.test(t)&&!/\b(?:no|not)\s+1099\b/.test(t))out.push('1099')
- if(/\bc2h\b|contract[ -]to[ -]hire|contract[ -]to[ -]permanent/.test(t))out.push('C2H')
- if(/\btemporary\b|\btemp[ -]to[ -]hire\b/.test(t)||/temporary/i.test(employmentType))out.push('Temporary')
- const contract=/\bcontract(?:or|ing)?\b/.test(t)||/contract/i.test(employmentType)||out.length>0
- if(contract&&/\bw[ -]?2\b/.test(t))out.unshift('W2')
- if(contract&&!out.length)out.push('Contract')
+ const normalize=(value:string)=>String(value||'').toLowerCase().replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ').trim()
+ const stripNegations=(value:string)=>value
+  .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b/gi,' ')
+  .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?(?:c2c|corp[ -]to[ -]corp)\b/gi,' ')
+  .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?1099\b/gi,' ')
+  .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?w[ -]?2\b/gi,' ')
+  .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?temporary\b/gi,' ')
+  .replace(/\b(?:no|not|without|never)\s+(?:a\s+)?(?:contract|contractor|contracting)(?:\s+(?:role|position|job|assignment|engagement|opportunity|opening|basis|employment))?\b/gi,' ')
+ const t=stripNegations(normalize(text)), et=stripNegations(normalize(employmentType)), combined=t+' '+et
+ const out:ContractType[]=[]
+ const hasC2C=/\b(?:c2c|corp[ -]to[ -]corp)\b/.test(combined)
+ const has1099=/\b1099\b/.test(combined)
+ const hasC2H=/\b(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b/.test(combined)
+ const hasTemporary=/\btemp[ -]to[ -]hire\b/.test(combined)||/\btemporary\b/.test(et)||/\btemporary\s+(?:role|position|job|assignment|contract)\b|\b(?:role|position|job|assignment)\s+(?:is\s+)?temporary\b/.test(t)
+ const hasW2=/\bw[ -]?2\b/.test(combined)
+ // A structured employmentType label is authoritative. Free-text contract words need employment context.
+ const hasContractLabel=/\bcontract(?:or|ing)?\b/.test(et)
+ const hasContractContext=/\b(?:contract|contractor|contracting)\s+(?:role|position|job|assignment|engagement|opportunity|opening|basis|employment|work)\b|\b(?:role|position|job|assignment|engagement|opportunity|opening)\s+(?:is|as|on)\s+(?:a\s+)?contract\b|\b(?:full|part)[ -]time\s+contract\b|\bfixed[ -]term\s+contract\b|\bw[ -]?2\s+contract\b|\bindependent\s+contractor\b|\bcontractor\s+(?:for|on)\s+(?:a\s+)?(?:\d+|one|two|three|six|twelve)\s+(?:week|month|year)s?\b|\bcontract\s+for\s+(?:a\s+)?(?:\d+|one|two|three|six|twelve)\s+(?:week|month|year)s?\b|\b(?:\d+|one|two|three|six|twelve)[ -](?:week|month|year)\s+contract\b/.test(t)
+ const hasContract=hasContractLabel||hasContractContext||hasC2C||has1099||hasC2H||hasTemporary
+ if(hasC2C)out.push('C2C')
+ if(has1099)out.push('1099')
+ if(hasC2H)out.push('C2H')
+ if(hasTemporary)out.push('Temporary')
+ if(hasContract&&hasW2)out.unshift('W2')
+ if(hasContract&&!out.length)out.push('Contract')
  return out
 }
 export function applicationUrl(value:string):string|null{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null}catch{return null}}
