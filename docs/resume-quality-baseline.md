@@ -20,3 +20,12 @@ Owner requirement, 16 October 2026: target 95–98% measured JD keyword coverage
 ## Historical WhatsApp incident reconciliation — 17 October 2026
 
 The 5:28 PM America/Chicago screenshot records the older 98% hard hold after automatic repair. The latest 6 November WhatsApp delivery policy supersedes that behavior; it does not authorize adding the missing CCSP, CISM, CRISC, CISA, Canton or SOL terms as candidate experience. The screenshot does not expose the exact score, full JD, original DOCX bytes, generated file or run trace, so the incident cannot be replayed exactly from the available artifact. See `docs/research/whatsapp-resume-acceptance-2026-11-10.md`.
+
+
+## Owner-approved final-DOCX Gemini ATS loop — 14 November 2026
+
+The owner-approved 3 November loop asks Gemini exactly **Give me ATS score** after each complete final DOCX export. The review sees the original JD, canonical target terms and text extracted from the actual exported DOCX. Gemini's score and missing/weak terms are diagnostics only; deterministic exported-byte coverage, ATS parseability and factual evidence remain authoritative.
+
+Corrections are restricted to source-resume evidence or explicit first-person confirmations. A confirmed skill may be placed in a relevant existing project across roles only when the original project context fits; no employer, project, action, outcome, date, title, location, contact, metric or credential may be invented. Weak terms may be improved in an existing role only when that role's source/confirmation context supports them. The loop is bounded to at most two correction rounds and the request time budget, with a new DOCX export and Gemini re-review after each accepted correction. Missing keys, invalid responses, incomplete exports and timeouts are reported as skipped/unavailable, not clean passes.
+
+Implementation status, 14 November: the final-DOCX code from stale PR #289 is being restacked on the current evidence-bound confirmed-skill branch fix/resume-confirmed-skill-current-3e710-20261114-run13. Exact-head validation, legitimate protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance remain pending. The protected preview requires an authorized private KOMPAS_VERCEL_API_TOKEN. No personal document, Gemini call, exported DOCX or live 98% match was produced in this run. The 6 November WhatsApp gap-disclosure policy is unchanged.

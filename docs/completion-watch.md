@@ -536,3 +536,85 @@ Continue: verify all required exact-head checks on the latest #381 branch head, 
 - Kompas Continuous Voice Delivery is disabled; do not duplicate its computer-audio/caption work. MFit Safe Merge Gate is active and reviewing PR #392; no parallel merge or branch rewrite was performed. No separate Bible-Keeper automation appeared in the accessible inventory.
 
 Continue: finish exact-head validation of `fix/resume-confirmed-skill-current-3e710-20261114-run13`, then obtain the legitimate protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance. Separately restack the approved final-DOCX Gemini loop; keep the historical WhatsApp incident open until its exact output and signed delivery evidence are recovered.
+
+
+## 14 November 2026 — run 11: continue the approved final-DOCX Gemini loop
+
+Continue: restack and validate the owner-approved final-DOCX Gemini ATS score/correction loop from stale PR #289 onto the current confirmed-skill implementation.
+
+- Canonical master is 3e710d50760b4a757d75ad2858ef508f3d36b388. Production alias job-dashboard-fawn.vercel.app is independently READY at deployment dpl_5X265CqeobnkUtiEH6xVA6yB5fXn, SHA 3e1033687972230de76747e063afe1a0c1cdea61. No new runtime release was created.
+- Parent PR #393 is a DRAFT current-master restack at 9cd81927b095289de0e4a39da74a8af2265cbc43; exact-head full CI 43589350262, WhatsApp recovery 43589350254, Kompas baseline 43589350277, and Plan/REA 43589350309 passed. Its protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance remain missing.
+- The new dependent branch feat/final-docx-gemini-current-20261114-run11 carries the approved final-DOCX loop from PR #289 onto the current confirmed-skill branch. It uses the exact first prompt, actual exported-DOCX text, canonical JD terms, a diagnostic-only score, at most two evidence-only corrections, re-export/re-review, and the latest relevant-context check for cross-role confirmed skills.
+- Weak terms are targeted only when the source role or an explicit first-person confirmation supports them in that existing project context. The final role guard receives the confirmed-skill set; unrelated roles and generic CRM/audit bullets remain protected.
+- Exact-head checks for the new branch are pending. The legitimate protected preview requires an authorized private KOMPAS_VERCEL_API_TOKEN; do not bypass deployment protection. No personal resume/JD was processed, no Gemini call or DOCX export occurred, and no production deployment or live 98% match is claimed.
+- The 17 Oct 17:28 Chicago WhatsApp incident remains separately blocked: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt are missing. PR #392's source fix does not prove historical delivery; no replay, real send or production R2 write was performed.
+- Poke-inspired Gmail/mobile PR #394 and Kompas question/voice harness PR #388 remain DRAFT pending protected preview and real inbox/device/native acceptance. Contract crawling remains manual/on-demand only; PR #381 merged, no daily contract-crawler cron is enabled, and Robert Half remains manual-only.
+- MFit Safe Merge Gate is enabled and has reviewed the current-master queue; it kept #392/#393/#394/#388 DRAFT because their separate preview/acceptance gates remain. Kompas Continuous Voice Delivery is disabled, so no audio/caption work was duplicated. No separate Bible-Keeper automation appeared in the accessible inventory.
+
+Continue: run the exact-head final-DOCX, confirmed-skill and WhatsApp regression workflows on the new dependent branch; keep it DRAFT until the legitimate protected preview and owner-authorized exported-DOCX acceptance are available.
+
+
+## 14 November 2026 13:50 UTC — exact-head validation update for the final-DOCX Gemini loop
+
+- PR #395 head `6cb3a8896772ac90758662a533260cf34a7ed99c` passed final-DOCX ATS review workflow `43599223875` (all steps successful, including `npm run check` and the focused final-DOCX tests), WhatsApp recovery workflow `43599223815`, and Plan Journal/REA workflow `43599223837`.
+- These checks validate the current dependent source head only. PR #395 is stacked on parent PR #393; full master-targeted CI must run after the parent is accepted and the stack is retargeted. The protected preview remains unavailable without an authorized private `KOMPAS_VERCEL_API_TOKEN`.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, and no deployment or live 98% match is claimed. The production alias remains on the earlier runtime SHA; this branch is not deployed.
+
+Continue: keep #395 DRAFT; satisfy the parent #393 preview and owner-authorized resume/JD/confirmed-skill DOCX acceptance first, then retarget and run full CI on the final master-based head. Do not bypass preview protection or substitute synthetic tests for the actual DOCX review.
+
+
+## 14 November 2026 13:58 UTC — final-DOCX Plan contract regression repair
+
+- PR #395 head `cc07f34ae14bf8be645626fa17f4ddc274987c7f` completed `npm run check` successfully, but its focused final-DOCX workflow `43602195377` ended FAILURE at 70/71 tests.
+- The only failure was the Plan contract test at `scripts/tests/resume-final-ats-review.test.mjs:86`: the updated Plan wording no longer contained the exact required phrase `the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN`. The test is correct and was not weakened.
+- The follow-up commit restores that exact blocker wording and increments `PLAN_REVISION` to `2026-11-14.8`. The corrected head must rerun the final-DOCX workflow; do not reuse the predecessor's partial result as a pass.
+- WhatsApp recovery `43602195328` and Plan/REA `43602195324` passed on `cc07f34`; those are still source tests, not delivery or DOCX acceptance.
+
+Continue: verify the corrected exact head's final-DOCX workflow to SUCCESS, then leave #395 DRAFT pending parent #393 preview and owner-authorized exported-DOCX acceptance. No personal data, Gemini model call, DOCX export, production deployment or live 98% claim occurred.
+
+
+## 14 November 2026 14:02 UTC — final-DOCX Gemini exact-head source gates green
+
+- Corrected PR #395 head `464a4007d769b5a0fedf62122ab8f7a5a6f1a0f5` passed final-DOCX ATS workflow `43602430563` (including `npm run check` and all focused tests), WhatsApp recovery `43602430544`, and Plan Journal/REA schema `43602430550`.
+- The prior `cc07f34` head passed `npm run check` but failed one focused Plan contract assertion (70/71). The preview-token wording was restored exactly and the test was preserved; no assertion was weakened.
+- PR #395 remains DRAFT and stacked on parent #393. Full master-targeted CI is still due after parent acceptance and retargeting. Protected preview still requires an authorized private `KOMPAS_VERCEL_API_TOKEN`.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, no deployment or live 98% match is claimed.
+
+Continue: complete parent #393 protected preview and owner-authorized baseline/JD/confirmed-skill DOCX acceptance; then retarget #395 to master and run full CI on the final head before any release.
+
+
+## 14 November 2026 14:05 UTC — final-DOCX Gemini exact-head source gates all green
+
+- PR #395 head `fb806e39adaf14580209185f98e040a205ed814f` passed final-DOCX ATS workflow `43602721589` (including `npm run check` and focused tests), WhatsApp recovery `43602721602`, and Plan Journal/REA schema `43602721766`.
+- The immediately preceding `cc07f34` head had one Plan phrase assertion failure (70/71) after `npm run check` passed. The exact preview-token phrase was restored and the test was retained; the corrected `464a4007` and `fb806e39` heads both passed all three source gates.
+- PR #395 remains DRAFT and stacked on #393. Full master-targeted CI remains due after parent acceptance and retargeting. Protected preview still requires an authorized private `KOMPAS_VERCEL_API_TOKEN`.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, no deployment or live 98% match is claimed.
+
+Continue: complete parent #393 protected preview and owner-authorized baseline/JD/confirmed-skill DOCX acceptance, then retarget #395 to master and run full CI on the final head.
+
+
+## 14 November 2026 14:08 UTC — exact-head resume gates and historical iZap check
+
+- PR #395 head `4136afc89cda31ec3371f30977784b1b71c235d2` passed final-DOCX ATS workflow `43602950153` (including `npm run check` and focused tests), WhatsApp recovery `43602950175`, and Plan Journal/REA schema `43602950221`. It remains DRAFT and stacked on PR #393; full master-targeted CI, protected preview and owner-authorized DOCX acceptance remain due.
+- The historical 17 Oct incident was checked read-only against iZap: the connected business has no linked WhatsApp numbers; searches for `98% coverage target` and `Eshwar_Resume` on 17 Oct returned no messages. This is iZap-only evidence, not proof about MFit Meta Cloud API. The generated output DOCX, R2 object/version, webhook correlation, Meta message ID and signed receipt remain missing.
+- No personal resume/JD was processed; no Gemini call, DOCX export, WhatsApp/email send, R2 mutation, historical replay or device test occurred.
+
+Continue: obtain the authorized protected preview and owner-approved baseline/JD/confirmed-skill DOCX acceptance for #393; separately recover the exact historical output and signed Meta delivery chain before any replay.
+
+
+## 14 November 2026 14:10 UTC — final-DOCX source gates and iZap historical check
+
+- PR #395 head `0eeb69e645373e91e85371e7ba5df3ef594fe731` passed final-DOCX ATS workflow `43603160971` (including `npm run check` and focused tests), WhatsApp recovery `43603160910`, and Plan Journal/REA schema `43603160921`. It remains DRAFT and stacked on PR #393; full master-targeted CI and protected preview are still due.
+- The 17 Oct historical incident was checked read-only against iZap: the connected business has no linked WhatsApp numbers; searches for `98% coverage target` and `Eshwar_Resume` returned no messages. This is iZap-only evidence, not proof about MFit Meta Cloud API. The generated output DOCX and signed delivery chain remain missing.
+- No personal resume/JD, Gemini model call, DOCX export, email/WhatsApp send, production R2 write, replay, deployment or owner-device test occurred.
+
+Continue: obtain the authorized protected preview and owner-approved baseline/JD/confirmed-skill DOCX acceptance for #393; separately recover the exact historical output and signed Meta delivery chain before any replay.
+
+
+## 14 November 2026 14:12 UTC — final-DOCX loop exact-head gates green
+
+- PR #395 head `b925b73219c0ec483cda3c7e83402f7bad3a351e` passed final-DOCX ATS workflow `43603339733` (including `npm run check` and focused tests), WhatsApp recovery `43603339737`, and Plan Journal/REA schema `43603339786`.
+- The Plan/REA record now points to the valid historical WhatsApp research file and records the iZap read-only finding. iZap has no linked WhatsApp number and no matching messages; this is not evidence about MFit Meta Cloud API.
+- PR #395 remains DRAFT and stacked on #393; full master-targeted CI, protected preview, and owner-authorized baseline/JD/confirmed-skill DOCX acceptance remain due. No personal resume/JD, Gemini call, DOCX export, deployment or live 98% match occurred.
+
+Continue: obtain the authorized protected preview and owner-approved baseline/JD/confirmed-skill DOCX acceptance for #393, then retarget #395 to master and run full CI on the final head.
