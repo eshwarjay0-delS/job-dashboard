@@ -509,3 +509,16 @@ Draft PR #381 on `fix/apply-manual-crawler-only-20261114` adds a dedicated manua
 No live crawl, external portal request, production-row mutation or application submission was performed. PR #381 head `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed all five exact-head gates: full CI `43562602530`, manual-only `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA `43562602388`. The full CI Webpack build completed successfully with no failed steps. A final documentation-only status record is being added on the same branch, so those results must be rerun on the new head before merge. No crawler runtime deployment is needed because the cron is already absent; any Plan & Vision UI text update must use the normal reviewed master release and exact alias verification.
 
 Continue: rerun exact-head CI after the final status-record commit, then let Safe Merge Gate sequence PR #381 with #386/#387. Do not run the crawler unless the owner separately requests a manual crawl.
+
+
+## 14 November 2026 — manual-only crawler guard validation update
+
+PR #381 remains a documentation/comment/regression-only change. Current master already has no `/api/crawl/run` cron; the separate Gmail crawler schedule is preserved, and Robert Half remains manual-only.
+
+- The earlier exact-head full CI on `f1ce562a2c4abbafd550887a512df5120555326e` failed TypeScript because the new REA record declared `steps` twice. Commit `b643f067cf802fa9ba6fa325a8a7e07fc4683466` merged both evidence arrays without dropping either.
+- Exact head `b1628bdf12b6d2eeb9189dc4b89ef495ef615c2e` then passed full CI `43567745876`, manual-only regression `43567745860`, crawler regression `43567745899`, Kompas baseline `43567745858`, and Plan/REA `43567745834`.
+- Plan Journal and REA now record that result in follow-up documentation commits `aabd68acc21dc543362baf3a34aeffe4316c0f8b` and `c535c7739777b152717c0683db0f3571a4a0229f`. Because those commits advance the branch after the green exact-head runs, all required checks must complete again on the latest PR head before merge. Do not reuse the `b1628bdf` results as proof for a later head.
+- MFit Safe Merge Gate must sequence #381 with shared Plan/REA branches #386 and #387; do not merge those documentation branches in parallel.
+- No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
+
+Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
