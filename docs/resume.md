@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **95–100% is the target, never a guarantee.** Web downloads retain the strict 95% raw-JD-overlap minimum and 98% generation target. WhatsApp follows the separately approved 6 Nov policy: a complete, readable 70–94.9% raw-overlap DOCX may be sent with disclosed gaps when supported coverage is at least 95%; a finished readable result below 70% may also be sent with disclosed gaps, but is not a clean pass. Incomplete, skills-only, unreadable, failed or identity-mismatched runs use the selected same-account resume fallback. Unsupported experience is never invented.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
@@ -80,3 +80,22 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## WhatsApp fallback boundary — 14 November 2026
+
+The 6 November owner correction remains authoritative: a completed readable WhatsApp rewrite may be sent below 95% raw JD overlap with gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp send gate. Do not invent confirmed experience, employers, dates, credentials or metrics.
+
+For an initial JD run whose provider fails or returns an incomplete result, the only allowed fallback is the exact selected same-account library resume, explicitly labelled **Original resume — NOT TAILORED**. Verify account root, normalized relative path, resolved file path and byte equality with the session copy. If the selection cannot be verified, send no document and preserve the request for retry. Swipe-reply refinement failures remain text-only and never send the baseline. Draft PR #380 carries the 14 November provider-exception correction; its exact-head gates and protected preview are still separate acceptance requirements.
+
+
+## 14 November 2026 — current WhatsApp fallback acceptance
+
+The current-master PR #380 source branch implements the owner-approved initial-JD fallback: only the exact selected same-account library bytes may be sent as **Original resume — NOT TAILORED** when the initial provider run is unavailable or incomplete. The account root, relative path, resolved library path and byte equality with the session copy must all match. If they cannot be verified, no file is sent and the request remains retryable. Failed swipe-reply refinement remains text-only and never sends an original or partial baseline. PR #380 head `cf86a8d51c5fc7aea432ffc139efe4cf9c5a4b64` passed full CI, the dedicated WhatsApp recovery gate, Kompas baseline and Plan/REA schema; it is still DRAFT, not merged/deployed, and the protected preview is unavailable. No live 95–100% or 98% match is claimed.
+
+
+## 14 November 2026 — current-master WhatsApp restack
+
+The approved WhatsApp fallback and unverified-JD hard hold are being restacked from source commit `128272f041a9b6a1d637abdb253affd6c7e11a7b` onto canonical master `46043ec6ca926b2ab82424d255367426685f294d` as `fix/whatsapp-offline-cas-current-46043-20261114`. The latest predecessor PR #392 head `33b1353809771ce9f8a99b0262731b166d64c3cf` is DRAFT/dirty and has no exact-head Actions runs. The new restack must pass full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on its own final head.
+
+The initial-JD fallback is limited to the exact selected same-account library bytes, labelled **Original resume — NOT TAILORED**; no session/inbox copy is allowed. Swipe-reply failure remains text-only. No 98% live match, historical delivery, production R2 write, model call or real WhatsApp send is claimed.

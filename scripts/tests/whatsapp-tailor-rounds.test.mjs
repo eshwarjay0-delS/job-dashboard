@@ -1,5 +1,6 @@
 // Simulated WhatsApp tailor rounds. Send is a recorder. Nothing leaves this process.
 import test from 'node:test'
+import { etagBlobMethods } from './helpers/etag-blob.mjs'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -142,6 +143,7 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
   }))
   seed()
   const blob = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => { entries.set(key, value) },
     get: async key => key === 'tailored/round-token.docx' ? Buffer.from('tailored-bytes') : null,
