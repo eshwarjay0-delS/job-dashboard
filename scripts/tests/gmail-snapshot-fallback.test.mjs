@@ -64,6 +64,101 @@ test("import secret is unset, wrong, or exact", () => {
   assert.equal(snapshotBodyTooLarge(MAX_SNAPSHOT_BODY_BYTES + 1), true)
 })
 
+test("public snapshot fallback fails closed when the import secret is missing", async () => {
+  const previous = process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+  delete process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+  const files = new Map()
+  const writes = []
+  setGmailSnapshotBackendForTests({
+    async put(path, body, access) {
+      writes.push({ path, access })
+      if (access === "private") throw new Error("private access is not supported")
+      files.set(path, body)
+    },
+    async get(path) { return files.has(path) ? files.get(path) : null },
+  })
+  try {
+    const saved = await acceptSnapshotPart({
+      user_id: USER,
+      part: 0,
+      total: 1,
+      threads: [thread("no-secret", "a@example.com", 10)],
+    })
+    assert.equal(saved.status, 503)
+    assert.equal(saved.body.error, "Snapshot store could not keep this part private.")
+    assert.equal(files.size, 0, "no public snapshot object is written without the deployment secret")
+    assert.ok(writes.every(write => write.access === "private"))
+  } finally {
+    if (previous === undefined) delete process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+    else process.env.GMAIL_SNAPSHOT_IMPORT_SECRET = previous
+  }
+})
+
+test("sealed public fallback uses the explicit secret and remains readable", async () => {
+  const previous = process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+  process.env.GMAIL_SNAPSHOT_IMPORT_SECRET = "unit-test-only-snapshot-secret"
+  const files = new Map()
+  setGmailSnapshotBackendForTests({
+    async put(path, body, access) {
+      if (access === "private") throw new Error("private access is not supported")
+      files.set(path, body)
+    },
+    async get(path) { return files.has(path) ? files.get(path) : null },
+  })
+  try {
+    const saved = await acceptSnapshotPart({
+      user_id: USER,
+      part: 0,
+      total: 1,
+      sync: [{ user_id: USER, account_id: "acct-a", last_sync_at: "2026-11-10T14:44:44.000Z", days_synced: 90 }],
+      threads: [thread("sealed", "a@example.com", 10)],
+    })
+    assert.equal(saved.status, 200)
+    const paths = [...files.keys()]
+    assert.equal(paths.length, 2)
+    assert.ok(paths.every(path => /^gmail-snapshot\/[a-f0-9]{64}\.json$/.test(path)))
+    assert.ok(paths.every(path => !path.includes(USER)), "public object paths do not reveal the account ID")
+    const manifest = [...files.values()].map(value => JSON.parse(value)).find(value => value.userId === USER)
+    assert.ok(manifest)
+    assert.equal(manifest.parts["0"].access, "public")
+    const accounts = await resolveGmailAccounts(USER, async () => {
+      throw Object.assign(new Error("database project is restricted"), { status: 402, code: "exceed_egress_quota" })
+    })
+    assert.equal(accounts.source, "snapshot")
+    assert.equal(accounts.accounts.length, 1)
+    const page = await snapshotThreads(USER, { days: 30, limit: 10, offset: 0 })
+    assert.equal(page.threads.length, 1)
+    assert.equal(page.threads[0].threadId, "sealed")
+  } finally {
+    if (previous === undefined) delete process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+    else process.env.GMAIL_SNAPSHOT_IMPORT_SECRET = previous
+  }
+})
+
+test("without the secret, snapshot reads do not probe a predictable public path", async () => {
+  const previous = process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+  delete process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+  const reads = []
+  setGmailSnapshotBackendForTests({
+    async put() {},
+    async get(path, access) {
+      reads.push({ path, access })
+      return null
+    },
+  })
+  try {
+    const accounts = await resolveGmailAccounts(USER, async () => {
+      throw Object.assign(new Error("database project is restricted"), { status: 402, code: "exceed_egress_quota" })
+    })
+    assert.equal(accounts.source, "snapshot")
+    assert.equal(accounts.accounts.length, 0)
+    assert.deepEqual(reads, [{ path: `gmail-snapshot/${USER}/manifest.json`, access: "private" }])
+  } finally {
+    if (previous === undefined) delete process.env.GMAIL_SNAPSHOT_IMPORT_SECRET
+    else process.env.GMAIL_SNAPSHOT_IMPORT_SECRET = previous
+  }
+})
+
 test("a restricted database read serves the saved rows, and a working read does not", async () => {
   const gets = []
   const files = new Map()
