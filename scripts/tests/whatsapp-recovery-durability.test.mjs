@@ -246,3 +246,150 @@ test("authenticated recovery route checkpoints progress before long work and use
   assert.ok(worker.includes('stage: "attempt_started"'))
   assert.ok(worker.includes('stage: "attempt_finished"'))
 })
+
+
+const refinementInput = n => ({
+  ...input(n),
+  jdId: "refine-job-" + n,
+  resumePath: "/versions/sender/.refine-" + n + ".docx",
+  refinement: {
+    replyTo: "wamid-original-" + n,
+    request: "Add the confirmed AWS project detail",
+    sourcePath: "/versions/sender/original-version.docx",
+    sourceHash: id(900 + n),
+    sourceSnapshotPath: "/versions/sender/.refine-" + n + ".docx",
+    idempotencyKey: id(n),
+    genSnapshot: { meta: { role: "Security Engineer" }, changes: ["Shorten bullets"], source: "/files/original.docx", createdAt: 1000 },
+  },
+})
+
+test("refinement enqueue is immutable and duplicate webhook delivery is idempotent", async () => {
+  const api = harness()
+  const first = await api.enqueueResumeRefinement(refinementInput(101))
+  const duplicate = await api.enqueueResumeRefinement(refinementInput(101))
+  assert.equal(first.id, duplicate.id)
+  assert.equal(duplicate.kind, "refine")
+  await assert.rejects(
+    () => api.enqueueResumeRefinement({ ...refinementInput(101), refinement: { ...refinementInput(101).refinement, request: "Replace the original request" } }),
+    /refinement_idempotency_conflict/,
+  )
+  const job = await api.readResumeRecovery(id(101))
+  assert.equal(job.refinement.request, "Add the confirmed AWS project detail")
+  assert.equal(job.refinement.replyTo, "wamid-original-101")
+})
+
+test("refinement jobs are isolated from the initial-JD recovery worker", async () => {
+  const api = harness()
+  await api.enqueueResumeRecovery(input(102))
+  await api.enqueueResumeRefinement(refinementInput(103))
+  assert.equal((await api.dueResumeRecoveries()).map(j => j.id).join(","), id(102))
+  assert.equal((await api.dueResumeRefinements()).map(j => j.id).join(","), id(103))
+})
+
+test("refinement claims have one winner and recover after a stale lease", async () => {
+  const api = harness()
+  await api.enqueueResumeRefinement(refinementInput(104))
+  const now = 1_800_000_000_000
+  const claims = await Promise.all([
+    api.claimResumeRefinement(id(104), now),
+    api.claimResumeRefinement(id(104), now),
+  ])
+  assert.equal(claims.filter(Boolean).length, 1)
+  const retry = await api.claimResumeRefinement(id(104), now + 330_001)
+  assert.ok(retry)
+  assert.equal(retry.attempts, 2)
+})
+
+test("rejected DOCX and exact source hash remain durable for a later safe retry", async () => {
+  const api = harness()
+  await api.enqueueResumeRefinement(refinementInput(105))
+  await api.patchResumeRefinement(id(105), {
+    generatedPath: "tailored/rejected-105.docx",
+    generatedSha256: id(905),
+    generationState: "rejected",
+    rejectionCode: "identity_guard_rejected",
+  })
+  const now = 1_800_000_000_000
+  await api.deferResumeRefinement(id(105), "identity_guard_rejected", now)
+  const saved = await api.readResumeRecovery(id(105))
+  assert.equal(saved.status, "pending")
+  assert.equal(saved.refinement.generationState, "rejected")
+  assert.equal(saved.refinement.rejectionCode, "identity_guard_rejected")
+  assert.equal(saved.refinement.generatedPath, "tailored/rejected-105.docx")
+  assert.equal(saved.refinement.generatedSha256, id(905))
+  assert.equal(saved.refinement.sourceHash, id(1005))
+  assert.equal(saved.refinement.sourceSnapshotPath, "/versions/sender/.refine-105.docx")
+  assert.equal((await api.dueResumeRefinements(1, now)).length, 0)
+  assert.equal((await api.dueResumeRefinements(1, now + 300_001)).length, 1)
+})
+
+test("refinement patch cannot rewrite the original reply, request, source path or source hash", async () => {
+  const api = harness()
+  await api.enqueueResumeRefinement(refinementInput(106))
+  await api.patchResumeRefinement(id(106), {
+    replyTo: "wamid-wrong",
+    request: "Wrong request",
+    sourcePath: "/other/source.docx",
+    sourceHash: id(1),
+    sourceSnapshotPath: "/other/snapshot.docx",
+    idempotencyKey: id(2),
+    generatedSha256: id(906),
+  })
+  const saved = await api.readResumeRecovery(id(106))
+  assert.equal(saved.refinement.replyTo, "wamid-original-106")
+  assert.equal(saved.refinement.request, "Add the confirmed AWS project detail")
+  assert.equal(saved.refinement.sourcePath, "/versions/sender/original-version.docx")
+  assert.equal(saved.refinement.sourceHash, id(1006))
+  assert.equal(saved.refinement.sourceSnapshotPath, "/versions/sender/.refine-106.docx")
+  assert.equal(saved.refinement.idempotencyKey, id(106))
+  assert.equal(saved.refinement.generatedSha256, id(906))
+})
+
+test("Meta acceptance and sent remain uncertain and are never automatically resent", async () => {
+  const api = harness()
+  await api.enqueueResumeRefinement(refinementInput(107))
+  await api.patchResumeRefinement(id(107), { generationState: "ready", generatedPath: "tailored/ready-107.docx", generatedSha256: id(907) }, { status: "sending" })
+  assert.equal(await api.markResumeDocumentAccepted(id(107), "wamid-refine-107"), true)
+  let job = await api.readResumeRecovery(id(107))
+  assert.equal(job.status, "uncertain")
+  assert.equal(job.deliveryState, "accepted")
+  assert.equal((await api.dueResumeRefinements()).length, 0)
+  await api.recordResumeDeliveryStatus("wamid-refine-107", "sent")
+  job = await api.readResumeRecovery(id(107))
+  assert.equal(job.status, "uncertain")
+  assert.equal(job.deliveryState, "sent")
+  assert.equal((await api.dueResumeRefinements()).length, 0)
+})
+
+test("signed delivery callback correlates by opaque job id and marks only delivered/read complete", async () => {
+  const api = harness()
+  await api.enqueueResumeRefinement(refinementInput(108))
+  await api.patchResumeRefinement(id(108), { generationState: "ready", generatedPath: "tailored/ready-108.docx", generatedSha256: id(908) }, { status: "sending" })
+  await api.recordResumeDeliveryStatus("wamid-refine-108", "delivered", id(108))
+  let job = await api.readResumeRecovery(id(108))
+  assert.equal(job.status, "delivered")
+  assert.equal(job.deliveryState, "delivered")
+  assert.equal(job.deliveredMessageId, "wamid-refine-108")
+  await api.patchResumeRecovery(id(108), { status: "pending", retryAt: 0 })
+  job = await api.readResumeRecovery(id(108))
+  assert.equal(job.status, "delivered")
+})
+
+test("signed Meta failure retries the same generated document rather than regenerating or sending a baseline", async () => {
+  const api = harness()
+  await api.enqueueResumeRefinement(refinementInput(109))
+  await api.patchResumeRefinement(id(109), {
+    generationState: "ready",
+    generatedPath: "tailored/ready-109.docx",
+    generatedSha256: id(909),
+    resultSnapshot: { token: "ready-109" },
+  }, { status: "sending" })
+  await api.markResumeDocumentAccepted(id(109), "wamid-refine-109")
+  await api.recordResumeDeliveryStatus("wamid-refine-109", "failed")
+  const job = await api.readResumeRecovery(id(109))
+  assert.equal(job.status, "pending")
+  assert.equal(job.deliveryState, "failed")
+  assert.equal(job.refinement.generatedPath, "tailored/ready-109.docx")
+  assert.equal(job.refinement.generatedSha256, id(909))
+  assert.equal(job.refinement.resultSnapshot.token, "ready-109")
+})
