@@ -535,3 +535,12 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 14 November 2026 — safe additive restack of Kompas question/voice CI harness
+
+- Original PR [#388](https://github.com/eshwarjay0-delS/job-dashboard/pull/388) is a test/CI-only change. Its head `8843d19df463d77f751b2d169b9d63dbcd61c3e5` is based on `3e710d50760b4a757d75ad2858ef508f3d36b388`, while current master is `46043ec6ca926b2ab82424d255367426685f294d`; GitHub reports the original PR as `dirty`.
+- The original exact-head full CI `43591332620`, Kompas baseline `43591332504`, and Plan/REA schema `43591332587` completed SUCCESS on the old head. These results do not validate a new restack.
+- A separate safe branch `safe/kompas-question-voice-ci-restack-20261114-2225z` was created from exact current master `46043ec6ca926b2ab82424d255367426685f294d`. It carries only the additive CI step and test-harness repairs (load the real QW helper block in the typed tests; supply a harmless empty `currentOutputKey()` in the voice VM), while preserving current master and appending current Plan/REA/handoff evidence. No production runtime, answer engine, capture, consent, authentication, session, transcript storage or desktop packaging source is changed.
+- Next: open/validate the restacked draft and require completed exact-head full CI, Kompas baseline and Plan/REA schema. Keep it DRAFT until the legitimate protected preview is available. Native Windows/phone acceptance and the live 50-pair answer comparison with independent human grading remain separate. Five test suites / 72 TAP cases are not 50 end-to-end improvement cycles.
+- Kompas Continuous Voice Delivery remains disabled; this restack does not duplicate its audio/caption runtime work. No model call, real audio capture, WhatsApp send, email send, production write or deployment occurred.

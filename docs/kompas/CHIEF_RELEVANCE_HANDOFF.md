@@ -74,3 +74,8 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+
+## 14 November 2026 — question and voice regression harness restack
+
+PR #388's original head 8843d19df463d77f751b2d169b9d63dbcd61c3e5 is a test-only change adding five question-framing, one-press, typed-input and voice suites to full CI. Its exact-head full CI 43591332620, Kompas baseline 43591332504 and Plan/REA schema 43591332587 all completed SUCCESS on that older base. The conflict is caused by intervening master updates; a separate safe restack branch safe/kompas-question-voice-ci-restack-20261114-2225z is based on current master 46043ec6ca926b2ab82424d255367426685f294d and preserves the newer journal/completion records. New exact-head checks are pending. This is CI/test harness work only, not a runtime answer/capture fix or a 50-cycle end-to-end evaluation. Protected preview, native Windows/phone acceptance and the live 50-pair human review remain separate.
