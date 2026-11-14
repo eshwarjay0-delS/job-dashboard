@@ -14,6 +14,11 @@ Continue: carry the approved WhatsApp same-account offline fallback, lossless re
 
 
 
+## 14 November 2026 19:07 UTC — TypeScript gate correction
+
+The corrected WhatsApp source-contract assertion was committed, but the first corrected-head runs did not reach the test suite. Full CI `43629496375` and WhatsApp recovery `43629496374` both stopped at TypeScript typecheck: the new REA record used `steps.status = "In progress"`, while the schema permits only `Pending`, `Blocked`, `Observed`, `Implemented` or `Tested`. The record now uses `Pending`. Plan/REA `43629496389` and Kompas baseline `43629496391` passed on that head. The WhatsApp contract test was skipped, so its corrected assertion is still unverified.
+
+
 ## 14 November 2026 18:56 UTC — exact-head WhatsApp contract-test correction
 
 The first exact-head WhatsApp recovery run on PR #399 head `cc4f9fbde7d355718c9603d5a15a263409aba46b` failed only at `scripts/tests/whatsapp-resume-contract.test.mjs:180`. The assertion expected the literal `sendOfflineOriginal("NOT TAILORED — AI rewrite incomplete.")` inline, but the reviewed implementation correctly computes `fallbackWhy` from the incomplete/unverified state and calls `sendOfflineOriginal(fallbackWhy)`. The test was too syntactic, not evidence of a runtime defect. It now asserts the fallbackWhy branch contains the exact incomplete caption and separately asserts the variable is passed to sendOfflineOriginal. No production code or safety guard was weakened.

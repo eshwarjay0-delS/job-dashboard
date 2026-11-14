@@ -104,3 +104,8 @@ The initial-JD fallback is limited to the exact selected same-account library by
 ## 14 November 2026 — exact-head WhatsApp contract-test correction
 
 PR #399 initial head `cc4f9fbde7d355718c9603d5a15a263409aba46b` passed Plan/REA and Kompas baseline, while WhatsApp recovery exposed a stale source-contract assertion at line 180: it expected an inline caption call, but the implementation correctly computes `fallbackWhy` and passes it to `sendOfflineOriginal`. The test now checks the incomplete caption in that branch and the variable call. This changes the test expectation only; it does not weaken the runtime sendability gate. All exact-head checks must rerun on the corrected head. Protected preview and real delivery remain separate gates.
+
+
+## 14 November 2026 — REA type correction
+
+The first PR #399 rerun stopped before the WhatsApp test suite because the new REA record used unsupported step status `In progress`; the schema permits only `Pending`, `Blocked`, `Observed`, `Implemented` and `Tested`. The status is corrected to `Pending`. The corrected source-contract test has not yet executed, so no test pass is claimed.
