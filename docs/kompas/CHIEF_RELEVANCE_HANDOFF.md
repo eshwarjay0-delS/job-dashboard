@@ -74,3 +74,8 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+
+## 14 November 2026 — question and voice regression harness
+
+PR #388 adds the current question-frame, one-press, typed-input and voice tests to CI; it does not alter the answer engine or capture runtime. The first exact-head full CI run `43577901312` reported 60/72 TAP cases passing. Static review found the extracted test VM omitted the QW question-window helper block (`mergeQuestionSpans` and its window helpers), and the voice VM lacked a harmless `currentOutputKey()` stub used by the extracted `start()` function. The follow-up loads the real helper block and supplies an empty device lookup. These are harness corrections, not product-behavior fixes or live voice evidence. Require exact-head full CI, Kompas baseline, Plan/REA and legitimate protected preview before considering the draft further; native Windows/phone acceptance and the 50-pair live relevance review remain separate.
