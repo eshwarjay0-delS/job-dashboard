@@ -224,10 +224,11 @@ test('roles that were not rewritten still send the chosen library file', async (
     quality_blockers: ['roles_unrewritten'],
   }
   const { generate, docs, filesFor } = harness(async () => unfinished)
+  // The selected Files root belongs to TEST_USER_ID; keep the fixture owner consistent.
   await generate('15550021', {
     jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)

@@ -321,6 +321,8 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.match(said.at(-1), /The rewrite produced no changes/)
 
   providerAvailable = false
+  // Start a fresh fixture window; the preceding mismatch case intentionally consumed one alternating read.
+  sessionReadCount = 0
   entries.set('whatsapp/session-123.json', JSON.stringify({
     version: 3, jdId: offlineSession.jdId, jd: offlineSession.jd,
     resumePath: offlineSession.resumePath, resumeName: offlineSession.resumeName,
