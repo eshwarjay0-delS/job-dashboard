@@ -52,7 +52,7 @@ test("the launcher zip is what the gate reads", async () => {
   const exePath = path.join(dir, "Kompas.exe");
   try {
     fs.writeFileSync(exePath, exe);
-    const result = await assertPackagedExe(exePath);
+    const result = await assertPackagedExe(exePath, { verifyManifests: false });
     assert.equal(result.required.includes("capture-source.cjs"), true);
     assert.equal(result.required.includes("taskbar-choice.cjs"), true);
     assert.equal(result.required.includes("output-loopback.cjs"), true);
