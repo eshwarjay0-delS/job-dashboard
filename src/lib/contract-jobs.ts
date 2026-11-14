@@ -1,9 +1,10 @@
 export type ContractType = 'W2' | 'C2C' | '1099' | 'C2H' | 'Temporary' | 'Contract'
 /** Employment evidence, not guesses from company names or ordinary W2 payroll. */
+export function stripNegatedC2HTerms(value:string):string{
+ return value.toLowerCase().replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ').replace(/\b(?:no|not|without|never)\s+(?:(?:a|the)\s+)?(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b/gi,' ')
+}
 export function contractTypes(text:string, employmentType=''):ContractType[]{
- const normalize = (value:string) => value.toLowerCase().replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ')
- const stripNegatedC2H = (value:string) => value.replace(/\b(?:no|not|without|never)\s+(?:(?:a|the)\s+)?(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b/gi,' ')
- const t=stripNegatedC2H(normalize(text)),et=stripNegatedC2H(normalize(employmentType)),out:ContractType[]=[]
+ const t=stripNegatedC2HTerms(text),et=stripNegatedC2HTerms(employmentType),out:ContractType[]=[]
  if(/\b(?:c2c|corp[ -]to[ -]corp)\b/.test(t)&&!/\b(?:no|not|without)\s+(?:c2c|corp[ -]to[ -]corp)\b/.test(t))out.push('C2C')
  if(/\b1099\b/.test(t)&&!/\b(?:no|not)\s+1099\b/.test(t))out.push('1099')
  if(/\b(?:c2h|contract[ -]to[ -](?:hire|perm(?:anent)?)|right[ -]to[ -]hire)\b/.test(`${t} ${et}`))out.push('C2H')
