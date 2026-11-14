@@ -522,3 +522,10 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 14 November 2026 11:55 UTC — Poke-inspired Gmail/mobile restack
+
+Continue: restack the owner-approved Poke-inspired account-scoped Gmail digest and mobile no-cover slice onto current master. New branch `fix/gmail-digest-mobile-current-3e710-20261114-run14` starts at `3e710d50760b4a757d75ad2858ef508f3d36b388` and carries the prior PR #387 source/test changes without its stale base. Code commit `6b3b4048c17bbbe2f515365a07d0b838af38c4be` adds account+sender mute identity, account+thread radar/React identity, selected-inbox opening, and a normal-flow mobile menu with no scrim or page inertness. The normal-flow layout is an implementation choice for the direct no-cover requirement.
+
+The predecessor PR #387 exact head `caf1515af0841d54350275b0905862dfc05c0ff7` passed full CI `43569225180`, Kompas baseline `43569225116`, and Plan/REA `43569225108`; these do not validate this new branch. New exact-head checks are pending. Keep the PR DRAFT until full CI/baseline/Plan-REA, legitimate protected preview, two authorized inboxes with colliding sender/thread IDs, selected-From preservation, per-account reconnect, and narrow-phone acceptance. No Gmail API/OAuth, inbox mutation, email send, worker enablement, or notification delivery occurred. Preserve 3–4 connected accounts as a target range, not a hard cap.
