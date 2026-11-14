@@ -118,7 +118,7 @@ test("sealed public fallback uses the explicit secret and remains readable", asy
     assert.equal(paths.length, 2)
     assert.ok(paths.every(path => /^gmail-snapshot\/[a-f0-9]{64}\.json$/.test(path)))
     assert.ok(paths.every(path => !path.includes(USER)), "public object paths do not reveal the account ID")
-    const manifest = [...files.values()].map(value => JSON.parse(value)).find(value => value.userId === USER)
+    const manifest = [...files.values()].map(value => JSON.parse(value)).find(value => value.userId === USER && value.parts)
     assert.ok(manifest)
     assert.equal(manifest.parts["0"].access, "public")
     const accounts = await resolveGmailAccounts(USER, async () => {
