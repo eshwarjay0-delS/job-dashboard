@@ -1,3 +1,17 @@
+## 14 November 2026 19:11 UTC — WhatsApp fallback regression repair
+
+Continue: correct the current-master WhatsApp resume fallback regression without changing runtime delivery behavior.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`; production alias remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The master-to-production difference is documentation/tests, not this WhatsApp runtime change.
+- Current-master draft PR [#399](https://github.com/eshwarjay0-delS/job-dashboard/pull/399) carries the approved same-account offline original fallback, pair CAS, swipe-refinement no-baseline behavior and unverified-JD hard hold.
+- Exact pre-fix head `e0694e2bac48cadd00876f6e3640b107619940c1` had full CI `43630012666` fail 1/31 at `scripts/tests/resume-guards.test.mjs:248`: a brittle assertion expected the literal `sendOfflineOriginal("NOT TAILORED — AI rewrite incomplete.")` inline. The route correctly derives `fallbackWhy` from unverified/incomplete state and calls `sendOfflineOriginal(fallbackWhy)`; the companion `whatsapp-resume-contract.test.mjs` already checks this computed behavior.
+- The test now asserts the exact incomplete caption branch and the variable call. This is a regression-test correction only; no runtime, WhatsApp delivery, R2, provider, auth or account-isolation behavior changed.
+- On the pre-fix head, WhatsApp recovery `43630012658`, Kompas baseline `43630012651` and Plan/REA `43630012656` passed. The updated branch must rerun all four gates on its exact final head.
+- Protected preview still requires an authorized administrator to configure/use the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass Vercel protection or expose credentials. No real WhatsApp send, production R2 write, model call, historical replay or handset acceptance occurred.
+- The 17 Oct 17:28 Chicago incident remains unverified: generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivered/read receipt and owner reconciliation of conflicting source facts are missing. Do not replay or claim delivery.
+
+**Next:** exact-final-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema; then legitimate protected preview and Safe Merge Gate review. Keep PR #399 DRAFT until those gates pass. Historical incident closure and real handset delivery remain separate.
+
 ## 14 November 2026 18:45 UTC — current-master WhatsApp fallback restack
 
 Continue: carry the approved WhatsApp same-account offline fallback, lossless resume/JD pair CAS, and unverified-JD hard hold onto the latest canonical master without losing intervening Kompas work.
