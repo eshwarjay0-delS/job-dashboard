@@ -308,10 +308,12 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     seen: ['offline-initial'], updatedAt: Date.now(),
   }))
   const readsBeforeOfflineFallback = sessionReadCount
+  const runsBeforeOfflineFallback = runs
+  const deliveriesBeforeOfflineFallback = deliveries
   await generate('123', offlineSession, offlineUser, undefined, offlineFiles)
   assert.equal(sessionReadCount - readsBeforeOfflineFallback, 1, 'the verified library bytes are delivered without rereading a mutable session copy')
-  assert.equal(runs, 5, 'offline fallback must not call the AI writer')
-  assert.equal(deliveries, 6, 'the selected original is delivered once')
+  assert.equal(runs, runsBeforeOfflineFallback, 'offline fallback must not call the AI writer')
+  assert.equal(deliveries, deliveriesBeforeOfflineFallback + 1, 'the selected original is delivered once')
   assert.match(docs.at(-1).caption, /Original resume — NOT TAILORED/)
   assert.match(docs.at(-1).caption, /AI provider unavailable/)
   assert.match(docs.at(-1).caption, /no edits were applied/)
