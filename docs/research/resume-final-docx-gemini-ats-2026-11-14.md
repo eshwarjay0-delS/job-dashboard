@@ -34,7 +34,7 @@ The code adds:
 ## Validation and release status
 
 - Parent PR #393 is a DRAFT current-master restack at 9cd81927b095289de0e4a39da74a8af2265cbc43; its exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks passed. It remains blocked on legitimate protected preview and owner-authorized baseline/JD/confirmation DOCX acceptance.
-- The new Gemini branch is stacked on that parent. Its exact-head workflows are pending at creation; the earlier PR #289 targeted tests do not validate this restack.
+- The new Gemini branch is stacked on that parent. Exact head `6cb3a8896772ac90758662a533260cf34a7ed99c` passed final-DOCX ATS review workflow `43599223875` (including `npm run check` and focused tests), WhatsApp recovery `43599223815`, and Plan/REA schema `43599223837`. These exact-head source gates supersede the earlier pending-at-creation status. Full master-targeted CI remains deferred until the parent is accepted and the stack is retargeted.
 - The protected preview requires an authorized administrator to configure the private KOMPAS_VERCEL_API_TOKEN. Do not bypass deployment protection or change ignore rules.
 - After the parent is accepted and the stack can target master, run full CI on the exact final head. Then use an owner-authorized original resume, JD and explicit first-person confirmations; inspect the actual exported DOCX bytes and role-by-role evidence; verify Gemini's diagnostic review and supported-only corrections.
 - No personal resume/JD was processed, no Gemini model call was made, no DOCX was exported, no production deployment occurred, and no live 98% match is claimed.

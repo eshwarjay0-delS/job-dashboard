@@ -552,3 +552,12 @@ Continue: restack and validate the owner-approved final-DOCX Gemini ATS score/co
 - MFit Safe Merge Gate is enabled and has reviewed the current-master queue; it kept #392/#393/#394/#388 DRAFT because their separate preview/acceptance gates remain. Kompas Continuous Voice Delivery is disabled, so no audio/caption work was duplicated. No separate Bible-Keeper automation appeared in the accessible inventory.
 
 Continue: run the exact-head final-DOCX, confirmed-skill and WhatsApp regression workflows on the new dependent branch; keep it DRAFT until the legitimate protected preview and owner-authorized exported-DOCX acceptance are available.
+
+
+## 14 November 2026 13:50 UTC — exact-head validation update for the final-DOCX Gemini loop
+
+- PR #395 head `6cb3a8896772ac90758662a533260cf34a7ed99c` passed final-DOCX ATS review workflow `43599223875` (all steps successful, including `npm run check` and the focused final-DOCX tests), WhatsApp recovery workflow `43599223815`, and Plan Journal/REA workflow `43599223837`.
+- These checks validate the current dependent source head only. PR #395 is stacked on parent PR #393; full master-targeted CI must run after the parent is accepted and the stack is retargeted. The protected preview remains unavailable without an authorized private `KOMPAS_VERCEL_API_TOKEN`.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, and no deployment or live 98% match is claimed. The production alias remains on the earlier runtime SHA; this branch is not deployed.
+
+Continue: keep #395 DRAFT; satisfy the parent #393 preview and owner-authorized resume/JD/confirmed-skill DOCX acceptance first, then retarget and run full CI on the final master-based head. Do not bypass preview protection or substitute synthetic tests for the actual DOCX review.
