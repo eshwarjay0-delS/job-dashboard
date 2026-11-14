@@ -56,7 +56,7 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: TypeScript typecheck
-        run: npm run typecheck
+      - name: TypeScript, lint and application checks
+        run: npm run check
       - name: Final DOCX ATS review tests
         run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-loop.test.mjs scripts/tests/resume-confirmation-quality.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs
