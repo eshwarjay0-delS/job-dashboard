@@ -1,4 +1,15 @@
-# MFit Completion Watch
+## 14 November 2026 20:50 UTC — Gmail sync freshness and worker-state audit
+
+Continue: verify the owner-approved Poke-inspired multi-account Gmail/mobile work against durable production state; do not enable outbound notifications.
+
+- Production-linked Supabase shows 3 Gmail-enabled accounts for 1 user. All 3 `mfit_gmail_sync` rows last synced on 10 Nov 2026 at 14:44:20–14:44:22 UTC; the 2,002 cached threads across those accounts were last updated on 10 Nov at 14:44–14:46 UTC. The 90-day cache exists, but no newer durable sync is evidenced.
+- `vercel.json` still schedules `/api/gmail/crawl` daily at 12:00 UTC; production `CRON_SECRET` exists and `CACHE_FRESH_MS` is five minutes. The 14 Nov 12:00 invocation cannot be inspected now because the Hobby runtime log retention is one hour. Vercel reported no grouped errors for `/api/gmail/crawl` or `/api/gmail` in seven days; Supabase edge logs had no `exceed_egress_quota` event in the preceding 24 hours. This does not prove the cron completed successfully.
+- `GMAIL_UPDATES_SCHEDULER_ENABLED` and `WHATSAPP_GMAIL_UPDATE_TEMPLATE` are absent. The separate Poke-style proactive worker remains disabled. The existing Important sender tracking and combined Important inbox are already implemented; do not duplicate them.
+- PR #401 current head `ab1ad5017adfe089b47cefc1072679f8426b49f5` passed full CI `43630283482`, Kompas baseline `43630283480` and Plan/REA `43630283444`. It remains DRAFT pending protected preview, two-inbox collision/selected-From/reconnect acceptance and a real narrow-phone check.
+- PR #396's `GMAIL_SNAPSHOT_IMPORT_SECRET` is an empty sensitive variable record. The branch removes the default HMAC fallback and may make legacy sealed snapshots unreadable; it is non-mergeable on an older base and has no exact-head checks. Do not merge until the owner-approved legacy migration/compatibility path is clear.
+- No Gmail API/OAuth call, inbox read/mutation, email send, WhatsApp send, worker enablement or production DB write occurred.
+
+**Next:** verify the next daily cron with retained logs or add a separately reviewed per-account sync-run audit. Keep the proactive worker disabled. Resolve PR #396's legacy snapshot blocker and require real two-inbox/narrow-phone acceptance for PR #401.# MFit Completion Watch
 
 ## 14 November 2026 — exact-master Kompas replay gate correction
 
