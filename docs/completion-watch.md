@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 14 November 2026 — PR #380 no-Files retry and timeout wording correction
+
+- Exact-head full CI run 43545490831 on PR #380 head 922fd0af123352a04d4ca335282d7ecba943db5a reached the WhatsApp tests and reported 52/54 passing. Two stale expectations failed: the single-request test expected a provider-failed upload-only inbox copy to be resent without a selected same-account Files source; the fivefold timeout test expected the older phrase "ran out of time just now."
+- The approved rule is unchanged: a provider-failed or incomplete initial JD may send only the exact selected same-account Files bytes after account-root, normalized/resolved-path and byte-equality checks. Without that verified selection, no document is sent and the request stays retryable. Swipe-refinement failures remain text-only.
+- Test correction commit f4daa8b950530060e110f7eeacdcac319e6d1416 changes the single-request case to assert no extra document, prior output unchanged, retry message, lease cleanup and successful later retry.
+- Runtime wording commit efa0528a6332ba93cafc041fc91ae23a3af7133a distinguishes a timeout from a generic provider failure without opening the fallback or sending an unverified copy.
+- Plan Journal and REA now record the failed run and corrections. All exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA gates must rerun after the final documentation commit; no earlier result validates the new head.
+- PR #380 remains DRAFT. The protected preview requires private KOMPAS_VERCEL_API_TOKEN from the owner or an authorized repository administrator. Do not bypass Vercel protection or alter ignore rules. No real WhatsApp send, R2 production write, model call, historical replay or handset test occurred. The 17 Oct 17:28 Chicago delivery evidence chain remains incomplete.
+
+
 ## 14 November 2026 — WhatsApp provider-failure fallback correction
 ## 14 November 2026 — no-Files and cross-profile fallback negatives
 
