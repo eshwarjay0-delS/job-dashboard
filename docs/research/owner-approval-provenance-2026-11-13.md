@@ -47,3 +47,12 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 ## 14 November 2026 — manual-only guard exact-head validation
 
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
+
+
+## 14 November 2026 — approval provenance correction
+
+The final-DOCX Gemini ATS score/correction/re-export loop was previously described in Plan text as owner-approved. A fresh retrieval of accessible prior conversation context did not find a direct owner-authored approval for that specific loop. The earlier approval label is superseded: keep the loop **proposed, not approved**. Do not implement it, add a new Gemini prompt, spend model credits, or run an automated correction/re-export loop until the owner explicitly approves it. Any future ATS score remains diagnostic and never becomes evidence of experience.
+
+The high-level Poke-inspired multi-account Gmail/mobile direction remains owner-requested. Per-account Calendar targeting, exact waiting-on-them radar semantics and exact hamburger interaction/layout were not recovered as direct owner instructions and remain proposals. The exact C2H/Right-To-Hire classifier semantics remain proposed as well.
+
+This correction does not cancel the approved confirmed-skill role-evidence work, the WhatsApp same-account offline fallback/pair-CAS work, or the high-level Gmail/mobile direction. Those continue under their own source, preview and acceptance gates.

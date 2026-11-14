@@ -1,3 +1,50 @@
+## 14 November 2026 — run 11: current-master WhatsApp restack and priority backlog
+
+**Continue: complete the approved WhatsApp same-account offline fallback and resume/JD pair-CAS restack on current master 3e710d5.** Keep the replacement draft until its own exact-head gates and legitimate protected preview pass. Do not merge, deploy or claim live acceptance from the predecessor branch's green checks.
+
+### Canonical source and release state
+
+- Canonical master is `3e710d50760b4a757d75ad2858ef508f3d36b388`, merged PR #381. Post-merge full CI run `43576937302` completed SUCCESS (48 steps). PR #381 changes manual-only regression coverage, comments, docs and Plan/REA; it does not change `vercel.json` or crawler runtime. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3e1033687972230de76747e063afe1a0c1cdea61`. Compare from that deployment to master shows documentation/tests/packaging changes, not a web runtime change. Plan & Vision UI updates in master are not yet visible in production.
+- PR #379 merged as `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`; exact-master full CI `43537986478`, Kompas baseline `43537986538`, Plan/REA `43537986516` and Windows packaging `43537986510` passed. It is a UAC manifest source/package guard, not proof that the owner's installed executable stopped prompting.
+- PR #380 predecessor head `740f4b575b546073093503cca2eb788bc0944dec` passed its exact-head gates: full CI `43574688616` (50 steps), WhatsApp recovery `43574688600`, Kompas baseline `43574688610`, Plan/REA `43574688601`. It was based on `926bf3e` and is now behind current master `3e710d5`.
+- The current replacement draft PR for branch `fix/whatsapp-offline-cas-master-3e710-20261114` carries the reviewed webhook, R2 If-Match adapter, exact selected-library verifier and regression files onto current master. Code-bearing restack commit is `1e5de2d8ad2b7fb736d672938a8e0d7e86bf2863`; later Plan/REA and handoff documentation commits follow, so use issue #168 and GitHub PR metadata for the exact current head. Its own full CI, WhatsApp recovery, Kompas baseline and Plan/REA runs must pass on that exact head; no predecessor result validates it. The new R2 test mocks S3 only; no production R2 write occurred.
+- The legitimate protected Vercel preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. It was not read, exposed, fabricated or bypassed. No real WhatsApp send, model call, historical replay or production R2 write occurred.
+
+### WhatsApp and resume acceptance
+
+
+The current-master replacement branch fix/whatsapp-offline-cas-master-3e710-20261114 is opened as a DRAFT PR; its active link is tracked in issue #168. Code-bearing restack commit is `1e5de2d8ad2b7fb736d672938a8e0d7e86bf2863`; use GitHub PR metadata for the exact current head. The old PR #380 is predecessor evidence only and must not be merged. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA must pass on the latest replacement PR head.
+
+- The 6 Nov channel correction remains authoritative: a completed readable WhatsApp rewrite may be sent below 95% raw JD overlap with gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp send gate. Unsupported employers, dates, credentials, skills and metrics must not be invented.
+- Initial-JD provider failure/incomplete output may use only the exact selected same-account library bytes, labelled **Original resume — NOT TAILORED**, after account-root, normalized relative path, resolved path and byte-equality checks. If verification fails, send no file and keep the request retryable. Swipe-reply refinement remains text-only on failure; the previously delivered file stays unchanged. Consume the JD/resume pair only after provider acceptance. R2 412/409/404 conflicts never become unconditional writes; unexpected 503 propagates.
+- The 17 Oct 17:28 Chicago screenshot says the bot held the file. Read-only production review found one `whatsapp:resume_tailor` usage row at 22:28:27.372685 UTC, no `resume_documents` or `resume_import_jobs` row in the 20-minute window, no `source_event_key`, and no request/document/R2/Meta/delivery correlation. A fresh Library search did not find the generated output DOCX. This does **not** prove no R2 object or Meta send exists. Exact output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. Do not replay or claim delivery.
+- PR #385 confirmed-skill role evidence is DRAFT at `4df2f8bc67a79a70191fb749688c4605ec1870a5`; its four source gates passed. It maps only explicitly confirmed skills to relevant existing roles. Protected preview, owner-authorized source/JD/confirmation inputs and exported-DOCX inspection remain missing. No live 98% match is claimed.
+- The final-DOCX Gemini ATS score/correction/re-export loop is **proposed, not owner-approved**. Earlier Plan wording that called it approved is superseded. Do not implement or call Gemini for this loop without explicit approval.
+
+### Gmail/mobile and snapshot recovery
+
+- PR #387 head `caf1515af0841d54350275b0905862dfc05c0ff7` passed full CI `43569225180`, Kompas baseline `43569225116` and Plan/REA `43569225108`. It remains DRAFT: protected preview, two authorized inboxes with colliding thread IDs, selected-From preservation, reconnect isolation and narrow-phone acceptance are still missing. High-level Poke-inspired multi-account Gmail/mobile direction is owner-requested; per-account Calendar targeting, exact waiting-on-them radar semantics and exact hamburger interaction remain proposals.
+- Read-only production aggregate: 3 connected accounts, 3 sync rows and 2,002 cached threads. Latest sync was 10 Nov 2026 14:44:44 UTC; latest thread update was 14:46:49 UTC. No rows changed in the last 24 hours. Vercel reported 22 Gmail 402 egress-quota errors in the last 24 hours, latest 13 Nov 14:25:55 UTC; no newer Gmail 402 appeared in that window, but stored mail remains stale.
+- Snapshot fallback code/tests exist, but `GMAIL_SNAPSHOT_IMPORT_SECRET` is present in environment metadata with an empty value. The exported `mfit_gmail_threads` and `mfit_gmail_sync` files were not available, so no import occurred. An authorized administrator must configure a non-empty secret and the owner must provide the exports.
+- Background Poke-style notifications remain disabled: `GMAIL_UPDATES_SCHEDULER_ENABLED` and `WHATSAPP_GMAIL_UPDATE_TEMPLATE` are absent. The in-app feed exists, but no background external sender was enabled. No Gmail API call, inbox mutation, email or WhatsApp notification was performed.
+
+### Contract crawler and Kompas
+
+- Contract crawling remains manual/on-demand only; no daily contract-crawler cron; Robert Half remains manual-only. PR #381 is merged and protects this boundary. No live crawl or portal request occurred. PR #376's C2H/Right-To-Hire classifier semantics remain proposed because direct owner approval was not recovered.
+- Kompas UAC issue #192 remains open until the owner's installed executable path/SHA and Windows process/event trace identify the elevation requester. The source/package guard does not prove the user's installed binary is fixed. The separate Kompas Continuous Voice Delivery task is disabled; no duplicate voice/caption edits were made. Actual 50 authenticated Kompas/ChatGPT answer pairs and independent grading still require the private `KOMPAS_API_TOKEN` and owner-approved source bundles.
+- The accessible automation inventory showed MFit Safe Merge Gate enabled; its latest run completed at 08:55 UTC, merged PR #381 and created draft PR #388. It must sequence shared Plan/REA changes. No separate Bible-Keeper audit was visible.
+
+### Exact blockers and next actions
+
+1. Run all four required workflows on the final new WhatsApp restack head. Keep DRAFT until green, then obtain the legitimate protected preview from an authorized administrator with `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection.
+2. Historical WhatsApp closure still requires the exact generated DOCX, per-run R2 object/version, Meta correlation and signed provider receipt plus owner fact reconciliation.
+3. Resume acceptance still requires protected preview and owner-authorized source/JD/confirmation inputs plus final DOCX inspection; no 98% result is claimed.
+4. Gmail snapshot recovery needs a non-empty import secret and the owner-exported files. Proactive external updates need the approved template and scheduler configuration; do not send a test.
+5. Gmail/mobile acceptance needs two authorized inboxes and a narrow-phone device check. Kompas UAC needs the installed binary hash and process trace; 50-pair relevance needs the private model token and approved bundle.
+
+No secret was read or exposed. No real email or WhatsApp was sent. No R2 production write, live model call, historical replay, contract crawl, Gmail mutation, production-row mutation or owner-device acceptance occurred.
+
+
 # MFit Completion Watch
 
 ## 13 November 2026 — approval provenance and release-gate correction
