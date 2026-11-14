@@ -75,6 +75,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   let runs = 0
   let file = null
   let samePerson = true
+  let mismatchLibraryBytes = false
   let sendError = null
   let hang = false
   const statuses = ['uncertain']
@@ -94,7 +95,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('no voice') } },
     'next/server': {},
-    '@/lib/storage': { blob, readPath: async () => Buffer.from('eshwarjay05@gmail.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
+    '@/lib/storage': { blob, readPath: async filePath => Buffer.from(mismatchLibraryBytes && filePath === '/resume.docx' ? 'different-session-copy' : 'eshwarjay05@gmail.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(acceptable) } },
@@ -163,9 +164,15 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.match(said.at(-1), /run stopped before a file/)
   assert.match(said.at(-1), /saved, and MarketFit will try again/)
 
+  mismatchLibraryBytes = true
+  sendError = null
   hang = true
+  const docsBeforeTimeout = docs.length
   const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, TEST_USER_ID, 300, selectedFiles)
   const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
   assert.equal(timed, 'done')
-  assert.match(said.at(-1), /ran out of time just now/) // Nov4: a timeout says so, instead of the generic tailor failure line.
+  assert.equal(runs, 4, 'the fifth fold reached the timed-out rewrite')
+  assert.equal(docs.length, docsBeforeTimeout, 'a selected-library/session byte mismatch must not send a document')
+  assert.match(said.at(-1), /could not verify the exact selected same-account resume/)
+  assert.match(said.at(-1), /No file was sent; your request is saved for retry/)
 })

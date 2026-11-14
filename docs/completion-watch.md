@@ -1,3 +1,16 @@
+## 14 November 2026 20:34 UTC — selected-library timeout fixture correction
+
+Continue: repair the exact-head WhatsApp timeout regression without changing runtime delivery behavior.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`. Production alias `job-dashboard-fawn.vercel.app` is READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The PR #399 fallback/CAS changes are not deployed.
+- PR #399 pre-fix head `21ad504592e8b81e5c60f630db7d11a6b6cb31c5` full CI `43637317974` failed at `scripts/tests/whatsapp-5fold.test.mjs:170`. The stale assertion expected the no-Files timeout wording, but the fixture passed selected Files context and the branch correctly returned the explicit selected-same-account verification-failure/no-file/retry response.
+- The fixture also retained the preceding mocked Meta HTTP error and returned identical bytes for the library and session paths, so it did not isolate the intended mismatch case. The correction deliberately makes those bytes differ, clears the prior send error, and asserts no additional document plus the explicit no-file/retry response. This is a test-only change; no runtime delivery, R2, auth or account-isolation behavior is altered.
+- On the pre-fix head, WhatsApp recovery `43637317936`, Kompas baseline `43637317980`, and Plan/REA schema `43637317926` passed. Those results do not validate the corrected head.
+- Protected preview still requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; it is not available in this run. The MFit Safe Merge Gate is enabled and owns merge sequencing. Keep PR #399 DRAFT; do not merge or deploy from this run.
+- No real WhatsApp message, production R2 write, model call or historical replay occurred. The 17 Oct 17:28 Chicago incident still lacks the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts.
+
+**Next:** require full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on the corrected exact PR head; then legitimate protected preview and Safe Merge Gate review. Keep the historical incident blocked until its exact evidence is recovered.
+
 ## 14 November 2026 19:11 UTC — WhatsApp fallback regression repair
 
 Continue: correct the current-master WhatsApp resume fallback regression without changing runtime delivery behavior.

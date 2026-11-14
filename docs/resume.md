@@ -109,3 +109,7 @@ PR #399 initial head `cc4f9fbde7d355718c9603d5a15a263409aba46b` passed Plan/REA 
 ## 14 November 2026 — REA type correction
 
 The first PR #399 rerun stopped before the WhatsApp test suite because the new REA record used unsupported step status `In progress`; the schema permits only `Pending`, `Blocked`, `Observed`, `Implemented` and `Tested`. The status is corrected to `Pending`. The corrected source-contract test has not yet executed, so no test pass is claimed.
+
+## 14 November 2026 — selected-library timeout regression
+
+PR #399's timeout regression fixture is being corrected on the current-master branch. The pre-fix full CI run failed because the fixture expected the generic no-Files timeout message even though it supplied selected Files context. The corrected fixture makes the selected-library bytes differ from the session copy, clears the prior mocked provider error, and asserts that no document is sent and the request remains saved for retry. This is a test-only change; the same-account path/byte checks and fail-closed runtime behavior are unchanged. Exact-head gates, protected preview and Safe Merge Gate review remain pending. The 17 Oct historical delivery is still unverified; no replay or real message was sent.
