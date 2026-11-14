@@ -41,7 +41,7 @@ test("a packaged asar that contains the closure passes, and a dropped module fai
   assert.throws(() => assertAsarClosure(fakeAsar(bad)), /capture-source\.cjs/);
 });
 
-test("the launcher zip is what the gate reads", () => {
+test("the launcher zip is what the gate reads", async () => {
   const required = shellPackageFiles(root);
   const asar = fakeAsar(Object.fromEntries(required.map((name) => [name, fs.readFileSync(path.join(root, name))])));
   const zip = zipStore({ "resources/app.asar": asar, "Kompas.exe": Buffer.from("MZ") });
@@ -52,7 +52,7 @@ test("the launcher zip is what the gate reads", () => {
   const exePath = path.join(dir, "Kompas.exe");
   try {
     fs.writeFileSync(exePath, exe);
-    const result = assertPackagedExe(exePath);
+    const result = await assertPackagedExe(exePath, { verifyManifests: false });
     assert.equal(result.required.includes("capture-source.cjs"), true);
     assert.equal(result.required.includes("taskbar-choice.cjs"), true);
     assert.equal(result.required.includes("output-loopback.cjs"), true);

@@ -11,7 +11,7 @@
     "start:electron": "electron .",
     "exe": "node scripts/build-exe.mjs",
     "dist": "node scripts/package.mjs",
-    "check": "node --check main.js && node --check marketfit-auth.cjs && node --check output-loopback.cjs && node --check chrome-handoff.cjs && node --check desktop-update.cjs && node --check scripts/package-closure.mjs && node --check scripts/verify-packaged-app.mjs && node --check scripts/smoke-launch.mjs && node --test scripts/auth-disabled.test.cjs scripts/marketfit-auth.test.cjs scripts/chrome-handoff.test.cjs scripts/desktop-update.test.cjs scripts/package-closure.test.mjs && node --check preload.js && node --check picker.js && node --check picker-preload.js && node --check scripts/runtime.mjs && node --check scripts/start.mjs && node --check scripts/build-exe.mjs && node --check scripts/package.mjs && node scripts/test-marketfit-protocol.mjs"
+    "check": "node --check main.js && node --check marketfit-auth.cjs && node --check output-loopback.cjs && node --check chrome-handoff.cjs && node --check desktop-update.cjs && node --check scripts/package-closure.mjs && node --check scripts/verify-packaged-app.mjs && node --check scripts/smoke-launch.mjs && node --test scripts/auth-disabled.test.cjs scripts/marketfit-auth.test.cjs scripts/chrome-handoff.test.cjs scripts/desktop-update.test.cjs scripts/package-closure.test.mjs scripts/execution-level.test.mjs && node --check preload.js && node --check picker.js && node --check picker-preload.js && node --check scripts/runtime.mjs && node --check scripts/start.mjs && node --check scripts/build-exe.mjs && node --check scripts/package.mjs && node scripts/test-marketfit-protocol.mjs"
   },
   "devDependencies": {
     "electron": "^44.5.1",

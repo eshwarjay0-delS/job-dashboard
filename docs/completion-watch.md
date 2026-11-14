@@ -467,3 +467,34 @@ The current-master review confirms these are still separate, gated items:
 | Poke-inspired Gmail/mobile | [#357](https://github.com/eshwarjay0-delS/job-dashboard/pull/357) `98afab1e1e658e7abf0a4dcfb2288656a1634bcf` | Full CI `43402024260` and baseline `43402024070` SUCCESS | Draft; base 8 commits behind; protected preview, two-inbox isolation/selected-From/reconnect, and real narrow-phone acceptance missing |
 
 These are prior exact-head workflow results, not current production or user-acceptance evidence. Do not merge the stale branches or treat a green unit suite as a 98% live resume match. Preserve the existing account isolation and confirmed-experience boundaries. No DOCX was generated, no Gmail inbox/OAuth was mutated, no email was sent, and no crawler was run in this watch.
+
+ 
+## 14 November 2026 — Continue: Kompas Windows UAC manifest regression guard
+
+Continue: add and validate a regression guard for the canonical MFit Windows executable's administrator manifest while preserving the user's UAC protections.
+
+- Current master is `3e1033687972230de76747e063afe1a0c1cdea61`. The source applies an `asInvoker` rewrite to every Electron RT_MANIFEST (rewriting an existing `requestedExecutionLevel` entry); `package.mjs` stamps both the inner Electron executable and outer x64 SFX launcher. The audit also checked `desktop-update.cjs`, `chrome-handoff.cjs`, `desktop-handoff.cjs`, `scripts/start.mjs` and `scripts/sfx.cs`: no explicit `runas` path was found, startup uses ordinary `spawn`, and the SFX child starts with `UseShellExecute=false`.
+- The canonical `kompas-desktop-latest` release asset is 162,251,677 bytes, updated 13 Nov 2026 18:28:25 UTC, SHA-256 `22e5551df7cb1c3ce1f18a82b25c6bdee210d7c148d9aa40714affe98207fcbd`. Windows package workflow `43482749570` succeeded on master `026c72968e45314ff0a99f701942c966e79f0a1e`; package source version is 0.8.8.
+- Added `legacy/perfact/desktop/scripts/execution-level.test.mjs` for admin/highestAvailable rewriting, already-safe/no-manifest preservation, all manifest resources, and both packaged executable layers. Wired it into the existing Windows `npm run check`.
+- Research, Plan Journal, Plan & Vision and REA record the source evidence and exact limitations. Expanded-audit documentation commits: `cdd051913ebe94caa571bffc80177af5d0e2e9db`, `91c3e74e3bdc4fbd91995b4c9d3043cca689a10d`, `6cc710e2a47ba2be89c6b1332776d70b3d133b67`, `529a6084819b5b9f78156dbc2da07246528659bc`. Issue #192 was updated with the audit (comment 6868417213).
+- This is a test-only branch; no runtime behavior changed. The test and Windows workflow are not yet run on the new branch. The exact installed EXE SHA/path, installed PE manifest, and Windows process/event trace remain unavailable. Do not call the UAC issue fixed; do not advise disabling UAC.
+- Coordination: Kompas Continuous Voice Delivery is disabled, so no audio/caption files were edited. MFit Safe Merge Gate is active and was already reviewing other PRs; this branch is isolated from #374–#377. No separate Bible-Keeper automation was present in the accessible automation list.
+
+Continue: wait for exact-head full CI to complete on PR #379 and review the test-only guard; keep issue #192 open until installed-binary and Windows-side evidence identifies the actual elevation requester.
+
+ 
+## 14 November 2026 — current priority backlog reconciliation
+
+**Canonical release:** master `3e1033687972230de76747e063afe1a0c1cdea61` is independently READY in production deployment `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`; `job-dashboard-fawn.vercel.app` points to that exact SHA. This is a documentation-only release. No new runtime feature was deployed in this run.
+
+| Priority | Current source | Verified gates | Remaining wall |
+|---|---|---|---|
+| WhatsApp resume failure / offline original fallback | [PR #374](https://github.com/eshwarjay0-delS/job-dashboard/pull/374), latest head `1ce449dccb6116aad7ed671946bc31bed2c7887a`, base `026c729` | Earlier head `794ba115` had green gates; these do **not** transfer to the new head | Latest head has no Actions runs, is dirty against current master, and protected preview requires private `KOMPAS_VERCEL_API_TOKEN`. No real send/R2 write/model call or historical replay. Keep draft |
+| Poke-inspired Gmail/mobile | [PR #375](https://github.com/eshwarjay0-delS/job-dashboard/pull/375), head `8b4a480313504240c5f5ad69596074c7ecedf549` | Full CI `43494969062`, baseline `43494968954`, Plan/REA `43494969251` SUCCESS | Dirty against current master; protected preview, two-inbox collision/selected-From/reconnect and narrow-phone acceptance missing |
+| Contract job search/crawler | [PR #376](https://github.com/eshwarjay0-delS/job-dashboard/pull/376), head `6f566197d763b6137c8608c2db3cd670a2278c5b` | Full CI `43494635050`, crawler regression `43494635586`, baseline `43494635138`, Plan/REA `43494635014` SUCCESS | Dirty against current master; protected preview and post-release crawl acceptance missing. C2H semantics remain proposed; manual/on-demand only, no daily cron, Robert Half manual-only |
+| Resume/JD/confirmed-experience alignment | [PR #377](https://github.com/eshwarjay0-delS/job-dashboard/pull/377), head `20b1abf8cde16448900ed594d6f62366666097e4` | Full CI `43503531707`, WhatsApp recovery `43503532020`, baseline `43503531666`, Plan/REA `43503531853` SUCCESS | Dirty against current master; protected preview and exported-DOCX acceptance missing. The approved final-DOCX Gemini ATS-score/correction loop remains unimplemented |
+| Kompas UAC manifest regression guard | [PR #379](https://github.com/eshwarjay0-delS/job-dashboard/pull/379), latest docs head `9b80c350970b42aaabe17f150a51458b188bbc1f`; code-bearing head `c8313491fd355d4d4fab5ad2bd3efaa58ddaff2f` | Windows package `43534609743`, baseline `43534609855`, Plan/REA `43534609754` SUCCESS on code-bearing head | Full CI `43534609741` still in progress at migration asset closure; latest docs-head Windows/Plan-REA runs `43535100007` / `43535100114` in progress. No runtime change; owner PC UAC acceptance missing |
+
+Safe Merge Gate run `34196b1e-b4d4-8328-9abd-572f4c39f622` completed at 00:25:27 UTC with no merge or branch edits. It confirmed the four priority restacks are not eligible for merge. Kompas Continuous Voice Delivery is disabled; do not duplicate its audio/caption work. No separate Bible-Keeper automation was present in the accessible inventory.
+
+Continue: restack the WhatsApp fallback on current master without discarding its code/tests, then require exact-head CI and the legitimate protected preview before merge/deploy. Keep #375/#376/#377 draft until conflict-free restacks and their respective real acceptance gates pass. Wait for #379 full CI. Keep the crawler manual/on-demand only.
