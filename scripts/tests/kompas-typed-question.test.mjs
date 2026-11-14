@@ -17,6 +17,7 @@ function slice(start, end) {
 }
 const code = [
   src.slice(src.indexOf("const Q_CUE ="), src.indexOf(";", src.indexOf("const Q_CUE =")) + 1),
+  slice("const QW_LABELS =", "// ── Question intake"),
   slice("// ── Question intake", "// ── end question intake ──"),
   slice("function shortFollowUp(", "const armsAuto"),
   slice("function pressQuestion(", "$(\"answerBtn\")"),
