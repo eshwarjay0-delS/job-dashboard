@@ -36,3 +36,14 @@ PR #374 is the current-master WhatsApp offline fallback / pair-CAS restack at 79
 PR #377 is the current-master confirmed-skill role-evidence restack at 20b1abf8cde16448900ed594d6f62366666097e4. Full CI 43503531707, WhatsApp recovery 43503532020, Kompas baseline 43503531666 and Plan/REA 43503531853 passed. Protected preview and exported-DOCX acceptance remain missing; no real model call or live ATS score is claimed.
 
 The historical 17 Oct 17:28 output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. The original source and JD recovery do not establish which file was generated or delivered. Do not replay or claim delivery.
+
+
+## 14 November 2026 — manual-only contract crawler implementation audit
+
+The direct 12 Nov owner correction requires manual/on-demand contract crawling only, no daily schedule, and Robert Half manual-only. A 14 Nov read of canonical master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` confirmed `vercel.json` already excludes `/api/crawl/run`; the earlier audit claim that master still contained that cron was incorrect. The remaining mismatch was stale route comments and product/research/Plan/REA documentation, not an active schedule.
+
+Draft PR #381 adds a regression guard and corrects those comments and records. It does not change `vercel.json` or the production crawler schedule. The separate `/api/gmail/crawl` schedule, admin-only `POST /api/crawl/jobs`, and secret-protected manual `GET /api/crawl/run` remain unchanged. Robert Half remains pending/manual-only. PR #376's Right To Hire / Contract To Perm mapping and other classifier semantics remain proposed and unapproved. No live crawl, portal request, database mutation or application submission occurred.
+
+## 14 November 2026 — manual-only guard exact-head validation
+
+PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.

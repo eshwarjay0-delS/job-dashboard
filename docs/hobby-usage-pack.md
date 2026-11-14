@@ -38,3 +38,8 @@ A per-user cap of **3 conditional polls per 60 seconds** returns 429 with `X-Kom
 ## Usage guard
 
 `.github/workflows/hobby-usage-guard.yml` runs weekly (Monday 14:00 UTC) and on `workflow_dispatch`. It hits `/api/health` once. If `KOMPAS_VERCEL_API_TOKEN` and the team id are present, it also tries the Vercel usage API and fails when Fast Origin Transfer or Active CPU cross half of the Hobby caps. A missing token or a 402 from Hobby Observability is not a failure.
+
+
+## 14 November 2026 schedule reconciliation
+
+The `/api/crawl/run` row above is historical: it records the former schedule, not an active cron. Canonical master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` already excludes this path from `vercel.json`. PR #381 adds a regression guard and corrects stale route/product documentation; it does not edit the Vercel schedule. The separate `/api/gmail/crawl` schedule remains active and unchanged. No crawl was run during this correction.

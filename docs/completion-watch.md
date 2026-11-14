@@ -498,3 +498,27 @@ Continue: wait for exact-head full CI to complete on PR #379 and review the test
 Safe Merge Gate run `34196b1e-b4d4-8328-9abd-572f4c39f622` completed at 00:25:27 UTC with no merge or branch edits. It confirmed the four priority restacks are not eligible for merge. Kompas Continuous Voice Delivery is disabled; do not duplicate its audio/caption work. No separate Bible-Keeper automation was present in the accessible inventory.
 
 Continue: restack the WhatsApp fallback on current master without discarding its code/tests, then require exact-head CI and the legitimate protected preview before merge/deploy. Keep #375/#376/#377 draft until conflict-free restacks and their respective real acceptance gates pass. Wait for #379 full CI. Keep the crawler manual/on-demand only.
+
+
+## 14 November 2026 — enforce the approved manual-only contract crawler
+
+The 12 Nov owner correction at 03:15:32 UTC is authoritative: contract crawling is manual/on-demand only, no daily schedule, and Robert Half remains manual-only. Correction after an independent read of canonical master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`: `vercel.json` already excludes `/api/crawl/run`; the earlier statement that master still scheduled this path was incorrect. The remaining drift was stale route comments and product/research/Plan/REA documentation.
+
+Draft PR #381 on `fix/apply-manual-crawler-only-20261114` adds a dedicated manual-only regression workflow and corrects those comments and records. It does not change `vercel.json` or the production crawler schedule. The admin-only `POST /api/crawl/jobs` trigger and secret-protected `GET /api/crawl/run` manual compatibility route remain; the separate Gmail crawler schedule is unchanged. Robert Half remains in `PENDING_PORTALS`, not active adapters. The proposed C2H semantics in PR #376 remain unapproved and untouched.
+
+No live crawl, external portal request, production-row mutation or application submission was performed. PR #381 head `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed all five exact-head gates: full CI `43562602530`, manual-only `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA `43562602388`. The full CI Webpack build completed successfully with no failed steps. A final documentation-only status record is being added on the same branch, so those results must be rerun on the new head before merge. No crawler runtime deployment is needed because the cron is already absent; any Plan & Vision UI text update must use the normal reviewed master release and exact alias verification.
+
+Continue: rerun exact-head CI after the final status-record commit, then let Safe Merge Gate sequence PR #381 with #386/#387. Do not run the crawler unless the owner separately requests a manual crawl.
+
+
+## 14 November 2026 — manual-only crawler guard validation update
+
+PR #381 remains a documentation/comment/regression-only change. Current master already has no `/api/crawl/run` cron; the separate Gmail crawler schedule is preserved, and Robert Half remains manual-only.
+
+- The earlier exact-head full CI on `f1ce562a2c4abbafd550887a512df5120555326e` failed TypeScript because the new REA record declared `steps` twice. Commit `b643f067cf802fa9ba6fa325a8a7e07fc4683466` merged both evidence arrays without dropping either.
+- Exact head `b1628bdf12b6d2eeb9189dc4b89ef495ef615c2e` then passed full CI `43567745876`, manual-only regression `43567745860`, crawler regression `43567745899`, Kompas baseline `43567745858`, and Plan/REA `43567745834`.
+- Plan Journal and REA now record that result in follow-up documentation commits `aabd68acc21dc543362baf3a34aeffe4316c0f8b` and `c535c7739777b152717c0683db0f3571a4a0229f`. Because those commits advance the branch after the green exact-head runs, all required checks must complete again on the latest PR head before merge. Do not reuse the `b1628bdf` results as proof for a later head.
+- MFit Safe Merge Gate must sequence #381 with shared Plan/REA branches #386 and #387; do not merge those documentation branches in parallel.
+- No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
+
+Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.

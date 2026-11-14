@@ -1,0 +1,38 @@
+name: Contract crawler manual-only regression
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "vercel.json"
+      - "src/app/api/crawl/run/route.ts"
+      - "src/app/api/crawl/jobs/route.ts"
+      - "src/lib/crawl/adapters.ts"
+      - "scripts/tests/hobby-usage-pack.test.mjs"
+      - "scripts/tests/crawl-manual-only.test.mjs"
+      - ".github/workflows/crawl-manual-only.yml"
+  pull_request:
+    branches: [master, main]
+    paths:
+      - "vercel.json"
+      - "src/app/api/crawl/run/route.ts"
+      - "src/app/api/crawl/jobs/route.ts"
+      - "src/lib/crawl/adapters.ts"
+      - "scripts/tests/hobby-usage-pack.test.mjs"
+      - "scripts/tests/crawl-manual-only.test.mjs"
+      - ".github/workflows/crawl-manual-only.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  manual-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify manual-only crawler and protected trigger
+        run: node --test scripts/tests/hobby-usage-pack.test.mjs scripts/tests/crawl-manual-only.test.mjs
