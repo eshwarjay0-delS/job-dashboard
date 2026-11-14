@@ -177,7 +177,7 @@ test('every Files-backed original fallback uses exact selected same-account libr
   assert.match(rejected, /const unverifiedClaims =/)
   assert.match(rejected, /sendOfflineOriginal\(fallbackWhy\)/)
   assert.doesNotMatch(rejected, /sendClosest\(unfinishedRewriteWhy\(result\)\)/)
-  assert.match(webhook, /sendOfflineOriginal\("NOT TAILORED — AI rewrite incomplete\."/)
+  assert.match(rejected, /const fallbackWhy = unverifiedClaims[\s\S]*?"NOT TAILORED — AI rewrite incomplete\."/)
   const noKeyStart = webhook.indexOf('if (!hasAnyKey(keys))', generateStart)
   const consumeStart = webhook.indexOf('// Consume this pair now', noKeyStart)
   const noKey = webhook.slice(noKeyStart, consumeStart)

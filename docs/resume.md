@@ -99,3 +99,8 @@ The current-master PR #380 source branch implements the owner-approved initial-J
 The approved WhatsApp fallback and unverified-JD hard hold are being restacked from source commit `128272f041a9b6a1d637abdb253affd6c7e11a7b` onto canonical master `46043ec6ca926b2ab82424d255367426685f294d` as `fix/whatsapp-offline-cas-current-46043-20261114`. The latest predecessor PR #392 head `33b1353809771ce9f8a99b0262731b166d64c3cf` is DRAFT/dirty and has no exact-head Actions runs. The new restack must pass full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on its own final head.
 
 The initial-JD fallback is limited to the exact selected same-account library bytes, labelled **Original resume — NOT TAILORED**; no session/inbox copy is allowed. Swipe-reply failure remains text-only. No 98% live match, historical delivery, production R2 write, model call or real WhatsApp send is claimed.
+
+
+## 14 November 2026 — exact-head WhatsApp contract-test correction
+
+PR #399 initial head `cc4f9fbde7d355718c9603d5a15a263409aba46b` passed Plan/REA and Kompas baseline, while WhatsApp recovery exposed a stale source-contract assertion at line 180: it expected an inline caption call, but the implementation correctly computes `fallbackWhy` and passes it to `sendOfflineOriginal`. The test now checks the incomplete caption in that branch and the variable call. This changes the test expectation only; it does not weaken the runtime sendability gate. All exact-head checks must rerun on the corrected head. Protected preview and real delivery remain separate gates.
