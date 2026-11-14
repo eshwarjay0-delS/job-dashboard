@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 14 November 2026 — WhatsApp provider-failure fallback correction
+
+- Continue: rerun the exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA gates for PR #380 after the Plan/REA documentation commit. Current branch: `fix/whatsapp-offline-cas-master-926bf3-20261114`; code head before this documentation update: `2ec3356e74ae4ca26bcfcb9b850c57b8176a11fd`; base: `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`.
+- Review of failed run 43539392627 found a real source gap as well as stale fixtures: provider exceptions called `sendClosest(session.resumePath)`, which could send an unverified inbox copy. The catch now calls `sendOfflineOriginal` only for a selected Files context and only after same-account root, normalized path, resolved path and byte equality checks. Otherwise it sends no file and reports retry. Swipe-refinement behavior remains text-only.
+- The failsafe test now models a valid account UUID and matching library/inbox bytes; the no-provider test snapshots AI-call and delivery counts so it proves zero new AI calls and exactly one original send. Commits: `dcd62710f6ad7e855f0550fd631f51a108cc9fca`, `87fd524fe05611283bc910d12caffa256228c08d`, `2ec3356e74ae4ca26bcfcb9b850c57b8176a11fd`.
+- On code head 2ec3356, Kompas baseline 43544964627 and Plan/REA 43544964541 passed; full CI 43544964583 and WhatsApp recovery 43544964535 were still in progress. This Plan/REA update changes the head, so those results do not validate the final branch. The new exact-head runs must complete green.
+- PR #380 remains DRAFT. Protected preview requires the private `KOMPAS_VERCEL_API_TOKEN` configured by the owner or an authorized repository administrator. Do not bypass the token, alter Vercel ignore/deployment rules, or merge before Safe Merge Gate review. No real Meta send, R2 production write, model call, historical replay or handset acceptance occurred.
+- The 17 Oct 17:28 Chicago incident remains separately blocked by the exact generated DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts. Do not replay or substitute a later DOCX.
+
 ## 13 November 2026 — approval provenance and release-gate correction
 
 - PR #374 WhatsApp offline fallback / pair-CAS restack: head 794ba1151f8761720c55936d15bb0eb9a0a37c5c; full CI 43503280817, WhatsApp recovery 43503280946, Kompas baseline 43503280979 and Plan/REA 43503280606 all SUCCESS. It remains DRAFT because protected preview dpl_6Ejh8tNfxR7pDYNcxWRp2f2thWV7 was canceled by Ignored Build Step; private KOMPAS_VERCEL_API_TOKEN is still required. No real send or R2 write.
