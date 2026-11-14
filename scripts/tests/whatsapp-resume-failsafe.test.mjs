@@ -32,6 +32,7 @@ const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 const TEST_USER_ROOT = `/data/users/${TEST_USER_ID}`
 const LIBRARY_HOUSTON_PATH = `${TEST_USER_ROOT}/eshwarjay05@gmail.com/GRC/easm.docx`
 const INBOX_HOUSTON_PATH = '/data/whatsapp/inbox/15550021/easm.docx'
+const INBOX_SAINT_LOUIS_PATH = '/data/whatsapp/inbox/15550021/grc.docx'
 const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
 
 function harness(runTailor) {
@@ -52,7 +53,7 @@ function harness(runTailor) {
     'next/server': {},
     '@/lib/storage': {
       blob: storage,
-      readPath: async p => [HOUSTON_PATH, LIBRARY_HOUSTON_PATH, INBOX_HOUSTON_PATH].includes(p) ? Buffer.from(HOUSTON) : p === SAINT_LOUIS_PATH ? Buffer.from(SAINT_LOUIS) : null,
+      readPath: async p => [HOUSTON_PATH, LIBRARY_HOUSTON_PATH, INBOX_HOUSTON_PATH].includes(p) ? Buffer.from(HOUSTON) : [SAINT_LOUIS_PATH, INBOX_SAINT_LOUIS_PATH].includes(p) ? Buffer.from(SAINT_LOUIS) : null,
       writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true,
     },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
@@ -239,8 +240,8 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
   const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
   await generate('15550021', {
     jdId: 'houston', jd: 'EASM role',
-    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+    resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /eshwarjay05@gmail.com/)
   assert.doesNotMatch(docs[0].body, /jayeshwar44/)
@@ -248,9 +249,20 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
   docs.length = 0
   await generate('15550021', {
     jdId: 'wrong-profile', jd: 'EASM role again',
-    resumePath: SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(SAINT_LOUIS_PATH))
-  assert.equal(docs.length, 0, 'a Saint Louis file is not sent for the Houston profile')
-  assert.doesNotMatch(said.join('\n'), /jayeshwar44/)
-  assert.doesNotMatch(docs.map(d => d.body).join('\n'), /jayeshwar44/)
+    resumePath: INBOX_SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
+  assert.equal(docs.length, 0, 'a Saint Louis session copy cannot replace the selected Houston library file')
+  assert.match(said.join('\\n'), /No file was sent/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /jayeshwar44/)
+})
+
+test('provider failure without a selected same-account Files resume sends no inbox copy', async () => {
+  const { generate, docs, said } = harness(async () => { throw new Error('provider down') })
+  await generate('15550021', {
+    jdId: 'easm-no-library', jd: 'EASM cybersecurity engineer',
+    resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0, 'an inbox/session copy is not an authorized fallback')
+  assert.match(said.join('\\n'), /No file was sent/)
+  assert.match(said.join('\\n'), /saved for retry/)
 })
