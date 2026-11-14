@@ -52,3 +52,14 @@ test("digest actions pass the receiving account and use account+thread React key
   assert.match(page, /key=\{interviewThreadKey\(r\.account, r\.threadId\)\}/)
   assert.match(page, /openMail\(r\.threadId, r\.account\)/)
 })
+
+
+test("reply identity and saved drafts stay bound to the receiving inbox when digest threads switch accounts", () => {
+  const page = readFileSync(new URL("../../src/app/dashboard/mail/page.tsx", import.meta.url), "utf8")
+  const reply = readFileSync(new URL("../../src/app/dashboard/mail/_components/smart-reply.tsx", import.meta.url), "utf8")
+  assert.ok(page.includes('key={`${m.account}:${m.id}`}'), "switching account/thread remounts the reply composer instead of carrying stale recipient or sender state")
+  assert.match(reply, /replyDraftKey\(data\.user\.id, mail\.account, mail\.id\)/)
+  assert.match(reply, /accountEmail: mail\.account, threadId: mail\.id/)
+  assert.match(reply, /setAccountId\(typeof body\.accountId === "string" \? body\.accountId : null\)/)
+  assert.match(reply, /\[mail\.id, mail\.account\]/)
+})
