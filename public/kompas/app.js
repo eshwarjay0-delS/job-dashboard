@@ -1365,12 +1365,13 @@ function fmtClock(ms) { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600
 function startClock() { startedAt = Date.now(); const tick = () => { $("clock").textContent = fmtClock(Date.now() - startedAt); }; tick(); clockTimer = setInterval(tick, 250); }
 function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
 
-/* ---- sources (both ON by default), theme, drawer ---- */
+/* ---- sources (microphone on; computer audio opt-in), theme, drawer ---- */
 // Computer-audio support is independent of the screen-question capture action.
 // The native Electron display handler already permits getDisplayMedia; hiding the
 // screen action on desktop made the completed screen review and answering path unreachable.
 const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
-const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
+// Computer audio stays off until the user explicitly selects it for the next Start.
+const srcOn = { mic: true, sys: false };
 if (NO_SYS_AUDIO) $("sysBtn").classList.add("hidden");
 if (window.kompasDesktop) {
   $("screenBtn").classList.remove("hidden");
@@ -1918,12 +1919,15 @@ function boostedLoopbackStream(ctx, sourceNode) {
   } catch { return null; }
 }
 async function start() {
+  if (!srcOn.mic && !srcOn.sys) {
+    status("Turn on the microphone or computer audio before starting.", "err");
+    return;
+  }
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
   sessionReadyUntil = 0;
   void currentOutputKey().then(key => { if (key) outputDeviceKey = key; });
   const generation = sourceGeneration.You;
   primeAudio();                       // inside the click, so the browser lets audio run
-  if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
   try { window.kompasDesktop?.setInterview?.(true); } catch {}
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
@@ -7229,11 +7233,11 @@ function renderConnect(s) {
   const desktop = !!window.kompasDesktop;
   const app = desktop ? "desktop" : LS.get("connectApp", "web");
   document.querySelectorAll(".cn-app").forEach(b => b.classList.toggle("on", b.dataset.app === app));
-  // The desktop exe is already the decision: microphone plus the output mix. No Browser / Desktop app / Phone choice.
+  // Desktop uses the explicit microphone and computer-audio controls; no Browser / Desktop app / Phone choice.
   const steps = NO_SYS_AUDIO
     ? ["Play the call through your <b>speakers</b>, not headphones, so the microphone hears the interviewer.", "Press <b>Connect &amp; start</b>. Kompas listens through your microphone.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
     : desktop
-      ? ["Press <b>Connect &amp; start</b> and allow the microphone.", "Leave the speaker control on. Kompas hears whatever the computer is playing — the call, a video, a browser tab — as the interviewer.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
+      ? ["Press <b>Connect &amp; start</b> and allow the selected audio sources.", "Turn on the speaker control to include the computer's output mix; otherwise Kompas uses the microphone only.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
       : CONNECT_STEPS[app];
   $("cnSteps").innerHTML = steps.map(t => `<li>${t}</li>`).join("");
   $("cnApps").classList.toggle("hidden", desktop || NO_SYS_AUDIO);
@@ -7518,7 +7522,12 @@ window.__kompasCaption = onCaptionText;
 $("cnStart").onclick = () => {
   const app = window.kompasDesktop ? "desktop" : LS.get("connectApp", "web");
   if (!window.kompasDesktop && app === "desktop") { launchInstalled(current); return; }
-  srcOn.mic = true; srcOn.sys = window.kompasDesktop ? !NO_SYS_AUDIO : app !== "phone" && !NO_SYS_AUDIO; syncSrc();
+  if (!window.kompasDesktop) {
+    srcOn.mic = true;
+    srcOn.sys = app !== "phone" && !NO_SYS_AUDIO;
+  }
+  // Desktop source buttons are explicit per-source consent; Connect & start must not override them.
+  syncSrc();
   $("startBtn").click();
 };
 $("startBtn").addEventListener("click", () => {
