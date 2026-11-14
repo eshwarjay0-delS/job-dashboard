@@ -1663,8 +1663,9 @@ function resumeGapReport(result: TailorResult): string {
   ].join("\n")
 }
 
-// The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
-// the name, every email, phone, link and date of the source must be in the exported file unchanged, and none added.
+// The send check. sameResumeIdentity always verifies the DOCX body, referenced headers/footers and external
+// hyperlink targets. Name, every email occurrence, phone, URL and employment date must survive unchanged,
+// independently of the JD terms/coverage switch.
 async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
   const [a, b] = await Promise.all([docxIdentityText(source), docxIdentityText(file)])
   return sameResumeIdentity(a, b)

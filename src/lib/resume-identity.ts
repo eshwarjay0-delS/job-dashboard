@@ -1,17 +1,23 @@
 import { checkRoundTrip } from "@/lib/resume-round-trip-guard"
-import { jdTermsGateOn } from "@/lib/jd-terms-gate"
 
-/** Compare every email, not just the first address parsed from a resume. With the job-post terms gate on
- *  (JD_TERMS_ALWAYS_ON_SKILLS, default on), also the round-trip guard: name, phones, links and dates unchanged. */
+/**
+ * Always verify the complete resume identity round-trip, independently of the
+ * JD keyword/coverage switch. Every email occurrence, name, phone, URL and date
+ * must survive export unchanged; the switch must never disable this safety check.
+ */
 export function sameResumeIdentity(source: string, output: string): boolean {
-  const emails = (text: string) => [...new Set((text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))].sort().join("\n")
-  if (emails(source) !== emails(output)) {
-    // Log only the mismatch category, never addresses or resume contents.
-    console.error("[resume] round-trip guard stopped delivery", { problems: 1, categories: ["email"] })
-    return false
-  }
-  if (!jdTermsGateOn()) return true
   const rt = checkRoundTrip(source, output)
-  if (!rt.ok) console.error("[resume] round-trip guard stopped delivery", { problems: rt.problems.length, categories: [...new Set(rt.problems.map(p => p.startsWith("name changed") || p.startsWith("source has no name") ? "name" : p.split(" ")[0]))] })
+  if (!rt.ok) {
+    // Log categories and counts only; never emit resume text or personal values.
+    const categories = [...new Set(rt.problems.map(problem =>
+      problem.startsWith("name changed") || problem.startsWith("source has no name")
+        ? "name"
+        : problem.split(" ")[0],
+    ))]
+    console.error("[resume] round-trip guard stopped delivery", {
+      problems: rt.problems.length,
+      categories,
+    })
+  }
   return rt.ok
 }

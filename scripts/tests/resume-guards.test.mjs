@@ -148,7 +148,7 @@ test('DOCX identity extraction includes referenced headers, footers and external
   const sourceText = await docxIdentityText(source)
   const reformattedText = await docxIdentityText(reformatted)
   assert.match(sourceText, /555-010-1234/)
-  assert.match(sourceText, /linkedin\.com\/in\/alex-example/)
+  assert.ok(sourceText.includes('\u001eDOCX_LINK:'), 'external target is retained as a dedicated comparison marker')
   assert.match(sourceText, /Jan 2020/)
   assert.equal(checkRoundTrip(sourceText, reformattedText).ok, true)
 })
@@ -172,6 +172,34 @@ test('DOCX identity extraction rejects real name, email, phone and experience-da
     assert.ok(checkRoundTrip(sourceText, output).problems.some(problem => problem.startsWith(mutation.category)), mutation.category)
   }
 })
+
+test('DOCX identity extraction compares complete hyperlink targets including semicolons and parentheses', async () => {
+  const facts = {
+    paragraphs: ['Alex Example', 'alex.example@example.com | 555-010-1234'],
+    linkTarget: 'https://linkedin.com/in/alex-example;team=(security)',
+  }
+  const source = await docxIdentityText(await syntheticIdentityDocx(facts))
+  const changed = await docxIdentityText(await syntheticIdentityDocx({
+    ...facts,
+    linkTarget: 'https://linkedin.com/in/alex-example;team=(sales)',
+  }))
+  assert.ok(checkRoundTrip(source, changed).problems.some(problem => problem.startsWith('url')))
+  const changedScheme = await docxIdentityText(await syntheticIdentityDocx({
+    ...facts,
+    linkTarget: 'http://linkedin.com/in/alex-example;team=(security)',
+  }))
+  assert.ok(checkRoundTrip(source, changedScheme).problems.some(problem => problem.startsWith('url')))
+})
+test('visible URL sentence punctuation is formatting-only, while URL path punctuation is preserved', () => {
+  const source = 'Alex Example\nhttps://linkedin.com/in/alex-example.'
+  const punctuationRemoved = 'Alex Example\nhttps://linkedin.com/in/alex-example'
+  assert.equal(checkRoundTrip(source, punctuationRemoved).ok, true)
+  const specialSource = 'Alex Example\nhttps://linkedin.com/in/alex-example;team=(security)'
+  const changedTarget = specialSource.replace('(security)', '(sales)')
+  assert.ok(checkRoundTrip(specialSource, changedTarget).problems.some(problem => problem.startsWith('url')))
+})
+
+
 
 test('DOCX identity extraction rejects header phone, footer date and hyperlink target mutations', async () => {
   const facts = {
@@ -231,9 +259,10 @@ test('WhatsApp refine: missing original and failed identity verification have di
   assert.match(route, /docxIdentityText\(file\)/)
 })
 
-test('resume identity: email-only mismatch logs category without exposing addresses', () => {
+test('resume identity: every protected fact uses the round-trip guard', () => {
   const identity = readFileSync(new URL('../../src/lib/resume-identity.ts', import.meta.url), 'utf8')
-  assert.match(identity, /if \(emails\(source\) !== emails\(output\)\) \{[\s\S]*?categories: \["email"\][\s\S]*?return false/)
-  assert.doesNotMatch(identity, /console\.error\([^\n]*(?:emails\(source\)|emails\(output\)|sourceText|outputText)/)
+  assert.ok(identity.includes('const rt = checkRoundTrip(source, output)'))
+  assert.ok(identity.includes('categories'))
+  assert.ok(identity.includes('return rt.ok'))
   assert.equal(checkRoundTrip(SRC, SRC.replace('alex.example@example.com', 'other@example.com')).ok, false)
 })
