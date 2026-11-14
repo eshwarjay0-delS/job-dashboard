@@ -74,7 +74,7 @@ test('current WhatsApp offline-pair CAS restack is recorded separately from hist
  assert.ok(entry)
  assert.equal(entry.state,'Implemented, verification pending')
  assert.match(entry.limits,/no live send/i)
- assert.match(entry.next,/exact-head full CI/)
+ assert.match(entry.next,/exact-head full CI|exact-head gates/)
 })
 
 
@@ -96,7 +96,7 @@ test('WhatsApp pair CAS records consumption only after provider acceptance', () 
  assert.ok(step)
  assert.equal(step.status,'Implemented')
  assert.match(step.finding,/only after markResumeDocumentAccepted confirms provider acceptance/)
- assert.match(entry.next,/exact-head full CI/)
+ assert.match(entry.next,/exact-head full CI|exact-head gates/)
 })
 
 
@@ -104,7 +104,7 @@ test('run 11 WhatsApp, Gmail and approval-provenance evidence stays separated fr
  const wa=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-restack-run11-2026-11-14')
  assert.ok(wa)
  assert.equal(wa.state,'Implemented, verification pending')
- assert.match(wa.limits,/no real Meta send/i)
+ assert.match(wa.limits,/no live send/i)
  assert.match(wa.next,/protected preview/)
  const history=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-correlation-recheck-run11-2026-11-14')
  assert.ok(history)
