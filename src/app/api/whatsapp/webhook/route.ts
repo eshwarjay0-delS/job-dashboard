@@ -1039,11 +1039,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     const timedOut = /timed out/i.test(String(e))
     failureCode = timedOut ? "timeout" : "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    const why = timedOut ? "The rewrite ran out of time just now." : "The rewrite stopped before it finished."
-    if (await sendClosest(why)) return
-    await sayOutcome(timedOut
-      ? "The rewrite ran out of time just now. Your resume and this job are saved, and MarketFit will try again."
-      : "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
+    const why = timedOut
+      ? "NOT TAILORED — AI rewrite timed out."
+      : "NOT TAILORED — AI provider failed."
+    // Initial-JD fallback is restricted to the exact selected same-account library
+    // bytes. Never send an inbox/session copy when the provider did not finish.
+    if (files && await sendOfflineOriginal(why)) return
+    await sayOutcome(files
+      ? "The AI rewrite did not finish, and I could not verify the exact selected same-account resume. No file was sent; your request is saved for retry."
+      : "The AI rewrite did not finish. No file was sent; your request is saved for retry.")
     return;
   }
 
