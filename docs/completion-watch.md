@@ -579,3 +579,8 @@ The first current-master restack head `16bd984118d61d7a813c7fa22f18a0906d34f405`
 ## 14 November 2026 — 17 Oct Library recovery check
 
 The accessible Library search found several materially different resume DOCX versions created 16–19 Oct, but no 27,724-byte source candidate and no correlated output. The extracted variants contain conflicting chronology/credential claims; none is proven to be the exact 17 Oct source or generated artifact. Preserve them as uncorrelated evidence only. The per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. No replay or replacement send.
+
+
+### Corrected-head CI revalidation request — 14 November 2026
+
+The first PR #382 head `16bd984118d61d7a813c7fa22f18a0906d34f405` failed typecheck because the two new REA records used an unsupported method enum. The correction is in `eb2cfca5e88a2dc0a71a9c4459a51392f6bb90c7`; the subsequent `c24cda9461358fa31770a62de80091397cdd6693` commit records the 17 Oct Library search and failure/correction evidence. The corrected branch head must receive fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA runs; the initial-head runs are not accepted as validation of the corrected head.
