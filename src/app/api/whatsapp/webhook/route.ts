@@ -1046,8 +1046,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     // bytes. Never send an inbox/session copy when the provider did not finish.
     if (files && await sendOfflineOriginal(why)) return
     await sayOutcome(files
-      ? "The AI rewrite did not finish, and I could not verify the exact selected same-account resume. No file was sent; your request is saved for retry."
-      : "The AI rewrite did not finish. No file was sent; your request is saved for retry.")
+      ? timedOut
+        ? "The AI rewrite ran out of time, and I could not verify the exact selected same-account resume. No file was sent; your request is saved for retry."
+        : "The AI rewrite did not finish, and I could not verify the exact selected same-account resume. No file was sent; your request is saved for retry."
+      : timedOut
+        ? "The AI rewrite ran out of time just now. No file was sent; your request is saved for retry."
+        : "The AI rewrite did not finish. No file was sent; your request is saved for retry.")
     return;
   }
 
