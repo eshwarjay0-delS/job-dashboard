@@ -216,3 +216,12 @@ The failsafe fixture now uses a valid test account UUID, matching `USER_RESUMES_
 Source commit: `dcd62710f6ad7e855f0550fd631f51a108cc9fca`. Regression commits: `87fd524fe05611283bc910d12caffa256228c08d` and `2ec3356e74ae4ca26bcfcb9b850c57b8176a11fd`. PR #380 remains DRAFT on post-#379 master. The code head `2ec3356e74ae4ca26bcfcb9b850c57b8176a11fd` had Kompas baseline 43544964627 and Plan/REA 43544964541 SUCCESS; full CI 43544964583 and WhatsApp recovery 43544964535 were still in progress before the latest Plan/REA commit. Fresh exact-head gates are required. The protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; no real WhatsApp send, R2 production write, model call, historical replay or handset test occurred.
 
 The historical 17 Oct 17:28 Chicago incident remains unverified: the exact generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts remain missing. Do not replay the request or substitute a later-created DOCX.
+
+
+## 14 November 2026 — no unverified inbox fallback
+
+The follow-up regression commit `c566583c6b925fbd96001f663904dd4c99d2326e` adds two negative cases to PR #380:
+- A provider exception with an inbox/session resume path but no selected same-account Files context sends no document and returns a text retry.
+- A Saint Louis session copy cannot replace the selected Houston library file; the bytes do not match the selected library source, so no document is sent.
+
+The positive same-account fixture uses a valid UUID and the account's resume-library root. This is mocked regression evidence only. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA must rerun on the new head. The protected preview and real WhatsApp acceptance remain separate. No real send, model request, R2 write or historical replay occurred.
