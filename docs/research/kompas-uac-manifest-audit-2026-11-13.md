@@ -42,3 +42,12 @@ The test and Windows packaging workflow have not yet run on this branch. This is
 Issue #192 stays OPEN. The exact installed executable SHA/path, an installed-binary manifest inspection, and a Windows process/event trace identifying the executable that requests elevation are still missing. The release source comments also say the binary is unsigned; SmartScreen/unknown-publisher warnings are a separate signing concern and must not be conflated with UAC elevation.
 
 Next: obtain exact-head full CI and Windows packaging success for this test guard. If the prompt persists on the latest package, compare the installed binary SHA and manifest, then identify the requesting process/parent from Windows-side evidence. Never advise disabling UAC or repeatedly approving prompts.
+
+
+## Published artifact verification — 14 November 2026
+
+PR #379 is merged as master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`. Exact-master GitHub Actions gates completed successfully: full CI `43537986478`, Kompas baseline `43537986538`, Plan/REA schema `43537986516`, and the canonical Windows packaging workflow `43537986510`.
+
+The Windows packaging job's **Verify real Windows executable** step passed. Its `verify-packaged-app.mjs` output reported `asInvoker manifest resources: outer 1, inner 1`; the regression that checks both Electron and outer SFX executables passed, as did the packaged runtime-closure and unpacked-app startup smoke checks. Workflow artifact `14090777296` and the current official `kompas-desktop-latest/Kompas.exe` release asset match exactly: 162,251,677 bytes, SHA-256 `85fc2440a84bc0bda062e69bc0a08f1ef99d064e6d6353bbced8805f3708bf99`, asset updated 2026-11-14 01:02:58 UTC. A separate read-only inspection of the artifact's outer PE manifest also found `requestedExecutionLevel level="asInvoker"`.
+
+This verifies the published artifact, not the executable installed on the owner's PC. The installed path/SHA and Windows process/event trace are still missing, so the requester of the repeated UAC prompt is unknown and issue #192 remains OPEN. Do not disable UAC or treat this package test as owner-device acceptance.
