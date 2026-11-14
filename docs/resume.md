@@ -80,3 +80,10 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## WhatsApp fallback boundary — 14 November 2026
+
+The 6 November owner correction remains authoritative: a completed readable WhatsApp rewrite may be sent below 95% raw JD overlap with gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp send gate. Do not invent confirmed experience, employers, dates, credentials or metrics.
+
+For an initial JD run whose provider fails or returns an incomplete result, the only allowed fallback is the exact selected same-account library resume, explicitly labelled **Original resume — NOT TAILORED**. Verify account root, normalized relative path, resolved file path and byte equality with the session copy. If the selection cannot be verified, send no document and preserve the request for retry. Swipe-reply refinement failures remain text-only and never send the baseline. Draft PR #380 carries the 14 November provider-exception correction; its exact-head gates and protected preview are still separate acceptance requirements.
