@@ -228,7 +228,7 @@ test('roles that were not rewritten still send the chosen library file', async (
   await generate('15550021', {
     jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
