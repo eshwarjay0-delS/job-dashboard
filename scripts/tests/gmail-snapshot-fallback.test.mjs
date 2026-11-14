@@ -60,6 +60,8 @@ test("import secret is unset, wrong, or exact", () => {
   assert.equal(authorizeSnapshotImport("wrong", env).status, 401)
   assert.equal(authorizeSnapshotImport("correct-horse-extra", env).status, 401)
   assert.equal(authorizeSnapshotImport("correct-horse", env).ok, true)
+  assert.equal(authorizeSnapshotImport("   ", { GMAIL_SNAPSHOT_IMPORT_SECRET: "   " }).status, 503)
+  assert.equal(authorizeSnapshotImport(" secret ", { GMAIL_SNAPSHOT_IMPORT_SECRET: " secret " }).ok, true)
   assert.equal(snapshotBodyTooLarge(MAX_SNAPSHOT_BODY_BYTES), false)
   assert.equal(snapshotBodyTooLarge(MAX_SNAPSHOT_BODY_BYTES + 1), true)
 })
