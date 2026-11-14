@@ -589,3 +589,10 @@ The first PR #382 head `16bd984118d61d7a813c7fa22f18a0906d34f405` failed typeche
 ### Second exact-head typecheck correction — 14 November 2026
 
 PR #383 head `5ae1ecf83501d226251f9ec01e5a4325f911127a` failed full CI `43548271010` and WhatsApp recovery `43548271007` at TypeScript validation. The new historical REA record used an unsupported state value (`Historical evidence incomplete`), unsupported source fields (`library`, `note`), and step statuses (`Incomplete`, `Complete`). Correct the record to state `Blocked`, sources `label/path/url` only, and step statuses `Pending/Blocked/Observed/Implemented/Tested`; rerun exact-head gates. Plan/REA `43548271089` and Kompas baseline `43548271298` passed on the failed head but do not override the TypeScript failure.
+
+
+## 14 November 2026 — stricter confirmed-skill evidence guard
+
+Review of the current-master restack found two remaining confirmation hazards before preview: blanket confirmation accepted second-person `you have experience with all required skills`, despite the prompt requiring a first-person candidate assertion; and a blanket phrase with an exception could be truncated before the exception and then passed to the writer. The strict follow-up branch `fix/resume-confirmed-skill-role-mapping-master-926bf3-run12-20261114-strict` now requires first-person blanket confirmation, rejects blanket statements containing any exception/negation instead of truncating them, and preserves specific positive statements such as `I used AWS but not GCP` as AWS-only. It also splits SIEM/logging, endpoint/EDR, vulnerability, AppSec, network and DLP context families so generic audit/compliance or generic security-risk wording cannot justify unrelated tools.
+
+PR #384 exact head `051f08533df704d24883254b1116c3acc00885b5` has WhatsApp recovery `43548465872`, Kompas baseline `43548465890`, and Plan/REA `43548465920` SUCCESS; full CI `43548465870` was still running at the migration-asset/lossless-import step at 02:53 UTC. This does not validate the stricter follow-up. The strict branch's exact-head workflows are pending. Both PRs remain draft; no model call, DOCX, production deploy or live match score.

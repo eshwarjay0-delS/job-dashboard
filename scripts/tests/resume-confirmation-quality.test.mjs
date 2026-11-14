@@ -10,6 +10,7 @@ for (const input of ['I have experience with AWS and Terraform', 'I personally d
 }
 test('an exception cannot confirm every requirement', () => {
   assert.equal(explicitlyConfirmsAllRequirements(['I have experience with all required skills except GCP']), false)
+  assert.deepEqual(confirmedCandidateStatements(['I have experience with all required skills except GCP']), [])
   assert.deepEqual(confirmedCandidateStatements(['I used AWS but not GCP']), ['I used AWS'])
 })
 
@@ -22,6 +23,13 @@ test('the owner-approved explicit blanket confirmation covers all supplied requi
   const statement = 'I have experience with all of them evenly'
   assert.equal(explicitlyConfirmsAllRequirements([statement]), true)
   assert.deepEqual(confirmedCandidateStatements([statement]), [statement])
+})
+
+test('second-person blanket wording is not a candidate experience confirmation', () => {
+  for (const statement of ['You have experience with all required skills', 'Do you have experience with all required skills?']) {
+    assert.equal(explicitlyConfirmsAllRequirements([statement]), false)
+    assert.deepEqual(confirmedCandidateStatements([statement]), [])
+  }
 })
 
 test('a job-description or formatting instruction is not blanket experience confirmation', () => {
@@ -251,4 +259,37 @@ test('CyberArk EPM does not transfer into generic IAM privilege or mail allowlis
     edits[2],
   ])
   assert.deepEqual(guarded.blockedTerms, ['CyberArk EPM'])
+})
+
+
+test('SIEM skills require log or alert project context, not generic audit/compliance wording', () => {
+  const roles = [
+    { bullets: [{ idx: 21, text: 'Reviewed audit evidence and compliance controls for finance reporting.' }] },
+    { bullets: [{ idx: 22, text: 'Correlated SIEM logs and investigated security alerts across monitored systems.' }] },
+  ]
+  const edits = [
+    { idx: 21, text: 'Reviewed audit evidence and compliance controls for finance reporting using Splunk.' },
+    { idx: 22, text: 'Correlated SIEM logs and investigated security alerts across monitored systems using Splunk.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['Splunk'], cover, new Set(['Splunk']))
+  assert.equal(guarded.reverted, 1)
+  assert.deepEqual(guarded.edits, [roles[0].bullets[0], edits[1]])
+  assert.deepEqual(guarded.blockedTerms, ['Splunk'])
+})
+
+test('endpoint tools require endpoint/EDR context rather than a generic security assessment', () => {
+  const roles = [
+    { bullets: [{ idx: 23, text: 'Performed security risk assessments and documented compliance control gaps.' }] },
+    { bullets: [{ idx: 24, text: 'Managed Windows endpoint protection and triaged EDR threat alerts.' }] },
+  ]
+  const edits = [
+    { idx: 23, text: 'Performed security risk assessments and documented compliance control gaps using Defender.' },
+    { idx: 24, text: 'Managed Windows endpoint protection and triaged EDR threat alerts using Defender.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(edits, roles, ['Defender'], cover, new Set(['Defender']))
+  assert.equal(guarded.reverted, 1)
+  assert.deepEqual(guarded.edits, [roles[0].bullets[0], edits[1]])
+  assert.deepEqual(guarded.blockedTerms, ['Defender'])
 })

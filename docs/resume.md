@@ -109,3 +109,8 @@ PR #377 final head `fa971b90c702e1cb96ebae161a1fdd1aa7ab1728` passed full CI `43
 ## Confirmed-skill mapping across roles — 14 November 2026
 
 The 6 November owner correction permits an explicit first-person candidate-confirmed skill to be mapped into relevant existing project bullets across roles, including earlier roles, even when the original bullet does not name the tool. The existing project frame must still fit the skill family. The confirmation does not create an employer, project, action, outcome, title, date, location, contact, metric or credential. Job-description wording, a target score and editing instructions are not candidate evidence. Unknown skills need direct source support; unrelated roles remain unchanged. Source facts that conflict with the owner-confirmed profile remain quarantined until reconciled.
+
+
+## Current factual match target — 14 November 2026
+
+The current target is **98% factual keyword coverage**, not a promise that every JD term will be inserted. Older 95–100% wording is historical. The score must be measured from the final exported DOCX, with unsupported requirements left as gaps; report raw and weighted coverage separately without rounding. Synthetic tests, source-level checks and a green CI run are not live resume acceptance. The final DOCX still requires the approved Gemini “Give me an ATS score” review and correction/re-export loop.
