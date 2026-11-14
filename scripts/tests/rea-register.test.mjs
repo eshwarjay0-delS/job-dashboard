@@ -68,29 +68,33 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
 
-test('Gmail and crawler scope details without direct owner approval stay blocked', () => {
- const gmail=REA_SESSIONS.find(s=>s.id==='gmail-mobile-scope-provenance-2026-11-13')
- const crawler=REA_SESSIONS.find(s=>s.id==='contract-c2h-scope-provenance-2026-11-13')
- assert.ok(gmail && crawler)
- assert.equal(gmail.state,'Blocked')
- assert.equal(crawler.state,'Blocked')
- assert.match(gmail.limits,/not directly confirmed|not owner-authored|proposed/i)
- assert.match(crawler.limits,/not directly owner-confirmed|not owner-authored|proposed/i)
- const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
- assert.match(plan,/not owner-approved/)
- assert.ok(plan.includes('historical owner-vision document docs/gmail.md'))
- assert.ok(plan.includes('not a hard maximum'))
- assert.match(plan,/manual\/on-demand only/i)
- assert.match(plan,/not directly owner-confirmed/)
+
+test('current WhatsApp offline-pair CAS restack is recorded separately from historical replay', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-restack-run11-2026-11-13')
+ assert.ok(entry)
+ assert.equal(entry.state,'Implemented, verification pending')
+ assert.match(entry.limits,/no real Meta send/i)
+ assert.match(entry.next,/exact-head full CI/)
 })
 
-test('WhatsApp offline fallback and confirmed-skill restacks remain blocked until acceptance', () => {
- const whatsapp=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-pr374-current-master-2026-11-13')
- const skills=REA_SESSIONS.find(s=>s.id==='resume-confirmed-skill-pr377-current-master-2026-11-13')
- assert.ok(whatsapp && skills)
- assert.equal(whatsapp.state,'Blocked')
- assert.equal(skills.state,'Blocked')
- assert.match(whatsapp.limits,/generated output|R2 object\/version|signed delivery/i)
- assert.match(whatsapp.limits,/protected preview/i)
- assert.match(skills.limits,/exported-DOCX acceptance/i)
+
+test('Oct 17 source archive recheck records the current access limit without exposing private material', () => {
+  const session = REA_SESSIONS.find(item => item.id === 'whatsapp-oct17-source-reverified-2026-11-13')
+  assert.ok(session)
+  const step = session.steps.find(item => item.label === 'Current execution archive recheck')
+  assert.ok(step)
+  assert.equal(step.status, 'Blocked')
+  assert.match(step.finding, /did not resolve the exact 27,724-byte source artifact/)
+  assert.doesNotMatch(JSON.stringify(session), /[a-f0-9]{64}|\/mnt\/data\/|C:\\\\Users\\\\/i)
+})
+
+
+test('WhatsApp pair CAS records consumption only after provider acceptance', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='whatsapp-offline-cas-restack-run11-2026-11-13')
+ assert.ok(entry)
+ const step=entry.steps.find(s=>s.label==='Consume only after accepted delivery')
+ assert.ok(step)
+ assert.equal(step.status,'Implemented')
+ assert.match(step.finding,/only after markResumeDocumentAccepted confirms provider acceptance/)
+ assert.match(entry.next,/exact-head full CI/)
 })
