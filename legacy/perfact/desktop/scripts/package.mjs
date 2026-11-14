@@ -81,7 +81,7 @@ fs.readSync(fd, mach, 0, 2, hdr.readUInt32LE(0x3c) + 4);
 fs.closeSync(fd);
 if (mach.readUInt16LE(0) !== 0x8664) { console.error(`Kompas.exe is PE machine 0x${mach.readUInt16LE(0).toString(16)}, not x64`); process.exit(1); }
 try {
-  const packed = assertPackagedExe(exe);
+  const packed = await assertPackagedExe(exe);
   console.log("packaged runtime closure ok: " + packed.required.join(", "));
 } catch (error) {
   console.error(String(error && error.message || error));
