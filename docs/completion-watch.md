@@ -509,3 +509,14 @@ Continue: obtain owner-consented browser A/B and installed-Windows acceptance fo
 - The separate 17 Oct 17:28 Chicago incident remains blocked by the missing generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts.
 
 Continue: obtain exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA checks for `d77af57` through the authorized Safe Merge Gate path; then obtain the legitimate protected preview. Keep #374 DRAFT until those gates pass. Only then use the normal production release and verify the READY alias. Keep #377, #375 and #376 sequenced behind the WhatsApp slice.
+
+## 13 November 2026 — Gmail saved snapshot and Supabase egress check
+
+- Read-only production SQL confirms `mfit_gmail_threads` contains **2,002 rows** and `mfit_gmail_sync` contains **3 rows**, all across **one owner and three accounts**.
+- Latest thread update: **2026-11-10 14:46:49.790 UTC**. Latest sync: **2026-11-10 14:44:44.277 UTC**. The snapshot exists but is stale; row counts do not prove fresh inbox reads or two-inbox UX.
+- The last-24-hour Vercel error aggregation shows **58** Gmail-route HTTP 402 failures with `exceed_egress_quota`: notify-rules/export 28; important/updates/recruiters 19; alerts 6; papers 2; application-chains 2; submission-track 1. Latest grouped Gmail error: **2026-11-13T15:01:56Z**. The last-hour aggregate was empty, but that does not prove Supabase Auth/API recovery.
+- Only aggregate SQL counts and timestamps were read. No email subjects, bodies, addresses, account identifiers, secrets or message content were accessed. No Gmail API/OAuth call, inbox mutation, outbound email or mobile-device test occurred.
+- PR #375 received the new evidence comment **6868128195**. The high-level Poke-inspired multi-account/mobile direction remains approved; two-inbox, selected-From, per-account reconnect and narrow-mobile acceptance remain open.
+- Exact blocker: the project owner/authorized administrator must restore Supabase Auth/API egress within the existing plan constraints or approve a safe alternate data path. Do not change billing/spend caps or bypass account isolation.
+
+Continue: after authorized egress recovery, validate authenticated reads and account isolation across all three saved accounts, selected-From preservation, isolated reconnect and narrow-mobile layout. No email should be sent as part of that validation.
