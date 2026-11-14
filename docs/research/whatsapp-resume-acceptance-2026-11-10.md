@@ -243,3 +243,8 @@ The read-only production usage event at 2026-10-17 22:28:27.372685 UTC still has
 PR #380 is now at exact head `8c5e712c39e438bf5a6a81a078dd6efe0c6d39c4`. Full CI `43557076691`, WhatsApp recovery `43557076621`, Kompas baseline `43557076622`, and Plan/REA `43557076630` all passed. The PR remains DRAFT and is not merged or deployed. Its protected preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass the protected-build rule. No production R2 write, real WhatsApp send, model call or historical replay occurred.
 
 The production alias remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3e1033687972230de76747e063afe1a0c1cdea61`. Master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` is one documentation/test/Windows-packaging commit ahead; no web runtime change is missing from production.
+
+
+## 14 November 2026 — accessible Library recheck
+
+A fresh Library search for the generated DOCX by incident date, role/title and DOCX type did not surface a matching output. A broader search returned unrelated BNY/interview material rather than the 17 Oct artifact. This is a bounded search result only; it does not prove that no copy exists outside the indexed Library. The original output DOCX, per-run R2 key/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. No replay or real message was sent.

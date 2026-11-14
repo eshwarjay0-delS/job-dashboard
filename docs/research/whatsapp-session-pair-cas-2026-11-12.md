@@ -118,3 +118,12 @@ The ETag/If-Match pair-consumption logic is unchanged: consume only after provid
 ## 14 November 2026 — actual R2 adapter status mapping test
 
 The earlier in-memory pair-CAS regression covers 409/404 retry behavior, stale ETag conflicts and concurrent winners at the higher-level pair-consumption helper. It does not instantiate the production `R2Storage` class. PR #380 adds a dedicated mocked-S3 test for `R2Storage.putIfMatch`: HTTP 412/409/404 return `false` after one conditional request, HTTP 503 propagates, and an accepted `If-Match` write returns `true`. The test is wired into full CI and uses fake credentials; no network/R2 request is made. Commit: `98fafff9f095146a71f50500c9c520007be75fef`. Exact-head CI and the protected preview remain pending.
+
+
+## 14 November 2026 — R2 conditional-write compatibility and current-master gates
+
+Cloudflare's current R2 S3 documentation explicitly lists `If-Match` and `If-None-Match` for `PutObject`, requires quoted ETags for strong `If-Match` comparison, and states that conditional writes are evaluated atomically against the committed bucket state. The adapter passes the ETag returned by `GetObject` unchanged to `PutObjectCommand.IfMatch`. References: https://developers.cloudflare.com/r2/api/s3/conditional-operations/ and https://developers.cloudflare.com/r2/reference/consistency/.
+
+The current-master PR #380 exact head is `cf86a8d51c5fc7aea432ffc139efe4cf9c5a4b64`. Full CI `43573764438` passed all 47 steps; the WhatsApp recovery gate `43573764496` passed 51/51; Kompas baseline `43573764426` and Plan/REA schema `43573764464` passed. The full-CI combined library/single-request/fivefold/failsafe group passed 54/54, the mocked R2 adapter suite passed 3/3 (412/409/404 fail closed, 503 propagates, accepted If-Match succeeds), and the pair-consumption interleaving regression passed. Two earlier failures were test-fixture issues: a mismatched user/path fixture and an alternating read counter shared across independent cases. Commits `5f1da9f47a9bd290ed7fa5c10bc5306c72e7aafa` and `cf86a8d51c5fc7aea432ffc139efe4cf9c5a4b64` correct only those fixtures; no runtime guard was weakened.
+
+This confirms documented API compatibility and mocked adapter behavior, not a live bucket write. No production R2 operation, Meta send, historical replay, model call or owner-device acceptance occurred. PR #380 remains DRAFT until the protected preview is legitimately configured and the Safe Merge Gate completes shared-document sequencing.
