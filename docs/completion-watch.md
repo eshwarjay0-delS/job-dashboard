@@ -600,3 +600,12 @@ Continue: complete parent #393 protected preview and owner-authorized baseline/J
 - No personal resume/JD was processed; no Gemini call, DOCX export, WhatsApp/email send, R2 mutation, historical replay or device test occurred.
 
 Continue: obtain the authorized protected preview and owner-approved baseline/JD/confirmed-skill DOCX acceptance for #393; separately recover the exact historical output and signed Meta delivery chain before any replay.
+
+
+## 14 November 2026 14:10 UTC — final-DOCX source gates and iZap historical check
+
+- PR #395 head `0eeb69e645373e91e85371e7ba5df3ef594fe731` passed final-DOCX ATS workflow `43603160971` (including `npm run check` and focused tests), WhatsApp recovery `43603160910`, and Plan Journal/REA schema `43603160921`. It remains DRAFT and stacked on PR #393; full master-targeted CI and protected preview are still due.
+- The 17 Oct historical incident was checked read-only against iZap: the connected business has no linked WhatsApp numbers; searches for `98% coverage target` and `Eshwar_Resume` returned no messages. This is iZap-only evidence, not proof about MFit Meta Cloud API. The generated output DOCX and signed delivery chain remain missing.
+- No personal resume/JD, Gemini model call, DOCX export, email/WhatsApp send, production R2 write, replay, deployment or owner-device test occurred.
+
+Continue: obtain the authorized protected preview and owner-approved baseline/JD/confirmed-skill DOCX acceptance for #393; separately recover the exact historical output and signed Meta delivery chain before any replay.

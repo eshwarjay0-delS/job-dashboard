@@ -157,3 +157,10 @@ PR #374 is the current-master restack of the offline original-resume fallback an
 The connected iZap account returned one business (`eshwarjay0`) with no linked WhatsApp numbers. Read-only `search_messages` queries for `98% coverage target` and `Eshwar_Resume` on 2026-10-17 in `America/Chicago` each returned zero results. This is only an iZap-side observation; it does not establish whether the separate MFit Meta Cloud API received, accepted, delivered or read a message. No WhatsApp message was sent or changed.
 
 A scoped Library search did not surface the generated output DOCX. The prior audit records the original source DOCX and matching JD as recovered in private storage, but they were not opened or processed in this run. The exact output, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. No historical replay or replacement send is authorized by this evidence.
+
+
+## 14 November 2026 — exact-head resume source gates and iZap evidence
+
+The final-DOCX dependent PR #395 head `0eeb69e645373e91e85371e7ba5df3ef594fe731` passed final-DOCX ATS review workflow `43603160971`, WhatsApp recovery `43603160910`, and Plan/REA schema `43603160921`. These are source/CI checks only; no personal resume/JD, Gemini call, DOCX export, protected preview or deployment occurred.
+
+The connected iZap account returned one business (`eshwarjay0`) with no linked WhatsApp numbers. Read-only searches for `98% coverage target` and `Eshwar_Resume` on 2026-10-17 in `America/Chicago` returned zero messages. This is only an iZap-side observation and does not establish whether MFit's separate Meta Cloud API received, accepted, delivered or read a message. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing.
