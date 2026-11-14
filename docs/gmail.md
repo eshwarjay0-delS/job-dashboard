@@ -224,3 +224,6 @@ The import endpoint is `POST /api/gmail/snapshot-import`, with `x-import-secret`
 The sealed public-Blob compatibility path remains available only when an explicit deployment secret exists, preserving the no-spend design. If the secret is absent, the reader skips the public fallback and the writer fails closed with 503 when private Blob access is unsupported. No paid storage tier is enabled. The background update worker remains disabled.
 
 The snapshot route exists in the current READY production source, but the Vercel environment-name listing only proves that a sensitive secret entry exists; its value was not read and non-empty status was not asserted. No owner-exported rows were imported and no authenticated import/readback has been performed. No explicit production deployment/`[ship]` approval was recovered for this task. See `docs/research/gmail-snapshot-fallback-2026-11-14.md`.
+
+
+Current source follow-through: PR #396 is open DRAFT for the explicit-secret boundary. Its first dedicated workflow run caught a test-fixture selector error, corrected in commit `a02ef22c492889532ad3ba8e25f4db3152bfd1bb`; exact-head checks are pending. No deployment is authorized by this audit.
