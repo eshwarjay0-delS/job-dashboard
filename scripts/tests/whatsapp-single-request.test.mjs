@@ -22,20 +22,62 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/resume-round-trip-guard': load('src/lib/resume-round-trip-guard.ts'),
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
-test('rejects swapped identities and an extra identity, preserves unchanged email', () => {
-  assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'eshwarjay05@gmail.com'), false)
-  assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'jayeshwar44@gmail.com eshwarjay05@gmail.com'), false)
-  // Email case alone is not a change; the round-trip guard (gate on) also reads the first line as the name, so check it off.
-  process.env.JD_TERMS_ALWAYS_ON_SKILLS = '0'
-  try { assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true) } finally { delete process.env.JD_TERMS_ALWAYS_ON_SKILLS }
+test('rejects swapped identities and extra addresses while accepting email case-only changes', () => {
+  const source = 'Eshwar Jay\nJAYESHWAR44@gmail.com'
+  assert.equal(sameResumeIdentity(source, 'Eshwar Jay\neshwarjay05@gmail.com'), false)
+  assert.equal(sameResumeIdentity(source, source + '\neshwarjay05@gmail.com'), false)
+  assert.equal(sameResumeIdentity(source, 'Eshwar Jay\njayeshwar44@gmail.com'), true)
 })
-test('with the job-post terms gate on, a changed phone or date stops the send; an unchanged file passes', () => {
-  // Gate on with a real name line: an email that differs only in letter case is the same resume.
-  assert.equal(sameResumeIdentity('Eshwar Jay\nJAYESHWAR44@gmail.com', 'Eshwar Jay\njayeshwar44@gmail.com'), true)
-  const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024'
-  assert.equal(sameResumeIdentity(src, src), true)
-  assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
-  assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
+test('the identity guard stays strict when the JD terms gate is off', () => {
+  const previous = process.env.JD_TERMS_ALWAYS_ON_SKILLS
+  process.env.JD_TERMS_ALWAYS_ON_SKILLS = '0'
+  try {
+    const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024\nhttps://linkedin.com/in/eshwar-jay'
+    assert.equal(sameResumeIdentity(src, src), true)
+    assert.equal(sameResumeIdentity(src, src.replace('Eshwar Jay', 'Eshwar J.')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('(312) 555-0142', '312-555-0142')), true)
+    assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', '01/2021')), true)
+    assert.equal(sameResumeIdentity(src, src.replace('Jan 2021 - Mar 2024', '2021-01 - 2024-03')), true)
+    const reflowed = src.replace('Analyst, Acme  Jan 2021 - Mar 2024', 'Analyst, Acme\nJan 2021 - Mar 2024')
+    assert.equal(sameResumeIdentity(src, reflowed), true)
+    const repeatedDates = src + '\nProject Alpha 2021-01\nProject Beta 2021-01'
+    assert.equal(sameResumeIdentity(repeatedDates, repeatedDates), true)
+    assert.equal(sameResumeIdentity(repeatedDates, repeatedDates.replace('Project Beta 2021-01', 'Project Beta')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('linkedin.com/in/eshwar-jay', 'github.com/eshwar-jay')), false)
+    // Host casing, the www alias and an origin-root slash are formatting-only.
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'https://www.LINKEDIN.com/in/eshwar-jay')), true)
+    const rootUrl = src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com')
+    assert.equal(sameResumeIdentity(rootUrl, rootUrl.replace('https://linkedin.com', 'https://www.LINKEDIN.com/')), true)
+    // Scheme, non-root trailing slash, query and fragment are part of the link target.
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'http://linkedin.com/in/eshwar-jay')), false)
+    assert.equal(sameResumeIdentity(src, src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com/in/eshwar-jay/')), false)
+    const queryUrl = src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com/in/eshwar-jay?redirect=/')
+    assert.equal(sameResumeIdentity(queryUrl, queryUrl.replace('?redirect=/', '?redirect=')), false)
+    const fragmentUrl = src.replace('https://linkedin.com/in/eshwar-jay', 'https://linkedin.com/in/eshwar-jay#section/')
+    assert.equal(sameResumeIdentity(fragmentUrl, fragmentUrl.replace('#section/', '#section')), false)
+    const caseSensitivePath = src.replace('https://linkedin.com/in/eshwar-jay', 'https://github.com/Eshwar/Kompas')
+    assert.equal(sameResumeIdentity(caseSensitivePath, caseSensitivePath.replace('Eshwar/Kompas', 'eshwar/Kompas')), false)
+    assert.equal(sameResumeIdentity(src, src + '\njayeshwar44@gmail.com'), false)
+  } finally {
+    if (previous === undefined) delete process.env.JD_TERMS_ALWAYS_ON_SKILLS
+    else process.env.JD_TERMS_ALWAYS_ON_SKILLS = previous
+  }
+})
+test('identity diagnostics expose only mismatch categories, never personal values', () => {
+  const originalError = console.error
+  const records = []
+  console.error = (...args) => records.push(args)
+  try {
+    const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024'
+    assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
+  } finally {
+    console.error = originalError
+  }
+  const serialized = JSON.stringify(records)
+  assert.match(serialized, /phone/)
+  assert.doesNotMatch(serialized, /jayeshwar44|555-0142|555-0143|Jan 2021|Jan 2020/)
 })
 test('concurrent storage claims produce exactly one winner and propagate storage failures', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'wa-claim-'))
