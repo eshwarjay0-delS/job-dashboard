@@ -498,3 +498,14 @@ Continue: wait for exact-head full CI to complete on PR #379 and review the test
 Safe Merge Gate run `34196b1e-b4d4-8328-9abd-572f4c39f622` completed at 00:25:27 UTC with no merge or branch edits. It confirmed the four priority restacks are not eligible for merge. Kompas Continuous Voice Delivery is disabled; do not duplicate its audio/caption work. No separate Bible-Keeper automation was present in the accessible inventory.
 
 Continue: restack the WhatsApp fallback on current master without discarding its code/tests, then require exact-head CI and the legitimate protected preview before merge/deploy. Keep #375/#376/#377 draft until conflict-free restacks and their respective real acceptance gates pass. Wait for #379 full CI. Keep the crawler manual/on-demand only.
+
+
+## 14 November 2026 — enforce the approved manual-only contract crawler
+
+The 12 Nov owner correction at 03:15:32 UTC is authoritative: contract crawling is manual/on-demand only, no daily schedule, and Robert Half remains manual-only. A current-master audit found a real source/docs mismatch: `vercel.json` still scheduled `/api/crawl/run` at `0 12 * * *`, `src/app/api/crawl/run/route.ts` still described a daily cron, and `src/app/api/crawl/jobs/route.ts` still said the daily cron called the GET route. This contradicted both the owner correction and the existing `scripts/tests/hobby-usage-pack.test.mjs` assertion that the contract crawler is not scheduled.
+
+Draft PR #381 on `fix/apply-manual-crawler-only-20261114` removes only the contract-crawler cron, preserves the separate Gmail crawler schedule, keeps the admin-only `POST /api/crawl/jobs` manual trigger and secret-protected `GET /api/crawl/run` compatibility route, and adds a dedicated manual-only regression workflow. It also updates the Apply plan and source records. Robert Half remains in `PENDING_PORTALS`, not active adapters. The proposed C2H semantics in PR #376 remain unapproved and untouched.
+
+No live crawl, external portal request, production-row mutation or application submission was performed. PR #381 requires exact-head full CI, dedicated manual-only tests and Plan/REA checks, then a production READY deployment and canonical alias verification. The current production alias has not been changed by this source branch.
+
+Continue: verify PR #381 exact-head tests and deployment. Do not run the crawler unless the owner separately requests a manual crawl.

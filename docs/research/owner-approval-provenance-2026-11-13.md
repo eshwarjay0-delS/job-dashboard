@@ -36,3 +36,10 @@ PR #374 is the current-master WhatsApp offline fallback / pair-CAS restack at 79
 PR #377 is the current-master confirmed-skill role-evidence restack at 20b1abf8cde16448900ed594d6f62366666097e4. Full CI 43503531707, WhatsApp recovery 43503532020, Kompas baseline 43503531666 and Plan/REA 43503531853 passed. Protected preview and exported-DOCX acceptance remain missing; no real model call or live ATS score is claimed.
 
 The historical 17 Oct 17:28 output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. The original source and JD recovery do not establish which file was generated or delivered. Do not replay or claim delivery.
+
+
+## 14 November 2026 — manual-only contract crawler implementation audit
+
+The direct 12 Nov owner correction requires manual/on-demand contract crawling only, no daily schedule, and Robert Half manual-only. Current master was inconsistent with that correction: `vercel.json` still contained `/api/crawl/run` at `0 12 * * *`; `src/app/api/crawl/run/route.ts` described a daily portal crawl; `src/app/api/crawl/jobs/route.ts` said the daily Vercel cron called GET; and `scripts/tests/hobby-usage-pack.test.mjs` already asserted the contract crawler cron was absent. This is a source mismatch, not a new owner request.
+
+Draft PR #381 removes only `/api/crawl/run` from Vercel crons, keeps the separate `/api/gmail/crawl` schedule, retains admin-only `POST /api/crawl/jobs` and secret-protected manual `GET /api/crawl/run`, and adds dedicated tests/workflow. Robert Half remains pending/manual-only. PR #376's Right To Hire / Contract To Perm mapping and other classifier semantics remain proposed and unapproved. No live crawl, portal request, database mutation or application submission occurred.

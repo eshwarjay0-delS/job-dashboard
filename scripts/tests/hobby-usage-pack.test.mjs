@@ -13,7 +13,7 @@ test("only master creates Vercel deployments; preview branches do not", () => {
   assert.equal(vercel.git.deploymentEnabled.master, true)
 })
 
-test("Vercel cron list keeps recover, crawl, and watchdog only, each once a day", () => {
+test("Vercel cron list keeps approved services and excludes the contract crawler", () => {
   const paths = vercel.crons.map(c => c.path).sort()
   assert.deepEqual(paths, ["/api/agent/watchdog", "/api/gmail/crawl", "/api/whatsapp/recover"].sort())
   for (const cron of vercel.crons) {
@@ -24,6 +24,7 @@ test("Vercel cron list keeps recover, crawl, and watchdog only, each once a day"
   }
   assert.ok(!vercel.crons.some(c => c.path === "/api/crawl/run"))
   assert.ok(!vercel.crons.some(c => c.path === "/api/chief/watch/run"))
+  assert.ok(vercel.crons.some(c => c.path === "/api/gmail/crawl"), "the separate Gmail crawl remains scheduled")
 })
 
 test("public stamps may be cached; other API routes stay no-store", () => {

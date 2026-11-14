@@ -94,3 +94,8 @@ The canonical production deployment is now `dpl_HX7moNfuc9WAnYg7iah4zYQBWQvC`, R
 The 10 Nov 11:00 UTC crawl completed before the deployment on old SHA `a66c108`: 6,818 found/upserted across 20 portals, eTeam absent, one Inspyr abort. It is not post-classifier acceptance. The first expected post-release crawl is 11 Nov 11:00 UTC. The public API smoke could not be reached from this runtime; no HTTP behavior is claimed.
 
 PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previous exact head `147a40e` passed crawler regression, Plan/REA schema, Kompas baseline and full CI, but this production-evidence documentation refresh changes the PR head and those gates must rerun. Its Vercel preview status is `build-rate-limit`; do not bypass quota or alias another deployment. Robert Half remains a manual navigation link only under Section 6 of its Terms of Use.
+
+
+## 12–14 November 2026 — owner correction and schedule audit
+
+The owner correction on 12 Nov 2026 is authoritative: the contract crawler is manual/on-demand only; do not restore a daily schedule; Robert Half remains manual-only. A 14 Nov source audit found that current master still had `/api/crawl/run` in `vercel.json` at `0 12 * * *`, despite the earlier `docs/hobby-usage-pack.md` note and the existing test assertion that this path must not be scheduled. The route comments also described a daily cron. Draft PR #381 removes that contract-crawler schedule and updates the route/documentation comments while preserving the separate Gmail crawler schedule and the admin-only manual trigger. No crawl, external request or production-row mutation was performed. The proposed classifier changes in PR #376 remain unapproved and are not part of this fix.
