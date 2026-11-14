@@ -1,4 +1,4 @@
-# Poke-inspired Gmail account identity and mobile navigation — 13 November 2026
+# Poke-inspired Gmail account identity and mobile navigation — 14 November 2026
 
 ## Approval and scope
 
@@ -51,3 +51,10 @@ Exact-head full CI, Kompas baseline, Plan/REA schema and protected preview are p
 The current-master restack PR #375 at head `9aa80221fe4c05d1265e649061ea4fe0dae518fe` passed full CI `43490945879`, Kompas baseline `43490945884` and Plan/REA schema `43490945912`. The source gates cover account-scoped digest identity and mobile shell behavior; they do not prove live two-inbox or device acceptance.
 
 PR #375 remains DRAFT pending the legitimate protected Vercel preview. The canonical production alias remains on prior READY SHA `024177889d092f30aaeada20fab649aa41c9d1f4`; no Gmail/mobile changes from this branch are live. No Gmail API/OAuth call, inbox mutation or outbound email occurred. After a reviewed deployment, require two authorized inboxes with a deliberately colliding provider thread ID and a narrow-phone check before claiming acceptance.
+
+
+## Additional owner scope recovered 14 November
+
+The direct 17 October request also names fold-style thread/reply/contact panes, CC/BCC/attachments, Important meaning “track this sender,” a combined Important inbox, an automation feed, and mobile controls/updates. The 3–4 account range is a target, not a hard cap. The full product plan retains normal Gmail capabilities. The current code changes do not implement all of those items; they remain separate backlog work.
+
+The 4 October no-cover requirement is approved. The exact normal-flow menu interaction is an implementation choice, not a direct user requirement. No per-account Calendar targeting, exact waiting-on-them radar semantics, or per-account sync-health card was approved in the retrieved owner context.

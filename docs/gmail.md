@@ -226,3 +226,12 @@ The current implementation slice keeps the four-account direction and account bo
 - On narrow screens, the hamburger expands below the sticky top bar in normal flow and pushes content down. It does not cover, dim or make the page inert; outside click, link selection and Escape close it and return focus to the hamburger.
 
 This source-level slice is not live acceptance. The exact-head CI and protected preview remain required. Real acceptance must use two authorized inboxes with a shared provider thread ID/sender and a narrow phone viewport. No Gmail API, OAuth, inbox mutation or outbound email test is part of this work.
+
+
+## Owner-authored scope confirmation recovered 14 November 2026
+
+Prior-context retrieval recovered the direct 17 October request: Poke-inspired multi-account inbox toggles; per-account identity and From selection; fold-style thread, reply and contact panes; CC/BCC/attachments; Important meaning “track this sender”; a combined Important inbox; an automation feed; and mobile controls/updates. The 3–4 connected-account range is a target, not a hard maximum. Gmail must retain regular Gmail capabilities while simplifying multiple inboxes.
+
+The 4 October mobile correction was that the menu must not block or cover the view. The current normal-flow expansion beneath the sticky header is an implementation choice, not a directly specified owner layout. Exact hamburger behavior remains subject to owner review and narrow-phone acceptance.
+
+PR #387 implements only a narrow account-scoped digest identity and non-covering navigation slice. It does not complete the full Gmail scope, change selected-From persistence or reply composition, enable automated sending, or establish two-inbox/mobile acceptance.
