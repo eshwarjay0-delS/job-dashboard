@@ -199,3 +199,13 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+## 15 November 2026 — read-only production crawler freshness check
+
+A read-only query against the production Supabase project `ruajlrzmxzprmmngluxy` found the latest run was `cf78f4bb-5f27-4476-b28f-3efa7156b231`, started `2026-11-10 11:00:24 UTC` and finished `11:01:11 UTC`: 20 portals, 6,818 jobs found/upserted, with one `inspyr` error (`This operation was aborted`). The prior run on 9 Nov included 21 portals and reported eTeam HTTP 404; eTeam is not in the 10 Nov portal list.
+
+Current `mfit_crawl_jobs` snapshot: 14,566 rows total; 12,407 active; 8,850 active rows labelled contract by `work_type` or `engagement`; 21 portals still have rows; `last_seen_at` ranges from 21 Oct through 10 Nov, with no newer records. These are database counts, not unique verified opportunities or relevance scores.
+
+No crawl was started in this continuation. The product's manual trigger `POST /api/crawl/jobs` requires `adminOf(req)`; the compatibility `GET /api/crawl/run` requires a valid `CRON_SECRET` or `WATCHDOG_CRON_SECRET`. No authenticated admin session or authorized trigger was available in this scheduled environment, and no secret was read or bypassed. Contract crawling remains manual/on-demand only; no Vercel cron was added. Robert Half stays manual-only pending documented source rights, and C2H/Right-to-Hire classification remains proposed pending direct owner confirmation.
+
+**Unblock:** an authorized admin must trigger the manual crawl through the existing UI/API, then review the Inspyr abort and portal freshness. Do not create a daily schedule or use the secret-protected compatibility route without authorization.

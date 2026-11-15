@@ -36,7 +36,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 
 ## Standing rules (never break)
 
-- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **95–100% is the target, never a guarantee.** Web downloads retain the strict 95% raw-JD-overlap minimum and 98% generation target. WhatsApp follows the separately approved 6 Nov policy: a complete, readable 70–94.9% raw-overlap DOCX may be sent with disclosed gaps when supported coverage is at least 95%; a finished readable result below 70% may also be sent with disclosed gaps, but is not a clean pass. Incomplete, skills-only, unreadable, failed or identity-mismatched runs use the selected same-account resume fallback. Unsupported experience is never invented.
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
@@ -80,3 +80,64 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## WhatsApp fallback boundary — 14 November 2026
+
+The 6 November owner correction remains authoritative: a completed readable WhatsApp rewrite may be sent below 95% raw JD overlap with gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp send gate. Do not invent confirmed experience, employers, dates, credentials or metrics.
+
+For an initial JD run whose provider fails or returns an incomplete result, the only allowed fallback is the exact selected same-account library resume, explicitly labelled **Original resume — NOT TAILORED**. Verify account root, normalized relative path, resolved file path and byte equality with the session copy. If the selection cannot be verified, send no document and preserve the request for retry. Swipe-reply refinement failures remain text-only and never send the baseline. Draft PR #380 carries the 14 November provider-exception correction; its exact-head gates and protected preview are still separate acceptance requirements.
+
+
+## 14 November 2026 — current WhatsApp fallback acceptance
+
+The current-master PR #380 source branch implements the owner-approved initial-JD fallback: only the exact selected same-account library bytes may be sent as **Original resume — NOT TAILORED** when the initial provider run is unavailable or incomplete. The account root, relative path, resolved library path and byte equality with the session copy must all match. If they cannot be verified, no file is sent and the request remains retryable. Failed swipe-reply refinement remains text-only and never sends an original or partial baseline. PR #380 head `cf86a8d51c5fc7aea432ffc139efe4cf9c5a4b64` passed full CI, the dedicated WhatsApp recovery gate, Kompas baseline and Plan/REA schema; it is still DRAFT, not merged/deployed, and the protected preview is unavailable. No live 95–100% or 98% match is claimed.
+
+
+## 14 November 2026 — current-master WhatsApp restack
+
+The approved WhatsApp fallback and unverified-JD hard hold are being restacked from source commit `128272f041a9b6a1d637abdb253affd6c7e11a7b` onto canonical master `46043ec6ca926b2ab82424d255367426685f294d` as `fix/whatsapp-offline-cas-current-46043-20261114`. The latest predecessor PR #392 head `33b1353809771ce9f8a99b0262731b166d64c3cf` is DRAFT/dirty and has no exact-head Actions runs. The new restack must pass full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on its own final head.
+
+The initial-JD fallback is limited to the exact selected same-account library bytes, labelled **Original resume — NOT TAILORED**; no session/inbox copy is allowed. Swipe-reply failure remains text-only. No 98% live match, historical delivery, production R2 write, model call or real WhatsApp send is claimed.
+
+
+## 14 November 2026 — exact-head WhatsApp contract-test correction
+
+PR #399 initial head `cc4f9fbde7d355718c9603d5a15a263409aba46b` passed Plan/REA and Kompas baseline, while WhatsApp recovery exposed a stale source-contract assertion at line 180: it expected an inline caption call, but the implementation correctly computes `fallbackWhy` and passes it to `sendOfflineOriginal`. The test now checks the incomplete caption in that branch and the variable call. This changes the test expectation only; it does not weaken the runtime sendability gate. All exact-head checks must rerun on the corrected head. Protected preview and real delivery remain separate gates.
+
+
+## 14 November 2026 — REA type correction
+
+The first PR #399 rerun stopped before the WhatsApp test suite because the new REA record used unsupported step status `In progress`; the schema permits only `Pending`, `Blocked`, `Observed`, `Implemented` and `Tested`. The status is corrected to `Pending`. The corrected source-contract test has not yet executed, so no test pass is claimed.
+
+## 14 November 2026 — selected-library timeout regression
+
+PR #399's timeout regression fixture is being corrected on the current-master branch. The pre-fix full CI run failed because the fixture expected the generic no-Files timeout message even though it supplied selected Files context. The corrected fixture makes the selected-library bytes differ from the session copy, clears the prior mocked provider error, and asserts that no document is sent and the request remains saved for retry. This is a test-only change; the same-account path/byte checks and fail-closed runtime behavior are unchanged. Exact-head gates, protected preview and Safe Merge Gate review remain pending. The 17 Oct historical delivery is still unverified; no replay or real message was sent.
+
+## 14 November 2026 — WhatsApp timeout fallback regression passed
+
+PR #399 test-correction commit `2b745bb2bd1939561909e6eee28e126cbac37b4d` now exercises a selected-library/session byte mismatch and asserts that no document is sent. Exact-head full CI `43638674249`, WhatsApp recovery `43638674273`, Kompas baseline `43638674258` and Plan/REA `43638674247` all passed. This is a test-fixture correction; runtime behavior is unchanged. Protected preview and Safe Merge Gate review remain pending. The 17 Oct historical delivery is still unverified and no replay or real send occurred.
+
+## 15 November 2026 — uploaded DOCX fallback now uses the verified account copy
+
+A source review of current-master PR #399 found that the earlier offline fallback handled Files-picker selections but not the ordinary WhatsApp upload path. An uploaded DOCX is saved to the verified user's Files root as `session.resumeFiled`, while the original remains in the sender's inbox; the normal upload call has no Files-picker object.
+
+The fallback now accepts either the explicit Files selection or, for an uploaded DOCX, only the saved `session.resumeFiled` copy strictly inside `filesOf(userId)`. It reads both the filed copy and the inbox/session source and requires byte-for-byte equality. The upload path obtains the identity email from the authenticated user's `profiles.email` row; it never treats an email parsed from the document as account ownership. Provider-unavailable uploads now attempt this same guarded fallback. Foreign-root, missing, mismatched, or unverified-profile cases send no document and retain the request for retry.
+
+The file is still labelled **Original resume — NOT TAILORED**. This does not change the approved 70% raw-overlap / 95% supported-coverage WhatsApp policy, the hard hold for unverified JD-only claims, or the text-only swipe-refinement failure rule.
+
+The new behavioral and source-contract cases are awaiting exact-head GitHub Actions. No real WhatsApp send, production R2 write, model call, historical replay, or handset acceptance occurred. The 17 Oct 17:28 Chicago incident remains unverified: its generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt, and owner reconciliation of conflicting source facts are still missing. No 98% live match is claimed.
+
+## 15 November 2026 — approved final-DOCX score review versus proposed correction loop
+
+The owner-authored comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128), dated 12 Nov 2026, explicitly requires a Gemini **“Give me an ATS score”** review of the final exported DOCX and actual measured coverage. That bounded diagnostic review is approved and remains a release acceptance requirement.
+
+Keep it separate from the broader automated correction/re-export/recheck loop. Accessible owner-authored evidence does not approve that loop, so it remains proposed. Do not add an automated correction prompt, spend credits on that loop, or repeatedly re-export until the owner separately approves it. Any score is diagnostic, not proof of experience; every claim and correction must still be supported by the selected source resume or an explicit first-person candidate confirmation.
+
+## 17 October WhatsApp resume hold — evidence and safe fallback
+
+The 5:28 PM Chicago screenshot shows the uploaded five-page, 28 KB `Eshwar Cyber resume).docx` was held after automatic repair failed to reach the 98% target; visible remaining terms were CCSP, CISM, CRISC, CISA, Canton, Sol, Specialty and Attributes. The matching contract JD, `Security Engineer – Risk & Controls` in Atlanta/GA, was recovered read-only from Gmail thread `1a1464393628992f`. These missing terms are not automatically candidate experience or credentials.
+
+The exact original source DOCX remains unavailable through the inventoried Library path `/J_Eshwar_44/General Security` (path not found); similar resume files are not substitutes. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt are also missing. No historical replay or resend is authorized by this evidence.
+
+PR #399 now has a mocked regression for the quality-hold path: after one bounded retry, it can return only the exact uploaded original saved under the verified account, byte-equal to the inbox source and checked against the authenticated profile email, labelled **NOT TAILORED**. This prevents a dead-end hold when the original is verifiable; it does not claim a tailored match or historical delivery. Exact-head CI is pending.

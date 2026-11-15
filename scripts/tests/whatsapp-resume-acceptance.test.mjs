@@ -28,7 +28,7 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
@@ -247,6 +247,26 @@ rejects("incomplete cached report rejected even with legacy deliverable status",
 rejects("unverified JD claims are rejected independently of score", {
   unverified_added_keywords: ["Unverified Product"],
 }, "unverified_jd_terms")
+
+test("unverified JD-only additions are a hard hold, never a shortfall delivery", () => {
+  const draft = make({
+    unverified_added_keywords: ["unsupported-platform"],
+    quality_blockers: ["unverified_jd_terms"],
+    coverage: 70,
+    supported_coverage: 100,
+  })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.equal(whatsappRewriteUsable(draft), false)
+  assert.equal(deliveredWithShortfall(draft), false)
+})
+
+test("an unverified_jd_terms quality blocker stays a hard hold if the detail list is absent", () => {
+  const draft = make({ unverified_added_keywords: [], quality_blockers: ["unverified_jd_terms"] })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(whatsappRewriteUsable(draft), false)
+  assert.equal(deliveredWithShortfall(draft), false)
+})
 rejects("missing role rewrite is rejected independently of score", {
   quality_blockers: ["roles_unrewritten"],
 }, "roles_unrewritten")

@@ -1,4 +1,18 @@
-# MFit Completion Watch
+## 15 November 2026 01:09 UTC — evidence-schema type correction committed
+
+The direct-upload fallback implementation remains in PR #399, but the first exact-head checks on `2c6980c3a70610f6da900d737bb1ada59e1c1632` stopped at TypeScript before running the WhatsApp suites. Full CI `43660906976` and WhatsApp recovery `43660906973` failed because the contract-crawler REA record used unsupported `area: "apply"` and `sources.source`; the typed schemas require `area: "applications"` and `sources.path`. The journal and REA values are corrected in commit `31e861d808d42d5bd0e34d30bb9b6e4959c07622`. No WhatsApp runtime behavior changed. The prior baseline `43660906980` and Plan/REA schema `43660907001` were green on the pre-fix head only; they must not be reused as final-head evidence.
+
+Next: require exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema. Keep PR #399 DRAFT pending the legitimate protected preview and Safe Merge Gate. No real send, R2 write, model call or historical replay occurred.
+
+## 15 November 2026 01:06 UTC — uploaded-DOCX fallback typecheck repair
+
+Continue: finish the approved ordinary WhatsApp-upload fallback on PR #399 without weakening account isolation or delivery policy.
+
+- PR #399 branch `fix/whatsapp-offline-cas-current-46043-20261114` head `2c6980c3a70610f6da900d737bb1ada59e1c1632` already contains the direct-upload path: it validates `session.resumeFiled` beneath `filesOf(userId)`, keeps the source inside the sender inbox or same account library, requires byte-for-byte equality, and binds identity to the authenticated `profiles.email` row. The original is labelled NOT TAILORED; missing, foreign-root, mismatched and unverified-profile cases send no file. Swipe refinement remains text-only.
+- Mocked behavioral coverage includes provider-unavailable success, foreign-root rejection, missing filed copy, byte mismatch, document/profile mismatch, unavailable profile email, and incomplete-quality fallback after one bounded retry. These tests are not a live WhatsApp send or historical replay.
+- Exact-head full CI `43660906976` and WhatsApp recovery `43660906973` both failed before running the suites because the concurrently added contract-crawler evidence records used unsupported Plan/REA schema values: `area: "apply"` and REA source fields named `source` instead of `path`. Kompas baseline `43660906980` and Plan/REA schema `43660907001` completed SUCCESS. Correct only those metadata types; do not change the WhatsApp runtime to address this failure.
+- The historical 17 Oct 17:28 Chicago incident remains unverified. Screenshot and matching JD were recovered, but the exact original source DOCX, generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound ID and signed delivered/read receipt are still missing. No replay or real send is authorized.
+- Protected preview still requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; it is unavailable to this run. Keep PR #399 DRAFT and let the enabled Safe Merge Gate sequence it. Production release and handset acceptance remain separate.
 
 ## 14 November 2026 — WhatsApp, Kompas and Gmail evidence refresh
 
@@ -19,6 +33,116 @@
 Continue: PR #399 — obtain the authorized protected-preview credential, complete the exact-head preview and Safe Merge Gate, then validate same-account original fallback and pair-CAS without a real outbound test. Keep PR #400 gated on authorized source/JD/confirmation and exported-DOCX acceptance; keep #401/#402/#403 in draft until their specific protected-preview and real UX gates pass. PR #404 remains documentation-only until exact-head full CI completes.
 
 
+## 14 November 2026 20:34 UTC — selected-library timeout fixture correction
+
+Continue: repair the exact-head WhatsApp timeout regression without changing runtime delivery behavior.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`. Production alias `job-dashboard-fawn.vercel.app` is READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The PR #399 fallback/CAS changes are not deployed.
+- PR #399 test-correction commit `2b745bb2bd1939561909e6eee28e126cbac37b4d` now models a selected-library/session byte mismatch, clears the previous mocked Meta error and asserts no additional document is sent. Corrected exact head `2b745bb2bd1939561909e6eee28e126cbac37b4d` passed full CI `43638674249`, WhatsApp recovery `43638674273`, Kompas baseline `43638674258` and Plan/REA schema `43638674247`, all SUCCESS. The pre-fix head `21ad504592e8b81e5c60f630db7d11a6b6cb31c5` failed at `scripts/tests/whatsapp-5fold.test.mjs:170` because its stale assertion expected the no-Files timeout wording.
+- The fixture also retained the preceding mocked Meta HTTP error and returned identical bytes for the library and session paths, so it did not isolate the intended mismatch case. The correction deliberately makes those bytes differ, clears the prior send error, and asserts no additional document plus the explicit no-file/retry response. This is a test-only change; no runtime delivery, R2, auth or account-isolation behavior is altered.
+- On the pre-fix head, WhatsApp recovery `43637317936`, Kompas baseline `43637317980`, and Plan/REA schema `43637317926` passed. Those results do not validate the corrected head.
+- Protected preview still requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; it is not available in this run. The MFit Safe Merge Gate is enabled and owns merge sequencing. Keep PR #399 DRAFT; do not merge or deploy from this run.
+- No real WhatsApp message, production R2 write, model call or historical replay occurred. The 17 Oct 17:28 Chicago incident still lacks the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts.
+
+**Next:** legitimate protected preview and Safe Merge Gate review. Keep the historical incident blocked until its exact evidence is recovered.
+
+## 14 November 2026 19:11 UTC — WhatsApp fallback regression repair
+
+Continue: correct the current-master WhatsApp resume fallback regression without changing runtime delivery behavior.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`; production alias remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The master-to-production difference is documentation/tests, not this WhatsApp runtime change.
+- Current-master draft PR [#399](https://github.com/eshwarjay0-delS/job-dashboard/pull/399) carries the approved same-account offline original fallback, pair CAS, swipe-refinement no-baseline behavior and unverified-JD hard hold.
+- Exact pre-fix head `e0694e2bac48cadd00876f6e3640b107619940c1` had full CI `43630012666` fail 1/31 at `scripts/tests/resume-guards.test.mjs:248`: a brittle assertion expected the literal `sendOfflineOriginal("NOT TAILORED — AI rewrite incomplete.")` inline. The route correctly derives `fallbackWhy` from unverified/incomplete state and calls `sendOfflineOriginal(fallbackWhy)`; the companion `whatsapp-resume-contract.test.mjs` already checks this computed behavior.
+- The test now asserts the exact incomplete caption branch and the variable call. This is a regression-test correction only; no runtime, WhatsApp delivery, R2, provider, auth or account-isolation behavior changed.
+- On the pre-fix head, WhatsApp recovery `43630012658`, Kompas baseline `43630012651` and Plan/REA `43630012656` passed. The updated branch must rerun all four gates on its exact final head.
+- Protected preview still requires an authorized administrator to configure/use the private `KOMPAS_VERCEL_API_TOKEN`; do not bypass Vercel protection or expose credentials. No real WhatsApp send, production R2 write, model call, historical replay or handset acceptance occurred.
+- The 17 Oct 17:28 Chicago incident remains unverified: generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivered/read receipt and owner reconciliation of conflicting source facts are missing. Do not replay or claim delivery.
+
+**Next:** exact-final-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema; then legitimate protected preview and Safe Merge Gate review. Keep PR #399 DRAFT until those gates pass. Historical incident closure and real handset delivery remain separate.
+
+## 14 November 2026 18:45 UTC — current-master WhatsApp fallback restack
+
+Continue: carry the approved WhatsApp same-account offline fallback, lossless resume/JD pair CAS, and unverified-JD hard hold onto the latest canonical master without losing intervening Kompas work.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`. The production aliases remain READY at deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Compare confirms the six commits from production to master change only `AGENTS.md`, this handoff, the Kompas replay regression, and the Plan Journal; the live runtime has not changed.
+- Source PR #392 head `33b1353809771ce9f8a99b0262731b166d64c3cf` is DRAFT, based on stale `3e710d5`, and GitHub reports `mergeable_state=dirty`. Its exact-head combined status is empty and the Actions API reports zero runs. Earlier green checks on predecessor `cb2cbce` do not validate this head.
+- Code-bearing source commit `128272f041a9b6a1d637abdb253affd6c7e11a7b` fixes the mismatch where `unverified_jd_terms` could pass `whatsappRewriteUsable()` while `acceptableWhatsAppResume()` rejected the same draft. It removes that reason from the shortfall allowlist, explicitly blocks both the unverified keyword list and quality blocker, and excludes it from shortfall delivery.
+- The carried implementation permits an initial-JD failure/incomplete/unsafe result to fall back only to the exact selected same-account library bytes after account-root, normalized relative-path, resolved-path and byte-equality checks. The document is labelled **Original resume — NOT TAILORED**. No selected library means no file. Swipe-reply refinement remains text-only on failure; the previously delivered document is unchanged. The JD/resume pair is consumed only after provider acceptance. R2 412/409/404 conflicts remain fail-closed; unexpected 503 propagates.
+- A new restack branch, `fix/whatsapp-offline-cas-current-46043-20261114`, is being built from current master with the complete reviewed source/test snapshot plus all intervening master changes. Only the two overlapping handoff files are merged explicitly; no Kompas voice/caption source is being edited.
+- PR #399 is open DRAFT at initial head `cc4f9fbde7d355718c9603d5a15a263409aba46b`. Exact-head Plan/REA 43629076882 and Kompas baseline 43629076911 passed; WhatsApp recovery 43629076865 failed only because line 180 of the source-contract test expected an inline literal call while the implementation uses the correctly computed `fallbackWhy` variable. The assertion now verifies the variable's incomplete caption and its use by `sendOfflineOriginal(fallbackWhy)`. Full CI 43629076887 was still running at the last read. The corrected test is committed on the branch; all four workflows must rerun on the new final head. No local clone/test runner is available in this scheduled environment (previous Git clone attempt failed DNS); GitHub Actions is the validation path. The protected Vercel preview requires the authorized private `KOMPAS_VERCEL_API_TOKEN`, which is unavailable here. No protection bypass, deployment, real WhatsApp send, production R2 write, model call or historical replay occurred.
+- The 17 Oct 17:28 Chicago incident remains unverified: one `whatsapp:resume_tailor` usage row at 22:28:27.372685 UTC was found, but no `resume_documents`/`resume_import_jobs` row in the 20-minute window, no `source_event_key`, and no request/document/R2/Meta/delivery correlation. The source DOCX and matching JD were privately recovered, but the generated output, per-run R2 object/version, Meta message ID, signed delivered/read receipt and owner reconciliation of conflicting source facts remain missing. This does not prove no send; do not replay or claim delivery.
+
+**Next:** require all four exact-head workflows on the new PR head; keep it DRAFT until the legitimate protected preview and Safe Merge Gate pass. Only then consider the authorized production release and verify READY plus the canonical alias. Historical delivery and handset acceptance remain separate evidence gates.
+
+
+
+## 14 November 2026 19:07 UTC — TypeScript gate correction
+
+The corrected WhatsApp source-contract assertion was committed, but the first corrected-head runs did not reach the test suite. Full CI `43629496375` and WhatsApp recovery `43629496374` both stopped at TypeScript typecheck: the new REA record used `steps.status = "In progress"`, while the schema permits only `Pending`, `Blocked`, `Observed`, `Implemented` or `Tested`. The record now uses `Pending`. Plan/REA `43629496389` and Kompas baseline `43629496391` passed on that head. The WhatsApp contract test was skipped, so its corrected assertion is still unverified.
+
+
+## 14 November 2026 18:56 UTC — exact-head WhatsApp contract-test correction
+
+The first exact-head WhatsApp recovery run on PR #399 head `cc4f9fbde7d355718c9603d5a15a263409aba46b` failed only at `scripts/tests/whatsapp-resume-contract.test.mjs:180`. The assertion expected the literal `sendOfflineOriginal("NOT TAILORED — AI rewrite incomplete.")` inline, but the reviewed implementation correctly computes `fallbackWhy` from the incomplete/unverified state and calls `sendOfflineOriginal(fallbackWhy)`. The test was too syntactic, not evidence of a runtime defect. It now asserts the fallbackWhy branch contains the exact incomplete caption and separately asserts the variable is passed to sendOfflineOriginal. No production code or safety guard was weakened.
+
+On initial PR #399 head `cc4f9fbde7d355718c9603d5a15a263409aba46b`, Plan/REA schema run 43629076882 and Kompas baseline run 43629076911 passed. WhatsApp recovery run 43629076865 failed at the stale inline-call assertion. Full CI run 43629076887 was still running at the last read. The corrected source-contract test is committed on the same draft branch; all four exact-head workflows must rerun on the new final head. Protected preview remains unavailable without the authorized private `KOMPAS_VERCEL_API_TOKEN`. No real send, R2 write, model call or replay occurred.
+
+
+## 14 November 2026 — WhatsApp unverified-claim sendability correction
+
+- Continue: fix the source-level sendability mismatch in PR #392. `unverified_jd_terms` was present in `WHATSAPP_SHORTFALL_REASONS`, so `whatsappRewriteUsable()` could permit a draft that `acceptableWhatsAppResume()` rejected. The synthetic 30.8% fixture contained an unsupported JD-only term and expected that generated file to be sent. This is not evidence of a real production send.
+- The correction removes unverified terms from the shortfall allowlist, explicitly rejects both `unverified_added_keywords` and the `unverified_jd_terms` blocker, and excludes the code from `deliveredWithShortfall()`.
+- Rejected initial-JD drafts now fall back only to the exact selected same-account library bytes, labelled **NOT TAILORED**. No selected library means no file; `sendClosest()` no longer reads a session/inbox path. Honest missing-skill gaps remain disclosed under the approved 70% raw-overlap / 95% supported-coverage policy.
+- Updated regressions cover the hard hold, honest-gap delivery, selected-library fallback, no-library refusal and no session/inbox copy. Exact-head Actions are pending; local clone is unavailable due DNS resolution failure. No real WhatsApp send, R2 write, model call or historical replay occurred.
+- PR #392 remains DRAFT and dirty against current master. After exact-head gates, restack through Safe Merge Gate; protected preview still requires an authorized `KOMPAS_VERCEL_API_TOKEN`. No production or handset acceptance is claimed.
+
+## 14 November 2026 — run 11: current-master WhatsApp restack and priority backlog
+
+**Continue: complete the approved WhatsApp same-account offline fallback and resume/JD pair-CAS restack on current master 3e710d5.** Keep the replacement draft until its own exact-head gates and legitimate protected preview pass. Do not merge, deploy or claim live acceptance from the predecessor branch's green checks.
+
+### Canonical source and release state
+
+- Canonical master is `3e710d50760b4a757d75ad2858ef508f3d36b388`, merged PR #381. Post-merge full CI run `43576937302` completed SUCCESS (48 steps). PR #381 changes manual-only regression coverage, comments, docs and Plan/REA; it does not change `vercel.json` or crawler runtime. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_5X265CqeobnkUtiEH6xVA6yB5fXn`, SHA `3e1033687972230de76747e063afe1a0c1cdea61`. Compare from that deployment to master shows documentation/tests/packaging changes, not a web runtime change. Plan & Vision UI updates in master are not yet visible in production.
+- PR #379 merged as `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c`; exact-master full CI `43537986478`, Kompas baseline `43537986538`, Plan/REA `43537986516` and Windows packaging `43537986510` passed. It is a UAC manifest source/package guard, not proof that the owner's installed executable stopped prompting.
+- PR #380 predecessor head `740f4b575b546073093503cca2eb788bc0944dec` passed its exact-head gates: full CI `43574688616` (50 steps), WhatsApp recovery `43574688600`, Kompas baseline `43574688610`, Plan/REA `43574688601`. It was based on `926bf3e` and is now behind current master `3e710d5`.
+- The current replacement draft PR for branch `fix/whatsapp-offline-cas-master-3e710-20261114` carries the reviewed webhook, R2 If-Match adapter, exact selected-library verifier and regression files onto current master. Code-bearing restack commit is `1e5de2d8ad2b7fb736d672938a8e0d7e86bf2863`; later Plan/REA and handoff documentation commits follow, so use issue #168 and GitHub PR metadata for the exact current head. Its own full CI, WhatsApp recovery, Kompas baseline and Plan/REA runs must pass on that exact head; no predecessor result validates it. The new R2 test mocks S3 only; no production R2 write occurred.
+- The legitimate protected Vercel preview still requires the private `KOMPAS_VERCEL_API_TOKEN`. It was not read, exposed, fabricated or bypassed. No real WhatsApp send, model call, historical replay or production R2 write occurred.
+
+### WhatsApp and resume acceptance
+
+
+The current-master replacement branch fix/whatsapp-offline-cas-master-3e710-20261114 is opened as a DRAFT PR; its active link is tracked in issue #168. Code-bearing restack commit is `1e5de2d8ad2b7fb736d672938a8e0d7e86bf2863`; use GitHub PR metadata for the exact current head. The old PR #380 is predecessor evidence only and must not be merged. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA must pass on the latest replacement PR head.
+
+- The 6 Nov channel correction remains authoritative: a completed readable WhatsApp rewrite may be sent below 95% raw JD overlap with gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp send gate. Unsupported employers, dates, credentials, skills and metrics must not be invented.
+- Initial-JD provider failure/incomplete output may use only the exact selected same-account library bytes, labelled **Original resume — NOT TAILORED**, after account-root, normalized relative path, resolved path and byte-equality checks. If verification fails, send no file and keep the request retryable. Swipe-reply refinement remains text-only on failure; the previously delivered file stays unchanged. Consume the JD/resume pair only after provider acceptance. R2 412/409/404 conflicts never become unconditional writes; unexpected 503 propagates.
+- The 17 Oct 17:28 Chicago screenshot says the bot held the file. Read-only production review found one `whatsapp:resume_tailor` usage row at 22:28:27.372685 UTC, no `resume_documents` or `resume_import_jobs` row in the 20-minute window, no `source_event_key`, and no request/document/R2/Meta/delivery correlation. A fresh Library search did not find the generated output DOCX. This does **not** prove no R2 object or Meta send exists. Exact output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. Do not replay or claim delivery.
+- PR #385 confirmed-skill role evidence is DRAFT at `4df2f8bc67a79a70191fb749688c4605ec1870a5`; its four source gates passed. It maps only explicitly confirmed skills to relevant existing roles. Protected preview, owner-authorized source/JD/confirmation inputs and exported-DOCX inspection remain missing. No live 98% match is claimed.
+- The final-DOCX Gemini ATS score/correction/re-export loop is **proposed, not owner-approved**. Earlier Plan wording that called it approved is superseded. Do not implement or call Gemini for this loop without explicit approval.
+
+### Gmail/mobile and snapshot recovery
+
+- PR #387 head `caf1515af0841d54350275b0905862dfc05c0ff7` passed full CI `43569225180`, Kompas baseline `43569225116` and Plan/REA `43569225108`. It remains DRAFT: protected preview, two authorized inboxes with colliding thread IDs, selected-From preservation, reconnect isolation and narrow-phone acceptance are still missing. High-level Poke-inspired multi-account Gmail/mobile direction is owner-requested; per-account Calendar targeting, exact waiting-on-them radar semantics and exact hamburger interaction remain proposals.
+- Read-only production aggregate: 3 connected accounts, 3 sync rows and 2,002 cached threads. Latest sync was 10 Nov 2026 14:44:44 UTC; latest thread update was 14:46:49 UTC. No rows changed in the last 24 hours. Vercel reported 22 Gmail 402 egress-quota errors in the last 24 hours, latest 13 Nov 14:25:55 UTC; no newer Gmail 402 appeared in that window, but stored mail remains stale.
+- Snapshot fallback code/tests exist, but `GMAIL_SNAPSHOT_IMPORT_SECRET` is present in environment metadata with an empty value. The exported `mfit_gmail_threads` and `mfit_gmail_sync` files were not available, so no import occurred. An authorized administrator must configure a non-empty secret and the owner must provide the exports.
+- Background Poke-style notifications remain disabled: `GMAIL_UPDATES_SCHEDULER_ENABLED` and `WHATSAPP_GMAIL_UPDATE_TEMPLATE` are absent. The in-app feed exists, but no background external sender was enabled. No Gmail API call, inbox mutation, email or WhatsApp notification was performed.
+
+### Contract crawler and Kompas
+
+- Contract crawling remains manual/on-demand only; no daily contract-crawler cron; Robert Half remains manual-only. PR #381 is merged and protects this boundary. No live crawl or portal request occurred. PR #376's C2H/Right-To-Hire classifier semantics remain proposed because direct owner approval was not recovered.
+- Kompas UAC issue #192 remains open until the owner's installed executable path/SHA and Windows process/event trace identify the elevation requester. The source/package guard does not prove the user's installed binary is fixed. The separate Kompas Continuous Voice Delivery task is disabled; no duplicate voice/caption edits were made. Actual 50 authenticated Kompas/ChatGPT answer pairs and independent grading still require the private `KOMPAS_API_TOKEN` and owner-approved source bundles.
+- The accessible automation inventory showed MFit Safe Merge Gate enabled; its latest run completed at 08:55 UTC, merged PR #381 and created draft PR #388. It must sequence shared Plan/REA changes. No separate Bible-Keeper audit was visible.
+
+### Exact blockers and next actions
+
+1. Run all four required workflows on the final new WhatsApp restack head. Keep DRAFT until green, then obtain the legitimate protected preview from an authorized administrator with `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection.
+2. Historical WhatsApp closure still requires the exact generated DOCX, per-run R2 object/version, Meta correlation and signed provider receipt plus owner fact reconciliation.
+3. Resume acceptance still requires protected preview and owner-authorized source/JD/confirmation inputs plus final DOCX inspection; no 98% result is claimed.
+4. Gmail snapshot recovery needs a non-empty import secret and the owner-exported files. Proactive external updates need the approved template and scheduler configuration; do not send a test.
+5. Gmail/mobile acceptance needs two authorized inboxes and a narrow-phone device check. Kompas UAC needs the installed binary hash and process trace; 50-pair relevance needs the private model token and approved bundle.
+
+No secret was read or exposed. No real email or WhatsApp was sent. No R2 production write, live model call, historical replay, contract crawl, Gmail mutation, production-row mutation or owner-device acceptance occurred.
+
+# MFit Completion Watch
 
 ## 14 November 2026 — exact-master Kompas replay gate correction
 
@@ -555,3 +679,42 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+## 15 November 2026 — cover the original WhatsApp-upload fallback path
+
+Continue: finish the approved WhatsApp uploaded-DOCX fallback correction on current-master PR #399.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The PR #399 runtime is not deployed.
+- The Safe Merge Gate's source review comment [#6886324077](https://github.com/eshwarjay0-delS/job-dashboard/pull/399#issuecomment-6886324077) found that the initial offline fallback required Files-picker context, but the 17 Oct scenario was an uploaded DOCX plus JD. The normal upload path stores an account-root copy at `session.resumeFiled` and leaves `session.resumePath` as the inbox source; it calls `generate()` without the Files-picker object.
+- PR #399 now validates `session.resumeFiled` strictly beneath `filesOf(userId)`, validates the session source under the sender's inbox or same account library, reads both copies and requires byte equality, and uses the authenticated `profiles.email` row for upload-path identity. The document's own email is not proof of account ownership. The no-provider path attempts this guarded fallback even without Files-picker context; foreign-root, missing, mismatched and unverified-profile cases fail closed.
+- Code commit: `92aab8e73ba5102d89c7f3af542088d171c7d486`. Behavioral regression commit: `218bc08608b75c481d2a597eafbe84d18e544f1b`. Source-contract regression commit: `2c9b03b8bd0ba92e5cb5d59074f66b398d1b8c48`. Product/research docs now record the correction.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA have not yet run on the final documentation head. Keep PR #399 DRAFT. The protected preview still requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it. Safe Merge Gate should review after the contributor's exact-head gates complete.
+- No real WhatsApp send, production R2 write, model call, historical replay or handset test occurred. The 17 Oct 17:28 Chicago incident remains unverified: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation are missing. A source fix does not prove historical delivery.
+
+**Next:** finish Plan/REA updates, run the four exact-head gates on the final PR #399 head, then wait for the legitimate protected preview and Safe Merge Gate. Keep the historical incident blocked until its exact artifacts and signed delivery evidence are recovered.
+
+## 15 November 2026 — final upload-verifier source correction
+
+The first source-contract test edit accidentally over-escaped its regular expressions, and the new email-shape check was also over-escaped. Both were corrected before accepting any test result: route commit `003a62f39c58fae3f65f2f05752bda2de39b2c8a` now validates a normal email address, and source-contract commit `bff0985f267afb893f88d65f9008397ed662c127` uses the intended literal regexes. The behavioral cases still cover success and fail-closed account/path/byte/profile cases. All previous runs are stale after these corrections and subsequent Plan/REA/documentation commits; check the current PR head and require fresh exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA.
+
+## 15 November 2026 — source-contract assertion scope correction
+
+On PR #399 head `003a1074c473cfd551b25e6bbd3a4e8bfb28f873`, Kompas baseline `43659964170` and Plan/REA schema `43659964143` passed, but WhatsApp recovery `43659964193` failed 1 of 51 tests. The assertion searched for the profile query inside `readSelectedLibraryBytes`; the implementation intentionally keeps the authenticated profile lookup in a separate `verifiedAccountEmail` helper. The test now inspects that helper in commit `f113eb794ec148055dfc131b0ad61fdadea9c13d`. Full CI `43659964137` was still running. The next documentation/REA commit invalidates these results; all four gates must pass on the next exact head. This was a test-scope correction, not evidence that the upload fallback is live.
+
+## 15 November 2026 — 17 Oct quality-hold evidence recovered
+
+- Library screenshot `1792276118790.jpeg`, created `2026-10-17T22:28:39Z` (5:28 PM Chicago), shows a five-page/28 KB `Eshwar Cyber resume).docx` was held after automatic repair did not reach the 98% coverage target. Visible remaining terms: `CCSP, CISM, CRISC, CISA, Canton, Sol, Specialty, Attributes`. This is a quality-gate hold, not evidence of a provider timeout or successful delivery.
+- Matching full JD recovered read-only from Gmail thread `1a1464393628992f`, subject `Fwd: Looking 5+ Years || Security Engineer – Risk & Controls || Atlanta/GA (Onsite)`. It is a contract role and includes CCSP, CISM, CRISC, CISA, AWS Security Specialty, Canton, Solana and Polygon. Do not turn these JD terms into credentials/experience without candidate confirmation and source support.
+- Exact original source DOCX remains unavailable at the previously inventoried Library path `/J_Eshwar_44/General Security` (current Files listing returned “Library path not found”). The Library contains similar resume versions, but none is proven to be the uploaded original; do not substitute. Previous owner-authored search record #6836339680 also says no exact source/output artifact was returned from conversation/Library retrieval.
+- PR #399 adds a mocked `uploaded-quality-hold` regression: incomplete first pass, one bounded fresh rewrite, then only the byte-equal same-account filed original may be sent as `NOT TAILORED`; path, byte or authenticated-profile mismatch sends nothing. Test commits `da046579b8dff49b8260dca6d72fd095409076b9` and `0de3b696b3d8a41db6cac1a841f6f8a211da1c60`.
+- Still missing: generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound message ID and signed delivered/read receipt. No historical replay, real WhatsApp send, R2 write or handset acceptance occurred. The new tests do not prove 98% live match or delivery.
+
+**Continue:** run all exact-head gates on the final PR #399 branch after these Plan/REA and documentation commits; keep it DRAFT until protected preview and Safe Merge Gate review. Then continue confirmed-skill alignment PR #400 using the recovered exact JD, but do not substitute a near-match resume for the unavailable source bundle.
+
+## 15 November 2026 — contract crawler freshness and exact manual-run blocker
+
+Production Supabase read-only snapshot: latest crawl `cf78f4bb-5f27-4476-b28f-3efa7156b231` ran 10 Nov 11:00:24–11:01:11 UTC across 20 portals, found/upserted 6,818 rows, with one Inspyr abort. The 9 Nov run had 21 portals and an eTeam HTTP 404. Current `mfit_crawl_jobs`: 14,566 total rows, 12,407 active, 8,850 active contract-labelled rows, 21 portals with rows; last-seen timestamps span 21 Oct–10 Nov. No newer crawl evidence exists.
+
+No live crawl was triggered. The approved manual trigger `POST /api/crawl/jobs` requires `adminOf(req)`; `GET /api/crawl/run` requires a valid cron/watchdog secret. This run has no authenticated admin session or authorized trigger, and no secret was read or bypassed. No cron was added. Robert Half remains manual-only pending written source rights; C2H/Right-to-Hire semantics remain proposed.
+
+**Unblock:** an authorized admin must invoke the existing manual trigger and inspect the Inspyr abort. The crawler is not current as of 15 Nov; do not present the 10 Nov snapshot as fresh.
