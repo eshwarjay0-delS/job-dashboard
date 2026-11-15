@@ -100,13 +100,15 @@ export const ADAPTERS: PortalAdapter[] = [
 //
 // Directory expansion (2026-10-21, owner-approved merge of prime-vendor-portals-expanded.md, firms #58-94 in
 // src/lib/vendorPortals.ts) — crawler-config hints, no adapters claimed yet:
-// - Peraton is the cheapest next adapter: its board is a standard iCIMS JSON feed
-//   (careers-peraton.icims.com). One shared iCIMS adapter would also fit other iCIMS-hosted firms.
+// - Peraton remains manual-only. Its current official search page is careers.peraton.com/search-jobs and
+//   links to Peraton's Terms, which restrict copying and scraping Site Content. The old iCIMS URL is not the
+//   current official search path; no authorized feed/API or portal robots policy was verified. Do not automate
+//   until written permission or a sanctioned feed/API with commercial-aggregation rights is documented.
 // - The government-contracting primes (SAIC, CACI, Booz Allen, Leidos, GDIT, Deloitte, ASRC Federal,
 //   eSimplicity, Global Alliant) mostly sit on iCIMS / Phenom / Workday-class boards — they ride the
 //   shared-adapter and headless-renderer decisions rather than one-off adapters.
 // - Recruiter-driven additions (Aerotek, Actalent, Kelly Services, Spherion, Express) post thin public
 //   boards: low crawl value, directory links only until a feed is verified live.
 export const PENDING_PORTALS = [
-  "idr", "vaco", "intellipro", "diverselynx", "roberthalf", "cybersn", "akkodis", "sni", "fountain", "eteam",
+  "idr", "vaco", "intellipro", "diverselynx", "roberthalf", "cybersn", "akkodis", "sni", "fountain", "eteam", "peraton",
 ]
