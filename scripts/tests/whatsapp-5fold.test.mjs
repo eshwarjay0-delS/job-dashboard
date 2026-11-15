@@ -98,11 +98,11 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { if (sendError) throw sendError; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
     '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Jordan' }) },
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) },
     '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity: () => samePerson },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
-    '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Jordan_Resume.docx' },
+    '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Candidate_Resume.docx' },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: () => false },
     '@/lib/whatsapp-trace': { trace: () => {} },
@@ -127,12 +127,12 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     },
   }, '\nexport { generate };')
 
-  await generate('15550021', { jdId: 'stuck', jd: 'Cloud security job', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'stuck', jd: 'Cloud security job', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 0, 'an uncertain Meta upload is not sent again')
   assert.match(said.at(-1), /document upload is unconfirmed/)
 
   file = null
-  await generate('15550021', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
   assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
   assert.match(docs[0].caption, /updated Word file could not be opened/)
@@ -143,7 +143,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   docs.length = 0
   file = Buffer.from('candidate2@example.test')
   samePerson = false
-  await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
   assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
   assert.match(docs[0].body, /candidate1@example.test/)
@@ -154,13 +154,13 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   file = Buffer.from('candidate1@example.test')
   samePerson = true
   sendError = new Error('WA sendDoc 500: no')
-  await generate('15550021', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 3)
   assert.match(said.at(-1), /WhatsApp refused it/)
   assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
 
   hang = true
-  const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
+  const stalled = generate('15550101', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
   const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
   assert.equal(timed, 'done')
   assert.match(said.at(-1), /ran out of time just now/) // Nov4: a timeout says so, instead of the generic tailor failure line.
