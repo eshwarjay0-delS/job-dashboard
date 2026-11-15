@@ -1,6 +1,6 @@
 # WhatsApp resume hold — exact source recovery and evidence boundary
 
-Updated: 10 November 2026. Method: read-only Library, Gmail, GitHub and database review plus local DOCX metadata/text inspection. No model call, real email, WhatsApp send, R2 write, or production mutation was performed.
+Updated: 15 November 2026. Method: read-only Library, Gmail, GitHub and database review plus local DOCX metadata/text inspection. No model call, real email, WhatsApp send, R2 write, or production mutation was performed.
 
 ## Recovered 17 October incident
 
@@ -207,3 +207,5 @@ PR #411 is a separate initial-JD provider-timeout/offline-fallback change. It mu
 ### Accessible conversation confirmation boundary — 15 November 2026
 
 A targeted retrieval of accessible prior conversations found no user-authored confirmation of the archived resume's exact education, employer/date chronology or full certification list. A previous 9+ years description was assistant-authored from an uploaded resume, not independent user confirmation. Older profile summaries are not enough to resolve the scope/date differences. The correct classification is **unreconciled/unverified**, not a proven contradiction. PR #400's explicit-confirmation gate remains necessary; do not use the archived chronology or credentials as confirmed facts, but do not claim they are false either.
+
+> **Superseding correction — 15 November 2026:** Some earlier sections describe the archived resume as conflicting with an owner-confirmed profile. That wording was too strong. Targeted retrieval of accessible prior conversations found no user-authored confirmation of the exact education/employer/date chronology or full credential set; a prior 9+ years description was assistant-authored from an uploaded resume. Treat these facts as **unverified/unreconciled**, not proven false or contradictory. PR #400's explicit-confirmation boundary remains authoritative.
