@@ -1,5 +1,23 @@
 # MFit Completion Watch
 
+## 15 November 2026 18:34 UTC — crawler abort diagnostics and backlog refresh
+
+Continue: complete the exact-head checks and Safe Merge Gate review for `fix/crawler-abort-diagnostics-20261115-1834z`, then resume the higher-priority WhatsApp and resume/JD gates below.
+
+- Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. PR #416 is merged at this SHA and changes synthetic WhatsApp fixtures/tests/CI/docs only; it does not change runtime delivery.
+- Production alias `job-dashboard-fawn.vercel.app` is READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The GitHub Vercel success status for master points to `dpl_5T8no96szcfy7YtRQQKxinCda8KH`, which is CANCELED; it is not the active alias. Master and production are therefore different.
+- The 17 Oct 2026 17:28 Chicago WhatsApp incident remains unverified: a five-page upload/hold screenshot and a matching JD were recovered, but a separate similar five-page archive copy is not proof of the exact uploaded bytes. A Library resume candidate created 16 Oct was inspected but is not treated as the incident source. Exact uploaded/output DOCX, request/webhook correlation, per-run R2 object/version, Meta message ID and signed delivered/read receipt remain unavailable. No replay, model call, R2 write or real message was performed.
+- PR #411 current head `069707f9e7a48a698f80835bf6cf2a820ebe49b6`, base `17f8dada7ce1acf11064b1129ca4e33764ebb8a3`, DRAFT and `mergeable=false`; no exact-head workflow runs were returned. Its protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. Keep it with Safe Merge Gate; do not copy the old branch over master.
+- PR #414 evidence-only head `ee313d9e8907ed4fa5b9def297e31af4ba115ae2` is DRAFT/non-mergeable and has no exact-head runs. PR #417 score-only Gemini final-DOCX diagnostic is approved, but remains stacked on #414; its dedicated review workflow, WhatsApp recovery and Plan/REA passed, while full CI and Kompas baseline have not run on its current head. Automatic Gemini correction/re-export remains unapproved.
+- PR #400 confirmed-skill alignment and PR #421 first-person confirmation parser remain DRAFT. The Safe Merge Gate has flagged that first-person grammar must not be treated as a universal policy without direct owner evidence; #418 is the provenance correction. Do not promote a broader restriction.
+- PR #401 Poke-inspired Gmail/mobile remains DRAFT/non-mergeable on an older base. Its full CI, Plan/REA and Kompas baseline passed on its current head, but protected preview, two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain missing. Read-only production sync rows last updated 10 Nov; the proactive worker remains disabled and no outbound notifications are enabled.
+- Contract crawler is manual/on-demand only; `vercel.json` has no contract cron. Read-only production snapshot: latest run 10 Nov 11:00:24–11:01:11 UTC, 20 portals, 6,818 found/upserted, one Inspyr `This operation was aborted`; 14,566 rows, 12,407 active, 10,509 active within 14 days, newest `last_seen_at` 10 Nov. No admin session was available, so no crawl was triggered. Robert Half remains manual-only; C2H semantics remain proposed.
+- New independent crawler slice: [PR #422](https://github.com/eshwarjay0-delS/job-dashboard/pull/422), implementation commit `27cb0f80d055af2ccffec8c378f45ece33dac32e`, reports portal host and timeout duration for local AbortController timeouts and distinguishes upstream AbortError. The dedicated crawler workflow now runs `crawl-collect.test.mjs`. PR #422 is DRAFT; exact-head gates are pending. No retry, portal request, schedule, source permission or production data change.
+- MFit Safe Merge Gate is enabled and owns shared Plan/REA sequencing. Kompas Continuous Voice Delivery is disabled; no duplicate voice/caption work was started. No separate Bible-Keeper automation was visible in the accessible automation inventory.
+
+**Acceptance still open:** no authenticated WhatsApp delivery/replay; no exact original 17 Oct DOCX; no protected preview credential; no current production deployment of runtime PRs; no authorized manual crawl; no two-inbox Gmail/mobile acceptance; no real signed-in Kompas AI Answer/Windows/phone acceptance. Unit tests do not prove 95–100% live resume match or real delivery.
+
+
 ## 15 November 2026 09:28 UTC — PR #416 fixture correction and exact-head gates
 
 - Canonical master remains `17f8dada7ce1acf11064b1129ca4e33764ebb8a3`; production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No PR #416 code or PR #411 fallback is deployed.
@@ -579,3 +597,16 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 15 November 2026 — Continue: correct crawler cleanup boundary
+
+PR [#422](https://github.com/eshwarjay0-delS/job-dashboard/pull/422) is the current approved manual-only crawler diagnostic slice, based on canonical master `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Safe Merge Gate review [5912408807](https://github.com/eshwarjay0-delS/job-dashboard/pull/422#pullrequestreview-5912408807) found that URL parsing still occurred before `try/finally`, so a malformed adapter URL could skip the request-pacing timestamp update.
+
+- Source correction `2cb87b22ea92c908d440107b072bdf0b760264b3` moves URL parsing inside the cleanup boundary and uses a safe fallback host label.
+- Regression `395f95f5105cb019b8f8ec2333c470294494dad8` proves a malformed URL still advances the pacing clock: a fixed clock and captured gap timer verify the next valid request waits the full configured interval.
+- On code head `395f95f5105cb019b8f8ec2333c470294494dad8`, crawler freshness/collector workflow `43757961666`, Kompas baseline `43757961612`, and Plan/REA schema `43757961637` passed; full CI `43757961686` was still running at Lint. The Plan/REA/research/Completion Watch documentation refresh creates a new head, so all gates must rerun on that final head.
+- The change does not retry, crawl, schedule, alter source permissions, change C2H classification, or mutate production rows. Contract crawling stays manual/on-demand only, no daily cron; Robert Half stays manual-only.
+- Production alias `job-dashboard-fawn.vercel.app` is still READY on `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` / `b94e1629c544048d84a2b048ae83b21b612ab9dd`, behind master. PR #422 remains DRAFT. No protected preview or deployment exists; the legitimate preview requires the owner-controlled `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. No manual crawl or portal request was started.
+
+Continue: rerun exact-head full CI, crawler workflow, Kompas baseline and Plan/REA schema on the final PR #422 head, then let MFit Safe Merge Gate review. Keep DRAFT until the protected preview is legitimately available and approved. Do not merge, deploy, trigger a crawl, add a cron or bypass access controls in this run.
