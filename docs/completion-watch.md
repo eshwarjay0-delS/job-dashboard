@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 15 November 2026 2026-11-15T15:32:00.000Z — current-master first-person confirmation restack
+
+Continue: publish and validate the approved first-person confirmation guard on the latest master without losing PR #416's synthetic WhatsApp fixture protections.
+
+- Canonical master is `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`; production alias `job-dashboard-fawn.vercel.app` was last independently READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. PR #416 is merged at master 8ad319d and is test/fixture/docs-only; no production redeploy is required for it.
+- PR #415 head `1bdcfa56fa839f938431cc97cc60be11b41a19e3` was based on stale `17f8dada7ce1acf11064b1129ca4e33764ebb8a3` and was non-mergeable against current master. The owner-approved 14 Nov correction permits only explicit positive first-person experience confirmation; the Safe Merge Gate requested a safe restack.
+- Replacement branch `fix/resume-first-person-confirmation-current-20261115-v2` starts at current master. It preserves both sides: PR #416 synthetic fixture privacy protections remain; PR #415 parser, negative/positive cases, WhatsApp workflow path filters, resume docs and REA evidence remain. No current-master changes were discarded.
+- Local evidence: focused resume confirmation tests 22/22; REA tests 9/9; `npm run check` exited 0 (typecheck, lint with existing warnings, autofill 133/133, application merge 15/15); workflow YAML parsed with Prettier; `git diff --check` passed. Exact-head GitHub workflows have not run on this replacement branch.
+- This is source-level candidate-evidence validation only. No authorized resume/JD model call, final DOCX, Gemini score, protected preview, production deployment or real WhatsApp action occurred. Do not claim a 98% live match.
+- Next: publish the restack as a DRAFT PR, run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the exact new head, then let Safe Merge Gate review. Protected preview and owner-authorized source/JD/confirmation plus exported-DOCX acceptance remain separate.
+
 ## 15 November 2026 09:28 UTC — PR #416 fixture correction and exact-head gates
 
 - Canonical master remains `17f8dada7ce1acf11064b1129ca4e33764ebb8a3`; production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No PR #416 code or PR #411 fallback is deployed.

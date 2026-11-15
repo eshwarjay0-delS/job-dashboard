@@ -75,3 +75,56 @@ Final review found a pre-existing web fact-check fail-open: unreadable source/ex
 The current implementation separates candidate confirmations from employer requirements in `candidateEvidenceInput`. `confirmedCandidateStatements` accepts first-person experience assertions and rejects editing instructions, questions, negations and JD-only requirement lists. `explicitlyConfirmsAllRequirements` recognizes the owner's explicit statement, “I have experience with all of them evenly,” while rejecting exceptions and formatting requests.
 
 The focused regression now pins both sides: the explicit blanket statement is accepted, while “Add all keywords,” “Make this 98% match,” and a bare required-skills list are not blanket experience evidence. This is a source-level guard, not a live model generation, a 98% match claim, or employer verification. The exported DOCX still needs an authenticated baseline/JD/confirmation review before quality can be accepted.
+
+
+## 15 November 2026 — first-person-only evidence correction
+
+### Finding
+
+The canonical master snapshot `17f8dada7ce1acf11064b1129ca4e33764ebb8a3` accepted two non-first-person forms as candidate evidence: the blanket matcher included “you have/possess”, and `confirmedCandidateStatements` accepted headings such as “Confirmed skills: Python”. This contradicted the 6 November owner correction, reiterated in owner-authored comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128), and the current confirmed-skill restack's stated rule that only explicit positive first-person assertions qualify.
+
+### Correction
+
+The review branch removes second-person blanket patterns and label-only headers, rejects common negative contractions, and retains explicit first-person positive statements. Contrast clauses preserve only the positive clause; a blanket statement with an exception is not treated as confirmation.
+
+### Evidence and limits
+
+- Source: `src/lib/resume-evidence.ts`.
+- Regression: `scripts/tests/resume-confirmation-quality.test.mjs` covers second-person statements, label-only headings, negative contractions, positive first-person assertions and bounded blanket confirmation.
+- Commits: `5bd0d132d057c2cfb50e59e66ac0a4feaa9c4379`, `6d9ef8d488ed4294197a02a86d050094297960ce`, and `0155cac19c853bef5a4b102e2f5f2da9cada0969` (corrected regex escaping before CI).
+- Exact-head GitHub Actions, protected preview, Safe Merge Gate, production release and real exported-DOCX acceptance remain pending.
+- No real resume/JD model call, DOCX generation, Gemini score, live ATS percentage or production data change occurred.
+
+
+### WhatsApp regression gate wiring
+
+The shared `resume-evidence.ts` helper is also consumed by the WhatsApp webhook. The dedicated `whatsapp-resume-regression.yml` workflow previously did not watch that helper or its focused confirmation tests, so a parser-only change could pass full CI without running the WhatsApp recovery/contract gate. The review branch adds both paths to the workflow's push and pull-request filters and includes the workflow file itself in the pull-request filter. The workflow-gate commit is `ec4fc2f5afb3f97211f18ef0cde8c62de755aada`. The exact-head workflow run is still pending; the change does not send a real WhatsApp message.
+
+
+### Exact-head check snapshot — 15 November 2026
+
+For PR #415 head `d79d8b06c5131213d76362bb45e730f6fd71f72d`:
+
+- WhatsApp resume recovery regression `43690999884`: SUCCESS.
+- Kompas baseline `43690999808`: SUCCESS.
+- Plan Journal and REA schema `43690999799`: SUCCESS.
+- Full CI `43690999874`: IN PROGRESS at the latest check.
+
+The branch remains DRAFT. Protected preview, production release and owner-authorized exported-DOCX acceptance have not occurred.
+
+
+## 15 November 2026 — exact-head test parser repair
+
+Full CI run 43691244803 failed in the evidence-bound resume export step before the focused confirmation assertions executed. The final negative-contraction string in scripts/tests/resume-confirmation-quality.test.mjs had a mismatched closing quote. Commit 959e9e81d41196dbc7e16cadd5752d96d0fef14c corrects only that test literal; it does not change resume-evidence parsing or runtime behavior.
+
+The previous code head's WhatsApp recovery, Kompas baseline and Plan/REA successes are not reused as evidence for the new head. Require all four exact-head workflows again. No model call, DOCX generation, Gemini review, live ATS score, production write or external message occurred.
+
+
+## 15 November 2026 — Plan/REA separator repair
+
+The first status update to the Plan Journal and REA replaced an array entry without retaining its trailing comma. The exact-head Plan/REA schema workflow 43706295982 caught the TypeScript parse error before the records were evaluated. Commits 8afda576a15a8da06615d7453e271354f1b841b2 and 1072652bf2151b9c9ea8599e6d8e448d5876c114 restore the separators. This is a documentation syntax correction only. All four required workflows must pass on the new exact head.
+
+
+## 15 November 2026 — exact-head confirmation guard results
+
+After correcting the negative-contraction fixture quote and Plan/REA separators, exact PR #415 head a23f94eb4e82777563a17fa51b303edcefbdcebf passed all four source gates: full CI 43706414403, WhatsApp recovery 43706414407, Kompas baseline 43706414428 and Plan/REA schema 43706414395. The twenty varied evidence-bound resume export cases completed in full CI. This verifies the first-person positive-confirmation boundary at source level only. Protected preview, owner-authorized source/JD/explicit confirmation, exported-DOCX inspection and final ATS diagnostic remain unverified; no 98% live match is claimed.

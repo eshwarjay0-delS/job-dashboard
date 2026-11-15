@@ -85,3 +85,9 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+## First-person confirmation gate — 15 November 2026
+
+Only explicit positive first-person candidate assertions can expand experience evidence. Second-person phrasing (for example, “You have experience with all required skills”) and label-only lists (for example, “Confirmed skills: Python”) are not candidate confirmation. Questions, negations and common negative contractions are rejected. A contrast such as “I used AWS but not GCP” may support the positive clause only; an exception cannot turn a blanket statement into confirmation.
+
+This guard preserves the 6 November owner correction: an explicitly confirmed skill may be mapped into relevant existing project bullets across roles, including earlier roles, but the confirmation supports only the named skill. It does not authorize a new employer, project, action, outcome, title, date, location, contact, metric or credential. The JD and formatting instructions remain target context, not evidence. Source-level regression tests do not establish a live ATS score or 98% match.
