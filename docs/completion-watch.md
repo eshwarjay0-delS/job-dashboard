@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 15 November 2026 13:55 UTC — C2H approval correction and PR #418 type repair
+
+- Canonical master remains `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`; the 15 Nov #416 merge is test/fixture/CI/docs-only. Production runtime is not changed by this PR #418 work.
+- PR [#418](https://github.com/eshwarjay0-delS/job-dashboard/pull/418) exact head `c25dbca95a35fa452396b4f759d87528804335fe` failed full CI `43718999934` at Type-check: `PlanJournalEntry.area` does not allow `platform`. Plan/REA `43718999923` and Kompas baseline `43718999926` passed. The correction uses supported cross-product area `all`; it does not widen the schema.
+- Accessible prior-context retrieval did not recover a primary owner-authored 12 Nov 05:03:03 UTC message approving Contract To Perm / Right To Hire → C2H. That timestamp appears only in assistant-generated status text. The latest direct owner correction on 14 Nov 05:51:27 UTC says C2H/Right-To-Hire semantics remain unapproved. C2H remains a contract category, but PR #419's aliases and associated negation rules are not approved; keep #419 DRAFT.
+- The 14 Nov operational policy remains: contract crawling manual/on-demand only, no daily cron, Robert Half manual-only. No live crawl, portal request, DB mutation, application submission, email or WhatsApp send occurred.
+- This correction supersedes the earlier assistant-generated C2H approval claim without deleting its historical record. The direct Gmail/mobile and confirmed-skill/Gemini approvals remain separately documented.
+
+Continue: rerun exact-head full CI and Plan/REA on corrected PR #418, then let the Safe Merge Gate review it. Keep #419 blocked pending explicit owner approval.
+
 ## 15 November 2026 13:25 UTC — Plan/REA validation correction
 
 PR #418 exact head 8990732d55dd0bd4c4c2a37b830cde5558d0c146 had full CI failure 43718368975: ESLint parsing failed at src/lib/plan-vision.ts line 27 column 3165 because the approved Gemini prompt quote was not escaped inside the TypeScript string. Plan/REA run 43718368988 also failed because an old regression still expected Gmail/C2H scope to be blocked and expected the former historical 3–4 account wording; Kompas baseline 43718368971 passed. The current follow-up escapes the prompt, updates the superseded Gmail/C2H REA entries and changes the test to assert the direct owner-approved requirements while keeping per-account Calendar/radar and generic contract-admin semantics proposed. Exact-head reruns are pending. This is documentation/test-only; no runtime deployment or external action.
