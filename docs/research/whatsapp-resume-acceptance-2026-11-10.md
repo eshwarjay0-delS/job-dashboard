@@ -202,3 +202,8 @@ The false-token correction for this JD is already present in the current product
 That test keeps the actual JD terms `Canton` and `Solana`, while excluding `CCSP`, `CISM`, `CRISC`, `CISA`, `AWS Security Specialty`, the fragment `sol`, the generic token `specialty`, and `attributes` from separate skill targets. The implementation's certification filter also prevents preferred credentials from being inserted as skills. This is exact source/test parity with the current production commit. It does not prove that the 17 Oct historical request ran this code, that a final DOCX was generated, or that the output passed a live end-to-end review.
 
 PR #411 is a separate initial-JD provider-timeout/offline-fallback change. It must not be described as the fix for the historical 98% quality hold. The historical hold remains unreplayed and uncorrelated.
+
+
+### Accessible conversation confirmation boundary — 15 November 2026
+
+A targeted retrieval of accessible prior conversations found no user-authored confirmation of the archived resume's exact education, employer/date chronology or full certification list. A previous 9+ years description was assistant-authored from an uploaded resume, not independent user confirmation. Older profile summaries are not enough to resolve the scope/date differences. The correct classification is **unreconciled/unverified**, not a proven contradiction. PR #400's explicit-confirmation gate remains necessary; do not use the archived chronology or credentials as confirmed facts, but do not claim they are false either.
