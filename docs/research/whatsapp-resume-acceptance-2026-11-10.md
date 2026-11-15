@@ -182,7 +182,7 @@ No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was
 - `Specialty` is part of the preferred **AWS Security Specialty** certification phrase; the recovered source does not establish that certification.
 - `attributes` does not appear as a literal JD requirement; treat it as a parser/tokenization artifact, not a candidate skill.
 
-The recovered document does contain source-text references to professional-history and skills claims that remain unverified. These are **claims in this archived document**, not independently confirmed experience. The document's education, employment chronology and certification claims materially conflict with the owner's confirmed profile in accessible context. Do not use any conflicting employer, degree, date, certification, platform or metric until the owner explicitly reconciles it. Do not copy preferred JD terms into experience merely to raise keyword coverage.
+The archived document contains personal professional-history and skill claims. They are not independently confirmed experience. Targeted retrieval of accessible prior conversations found no user-authored confirmation of the exact education/employment chronology or full credential set; the correct status is unverified/unreconciled, not a proven contradiction. Do not use archived employer, degree, date, certification, platform or metric claims until the owner explicitly reconciles them. Do not copy preferred JD terms into experience merely to raise keyword coverage.
 
 ### Policy reconciliation
 
