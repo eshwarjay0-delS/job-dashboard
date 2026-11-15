@@ -95,6 +95,7 @@ export function validateDossierSources(raw: unknown): DossierSource[] {
         return badInput("Invalid audio provenance for " + id + ".")
       media = { filename, sha256: v.sha256,
         durationSeconds: v.durationSeconds, transcriptStatus: v.transcriptStatus }
+    }
     seen.add(id)
     sources.push({ id, kind: kind as DossierSourceKind, title, text, digest: digest(text), ...(media ? { media } : {}) })
   }
