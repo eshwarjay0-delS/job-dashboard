@@ -10,7 +10,7 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandConfirmedVocabulary, expandJdKeywords, generateRelatedMaterialTwice, generateRelatedPass, type ConfirmedVocabulary } from "./claude"
+import { adapt, expandConfirmedVocabulary, expandJdKeywords, generateRelatedMaterialTwice, generateRelatedPass, reviewFinalDocxWithGemini, type ConfirmedVocabulary } from "./claude"
 import { constructJd, coverageNeedsAnotherPass, dropInventedExperienceEdits, inventedExperienceFrame, keepEnvironmentsLabel, keywordsFromPass, labelledSkillEdit, restoreMentionedTerms, splitOverflowTerms, strengthsSummary, textHasTerm, unverifiedClaims, weaveExperienceRepresentation } from "./constructed-jd"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
@@ -26,6 +26,7 @@ import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
 import { atsCheck, type AtsResult } from "./resume-ats"
 import { docxText } from "./resume-round-trip-guard"
 import { recountExported } from "./resume-exported-recount"
+import type { FinalAtsReview } from "./resume-final-ats-review"
 
 export interface TailorResult {
   /** Receipt policy for complete evidence-checked exports; never inferred from overlap. */
@@ -35,6 +36,8 @@ export interface TailorResult {
   quality_blockers?: string[]
   /** ATS parseability of the exported DOCX, measured on its extracted text and re-parsed zones. */
   ats?: AtsResult
+  /** Gemini review of the exact exported DOCX; diagnostic only, never evidence or a delivery gate. */
+  gemini_ats_review?: FinalAtsReview
   token: string
   score: number
   score_before: number
@@ -674,7 +677,9 @@ export async function runTailor(opts: {
   // The draft stops early enough that the one extra generate-then-tailor pass still has a window.
   const fullDeadline = started + TAILOR_MAX_MS
   const extraReserve = refine || !opts.keys.gemini ? 0 : extraPassReserveMs(TAILOR_MAX_MS)
-  const deadline = fullDeadline - extraReserve
+  // Reserve one bounded Gemini call for the actual exported DOCX; it never triggers a rewrite.
+  const finalAtsReserve = opts.keys.gemini ? Math.min(8000, Math.floor(TAILOR_MAX_MS * 0.15)) : 0
+  const deadline = fullDeadline - extraReserve - finalAtsReserve
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
   // A full retarget is ranked on the whole resume AND on how well EACH client role shows the listed JD skills, with a
@@ -1177,7 +1182,44 @@ export async function runTailor(opts: {
       : /^Tailoring incomplete/.test(why) ? `${why} Please try again in a minute.`
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
+  // Owner-approved final-DOCX ATS diagnostic: inspect the actual exported bytes once.
+  // This is score-only. Gemini cannot edit the document, create experience evidence, or alter any quality gate.
+  let geminiAtsReview: FinalAtsReview = {
+    status: opts.keys.gemini ? "skipped_incomplete" : "skipped_no_key",
+    score: null,
+    missing: [],
+    weak: [],
+  }
+  if (best.partial || skillsOnly) {
+    geminiAtsReview.status = "skipped_incomplete"
+  } else if (opts.keys.gemini) {
+    const remainingMs = fullDeadline - Date.now()
+    if (remainingMs < 1000) {
+      geminiAtsReview.status = "skipped_time_budget"
+    } else {
+      try {
+        const exportedForReview = await docxText(best.buffer)
+        geminiAtsReview = await reviewFinalDocxWithGemini({
+          keys: { gemini: opts.keys.gemini },
+          jd: opts.jd,
+          docxText: exportedForReview,
+          terms: jdExtracted,
+          timeoutMs: Math.min(7000, Math.max(1000, remainingMs - 500)),
+          usageSink,
+        })
+      } catch {
+        geminiAtsReview.status = "unavailable"
+      }
+    }
+  }
   const { edits, buffer, notes, afterKw } = best
+  if (geminiAtsReview.status === "ok") {
+    notes.push(`Gemini final-DOCX ATS score: ${geminiAtsReview.score}/100 (diagnostic only; deterministic coverage and experience evidence remain authoritative).`)
+    if (geminiAtsReview.missing.length) notes.push(`Gemini diagnostic missing JD terms: ${geminiAtsReview.missing.join(", ")}`)
+    if (geminiAtsReview.weak.length) notes.push(`Gemini diagnostic weak JD terms: ${geminiAtsReview.weak.join(", ")}`)
+  } else {
+    notes.push(`Gemini final-DOCX ATS review: ${geminiAtsReview.status}; deterministic exported-DOCX coverage and existing quality gates remain authoritative.`)
+  }
   const evidencePass = floorFrom ?? best
   const { claimedKw, roleKw, required, provenKw } = evidencePass
   if (skillsOnly) notes.push("No AI writer completed this resume. Supported vocabulary recovery is incomplete and must not be delivered as a tailored resume.")
@@ -1398,6 +1440,7 @@ export async function runTailor(opts: {
     quality: qualityReport,
     quality_blockers: qualityBlockers,
     ats,
+    gemini_ats_review: geminiAtsReview,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
