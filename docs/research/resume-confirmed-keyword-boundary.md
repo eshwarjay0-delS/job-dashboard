@@ -118,3 +118,8 @@ The branch remains DRAFT. Protected preview, production release and owner-author
 Full CI run 43691244803 failed in the evidence-bound resume export step before the focused confirmation assertions executed. The final negative-contraction string in scripts/tests/resume-confirmation-quality.test.mjs had a mismatched closing quote. Commit 959e9e81d41196dbc7e16cadd5752d96d0fef14c corrects only that test literal; it does not change resume-evidence parsing or runtime behavior.
 
 The previous code head's WhatsApp recovery, Kompas baseline and Plan/REA successes are not reused as evidence for the new head. Require all four exact-head workflows again. No model call, DOCX generation, Gemini review, live ATS score, production write or external message occurred.
+
+
+## 15 November 2026 — Plan/REA separator repair
+
+The first status update to the Plan Journal and REA replaced an array entry without retaining its trailing comma. The exact-head Plan/REA schema workflow 43706295982 caught the TypeScript parse error before the records were evaluated. Commits 8afda576a15a8da06615d7453e271354f1b841b2 and 1072652bf2151b9c9ea8599e6d8e448d5876c114 restore the separators. This is a documentation syntax correction only. All four required workflows must pass on the new exact head.
