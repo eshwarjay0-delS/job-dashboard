@@ -597,3 +597,16 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 15 November 2026 — Continue: correct crawler cleanup boundary
+
+PR [#422](https://github.com/eshwarjay0-delS/job-dashboard/pull/422) is the current approved manual-only crawler diagnostic slice, based on canonical master `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Safe Merge Gate review [5912408807](https://github.com/eshwarjay0-delS/job-dashboard/pull/422#pullrequestreview-5912408807) found that URL parsing still occurred before `try/finally`, so a malformed adapter URL could skip the request-pacing timestamp update.
+
+- Source correction `2cb87b22ea92c908d440107b072bdf0b760264b3` moves URL parsing inside the cleanup boundary and uses a safe fallback host label.
+- Regression `395f95f5105cb019b8f8ec2333c470294494dad8` proves a malformed URL still advances the pacing clock: a fixed clock and captured gap timer verify the next valid request waits the full configured interval.
+- On code head `395f95f5105cb019b8f8ec2333c470294494dad8`, crawler freshness/collector workflow `43757961666`, Kompas baseline `43757961612`, and Plan/REA schema `43757961637` passed; full CI `43757961686` was still running at Lint. The Plan/REA/research/Completion Watch documentation refresh creates a new head, so all gates must rerun on that final head.
+- The change does not retry, crawl, schedule, alter source permissions, change C2H classification, or mutate production rows. Contract crawling stays manual/on-demand only, no daily cron; Robert Half stays manual-only.
+- Production alias `job-dashboard-fawn.vercel.app` is still READY on `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` / `b94e1629c544048d84a2b048ae83b21b612ab9dd`, behind master. PR #422 remains DRAFT. No protected preview or deployment exists; the legitimate preview requires the owner-controlled `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. No manual crawl or portal request was started.
+
+Continue: rerun exact-head full CI, crawler workflow, Kompas baseline and Plan/REA schema on the final PR #422 head, then let MFit Safe Merge Gate review. Keep DRAFT until the protected preview is legitimately available and approved. Do not merge, deploy, trigger a crawl, add a cron or bypass access controls in this run.
