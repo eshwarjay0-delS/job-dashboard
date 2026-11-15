@@ -29,3 +29,18 @@ test("Robert Half remains a manual-only directory source", () => {
   assert.doesNotMatch(active[1], /roberthalf/i)
   assert.match(pending[1], /roberthalf/i)
 })
+
+
+test("Peraton remains a manual-only directory source until aggregation rights are verified", () => {
+  const active = adapters.match(/export const ADAPTERS: PortalAdapter\\[\\] = \\[([\\s\\S]*?)\\n\\]/)
+  const pending = adapters.match(/export const PENDING_PORTALS = \\[([\\s\\S]*?)\\n\\]/)
+  assert.ok(active, "active adapter list is present")
+  assert.ok(pending, "pending/manual-only list is present")
+  assert.doesNotMatch(active[1], /peraton/i)
+  assert.match(pending[1], /peraton/i)
+  const portals = read("../../src/lib/vendorPortals.ts")
+  const peraton = portals.match(/\\{ firm: "Peraton"[\\s\\S]*?\\},/)
+  assert.ok(peraton, "Peraton stays in the manual portal directory")
+  assert.match(peraton[0], /manual navigation only/i)
+  assert.match(peraton[0], /written permission|sanctioned feed\\/API/i)
+})
