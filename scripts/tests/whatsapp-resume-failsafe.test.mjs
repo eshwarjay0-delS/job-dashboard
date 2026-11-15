@@ -258,12 +258,27 @@ test('roles that were not rewritten still send the chosen library file', async (
   // The selected Files root belongs to TEST_USER_ID; keep the fixture owner consistent.
   await generate('15550021', {
     jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
-    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+    resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /NOT TAILORED — AI draft did not pass delivery checks/)
   assert.doesNotMatch(docs[0].body, /Documented access-control reviews and exceptions/)
+})
+
+test('an out-of-root legacy source path is refused by the selected same-account fallback', async () => {
+  const unfinished = {
+    ...low,
+    token: 'easm-legacy-path',
+    quality: { ...low.quality, incomplete: false },
+    quality_blockers: ['roles_unrewritten'],
+  }
+  const { generate, docs, filesFor } = harness(async () => unfinished)
+  await generate('15550021', {
+    jdId: 'easm-legacy-path', jd: 'EASM cybersecurity engineer',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
+  assert.equal(docs.length, 0, 'a path outside the verified inbox and account library roots cannot be sent')
 })
 
 test('the Houston and Saint Louis profiles are not mixed when the failsafe sends a file', async () => {
