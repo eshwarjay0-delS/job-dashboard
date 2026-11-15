@@ -127,3 +127,9 @@ The fallback now accepts either the explicit Files selection or, for an uploaded
 The file is still labelled **Original resume — NOT TAILORED**. This does not change the approved 70% raw-overlap / 95% supported-coverage WhatsApp policy, the hard hold for unverified JD-only claims, or the text-only swipe-refinement failure rule.
 
 The new behavioral and source-contract cases are awaiting exact-head GitHub Actions. No real WhatsApp send, production R2 write, model call, historical replay, or handset acceptance occurred. The 17 Oct 17:28 Chicago incident remains unverified: its generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt, and owner reconciliation of conflicting source facts are still missing. No 98% live match is claimed.
+
+## 15 November 2026 — approved final-DOCX score review versus proposed correction loop
+
+The owner-authored comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128), dated 12 Nov 2026, explicitly requires a Gemini **“Give me an ATS score”** review of the final exported DOCX and actual measured coverage. That bounded diagnostic review is approved and remains a release acceptance requirement.
+
+Keep it separate from the broader automated correction/re-export/recheck loop. Accessible owner-authored evidence does not approve that loop, so it remains proposed. Do not add an automated correction prompt, spend credits on that loop, or repeatedly re-export until the owner separately approves it. Any score is diagnostic, not proof of experience; every claim and correction must still be supported by the selected source resume or an explicit first-person candidate confirmation.
