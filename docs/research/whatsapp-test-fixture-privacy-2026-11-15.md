@@ -58,3 +58,8 @@ This remains test/documentation work only. It does not change the WhatsApp webho
 ## Privacy scanner false-positive correction — 15 November 2026
 
 The expanded guard normalizes escaped resume line breaks before scanning contact values. Without that normalization, a source literal containing the two characters backslash+n immediately before an email can make a simple regex see a leading n as part of the email. This is a scanner-only correction; it does not alter fixture content or any runtime identity logic. The final-head gates must include this correction.
+
+
+## 15 November 2026 — supported REA status correction
+
+The exact-head Plan/REA schema check accepted the new record, but full CI and the WhatsApp recovery typecheck correctly rejected the aggregate REA state value "Tested" because the ReaSession state union does not include that value. The supported aggregate state is restored to "Implemented, verification pending"; individual validation steps retain their "Tested" status and exact-head evidence. This preserves the distinction between source tests and deployment/real acceptance. Full CI 43706681284 and WhatsApp recovery 43706681273 exposed the issue; the next exact head must rerun all four gates.
