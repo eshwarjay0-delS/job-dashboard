@@ -1,3 +1,9 @@
+## 15 November 2026 01:09 UTC — evidence-schema type correction committed
+
+The direct-upload fallback implementation remains in PR #399, but the first exact-head checks on `2c6980c3a70610f6da900d737bb1ada59e1c1632` stopped at TypeScript before running the WhatsApp suites. Full CI `43660906976` and WhatsApp recovery `43660906973` failed because the contract-crawler REA record used unsupported `area: "apply"` and `sources.source`; the typed schemas require `area: "applications"` and `sources.path`. The journal and REA values are corrected in commit `31e861d808d42d5bd0e34d30bb9b6e4959c07622`. No WhatsApp runtime behavior changed. The prior baseline `43660906980` and Plan/REA schema `43660907001` were green on the pre-fix head only; they must not be reused as final-head evidence.
+
+Next: require exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema. Keep PR #399 DRAFT pending the legitimate protected preview and Safe Merge Gate. No real send, R2 write, model call or historical replay occurred.
+
 ## 15 November 2026 01:06 UTC — uploaded-DOCX fallback typecheck repair
 
 Continue: finish the approved ordinary WhatsApp-upload fallback on PR #399 without weakening account isolation or delivery policy.
