@@ -128,3 +128,14 @@ The first status update to the Plan Journal and REA replaced an array entry with
 ## 15 November 2026 — exact-head confirmation guard results
 
 After correcting the negative-contraction fixture quote and Plan/REA separators, exact PR #415 head a23f94eb4e82777563a17fa51b303edcefbdcebf passed all four source gates: full CI 43706414403, WhatsApp recovery 43706414407, Kompas baseline 43706414428 and Plan/REA schema 43706414395. The twenty varied evidence-bound resume export cases completed in full CI. This verifies the first-person positive-confirmation boundary at source level only. Protected preview, owner-authorized source/JD/explicit confirmation, exported-DOCX inspection and final ATS diagnostic remain unverified; no 98% live match is claimed.
+
+
+## 15 November 2026 — reject interrogative first-person confirmations
+
+Safe Merge Gate review of PR #421 found two parser false positives. The sentence splitter removed the terminal question mark before evaluating 'I used AWS?', allowing it to pass the first-person prefix check. Separately, the blanket matcher accepted 'I have experience with all required skills?' because it did not reject interrogative syntax.
+
+The correction keeps sentence-ending punctuation through segmentation, rejects question-mark clauses before contrast splitting or other normalization, and makes blanket confirmation reject question-mark input. It retains independent later declarative sentences and the positive-only contrast behavior: 'I used AWS but not GCP' supports AWS only.
+
+Evidence: Safe Merge Gate inline comments 4579092461 and 4579092462; parser commit abb708ccf0a81adb758c91b88b978ae9074228f4; regression commit 2a8630cc98fe879b95ecf6222c8f64f87e4a6fda. The exact updated-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks remain pending. No live resume/JD run, DOCX export, Gemini review, production deployment or outbound message occurred.
+
+Next: require all four exact-head checks, Safe Merge Gate review, a legitimate protected preview, and an owner-authorized baseline resume/JD/confirmation run with exported-DOCX inspection. Do not infer a live 95–100% match from source tests.
