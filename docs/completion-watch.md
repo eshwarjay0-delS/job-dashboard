@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 15 November 2026 09:28 UTC — PR #416 fixture correction and exact-head gates
+
+- Canonical master remains `17f8dada7ce1acf11064b1129ca4e33764ebb8a3`; production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No PR #416 code or PR #411 fallback is deployed.
+- PR [#416](https://github.com/eshwarjay0-delS/job-dashboard/pull/416) received a test-only correction at commit `f2affec74ed7a669d9955a76f299b12abbc414cf`: two synthetic resume fixtures now put the candidate email on a separate line from the candidate name. The original full CI on head `f81df144b45db21c83ecc0e5f75f6056dd8c53bb` had 52/55 passes; three fail-safe tests correctly failed closed because the malformed fixture made the parsed email differ from the selected profile. No runtime code or identity guard was weakened.
+- On code head `f2affec`, WhatsApp recovery `43699322376`, Kompas baseline `43699322370`, and Plan/REA `43699322402` passed; full CI `43699322349` was still in progress at 09:28 UTC. The Plan/REA/research/Completion Watch update below creates a new head, so all required checks must be reverified on the final head before the Safe Merge Gate can consider the PR. Keep #416 DRAFT; no merge or deployment.
+- PR [#411](https://github.com/eshwarjay0-delS/job-dashboard/pull/411) uploaded-DOCX timeout fallback is still DRAFT. Its latest code/evidence head `32a4f958de95c2c078535e52a7ac2906b30c728d` has full CI `43667987475`, WhatsApp recovery `43667987513`, Kompas baseline `43667987459` and Plan/REA `43667987457` all SUCCESS. It still lacks the legitimate protected Vercel preview requiring the owner-controlled `KOMPAS_VERCEL_API_TOKEN`; the Safe Merge Gate also requires an explicit decision on sending an original resume labelled NOT TAILORED after an initial-JD provider timeout. Apply #416's sanitized fixtures to #411 after the privacy PR is accepted. No real Meta send, R2 write, model call or replay occurred.
+- The 17 Oct 17:28 Chicago event remains an unverified delivery incident: the production usage record proves a model-use event (score 87, 34 calls, no source-event key), not an exported DOCX or delivery. Exact uploaded/output bytes, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Do not replay or infer delivery.
+
+
 
 ## 15 November 2026 — WhatsApp fixture privacy correction and release gates (08:46 UTC)
 
