@@ -91,6 +91,6 @@ The review branch removes second-person blanket patterns and label-only headers,
 
 - Source: `src/lib/resume-evidence.ts`.
 - Regression: `scripts/tests/resume-confirmation-quality.test.mjs` covers second-person statements, label-only headings, negative contractions, positive first-person assertions and bounded blanket confirmation.
-- Commits: `5bd0d132d057c2cfb50e59e66ac0a4feaa9c4379` and `6d9ef8d488ed4294197a02a86d050094297960ce`.
+- Commits: `5bd0d132d057c2cfb50e59e66ac0a4feaa9c4379`, `6d9ef8d488ed4294197a02a86d050094297960ce`, and `0155cac19c853bef5a4b102e2f5f2da9cada0969` (corrected regex escaping before CI).
 - Exact-head GitHub Actions, protected preview, Safe Merge Gate, production release and real exported-DOCX acceptance remain pending.
 - No real resume/JD model call, DOCX generation, Gemini score, live ATS percentage or production data change occurred.
