@@ -1,5 +1,18 @@
 # MFit Completion Watch
 
+
+## 15 November 2026 — approved score-only final-DOCX Gemini review
+
+Continue: run the exact-head full CI, Kompas baseline and Plan/REA checks for `feat/resume-final-docx-gemini-score-only-20261115-r2`, then obtain the legitimate protected preview and an owner-authorized exported-DOCX acceptance run.
+
+- Approval: the owner's 6 Nov correction, reiterated in owner-authored [PR #319 comment 6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128), requires the exact Gemini prompt **Give me ATS score** on the final exported DOCX and actual measured coverage.
+- This branch adds one bounded Gemini-only diagnostic after export. It reads the actual `best.buffer` DOCX bytes through `docxText`, sends the full JD and canonical target terms, and returns a score plus missing/weak terms only from that canonical list. Incomplete/skills-only drafts are skipped; no-key, time-budget, invalid-response and unavailable states are explicit.
+- The score is advisory only. It does not edit or re-export the resume, establish experience, change deterministic coverage, alter quality gates, or change web/WhatsApp delivery thresholds. The automatic correction/re-export/re-review loop from PR #395 is explicitly excluded because accessible owner-authored approval for that behavior was not found.
+- Added focused prompt/parser and source-wiring tests, wired into package prebuild and full CI. Plan & Vision revision is 2026-11-15.2; the matching Plan Journal, REA, Resume handoff and research note are updated on this branch.
+- Canonical master at branch creation: `17f8dada7ce1acf11064b1129ca4e33764ebb8a3`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. This branch is not deployed.
+- No personal resume/JD was processed, no Gemini model call or DOCX export occurred, and no 98% live match is claimed. The protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. Actual acceptance also requires an authorized baseline resume, full JD, explicit first-person confirmations where needed, and inspection of the exported DOCX.
+
+
 > **Superseding correction — 15 November 2026:** Earlier entries below that claim exact recovery of the WhatsApp-uploaded DOCX or a verified digest are too strong. A private archive review found a separate similar five-page copy, but the exact WhatsApp-uploaded bytes/request correlation are not available. Private filename, archive path, size and fingerprint are omitted. Older entries that describe source facts as conflicting with an owner-confirmed profile are also superseded: accessible owner-authored confirmation of the exact chronology/credentials was not found; the correct status is **unverified/unreconciled**, not a proven contradiction. Preserve historical decisions but do not treat either archive copy or assistant-authored summary as confirmed facts.
 
 ## 15 November 2026 — recovered 17 October WhatsApp source and JD
