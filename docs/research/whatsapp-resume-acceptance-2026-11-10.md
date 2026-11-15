@@ -6,13 +6,13 @@ Updated: 15 November 2026. Method: read-only Library, Gmail, GitHub and database
 
 The archived Library screenshot was created at `2026-10-17T22:28:39Z` (5:28 PM America/Chicago). It shows the M Fit WhatsApp thread:
 
-- At about 5:25 PM, a Security Engineer – Risk & Controls job post and a five-page, 28 KB Word resume were submitted.
+- At about 5:25 PM, a matching security-engineering JD job post and a five-page, five-page Word resume were submitted.
 - At 5:28 PM, the bot replied: “The rewrite did not reach your 98% coverage target after automatic repair. I have held the file.”
 - The visible missing-term list was `ccsp`, `cism`, `crisc`, `cisa`, `canton`, `sol`, `specialty`, `attributes`.
 
 ### Original resume bytes recovered
 
-The exact input DOCX was recovered from a private Library archive. It is 27,724 bytes; its digest was verified locally and is retained with the private artifact, not published in this repository. This is the original source file, not a generated output.
+An earlier private archive review found a similar five-page DOCX, but the exact WhatsApp-uploaded bytes are not currently accessible. No filename, archive path, exact size or document fingerprint is retained in this public handoff.
 
 ### Full job description recovered
 
@@ -107,7 +107,7 @@ PR #279 head `cc7e4ea675d808a89f4b4ea1f22711b0be7141b7` has Kompas baseline `427
 
 ## 10 November 2026 — exact source archive verification and final-DOCX Gemini requirement
 
-The original 17 Oct source DOCX was independently verified in a private Library archive (27,724 bytes; exact digest retained privately and not published). The matching JD was recovered from the user's private inbox. The source's education, employer chronology, experience length and credentials materially conflict with the owner-confirmed profile; keep those claims quarantined until reconciled. The generated output DOCX, per-run R2 object key, Meta message ID and signed delivery/read receipt remain unavailable, so no exact replay or delivery claim is made.
+A separate private archive review found a similar five-page DOCX; exact WhatsApp-uploaded bytes remain unavailable. Earlier statements that source facts conflict with the owner-confirmed profile are superseded: accessible owner-authored confirmation of the exact chronology and credentials was not found, so the status is unverified/unreconciled.
 
 The owner-approved 3 Nov requirement (recorded in PR #275 at 07:46 UTC) is to ask Gemini exactly `Give me ATS score` after every final DOCX export, identify missing/weak JD keywords, correct only gaps supported by the source resume or explicit first-person confirmations, re-export and recheck until the highest truthful match. The score and suggestions are diagnostics only, never experience evidence. Current `src/lib/tailor.ts` has two pre-generation Gemini keyword passes, deterministic ATS parsing of the exported DOCX, and Gemini final-document gap feedback, but it does not perform the final-DOCX ATS-score review or bounded correction/re-export/recheck loop.
 
@@ -147,7 +147,7 @@ PR #374 is the current-master restack of the offline original-resume fallback an
 - PR #374 remains DRAFT. An authorized Vercel preview request dpl_6Ejh8tNfxR7pDYNcxWRp2f2thWV7 was CANCELED by the project's Ignored Build Step. The protected preview still requires the private KOMPAS_VERCEL_API_TOKEN. No ignore rule or protection setting was changed.
 - No real WhatsApp send, R2 production write, model call, or handset test occurred.
 
-**Historical 17 Oct 17:28 Chicago incident remains separately blocked.** The original 27,724-byte source DOCX and matching JD are recorded as recovered, but the generated output DOCX, per-run R2 object/version, webhook/request correlation ID, Meta message ID, and signed delivery/read receipt remain unavailable. The source's education/employment/credential facts conflict with the owner-confirmed profile and remain quarantined pending owner reconciliation. Do not replay the request or infer delivery from a source file or a mocked test.
+**Historical 17 Oct 17:28 Chicago incident remains separately blocked.** The matching JD and screenshot evidence are recorded without reproducing private file metadata. The generated output DOCX, per-run R2 object/version, webhook/request correlation ID, Meta message ID and signed delivery/read receipt remain unavailable. Source facts remain unverified/unreconciled pending explicit owner reconciliation; do not replay or infer delivery.
 
 **Next:** keep #374 DRAFT until the legitimate protected preview and Safe Merge Gate approval. Historical closure requires the exact generated output plus per-run R2/webhook/Meta evidence and owner fact reconciliation before any authorized replay. Real handset delivery is a separate acceptance gate.
 
@@ -171,9 +171,9 @@ No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was
 
 ### Evidence recovered
 
-- The Library screenshot `1792276118790.jpeg` decodes to 2026-10-17 22:28:38.790 UTC (17:28:38.790 America/Chicago). It shows a WhatsApp upload named **Eshwar Cyber resume).docx**, displayed as five pages / 28 KB, followed by the bot's 5:28 PM message: the rewrite did not reach the 98% coverage target after automatic repair, so the file was held. The listed remaining terms were `CCSP`, `CISM`, `CRISC`, `CISA`, `Canton`, `Sol`, `Specialty`, and `attributes`.
-- The private `Organized_Original_Resumes.zip` archive contains `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`, 27,724 bytes, SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`. The private inventory records the same filename, path and digest. Its byte size and five-page layout strongly match the WhatsApp attachment display, but the actual WhatsApp attachment bytes/request correlation were not recovered; do not call this a byte-for-byte proof of the uploaded payload.
-- The matching Gmail thread was recovered: **Security Engineer – Risk & Controls**, Atlanta, GA (onsite), open for contract, with the forwarded JD dated 17 October 2026. The JD separates required qualifications from preferred qualifications.
+- The private Library screenshot (not copied into the repository) shows a five-page resume upload and the 5:28 PM hold message after the historical 98% target was not met. Exact screenshot and source filenames are omitted.
+- A separate private archive review found a five-page DOCX with similar layout characteristics. This is a metadata-level resemblance only, not proof of the exact WhatsApp-uploaded bytes; filename, archive path, exact size and fingerprint are intentionally omitted.
+- A matching job description was recovered read-only from private mail; its title, location and full content are not reproduced in the public handoff.
 
 ### Meaning of the eight remaining terms
 
@@ -182,7 +182,7 @@ No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was
 - `Specialty` is part of the preferred **AWS Security Specialty** certification phrase; the recovered source does not establish that certification.
 - `attributes` does not appear as a literal JD requirement; treat it as a parser/tokenization artifact, not a candidate skill.
 
-The recovered document does contain source-text references to NIST/ISO 27001, AWS/Azure, IAM/KMS/CloudTrail/GuardDuty, secure SDLC, SAST/DAST, CI/CD, vulnerability remediation, SIEM, dashboards and GRC tools. These are **claims in this archived document**, not independently confirmed experience. The document's education, employment chronology and certification claims materially conflict with the owner's confirmed profile in accessible context. Do not use any conflicting employer, degree, date, certification, platform or metric until the owner explicitly reconciles it. Do not copy preferred JD terms into experience merely to raise keyword coverage.
+The recovered document does contain source-text references to professional-history and skills claims that remain unverified. These are **claims in this archived document**, not independently confirmed experience. The document's education, employment chronology and certification claims materially conflict with the owner's confirmed profile in accessible context. Do not use any conflicting employer, degree, date, certification, platform or metric until the owner explicitly reconciles it. Do not copy preferred JD terms into experience merely to raise keyword coverage.
 
 ### Policy reconciliation
 
