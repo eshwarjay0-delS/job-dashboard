@@ -20,3 +20,7 @@ Owner requirement, 16 October 2026: target 95–98% measured JD keyword coverage
 ## Historical WhatsApp incident reconciliation — 17 October 2026
 
 The 5:28 PM America/Chicago screenshot records the older 98% hard hold after automatic repair. The latest 6 November WhatsApp delivery policy supersedes that behavior; it does not authorize adding the missing CCSP, CISM, CRISC, CISA, Canton or SOL terms as candidate experience. The screenshot does not expose the exact score, full JD, original DOCX bytes, generated file or run trace, so the incident cannot be replayed exactly from the available artifact. See `docs/research/whatsapp-resume-acceptance-2026-11-10.md`.
+
+## Final exported-DOCX Gemini diagnostic — approved 6 November 2026
+
+After a complete export, run one Gemini-only review using the exact prompt **"Give me ATS score"**, the full JD, the text extracted from the actual exported DOCX bytes, and the canonical JD target terms. Report the numeric score plus canonical missing/weak terms as diagnostics only. Do not use Gemini suggestions as candidate evidence, rewrite or re-export automatically, change the deterministic coverage result, or alter the existing web/WhatsApp delivery gates. If the key is unavailable, the draft is incomplete/skills-only, time expires, or the review is invalid/unavailable, record that status; deterministic exported-DOCX measurements remain authoritative. The automatic correction/re-export loop is not approved by the accessible owner-authored evidence.

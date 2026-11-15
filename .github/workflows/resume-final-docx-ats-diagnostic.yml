@@ -1,0 +1,60 @@
+name: Resume final DOCX ATS diagnostic regression
+
+on:
+  push:
+    branches:
+      - feat/resume-final-docx-gemini-score-only-20261115-r2
+    paths:
+      - "src/lib/tailor.ts"
+      - "src/lib/claude.ts"
+      - "src/lib/resume-final-ats-review.ts"
+      - "scripts/tests/resume-final-ats-review.test.mjs"
+      - "scripts/tests/resume-final-ats-review-wiring.test.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "src/lib/plan-vision.ts"
+      - "src/lib/plan-vision-journal.ts"
+      - "src/lib/rea-register.ts"
+      - "docs/resume*.md"
+      - "docs/research/resume-final-docx-gemini-score-only-2026-11-15.md"
+      - "docs/completion-watch.md"
+      - ".github/workflows/resume-final-docx-ats-diagnostic.yml"
+  pull_request:
+    paths:
+      - "src/lib/tailor.ts"
+      - "src/lib/claude.ts"
+      - "src/lib/resume-final-ats-review.ts"
+      - "scripts/tests/resume-final-ats-review.test.mjs"
+      - "scripts/tests/resume-final-ats-review-wiring.test.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "src/lib/plan-vision.ts"
+      - "src/lib/plan-vision-journal.ts"
+      - "src/lib/rea-register.ts"
+      - "docs/resume*.md"
+      - "docs/research/resume-final-docx-gemini-score-only-2026-11-15.md"
+      - "docs/completion-watch.md"
+      - ".github/workflows/resume-final-docx-ats-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  final-docx-ats-diagnostic:
+    name: score-only final DOCX ATS diagnostic
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: TypeScript, lint and application checks
+        run: npm run check
+      - name: Final DOCX ATS diagnostic regressions
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-review-wiring.test.mjs
