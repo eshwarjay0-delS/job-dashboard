@@ -113,7 +113,7 @@ The 6 November owner correction permits an explicit first-person candidate-confi
 
 ## Current factual match target — 14 November 2026
 
-The current target is **98% factual keyword coverage**, not a promise that every JD term will be inserted. Older 95–100% wording is historical. The score must be measured from the final exported DOCX, with unsupported requirements left as gaps; report raw and weighted coverage separately without rounding. Synthetic tests, source-level checks and a green CI run are not live resume acceptance. The final DOCX still requires the approved Gemini “Give me an ATS score” review and correction/re-export loop.
+The current target is **98% factual keyword coverage**, not a promise that every JD term will be inserted. Older 95–100% wording is historical. The score must be measured from the final exported DOCX, with unsupported requirements left as gaps; report raw and weighted coverage separately without rounding. Synthetic tests, source-level checks and a green CI run are not live resume acceptance. The final DOCX still requires the owner-approved Gemini “Give me an ATS score” diagnostic review and actual measured coverage. The broader automated correction/re-export/recheck loop remains proposed until separately approved; no score or suggestion becomes candidate evidence.
 
 
 ## SIEM plural-context regression correction — 14 November 2026
