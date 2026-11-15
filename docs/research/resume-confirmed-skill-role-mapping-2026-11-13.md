@@ -64,7 +64,7 @@ The restack also carries `docs/resume.md` and the Oct 17 evidence audit, but doe
 
 The exact-head GitHub Actions checks are pending. Local `npm ci` and tests could not run because the Vercel sandbox API returned HTTP 400 and the container could not resolve GitHub; no local execution is claimed. The legitimate protected Vercel preview still requires the private `KOMPAS_VERCEL_API_TOKEN`; no bypass was attempted.
 
-The actual 17 Oct source/JD case remains separate: prior private review recorded the source DOCX and matching JD recovery, but current execution did not rematerialize the source bytes; the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/tenure/credential facts remain quarantined. No model call, DOCX export, historical replay, R2 write, real send or handset acceptance occurred. No 95–100% or 98% live-match claim is supported by these source tests.
+The actual 17 Oct source/JD case remains separate. The matching full Security Engineer – Risk & Controls Atlanta/GA contract JD is now independently recovered read-only from Gmail thread `1a1464393628992f` (subject: `Fwd: Looking 5+ Years || Security Engineer – Risk & Controls || Atlanta/GA (Onsite)`). The Library screenshot `1792276118790.jpeg` confirms the 5:28 PM Chicago quality-gate hold at 98% with remaining terms CCSP, CISM, CRISC, CISA, Canton, Sol, Specialty and Attributes. The exact original 27,724-byte source DOCX is still not accessible at the previously inventoried Library path `/J_Eshwar_44/General Security`; the current Library has near-match resumes only, which must not be substituted. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt remain unavailable. Conflicting source education/employment/tenure/credential facts remain quarantined. No model call, DOCX export, historical replay, R2 write, real send or handset acceptance occurred. Conflicting source education/employment/tenure/credential facts remain quarantined. No model call, DOCX export, historical replay, R2 write, real send or handset acceptance occurred. No 95–100% or 98% live-match claim is supported by these source tests.
 
 
 ## Context-specificity regression — 13 November 2026
@@ -124,3 +124,8 @@ The final exported-DOCX Gemini **score review** is explicitly approved by the di
 ## Current-master restack — 14 November 2026, run 14
 
 The reviewed source/test changes from PR #393 head `9cd81927b095289de0e4a39da74a8af2265cbc43` are being restacked onto canonical master `46043ec6ca926b2ab82424d255367426685f294d` in `fix/resume-confirmed-skill-current-master-46043-20261114`. Predecessor exact-head checks passed (full CI 43589350262, WhatsApp recovery 43589350254, Kompas baseline 43589350277, Plan/REA 43589350309), but they do not validate this new head. Protected preview and owner-authorized exported-DOCX acceptance remain separate gates.
+
+
+## 15 November 2026 — exact JD retrieval update
+
+The Gmail thread above resolves the exact-JD retrieval gap. It does not resolve the original source DOCX or historical delivery artifacts. The 17 Oct screenshot is evidence of a 98% quality-gate hold, not a successful send. Do not treat the JD terms as candidate certifications/experience without explicit confirmation; do not replay or resend the historical request.
