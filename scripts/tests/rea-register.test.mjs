@@ -45,7 +45,7 @@ test('final-DOCX Gemini, source-archive, Gmail and crawler acceptance gates stay
  assert.match(gemini.next,/final-DOCX/)
  const source=REA_SESSIONS.find(s=>s.id==='whatsapp-oct17-source-archive-verification-2026-11-10')
  assert.ok(source)
- assert.ok(source.steps.some(s=>s.status==='Implemented' && /similar page-count\/layout metadata/.test(s.finding)))
+ assert.ok(source.steps.some(s=>s.status==='Tested' && /similar page-count\/layout characteristics/.test(s.finding)))
   assert.match(source.limits,/filename, archive path, exact size, fingerprint/)
   assert.doesNotMatch(JSON.stringify(source),/\b\d{1,2},\d{3}\s*bytes\b/)
   assert.doesNotMatch(JSON.stringify(source),/sha-?256[:\s]+[a-f0-9]{64}/i)
