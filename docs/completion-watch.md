@@ -15,7 +15,7 @@
 - PR #400 confirmed-experience alignment remains gated on authorized owner-confirmed source/JD facts and final exported-DOCX inspection. PR #401 Gmail/mobile has exact-head full CI, baseline and Plan/REA green but still lacks protected preview and two-inbox/narrow-phone acceptance. PR #402 C2H classifier semantics remain unapproved; do not promote them. Contract crawling stays manual/on-demand only, Robert Half manual-only.
 - No model call, DOCX generation, R2 write, DB mutation, WhatsApp/email send, live crawl or owner-device test occurred. The Safe Merge Gate owns shared merge sequencing; no separate Bible-Keeper task was visible in the accessible automation inventory, and Kompas Continuous Voice Delivery is disabled.
 
-Continue: obtain the legitimate protected-preview credential for PR #411 and run the exact-head preview plus Safe Merge Gate. If that credential is unavailable, keep #411 draft and continue only with independently approved work; do not replay the historical request.
+Continue: run exact-head full CI, Plan/REA schema and Kompas baseline for the privacy-redacted PR #414, then let Safe Merge Gate sequence it. Keep #411 draft until the legitimate protected-preview credential is available; do not replay the historical request or use an alternate unprotected preview.
 
 ## 14 November 2026 — WhatsApp, Kompas and Gmail evidence refresh
 
