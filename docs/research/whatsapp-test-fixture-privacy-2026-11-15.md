@@ -53,3 +53,8 @@ The Safe Merge Gate review of PR #416 found that the first privacy regression co
 The current Plan & Vision baseline is corrected: the exact 17 Oct source DOCX is not currently available in the Library. A prior private review's size/digest is historical only, and the source facts are unverified/unreconciled rather than a proven contradiction. No private archive path, digest, personal email, phone, or document text is added to this repository.
 
 This remains test/documentation work only. It does not change the WhatsApp webhook, resume generation, identity guard, R2 behavior, delivery policy, or production configuration. The previous PR #416 head e9a18145f4cf387d81d22f1bd232b31c1adb1e08 passed full CI 43699468090, WhatsApp recovery 43699468076, Kompas baseline 43699468109, and Plan/REA 43699468067; this follow-up creates a new head and requires all four checks again. No protected preview, deployment, model call, DOCX generation, R2 write, real message, or device acceptance is claimed.
+
+
+## Privacy scanner false-positive correction — 15 November 2026
+
+The expanded guard normalizes escaped resume line breaks before scanning contact values. Without that normalization, a source literal containing the two characters backslash+n immediately before an email can make a simple regex see a leading n as part of the email. This is a scanner-only correction; it does not alter fixture content or any runtime identity logic. The final-head gates must include this correction.
