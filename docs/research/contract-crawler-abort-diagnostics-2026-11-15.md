@@ -45,3 +45,19 @@ Canonical master at branch creation: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`.
 The active production alias `job-dashboard-fawn.vercel.app` independently resolves to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The GitHub Vercel success status for master points to deployment `dpl_5T8no96szcfy7YtRQQKxinCda8KH`, which is CANCELED by the Ignored Build Step; it is not the active production alias. This change is in draft PR [#422](https://github.com/eshwarjay0-delS/job-dashboard/pull/422), implementation commit `27cb0f80d055af2ccffec8c378f45ece33dac32e`. It is not deployed.
 
 Exact-head full CI, crawler regression, Plan/REA schema, Kompas baseline, protected preview, production READY alias, and a later authorized manual crawl remain separate gates. No live crawl or production mutation is claimed.
+
+
+## Safe Merge Gate review correction — 15 November 2026, 20:25 UTC
+
+The review identified one behavior-preservation gap in the diagnostic change: `new URL(url).host` executed before the `try/finally`. A malformed adapter URL could therefore throw before the cleanup block updated the request-pacing timestamp.
+
+The correction initializes the host to a safe placeholder and parses the URL inside `try`. The existing `finally` now always clears the abort timer and updates `last`, including malformed URLs. A deterministic regression fixes `Date.now`, observes the configured gap timer, forces an invalid URL, then verifies the following valid request waits the full gap.
+
+- Source correction: `2cb87b22ea92c908d440107b072bdf0b760264b3`
+- Regression test: `395f95f5105cb019b8f8ec2333c470294494dad8`
+- Code-head crawler workflow: `43757961666` SUCCESS
+- Code-head Kompas baseline: `43757961612` SUCCESS
+- Code-head Plan/REA schema: `43757961637` SUCCESS
+- Code-head full CI: `43757961686` IN PROGRESS at Lint when recorded; results on this head do not cover the later documentation commits.
+
+The PR remains DRAFT. The current production alias is still READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; master is `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. No protected preview, production deployment, portal request, live crawl or production-row mutation occurred. The protected preview still requires the owner-controlled `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run.
