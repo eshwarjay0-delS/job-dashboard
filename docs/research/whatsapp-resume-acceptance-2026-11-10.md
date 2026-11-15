@@ -303,3 +303,18 @@ No real WhatsApp send, production R2 write, model call, historical replay or han
 ## 14 November 2026 — exact-head timeout fallback regression passed
 
 Test-correction commit `2b745bb2bd1939561909e6eee28e126cbac37b4d` models a selected-library/session byte mismatch, clears the preceding mocked Meta error, and asserts that no additional document is sent and the request is saved for retry. Corrected exact head `2b745bb2bd1939561909e6eee28e126cbac37b4d` passed full CI `43638674249`, WhatsApp recovery `43638674273`, Kompas baseline `43638674258` and Plan/REA schema `43638674247`, all SUCCESS. Runtime delivery behavior is unchanged. Protected preview and Safe Merge Gate review remain pending; the 17 Oct historical output/Meta receipt evidence is still missing.
+
+## 15 November 2026 — original uploaded-DOCX fallback path correction
+
+The exact-head source review on PR #399 found a gap in the first fallback implementation: `readSelectedLibraryBytes()` required a separate Files-picker object, but the normal inbound DOCX handler calls `generate(from, session, userId)` without that object. The upload handler does save an account-scoped copy in `session.resumeFiled`; `session.resumePath` remains the inbox source.
+
+The guarded fallback now supports two distinct origins:
+
+- **Files picker:** retain the explicit selection's account root, relative/resolved path, selected email and byte-equality checks.
+- **WhatsApp upload:** require `session.resumeFiled` to resolve strictly beneath `filesOf(userId)`; require the session source to be inside that sender's inbox or the same account library; read both copies and require byte-for-byte equality; obtain the identity email from the authenticated `profiles.email` row for the verified `userId`. The document's own email is never used to establish account ownership.
+
+The no-provider path now attempts this verifier even when there is no Files-picker object. If the saved copy is missing, outside the account root, differs from the inbox bytes, the account profile cannot be read, or the file identity does not match the verified profile, no document is sent and the recovery request remains available. The outgoing original is explicitly labelled **Original resume — NOT TAILORED**. Swipe-reply refinement remains text-only on failure; R2 pair consumption still occurs only after provider acceptance and conditional-write conflicts never fall back to unconditional writes.
+
+The correction is on PR #399 branch `fix/whatsapp-offline-cas-current-46043-20261114`. Code commit `92aab8e73ba5102d89c7f3af542088d171c7d486`; behavioral tests `218bc08608b75c481d2a597eafbe84d18e544f1b`; source-contract tests `2c9b03b8bd0ba92e5cb5d59074f66b398d1b8c48`. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA must run after all documentation updates.
+
+This is source/test work only. No real WhatsApp send, production R2 write, model call, historical replay or handset acceptance occurred. The 17 Oct 17:28 Chicago incident still lacks its generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation. The earlier usage event is not a delivery receipt; do not replay the request or claim it was delivered.
