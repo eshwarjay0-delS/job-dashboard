@@ -100,10 +100,10 @@ export const ADAPTERS: PortalAdapter[] = [
 //
 // Directory expansion (2026-10-21, owner-approved merge of prime-vendor-portals-expanded.md, firms #58-94 in
 // src/lib/vendorPortals.ts) — crawler-config hints, no adapters claimed yet:
-// - Peraton remains a directory/manual-navigation source. The iCIMS Job Portal API is a vendor API
-//   requiring tenant Basic-auth access, not an anonymous public JSON feed. Peraton's corporate terms restrict
-//   scraping/copying its Site Content; the iCIMS portal's own terms/robots and commercial aggregation rights
-//   were not verified. Do not add an adapter without written permission or a sanctioned feed/API.
+// - Peraton remains manual-only. Its current official search page is careers.peraton.com/search-jobs and
+//   links to Peraton's Terms, which restrict copying and scraping Site Content. The old iCIMS URL is not the
+//   current official search path; no authorized feed/API or portal robots policy was verified. Do not automate
+//   until written permission or a sanctioned feed/API with commercial-aggregation rights is documented.
 // - The government-contracting primes (SAIC, CACI, Booz Allen, Leidos, GDIT, Deloitte, ASRC Federal,
 //   eSimplicity, Global Alliant) mostly sit on iCIMS / Phenom / Workday-class boards — they ride the
 //   shared-adapter and headless-renderer decisions rather than one-off adapters.
