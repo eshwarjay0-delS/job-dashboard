@@ -908,7 +908,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       const { data, error } = await createServiceClient()
         .from("profiles").select("email").eq("id", userId).maybeSingle()
       const email = String(data?.email || "").trim().toLowerCase()
-      return !error && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) ? email : ""
+      return !error && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : ""
     } catch { return "" }
   }
   const readSelectedLibraryBytes = async (): Promise<Buffer | null> => {
