@@ -78,3 +78,31 @@ test('portals run several at a time, the order turns with the offset, nothing st
   const failing = await crawlEach([adapters[1]], async () => { throw new Error('HTTP 503 from b.test') }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 1_000 })
   assert.equal(failing[0].error, 'HTTP 503 from b.test')
 })
+
+
+test('politeFetcher distinguishes local timeouts from upstream aborts and records the portal host', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    await assert.rejects(
+      politeFetcher(0, 5)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' }),
+      /Request to www\\.inspyrsolutions\\.com timed out after 5 ms/,
+    )
+
+    globalThis.fetch = async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError')
+    }
+    await assert.rejects(
+      politeFetcher(0, 100)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' }),
+      /Request to www\\.inspyrsolutions\\.com was aborted before the local timeout/,
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
