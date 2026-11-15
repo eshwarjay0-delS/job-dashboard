@@ -255,6 +255,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.match(docs[0].caption, /NOT TAILORED/)
   assert.match(docs[0].caption, /AI rewrite timed out/)
   hang = false
+  providerAvailable = false
 
   docs.length = 0
   await generate('15550021', {
@@ -317,13 +318,14 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   uploadSessionBytes = 'eshwarjay05@gmail.com'
   docs.length = 0
   said.length = 0
+  const beforeQualityRetry = runs
   await generate('15550021', {
     jdId: 'uploaded-quality-hold',
     jd: 'Cloud security upload job with a strict supported-coverage target',
     resumePath: uploadSessionPath,
     resumeFiled: uploadLibraryPath,
   }, TEST_USER_ID, 180_000)
-  assert.equal(runs, 6, 'an incomplete first pass receives one bounded fresh rewrite')
+  assert.equal(runs, beforeQualityRetry + 2, 'an incomplete first pass receives one bounded fresh rewrite')
   assert.equal(docs.length, 1, 'the quality hold returns the verified uploaded original instead of stopping without a file')
   assert.equal(docs[0].body, 'eshwarjay05@gmail.com', 'the incomplete generated draft is never sent')
   assert.match(docs[0].caption, /NOT TAILORED/)
