@@ -193,3 +193,12 @@ The screenshot's 98% hold reflects the historical behavior on 17 October. The la
 The generated output DOCX, per-run R2 object key/version, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable. The screenshot proves a hold message, not that an output was generated or delivered. Owner reconciliation of the conflicting source facts is still required. Do not replay the historical request, generate a substitute, write to R2 or send a real WhatsApp message as part of this audit.
 
 Current implementation follow-through is separate: PR #411 head `32a4f958de95c2c078535e52a7ac2906b30c728d` passed full CI `43667987475`, WhatsApp recovery `43667987513`, Kompas baseline `43667987459`, and Plan/REA schema `43667987457`. The legitimate protected Vercel preview is still unavailable because the private `KOMPAS_VERCEL_API_TOKEN` is not configured for this run. Keep the PR draft; green source tests are not preview, production or real WhatsApp acceptance.
+
+
+### Current production keyword-target regression — verified 15 November 2026
+
+The false-token correction for this JD is already present in the current production source tree, not merely on a draft branch. `src/lib/keyword-targets.ts` has the same Git blob SHA `26cd5e8c4b0dae63f6913e118b1c7d6421440118` at current master `17f8dada7ce1acf11064b1129ca4e33764ebb8a3` and production alias SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The regression test `scripts/tests/keyword-targets.test.mjs` also has identical blob SHA `88309883263b847a12330a6761a3f762ca94688c` at both refs.
+
+That test keeps the actual JD terms `Canton` and `Solana`, while excluding `CCSP`, `CISM`, `CRISC`, `CISA`, `AWS Security Specialty`, the fragment `sol`, the generic token `specialty`, and `attributes` from separate skill targets. The implementation's certification filter also prevents preferred credentials from being inserted as skills. This is exact source/test parity with the current production commit. It does not prove that the 17 Oct historical request ran this code, that a final DOCX was generated, or that the output passed a live end-to-end review.
+
+PR #411 is a separate initial-JD provider-timeout/offline-fallback change. It must not be described as the fix for the historical 98% quality hold. The historical hold remains unreplayed and uncorrelated.
