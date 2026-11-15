@@ -83,7 +83,7 @@ test('Gmail details remain proposed while owner-approved C2H aliases are pending
   assert.match(plan,/not owner-approved/)
   assert.ok(plan.includes('historical owner-vision document docs/gmail.md'))
   assert.ok(plan.includes('not a hard maximum'))
-  assert.match(plan,/manual\\/on-demand only/i)
+  assert.match(plan,/manual\/on-demand only/i)
   assert.match(plan,/Direct owner-authored approval on 14 Nov 2026 05:51:27 UTC/)
   assert.match(plan,/Contract To Perm and Right To Hire map to C2H/)
   assert.match(plan,/negated labels remain unknown/)
