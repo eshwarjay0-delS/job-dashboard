@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 15 November 2026 13:25 UTC — Plan/REA validation correction
+
+PR #418 exact head 8990732d55dd0bd4c4c2a37b830cde5558d0c146 had full CI failure 43718368975: ESLint parsing failed at src/lib/plan-vision.ts line 27 column 3165 because the approved Gemini prompt quote was not escaped inside the TypeScript string. Plan/REA run 43718368988 also failed because an old regression still expected Gmail/C2H scope to be blocked and expected the former historical 3–4 account wording; Kompas baseline 43718368971 passed. The current follow-up escapes the prompt, updates the superseded Gmail/C2H REA entries and changes the test to assert the direct owner-approved requirements while keeping per-account Calendar/radar and generic contract-admin semantics proposed. Exact-head reruns are pending. This is documentation/test-only; no runtime deployment or external action.
+
+
+
 ## 15 November 2026 13:18 UTC — exact prior-context corrections
 
 - Gmail: direct owner requests confirm up to four Gmail accounts (5 Oct), separate account identities/chains, deterministic RTR/application linking, selectable emails and sender/domain ignore lists (12 Oct), and mobile navigation hidden when closed and below-header/push-down when opened (4 Oct). Per-account Calendar targeting and exact waiting-on-them radar semantics remain proposed.
