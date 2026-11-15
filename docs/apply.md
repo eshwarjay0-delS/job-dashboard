@@ -201,8 +201,8 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
 
 
-## Owner-approved contract classification — 12 November 2026
+## Contract classification — approval boundary corrected 15 November 2026
 
-The direct owner instruction at 12 Nov 2026 05:03:03 UTC includes W2, W2 Contract, C2C, 1099, temporary, permanent and C2H in the contract-search taxonomy; W2 payroll alone is not contract; negated labels remain unknown; and Contract To Perm plus Right To Hire map to C2H. The classifier must recognize ordinary space/hyphen variants and must not convert a directly negated C2H phrase into a positive C2H or generic Contract result by itself.
+The owner-approved Apply taxonomy includes C2H as a contract category. The latest direct owner correction on 14 Nov 2026 at 05:51:27 UTC says “C2H/Right-To-Hire semantics remain unapproved.” The 12 Nov 05:03:03 UTC timestamp for Contract To Perm / Right To Hire → C2H appears only in assistant-generated status text; the primary owner-authored message could not be retrieved in the accessible record. Therefore, do not map Contract To Perm, Contract To Permanent or Right To Hire to C2H, and do not ship associated negation rules, until explicit owner approval. Explicit C2H / Contract To Hire evidence remains distinct from W2 payroll; generic contract-administration, negotiation or lifecycle language is not a work-type signal.
 
-This classifier approval is separate from the operational cadence: crawling remains manual/on-demand only, no daily contract-crawler cron is allowed, the separate Gmail crawler schedule stays intact, and Robert Half remains manual-only. Do not run a live crawl, mutate production rows or submit an application without a separate explicit authorization. Generic contract-administration, negotiation or lifecycle language is not added as a work-type rule without direct owner approval.
+Crawling remains manual/on-demand only; no daily contract-crawler cron is allowed; the separate Gmail crawler schedule stays intact; and Robert Half remains manual-only. Do not run a live crawl, mutate production rows or submit an application without a separate explicit authorization.
