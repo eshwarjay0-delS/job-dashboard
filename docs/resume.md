@@ -80,3 +80,10 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+
+## First-person confirmation gate — 15 November 2026
+
+Only explicit positive first-person candidate assertions can expand experience evidence. Second-person phrasing (for example, “You have experience with all required skills”) and label-only lists (for example, “Confirmed skills: Python”) are not candidate confirmation. Questions, negations and common negative contractions are rejected. A contrast such as “I used AWS but not GCP” may support the positive clause only; an exception cannot turn a blanket statement into confirmation.
+
+This guard preserves the 6 November owner correction: an explicitly confirmed skill may be mapped into relevant existing project bullets across roles, including earlier roles, but the confirmation supports only the named skill. It does not authorize a new employer, project, action, outcome, title, date, location, contact, metric or credential. The JD and formatting instructions remain target context, not evidence. Source-level regression tests do not establish a live ATS score or 98% match.
