@@ -31,8 +31,8 @@ test('rejects swapped identities and an extra identity, preserves unchanged emai
 })
 test('with the job-post terms gate on, a changed phone or date stops the send; an unchanged file passes', () => {
   // Gate on with a real name line: an email that differs only in letter case is the same resume.
-  assert.equal(sameResumeIdentity('Jordan Example\candidate4@example.test', 'Jordan Example\candidate4@example.test'), true)
-  const src = 'Jordan Example\candidate4@example.test | 202-555-0103\nAnalyst, Acme  Jan 2021 - Mar 2024'
+  assert.equal(sameResumeIdentity('Candidate One\candidate4@example.test', 'Candidate One\candidate4@example.test'), true)
+  const src = 'Candidate One\candidate4@example.test | 202-555-0103\nAnalyst, Acme  Jan 2021 - Mar 2024'
   assert.equal(sameResumeIdentity(src, src), true)
   assert.equal(sameResumeIdentity(src, src.replace('0103', '0104')), false)
   assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
@@ -75,7 +75,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { deliveries++; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Jordan' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
@@ -132,8 +132,8 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   const saved = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(saved.resumePath, undefined)
   assert.equal(saved.jd, undefined)
-  const caption = captionFor('Jordan', { role: 'Engineer' }, { coverage: 63, quality: { status: 'needs_review' } })
-  const gapCaption = captionFor('Jordan', {}, { coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
+  const caption = captionFor('Candidate', { role: 'Engineer' }, { coverage: 63, quality: { status: 'needs_review' } })
+  const gapCaption = captionFor('Candidate', {}, { coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
   assert.ok(gapCaption.includes('28.5%'))
   const gapReport = resumeGapReport({ coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
   assert.match(gapReport, /Missing \/ unresolved JD terms: f5, cisco/)
@@ -166,7 +166,7 @@ test('a below-floor rewrite still delivers the Word file and names what is missi
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold1' }, sendDocument: async (_to, _body, _name, caption) => { docs.push(caption); return 'wamid.doc1' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Jordan' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
@@ -221,7 +221,7 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Jordan' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
@@ -278,7 +278,7 @@ test('a partial hold names the unfinished sections and invites a reply-redo; oth
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async () => 'wamid', sendDocument: async () => 'sent' },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Jordan' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
