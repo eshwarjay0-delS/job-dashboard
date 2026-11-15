@@ -82,3 +82,10 @@ The focused regression now pins both sides: the explicit blanket statement is ac
 The approved rule is evidence-based tailoring: use the exact JD, map its requirements to actual candidate experience, and add DR/BIA/RTO/RPO/testing claims only if actually performed. Owner comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) also permits a candidate-confirmed skill to be mapped into relevant existing project bullets across roles, without inventing new biography facts.
 
 A targeted retrieval of accessible owner-authored conversation records did not find a direct instruction that only first-person positive grammar may count as confirmation. PR #415's strict first-person parser is therefore a conservative proposal, not an approved syntax policy. Keep it DRAFT until the owner explicitly confirms that restriction. This preserves the confirmed-experience boundary without inventing an additional grammar requirement.
+
+
+## 15 November 2026 — reported first-person correction remains unverified
+
+The MFit Safe Merge Gate reports a 14 November owner message requiring first-person blanket confirmation and preserving exceptions such as “I used AWS but not GCP.” This run searched accessible prior conversation context for the reported timestamp and wording but did not retrieve the underlying user message. Record this as a secondary report, not a verified universal parser rule.
+
+The directly accessible 6 November owner-authored [PR #319 comment #6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) confirms that explicitly candidate-confirmed skills may be mapped into relevant existing project bullets across roles, without inventing biography facts. It does not establish that every positive statement must use first-person grammar. Keep PR #415 DRAFT until the original 14 November message is recovered or the owner directly reconfirms the intended confirmation syntax and exception handling. Do not truncate exceptions or silently weaken the actual-experience boundary.

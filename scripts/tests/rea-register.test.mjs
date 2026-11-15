@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {REA_SESSIONS,filterReaSessions} from '../../src/lib/rea-register.ts'
+import {PLAN_JOURNAL} from '../../src/lib/plan-vision-journal.ts'
 import {readFileSync,existsSync} from 'node:fs'
 import path from 'node:path'
 const root=path.resolve(import.meta.dirname,'../..')
@@ -102,4 +103,20 @@ test('WhatsApp offline fallback and confirmed-skill restacks remain blocked unti
  assert.match(whatsapp.limits,/generated output|R2 object\/version|signed delivery/i)
  assert.match(whatsapp.limits,/protected preview/i)
  assert.match(skills.limits,/exported-DOCX acceptance/i)
+})
+
+
+test('conflicting secondary approval reports stay blocked until primary owner messages are available',()=>{
+ const rea=REA_SESSIONS.find(s=>s.id==='owner-approval-secondary-report-reconciliation-2026-11-15')
+ assert.ok(rea)
+ assert.equal(rea.state,'Blocked')
+ assert.match(rea.limits,/No primary 14 Nov owner message was retrieved/)
+ const journal=PLAN_JOURNAL.find(s=>s.id==='owner-approval-secondary-report-reconciliation-2026-11-15')
+ assert.ok(journal)
+ assert.equal(journal.approval,'proposed')
+ assert.equal(journal.delivery,'blocked')
+ const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
+ assert.match(plan,/conflicting secondary reports/)
+ assert.match(plan,/keep aliases unverified/)
+ assert.match(plan,/first-person blanket-confirmation correction/)
 })
