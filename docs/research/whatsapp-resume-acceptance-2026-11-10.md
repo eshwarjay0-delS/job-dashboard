@@ -348,3 +348,16 @@ The current-master candidates remain separate:
 - PR #400: exact-head source gates passed; protected preview, authorized source/JD/confirmation and exported-DOCX acceptance remain outstanding.
 
 No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are available. Do not replay it or claim delivery.
+
+
+## 15 November 2026 — uploaded-DOCX provider-timeout fallback gap
+
+A further source review of the current fallback implementation found a second gap after the ordinary upload path was added. The normal generate() function already attempted the guarded original fallback when no provider key was available and when a generated draft failed the quality/claim checks. Its provider timeout/error catch still used a Files-picker-only condition, however. An ordinary uploaded DOCX has no files argument, even though the webhook has filed a copy at session.resumeFiled, so a provider timeout after the model call started could still end with no original fallback.
+
+The source now calls sendOfflineOriginal(why) without the Files-picker-only condition. This is safe within this function because generate() is the initial-JD/redo path; swipe-reply refinement is a separate refine() implementation and continues to refuse the original or partial baseline on failure. The helper still enforces the verified user's Files root, byte equality between the filed copy and the sender's inbox original, and identity from the authenticated profiles.email row. Missing, foreign-root, mismatched or unverified copies remain fail-closed. The failure text now explains when an uploaded original could not be verified.
+
+Mocked regressions were added: the behavioral test starts the model call for an uploaded DOCX, forces a timeout, and verifies that only the exact verified original is sent with NOT TAILORED; the source-contract test requires the timeout catch to invoke the guarded helper without a Files-picker condition. Existing swipe-refinement no-baseline tests remain.
+
+Code/test commits: webhook 5f9d57feee745d4288da5b5daecac2ea1bb00541, behavioral regression ccb38256621302e218177c2bf89aa860f2b8f4ae, source-contract regression 5ec5324841aee35e61b70b9da2d2f16d5a6f6a07. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA remain pending on the final PR. No real WhatsApp message, model call, R2 production write or historical replay occurred.
+
+This does not resolve the 17 Oct 17:28 Chicago incident. The screenshot and matching JD were recovered, but the generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation remain missing. A previous private review recorded a 27,724-byte source DOCX, but the exact Library path currently returns Library path not found; treat that byte count as historical, not currently accessible evidence. Do not replay or claim delivery.
