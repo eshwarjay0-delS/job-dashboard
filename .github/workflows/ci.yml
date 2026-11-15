@@ -89,6 +89,9 @@ jobs:
       - name: Verify twenty varied evidence-bound resume exports
         run: node --test scripts/tests/resume-evidence-quality-20fold.test.mjs scripts/tests/resume-saved-quality.test.mjs scripts/tests/resume-confirmation-quality.test.mjs scripts/tests/resume-web-release.test.mjs scripts/tests/resume-floor.test.mjs scripts/tests/resume-floor-gate.test.mjs
 
+      - name: Verify final exported DOCX Gemini ATS diagnostic (score-only)
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-review-wiring.test.mjs
+
       - name: Verify resume identity guard with synthetic DOCX Mammoth round-trip
         run: node --experimental-strip-types --test scripts/tests/resume-guards.test.mjs
 
