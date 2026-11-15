@@ -1,5 +1,7 @@
 # MFit Completion Watch
 
+> **Superseding correction — 15 November 2026:** Older historical entries below call the archived resume's chronology/credentials a conflict with owner-confirmed facts. Targeted retrieval found no user-authored confirmation of the exact chronology or full credential set; a prior 9+ years description was assistant-authored from an uploaded resume. Current classification is **unverified/unreconciled**, not a proven contradiction. Preserve the old history but do not treat it as confirmed.
+
 ## 15 November 2026 — recovered 17 October WhatsApp source and JD
 
 - Canonical master is now `17f8dada7ce1acf11064b1129ca4e33764ebb8a3` (PR #404 documentation-only merge). Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The master/production difference is documentation-only; no runtime redeploy is implied by this evidence update.
