@@ -35,3 +35,12 @@ The audit found five distinct normalized email identities and three phone identi
 ## Next
 
 Require exact-head full CI, WhatsApp recovery, Kompas baseline, and Plan/REA schema checks. Let MFit Safe Merge Gate sequence the privacy-only PR. Then restack PR #411 onto the sanitized master without weakening its separate approval, protected-preview, or delivery-acceptance gates.
+
+
+## CI diagnosis and correction — 15 November 2026
+
+The first exact-head full CI run for PR #416, head `f81df144b45db21c83ecc0e5f75f6056dd8c53bb`, failed three of 55 WhatsApp failsafe cases. The failures were in the test fixture, not the webhook: two synthetic resume strings had the candidate name and email joined without a line break. The strict selected-profile guard therefore parsed a different address and correctly refused to send the file in the test harness.
+
+The test-only correction is commit `f2affec74ed7a669d9955a76f299b12abbc414cf`. It restores the line break in both synthetic strings and does not weaken the account/profile check or change runtime code. On that code head, the WhatsApp recovery workflow (43699322376), Kompas baseline (43699322370) and Plan/REA schema (43699322402) passed; full CI (43699322349) was still running at 09:28 UTC. The accompanying Plan/REA and Completion Watch update creates a new PR head, so all required checks must be verified again on the final head.
+
+The privacy-only PR remains DRAFT pending exact-head full CI and MFit Safe Merge Gate review. No production release, real WhatsApp send, R2 write, model call, or device acceptance occurred.
