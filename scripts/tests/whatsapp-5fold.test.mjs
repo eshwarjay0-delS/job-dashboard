@@ -3,6 +3,7 @@
 // taken off the skills line, including when that tool was written as the heading.
 // A run that cannot send a file says so. It does not stop after "Updating".
 import test from 'node:test'
+import { etagBlobMethods } from './helpers/etag-blob.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -79,6 +80,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   const statuses = ['uncertain']
   const entries = new Map()
   const blob = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => file,
