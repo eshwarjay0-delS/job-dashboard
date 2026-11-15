@@ -644,3 +644,16 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+## 15 November 2026 — cover the original WhatsApp-upload fallback path
+
+Continue: finish the approved WhatsApp uploaded-DOCX fallback correction on current-master PR #399.
+
+- Canonical master is `46043ec6ca926b2ab82424d255367426685f294d`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The PR #399 runtime is not deployed.
+- The Safe Merge Gate's source review comment [#6886324077](https://github.com/eshwarjay0-delS/job-dashboard/pull/399#issuecomment-6886324077) found that the initial offline fallback required Files-picker context, but the 17 Oct scenario was an uploaded DOCX plus JD. The normal upload path stores an account-root copy at `session.resumeFiled` and leaves `session.resumePath` as the inbox source; it calls `generate()` without the Files-picker object.
+- PR #399 now validates `session.resumeFiled` strictly beneath `filesOf(userId)`, validates the session source under the sender's inbox or same account library, reads both copies and requires byte equality, and uses the authenticated `profiles.email` row for upload-path identity. The document's own email is not proof of account ownership. The no-provider path attempts this guarded fallback even without Files-picker context; foreign-root, missing, mismatched and unverified-profile cases fail closed.
+- Code commit: `92aab8e73ba5102d89c7f3af542088d171c7d486`. Behavioral regression commit: `218bc08608b75c481d2a597eafbe84d18e544f1b`. Source-contract regression commit: `2c9b03b8bd0ba92e5cb5d59074f66b398d1b8c48`. Product/research docs now record the correction.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA have not yet run on the final documentation head. Keep PR #399 DRAFT. The protected preview still requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; do not bypass it. Safe Merge Gate should review after the contributor's exact-head gates complete.
+- No real WhatsApp send, production R2 write, model call, historical replay or handset test occurred. The 17 Oct 17:28 Chicago incident remains unverified: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation are missing. A source fix does not prove historical delivery.
+
+**Next:** finish Plan/REA updates, run the four exact-head gates on the final PR #399 head, then wait for the legitimate protected preview and Safe Merge Gate. Keep the historical incident blocked until its exact artifacts and signed delivery evidence are recovered.
