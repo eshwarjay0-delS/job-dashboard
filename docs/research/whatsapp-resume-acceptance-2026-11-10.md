@@ -165,3 +165,31 @@ The current-master candidates remain separate:
 - PR #400: exact-head source gates passed; protected preview, authorized source/JD/confirmation and exported-DOCX acceptance remain outstanding.
 
 No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are available. Do not replay it or claim delivery.
+
+
+## 15 November 2026 — screenshot, source archive and matching JD recovered
+
+### Evidence recovered
+
+- The Library screenshot `1792276118790.jpeg` decodes to 2026-10-17 22:28:38.790 UTC (17:28:38.790 America/Chicago). It shows a WhatsApp upload named **Eshwar Cyber resume).docx**, displayed as five pages / 28 KB, followed by the bot's 5:28 PM message: the rewrite did not reach the 98% coverage target after automatic repair, so the file was held. The listed remaining terms were `CCSP`, `CISM`, `CRISC`, `CISA`, `Canton`, `Sol`, `Specialty`, and `attributes`.
+- The private `Organized_Original_Resumes.zip` archive contains `J_Eshwar_44/General Security/Eshwar Cyber resume).docx`, 27,724 bytes, SHA-256 `aaa10a967b98cfed74d00b9529a95da074d6b4a6e704f1276c7e1b0d53cc7712`. The private inventory records the same filename, path and digest. Its byte size and five-page layout strongly match the WhatsApp attachment display, but the actual WhatsApp attachment bytes/request correlation were not recovered; do not call this a byte-for-byte proof of the uploaded payload.
+- The matching Gmail thread was recovered: **Security Engineer – Risk & Controls**, Atlanta, GA (onsite), open for contract, with the forwarded JD dated 17 October 2026. The JD separates required qualifications from preferred qualifications.
+
+### Meaning of the eight remaining terms
+
+- `CCSP`, `CISM`, `CRISC`, and `CISA` are preferred certifications in this JD, not required qualifications. They are not evidenced as held in the recovered source document.
+- `Canton` and `Sol` refer to preferred distributed-ledger platforms (Canton and Solana). The recovered source document does not evidence hands-on experience with those platforms.
+- `Specialty` is part of the preferred **AWS Security Specialty** certification phrase; the recovered source does not establish that certification.
+- `attributes` does not appear as a literal JD requirement; treat it as a parser/tokenization artifact, not a candidate skill.
+
+The recovered document does contain source-text references to NIST/ISO 27001, AWS/Azure, IAM/KMS/CloudTrail/GuardDuty, secure SDLC, SAST/DAST, CI/CD, vulnerability remediation, SIEM, dashboards and GRC tools. These are **claims in this archived document**, not independently confirmed experience. The document's education, employment chronology and certification claims materially conflict with the owner's confirmed profile in accessible context. Do not use any conflicting employer, degree, date, certification, platform or metric until the owner explicitly reconciles it. Do not copy preferred JD terms into experience merely to raise keyword coverage.
+
+### Policy reconciliation
+
+The screenshot's 98% hold reflects the historical behavior on 17 October. The later owner correction on 6 November supersedes a universal 98% WhatsApp hard hold: 98% is an evidence target; a completed readable WhatsApp result may be sent below 95% with gaps disclosed under the approved supported-coverage rules. This does **not** permit unsupported claims. Incomplete, unreadable, identity-mismatched or fact-conflicted output remains held; web-download thresholds remain separately stricter. Keep the current PR #399/#411 unsupported-term protection and the PR #400 confirmed-experience boundary intact unless the owner explicitly changes them.
+
+### What remains unproven
+
+The generated output DOCX, per-run R2 object key/version, webhook/request correlation ID, Meta message ID and signed delivered/read callback remain unavailable. The screenshot proves a hold message, not that an output was generated or delivered. Owner reconciliation of the conflicting source facts is still required. Do not replay the historical request, generate a substitute, write to R2 or send a real WhatsApp message as part of this audit.
+
+Current implementation follow-through is separate: PR #411 head `32a4f958de95c2c078535e52a7ac2906b30c728d` passed full CI `43667987475`, WhatsApp recovery `43667987513`, Kompas baseline `43667987459`, and Plan/REA schema `43667987457`. The legitimate protected Vercel preview is still unavailable because the private `KOMPAS_VERCEL_API_TOKEN` is not configured for this run. Keep the PR draft; green source tests are not preview, production or real WhatsApp acceptance.
