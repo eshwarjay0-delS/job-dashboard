@@ -30,16 +30,16 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
  * Headings such as "Confirmed skills:" and second-person wording are not candidate
  * confirmation. Split ordinary contrast clauses, then reject negation in each clause. */
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
-  return statements.flatMap(statement => statement.split(/[\\n;]+|[.!?](?=\\s|$)/)).flatMap(raw => {
+  return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
     if (!line) return []
-    const hasBlanketConfirmation = /\\b(?:all|every)\\b/i.test(line) && /\\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\\b/i.test(line)
-    const hasException = /\\b(?:except|excluding|but|however|not|never|without)\\b/i.test(line)
+    const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
+    const hasException = /\b(?:except|excluding|but|however|not|never|without)\b/i.test(line)
     if (hasBlanketConfirmation && hasException) return []
-    return line.split(/\\b(?:but|however|except|excluding)\\b/i).flatMap(rawClause => {
+    return line.split(/\b(?:but|however|except|excluding)\b/i).flatMap(rawClause => {
       const clause = rawClause.trim()
-      if (!/^(?:i\\s+(?:(?:have|possess)\\b|(?:personally\\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\\b)|my\\s+(?:experience|skills|background)\\b)/i.test(clause)) return []
-      if (/\\b(?:no|not|never|without|don't|doesn't|didn't|haven't|hasn't|hadn't|can't|cannot|won't|wouldn't|shouldn't|isn't|aren't|wasn't|weren't)\\b/i.test(clause)) return []
+      if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b)/i.test(clause)) return []
+      if (/\b(?:no|not|never|without|don't|doesn't|didn't|haven't|hasn't|hadn't|can't|cannot|won't|wouldn't|shouldn't|isn't|aren't|wasn't|weren't)\b/i.test(clause)) return []
       return [clause]
     })
   })
