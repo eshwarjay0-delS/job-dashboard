@@ -23,10 +23,10 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Eshwar Jay\neshwarjay05@gmail.com | (713) 555-0105\nAnalyst, Acme  Jan 2021 - Mar 2024'
-const SAINT_LOUIS = 'Eshwar Jay\njayeshwar44@gmail.com | (314) 555-0144\nAnalyst, Acme  Jan 2019 - Jun 2022'
-const HOUSTON_PATH = '/library/eshwarjay05/easm.docx'
-const SAINT_LOUIS_PATH = '/library/jayeshwar44/grc.docx'
+const HOUSTON = 'Jordan Example\candidate3@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const SAINT_LOUIS = 'Jordan Example\candidate4@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
+const HOUSTON_PATH = '/library/candidate1/easm.docx'
+const SAINT_LOUIS_PATH = '/library/candidate2/grc.docx'
 const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
 
 function harness(runTailor) {
@@ -59,7 +59,7 @@ function harness(runTailor) {
     },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
     '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Jordan' }) },
     '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
@@ -90,10 +90,10 @@ function harness(runTailor) {
   const { generate } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate };')
   const filesFor = path => ({
     userDir: '/data/user-resumes/user',
-    email: 'eshwarjay05@gmail.com',
+    email: 'candidate1@example.test',
     said: 'your *EASM Cybersecurity Engineer* resume (in GRC and IT Risk). I chose it because its title matches',
     depth: 0,
-    rel: 'eshwarjay05@gmail.com/GRC/easm.docx',
+    rel: 'candidate1@example.test/GRC/easm.docx',
     abs: path,
   })
   return { generate, docs, said, filesFor }
@@ -117,8 +117,8 @@ test('a below-floor rewrite still delivers that Word file and names the missing 
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.match(docs[0].body, /candidate1@example.test/)
+  assert.doesNotMatch(docs[0].body, /candidate2/)
   assert.match(docs[0].caption, /30\.8%/)
   assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
   assert.match(docs[0].caption, /supplierninja/)
@@ -206,7 +206,7 @@ test('a slow constructed-JD rewrite sends the rewritten file, not the original',
   assert.match(docs[0].caption, /97%/)
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].caption, /did not finish cleanly/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.doesNotMatch(docs[0].body, /candidate2/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
@@ -237,8 +237,8 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.match(docs[0].body, /candidate1@example.test/)
+  assert.doesNotMatch(docs[0].body, /candidate2/)
 
   docs.length = 0
   await generate('15550021', {
@@ -246,6 +246,6 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
     resumePath: SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, 'user', 60_000, filesFor(SAINT_LOUIS_PATH))
   assert.equal(docs.length, 0, 'a Saint Louis file is not sent for the Houston profile')
-  assert.doesNotMatch(said.join('\n'), /jayeshwar44/)
-  assert.doesNotMatch(docs.map(d => d.body).join('\n'), /jayeshwar44/)
+  assert.doesNotMatch(said.join('\n'), /candidate2/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\n'), /candidate2/)
 })
