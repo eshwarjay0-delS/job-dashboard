@@ -28,7 +28,7 @@ Source commits: `4eba406347ae25a22a544a123759a9a37dcc3894`, `d7c99275834c9de5fd9
 
 ## Validation and limitations
 
-The previous PR #400 head `a58cf550a1c21137db24e10a3bbe50d7c683b6ea` passed full CI `43629917653`, WhatsApp recovery `43629917630`, Kompas baseline `43629917579`, and Plan/REA schema `43629917580`. Those runs do not validate this new restack. The new branch starts from master `8ad319d`; its exact-head gates must run again.
+The previous PR #400 head `a58cf550a1c21137db24e10a3bbe50d7c683b6ea` passed full CI `43629917653`, WhatsApp recovery `43629917630`, Kompas baseline `43629917579`, and Plan/REA schema `43629917580`. Those runs do not validate this new restack. The new branch starts from master `8ad319d`. Code-bearing head `dba452abc871e9b9d42f4d47bad41953654c9d81` passed full CI `43766442082`, WhatsApp recovery `43766442060`, Kompas baseline `43766442129` and Plan/REA `43766442004`. The following docs-only update advances the branch head, so rerun exact-head gates before merge.
 
 A local clone attempt failed because the execution container could not resolve `github.com`. No local test execution is claimed. GitHub Actions is the available executable validation path. No Next.js APIs or runtime framework interfaces were changed.
 
