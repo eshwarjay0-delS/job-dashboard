@@ -42,6 +42,6 @@ No retry was added. No adapter, source URL, source permission, 14-day freshness 
 
 Canonical master at branch creation: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`.
 
-The active production alias `job-dashboard-fawn.vercel.app` independently resolves to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The GitHub Vercel success status for master points to deployment `dpl_5T8no96szcfy7YtRQQKxinCda8KH`, which is CANCELED by the Ignored Build Step; it is not the active production alias. This branch is not deployed.
+The active production alias `job-dashboard-fawn.vercel.app` independently resolves to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The GitHub Vercel success status for master points to deployment `dpl_5T8no96szcfy7YtRQQKxinCda8KH`, which is CANCELED by the Ignored Build Step; it is not the active production alias. This change is in draft PR [#422](https://github.com/eshwarjay0-delS/job-dashboard/pull/422), implementation commit `27cb0f80d055af2ccffec8c378f45ece33dac32e`. It is not deployed.
 
 Exact-head full CI, crawler regression, Plan/REA schema, Kompas baseline, protected preview, production READY alias, and a later authorized manual crawl remain separate gates. No live crawl or production mutation is claimed.
