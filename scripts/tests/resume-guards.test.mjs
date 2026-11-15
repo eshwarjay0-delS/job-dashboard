@@ -233,9 +233,10 @@ test('WhatsApp refine never sends the original or a partial baseline when an upd
   assert.match(refine, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*return sendText\(from, "The update failed name, contact or employment-date verification\. No file was sent; your previous resume is unchanged\."\)/)
   assert.doesNotMatch(refine, /sendBaseline|sendClosest|deliver\(from, baseline/)
 
-  // The initial-JD path is separate: only a selected same-account library file
-  // can use the no-provider fallback, and the caption explicitly says NOT TAILORED.
-  assert.match(route, /if \(files && await sendOfflineOriginal\(\)\) return/)
+  // The initial-JD path is separate: only an exact same-account original from
+  // the Files picker or verified uploaded-DOCX copy can use this fallback.
+  assert.match(route, /if \(await sendOfflineOriginal\(\)\) return/)
+  assert.match(route, /if \(await sendOfflineOriginal\(why\)\) return/)
   assert.match(route, /const expectedRoot = filesOf\(userId\)/)
   assert.match(route, /const relative = path\.normalize\(files\.rel\)/)
   assert.match(route, /path\.resolve\(root, relative\) !== selected/)
