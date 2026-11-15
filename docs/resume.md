@@ -144,3 +144,9 @@ The approved cross-role confirmed-skill implementation from PR #393 head `9cd819
 The 6 Nov owner comment #6817645128 confirms that a first-person-confirmed skill may be mapped into relevant existing project bullets across roles, including earlier roles. Confirmation supports the named skill only; do not invent an employer, project, action, outcome, date, title, location, contact, metric or credential. Keep separate profile libraries separate.
 
 The final exported-DOCX Gemini score review is approved by the same owner comment. The expanded automated correction/re-export/recheck loop is not independently verified in accessible prior-chat history and remains proposed. No owner resume/JD/confirmation run, DOCX export, Gemini call, live 98% match or production deployment occurred.
+
+## 15 November 2026 — exact JD recovered, original source still missing
+
+The matching full `Security Engineer – Risk & Controls` Atlanta/GA contract JD is now recovered read-only from Gmail thread `1a1464393628992f`. The 17 Oct 17:28 Chicago screenshot `1792276118790.jpeg` shows the five-page, 28 KB uploaded DOCX was held after automatic repair failed the 98% target; visible remaining terms were CCSP, CISM, CRISC, CISA, Canton, Sol, Specialty and Attributes.
+
+The exact original 27,724-byte DOCX remains unavailable at the previously inventoried Library path `/J_Eshwar_44/General Security` (current listing returns path not found). Do not substitute a similar resume. The generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID and signed delivery/read receipt remain missing. No historical replay, model call, DOCX export or real WhatsApp send occurred. The JD terms remain target requirements, not candidate credentials or experience without explicit confirmation and source support.
