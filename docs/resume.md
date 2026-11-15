@@ -80,3 +80,7 @@ Shared result scores, keyword analysis, notes and the web match ring retain one 
 Salesforce title recognition is being validated for baseline selection. Salesforce/SFDC developers must enter the title-matched pool; administrators remain a different role. See `docs/research/salesforce-role-selection.md`. The coding environment is available again; the earlier outage below is historical, not a current blocker.
 
 Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
+
+## Final exported-DOCX ATS review — 15 November 2026
+
+The approved final review is one Gemini-only diagnostic after export. It uses the exact prompt **"Give me ATS score"**, the full job description, and text extracted from the actual exported DOCX bytes. The parser accepts only canonical JD target terms when reporting missing or weak items. The score is advisory; it never creates experience evidence, changes deterministic coverage, triggers a rewrite/re-export, or changes delivery thresholds. Incomplete/skills-only documents and unavailable/invalid reviews are reported as such. The automatic correction/re-export loop remains unapproved and is not part of this implementation. See `docs/research/resume-final-docx-gemini-score-only-2026-11-15.md`.
