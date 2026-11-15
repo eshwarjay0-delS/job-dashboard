@@ -9,6 +9,8 @@ on:
       - 'src/lib/whatsapp-resume-acceptance.ts'
       - 'src/lib/whatsapp-resume-recovery.ts'
       - 'src/lib/whatsapp.ts'
+      - 'src/lib/resume-evidence.ts'
+      - 'scripts/tests/resume-confirmation-quality.test.mjs'
       - 'src/lib/whatsapp-retry-policy.ts'
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
@@ -33,18 +35,4 @@ on:
       - 'scripts/tests/whatsapp-5fold.test.mjs'
       - 'scripts/tests/whatsapp-resume-failsafe.test.mjs'
       - 'scripts/tests/whatsapp-single-request.test.mjs'
-      - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
-  workflow_dispatch:
-jobs:
-  regression:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs
+      - 'scripts/t¶»§q«^
