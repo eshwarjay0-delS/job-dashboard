@@ -564,3 +564,11 @@ Continue: verify all required exact-head checks on the latest #381 branch head, 
 - Prior #356 full CI `43400940786`, Kompas baseline `43400940746`, and Plan/REA `43400940841` succeeded on the old head only. They are not transferable; the new head needs fresh exact-head full CI, baseline and Plan/REA.
 - The separate protected `voice-preview-smoke` and preview gate remain mandatory. No exact-head preview is available; the owner-controlled private `KOMPAS_VERCEL_API_TOKEN` is not available to this run. Keep the restack DRAFT; do not bypass the gate.
 - No live audio capture, transcript persistence, account/session change, production deployment or Windows hardware acceptance occurred.
+
+## 15 November 2026 06:19 UTC — safe audio provenance restack CI failure and correction
+
+- The first exact-head full CI run for PR [#413](https://github.com/eshwarjay0-delS/job-dashboard/pull/413), head `ab3bedd1efba6f58c43ecddb166d54a43c1660f6`, failed at Lint: `src/lib/kompas-dossier-bots.ts:216:0` reported `Parsing error: '}' expected`. The Lint job reported 1 error and 264 warnings; Type-check and subsequent gates were skipped. This is a restack-edit error, not a runtime regression.
+- Added the missing closing brace for the `audio_transcript` validation block immediately before `seen.add(id)` in commit `37370c77647e9157eba88e6b208e008e156d4444`. No validation condition or behavior changed.
+- All prior green baseline/Plan-REA results and the failed full CI belong to the previous head; fresh full CI, baseline and Plan/REA are required on the new exact head.
+- PR #413 remains DRAFT. The protected `voice-preview-smoke` and preview gate are still mandatory; no exact-head preview exists and the owner-controlled private token is unavailable. Do not bypass the gate.
+- No audio capture, transcript persistence, account/session mutation, production deployment or Windows hardware acceptance occurred.
