@@ -675,3 +675,11 @@ On PR #399 head `003a1074c473cfd551b25e6bbd3a4e8bfb28f873`, Kompas baseline `436
 - Still missing: generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound message ID and signed delivered/read receipt. No historical replay, real WhatsApp send, R2 write or handset acceptance occurred. The new tests do not prove 98% live match or delivery.
 
 **Continue:** run all exact-head gates on the final PR #399 branch after these Plan/REA and documentation commits; keep it DRAFT until protected preview and Safe Merge Gate review. Then continue confirmed-skill alignment PR #400 using the recovered exact JD, but do not substitute a near-match resume for the unavailable source bundle.
+
+## 15 November 2026 — contract crawler freshness and exact manual-run blocker
+
+Production Supabase read-only snapshot: latest crawl `cf78f4bb-5f27-4476-b28f-3efa7156b231` ran 10 Nov 11:00:24–11:01:11 UTC across 20 portals, found/upserted 6,818 rows, with one Inspyr abort. The 9 Nov run had 21 portals and an eTeam HTTP 404. Current `mfit_crawl_jobs`: 14,566 total rows, 12,407 active, 8,850 active contract-labelled rows, 21 portals with rows; last-seen timestamps span 21 Oct–10 Nov. No newer crawl evidence exists.
+
+No live crawl was triggered. The approved manual trigger `POST /api/crawl/jobs` requires `adminOf(req)`; `GET /api/crawl/run` requires a valid cron/watchdog secret. This run has no authenticated admin session or authorized trigger, and no secret was read or bypassed. No cron was added. Robert Half remains manual-only pending written source rights; C2H/Right-to-Hire semantics remain proposed.
+
+**Unblock:** an authorized admin must invoke the existing manual trigger and inspect the Inspyr abort. The crawler is not current as of 15 Nov; do not present the 10 Nov snapshot as fresh.
