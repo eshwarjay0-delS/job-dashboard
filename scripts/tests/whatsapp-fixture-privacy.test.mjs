@@ -13,8 +13,9 @@ const RESERVED_TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 for (const file of FIXTURES) {
   test(file + ' contains only reserved synthetic identity and contact data', () => {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8')
-    const emails = source.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig) ?? []
-    const phones = source.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g) ?? []
+    const scanSource = source.replace(/\\n/g, '\n')
+    const emails = scanSource.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig) ?? []
+    const phones = scanSource.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g) ?? []
     const identityNames = [...source.matchAll(/(?:firstName|lastName|fullName|candidateName|displayName)\s*:\s*['"]([^'"]+)['"]/g)].map(match => match[1])
     const resumeHeaderNames = [...source.matchAll(/const\s+(?:HOUSTON|SAINT_LOUIS|src)\s*=\s*['"](Candidate(?: One| Two)?)(?:\\n|\\)/g)].map(match => match[1])
     const outputNames = [...source.matchAll(/outputNameFor:\s*async\s*\(\)\s*=>\s*['"]([^'"]+)['"]/g)].map(match => match[1])
