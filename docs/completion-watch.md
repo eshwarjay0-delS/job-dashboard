@@ -1,3 +1,13 @@
+## 15 November 2026 01:06 UTC — uploaded-DOCX fallback typecheck repair
+
+Continue: finish the approved ordinary WhatsApp-upload fallback on PR #399 without weakening account isolation or delivery policy.
+
+- PR #399 branch `fix/whatsapp-offline-cas-current-46043-20261114` head `2c6980c3a70610f6da900d737bb1ada59e1c1632` already contains the direct-upload path: it validates `session.resumeFiled` beneath `filesOf(userId)`, keeps the source inside the sender inbox or same account library, requires byte-for-byte equality, and binds identity to the authenticated `profiles.email` row. The original is labelled NOT TAILORED; missing, foreign-root, mismatched and unverified-profile cases send no file. Swipe refinement remains text-only.
+- Mocked behavioral coverage includes provider-unavailable success, foreign-root rejection, missing filed copy, byte mismatch, document/profile mismatch, unavailable profile email, and incomplete-quality fallback after one bounded retry. These tests are not a live WhatsApp send or historical replay.
+- Exact-head full CI `43660906976` and WhatsApp recovery `43660906973` both failed before running the suites because the concurrently added contract-crawler evidence records used unsupported Plan/REA schema values: `area: "apply"` and REA source fields named `source` instead of `path`. Kompas baseline `43660906980` and Plan/REA schema `43660907001` completed SUCCESS. Correct only those metadata types; do not change the WhatsApp runtime to address this failure.
+- The historical 17 Oct 17:28 Chicago incident remains unverified. Screenshot and matching JD were recovered, but the exact original source DOCX, generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound ID and signed delivered/read receipt are still missing. No replay or real send is authorized.
+- Protected preview still requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; it is unavailable to this run. Keep PR #399 DRAFT and let the enabled Safe Merge Gate sequence it. Production release and handset acceptance remain separate.
+
 ## 14 November 2026 20:34 UTC — selected-library timeout fixture correction
 
 Continue: repair the exact-head WhatsApp timeout regression without changing runtime delivery behavior.
