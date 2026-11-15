@@ -1,14 +1,14 @@
 # MFit Completion Watch
 
-## 15 November 2026 18:03 UTC — primary-source boundary for conflicting approval reports
+## 15 November 2026 18:17 UTC — Safe Merge Gate retraction confirmed
 
-Continue: preserve the approval boundary and keep PR #419 and PR #415 DRAFT until the underlying 14 November owner messages are available; continue other approved work independently.
+Continue: keep PR #419's C2H alias behavior and PR #415's strict first-person parser DRAFT; continue other approved work without promoting unverified instructions.
 
-- The MFit Safe Merge Gate comments on [PR #418](https://github.com/eshwarjay0-delS/job-dashboard/pull/418#issuecomment-6896175978) and its follow-up [#6898089314](https://github.com/eshwarjay0-delS/job-dashboard/pull/418#issuecomment-6898089314) report two later owner corrections: positive Contract To Perm / Contract To Permanent / Right To Hire → C2H aliases with negative forms unknown, and first-person blanket confirmation with exceptions preserved.
-- Targeted prior-context retrieval in this run searched those dates and phrases but returned no matching conversation. The GitHub comments are secondary summaries, not the original user messages. Existing Plan/REA entries contain conflicting assistant-generated interpretations, so neither report is promoted to confirmed policy here.
-- The directly accessible owner-authored [6 Nov comment #6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) confirms cross-role mapping of candidate-confirmed skills and the no-invented-biography boundary; it does not establish the later C2H aliases or universal first-person-only parser syntax.
-- Keep PR #419 and PR #415 DRAFT pending primary-source recovery or direct owner confirmation. Negative C2H forms remain unknown. Do not change the manual-only crawler, no-daily-cron or Robert Half manual-only policy.
-- Documentation/Plan/REA/test only. No classifier or parser runtime change, crawl, model call, DOCX generation, production mutation, email or WhatsApp send occurred.
+- The Safe Merge Gate's initial PR #418 comments reported later owner approvals, but its subsequent review [retracted the positive C2H approval claim](https://github.com/eshwarjay0-delS/job-dashboard/pull/418#pullrequestreview-5912105497), saying the earlier comment relied on an assistant-generated status summary and no direct owner-authored message approving those aliases or requiring first-person grammar for all confirmations was recovered.
+- This run independently searched prior conversation context for the reported 14 November timestamps and phrases; no matching conversation was returned. The 14 Nov alias-approval timestamp and blanket first-person rule remain unverified. Do not treat the earlier Safe Gate comment as primary evidence.
+- The directly accessible owner-authored [6 Nov comment #6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) confirms cross-role mapping of candidate-confirmed skills and the no-invented-biography boundary, but not the later C2H aliases or universal first-person-only syntax.
+- Keep Contract To Perm / Contract To Permanent / Right To Hire aliases and associated negation behavior unapproved; negative forms remain unknown. Keep PR #419 and PR #415 DRAFT. Preserve manual/on-demand crawling, no daily contract cron and Robert Half manual-only.
+- Documentation/Plan/REA/test only. No classifier/parser runtime change, crawl, model call, DOCX, production mutation, email or WhatsApp send occurred.
 
 ## 15 November 2026 13:55 UTC — C2H approval correction and PR #418 type repair
 
