@@ -63,3 +63,11 @@ test("missing and weak arrays tolerate non-string or malformed list values", () 
   );
   assert.deepEqual(review, { status: "ok", score: 91.2, missing: ["Splunk"], weak: [] });
 });
+
+test("parser rejects null, empty, boolean, array, and object scores instead of coercing them", () => {
+  for (const score of [null, "", "   ", true, false, [], {}]) {
+    const review = parseFinalAtsReview(JSON.stringify({ score, missing: [], weak: [] }), TERMS);
+    assert.equal(review.status, "invalid_response", `score ${JSON.stringify(score)} must be rejected`);
+    assert.equal(review.score, null);
+  }
+});
