@@ -94,3 +94,8 @@ The review branch removes second-person blanket patterns and label-only headers,
 - Commits: `5bd0d132d057c2cfb50e59e66ac0a4feaa9c4379`, `6d9ef8d488ed4294197a02a86d050094297960ce`, and `0155cac19c853bef5a4b102e2f5f2da9cada0969` (corrected regex escaping before CI).
 - Exact-head GitHub Actions, protected preview, Safe Merge Gate, production release and real exported-DOCX acceptance remain pending.
 - No real resume/JD model call, DOCX generation, Gemini score, live ATS percentage or production data change occurred.
+
+
+### WhatsApp regression gate wiring
+
+The shared `resume-evidence.ts` helper is also consumed by the WhatsApp webhook. The dedicated `whatsapp-resume-regression.yml` workflow previously did not watch that helper or its focused confirmation tests, so a parser-only change could pass full CI without running the WhatsApp recovery/contract gate. The review branch adds both paths to the workflow's push and pull-request filters and includes the workflow file itself in the pull-request filter. The exact-head workflow run is still pending; the change does not send a real WhatsApp message.
