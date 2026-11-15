@@ -1086,16 +1086,21 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     const why = timedOut
       ? "NOT TAILORED — AI rewrite timed out."
       : "NOT TAILORED — AI provider failed."
-    // Initial-JD fallback is restricted to the exact selected same-account library
-    // bytes. Never send an inbox/session copy when the provider did not finish.
-    if (files && await sendOfflineOriginal(why)) return
+    // This is still the initial-JD generate path (swipe refinement is separate).
+    // Try only the exact selected same-account original, whether it came from the
+    // Files picker or from the authenticated user's verified uploaded-DOCX copy.
+    if (await sendOfflineOriginal(why)) return
     await sayOutcome(files
       ? timedOut
         ? "The AI rewrite ran out of time, and I could not verify the exact selected same-account resume. No file was sent; your request is saved for retry."
         : "The AI rewrite did not finish, and I could not verify the exact selected same-account resume. No file was sent; your request is saved for retry."
-      : timedOut
-        ? "The AI rewrite ran out of time just now. No file was sent; your request is saved for retry."
-        : "The AI rewrite did not finish. No file was sent; your request is saved for retry.")
+      : session.resumeFiled
+        ? timedOut
+          ? "The AI rewrite timed out, and I could not verify the uploaded original against your account's saved copy. No file was sent; your request is saved for retry."
+          : "The AI rewrite failed, and I could not verify the uploaded original against your account's saved copy. No file was sent; your request is saved for retry."
+        : timedOut
+          ? "The AI rewrite ran out of time just now. No file was sent; your request is saved for retry."
+          : "The AI rewrite did not finish. No file was sent; your request is saved for retry.")
     return;
   }
 
