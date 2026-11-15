@@ -1,6 +1,6 @@
 # MFit Completion Watch
 
-> **Superseding correction — 15 November 2026:** Older historical entries below call the archived resume's chronology/credentials a conflict with owner-confirmed facts. Targeted retrieval found no user-authored confirmation of the exact chronology or full credential set; a prior 9+ years description was assistant-authored from an uploaded resume. Current classification is **unverified/unreconciled**, not a proven contradiction. Preserve the old history but do not treat it as confirmed.
+> **Superseding correction — 15 November 2026:** Earlier entries below that claim exact recovery of the WhatsApp-uploaded DOCX or a verified digest are too strong. A private archive review found a separate similar five-page copy, but the exact WhatsApp-uploaded bytes/request correlation are not available. Private filename, archive path, size and fingerprint are omitted. Older entries that describe source facts as conflicting with an owner-confirmed profile are also superseded: accessible owner-authored confirmation of the exact chronology/credentials was not found; the correct status is **unverified/unreconciled**, not a proven contradiction. Preserve historical decisions but do not treat either archive copy or assistant-authored summary as confirmed facts.
 
 ## 15 November 2026 — recovered 17 October WhatsApp source and JD
 
@@ -309,7 +309,7 @@ Continue: verify the next scheduled crawl and public API freshness response; do 
 
 ## 10 November 2026 — exact 17 October WhatsApp source recovered
 
-Continue: the original five-page DOCX has been recovered from a private Library archive; its exact digest was verified locally and remains with the private artifact, not in this public repository. The full matching matching security-engineering JD JD was recovered from the user's private inbox. The screenshot is dated 17 Oct 17:28 Chicago. The exact generated output and per-run R2/webhook/Meta delivery trace are still missing. iZap has no configured WhatsApp number and no matching chat history.
+Continue: the private screenshot shows a five-page resume upload and the 17 Oct 17:28 Chicago hold. A separate private archive review found a similar five-page document, but exact WhatsApp-uploaded bytes are not available; filename, path, size and fingerprint are omitted. A matching JD was reviewed read-only from private mail; its content is not reproduced. The generated output and per-run R2/webhook/Meta delivery trace remain missing. No replay or outbound test was performed.
 
 The eight screenshot terms are not eight missing candidate skills: CCSP/CISM/CRISC/CISA/AWS Security Specialty are credentials (never add); Canton/Solana are preferred but unsupported in the source; `sol` is a fragment of `Solana`; `attributes` does not appear in the full JD. The source DOCX also conflicts with the owner-confirmed profile's education/employment/credential facts. Quarantine those claims until the owner reconciles them; do not count the JD's 5+ years as confirmed. The new source-backed filter/test PR covers only the generic fragment boundary; no 98% live match is claimed.
 
@@ -392,7 +392,7 @@ A second mismatch allowed `unverified_jd_terms` in the WhatsApp shortfall allow-
 ## 10 November 2026 — continuation evidence refresh (11:56 UTC)
 
 ### WhatsApp resume / factual alignment
-- The exact source file was verified in a private Library archive (five-page; exact digest retained privately and not published). The matching JD was recovered from the user's private inbox. The source chronology/education/credential claims conflict materially with the owner-confirmed profile and remain quarantined. The generated output, per-run R2 key, Meta message ID and signed delivery/read receipt are still missing.
+- A separate private archive review found a similar five-page DOCX; exact WhatsApp-uploaded bytes are not available and no filename/path/size/fingerprint is retained. The matching JD was reviewed read-only from private mail. Archived source chronology/education/credential claims remain unverified/unreconciled, not a proven contradiction. The generated output, per-run R2 key, Meta message ID and signed delivery/read receipt remain missing.
 - PR #279 is at exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61`; full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS. It remains DRAFT; owner review is still required for the external-send change, and the Vercel status is build-rate-limit. Do not merge/deploy based only on green tests.
 - The owner-approved 3 Nov Gemini requirement is still unimplemented: ask Gemini exactly `Give me ATS score` on the final exported DOCX, list missing/weak JD terms, correct only source-supported/explicitly confirmed gaps, re-export and recheck. The score is diagnostic, not experience evidence.
 
