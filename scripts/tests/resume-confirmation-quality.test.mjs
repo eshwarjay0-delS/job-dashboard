@@ -30,10 +30,24 @@ test('a job-description or formatting instruction is not blanket experience conf
   }
 })
 
-
 test('only first-person positive statements can confirm all requirements', () => {
   assert.equal(explicitlyConfirmsAllRequirements(['I have experience with all required skills']), true)
   assert.equal(explicitlyConfirmsAllRequirements(['You have experience with all required skills']), false)
   assert.equal(explicitlyConfirmsAllRequirements(['Confirmed skills: Python']), false)
   assert.equal(explicitlyConfirmsAllRequirements(['Confirmed experience: Python']), false)
+})
+
+test('interrogative statements never become candidate experience evidence', () => {
+  for (const question of [
+    'I used AWS?',
+    'My experience includes AWS?',
+    'I have experience with all required skills?',
+  ]) {
+    assert.deepEqual(confirmedCandidateStatements([question]), [])
+    assert.equal(explicitlyConfirmsAllRequirements([question]), false)
+  }
+})
+
+test('a question is rejected without suppressing a later declarative statement', () => {
+  assert.deepEqual(confirmedCandidateStatements(['I used AWS? I used Azure.']), ['I used Azure'])
 })
