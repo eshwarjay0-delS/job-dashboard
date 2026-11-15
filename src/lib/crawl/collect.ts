@@ -10,16 +10,19 @@ export function politeFetcher(gapMs = 600, requestTimeoutMs = 25_000): Fetcher {
     const wait = last + gapMs - Date.now()
     if (wait > 0) await new Promise(r => setTimeout(r, wait))
     const ctrl = new AbortController()
-    const host = new URL(url).host
+    let host = "unknown host"
     const t = setTimeout(() => ctrl.abort(), requestTimeoutMs)
     try {
+      // Keep parsing inside the cleanup boundary: malformed adapter URLs must
+      // still advance the pacing clock in finally.
+      host = new URL(url).host
       const res = await fetch(url, {
         method: init.method || "GET",
         headers: { "User-Agent": CRAWL_UA, Accept: init.accept || "text/html", ...(init.body ? { "Content-Type": "application/json" } : {}), ...init.headers },
         ...(init.body ? { body: init.body } : {}),
         signal: ctrl.signal,
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status} from ${new URL(url).host}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${host}`)
       return await res.text()
     } catch (error) {
       if (ctrl.signal.aborted) {
