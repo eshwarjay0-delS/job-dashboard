@@ -133,3 +133,11 @@ The new behavioral and source-contract cases are awaiting exact-head GitHub Acti
 The owner-authored comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128), dated 12 Nov 2026, explicitly requires a Gemini **“Give me an ATS score”** review of the final exported DOCX and actual measured coverage. That bounded diagnostic review is approved and remains a release acceptance requirement.
 
 Keep it separate from the broader automated correction/re-export/recheck loop. Accessible owner-authored evidence does not approve that loop, so it remains proposed. Do not add an automated correction prompt, spend credits on that loop, or repeatedly re-export until the owner separately approves it. Any score is diagnostic, not proof of experience; every claim and correction must still be supported by the selected source resume or an explicit first-person candidate confirmation.
+
+## 17 October WhatsApp resume hold — evidence and safe fallback
+
+The 5:28 PM Chicago screenshot shows the uploaded five-page, 28 KB `Eshwar Cyber resume).docx` was held after automatic repair failed to reach the 98% target; visible remaining terms were CCSP, CISM, CRISC, CISA, Canton, Sol, Specialty and Attributes. The matching contract JD, `Security Engineer – Risk & Controls` in Atlanta/GA, was recovered read-only from Gmail thread `1a1464393628992f`. These missing terms are not automatically candidate experience or credentials.
+
+The exact original source DOCX remains unavailable through the inventoried Library path `/J_Eshwar_44/General Security` (path not found); similar resume files are not substitutes. The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt are also missing. No historical replay or resend is authorized by this evidence.
+
+PR #399 now has a mocked regression for the quality-hold path: after one bounded retry, it can return only the exact uploaded original saved under the verified account, byte-equal to the inbox source and checked against the authenticated profile email, labelled **NOT TAILORED**. This prevents a dead-end hold when the original is verifiable; it does not claim a tailored match or historical delivery. Exact-head CI is pending.
