@@ -579,3 +579,18 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 15 November 2026 — confirmed-experience writer prompt restack
+
+Continue: restack the owner-approved confirmed-skill alignment onto current canonical master and guard the LLM prompt against treating a job description as candidate evidence.
+
+- Current master at the start of this work was `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Its `src/lib/claude.ts` still contained contradictory instructions to represent the JD skill set, assume the candidate claims the JD requirements, and spread JD tools across every role. Those lines conflict with the approved 6 Nov owner correction recorded in PR #319 comment `6817645128`.
+- The approved boundary allows a specifically confirmed skill to appear in relevant existing project context across roles, including earlier roles, without same-role source wording. It does not permit new employers, projects, actions, outcomes, dates, titles, locations, contacts, metrics, credentials or unsupported project facts.
+- Source/test changes were restacked from PR #400 onto a new branch from master 8ad319. The writer prompt now frames the JD as target context; role-only source gaps remain role-scoped; unsupported role edits are restored. A prompt-contract regression rejects the old contradictory wording.
+- Branch: `fix/resume-confirmed-skill-alignment-master-8ad319-20261115`. Source/test commits: `4eba406347ae25a22a544a123759a9a37dcc3894`, `d7c99275834c9de5fd9af7b670e3c83e040e9415`, `23b0fd0c077379b760f3b59bc2f9ed1d657fa01c`, `856894210dcc22366e7a2ee1c7979c8ba151be5d`, `2036d6886cdb3ea466bc1f87eee98e1f144f668e`.
+- Prior PR #400 head `a58cf550a1c21137db24e10a3bbe50d7c683b6ea` passed full CI `43629917653`, WhatsApp recovery `43629917630`, Kompas baseline `43629917579` and Plan/REA `43629917580`; these do not validate the new restack. Exact-head gates must rerun.
+- Local clone failed because the execution container could not resolve `github.com`; no local tests are claimed. GitHub Actions is the executable validation path. No owner document was processed, no DOCX/Gemini run occurred, and no 98% live match is claimed.
+- Protected preview requires the authorized private `KOMPAS_VERCEL_API_TOKEN`; it is not available to this run. No protection bypass, deployment, email or WhatsApp send occurred.
+
+Continue: open the new restack as a DRAFT PR, run full CI + WhatsApp recovery + Kompas baseline + Plan/REA on its exact head, and let Safe Merge Gate sequence it. Keep the protected preview and owner-authorized exported-DOCX acceptance as separate blockers. Do not merge or deploy based on predecessor checks.
