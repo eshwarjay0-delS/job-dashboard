@@ -24,16 +24,16 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 test('rejects swapped identities and an extra identity, preserves unchanged email', () => {
-  assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'eshwarjay05@gmail.com'), false)
-  assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'jayeshwar44@gmail.com eshwarjay05@gmail.com'), false)
+  assert.equal(sameResumeIdentity('candidate1@example.test', 'candidate2@example.test'), false)
+  assert.equal(sameResumeIdentity('candidate1@example.test', 'candidate1@example.test candidate2@example.test'), false)
   // Email case alone is not a change; the round-trip guard (gate on) also reads the first line as the name, so check it off.
   process.env.JD_TERMS_ALWAYS_ON_SKILLS = '0'
-  try { assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true) } finally { delete process.env.JD_TERMS_ALWAYS_ON_SKILLS }
+  try { assert.equal(sameResumeIdentity('candidate3@example.test', 'candidate1@example.test'), true) } finally { delete process.env.JD_TERMS_ALWAYS_ON_SKILLS }
 })
 test('with the job-post terms gate on, a changed phone or date stops the send; an unchanged file passes', () => {
   // Gate on with a real name line: an email that differs only in letter case is the same resume.
-  assert.equal(sameResumeIdentity('Eshwar Jay\nJAYESHWAR44@gmail.com', 'Eshwar Jay\njayeshwar44@gmail.com'), true)
-  const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024'
+  assert.equal(sameResumeIdentity('Candidate One\ncandidate3@example.test', 'Candidate One\ncandidate1@example.test'), true)
+  const src = 'Candidate One\ncandidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
   assert.equal(sameResumeIdentity(src, src), true)
   assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
   assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
@@ -136,19 +136,19 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     } }),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
-    get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
+    get: async () => Buffer.from('candidate6@example.test'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
   }
   const mocks = {
     // These cases exercise resume tailoring; channel transport has its own acceptance suite.
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
     'next/server': {}, '@/lib/storage': { blob, readPath: async p => {
-      if (offlineMismatch && p.startsWith('/data/users/')) return Buffer.from('other@email.com')
+      if (offlineMismatch && p.startsWith('/data/users/')) return Buffer.from('candidate7@example.test')
       if (p === '/data/whatsapp/inbox/123/selected.docx') {
         sessionReadCount++
-        return Buffer.from(sessionReadCount % 2 === 1 ? 'same@email.com' : 'changed-after-verification@email.com')
+        return Buffer.from(sessionReadCount % 2 === 1 ? 'candidate6@example.test' : 'candidate8@example.test')
       }
-      return Buffer.from('same@email.com')
+      return Buffer.from('candidate6@example.test')
     }, writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable },
@@ -168,9 +168,9 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
       },
     },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
-    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Eshwar_Resume.docx' },
+    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Candidate_Resume.docx' },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
     '@/lib/whatsapp-trace': { trace: () => {} },
@@ -217,7 +217,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
   assert.equal(deliveries, deliveriesBeforeFailure + 1, 'a successful retry may deliver the completed rewrite')
   const selectedUser = '00000000-0000-4000-8000-000000000001'
-  const selectedFiles = { userDir: `/data/users/${selectedUser}`, email: 'same@email.com', said: 'the selected resume', depth: 0, rel: 'selected.docx', abs: `/data/users/${selectedUser}/selected.docx` }
+  const selectedFiles = { userDir: `/data/users/${selectedUser}`, email: 'candidate6@example.test', said: 'the selected resume', depth: 0, rel: 'selected.docx', abs: `/data/users/${selectedUser}/selected.docx` }
   unchangedNext = true
   await generate('123', session, selectedUser, 60_000, selectedFiles)
   assert.equal(runs, 5)
@@ -228,8 +228,8 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   const saved = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(saved.resumePath, undefined)
   assert.equal(saved.jd, undefined)
-  const caption = captionFor('Eshwar', { role: 'Engineer' }, { coverage: 63, quality: { status: 'needs_review' } })
-  const gapCaption = captionFor('Eshwar', {}, { coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
+  const caption = captionFor('Candidate', { role: 'Engineer' }, { coverage: 63, quality: { status: 'needs_review' } })
+  const gapCaption = captionFor('Candidate', {}, { coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
   assert.ok(gapCaption.includes('28.5%'))
   const gapReport = resumeGapReport({ coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
   assert.match(gapReport, /Missing \/ unresolved JD terms: f5, cisco/)
@@ -252,11 +252,11 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   }
   const offlineFiles = {
     userDir: `/data/users/${offlineUser}`,
-    email: 'same@email.com',
+    email: 'candidate6@example.test',
     said: 'the selected Cloud Security resume',
     depth: 0,
-    rel: 'same@email.com/Cloud Security Engineer.docx',
-    abs: `/data/users/${offlineUser}/same@email.com/Cloud Security Engineer.docx`,
+    rel: 'candidate6@example.test/Cloud Security Engineer.docx',
+    abs: `/data/users/${offlineUser}/candidate6@example.test/Cloud Security Engineer.docx`,
   }
   // A partial provider draft is not delivered. For an initial JD run, only the exact
   // selected same-account library bytes may be sent, clearly labelled NOT TAILORED.
@@ -275,7 +275,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   partialMode = false
   assert.equal(docs.length, docsBeforePartialFallback + 1, 'a partial initial rewrite uses one verified original fallback')
   assert.equal(sessionReadCount - readsBeforePartialFallback, 1, 'the session copy is read once and compared with the selected library bytes')
-  assert.equal(docs.at(-1).body, 'same@email.com', 'only the exact selected library bytes are sent')
+  assert.equal(docs.at(-1).body, 'candidate6@example.test', 'only the exact selected library bytes are sent')
   assert.match(docs.at(-1).caption, /Original resume — NOT TAILORED/)
   assert.match(docs.at(-1).caption, /AI rewrite incomplete/)
   assert.match(docs.at(-1).caption, /no edits were applied/)
@@ -340,7 +340,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.match(docs.at(-1).caption, /Original resume — NOT TAILORED/)
   assert.match(docs.at(-1).caption, /AI provider unavailable/)
   assert.match(docs.at(-1).caption, /no edits were applied/)
-  assert.equal(docs.at(-1).body, 'same@email.com', 'the exact selected library bytes are sent')
+  assert.equal(docs.at(-1).body, 'candidate6@example.test', 'the exact selected library bytes are sent')
 
   const consumedOffline = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(consumedOffline.jd, undefined, 'a successfully accepted offline original consumes its old JD')
@@ -514,7 +514,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(docs.length, beforeWrongRoot, 'a different account root must not send a fallback')
   assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
 
-  const mismatchedRelFiles = { ...offlineFiles, rel: 'other@email.com/Cloud Security Engineer.docx' }
+  const mismatchedRelFiles = { ...offlineFiles, rel: 'candidate7@example.test/Cloud Security Engineer.docx' }
   const beforeRelMismatch = docs.length
   await generate('123', { ...offlineSession, jdId: 'offline-relative-path-mismatch' }, offlineUser, undefined, mismatchedRelFiles)
   assert.equal(docs.length, beforeRelMismatch, 'a relative library path that does not resolve to the selected file must not send')
@@ -535,19 +535,19 @@ test('a below-floor rewrite still delivers the Word file and names what is missi
     ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
-    get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
+    get: async () => Buffer.from('candidate6@example.test'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
   }
   const mocks = {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('candidate6@example.test'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async () => ({ token: 'held-result', score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }) },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold1' }, sendDocument: async (_to, _body, _name, caption) => { docs.push(caption); return 'wamid.doc1' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
@@ -591,19 +591,19 @@ test('a reply to a hold uses confirmed evidence and never sends a baseline when 
     ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
-    get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
+    get: async () => Buffer.from('candidate6@example.test'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
   }
   const mocks = {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('candidate6@example.test'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async opts => { captured = opts; if (failNext) { failNext = false; throw new Error('provider timeout') } if (heldNext) return { token: 'redo-held', edits: { extras: [] }, partial: true, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: ['draft_parts_missing'], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'], incomplete: true }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
@@ -654,19 +654,19 @@ test('a partial hold names the unfinished sections and invites a reply-redo; oth
     ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
-    get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
+    get: async () => Buffer.from('candidate6@example.test'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
   }
   const mocks = {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('candidate6@example.test'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async () => ({}) },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async () => 'wamid', sendDocument: async () => 'sent' },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
