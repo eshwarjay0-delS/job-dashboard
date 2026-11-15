@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {REA_SESSIONS,filterReaSessions} from '../../src/lib/rea-register.ts'
+import {PLAN_JOURNAL} from '../../src/lib/plan-vision-journal.ts'
 import {readFileSync,existsSync} from 'node:fs'
 import path from 'node:path'
 const root=path.resolve(import.meta.dirname,'../..')
@@ -68,20 +69,29 @@ test('Oct 17 public REA record avoids private source locators', () => {
  assert.doesNotMatch(publicRecord, /\\.docx/i)
 })
 
-test('Gmail and crawler scope details without direct owner approval stay blocked', () => {
- const gmail=REA_SESSIONS.find(s=>s.id==='gmail-mobile-scope-provenance-2026-11-13')
- const crawler=REA_SESSIONS.find(s=>s.id==='contract-c2h-scope-provenance-2026-11-13')
- assert.ok(gmail && crawler)
- assert.equal(gmail.state,'Blocked')
+test('Gmail owner approvals remain distinct from unapproved C2H alias semantics', () => {
+ const gmail=REA_SESSIONS.find(s=>s.id==='gmail-poke-owner-approval-provenance-2026-11-15')
+ const crawler=REA_SESSIONS.find(s=>s.id==='contract-c2h-alias-approval-correction-2026-11-15')
+ const oldAlias=REA_SESSIONS.find(s=>s.id==='contract-c2h-owner-approved-aliases-2026-11-15')
+ const oldScope=REA_SESSIONS.find(s=>s.id==='contract-c2h-scope-provenance-2026-11-13')
+ const oldGmail=REA_SESSIONS.find(s=>s.id==='gmail-mobile-scope-provenance-2026-11-13')
+ assert.ok(gmail && crawler && oldAlias && oldScope && oldGmail)
+ assert.equal(gmail.state,'Research mapped')
  assert.equal(crawler.state,'Blocked')
- assert.match(gmail.limits,/not directly confirmed|not owner-authored|proposed/i)
- assert.match(crawler.limits,/not directly owner-confirmed|not owner-authored|proposed/i)
+ assert.equal(oldAlias.state,'Blocked')
+ assert.equal(oldScope.state,'Blocked')
+ assert.equal(oldGmail.state,'Research mapped')
+ assert.match(gmail.limits,/No Gmail API call/)
+ assert.match(crawler.limits,/No direct owner approval.*alias mapping/i)
  const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
- assert.match(plan,/not owner-approved/)
- assert.ok(plan.includes('historical owner-vision document docs/gmail.md'))
- assert.ok(plan.includes('not a hard maximum'))
+ const lower=plan.toLowerCase()
+ assert.ok(plan.includes('up to four connected Gmail accounts'))
+ assert.ok(plan.includes('closed navigation stays hidden'))
+ assert.ok(lower.includes('per-account calendar target selection and exact waiting-on-them radar semantics remain proposed'))
+ assert.ok(plan.includes('No primary owner-authored approval for Contract To Perm / Contract To Permanent / Right To Hire aliases or their negation rules was recovered.'))
  assert.match(plan,/manual\/on-demand only/i)
- assert.match(plan,/not directly owner-confirmed/)
+ assert.match(plan,/Robert Half remains manual-only/i)
+ assert.match(plan,/generic contract-administration.*unapproved/i)
 })
 
 test('WhatsApp offline fallback and confirmed-skill restacks remain blocked until acceptance', () => {
@@ -93,4 +103,22 @@ test('WhatsApp offline fallback and confirmed-skill restacks remain blocked unti
  assert.match(whatsapp.limits,/generated output|R2 object\/version|signed delivery/i)
  assert.match(whatsapp.limits,/protected preview/i)
  assert.match(skills.limits,/exported-DOCX acceptance/i)
+})
+
+
+test('conflicting secondary approval reports stay blocked until primary owner messages are available',()=>{
+ const rea=REA_SESSIONS.find(s=>s.id==='owner-approval-secondary-report-reconciliation-2026-11-15')
+ assert.ok(rea)
+ assert.equal(rea.state,'Blocked')
+ assert.match(rea.limits,/No primary 14 Nov owner message was retrieved/)
+ assert.ok(rea.steps.some(step=>/retracted its earlier positive C2H approval claim/.test(step.finding)))
+ const journal=PLAN_JOURNAL.find(s=>s.id==='owner-approval-secondary-report-reconciliation-2026-11-15')
+ assert.ok(journal)
+ assert.equal(journal.approval,'proposed')
+ assert.equal(journal.delivery,'blocked')
+ const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
+ assert.match(plan,/No primary owner-authored approval for Contract To Perm/)
+ assert.match(plan,/Safe Merge Gate retracted its earlier positive-approval report/)
+ assert.match(plan,/Keep these aliases unapproved/)
+ assert.match(plan,/first-person rule was not supported by a recovered primary owner message/)
 })

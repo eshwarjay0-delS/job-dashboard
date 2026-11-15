@@ -199,3 +199,10 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## Contract classification — approval boundary corrected 15 November 2026
+
+The Apply taxonomy includes C2H as a contract category. No primary owner-authored approval for Contract To Perm / Contract To Permanent / Right To Hire alias mapping or associated negation rules was recovered. The Safe Merge Gate retracted its earlier positive-approval report, stating that it relied on an assistant-generated status summary. Keep those aliases unapproved and PR #419 DRAFT; negative forms remain unknown. Explicit C2H / Contract To Hire evidence remains distinct from W2 payroll; generic contract-administration, negotiation or lifecycle language is not a work-type signal.
+
+Crawling remains manual/on-demand only; no daily contract-crawler cron is allowed; the separate Gmail crawler schedule stays intact; and Robert Half remains manual-only. Do not run a live crawl, mutate production rows or submit an application without a separate explicit authorization.

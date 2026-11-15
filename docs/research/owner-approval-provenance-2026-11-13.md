@@ -47,3 +47,39 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 ## 14 November 2026 — manual-only guard exact-head validation
 
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
+
+
+## 15 November 2026 — first-person-only resume confirmation approval check
+
+The direct 6 Nov owner-authored correction requires tailoring against the exact JD, mapping requirements to actual experience, and adding DR/BIA/RTO/RPO/testing claims only when actually performed. Owner comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) permits an explicitly candidate-confirmed skill to be mapped into relevant existing project bullets across roles, without inventing new employers, projects, actions, outcomes, dates, titles, locations, contacts, metrics or credentials.
+
+Neither source states that only first-person grammar is an admissible form of candidate confirmation. Targeted retrieval of accessible prior conversations found no direct user-authored first-person-only rule. This does not mean the owner rejected that syntax; it means the stricter restriction is not verified as approved. PR #415's parser therefore remains a proposal and must stay DRAFT until the owner explicitly confirms whether first-person wording is required. Do not merge or deploy the restriction by inferring approval from a PR description or passing tests.
+
+The factual boundary remains unchanged: JD requirements and editing instructions are not experience evidence, and no unperformed DR/BIA/RTO/RPO/testing claims or other biography facts may be added. No live resume/JD model call, DOCX generation, ATS score or production change occurred in this approval check.
+
+
+## 15 November 2026 — direct Gmail/mobile owner requirements recovered
+
+Targeted prior-conversation retrieval returned these direct owner messages:
+
+- 5 Oct 2026 02:18:48 UTC: requested the Poke feature and up to four connected Gmail accounts; the account section could not yet connect Gmail.
+- 12 Oct 2026 13:17:53 UTC: requires deterministic email relationship mapping; a past Calendar invite is not proof of attendance; missing links stay open; map RTR/application chains, progress, follow-ups, recruiter handoffs, Calendar invites and an overview/mind-map.
+- 12 Oct 2026 13:20:04 UTC: keep Gmail accounts/chains separate; support email selection, sender/domain ignore and user-managed ignore lists.
+- 4 Oct 2026 23:41:26 UTC: closed mobile navigation is hidden; when opened, navigation sits underneath the header rather than overlaying or squeezing the current view.
+
+This supersedes the earlier statement that the exact mobile-menu behavior was not retrieved. Poke-inspired multi-account/mobile updates are approved at high level. Per-account Calendar target selection and exact waiting-on-them radar semantics were not recovered as direct owner instructions and remain proposed.
+
+## 15 November 2026 — correction: C2H alias approval was not recovered
+
+The 12 Nov 2026 05:03:03 UTC timestamp for Contract To Perm / Right To Hire → C2H appears only in assistant-generated status text in the accessible record. Targeted prior-conversation retrieval did not recover the primary owner-authored message. The latest direct owner correction on 14 Nov 2026 at 05:51:27 UTC states: “C2H/Right-To-Hire semantics remain unapproved.” Treat Contract To Perm, Contract To Permanent and Right To Hire alias mapping, plus associated negation rules, as proposed rather than approved. The 17 Oct Apply taxonomy includes C2H as a category but does not establish those aliases. Keep PR #419 DRAFT; do not merge or ship the alias behavior by inference.
+
+The operational correction remains authoritative: crawling is manual/on-demand only, no daily contract-crawler cron, Robert Half manual-only, and the separate Gmail schedule is preserved. No live crawl or production mutation is authorized by this record.
+
+
+## 15 November 2026 — Safe Merge Gate retraction and primary-source boundary
+
+The Safe Merge Gate initially reported that later owner messages approved positive Contract To Perm / Contract To Permanent / Right To Hire → C2H aliases and required first-person blanket confirmation with exceptions preserved. Its later review [retracted the alias-approval claim](https://github.com/eshwarjay0-delS/job-dashboard/pull/418#pullrequestreview-5912105497), stating that the earlier comment had relied on an assistant-generated status summary and that no direct owner-authored message approving those aliases or requiring first-person grammar for all confirmations was recovered. This run independently searched accessible prior conversation context for the reported 14 November timestamps and phrases; no matching conversation was returned.
+
+Therefore, the 14 November 05:51:27 alias-approval timestamp and the reported first-person blanket-confirmation rule remain unverified. Keep Contract To Perm / Contract To Permanent / Right To Hire alias and negation behavior unapproved; negative forms remain unknown. Keep PR #419 DRAFT. Keep PR #415's strict first-person-only parser DRAFT; do not infer a universal grammar rule or truncate exceptions. The directly accessible owner-authored 6 November comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) independently confirms that candidate-confirmed skills may be mapped into relevant existing project bullets across roles without inventing biography facts, but does not establish those later rules.
+
+Preserve manual/on-demand contract crawling, no daily contract cron and Robert Half manual-only. This is a documentation/Plan/REA correction only; no classifier/parser runtime change, live crawl, model call, DOCX, external send or production data was changed.

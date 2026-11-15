@@ -213,3 +213,13 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Owner corrections recovered from prior conversations — 4–12 October 2026
+
+- **Account count:** connect up to four Gmail accounts; keep each account and its RTR/application chain distinct. The four-account target is explicit.
+- **Relationship integrity:** connect email dots deterministically; a past Calendar invitation is not proof the interview happened, and missing links stay open. Map each RTR/application chain, progress, follow-ups, recruiter handoffs and Calendar invitations into the overview/mind-map.
+- **User controls:** support selecting emails, ignoring a sender or domain, and user-managed ignore lists.
+- **Mobile navigation:** closed navigation stays hidden. When opened, it sits below the header and pushes content down; it must not overlay or squeeze the current view.
+
+Poke-inspired multi-account/mobile updates are approved at high level. Per-account Calendar target selection and exact waiting-on-them radar semantics remain proposed until directly confirmed.
