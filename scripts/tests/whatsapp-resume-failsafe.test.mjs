@@ -23,10 +23,12 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Jordan Example\candidate3@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
-const SAINT_LOUIS = 'Jordan Example\candidate4@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
-const HOUSTON_PATH = '/library/candidate1/easm.docx'
-const SAINT_LOUIS_PATH = '/library/candidate2/grc.docx'
+const HOUSTON = 'Jordan Example\candidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const SAINT_LOUIS = 'Taylor Example\candidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
+const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
+const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
+const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/GRC/easm.docx`
+const SAINT_LOUIS_PATH = `${TEST_USER_ROOT}/candidate2@example.test/GRC/grc.docx`
 const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
 
 function harness(runTailor) {
@@ -49,7 +51,7 @@ function harness(runTailor) {
       readPath: async p => p === HOUSTON_PATH ? Buffer.from(HOUSTON) : p === SAINT_LOUIS_PATH ? Buffer.from(SAINT_LOUIS) : null,
       writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true,
     },
-    '@/lib/paths': { DATA_DIR: '/data' },
+    '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/user-resumes' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
     '@/lib/tailor': { runTailor },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'EASM Cybersecurity Engineer', company: 'Acme', location: '' }) },
@@ -89,11 +91,11 @@ function harness(runTailor) {
   }
   const { generate } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate };')
   const filesFor = path => ({
-    userDir: '/data/user-resumes/user',
+    userDir: TEST_USER_ROOT,
     email: 'candidate1@example.test',
     said: 'your *EASM Cybersecurity Engineer* resume (in GRC and IT Risk). I chose it because its title matches',
     depth: 0,
-    rel: 'candidate1@example.test/GRC/easm.docx',
+    rel: path === HOUSTON_PATH ? 'candidate1@example.test/GRC/easm.docx' : 'candidate2@example.test/GRC/grc.docx',
     abs: path,
   })
   return { generate, docs, said, filesFor }
@@ -114,7 +116,7 @@ test('a below-floor rewrite still delivers that Word file and names the missing 
   await generate('15550021', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /Rewrote supplier reviews/)
   assert.match(docs[0].body, /candidate1@example.test/)
@@ -137,7 +139,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
     jdId: 'easm-fail', jd: 'EASM cybersecurity engineer',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }
-  await generate('15550021', session, 'user', 60_000, filesFor(HOUSTON_PATH))
+  await generate('15550021', session, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
@@ -150,7 +152,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
 
   mode = 'partial'
   docs.length = 0
-  await generate('15550021', { ...session, jdId: 'easm-partial' }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  await generate('15550021', { ...session, jdId: 'easm-partial' }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /marked incomplete/)
@@ -170,7 +172,7 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
   await generate('15550021', {
     jdId: 'easm-scored', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /Rewrote supplier reviews/)
   assert.match(docs[0].caption, /30\.8%/)
@@ -200,7 +202,7 @@ test('a slow constructed-JD rewrite sends the rewritten file, not the original',
   await generate('15550021', {
     jdId: 'iam-slow', jd: 'IAM consultant with SailPoint and CyberArk',
     resumePath: HOUSTON_PATH, resumeName: 'Senior IAM Business Analyst',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /Rewrote supplier reviews/)
   assert.match(docs[0].caption, /97%/)
@@ -221,7 +223,7 @@ test('roles that were not rewritten still send the chosen library file', async (
   await generate('15550021', {
     jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
@@ -235,7 +237,7 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
   await generate('15550021', {
     jdId: 'houston', jd: 'EASM role',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /candidate1@example.test/)
   assert.doesNotMatch(docs[0].body, /candidate2/)
@@ -244,7 +246,7 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
   await generate('15550021', {
     jdId: 'wrong-profile', jd: 'EASM role again',
     resumePath: SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, 'user', 60_000, filesFor(SAINT_LOUIS_PATH))
+  }, TEST_USER_ID, 60_000, filesFor(SAINT_LOUIS_PATH))
   assert.equal(docs.length, 0, 'a Saint Louis file is not sent for the Houston profile')
   assert.doesNotMatch(said.join('\n'), /candidate2/)
   assert.doesNotMatch(docs.map(d => d.body).join('\n'), /candidate2/)
