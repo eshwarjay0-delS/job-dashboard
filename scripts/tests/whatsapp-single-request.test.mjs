@@ -56,6 +56,8 @@ test('concurrent storage claims produce exactly one winner and propagate storage
 })
 test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
   const entries = new Map()
+  let providerAvailable = true, offlineMismatch = false
+  let sessionReadCount = 0
   let runs = 0, deliveries = 0, failNext = false, unchangedNext = false
   const said = []
   const docs = []
@@ -68,9 +70,16 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     // These cases exercise resume tailoring; channel transport has its own acceptance suite.
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
-    '@/lib/paths': { DATA_DIR: '/data' },
-    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
+    'next/server': {}, '@/lib/storage': { blob, readPath: async p => {
+      if (offlineMismatch && p.startsWith('/data/users/')) return Buffer.from('other@email.com')
+      if (p === '/data/whatsapp/inbox/123/selected.docx') {
+        sessionReadCount++
+        return Buffer.from(sessionReadCount % 2 === 1 ? 'same@email.com' : 'changed-after-verification@email.com')
+      }
+      return Buffer.from('same@email.com')
+    }, writePath: async () => {}, deletePath: async () => {} },
+    '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
+    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable },
     '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { deliveries++; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
@@ -83,7 +92,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp-trace': { trace: () => {} },
     // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
-    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {}, '@/lib/made-floor': {},
+    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': { markUsed: async () => {} }, '@/lib/resume-library': {}, '@/lib/made-floor': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
     '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
     '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
@@ -144,6 +153,58 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.ok(caption.includes('63%'))
   assert.match(resumeGapReport({ coverage: 63, quality: { status: 'needs_review' } }), /Risk: Needs review/)
   assert.ok(!caption.includes('Draft:'))
+
+  // Explicit 6 Nov owner policy: with no provider, only a verified selected
+  // same-account library original may be sent, and it must say NOT TAILORED.
+  const offlineUser = '00000000-0000-4000-8000-000000000001'
+  const offlineSession = {
+    jdId: 'offline-jd',
+    jd: 'Cloud Security Engineer contract role',
+    resumePath: '/data/whatsapp/inbox/123/selected.docx',
+    resumeName: 'Cloud Security Engineer',
+  }
+  const offlineFiles = {
+    userDir: `/data/users/${offlineUser}`,
+    email: 'same@email.com',
+    said: 'the selected Cloud Security resume',
+    depth: 0,
+    rel: 'same@email.com/Cloud Security Engineer.docx',
+    abs: `/data/users/${offlineUser}/same@email.com/Cloud Security Engineer.docx`,
+  }
+  providerAvailable = false
+  const readsBeforeOfflineFallback = sessionReadCount
+  await generate('123', offlineSession, offlineUser, undefined, offlineFiles)
+  assert.equal(sessionReadCount - readsBeforeOfflineFallback, 1, 'the verified library bytes are delivered without rereading a mutable session copy')
+  assert.equal(runs, 5, 'offline fallback must not call the AI writer')
+  assert.equal(deliveries, 6, 'the selected original is delivered once')
+  assert.match(docs.at(-1).caption, /Original resume — NOT TAILORED/)
+  assert.match(docs.at(-1).caption, /AI provider unavailable/)
+  assert.match(docs.at(-1).caption, /no edits were applied/)
+  assert.equal(docs.at(-1).body, 'same@email.com', 'the exact selected library bytes are sent')
+
+  const beforeMismatch = docs.length
+  offlineMismatch = true
+  await generate('123', { ...offlineSession, jdId: 'offline-byte-mismatch' }, offlineUser, undefined, offlineFiles)
+  assert.equal(docs.length, beforeMismatch, 'a library/session byte mismatch must not send a fallback')
+  assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
+
+  offlineMismatch = false
+  const wrongRootFiles = { ...offlineFiles, userDir: '/data/users/some-other-account' }
+  const beforeWrongRoot = docs.length
+  await generate('123', { ...offlineSession, jdId: 'offline-root-mismatch' }, offlineUser, undefined, wrongRootFiles)
+  assert.equal(docs.length, beforeWrongRoot, 'a different account root must not send a fallback')
+  assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
+
+  const mismatchedRelFiles = { ...offlineFiles, rel: 'other@email.com/Cloud Security Engineer.docx' }
+  const beforeRelMismatch = docs.length
+  await generate('123', { ...offlineSession, jdId: 'offline-relative-path-mismatch' }, offlineUser, undefined, mismatchedRelFiles)
+  assert.equal(docs.length, beforeRelMismatch, 'a relative library path that does not resolve to the selected file must not send')
+  assert.match(said.at(-1), /could not verify or send the selected same-account resume/)
+
+  const beforeUnselected = docs.length
+  await generate('123', { ...offlineSession, jdId: 'offline-upload' }, 'user')
+  assert.equal(docs.length, beforeUnselected, 'an upload or unselected resume is not eligible for the library fallback')
+  assert.match(said.at(-1), /no same-account library resume was selected/)
   assert.ok(caption.split('\n').length <= 5)
 })
 
@@ -200,10 +261,10 @@ test('a below-floor rewrite still delivers the Word file and names what is missi
   assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
 })
 
-test('a reply to a hold re-runs with the reply experience as evidence, and a still-below-floor redo still delivers', async () => {
+test('a reply to a hold uses confirmed evidence and never sends a baseline when refinement fails', async () => {
   const entries = new Map()
   const said = []
-  let deliveries = 0, captured = null, heldNext = false
+  let deliveries = 0, captured = null, heldNext = false, failNext = false
   const docs = []
   const { createHash } = require('node:crypto')
   const blob = {
@@ -217,7 +278,7 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
-    '@/lib/tailor': { runTailor: async opts => { captured = opts; if (heldNext) return { token: 'redo-held', edits: { extras: [] }, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
+    '@/lib/tailor': { runTailor: async opts => { captured = opts; if (failNext) { failNext = false; throw new Error('provider timeout') } if (heldNext) return { token: 'redo-held', edits: { extras: [] }, partial: true, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: ['draft_parts_missing'], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'], incomplete: true }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
@@ -253,9 +314,14 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
   assert.equal(deliveries, 1, 'a passing redo delivers')
   heldNext = true
   await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
-  assert.equal(deliveries, 2, 'a still-below-floor redo still delivers the rewritten file')
-  assert.ok(docs.some(text => text.includes('Still missing: splunk') && text.includes('40%')), 'the redo names the shortfall on the file')
-  assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
+  assert.equal(deliveries, 1, 'an incomplete refinement must not send the original or a partial baseline')
+  assert.equal(docs.length, 1, 'only the successful rewritten version was delivered')
+  assert.match(said.at(-1), /No file was sent; your previous resume is unchanged/)
+  failNext = true
+  await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
+  assert.equal(deliveries, 1, 'a provider failure must not send the original baseline')
+  assert.equal(docs.length, 1)
+  assert.match(said.at(-1), /No file was sent; your previous resume is unchanged/)
 })
 
 test('a partial hold names the unfinished sections and invites a reply-redo; other holds do not', async () => {

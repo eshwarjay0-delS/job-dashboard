@@ -13,8 +13,11 @@ export const WHATSAPP_SUPPORTED_FLOOR = 95
  * A complete draft from 70% through 94.9% is a clean pass when supported coverage
  * is already at 95%, so an honest gap does not block filing.
  * Below 70% is not a clean pass. It is still sent when the rewrite finished,
- * with the missing terms named. A failed or incomplete rewrite sends the
- * already-chosen resume instead. TAILOR_DELIVER_WITH_SHORTFALL=0 or
+ * with the missing terms named. For an initial JD run, a failed or incomplete
+ * rewrite may use the already-chosen same-account resume fallback; a no-provider
+ * fallback is explicitly labelled NOT TAILORED. Swipe-reply refinement is
+ * stricter: it never sends the original or a partial baseline when an edit fails,
+ * is incomplete, unreadable or identity-unsafe. TAILOR_DELIVER_WITH_SHORTFALL=0 or
  * JD_TERMS_ALWAYS_ON_SKILLS=0 restores the strict under-95% clean-pass refusal. */
 export const WHATSAPP_JOB_POST_FLOOR = 70
 
