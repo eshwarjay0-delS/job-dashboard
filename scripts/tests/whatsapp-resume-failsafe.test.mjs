@@ -24,15 +24,15 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Eshwar Jay\neshwarjay05@gmail.com | (713) 555-0105\nAnalyst, Acme  Jan 2021 - Mar 2024\nReviewed access controls and documented exceptions.'
-const SAINT_LOUIS = 'Eshwar Jay\njayeshwar44@gmail.com | (314) 555-0144\nAnalyst, Acme  Jan 2019 - Jun 2022'
-const HOUSTON_PATH = '/library/eshwarjay05/easm.docx'
-const SAINT_LOUIS_PATH = '/library/jayeshwar44/grc.docx'
+const HOUSTON = 'Candidate One\candidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024\nReviewed access controls and documented exceptions.'
+const SAINT_LOUIS = 'Candidate One\candidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
+const HOUSTON_PATH = '/library/Candidatejay05/easm.docx'
+const SAINT_LOUIS_PATH = '/library/jayCandidate44/grc.docx'
 const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
-const TEST_USER_ROOT = `/data/users/${TEST_USER_ID}`
-const LIBRARY_HOUSTON_PATH = `${TEST_USER_ROOT}/eshwarjay05@gmail.com/GRC/easm.docx`
-const INBOX_HOUSTON_PATH = '/data/whatsapp/inbox/15550021/easm.docx'
-const INBOX_SAINT_LOUIS_PATH = '/data/whatsapp/inbox/15550021/grc.docx'
+const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
+const LIBRARY_HOUSTON_PATH = `${TEST_USER_ROOT}/candidate3@example.test/GRC/easm.docx`
+const INBOX_HOUSTON_PATH = '/data/whatsapp/inbox/15550101/easm.docx'
+const INBOX_SAINT_LOUIS_PATH = '/data/whatsapp/inbox/15550101/grc.docx'
 const REWRITTEN = HOUSTON.replace('Reviewed access controls and documented exceptions.', 'Documented access-control reviews and exceptions.')
 
 function harness(runTailor) {
@@ -66,7 +66,7 @@ function harness(runTailor) {
     },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
     '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate' }) },
     '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
@@ -97,10 +97,10 @@ function harness(runTailor) {
   const { generate } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate };')
   const filesFor = path => ({
     userDir: TEST_USER_ROOT,
-    email: 'eshwarjay05@gmail.com',
+    email: 'candidate3@example.test',
     said: 'your *EASM Cybersecurity Engineer* resume (in GRC and IT Risk). I chose it because its title matches',
     depth: 0,
-    rel: 'eshwarjay05@gmail.com/GRC/easm.docx',
+    rel: 'candidate3@example.test/GRC/easm.docx',
     abs: path,
   })
   return { generate, docs, said, filesFor }
@@ -118,14 +118,14 @@ const low = {
 
 test('a below-floor rewrite still delivers that Word file and names the missing terms', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.match(docs[0].body, /Documented access-control reviews and exceptions/)
-  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.match(docs[0].body, /candidate3@example.test/)
+  assert.doesNotMatch(docs[0].body, /jayCandidate44/)
   assert.match(docs[0].caption, /30\.8%/)
   assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
   assert.doesNotMatch(docs[0].caption, /unsupported-platform/)
@@ -144,7 +144,7 @@ test('a failed or incomplete rewrite falls back only to the verified same-accoun
     jdId: 'easm-fail', jd: 'EASM cybersecurity engineer',
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }
-  await generate('15550021', session, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
+  await generate('15550101', session, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON, 'only the verified same-account library bytes are sent')
   assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
@@ -155,7 +155,7 @@ test('a failed or incomplete rewrite falls back only to the verified same-accoun
 
   mode = 'partial'
   docs.length = 0
-  await generate('15550021', { ...session, jdId: 'easm-partial' }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
+  await generate('15550101', { ...session, jdId: 'easm-partial' }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
@@ -175,7 +175,7 @@ test('a draft with unverified JD-only claims is held and falls back only to the 
     keyword_analysis: { matched: [], added: ['unsupported-platform'], missing: ['soc 2'] },
   }
   const { generate, docs, filesFor } = harness(async () => unsafe)
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'easm-unverified', jd: 'EASM cybersecurity engineer',
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
@@ -186,7 +186,7 @@ test('a draft with unverified JD-only claims is held and falls back only to the 
   assert.doesNotMatch(docs[0].caption, /unsupported-platform/)
 
   const noLibrary = harness(async () => unsafe)
-  await noLibrary.generate('15550021', {
+  await noLibrary.generate('15550101', {
     jdId: 'easm-unverified-no-library', jd: 'EASM cybersecurity engineer',
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000)
@@ -204,7 +204,7 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
     ats: { score: 92, passed: true, checks: [], issues: [] },
   }
   const { generate, docs, said, filesFor } = harness(async () => finished)
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'easm-scored', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
@@ -234,7 +234,7 @@ test('a slow constructed-JD rewrite sends the rewritten file, not the original',
     await new Promise(resolve => setTimeout(resolve, 50))
     return finished
   })
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'iam-slow', jd: 'IAM consultant with SailPoint and CyberArk',
     resumePath: HOUSTON_PATH, resumeName: 'Senior IAM Business Analyst',
   }, 'user', 60_000, filesFor(HOUSTON_PATH))
@@ -243,7 +243,7 @@ test('a slow constructed-JD rewrite sends the rewritten file, not the original',
   assert.match(docs[0].caption, /97%/)
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].caption, /did not finish cleanly/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.doesNotMatch(docs[0].body, /jayCandidate44/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
@@ -256,7 +256,7 @@ test('roles that were not rewritten still send the chosen library file', async (
   }
   const { generate, docs, filesFor } = harness(async () => unfinished)
   // The selected Files root belongs to TEST_USER_ID; keep the fixture owner consistent.
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
@@ -274,7 +274,7 @@ test('an out-of-root legacy source path is refused by the selected same-account 
     quality_blockers: ['roles_unrewritten'],
   }
   const { generate, docs, filesFor } = harness(async () => unfinished)
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'easm-legacy-path', jd: 'EASM cybersecurity engineer',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
@@ -283,27 +283,27 @@ test('an out-of-root legacy source path is refused by the selected same-account 
 
 test('the Houston and Saint Louis profiles are not mixed when the failsafe sends a file', async () => {
   const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'houston', jd: 'EASM role',
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /eshwarjay05@gmail.com/)
-  assert.doesNotMatch(docs[0].body, /jayeshwar44/)
+  assert.match(docs[0].body, /candidate3@example.test/)
+  assert.doesNotMatch(docs[0].body, /jayCandidate44/)
 
   docs.length = 0
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'wrong-profile', jd: 'EASM role again',
     resumePath: INBOX_SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(LIBRARY_HOUSTON_PATH))
   assert.equal(docs.length, 0, 'a Saint Louis session copy cannot replace the selected Houston library file')
   assert.match(said.join('\\n'), /No file was sent/)
-  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /jayeshwar44/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /jayCandidate44/)
 })
 
 test('provider failure without a selected same-account Files resume sends no inbox copy', async () => {
   const { generate, docs, said } = harness(async () => { throw new Error('provider down') })
-  await generate('15550021', {
+  await generate('15550101', {
     jdId: 'easm-no-library', jd: 'EASM cybersecurity engineer',
     resumePath: INBOX_HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000)
