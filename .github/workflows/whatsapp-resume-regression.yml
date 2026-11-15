@@ -9,6 +9,8 @@ on:
       - 'src/lib/whatsapp-resume-acceptance.ts'
       - 'src/lib/whatsapp-resume-recovery.ts'
       - 'src/lib/whatsapp.ts'
+      - 'src/lib/resume-evidence.ts'
+      - 'scripts/tests/resume-confirmation-quality.test.mjs'
       - 'src/lib/whatsapp-retry-policy.ts'
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
@@ -26,6 +28,9 @@ on:
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
       - 'scripts/tests/whatsapp-resume-contract.test.mjs'
+      - 'src/lib/resume-evidence.ts'
+      - 'scripts/tests/resume-confirmation-quality.test.mjs'
+      - '.github/workflows/whatsapp-resume-regression.yml'
   workflow_dispatch:
 jobs:
   regression:
