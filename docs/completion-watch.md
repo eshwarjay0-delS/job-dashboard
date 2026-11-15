@@ -1,3 +1,4 @@
+# MFit Completion Watch
 
 ## 15 November 2026 18:34 UTC — crawler abort diagnostics and backlog refresh
 
