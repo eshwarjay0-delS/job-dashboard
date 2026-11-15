@@ -47,3 +47,12 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 ## 14 November 2026 — manual-only guard exact-head validation
 
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
+
+
+## 15 November 2026 — first-person-only resume confirmation approval check
+
+The direct 6 Nov owner-authored correction requires tailoring against the exact JD, mapping requirements to actual experience, and adding DR/BIA/RTO/RPO/testing claims only when actually performed. Owner comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) permits an explicitly candidate-confirmed skill to be mapped into relevant existing project bullets across roles, without inventing new employers, projects, actions, outcomes, dates, titles, locations, contacts, metrics or credentials.
+
+Neither source states that only first-person grammar is an admissible form of candidate confirmation. Targeted retrieval of accessible prior conversations found no direct user-authored first-person-only rule. This does not mean the owner rejected that syntax; it means the stricter restriction is not verified as approved. PR #415's parser therefore remains a proposal and must stay DRAFT until the owner explicitly confirms whether first-person wording is required. Do not merge or deploy the restriction by inferring approval from a PR description or passing tests.
+
+The factual boundary remains unchanged: JD requirements and editing instructions are not experience evidence, and no unperformed DR/BIA/RTO/RPO/testing claims or other biography facts may be added. No live resume/JD model call, DOCX generation, ATS score or production change occurred in this approval check.

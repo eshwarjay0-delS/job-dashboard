@@ -75,3 +75,10 @@ Final review found a pre-existing web fact-check fail-open: unreadable source/ex
 The current implementation separates candidate confirmations from employer requirements in `candidateEvidenceInput`. `confirmedCandidateStatements` accepts first-person experience assertions and rejects editing instructions, questions, negations and JD-only requirement lists. `explicitlyConfirmsAllRequirements` recognizes the owner's explicit statement, “I have experience with all of them evenly,” while rejecting exceptions and formatting requests.
 
 The focused regression now pins both sides: the explicit blanket statement is accepted, while “Add all keywords,” “Make this 98% match,” and a bare required-skills list are not blanket experience evidence. This is a source-level guard, not a live model generation, a 98% match claim, or employer verification. The exported DOCX still needs an authenticated baseline/JD/confirmation review before quality can be accepted.
+
+
+## 15 November 2026 — approval provenance for first-person-only confirmation
+
+The approved rule is evidence-based tailoring: use the exact JD, map its requirements to actual candidate experience, and add DR/BIA/RTO/RPO/testing claims only if actually performed. Owner comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) also permits a candidate-confirmed skill to be mapped into relevant existing project bullets across roles, without inventing new biography facts.
+
+A targeted retrieval of accessible owner-authored conversation records did not find a direct instruction that only first-person positive grammar may count as confirmation. PR #415's strict first-person parser is therefore a conservative proposal, not an approved syntax policy. Keep it DRAFT until the owner explicitly confirms that restriction. This preserves the confirmed-experience boundary without inventing an additional grammar requirement.
