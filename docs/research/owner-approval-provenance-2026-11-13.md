@@ -69,8 +69,8 @@ Targeted prior-conversation retrieval returned these direct owner messages:
 
 This supersedes the earlier statement that the exact mobile-menu behavior was not retrieved. Poke-inspired multi-account/mobile updates are approved at high level. Per-account Calendar target selection and exact waiting-on-them radar semantics were not recovered as direct owner instructions and remain proposed.
 
-## 15 November 2026 — direct C2H classifier approval recovered and timestamp corrected
+## 15 November 2026 — correction: C2H alias approval was not recovered
 
-The direct owner message is 12 Nov 2026 at 05:03:03 UTC: W2, W2 Contract, C2C, 1099, temporary, permanent and C2H are in scope; W2 payroll alone is not contract; negated labels remain unknown; Contract To Perm and Right To Hire map to C2H. The earlier 07:41:33 UTC timestamp appeared in assistant-generated status text and is not used as owner evidence. This direct instruction supersedes the earlier approval-pending statement in this document and PR #402's stale body.
+The 12 Nov 2026 05:03:03 UTC timestamp for Contract To Perm / Right To Hire → C2H appears only in assistant-generated status text in the accessible record. Targeted prior-conversation retrieval did not recover the primary owner-authored message. The latest direct owner correction on 14 Nov 2026 at 05:51:27 UTC states: “C2H/Right-To-Hire semantics remain unapproved.” Treat Contract To Perm, Contract To Permanent and Right To Hire alias mapping, plus associated negation rules, as proposed rather than approved. The 17 Oct Apply taxonomy includes C2H as a category but does not establish those aliases. Keep PR #419 DRAFT; do not merge or ship the alias behavior by inference.
 
-The 14 Nov owner correction is separate and remains authoritative: contract crawling is manual/on-demand only; no daily cron; Robert Half manual-only; preserve the separate Gmail schedule; do not mutate production rows or submit applications without authorization. Generic contract-administration, negotiation or lifecycle inference remains unapproved. No live crawl occurred.
+The operational correction remains authoritative: crawling is manual/on-demand only, no daily contract-crawler cron, Robert Half manual-only, and the separate Gmail schedule is preserved. No live crawl or production mutation is authorized by this record.
