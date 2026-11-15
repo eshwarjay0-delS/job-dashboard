@@ -78,7 +78,7 @@ test('Gmail details remain proposed while owner-approved C2H aliases are pending
   assert.match(gmail.limits,/not directly confirmed|not owner-authored|proposed/i)
   assert.match(historicalCrawler.next,/superseded by the direct owner-authored 14 Nov 05:51:27 UTC approval/i)
   assert.equal(crawler.state,'Implemented, verification pending')
-  assert.match(crawler.limits,/protected preview/i)
+  assert.match(crawler.next,/protected preview/i)
   const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
   assert.match(plan,/not owner-approved/)
   assert.ok(plan.includes('historical owner-vision document docs/gmail.md'))
