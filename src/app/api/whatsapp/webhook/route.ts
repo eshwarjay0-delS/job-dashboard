@@ -898,23 +898,57 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
     throw new Error("WhatsApp session changed repeatedly while consuming a delivered resume pair")
   }
-  // A Files-backed original fallback must be the exact selected, account-scoped library bytes.
-  // Older recovery records can still carry an inbox/session copy, so validate both its path and bytes
-  // on every fallback path, not only the no-provider branch.
+  // A fallback must be the exact account-scoped library copy of the source chosen for this run.
+  // Files-picker runs use their explicit selection. An uploaded DOCX may use only the copy that
+  // saveUpload filed under this verified user, after matching it byte-for-byte to the inbox source.
+  let fallbackIdentityEmail = String(files?.email || "").trim().toLowerCase()
+  const verifiedAccountEmail = async (): Promise<string> => {
+    if (!serviceClientAvailable()) return ""
+    try {
+      const { data, error } = await createServiceClient()
+        .from("profiles").select("email").eq("id", userId).maybeSingle()
+      const email = String(data?.email || "").trim().toLowerCase()
+      return !error && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) ? email : ""
+    } catch { return "" }
+  }
   const readSelectedLibraryBytes = async (): Promise<Buffer | null> => {
-    if (!files || !files.email || !files.userDir || !files.abs || !files.rel || !session.resumePath) return null
+    if (!session.resumePath) return null
     const expectedRoot = filesOf(userId)
-    if (!expectedRoot || path.resolve(files.userDir) !== path.resolve(expectedRoot)) return null
-    const root = path.resolve(files.userDir)
-    const selected = path.resolve(files.abs)
-    const relative = path.normalize(files.rel)
-    if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(".." + path.sep)) return null
+    if (!expectedRoot) return null
+    const root = path.resolve(expectedRoot)
+    let selected = ""
+    let relative = ""
+    let identityEmail = ""
+    if (files) {
+      if (!files.email || !files.userDir || !files.abs || !files.rel ||
+          path.resolve(files.userDir) !== root) return null
+      selected = path.resolve(files.abs)
+      relative = path.normalize(files.rel)
+      identityEmail = files.email.trim().toLowerCase()
+    } else {
+      if (!session.resumeFiled) return null
+      selected = path.resolve(session.resumeFiled)
+      relative = path.relative(root, selected)
+      // The document's own email is not proof of account ownership. For the upload path,
+      // bind identity to the authenticated user's profile row instead.
+      identityEmail = await verifiedAccountEmail()
+      if (!identityEmail) return null
+    }
+    if (!identityEmail || path.isAbsolute(relative) || relative === "." ||
+        relative === ".." || relative.startsWith(".." + path.sep)) return null
     if (path.resolve(root, relative) !== selected || !selected.startsWith(root + path.sep)) return null
+
+    const sessionSource = path.resolve(session.resumePath)
+    const inboxRoot = path.resolve(INBOX_DIR, digits(from))
+    const sourceInInbox = sessionSource.startsWith(inboxRoot + path.sep)
+    const sourceInLibrary = sessionSource.startsWith(root + path.sep)
+    if (!sourceInInbox && !sourceInLibrary) return null
     const [libraryBytes, sessionBytes] = await Promise.all([
       readPath(selected).catch(() => null),
-      readPath(session.resumePath).catch(() => null),
+      readPath(sessionSource).catch(() => null),
     ])
     if (!libraryBytes || !sessionBytes || !libraryBytes.equals(sessionBytes)) return null
+    fallbackIdentityEmail = identityEmail
     return libraryBytes
   }
   const sendClosest = async (why: string, verifiedSource?: Buffer): Promise<boolean> => {
@@ -927,7 +961,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
     // Never substitute a resume from the other email. The path was chosen for this run.
-    if (!chosenResumeMatchesProfile(text, files?.email)) return false
+    if (!chosenResumeMatchesProfile(text, fallbackIdentityEmail)) return false
     const meta = await metaPromise
     const name = await outputNameFor(source)
     const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
@@ -963,14 +997,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   try {
     if (!hasAnyKey(keys)) {
       failureCode = "provider_unavailable"
-      if (files && await sendOfflineOriginal()) return
+      if (await sendOfflineOriginal()) return
       const latest = await readResumeRecovery(job).catch(() => null)
       const uncertain = sending || latest?.status === "sending" || latest?.status === "uncertain"
       await sayOutcome(uncertain
         ? "WhatsApp did not confirm the selected original resume. I will not send a duplicate; your request is saved."
         : files
           ? "I could not verify or send the selected same-account resume, so no file was sent. Your request is saved for retry."
-          : "AI tailoring is unavailable and no same-account library resume was selected, so no file was sent. Your request is saved for retry.")
+          : session.resumeFiled
+            ? "AI tailoring is unavailable and I could not verify the uploaded original against your account's saved copy, so no file was sent. Your request is saved for retry."
+            : "AI tailoring is unavailable and no same-account library resume was selected, so no file was sent. Your request is saved for retry.")
       return
     }
   if (!quiet) await sendText(from, files
