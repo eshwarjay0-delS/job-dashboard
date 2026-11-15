@@ -111,3 +111,10 @@ For PR #415 head `d79d8b06c5131213d76362bb45e730f6fd71f72d`:
 - Full CI `43690999874`: IN PROGRESS at the latest check.
 
 The branch remains DRAFT. Protected preview, production release and owner-authorized exported-DOCX acceptance have not occurred.
+
+
+## 15 November 2026 — exact-head test parser repair
+
+Full CI run 43691244803 failed in the evidence-bound resume export step before the focused confirmation assertions executed. The final negative-contraction string in scripts/tests/resume-confirmation-quality.test.mjs had a mismatched closing quote. Commit 959e9e81d41196dbc7e16cadd5752d96d0fef14c corrects only that test literal; it does not change resume-evidence parsing or runtime behavior.
+
+The previous code head's WhatsApp recovery, Kompas baseline and Plan/REA successes are not reused as evidence for the new head. Require all four exact-head workflows again. No model call, DOCX generation, Gemini review, live ATS score, production write or external message occurred.
