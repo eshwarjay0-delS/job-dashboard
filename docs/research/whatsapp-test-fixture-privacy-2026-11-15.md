@@ -44,3 +44,12 @@ The first exact-head full CI run for PR #416, head `f81df144b45db21c83ecc0e5f75f
 The test-only correction is commit `f2affec74ed7a669d9955a76f299b12abbc414cf`. It restores the line break in both synthetic strings and does not weaken the account/profile check or change runtime code. On that code head, the WhatsApp recovery workflow (43699322376), Kompas baseline (43699322370) and Plan/REA schema (43699322402) passed; full CI (43699322349) was still running at 09:28 UTC. The accompanying Plan/REA and Completion Watch update creates a new PR head, so all required checks must be verified again on the final head.
 
 The privacy-only PR remains DRAFT pending exact-head full CI and MFit Safe Merge Gate review. No production release, real WhatsApp send, R2 write, model call, or device acceptance occurred.
+
+
+## Privacy guard completion follow-up — 15 November 2026
+
+The Safe Merge Gate review of PR #416 found that the first privacy regression covered email domains and formatted phone numbers but did not mechanically enforce the synthetic-name and account-path categories described above. This follow-up makes the fixture identities visibly synthetic (Candidate / Candidate One / Candidate Two), uses the reserved synthetic test UUID and candidateN@example.test account folders, and checks those name/path contracts in the privacy test. WhatsApp recipient fixtures also use the reserved fictional 555-0100–0199 range.
+
+The current Plan & Vision baseline is corrected: the exact 17 Oct source DOCX is not currently available in the Library. A prior private review's size/digest is historical only, and the source facts are unverified/unreconciled rather than a proven contradiction. No private archive path, digest, personal email, phone, or document text is added to this repository.
+
+This remains test/documentation work only. It does not change the WhatsApp webhook, resume generation, identity guard, R2 behavior, delivery policy, or production configuration. The previous PR #416 head e9a18145f4cf387d81d22f1bd232b31c1adb1e08 passed full CI 43699468090, WhatsApp recovery 43699468076, Kompas baseline 43699468109, and Plan/REA 43699468067; this follow-up creates a new head and requires all four checks again. No protected preview, deployment, model call, DOCX generation, R2 write, real message, or device acceptance is claimed.
