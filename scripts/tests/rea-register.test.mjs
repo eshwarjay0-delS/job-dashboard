@@ -111,7 +111,7 @@ test('conflicting secondary approval reports stay blocked until primary owner me
  assert.ok(rea)
  assert.equal(rea.state,'Blocked')
  assert.match(rea.limits,/No primary 14 Nov owner message was retrieved/)
- assert.match(rea.limits,/Safe Merge Gate retracted its earlier positive-approval report/)
+ assert.ok(rea.steps.some(step=>/retracted its earlier positive C2H approval claim/.test(step.finding)))
  const journal=PLAN_JOURNAL.find(s=>s.id==='owner-approval-secondary-report-reconciliation-2026-11-15')
  assert.ok(journal)
  assert.equal(journal.approval,'proposed')
