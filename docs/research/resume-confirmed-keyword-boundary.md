@@ -75,3 +75,22 @@ Final review found a pre-existing web fact-check fail-open: unreadable source/ex
 The current implementation separates candidate confirmations from employer requirements in `candidateEvidenceInput`. `confirmedCandidateStatements` accepts first-person experience assertions and rejects editing instructions, questions, negations and JD-only requirement lists. `explicitlyConfirmsAllRequirements` recognizes the owner's explicit statement, “I have experience with all of them evenly,” while rejecting exceptions and formatting requests.
 
 The focused regression now pins both sides: the explicit blanket statement is accepted, while “Add all keywords,” “Make this 98% match,” and a bare required-skills list are not blanket experience evidence. This is a source-level guard, not a live model generation, a 98% match claim, or employer verification. The exported DOCX still needs an authenticated baseline/JD/confirmation review before quality can be accepted.
+
+
+## 15 November 2026 — first-person-only evidence correction
+
+### Finding
+
+The canonical master snapshot `17f8dada7ce1acf11064b1129ca4e33764ebb8a3` accepted two non-first-person forms as candidate evidence: the blanket matcher included “you have/possess”, and `confirmedCandidateStatements` accepted headings such as “Confirmed skills: Python”. This contradicted the 6 November owner correction, reiterated in owner-authored comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128), and the current confirmed-skill restack's stated rule that only explicit positive first-person assertions qualify.
+
+### Correction
+
+The review branch removes second-person blanket patterns and label-only headers, rejects common negative contractions, and retains explicit first-person positive statements. Contrast clauses preserve only the positive clause; a blanket statement with an exception is not treated as confirmation.
+
+### Evidence and limits
+
+- Source: `src/lib/resume-evidence.ts`.
+- Regression: `scripts/tests/resume-confirmation-quality.test.mjs` covers second-person statements, label-only headings, negative contractions, positive first-person assertions and bounded blanket confirmation.
+- Commits: `5bd0d132d057c2cfb50e59e66ac0a4feaa9c4379` and `6d9ef8d488ed4294197a02a86d050094297960ce`.
+- Exact-head GitHub Actions, protected preview, Safe Merge Gate, production release and real exported-DOCX acceptance remain pending.
+- No real resume/JD model call, DOCX generation, Gemini score, live ATS percentage or production data change occurred.
