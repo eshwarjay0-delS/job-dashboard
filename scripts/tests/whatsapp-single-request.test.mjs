@@ -34,7 +34,7 @@ test('with the job-post terms gate on, a changed phone or date stops the send; a
   assert.equal(sameResumeIdentity('Jordan Example\candidate4@example.test', 'Jordan Example\candidate4@example.test'), true)
   const src = 'Jordan Example\candidate4@example.test | 202-555-0103\nAnalyst, Acme  Jan 2021 - Mar 2024'
   assert.equal(sameResumeIdentity(src, src), true)
-  assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
+  assert.equal(sameResumeIdentity(src, src.replace('0103', '0104')), false)
   assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
 })
 test('concurrent storage claims produce exactly one winner and propagate storage failures', async () => {
