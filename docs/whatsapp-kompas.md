@@ -155,3 +155,8 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+
+## Public test-fixture privacy — 15 November 2026
+
+WhatsApp regression fixtures are synthetic only. Use `example.test` email identities and reserved fictional 555-0100 through 555-0199 phone numbers; never commit private resume bodies, real account contacts, user-specific library paths, or private document fingerprints. Keep distinct test identities distinct so account-isolation assertions remain meaningful. See `docs/research/whatsapp-test-fixture-privacy-2026-11-15.md`.
