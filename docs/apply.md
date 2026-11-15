@@ -201,8 +201,8 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
 
 
-## Owner-approved contract classification — 12 November 2026
+## Owner-approved contract classification — 14 November 2026
 
-The direct owner instruction at 12 Nov 2026 05:03:03 UTC includes W2, W2 Contract, C2C, 1099, temporary, permanent and C2H in the contract-search taxonomy; W2 payroll alone is not contract; negated labels remain unknown; and Contract To Perm plus Right To Hire map to C2H. The classifier recognizes ordinary space/hyphen variants and does not convert a directly negated C2H phrase into a positive C2H or generic Contract result by itself.
+The direct owner instruction at 12 Nov 2026 05:03:03 UTC establishes W2, W2 Contract, C2C, 1099, temporary, permanent and C2H in the contract-search taxonomy; W2 payroll alone is not contract. A separate direct owner approval at 14 Nov 2026 05:51:27 UTC explicitly maps Contract To Perm and Right To Hire to C2H and requires negated labels to remain unknown. The classifier recognizes ordinary space/hyphen variants and strips both prefix negatives (No/Not/Without/Never) and the owner-provided trailing negatives: Right To Hire is not available, Contract To Perm is not offered, and C2H not available. A separate positive alias in the same listing remains eligible; a negated phrase alone does not create C2H or generic Contract.
 
 This classifier approval is separate from the operational cadence: crawling remains manual/on-demand only, no daily contract-crawler cron is allowed, the separate Gmail crawler schedule stays intact, and Robert Half remains manual-only. Do not run a live crawl, mutate production rows or submit an application without a separate explicit authorization. Generic contract-administration, negotiation or lifecycle language is not added as a work-type rule without direct owner approval.
