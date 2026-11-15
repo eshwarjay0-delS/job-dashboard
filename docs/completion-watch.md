@@ -657,3 +657,7 @@ Continue: finish the approved WhatsApp uploaded-DOCX fallback correction on curr
 - No real WhatsApp send, production R2 write, model call, historical replay or handset test occurred. The 17 Oct 17:28 Chicago incident remains unverified: generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation are missing. A source fix does not prove historical delivery.
 
 **Next:** finish Plan/REA updates, run the four exact-head gates on the final PR #399 head, then wait for the legitimate protected preview and Safe Merge Gate. Keep the historical incident blocked until its exact artifacts and signed delivery evidence are recovered.
+
+## 15 November 2026 — final upload-verifier source correction
+
+The first source-contract test edit accidentally over-escaped its regular expressions, and the new email-shape check was also over-escaped. Both were corrected before accepting any test result: route commit `003a62f39c58fae3f65f2f05752bda2de39b2c8a` now validates a normal email address, and source-contract commit `bff0985f267afb893f88d65f9008397ed662c127` uses the intended literal regexes. The behavioral cases still cover success and fail-closed account/path/byte/profile cases. All previous runs are stale after these corrections and subsequent Plan/REA/documentation commits; check the current PR head and require fresh exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA.
