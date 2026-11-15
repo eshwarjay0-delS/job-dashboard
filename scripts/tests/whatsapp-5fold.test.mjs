@@ -83,6 +83,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   let uploadProfileEmail = 'eshwarjay05@gmail.com'
   let sendError = null
   let hang = false
+  let qualityIncomplete = false
   const statuses = ['uncertain']
   const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
   const selectedFiles = { userDir: `/data/users/${TEST_USER_ID}`, email: 'eshwarjay05@gmail.com', said: 'Eshwar Resume', depth: 0, rel: 'selected.docx', abs: `/data/users/${TEST_USER_ID}/selected.docx` }
@@ -116,7 +117,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable, resolveKeys: () => ({}), tailorKeys: k => k },
-    '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(acceptable) } },
+    '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(qualityIncomplete ? { ...acceptable, partial: true, coverage: 94, supported_coverage: 94, quality_blockers: ['quality_incomplete'], quality: { status: 'incomplete', incomplete: true, matched: 9, total: 10, missing: ['CCSP'] } } : acceptable) } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer', company: '', location: '' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { if (sendError) throw sendError; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
@@ -283,4 +284,27 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     resumeFiled: uploadLibraryPath,
   }, TEST_USER_ID, 60_000)
   assert.equal(docs.length, 0, 'missing verified account email fails closed')
+
+  // The 17 Oct screenshot shows an initial-JD draft held below the 98% target.
+  // When that quality gate remains incomplete, return only the verified uploaded
+  // original; never send the incomplete generated draft.
+  providerAvailable = true
+  qualityIncomplete = true
+  uploadProfileEmail = 'eshwarjay05@gmail.com'
+  uploadLibraryBytes = 'eshwarjay05@gmail.com'
+  uploadSessionBytes = 'eshwarjay05@gmail.com'
+  docs.length = 0
+  said.length = 0
+  await generate('15550021', {
+    jdId: 'uploaded-quality-hold',
+    jd: 'Cloud security upload job with a strict supported-coverage target',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 60_000)
+  assert.equal(runs, 6, 'an incomplete first pass receives one bounded fresh rewrite')
+  assert.equal(docs.length, 1, 'the quality hold returns the verified uploaded original instead of stopping without a file')
+  assert.equal(docs[0].body, 'eshwarjay05@gmail.com', 'the incomplete generated draft is never sent')
+  assert.match(docs[0].caption, /NOT TAILORED/)
+  assert.match(docs[0].caption, /rewrite incomplete/i)
+  qualityIncomplete = false
 })
