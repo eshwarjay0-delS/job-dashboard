@@ -199,3 +199,10 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## Owner-approved contract classification — 12 November 2026
+
+The direct owner instruction at 12 Nov 2026 05:03:03 UTC includes W2, W2 Contract, C2C, 1099, temporary, permanent and C2H in the contract-search taxonomy; W2 payroll alone is not contract; negated labels remain unknown; and Contract To Perm plus Right To Hire map to C2H. The classifier must recognize ordinary space/hyphen variants and must not convert a directly negated C2H phrase into a positive C2H or generic Contract result by itself.
+
+This classifier approval is separate from the operational cadence: crawling remains manual/on-demand only, no daily contract-crawler cron is allowed, the separate Gmail crawler schedule stays intact, and Robert Half remains manual-only. Do not run a live crawl, mutate production rows or submit an application without a separate explicit authorization. Generic contract-administration, negotiation or lifecycle language is not added as a work-type rule without direct owner approval.

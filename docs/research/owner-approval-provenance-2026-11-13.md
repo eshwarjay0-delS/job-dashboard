@@ -56,3 +56,21 @@ The direct 6 Nov owner-authored correction requires tailoring against the exact 
 Neither source states that only first-person grammar is an admissible form of candidate confirmation. Targeted retrieval of accessible prior conversations found no direct user-authored first-person-only rule. This does not mean the owner rejected that syntax; it means the stricter restriction is not verified as approved. PR #415's parser therefore remains a proposal and must stay DRAFT until the owner explicitly confirms whether first-person wording is required. Do not merge or deploy the restriction by inferring approval from a PR description or passing tests.
 
 The factual boundary remains unchanged: JD requirements and editing instructions are not experience evidence, and no unperformed DR/BIA/RTO/RPO/testing claims or other biography facts may be added. No live resume/JD model call, DOCX generation, ATS score or production change occurred in this approval check.
+
+
+## 15 November 2026 — direct Gmail/mobile owner requirements recovered
+
+Targeted prior-conversation retrieval returned these direct owner messages:
+
+- 5 Oct 2026 02:18:48 UTC: requested the Poke feature and up to four connected Gmail accounts; the account section could not yet connect Gmail.
+- 12 Oct 2026 13:17:53 UTC: requires deterministic email relationship mapping; a past Calendar invite is not proof of attendance; missing links stay open; map RTR/application chains, progress, follow-ups, recruiter handoffs, Calendar invites and an overview/mind-map.
+- 12 Oct 2026 13:20:04 UTC: keep Gmail accounts/chains separate; support email selection, sender/domain ignore and user-managed ignore lists.
+- 4 Oct 2026 23:41:26 UTC: closed mobile navigation is hidden; when opened, navigation sits underneath the header rather than overlaying or squeezing the current view.
+
+This supersedes the earlier statement that the exact mobile-menu behavior was not retrieved. Poke-inspired multi-account/mobile updates are approved at high level. Per-account Calendar target selection and exact waiting-on-them radar semantics were not recovered as direct owner instructions and remain proposed.
+
+## 15 November 2026 — direct C2H classifier approval recovered and timestamp corrected
+
+The direct owner message is 12 Nov 2026 at 05:03:03 UTC: W2, W2 Contract, C2C, 1099, temporary, permanent and C2H are in scope; W2 payroll alone is not contract; negated labels remain unknown; Contract To Perm and Right To Hire map to C2H. The earlier 07:41:33 UTC timestamp appeared in assistant-generated status text and is not used as owner evidence. This direct instruction supersedes the earlier approval-pending statement in this document and PR #402's stale body.
+
+The 14 Nov owner correction is separate and remains authoritative: contract crawling is manual/on-demand only; no daily cron; Robert Half manual-only; preserve the separate Gmail schedule; do not mutate production rows or submit applications without authorization. Generic contract-administration, negotiation or lifecycle inference remains unapproved. No live crawl occurred.
