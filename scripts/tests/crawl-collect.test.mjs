@@ -106,3 +106,31 @@ test('politeFetcher distinguishes local timeouts from upstream aborts and record
     globalThis.fetch = originalFetch
   }
 })
+
+test('a malformed adapter URL still advances the request pacing clock', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  const originalNow = Date.now
+  const originalSetTimeout = globalThis.setTimeout
+  const gapMs = 137
+  const waits = []
+  try {
+    Date.now = () => 1000
+    globalThis.setTimeout = (callback, ms, ...args) => {
+      if (ms === gapMs) {
+        waits.push(ms)
+        return originalSetTimeout(callback, 0, ...args)
+      }
+      return originalSetTimeout(callback, ms, ...args)
+    }
+    globalThis.fetch = async () => ({ ok: true, text: async () => 'ok' })
+    const get = politeFetcher(gapMs, 5000)
+    await assert.rejects(get('not a valid URL'), /Invalid URL/)
+    assert.equal(await get('https://crawler.test/jobs'), 'ok')
+    assert.deepEqual(waits, [gapMs], 'the malformed URL must still advance the pacing timestamp')
+  } finally {
+    globalThis.fetch = originalFetch
+    Date.now = originalNow
+    globalThis.setTimeout = originalSetTimeout
+  }
+})
