@@ -234,6 +234,28 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.match(docs[0].caption, /NOT TAILORED/)
   assert.match(docs[0].caption, /original resume/i)
 
+  // A timeout after the model starts must use the same verified uploaded original.
+  // This is still the initial-JD path; swipe refinement has its own no-baseline rule.
+  providerAvailable = true
+  hang = true
+  docs.length = 0
+  said.length = 0
+  const beforeUploadedTimeout = runs
+  const uploadedTimeout = generate('15550021', {
+    jdId: 'uploaded-timeout',
+    jd: 'Cloud security upload job timeout',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 300)
+  const uploadedTimeoutResult = await Promise.race([uploadedTimeout.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
+  assert.equal(uploadedTimeoutResult, 'done')
+  assert.equal(runs, beforeUploadedTimeout + 1, 'the timeout occurred after the model call started')
+  assert.equal(docs.length, 1, 'a timeout may send only the exact verified uploaded original')
+  assert.equal(docs[0].body, 'eshwarjay05@gmail.com')
+  assert.match(docs[0].caption, /NOT TAILORED/)
+  assert.match(docs[0].caption, /AI rewrite timed out/)
+  hang = false
+
   docs.length = 0
   await generate('15550021', {
     jdId: 'uploaded-foreign-root',
