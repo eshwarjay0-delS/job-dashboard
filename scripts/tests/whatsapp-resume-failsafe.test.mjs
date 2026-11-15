@@ -1,6 +1,7 @@
 // WhatsApp must always deliver a resume file for the profile already chosen.
 // Nov 6, 2026: the EASM run refused a 30.8% rewrite and sent no file.
 import test from 'node:test'
+import { etagBlobMethods } from './helpers/etag-blob.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -34,6 +35,7 @@ function harness(runTailor) {
   const said = []
   const entries = new Map()
   const storage = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async key => (String(key).startsWith('tailored/') ? Buffer.from(REWRITTEN) : null),
