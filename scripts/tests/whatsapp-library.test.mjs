@@ -3,6 +3,7 @@
 // from it, filed back in Files in the folder for its kind of job, the pick logged and counted; "redo"; and a job made
 // before sent again with no new run. The bot runs with stand-ins for storage, the AI and WhatsApp.
 import test from 'node:test'
+import { etagBlobMethods } from './helpers/etag-blob.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -35,6 +36,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
   const store = new Map()
   const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = [], channelCalls = []
   const blob = {
+    ...etagBlobMethods(store),
     getText: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v) }, delete: async k => { store.delete(k) },
     putIfAbsent: async (k, v) => { if (store.has(k)) return false; store.set(k, v); return true },
     get: async k => (k.startsWith('tailored/') ? Buffer.from('a@x.com tailored resume') : null),

@@ -155,3 +155,29 @@ Next: explicit account-owned shared-session selection from the local workspace w
 ## Blocker re-check — 5 November 2026
 
 The 27 October journal entry that said no runnable environment was available, and that production had no Kompas routing, is no longer the current fact. Master `90cdd1dd` wires `handleWhatsAppKompas` in the WhatsApp webhook. Pull request 87 (`4374b13`) and pull request 108 (`59715c3`) are ancestors of that master. Live `https://job-dashboard-fawn.vercel.app/kompas` returned 200 with the text Open WhatsApp chats. `version.json` reported commit `90cdd1ddcd04e89e175972024240dd7981dd988d` and build `kompas-20261105-call-audio`. `/api/health` returned ok. This check does not prove a real WhatsApp message, a desktop sync tap, native session convergence, retention, or a signed-in browser session.
+
+
+## Resume fallback and session-pair safety — 13 November 2026
+
+- Initial JD + unavailable AI provider: the bot may send only the exact selected resume bytes verified against the same account's selected library file, with the explicit label **Original resume — NOT TAILORED**.
+- Swipe-reply refinement: failures remain text-only. The bot must not send the original or a partial baseline; the previously delivered resume remains unchanged.
+- Resume and JD are one pair. Consume only after the provider accepts the exact document; a signed failed-delivery callback keeps the pair for recovery.
+- Session updates use R2 ETag/If-Match conditional writes. HTTP 409, 412 and 404 are bounded retry conflicts; unexpected storage failures propagate. There is no unconditional-write fallback.
+- The 6 Nov channel policy remains in force: 70% raw-overlap delivery floor; clean 70–94.9% pass requires at least 95% supported coverage; 98% is an evidence target, not a universal WhatsApp hard hold. Unsupported experience, employers, dates, credentials and metrics are never invented.
+
+Source implementation is in the current-master restack branch. CI, protected preview, production deployment and real handset acceptance are separate gates. The 17 Oct historical output and signed provider receipt remain unavailable; no replay or real send is claimed.
+
+
+## Provider failure fallback — 14 November 2026
+
+For an initial job-description run, a provider exception is handled the same way as an incomplete result: send only the exact selected same-account library bytes after verifying the account root, normalized relative path, resolved file path and byte equality with the session copy. The outgoing caption must say **Original resume — NOT TAILORED**. If no selected Files context exists or any check fails, send no document and keep the request available for retry. Do not use an arbitrary inbox/session copy as a fallback. Swipe-reply refinement remains text-only on provider failure or incomplete output; the previously delivered version stays unchanged.
+
+This correction is carried in current-master draft PR #399. At the last inspected head e0694e2bac48cadd00876f6e3640b107619940c1, full CI 43630012666 failed only because scripts/tests/resume-guards.test.mjs still expected an inline literal call; the route correctly computes fallbackWhy and passes it to sendOfflineOriginal. The test now checks the exact incomplete-caption branch and variable use. WhatsApp recovery 43630012658, Kompas baseline 43630012651 and Plan/REA 43630012656 passed on that pre-fix head; all four gates must rerun on the updated final head. The legitimate protected preview is still required. No real WhatsApp send or R2 production write is claimed.
+
+## 15 November 2026 — 17 October WhatsApp quality-hold evidence
+
+The 17 Oct 17:28 Chicago screenshot (`1792276118790.jpeg`, Library) shows the five-page, 28 KB uploaded DOCX was held because automatic repair did not reach the 98% target; visible remaining terms were CCSP, CISM, CRISC, CISA, Canton, Sol, Specialty and Attributes. The matching Security Engineer – Risk & Controls contract JD was recovered from Gmail thread `1a1464393628992f`. Treat this as a quality-gate hold; do not infer provider failure or delivery.
+
+The exact original source DOCX is still inaccessible at the previously inventoried Library path `/J_Eshwar_44/General Security`; similar files must not be substituted. Generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound message ID and signed delivery/read receipt remain unavailable. No historical replay or real WhatsApp test was performed.
+
+PR #399 adds a mocked uploaded-quality-hold regression: one bounded rewrite attempt, then a byte-equal same-account filed original may be returned as `NOT TAILORED`; path, byte or authenticated-profile mismatch sends no file. Exact-head CI and protected preview remain pending.
