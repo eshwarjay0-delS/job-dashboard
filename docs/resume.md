@@ -117,3 +117,13 @@ PR #399's timeout regression fixture is being corrected on the current-master br
 ## 14 November 2026 — WhatsApp timeout fallback regression passed
 
 PR #399 test-correction commit `2b745bb2bd1939561909e6eee28e126cbac37b4d` now exercises a selected-library/session byte mismatch and asserts that no document is sent. Exact-head full CI `43638674249`, WhatsApp recovery `43638674273`, Kompas baseline `43638674258` and Plan/REA `43638674247` all passed. This is a test-fixture correction; runtime behavior is unchanged. Protected preview and Safe Merge Gate review remain pending. The 17 Oct historical delivery is still unverified and no replay or real send occurred.
+
+## 15 November 2026 — uploaded DOCX fallback now uses the verified account copy
+
+A source review of current-master PR #399 found that the earlier offline fallback handled Files-picker selections but not the ordinary WhatsApp upload path. An uploaded DOCX is saved to the verified user's Files root as `session.resumeFiled`, while the original remains in the sender's inbox; the normal upload call has no Files-picker object.
+
+The fallback now accepts either the explicit Files selection or, for an uploaded DOCX, only the saved `session.resumeFiled` copy strictly inside `filesOf(userId)`. It reads both the filed copy and the inbox/session source and requires byte-for-byte equality. The upload path obtains the identity email from the authenticated user's `profiles.email` row; it never treats an email parsed from the document as account ownership. Provider-unavailable uploads now attempt this same guarded fallback. Foreign-root, missing, mismatched, or unverified-profile cases send no document and retain the request for retry.
+
+The file is still labelled **Original resume — NOT TAILORED**. This does not change the approved 70% raw-overlap / 95% supported-coverage WhatsApp policy, the hard hold for unverified JD-only claims, or the text-only swipe-refinement failure rule.
+
+The new behavioral and source-contract cases are awaiting exact-head GitHub Actions. No real WhatsApp send, production R2 write, model call, historical replay, or handset acceptance occurred. The 17 Oct 17:28 Chicago incident remains unverified: its generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt, and owner reconciliation of conflicting source facts are still missing. No 98% live match is claimed.
