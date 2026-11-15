@@ -217,18 +217,37 @@ test('keywords: Java not matched inside JavaScript', () => {
   assert.deepEqual(r.covered, [])
 })
 
-// Guarded WhatsApp refine failures must never attribute a non-email mismatch to email.
-// A missing original still sends no file. An identity, contact, or date mismatch does not
-// send the rewritten bytes; it sends the already-chosen baseline and names that reason.
-test('WhatsApp refine: missing original and failed identity verification have distinct, accurate refusals', () => {
+// Swipe-reply refinements have a stricter recovery contract than the initial-JD flow:
+// missing source means no queue and no document; rejected output stays recoverable and is
+// never replaced with the original/partial file.
+test('WhatsApp refine: missing source never queues or sends; identity rejection remains recoverable', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
-  assert.match(route, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\."\)/)
-  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*await sendBaseline\("The update failed identity\/contact\/date verification, so I sent your original resume instead\.", source, meta\)/)
-  assert.match(route, /sendClosest\("The update failed identity\/contact\/date verification, so I sent your original resume instead\."\)/)
-  assert.doesNotMatch(route, /The rewrite did not keep your name, contact details and dates/)
-  assert.doesNotMatch(route, /failed the contact-details or employment-date preservation check/)
-  assert.match(route, /docxIdentityText\(source\)/)
-  assert.match(route, /docxIdentityText\(file\)/)
+  const refineStart = route.indexOf('async function refine(')
+  const workerStart = route.indexOf('async function processResumeRefinement(', refineStart)
+  const deliverStart = route.indexOf('async function deliver(', workerStart)
+  assert.ok(refineStart >= 0 && workerStart > refineStart && deliverStart > workerStart)
+
+  const refine = route.slice(refineStart, workerStart)
+  const worker = route.slice(workerStart, deliverStart)
+  const sourceRead = refine.indexOf('const source = await readPath(gen.file).catch(() => null)')
+  const missingSource = refine.indexOf('if (!source) return sendText(')
+  const enqueue = refine.indexOf('await enqueueResumeRefinement({')
+  const process = refine.indexOf('await processResumeRefinement(jobId)')
+  assert.ok(sourceRead >= 0 && missingSource > sourceRead)
+  assert.ok(enqueue > missingSource && process > enqueue)
+  assert.match(refine, /if \(!source\) return sendText\(from, "I could not open the exact resume version you replied to\. No document was sent\."\)/)
+  assert.doesNotMatch(refine, /\b(?:sendDocument|sendBaseline|sendClosest)\s*\(/)
+
+  const qualityGate = worker.indexOf('if (!whatsappRewriteUsable(result))')
+  const identityGate = worker.indexOf('if (!(await sameResumeFacts(source, file)))')
+  const delivery = worker.indexOf('await deliver(')
+  assert.ok(qualityGate >= 0 && identityGate > qualityGate && delivery > identityGate)
+  assert.match(worker, /await deferResumeRefinement\(jobId, "identity_guard_rejected"\)/)
+  const rejected = worker.slice(identityGate, delivery)
+  assert.match(rejected, /Your edit is saved for retry/)
+  assert.match(rejected, /No document was sent/)
+  assert.doesNotMatch(rejected, /\b(?:sendDocument|sendBaseline|sendClosest|deliver)\s*\(/)
+  assert.match(worker, /await markResumeDocumentAccepted\(jobId, wamid\)/)
 })
 
 test('resume identity: email-only mismatch logs category without exposing addresses', () => {

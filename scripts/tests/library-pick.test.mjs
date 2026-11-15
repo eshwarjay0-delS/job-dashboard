@@ -186,7 +186,7 @@ test('WhatsApp bot: a resume sent wins, otherwise the email is asked once and re
   assert.ok(read('src/lib/library-choose.ts').includes('agentPick('), 'the AI agent picks the resume inside the email')
   assert.ok(!bot.includes('archiveGeneratedResume('))
   assert.ok(!bot.includes('resume_documents'))
-  assert.ok(bot.includes('return refine(from, replyTo, text, userId)'))
+  assert.ok(bot.includes('return refine(from, replyTo, text, userId, msgId)'), 'the inbound Meta message id makes swipe-reply refinement idempotent')
 })
 
 test('only a registered number is answered; one that is not gets one automated message a day and nothing else', () => {

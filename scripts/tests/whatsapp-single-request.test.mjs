@@ -210,17 +210,18 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
+    list: async prefix => [...entries.keys()].filter(key => key.startsWith(prefix)),
   }
   const mocks = {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
-    'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
+    'next/server': {}, '@/lib/storage': { blob, keyOf: value => value, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
     '@/lib/tailor': { runTailor: async opts => { captured = opts; if (heldNext) return { token: 'redo-held', edits: { extras: [] }, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return 'sent' } },
-    '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
+    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return `sent-${deliveries}` } },
+    '@/lib/owner': { isOwnerWhatsApp: () => true }, '@/lib/whatsapp-who': { resolveWhatsAppUser: async () => ({ who: { userId: 'user', own: true } }) }, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
@@ -234,25 +235,19 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
-    '@/lib/whatsapp-resume-recovery': {
-      enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
-      deferResumeRecovery: async () => {},
-      dueResumeRecoveries: async () => [],
-      markResumeDocumentAccepted: async () => true,
-      recordResumeDeliveryStatus: async () => {},
-      readResumeRecovery: async () => ({ status: 'pending' }),
-    },
+    '@/lib/whatsapp-resume-recovery': load('src/lib/whatsapp-resume-recovery.ts', {
+      './storage': { blob }, './whatsapp-retry-policy': { retryDelayMs: () => 1000 },
+    }),
   }
   const { refine } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { refine };')
   const genKey = `whatsapp/gens/123/${createHash('sha1').update('wamid.hold1').digest('hex').slice(0, 24)}.json`
-  entries.set(genKey, JSON.stringify({ userId: 'user', jd: 'job description', file: 'whatsapp/versions/123/base.docx', meta: { role: 'Engineer' }, changes: [], source: '/data/whatsapp/inbox/123/unique.docx', createdAt: Date.now(), held: true }))
-  await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
+  entries.set(genKey, JSON.stringify({ userId: 'user', jd: 'job description', file: '/data/whatsapp/versions/123/base.docx', meta: { role: 'Engineer' }, changes: [], source: '/data/whatsapp/inbox/123/unique.docx', createdAt: Date.now(), held: true }))
+  await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user', 'wamid.edit1')
   assert.equal(captured.immediatePrefs.length, 1)
   assert.equal(captured.immediatePrefs[0], 'I have experience with Splunk and AWS')
   assert.equal(deliveries, 1, 'a passing redo delivers')
   heldNext = true
-  await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
+  await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user', 'wamid.edit2')
   assert.equal(deliveries, 2, 'a still-below-floor redo still delivers the rewritten file')
   assert.ok(docs.some(text => text.includes('Still missing: splunk') && text.includes('40%')), 'the redo names the shortfall on the file')
   assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
