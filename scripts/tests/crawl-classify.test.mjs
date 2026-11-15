@@ -75,3 +75,32 @@ test("the C2H correction does not change unrelated contract labels", () => {
   assert.deepEqual(contractTypes("W2 Contract"), ["W2"])
   assert.equal(contractTypes("Contract administration").includes("C2H"), false)
 })
+
+
+test("owner-provided trailing C2H negations remain unknown", () => {
+  for (const value of [
+    "Right to hire is not available",
+    "Contract To Perm is not offered",
+    "C2H not available",
+  ]) {
+    assert.deepEqual(contractTypes(value), [], value)
+    assert.equal(classifyWorkType(value), "unknown", value)
+    assert.deepEqual(contractTypes("Software Engineer", value), [], value)
+  }
+})
+
+test("mixed positive and negative C2H evidence keeps only the positive facts", () => {
+  assert.deepEqual(
+    contractTypes("Right To Hire is not available; Contract To Perm"),
+    ["C2H"],
+  )
+  assert.deepEqual(
+    contractTypes("Contract To Perm is not offered; C2C"),
+    ["C2C"],
+  )
+  assert.deepEqual(contractTypes("C2H not available; 1099"), ["1099"])
+  assert.deepEqual(
+    contractTypes("Software Engineer", "Right To Hire is not available; C2H"),
+    ["C2H"],
+  )
+})
