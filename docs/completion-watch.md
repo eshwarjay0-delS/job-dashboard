@@ -1,14 +1,14 @@
 # MFit Completion Watch
 
-## 15 November 2026 18:20 UTC — Safe Merge Gate retraction and test repair
+## 15 November 2026 18:22 UTC — Safe Merge Gate retraction and exact-head test repair
 
 Continue: keep PR #419's C2H alias behavior and PR #415's strict first-person parser DRAFT; continue other approved work without promoting unverified instructions.
 
 - The Safe Merge Gate's initial PR #418 comments reported later owner approvals, but its subsequent review [retracted the positive C2H approval claim](https://github.com/eshwarjay0-delS/job-dashboard/pull/418#pullrequestreview-5912105497), saying the earlier comment relied on an assistant-generated status summary and no direct owner-authored message approving those aliases or requiring first-person grammar for all confirmations was recovered.
 - This run independently searched prior conversation context for the reported 14 November timestamps and phrases; no matching conversation was returned. Keep the C2H aliases unapproved, negative forms unknown, and the first-person-only parser unapproved. PR #419 and PR #415 remain DRAFT.
 - The directly accessible owner-authored [6 Nov comment #6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) confirms cross-role mapping of candidate-confirmed skills and the no-invented-biography boundary, but not the later C2H aliases or universal first-person-only syntax.
-- PR #418 source/documentation change is on head 1459f60efd118bec975253486795d10d1f426c2c. Kompas baseline 43746140319 passed. Plan/REA 43746140294 failed only because a new assertion looked for the retraction phrase in rea.limits while the record stores it in rea.steps; the assertion is corrected in the next commit. Full CI 43746140307 was still running on that preceding head. The new exact head must rerun all gates.
-- Preserve manual/on-demand crawling, no daily contract cron and Robert Half manual-only. This is documentation/Plan/REA/test only; no classifier/parser runtime change, crawl, model call, DOCX, production mutation, email or WhatsApp send occurred.
+- PR #418 current branch head is b9237b2b70a518e14c4aa1a8972deda2f7006c25. On the prior head 1459f60, Kompas baseline 43746140319 passed; Plan/REA 43746140294 failed on a stale assertion. The test now checks the retraction in the REA steps array and asserts the current Plan wording instead of superseded C2H/first-person text. Full CI 43746140307 was still running on 1459f60. Exact-head gates for b9237 must be verified before any merge.
+- The branch is reported non-mergeable after this shared-file update; do not rebase or merge ahead of #414/#421 sequencing. Preserve manual/on-demand crawling, no daily contract cron and Robert Half manual-only. No runtime change, crawl, model call, DOCX, production mutation, email or WhatsApp send occurred.
 
 ## 15 November 2026 13:55 UTC — C2H approval correction and PR #418 type repair
 
