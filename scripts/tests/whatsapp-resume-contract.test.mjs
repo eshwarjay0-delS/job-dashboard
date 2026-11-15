@@ -190,6 +190,11 @@ test('every Files-backed original fallback uses exact selected same-account libr
   const consumeStart = webhook.indexOf('// Consume this pair now', noKeyStart)
   const noKey = webhook.slice(noKeyStart, consumeStart)
   assert.match(noKey, /if \(await sendOfflineOriginal\(\)\) return/)
+  const timeoutStart = webhook.indexOf('const timedOut =', noKeyStart)
+  const timeoutEnd = webhook.indexOf('await sayOutcome(files', timeoutStart)
+  const timeoutCatch = webhook.slice(timeoutStart, timeoutEnd)
+  assert.match(timeoutCatch, /if \(await sendOfflineOriginal\(why\)\) return/)
+  assert.doesNotMatch(timeoutCatch, /if \(files && await sendOfflineOriginal\(why\)\)/)
 })
 
 test('swipe refinement never sends the original or partial baseline on any failure', () => {
