@@ -24,3 +24,10 @@ No audio capture, transcript persistence, account identity, privacy, external se
 PR #356's old-head full CI `43400940786`, Kompas baseline `43400940746`, and Plan/REA schema `43400940841` succeeded, but those results do not validate this new head. Fresh exact-head full CI, baseline and Plan/REA are required.
 
 The separate protected `voice-preview-smoke` and preview gate remain required. The owner-controlled private `KOMPAS_VERCEL_API_TOKEN` is unavailable to this run. Do not bypass it. No Windows hardware acceptance or production deployment is claimed.
+
+## First exact-head validation and correction
+
+- The first full CI run on head `ab3bedd1efba6f58c43ecddb166d54a43c1660f6` failed at Lint with `src/lib/kompas-dossier-bots.ts:216:0 — Parsing error: '}' expected` (run `43684834490`). Type-check and later steps were skipped; the baseline and Plan/REA jobs on that same head succeeded.
+- Inspection found the re-applied `audio_transcript` validation block was missing its closing brace immediately before `seen.add(id)`. Added only that brace in commit `37370c77647e9157eba88e6b208e008e156d4444`; no validation rule changed.
+- All checks must rerun on the new final head. The previous green baseline/Plan-REA and failed full CI are historical for the old head, not proof for the corrected head.
+- The protected voice-preview-smoke and preview remain blocked by the unavailable owner-controlled private token. Do not bypass.
