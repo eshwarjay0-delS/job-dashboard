@@ -24,13 +24,13 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Candidate One\candidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024\nReviewed access controls and documented exceptions.'
-const SAINT_LOUIS = 'Candidate One\candidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
-const HOUSTON_PATH = '/library/Candidatejay05/easm.docx'
-const SAINT_LOUIS_PATH = '/library/jayCandidate44/grc.docx'
+const HOUSTON = 'Candidate One\ncandidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024\nReviewed access controls and documented exceptions.'
+const SAINT_LOUIS = 'Candidate Two\ncandidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
+const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/easm.docx`
+const SAINT_LOUIS_PATH = `${TEST_USER_ROOT}/candidate2@example.test/grc.docx`
 const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
-const LIBRARY_HOUSTON_PATH = `${TEST_USER_ROOT}/candidate3@example.test/GRC/easm.docx`
+const LIBRARY_HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/easm.docx`
 const INBOX_HOUSTON_PATH = '/data/whatsapp/inbox/15550101/easm.docx'
 const INBOX_SAINT_LOUIS_PATH = '/data/whatsapp/inbox/15550101/grc.docx'
 const REWRITTEN = HOUSTON.replace('Reviewed access controls and documented exceptions.', 'Documented access-control reviews and exceptions.')
