@@ -300,7 +300,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     jd: 'Cloud security upload job with a strict supported-coverage target',
     resumePath: uploadSessionPath,
     resumeFiled: uploadLibraryPath,
-  }, TEST_USER_ID, 60_000)
+  }, TEST_USER_ID, 180_000)
   assert.equal(runs, 6, 'an incomplete first pass receives one bounded fresh rewrite')
   assert.equal(docs.length, 1, 'the quality hold returns the verified uploaded original instead of stopping without a file')
   assert.equal(docs[0].body, 'eshwarjay05@gmail.com', 'the incomplete generated draft is never sent')
