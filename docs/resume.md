@@ -91,3 +91,8 @@ Source-controlled WhatsApp resume tests must use synthetic candidate names, dist
 Only explicit positive first-person candidate assertions can expand experience evidence. Second-person phrasing (for example, “You have experience with all required skills”) and label-only lists (for example, “Confirmed skills: Python”) are not candidate confirmation. Questions, negations and common negative contractions are rejected. A contrast such as “I used AWS but not GCP” may support the positive clause only; an exception cannot turn a blanket statement into confirmation.
 
 This guard preserves the 6 November owner correction: an explicitly confirmed skill may be mapped into relevant existing project bullets across roles, including earlier roles, but the confirmation supports only the named skill. It does not authorize a new employer, project, action, outcome, title, date, location, contact, metric or credential. The JD and formatting instructions remain target context, not evidence. Source-level regression tests do not establish a live ATS score or 98% match.
+
+
+## Interrogative confirmation regression — 15 November 2026
+
+A first-person-looking question is not a candidate fact. Preserve terminal question marks through sentence segmentation and reject the interrogative clause before punctuation or contrast normalization. For example, 'I used AWS?', 'My experience includes AWS?', and 'I have experience with all required skills?' must not expand the evidence set. A later independent declarative sentence may still be evaluated, and 'I used AWS but not GCP' continues to support AWS only. The focused cases are in scripts/tests/resume-confirmation-quality.test.mjs; exact-head hosted checks and exported-DOCX acceptance remain separate.
