@@ -14,6 +14,8 @@ The source-only correction already existed in PR #400, but that branch was based
 
 ## Implementation on the current-master restack
 
+Draft PR #423: https://github.com/eshwarjay0-delS/job-dashboard/pull/423
+
 Branch: `fix/resume-confirmed-skill-alignment-master-8ad319-20261115`
 
 - `src/lib/claude.ts` now treats the JD as target requirements, not candidate history. It permits only source-supported or explicitly confirmed skills and allows cross-role mapping only into relevant existing project context.
