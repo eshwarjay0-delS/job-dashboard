@@ -93,4 +93,4 @@ The owner-approved 6 November correction permits an explicitly confirmed skill t
 
 The current-master writer prompt had contradictory legacy wording that treated JD requirements as candidate skills and encouraged spreading JD terms across every role. The current-master restack corrects that prompt, keeps source-only gaps role-scoped, and deterministically restores unsupported role edits. A prompt-contract test guards against reintroducing the contradictory instructions.
 
-The source change and tests are in draft review. Exact-head CI, WhatsApp recovery, Kompas baseline, Plan/REA, protected preview and owner-authorized exported-DOCX acceptance remain separate gates. No live 95–100% or 98% match is claimed.
+The source change and tests are in draft PR [#423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423). Exact-head CI, WhatsApp recovery, Kompas baseline, Plan/REA, protected preview and owner-authorized exported-DOCX acceptance remain separate gates. No live 95–100% or 98% match is claimed.
