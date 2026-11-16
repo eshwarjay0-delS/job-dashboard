@@ -144,6 +144,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
   assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
+  assert.ok(docs[0].caption.indexOf("Original resume — NOT TAILORED") < docs[0].caption.indexOf("This is your closest matching resume"))
   assert.match(docs[0].caption, /EASM Cybersecurity Engineer/)
   assert.match(docs[0].caption, /in GRC and IT Risk/)
   assert.match(docs[0].caption, /did not finish cleanly/)
