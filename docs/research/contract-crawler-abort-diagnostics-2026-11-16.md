@@ -23,14 +23,14 @@ Mocked tests cover:
 2. Upstream AbortError attribution.
 3. Malformed URL cleanup and preservation of the pacing gap before a subsequent valid request.
 
-The dedicated crawler freshness workflow now runs `scripts/tests/crawl-collect.test.mjs` when collector code or tests change.
+The dedicated crawler freshness workflow now runs `scripts/tests/crawl-collect.test.mjs` when collector code or tests change, on both pull requests and master pushes.
 
 ## Current-master restack
 
 - Base master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`.
 - Source was independently reviewed from predecessor PR #430, branch `fix/crawler-abort-diagnostics-current-master-20261116`, but only collector, test, workflow and Apply documentation changes are copied. No PR #428 WhatsApp files or behavior are included.
 - New branch: `fix/crawler-abort-diagnostics-master-66291-20261116`, opened as draft PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) at initial head `e1d0401f372ce3410d7102bc87611c443d749f88`. Plan/REA evidence updates will advance the branch; all required workflows must be checked again on the final head.
-- The exact-head full CI, Kompas baseline, crawler workflow and Plan/REA schema checks must complete on the final PR head. The predecessor's focused tests are not a substitute.
+- Workflow path filters were corrected in commit `9dfbab16b12de3aaf3b86345f8f20a8534616368` so collector changes trigger the suite on both pull requests and master pushes. The earlier workflow commit `936d8789da6126e5ac78d45e62518255d4b6df21` omitted the push-path entries; the corrected blob matches the reviewed predecessor workflow. The exact-head full CI, Kompas baseline, crawler workflow and Plan/REA schema checks must complete on the final PR head. The predecessor's focused tests are not a substitute.
 - The Vercel project currently reports `live:false`; latest production attempt is CANCELED and the canonical alias remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview access requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. No deployment or protection bypass is attempted.
 
 ## Preserved source policy
