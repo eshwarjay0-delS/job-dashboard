@@ -3,6 +3,7 @@
 // taken off the skills line, including when that tool was written as the heading.
 // A run that cannot send a file says so. It does not stop after "Updating".
 import test from 'node:test'
+import { etagBlobMethods } from './helpers/etag-blob.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -74,11 +75,27 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   let runs = 0
   let file = null
   let samePerson = true
+  let mismatchLibraryBytes = false
+  let providerAvailable = true
+  let missingUploadLibrary = false
+  let uploadLibraryBytes = 'candidate1@example.test'
+  let uploadSessionBytes = 'candidate1@example.test'
+  let uploadProfileEmail = 'candidate1@example.test'
   let sendError = null
   let hang = false
+  let qualityIncomplete = false
   const statuses = ['uncertain']
+  const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
+  const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
+  const SELECTED_PATH = `${TEST_USER_ROOT}/candidate1@example.test/selected.docx`
+  const UPLOAD_PATH = `${TEST_USER_ROOT}/candidate1@example.test/uploaded.docx`
+  const selectedFiles = { userDir: TEST_USER_ROOT, email: 'candidate1@example.test', said: 'Candidate Resume', depth: 0, rel: 'selected.docx', abs: SELECTED_PATH }
+  const selectedSessionPath = SELECTED_PATH
+  const uploadLibraryPath = UPLOAD_PATH
+  const uploadSessionPath = '/data/whatsapp/inbox/15550101/uploaded.docx'
   const entries = new Map()
   const blob = {
+    ...etagBlobMethods(entries),
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
     get: async () => file,
@@ -90,10 +107,20 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('no voice') } },
     'next/server': {},
-    '@/lib/storage': { blob, readPath: async () => Buffer.from('candidate1@example.test'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
-    '@/lib/paths': { DATA_DIR: '/data' },
-    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
-    '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(acceptable) } },
+    '@/lib/storage': {
+      blob,
+      readPath: async filePath => {
+        if (filePath === uploadLibraryPath) return missingUploadLibrary ? null : Buffer.from(uploadLibraryBytes)
+        if (filePath === uploadSessionPath) return Buffer.from(uploadSessionBytes)
+        if (filePath === selectedFiles.abs) return Buffer.from('candidate1@example.test')
+        if (filePath === selectedSessionPath) return Buffer.from(mismatchLibraryBytes ? 'different-session-copy' : 'candidate1@example.test')
+        return Buffer.from('candidate1@example.test')
+      },
+      writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true
+    },
+    '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/users' },
+    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => providerAvailable, resolveKeys: () => ({}), tailorKeys: k => k },
+    '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(qualityIncomplete ? { ...acceptable, partial: true, coverage: 94, supported_coverage: 94, quality_blockers: ['quality_incomplete'], quality: { status: 'incomplete', incomplete: true, matched: 9, total: 10, missing: ['CCSP'] } } : acceptable) } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer', company: '', location: '' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async (_to, body, _name, caption) => { if (sendError) throw sendError; docs.push({ body: Buffer.from(body).toString(), caption }); return 'sent' } },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
@@ -103,7 +130,21 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/resume-identity': { sameResumeIdentity: () => samePerson },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
     '@/lib/docx': { extractText: async b => b.toString(), outputNameFor: async () => 'Candidate_Resume.docx' },
-    '@/lib/supabase/service': { serviceClientAvailable: () => false },
+    '@/lib/supabase/service': {
+      serviceClientAvailable: () => true,
+      createServiceClient: () => ({
+        from: table => ({
+          select: () => ({
+            eq: (_column, id) => ({
+              maybeSingle: async () => ({
+                data: table === 'profiles' && id === TEST_USER_ID ? { email: uploadProfileEmail } : null,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      }),
+    },
     '@/lib/keyword-targets': { isCertification: () => false },
     '@/lib/whatsapp-trace': { trace: () => {} },
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
@@ -127,12 +168,12 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     },
   }, '\nexport { generate };')
 
-  await generate('15550101', { jdId: 'stuck', jd: 'Cloud security job', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'stuck', jd: 'Cloud security job', resumePath: selectedSessionPath }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 0, 'an uncertain Meta upload is not sent again')
   assert.match(said.at(-1), /document upload is unconfirmed/)
 
   file = null
-  await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: selectedSessionPath }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 1)
   assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
   assert.match(docs[0].caption, /updated Word file could not be opened/)
@@ -143,25 +184,154 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   docs.length = 0
   file = Buffer.from('candidate2@example.test')
   samePerson = false
-  await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: selectedSessionPath }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 2)
   assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
   assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
+  assert.doesNotMatch(docs[0].body, /jayCandidate44/)
   assert.match(docs[0].caption, /identity\/contact\/date verification/)
   assert.match(docs[0].caption, /closest matching resume/)
 
   file = Buffer.from('candidate1@example.test')
   samePerson = true
   sendError = new Error('WA sendDoc 500: no')
-  await generate('15550101', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
+  await generate('15550101', { jdId: 'refused', jd: 'Cloud security job four', resumePath: selectedSessionPath }, TEST_USER_ID, 60_000, selectedFiles)
   assert.equal(runs, 3)
-  assert.match(said.at(-1), /WhatsApp refused it/)
-  assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
+  assert.match(said.at(-1), /run stopped before a file/)
+  assert.match(said.at(-1), /saved, and MarketFit will try again/)
 
+  mismatchLibraryBytes = true
+  sendError = null
   hang = true
-  const stalled = generate('15550101', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
+  const docsBeforeTimeout = docs.length
+  const stalled = generate('15550101', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: selectedSessionPath }, TEST_USER_ID, 300, selectedFiles)
   const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
   assert.equal(timed, 'done')
-  assert.match(said.at(-1), /ran out of time just now/) // Nov4: a timeout says so, instead of the generic tailor failure line.
+  assert.equal(runs, 4, 'the fifth fold reached the timed-out rewrite')
+  assert.equal(docs.length, docsBeforeTimeout, 'a selected-library/session byte mismatch must not send a document')
+  assert.match(said.at(-1), /could not verify the exact selected same-account resume/)
+  assert.match(said.at(-1), /No file was sent; your request is saved for retry/)
+
+  // The original WhatsApp upload path has no Files-picker context. It may use only
+  // the same-account copy filed by saveUpload, byte-equal to the inbox source and
+  // identity-checked against the authenticated profiles.email row.
+  providerAvailable = false
+  hang = false
+  mismatchLibraryBytes = false
+  sendError = null
+  docs.length = 0
+  said.length = 0
+  uploadLibraryBytes = 'candidate1@example.test'
+  uploadSessionBytes = 'candidate1@example.test'
+  uploadProfileEmail = 'candidate1@example.test'
+  missingUploadLibrary = false
+  await generate('15550101', {
+    jdId: 'uploaded-no-provider',
+    jd: 'Cloud security upload job',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 60_000)
+  assert.equal(runs, 4, 'provider-unavailable upload fallback does not invoke the model')
+  assert.equal(docs.length, 1, 'the exact same-account filed copy can be used for an uploaded DOCX')
+  assert.equal(docs[0].body, 'candidate1@example.test', 'the sent bytes are the verified filed original')
+  assert.match(docs[0].caption, /NOT TAILORED/)
+  assert.match(docs[0].caption, /original resume/i)
+
+  // A timeout after the model starts must use the same verified uploaded original.
+  // This is still the initial-JD path; swipe refinement has its own no-baseline rule.
+  providerAvailable = true
+  hang = true
+  docs.length = 0
+  said.length = 0
+  const beforeUploadedTimeout = runs
+  const uploadedTimeout = generate('15550101', {
+    jdId: 'uploaded-timeout',
+    jd: 'Cloud security upload job timeout',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 300)
+  const uploadedTimeoutResult = await Promise.race([uploadedTimeout.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
+  assert.equal(uploadedTimeoutResult, 'done')
+  assert.equal(runs, beforeUploadedTimeout + 1, 'the timeout occurred after the model call started')
+  assert.equal(docs.length, 1, 'a timeout may send only the exact verified uploaded original')
+  assert.equal(docs[0].body, 'candidate1@example.test')
+  assert.match(docs[0].caption, /NOT TAILORED/)
+  assert.match(docs[0].caption, /AI rewrite timed out/)
+  hang = false
+  providerAvailable = false
+
+  docs.length = 0
+  await generate('15550101', {
+    jdId: 'uploaded-foreign-root',
+    jd: 'Cloud security upload job foreign root',
+    resumePath: uploadSessionPath,
+    resumeFiled: '/data/users/foreign-account/uploaded.docx',
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0, 'a filed path outside the verified account root is never sent')
+
+  missingUploadLibrary = true
+  await generate('15550101', {
+    jdId: 'uploaded-missing-copy',
+    jd: 'Cloud security upload job missing copy',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0, 'a missing filed copy never falls back to the inbox bytes')
+
+  missingUploadLibrary = false
+  uploadLibraryBytes = 'candidate1@example.test'
+  uploadSessionBytes = 'different-inbox-bytes'
+  await generate('15550101', {
+    jdId: 'uploaded-byte-mismatch',
+    jd: 'Cloud security upload job byte mismatch',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0, 'the filed copy must match the uploaded inbox source byte-for-byte')
+
+  uploadLibraryBytes = 'candidate3@example.test'
+  uploadSessionBytes = 'candidate3@example.test'
+  uploadProfileEmail = 'candidate1@example.test'
+  await generate('15550101', {
+    jdId: 'uploaded-profile-mismatch',
+    jd: 'Cloud security upload job profile mismatch',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0, 'the resume email is not substituted for the authenticated account profile email')
+
+  uploadLibraryBytes = 'candidate1@example.test'
+  uploadSessionBytes = 'candidate1@example.test'
+  uploadProfileEmail = ''
+  await generate('15550101', {
+    jdId: 'uploaded-profile-unavailable',
+    jd: 'Cloud security upload job profile unavailable',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0, 'missing verified account email fails closed')
+
+  // The 17 Oct screenshot shows an initial-JD draft held below the 98% target.
+  // When that quality gate remains incomplete, return only the verified uploaded
+  // original; never send the incomplete generated draft.
+  providerAvailable = true
+  qualityIncomplete = true
+  uploadProfileEmail = 'candidate1@example.test'
+  uploadLibraryBytes = 'candidate1@example.test'
+  uploadSessionBytes = 'candidate1@example.test'
+  docs.length = 0
+  said.length = 0
+  const beforeQualityRetry = runs
+  await generate('15550101', {
+    jdId: 'uploaded-quality-hold',
+    jd: 'Cloud security upload job with a strict supported-coverage target',
+    resumePath: uploadSessionPath,
+    resumeFiled: uploadLibraryPath,
+  }, TEST_USER_ID, 180_000)
+  assert.equal(runs, beforeQualityRetry + 2, 'an incomplete first pass receives one bounded fresh rewrite')
+  assert.equal(docs.length, 1, 'the quality hold returns the verified uploaded original instead of stopping without a file')
+  assert.equal(docs[0].body, 'candidate1@example.test', 'the incomplete generated draft is never sent')
+  assert.match(docs[0].caption, /NOT TAILORED/)
+  assert.match(docs[0].caption, /rewrite incomplete/i)
+  qualityIncomplete = false
 })

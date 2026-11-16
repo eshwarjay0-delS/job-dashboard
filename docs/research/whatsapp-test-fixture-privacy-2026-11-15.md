@@ -63,3 +63,12 @@ The expanded guard normalizes escaped resume line breaks before scanning contact
 ## 15 November 2026 — supported REA status correction
 
 The exact-head Plan/REA schema check accepted the new record, but full CI and the WhatsApp recovery typecheck correctly rejected the aggregate REA state value "Tested" because the ReaSession state union does not include that value. The supported aggregate state is restored to "Implemented, verification pending"; individual validation steps retain their "Tested" status and exact-head evidence. This preserves the distinction between source tests and deployment/real acceptance. Full CI 43706681284 and WhatsApp recovery 43706681273 exposed the issue; the next exact head must rerun all four gates.
+
+
+## PR #411 guard follow-up — 15 November 2026
+
+The exact PR #411 branch inspected at head `b2c7c7ef39841a41f783df5c6b5980322690398c` already used synthetic Candidate names, distinct `candidateN@example.test` identities and reserved fictional phone numbers across the three WhatsApp fixtures. It did not yet contain the dedicated privacy regression or the CI/workflow wiring. This follow-up carries the merged guard into that branch and adds the test to full CI and the dedicated WhatsApp recovery workflow, including fixture path filters.
+
+No fixture values or runtime behavior are changed by this follow-up. The guard checks the existing synthetic identity, phone, output-name, recipient and account-path contracts. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA results are pending. PR #411 remains DRAFT and stale against the current master until the Safe Merge Gate restacks it after the evidence-only PR #414/shared-document sequence.
+
+No live WhatsApp send, model call, production R2 write, historical replay, application submission, or owner-device action occurred. The protected preview and the separate owner decision on sending an original `NOT TAILORED` resume after a provider timeout remain mandatory.
