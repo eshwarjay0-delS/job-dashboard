@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 16 November 2026 15:57 UTC — Gmail Retry-After exact-head verification
+
+- Canonical MFit master at the last repository comparison is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; production alias `job-dashboard-fawn.vercel.app` remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+- PR [#432](https://github.com/eshwarjay0-delS/job-dashboard/pull/432), branch `fix/gmail-retry-after-20261116`, exact head `6b04a042a59b414d729c5e916ffad66ce6fd2c6b`: full CI `43873587418`, Plan/REA schema `43873587419`, and Kompas baseline `43873587424` all COMPLETED SUCCESS. The helper and on-demand Overview path honor delta-seconds/HTTP-date Retry-After while preserving the bounded fallback and per-page/account isolation.
+- Release is blocked, not failed: Vercel `get_project` reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED; `get_alias` and `get_deployment` independently confirm the canonical alias still targets older READY `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` / `b94e1629c544048d84a2b048ae83b21b612ab9dd`. SSO protection is enabled on non-custom domains. The owner-controlled private `KOMPAS_VERCEL_API_TOKEN` is unavailable. No preview, deploy, billing change, unpause or protection bypass was attempted.
+- The Poke-style worker, scheduler, notifications, inbox writes and outbound sends remain disabled. No Gmail API/OAuth call or authenticated two-inbox/mobile acceptance occurred. Do not call the cached 2,002 threads fresh.
+- WhatsApp remains separately open: PR #428's approved fallback-label slice is source-tested but still DRAFT, its branch diverges from current master by two commits, and protected preview is unavailable. PR #427's whole-delivery hard hold remains explicitly unapproved. PR #411's uploaded-original-after-timeout behavior remains a separate unapproved decision.
+- The 17 Oct 2026 17:28 Chicago WhatsApp incident is still unverified: exact output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivery/read receipt are missing. No replay or resend.
+- No live Gmail/WhatsApp sends, inbox mutation, crawl, production DB write or owner-device test occurred.
+
+Continue: keep PR #432 DRAFT until an owner/authorized admin restores the Vercel project live state and supplies legitimate protected-preview access privately; then let MFit Safe Merge Gate review the exact head and verify preview before any release. Continue the separate approved WhatsApp library-fallback label only through Safe Merge Gate's safe restack; do not include PR #427's unapproved hard hold.
 ## 16 November 2026 13:00 UTC — Gmail Retry-After continuation
 
 - Production issue [#429](https://github.com/eshwarjay0-delS/job-dashboard/issues/429) records five Gmail 403 `rateLimitExceeded` responses on `/api/gmail/application-chains` and one unreadable history-page error. The API already returns HTTP 429 with `Retry-After: 30`; the Overview client used fixed 15/40/65-second waits and could retry before the server's requested pause.
