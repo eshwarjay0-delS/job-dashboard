@@ -255,3 +255,10 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
   assert.doesNotMatch(said.join('\n'), /candidate2/)
   assert.doesNotMatch(docs.map(d => d.body).join('\n'), /candidate2/)
 })
+
+
+test('the not-tailored label is restricted to Files/library-origin fallback', () => {
+  const source = readFileSync(resolve(root, 'src/app/api/whatsapp/webhook/route.ts'), 'utf8')
+  assert.match(source, /closestResumeCaption\(name, chosenLabel\(files, session\.resumeName\), why, !!files\)/)
+  assert.match(source, /\.\.\.\(markNotTailored \? \["Original resume — NOT TAILORED"\] : \[\]\)/)
+})
