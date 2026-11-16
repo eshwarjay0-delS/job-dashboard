@@ -1,3 +1,17 @@
+## 16 November 2026 02:41 UTC — isolate the approved unsupported-JD hard hold
+
+Continue: validate the narrow WhatsApp `unverified_jd_terms` hard-hold correction on its exact final head, then let the MFit Safe Merge Gate review it. Do not bundle it with the separate provider-timeout original-resume send.
+
+- Canonical master at branch start: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The #416 fixture/privacy merge is test/docs/CI only; it is not a resume runtime release.
+- Source audit found a fail-open cached-result shape: `unverified_jd_terms` was allowed in the WhatsApp shortfall reason set, while `whatsappRewriteUsable()` did not explicitly reject a blocker-only cached result when `unverified_added_keywords` was empty.
+- New review branch `fix/whatsapp-unverified-jd-hard-hold-20261115`: runtime commit `40ea21ed7ac667b75296368a11c31aec2bdcb55f`; two regression cases `663a3abc3fa60337d04f771d3d21737718140d33`. The change removes unsupported JD-only additions from the shortfall allowlist, explicitly rejects the detail-list and blocker-only forms, and no longer labels them as a delivered shortfall. It does not change the 70% raw / 95% supported WhatsApp policy or any fallback/send behavior.
+- The owner-authored 14 Nov hard-hold decision is confirmed in accessible prior context. The broader 27 Oct closest-library-resume failsafe remains separate; this change does not authorize sending an original after provider timeout.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending. Keep DRAFT until all required gates pass, Safe Merge Gate review completes, and the legitimate protected preview is available through the owner-controlled `KOMPAS_VERCEL_API_TOKEN`. Do not bypass Vercel protection.
+- Historical 17 Oct 17:28 Chicago event remains unverified: one model-use usage row (score 87, 34 calls, no source-event key) is not proof of export or delivery; output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed receipt and owner fact reconciliation remain missing. No replay.
+- PR #411's uploaded-DOCX provider-timeout fallback remains DRAFT, non-mergeable on an old base, and has a separate unresolved owner-decision gate for sending an original labelled NOT TAILORED after timeout. iZap currently has zero linked WhatsApp numbers, so real Meta delivery acceptance is unavailable until the owner connects a number. No real send, R2 write, model call or production mutation occurred.
+
+No production deployment or live acceptance is claimed for this branch.
+
 # MFit Completion Watch
 
 ## 15 November 2026 09:28 UTC — PR #416 fixture correction and exact-head gates
