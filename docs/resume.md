@@ -94,3 +94,10 @@ The owner-approved 6 November correction permits an explicitly confirmed skill t
 The current-master writer prompt had contradictory legacy wording that treated JD requirements as candidate skills and encouraged spreading JD terms across every role. The current-master restack corrects that prompt, keeps source-only gaps role-scoped, and deterministically restores unsupported role edits. A prompt-contract test guards against reintroducing the contradictory instructions.
 
 The source change and tests are in draft PR [#423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423). The code-bearing head passed exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; this docs-only update advances the branch, so those gates must rerun. Protected preview and owner-authorized exported-DOCX acceptance remain separate gates. No live 95–100% or 98% match is claimed.
+
+
+## Confirmation syntax correction — 16 November 2026
+
+The owner-approved cross-role rule requires an explicit candidate confirmation, but no accessible owner-authored instruction makes first-person grammar the exclusive confirmation syntax. The writer prompt and evidence input now use “explicit candidate confirmations.” The parser still requires an explicit positive assertion or a labelled `Confirmed skills:` / `Confirmed experience:` statement; JD-only requirements, editing instructions, questions and negations remain non-evidence. The blanket-all path remains narrow and exception-safe. This is not a live resume match or exported-DOCX acceptance.
+
+The correction is in draft PR [#423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423). Exact-head CI and protected-preview/exported-DOCX gates remain separate.
