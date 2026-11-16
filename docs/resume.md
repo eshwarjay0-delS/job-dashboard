@@ -101,3 +101,10 @@ The source change and tests are in draft PR [#423](https://github.com/eshwarjay0
 The owner-approved cross-role rule requires an explicit candidate confirmation, but no accessible owner-authored instruction makes first-person grammar the exclusive confirmation syntax. The writer prompt and evidence input now use “explicit candidate confirmations.” The parser still requires an explicit positive assertion or a labelled `Confirmed skills:` / `Confirmed experience:` statement; JD-only requirements, editing instructions, questions and negations remain non-evidence. The blanket-all path remains narrow and exception-safe. This is not a live resume match or exported-DOCX acceptance.
 
 The correction is in draft PR [#423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423). Exact-head CI and protected-preview/exported-DOCX gates remain separate.
+
+
+## WhatsApp coverage policy and 17 October hold — 16 November 2026
+
+The 95% shared resume-quality report floor and 98% target are not a universal WhatsApp send hold. The approved WhatsApp path can send a complete readable below-95% result with gaps disclosed; 70–94.9% is a clean pass only when supported coverage is at least 95% and ATS, identity, role-completeness and document-integrity gates pass. A finished result below 70% is not a clean pass. Web downloads retain the strict 95% raw-overlap gate. The current production alias contains the 17 October Risk & Controls term-filter fix and regression; certifications, generic fragments and unsupported preferred platforms are not added as candidate experience.
+
+The historical 17 October 17:28 Chicago hold remains unverified as a delivery event. Its screenshot and source archive are evidence of the request, not of the generated DOCX or Meta delivery. The output DOCX, per-run R2/webhook/Meta trace, signed delivery receipt and owner reconciliation of conflicting source facts are still required before any authorized replay.
