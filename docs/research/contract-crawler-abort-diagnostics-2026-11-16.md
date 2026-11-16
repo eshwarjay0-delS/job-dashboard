@@ -55,3 +55,8 @@ No live portal request, manual crawl, production database mutation, application 
 The first run, crawler workflow 43820809564, passed the five freshness and three classifier tests but failed one new collector assertion: the test regular expression was double-escaped. The implementation's timeout message was correct; the failure was in the test expectation. Commit 2a2bf83f02b349d6deb968c09a754aa56a556683 changed the assertions to compare exact error-message strings.
 
 The corrected-head crawler workflow 43820946766 completed SUCCESS: 5/5 freshness, 3/3 classifier and 7/7 collector tests (15 total). Plan/REA schema workflow 43820946873 also completed SUCCESS. Full CI and Kompas baseline were not triggered because this PR is stacked on PR #428 rather than targeting master; run them after the parent is accepted and the branch is retargeted. Protected preview remains unavailable without the owner-controlled KOMPAS_VERCEL_API_TOKEN. No production deployment or live crawl occurred.
+
+
+## Final stacked-head evidence before the Plan/REA evidence update
+
+PR #430 head 7322bea5ae29cabc018ad8bd4498e4176ddcd569 passed crawler workflow 43821164467 (5 freshness + 3 classifier + 7 collector tests, all successful) and Plan/REA schema workflow 43821164638. A subsequent documentation-only update records these results in Plan & Vision, Plan Journal and REA; the exact final-head schema check is being re-confirmed. Full CI and Kompas baseline remain deferred until PR #428 is accepted and PR #430 is retargeted to master.
