@@ -43,3 +43,8 @@ A second path marked the draft incomplete before the role calls finished. The fi
 Focused suites covering the budget, the quality flag, the send gate, the 30.8 percent scored send, the library backup, the 70 percent clean pass, and the website hold: 152 passed, 0 failed. `tsc --noEmit` passed.
 
 Not a live WhatsApp message. Not a production deploy. A live Houston EASM run is still required after this pull request is merged.
+
+
+## 16 November 2026 — numeric-threshold approval provenance correction
+
+The 6 Nov numeric 70–94.9% / 95%-supported wording at the top of this research record is a repository research summary, not a verified direct owner quotation. Accessible prior-conversation retrieval did not recover an owner-authored message containing those numbers; the retrieved 6 Nov assistant summary is not owner approval. Therefore the threshold remains repository-recorded current implementation, not a verified owner-approved numeric policy. Preserve the current code behavior pending an explicit owner correction; do not claim fresh approval or change the thresholds by inference. The separate 6 Nov owner-authored confirmed-skill correction is evidenced by PR #319 comment #6817645128 and is not the source of these numeric thresholds.
