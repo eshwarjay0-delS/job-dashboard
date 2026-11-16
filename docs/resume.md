@@ -85,3 +85,26 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+
+## Confirmed-experience prompt boundary — 15 November 2026
+
+The owner-approved 6 November correction permits an explicitly confirmed skill to be mapped into relevant existing project bullets across roles, including earlier roles, without requiring the original bullet in that same role to name the tool. The confirmation supports the named skill only; it does not create an employer, project, action, outcome, date, title, location, contact, metric or credential. A JD, target score or editing instruction is not candidate evidence.
+
+The current-master writer prompt had contradictory legacy wording that treated JD requirements as candidate skills and encouraged spreading JD terms across every role. The current-master restack corrects that prompt, keeps source-only gaps role-scoped, and deterministically restores unsupported role edits. A prompt-contract test guards against reintroducing the contradictory instructions.
+
+The source change and tests are in draft PR [#423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423). The code-bearing head passed exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; this docs-only update advances the branch, so those gates must rerun. Protected preview and owner-authorized exported-DOCX acceptance remain separate gates. No live 95–100% or 98% match is claimed.
+
+
+## Confirmation syntax correction — 16 November 2026
+
+The owner-approved cross-role rule requires an explicit candidate confirmation, but no accessible owner-authored instruction makes first-person grammar the exclusive confirmation syntax. The writer prompt and evidence input now use “explicit candidate confirmations.” The parser still requires an explicit positive assertion or a labelled `Confirmed skills:` / `Confirmed experience:` statement; JD-only requirements, editing instructions, questions and negations remain non-evidence. The blanket-all path remains narrow and exception-safe. This is not a live resume match or exported-DOCX acceptance.
+
+The correction is in draft PR [#423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423). Exact-head CI and protected-preview/exported-DOCX gates remain separate.
+
+
+## WhatsApp coverage policy and 17 October hold — 16 November 2026
+
+The 95% shared resume-quality report floor and 98% target are not a universal WhatsApp send hold. The approved WhatsApp path can send a complete readable below-95% result with gaps disclosed; 70–94.9% is a clean pass only when supported coverage is at least 95% and ATS, identity, role-completeness and document-integrity gates pass. A finished result below 70% is not a clean pass. Web downloads retain the strict 95% raw-overlap gate. The current production alias contains the 17 October Risk & Controls term-filter fix and regression; certifications, generic fragments and unsupported preferred platforms are not added as candidate experience.
+
+The historical 17 October 17:28 Chicago hold remains unverified as a delivery event. Its screenshot and source archive are evidence of the request, not of the generated DOCX or Meta delivery. The output DOCX, per-run R2/webhook/Meta trace, signed delivery receipt and owner reconciliation of conflicting source facts are still required before any authorized replay.
