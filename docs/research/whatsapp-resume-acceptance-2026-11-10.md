@@ -165,3 +165,10 @@ The current-master candidates remain separate:
 - PR #400: exact-head source gates passed; protected preview, authorized source/JD/confirmation and exported-DOCX acceptance remain outstanding.
 
 No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are available. Do not replay it or claim delivery.
+
+
+## 16 November 2026 — restore the explicit label on the approved library fallback
+
+The 13 November handoff records that the initial-JD offline fallback should be labelled **Original resume — NOT TAILORED**. A current-master source recheck found that `closestResumeCaption` did not actually enforce that exact label. The new caption-only branch adds it only when the run carries the selected Files/library source marker. The upload-origin path, send eligibility, account selection, document bytes, retry state and external delivery calls are unchanged.
+
+Runtime commit: `9fb4bb3a2bacb83b02c90dbed3521b63313aa74f`. Test commit: `8c183200c24282d6ab0940c625d599faa9b4ad2a`. Exact-final-head CI, protected preview, Safe Merge Gate review and production READY verification remain pending. No live message or handset test occurred. PR #411's uploaded-original-after-timeout behavior remains separate and unapproved; the 17 October delivery incident remains unverified.
