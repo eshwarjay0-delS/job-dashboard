@@ -49,3 +49,9 @@ Source commits:
 - The scheduled environment has no local repository checkout or node_modules; no local test or build is claimed.
 
 No live portal request, manual crawl, production database mutation, application submission, email or WhatsApp send occurred. The next gate is exact-head CI plus the dedicated crawler workflow, Kompas baseline and Plan/REA schema, followed by Safe Merge Gate review and the legitimate protected preview.
+
+## Exact-head test correction — 16 November 2026
+
+The first run, crawler workflow 43820809564, passed the five freshness and three classifier tests but failed one new collector assertion: the test regular expression was double-escaped. The implementation's timeout message was correct; the failure was in the test expectation. Commit 2a2bf83f02b349d6deb968c09a754aa56a556683 changed the assertions to compare exact error-message strings.
+
+The corrected-head crawler workflow 43820946766 completed SUCCESS: 5/5 freshness, 3/3 classifier and 7/7 collector tests (15 total). Plan/REA schema workflow 43820946873 also completed SUCCESS. Full CI and Kompas baseline were not triggered because this PR is stacked on PR #428 rather than targeting master; run them after the parent is accepted and the branch is retargeted. Protected preview remains unavailable without the owner-controlled KOMPAS_VERCEL_API_TOKEN. No production deployment or live crawl occurred.
