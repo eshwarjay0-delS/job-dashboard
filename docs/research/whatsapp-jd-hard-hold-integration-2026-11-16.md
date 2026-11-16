@@ -37,7 +37,7 @@ Code/test commits:
 - `1d9ee1fdd6bbeccc886f9527d227c4911eeb1ff5`
 - `1fb0bd284ae1dd4559c12feb3c500f4bebc5ce36`
 
-Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks are pending on the final restack head. No local tests are claimed because the scheduled container cannot resolve `github.com`; GitHub Actions is the available test runner.
+PR #427 was opened DRAFT. Exact pre-docs-finalization head `a3af7b361333ee4b4fead8629b673620091a8428` passed full CI `43803798646` (43 steps), WhatsApp recovery `43803798682`, Kompas baseline `43803798631` and Plan/REA schema `43803798644`. The documentation-only finalization commit must rerun these checks on its new exact head. No local tests are claimed because the scheduled container cannot resolve `github.com`; GitHub Actions is the available test runner.
 
 ## Historical incident and release limits
 
