@@ -5,7 +5,7 @@ import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirm
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
-for (const input of ['I have experience with AWS and Terraform', 'I personally deployed CyberArk EPM', 'My experience includes SOX testing', 'Confirmed skills: Python']) {
+for (const input of ['I have experience with AWS and Terraform', 'I personally deployed CyberArk EPM', 'My experience includes SOX testing', 'Confirmed skills: Python', 'Confirmed experience: SOX testing']) {
   test(`explicit experience is retained: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), [input]))
 }
 test('an exception cannot confirm every requirement', () => {
@@ -59,10 +59,15 @@ test('candidate-confirmed skills may be mapped into existing projects without ch
 test("resume writer permits only explicit candidate-confirmed cross-role skills", () => {
   const tailor = readFileSync(new URL("../../src/lib/tailor.ts", import.meta.url), "utf8")
   const claude = readFileSync(new URL("../../src/lib/claude.ts", import.meta.url), "utf8")
+  const evidence = readFileSync(new URL("../../src/lib/resume-evidence.ts", import.meta.url), "utf8")
   assert.doesNotMatch(tailor, /Write every known JD term into the current role and the previous roles/)
   assert.doesNotMatch(tailor, /the candidate claims this JD skill set/)
   assert.doesNotMatch(claude, /The candidate claims this JD skill set/)
-  assert.match(claude, /explicit first-person candidate confirmations/)
+  assert.match(claude, /explicit candidate confirmations are evidence for the confirmed skills/)
+  assert.match(evidence, /only explicit candidate confirmations can support a skill/)
+  assert.doesNotMatch(evidence, /only explicit first-person candidate confirmations/)
+  assert.doesNotMatch(claude, /explicit first-person candidate confirmations|explicit first-person candidate confirmation of that skill/)
+  assert.doesNotMatch(tailor, /explicit first-person candidate confirmations|explicit first-person confirmations support/)
   assert.match(claude, /mapped into a relevant existing project bullet across roles, including earlier roles/)
   assert.match(claude, /do not require same-role source proof/i)
   assert.match(claude, /NO AUTOMATIC CROSS-ROLE TRANSFER/)
