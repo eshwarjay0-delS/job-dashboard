@@ -1,5 +1,20 @@
 # MFit Completion Watch
 
+## 16 November 2026 06:18 UTC — exact JD provenance corrected; PR #428 evidence updated
+
+- PR [#428](https://github.com/eshwarjay0-delS/job-dashboard/pull/428) remains DRAFT and mergeable on branch `fix/whatsapp-library-fallback-not-tailored-label-20261116`. Branch head before this Completion Watch update: `68b62e56e76ac550b4fb2e895b08cf63bbe9325f`. This docs commit advances the head; query the PR for the new exact SHA.
+- The owner-approved library fallback caption change remains narrowly scoped to a Files/library-origin run. Runtime commit `9fb4bb3a2bacb83b02c90dbed3521b63313aa74f`; fallback/tailored assertions `8c183200c24282d6ab0940c625d599faa9b4ad2a`; library-source gate test `8f50746e2eaa3f7865d9404e39e76ce0b5ccfe26`. No send eligibility, file selection, account guard, bytes, retry, R2 or Meta behavior changed.
+- Read-only Gmail retrieval now confirms the matching **5+ years** Security Engineer – Risk & Controls / Atlanta onsite / contract JD in thread `1a1464393628992f` (forwarded 16 Oct 2026 19:49 UTC). A separate **12+ years** variant in `1a14663317ae0564` adds React.js and is not substituted. The exact JD is therefore recovered; the backlog no longer treats it as missing.
+- Exact candidate evidence remains blocked: the 17 Oct WhatsApp source DOCX is not byte-verified; the generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt are missing. Accessible prior-context retrieval found the 6 Nov general approval for explicitly confirmed skills but no specific per-skill confirmation list for this JD. The 5+ years chronology is not independently owner-verified. Recruiter-submitted “9+ years” rows, assistant-authored resume claims and JD text are not candidate evidence. This was posted as a provenance correction on PR #423 comment `6908906577`.
+- Plan & Vision revision `2026-11-16.9` commit `e8a76f5b3a458a8bf1e291f976c3e75e9a908747`; research note commit `19f55711a828315aa0a0362b8cb7c052f40e54b7`; Plan Journal commit `73bd1a62dc3126b555aa76d33eb0496ce6d01656`; REA commit `68b62e56e76ac550b4fb2e895b08cf63bbe9325f`. PR #428 description now records the exact JD and the remaining candidate-evidence blockers.
+- Exact-head validation is not complete. The previous code/test head `8f50746e2eaa3f7865d9404e39e76ce0b5ccfe26` had WhatsApp recovery `43814919362`, Kompas baseline `43814918936`, and Plan/REA `43814918952` SUCCESS; full CI `43814919306` was still in progress at the migration asset/lossless import step. Those results do not validate the new documentation head. Re-run all four gates on the final PR head.
+- No protected preview exists for PR #428; the owner-controlled private `KOMPAS_VERCEL_API_TOKEN` is unavailable. Production remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`, alias `job-dashboard-fawn.vercel.app`; current master `11f14891cfc07ba706043c78d1c9b7432d92aec0` and PR #428 are not live. No deployment, preview bypass, real email/WhatsApp send, DOCX export, R2 write or database mutation occurred.
+
+Continue: verify the exact final PR #428 head's full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema; then let Safe Merge Gate review. Keep PR #411's uploaded-original-after-timeout decision and PR #427's whole-message interpretation separate. Do not claim the 17 Oct delivery or resume/JD acceptance complete.
+
+---
+
+
 ## 16 November 2026 06:04 UTC — PR #428 restores the approved library-fallback label
 
 - Canonical master at branch creation: `11f14891cfc07ba706043c78d1c9b7432d92aec0`. Existing production alias `job-dashboard-fawn.vercel.app` remains independently reported READY at deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. This caption correction is not in production.
