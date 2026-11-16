@@ -143,6 +143,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.match(docs[0].caption, /EASM Cybersecurity Engineer/)
   assert.match(docs[0].caption, /in GRC and IT Risk/)
   assert.match(docs[0].caption, /did not finish cleanly/)
@@ -157,6 +158,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /marked incomplete/)
   assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
@@ -183,6 +185,7 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].caption, /marked incomplete/)
   assert.doesNotMatch(docs[0].caption, /closest matching resume/)
+  assert.doesNotMatch(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
@@ -227,6 +230,7 @@ test('roles that were not rewritten still send the chosen library file', async (
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.match(docs[0].caption, /Some experience sections were not rewritten/)
   assert.match(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
