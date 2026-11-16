@@ -92,7 +92,7 @@ test('politeFetcher distinguishes local timeouts from upstream aborts and record
     })
     await assert.rejects(
       politeFetcher(0, 5)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' }),
-      /Request to www\\.inspyrsolutions\\.com timed out after 5 ms/,
+      error => error.message === 'Request to www.inspyrsolutions.com timed out after 5 ms',
     )
 
     globalThis.fetch = async () => {
@@ -100,7 +100,7 @@ test('politeFetcher distinguishes local timeouts from upstream aborts and record
     }
     await assert.rejects(
       politeFetcher(0, 100)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' }),
-      /Request to www\\.inspyrsolutions\\.com was aborted before the local timeout/,
+      error => error.message === 'Request to www.inspyrsolutions.com was aborted before the local timeout',
     )
   } finally {
     globalThis.fetch = originalFetch
