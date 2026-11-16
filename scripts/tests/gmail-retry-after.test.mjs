@@ -14,9 +14,9 @@ test('Retry-After delta-seconds is honored', () => {
   assert.equal(gmailRetryDelaySeconds('120', 40, NOW), 120)
 })
 
-test('Retry-After HTTP-date is rounded up and never shortened', () => {
-  const date = new Date(NOW + 45_001).toUTCString()
-  assert.equal(gmailRetryDelaySeconds(date, 15, NOW), 46)
+test('Retry-After HTTP-date is honored and never shortened', () => {
+  const date = new Date(NOW + 45_000).toUTCString()
+  assert.equal(gmailRetryDelaySeconds(date, 15, NOW), 45)
   assert.equal(gmailRetryDelaySeconds(new Date(NOW + 2_000).toUTCString(), 40, NOW), 40)
 })
 
