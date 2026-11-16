@@ -123,7 +123,7 @@ test('a below-floor rewrite with an unsupported JD-only addition is held and sen
   assert.doesNotMatch(docs[0].body, /supplierninja/)
   assert.doesNotMatch(docs[0].caption, /supplierninja/)
   assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(said.join('\\n'), /EASM Cybersecurity Engineer/)
+  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
 
 test('a failed or incomplete rewrite still delivers the chosen library resume', async () => {
@@ -176,7 +176,7 @@ test('a finished rewrite with an unsupported JD-only addition stays held despite
   assert.doesNotMatch(docs[0].body, /supplierninja/)
   assert.doesNotMatch(docs[0].caption, /supplierninja/)
   assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(said.join('\\n'), /EASM Cybersecurity Engineer/)
+  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
 
 test('a slow completed rewrite sends only the evidence-preserving edited file', async () => {
@@ -202,7 +202,7 @@ test('a slow completed rewrite sends only the evidence-preserving edited file', 
   assert.match(docs[0].caption, /97%/)
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.doesNotMatch(said.join('\\n'), /I did not send a file/)
+  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
 test('a cached blocker-only unverified JD result is held and sends the selected library resume', async () => {
@@ -223,7 +223,7 @@ test('a cached blocker-only unverified JD result is held and sends the selected 
   assert.match(docs[0].caption, /closest matching resume/)
   assert.doesNotMatch(docs[0].body, /supplierninja/)
   assert.doesNotMatch(docs[0].caption, /supplierninja/)
-  assert.match(said.join('\\n'), /EASM Cybersecurity Engineer/)
+  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
 
 test('roles that were not rewritten still send the chosen library file', async () => {
