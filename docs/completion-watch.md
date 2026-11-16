@@ -1,3 +1,21 @@
+## 16 November 2026 07:12 UTC — crawler diagnostics continuation and refreshed release gates
+
+- The current canonical master ref is two documentation-only commits ahead of the 11f14891 base: 6933215 created the new crawler research note on master by default, then 66291f677cbcc2318229ef9a3164961e6d3cdb6a removed it immediately after it was copied to the review branch. The compare result has no net file changes; no runtime source, environment or production behavior changed. This operational correction is recorded for transparency.
+- Parent PR [#428](https://github.com/eshwarjay0-delS/job-dashboard/pull/428) remains DRAFT at exact head 34008374c99daf07f96e7a2c8028883f5cfbf686. All four exact-head workflows are now SUCCESS: WhatsApp recovery 43815896299, Kompas baseline 43815896365, Plan/REA 43815896337 and full CI 43815896358. GitHub now reports mergeable=true. The protected Vercel preview lookup still returns zero deployments; the owner-controlled KOMPAS_VERCEL_API_TOKEN is unavailable. Do not mark ready, merge or deploy until Safe Merge Gate and the legitimate preview gate complete.
+- New stacked PR [#430](https://github.com/eshwarjay0-delS/job-dashboard/pull/430), branch fix/crawler-abort-diagnostics-current-master-20261116, is based on PR #428 head 34008374. It restacks only the collector timeout/abort diagnostics, collector regressions, workflow wiring and associated Plan/REA/Apply/research documentation. It does not edit PR #422 or the parent's branch.
+- Code commits: 2e03d203a129a1f4c0d46d184452ac61e49fbfef (25-second default retained; local timeout vs upstream abort and host attribution), 2d83976507c19aa3ca2308e172ebca4fecb4eb8e (mocked timeout/upstream abort/malformed-URL pacing tests), 4666a5b3612fc5af9f17f5f6ab3a9a5f98776343 (dedicated workflow), and 2a2bf83f02b349d6deb968c09a754aa56a556683 (test-only regex assertion correction).
+- The first run 43820809564 exposed a double-escaped test regex, not a runtime defect. Corrected code head 2a2bf83 passed crawler workflow 43820946766 (15/15: 5 freshness, 3 classifier, 7 collector) and Plan/REA schema 43820946873. Pre-documentation head 7322bea5ae29cabc018ad8bd4498e4176ddcd569 also passed crawler workflow 43821164467 (15/15) and Plan/REA schema 43821164638.
+- Current PR #430 head after its evidence-only updates is f73b85704e130951c1a9d44e2b5a25459975e9c9. No workflow result is yet recorded on this latest docs-only head. Full CI and Kompas baseline are deferred because #430 is stacked on #428, not master; after #428 is accepted, retarget safely and run both on the exact final head. The PR remains DRAFT and is not deployed.
+- Production alias job-dashboard-fawn.vercel.app remains READY at dpl_7QVykeYoWSswLDgsQP99xF2piBn3, runtime SHA b94e1629c544048d84a2b048ae83b21b612ab9dd. Neither #428 nor #430 is live.
+- The 17 Oct 17:28 Chicago WhatsApp incident remains unverified: exact source DOCX byte match, generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt are still missing. The matching 5+ years Atlanta Risk & Controls JD was recovered separately; the 12+ years variant is not substituted. No replay or resend.
+- Contract crawling remains manual/on-demand only, with no daily cron; Robert Half remains manual-only; C2H/Right-to-Hire aliases remain unapproved. No live portal request or crawl occurred.
+- Poke-inspired Gmail/mobile PR #424 remains DRAFT pending protected preview, two authorized inboxes and narrow-phone acceptance. The proactive worker remains disabled; no Gmail API call or email send occurred.
+- Kompas Continuous Voice Delivery remains disabled. No duplicate voice/caption edits were made; real 50-pair human grading and native Windows/WhatsApp/mobile acceptance remain open.
+
+Continue: after Safe Merge Gate resolves PR #428's preview/review gate, merge and deploy only the reviewed exact SHA, verify READY plus the canonical alias, then retarget PR #430 to master and run exact-head full CI, Kompas baseline, crawler and Plan/REA gates. Keep the 17 Oct artifact/receipt and owner-device acceptance gaps open; do not run a live crawl or send real messages.
+
+---
+
 # MFit Completion Watch
 
 ## 16 November 2026 06:18 UTC — exact JD provenance corrected; PR #428 evidence updated
