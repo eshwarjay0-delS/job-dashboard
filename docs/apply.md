@@ -199,3 +199,8 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## 16 November 2026 — collector timeout diagnostics
+
+The crawler request helper retains its 25-second default timeout. The current diagnostics distinguish an abort triggered by the local AbortController from an upstream AbortError, include the portal host, and ensure malformed adapter URLs still advance the request-pacing clock. Mocked regressions cover all three cases. This is diagnostic-only: no automatic retry, portal adapter, source permission, classifier, freshness rule, schedule, or production row changes. Contract crawling remains manual/on-demand only; Robert Half remains manual-only; do not restore a daily contract cron or run a live crawl as part of this change.
