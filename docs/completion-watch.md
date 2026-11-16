@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 16 November 2026 00:28 UTC — confirmed-skill confirmation syntax correction
+
+- Canonical master at the start of this continuation is `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. The latest independently recorded production runtime remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`, alias `job-dashboard-fawn.vercel.app`. PR #423 is not deployed.
+- Safe Merge Gate review comment [#6902823074](https://github.com/eshwarjay0-delS/job-dashboard/pull/423#issuecomment-6902823074) found that PR #423's prompt/evidence wording had elevated first-person grammar into an exclusive confirmation rule. The direct owner-authored 6 Nov correction [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) allows explicitly confirmed skills to map into relevant existing projects across roles, but does not impose that grammar restriction.
+- PR #423 now removes “first-person-only” wording from `src/lib/claude.ts`, `src/lib/resume-evidence.ts` and `src/lib/tailor.ts`. The parser still accepts positive first-person assertions and explicit `Confirmed skills:` / `Confirmed experience:` labels. JD-only lists, editing instructions, questions and negations remain non-evidence; exception handling and the narrow owner-phrase blanket confirmation remain unchanged. No new employer, project, action, outcome, date, title, location, contact, metric or credential can be invented.
+- Source/test commits: `2e35b112b7f1`, `8857d7b506b9`, `c652012b0bde`, `04c4676f10e8`. Code head `04c4676f10e8286507e3161cfb68971a12aab60a` had Plan/REA schema `43781074076` SUCCESS, Kompas baseline `43781074158` SUCCESS, WhatsApp recovery `43781074081` SUCCESS; full CI `43781074091` was IN PROGRESS. This Plan/REA/Completion Watch follow-up advances the branch, so all exact-head gates must rerun. Local clone remains unavailable because this runtime cannot resolve github.com; GitHub Actions is the executable test path.
+- Keep PR #423 DRAFT pending exact-head full CI, Safe Merge Gate review, legitimate protected preview through the owner-controlled `KOMPAS_VERCEL_API_TOKEN`, and owner-authorized source/JD/confirmation plus actual exported-DOCX inspection. No model call, DOCX generation, Gemini score, email/WhatsApp send, R2 write or production deployment occurred. No live 95–100% or 98% match is claimed.
+- The 17 Oct 17:28 Chicago WhatsApp incident remains unverified: the recorded production usage event (score 87, 34 calls, no source-event key) is not proof of an exported DOCX or delivery. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation remain missing. Do not replay or infer delivery.
+- PR #424 remains the separate Poke-inspired Gmail/mobile restack and shares Plan/REA/Completion Watch files; MFit Safe Merge Gate owns sequencing. Contract crawling remains manual/on-demand, no daily contract cron; Robert Half remains manual-only. Kompas Continuous Voice Delivery is disabled in the accessible inventory; no duplicate voice/caption edits were made. No separate Bible-Keeper automation was visible.
+
+Continue: complete exact-head validation on PR #423 after this documentation update, then let Safe Merge Gate sequence the shared Plan/REA files. Keep the protected preview and actual DOCX acceptance separate from source-test success.
+
+---
+
 ## 15 November 2026 09:28 UTC — PR #416 fixture correction and exact-head gates
 
 - Canonical master remains `17f8dada7ce1acf11064b1129ca4e33764ebb8a3`; production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No PR #416 code or PR #411 fallback is deployed.
