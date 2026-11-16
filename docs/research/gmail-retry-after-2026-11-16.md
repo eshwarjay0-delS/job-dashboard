@@ -41,6 +41,6 @@ Initial full CI `43871483417` failed Type-check with TS7006 for the two unannota
 
 ## Release status and next action
 
-The canonical production alias remains READY at deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. PR #432 is DRAFT and not deployed. The legitimate protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. Do not bypass Vercel protection.
+The Vercel project metadata currently reports `live:false`; its latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Alias metadata still points `job-dashboard-fawn.vercel.app` to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No public HTTP smoke or authenticated acceptance was established. PR #432 is DRAFT and not deployed. The legitimate protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run; an owner/authorized admin must also restore the project live state before release. Do not change billing, unpause the project or bypass Vercel protection.
 
 Continue with exact-final-head CI, Kompas baseline, Plan/REA schema and MFit Safe Merge Gate review. After the authorized preview and reviewed merge, deploy the approved master and verify the exact READY production SHA plus canonical alias. Keep two-inbox, selected-From, reconnect and narrow-mobile acceptance separate.
