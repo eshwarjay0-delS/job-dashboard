@@ -176,3 +176,14 @@ The current production alias was independently checked: `dpl_7QVykeYoWSswLDgsQP9
 A misleading comment in `resume-quality.ts` said every result below 95% was held. PR #423 now corrects the comment to distinguish the shared `needs_review` report status from the channel-specific WhatsApp exception, and strengthens the 70% test to assert that a complete 70% / 95%-supported result can be sent even while the shared report status is `needs_review`. This is a comment/test correction only; no send behavior was changed. Commits: `bf576eec8fec6cfd5f90339e084e72b21f8e5b34`, `cbb40864716fdcc6f1b985c5b6073b35427102d6`.
 
 The historical incident remains open: no generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt, or owner reconciliation of the source's conflicting education/employment/credential facts is available. The screenshot and a matching-size source archive member do not prove which output was generated or delivered. Do not replay the request, infer delivery, or add missing certifications/platform experience.
+
+
+## 16 November 2026 — source archive and JD re-verification; threshold provenance
+
+A read-only materialization of the organized Library resume archive found a 27,724-byte DOCX member whose SHA-256 matches the corresponding Library inventory entry. The 17 Oct screenshot shows a five-page, approximately 28 KB DOCX with the same displayed filename. This confirms the archived source master and inventory agree and that the screenshot's rounded size is consistent; it does **not** prove the actual WhatsApp media payload was byte-identical. The iZap connector did not expose the message/media bytes. No private resume text, filename, archive path, digest, contact detail or email body is copied into this record.
+
+Connected Gmail read-only retrieval independently confirmed the matching 5+ years Security Engineer – Risk & Controls, Atlanta onsite JD. A separate 12+ years recruiter variant was excluded and is not substituted. The screenshot sequence shows the attachment, a subsequent bot request for a resume, an updating message and a 5:28 PM hold. Without webhook/request IDs, this does not establish a race or root cause.
+
+Accessible prior-conversation search did not recover an owner-authored message confirming the numeric 70–94.9% / 95%-supported threshold. The 6 Nov assistant summary is not direct approval. The current code's separate WhatsApp shortfall path is preserved as existing implementation; do not label the numeric threshold owner-approved or change it by inference.
+
+Still missing: exact WhatsApp attachment payload bytes, generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt. No replay, resend, model call, R2 write or real WhatsApp send occurred. Keep the historical incident open.
