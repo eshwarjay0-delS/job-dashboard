@@ -1,10 +1,13 @@
 /** Shared quality report for web, WhatsApp, and cached generations.
  * 95% is the shared report floor and the web-download floor; 98% is the target.
  * The current WhatsApp implementation has a separate shortfall path recorded
- * in the 6 Nov repository research. Accessible prior-conversation retrieval
- * did not recover an owner-authored message approving the numeric 70–94.9% /
- * 95%-supported thresholds; a prior assistant summary is not direct approval.
- * Preserve current behavior pending an explicit owner correction. A complete,
+ * in the 6 Nov repository research and Plan Journal. The dated 6 Nov owner-
+ * request record preserves the 70–94.9 percent clean-pass band and the website
+ * 95 percent gate. Treat this as repository-recorded owner approval; the
+ * primary owner-authored message was not independently re-retrieved in this
+ * run. Preserve that historical decision and current behavior. The 14 Nov
+ * no-fabrication correction remains authoritative: unsupported experience
+ * claims and unverified_jd_terms must never pass. A complete,
  * readable result below 95% raw overlap can still be sent with disclosed gaps
  * under that implementation; 70–94.9% is a clean pass only with at least 95%
  * supported coverage and all independent ATS, identity, role-completeness,

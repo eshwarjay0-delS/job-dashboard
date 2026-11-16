@@ -626,7 +626,7 @@ Canonical source remains `eshwarjay0-delS/job-dashboard`. Current master is `662
 
 ### Approval provenance correction
 
-The repository records a 6 Nov 70–94.9% / 95%-supported WhatsApp numeric threshold. Accessible prior-conversation retrieval did not recover an owner-authored message confirming those numbers; the retrieved 6 Nov assistant summary is not direct approval. The current implementation is preserved, but do not label the numeric threshold owner-approved or change it by inference. The separate 6 Nov confirmed-skill cross-role correction is independently evidenced by owner-authored PR #319 comment #6817645128.
+The repository contains a dated 6 Nov owner-request record in `docs/research/whatsapp-scored-rewrite-2026-11-06.md` and the Plan Journal: “Do not refuse a file only because coverage is under 95 percent. The 70 to 94.9 percent clean pass and the website 95 percent gate stay.” The correct status is **repository-recorded 6 Nov owner approval; primary owner-authored message not independently re-retrieved in this run**. This supersedes the earlier 16 Nov wording that treated the threshold as unapproved, while preserving that earlier record as a snapshot of what was known then. Runtime is unchanged. The 14 Nov correction remains authoritative: honest gaps may be disclosed, but unsupported experience claims and `unverified_jd_terms` must never pass. The separate 6 Nov confirmed-skill cross-role correction is independently evidenced by owner-authored PR #319 comment #6817645128.
 
 ### Current review queue
 
