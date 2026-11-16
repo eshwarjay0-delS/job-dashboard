@@ -2,7 +2,7 @@
 
 ## Owner approval and scope
 
-The owner-authored 6 November correction is recorded in [PR #319 comment 6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128). It approves mapping an explicitly first-person-confirmed skill naturally into relevant existing project bullets across roles, including earlier roles, without requiring the original bullet in that same role to name the tool.
+The owner-authored 6 November correction is recorded in [PR #319 comment 6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128). It approves mapping an explicitly confirmed skill naturally into relevant existing project bullets across roles, including earlier roles, without requiring the original bullet in that same role to name the tool.
 
 A confirmation supports the named skill only. It does not authorize a new employer, project, action, outcome, date, title, location, contact detail, metric, credential or unsupported project fact. JD wording, target scores and editing instructions are not candidate evidence. Keep the Houston and Saint Louis profile libraries separate.
 
@@ -41,3 +41,12 @@ No owner resume/JD/confirmation was processed, no model call was made, no DOCX w
 3. After preview, use an owner-authorized source resume, exact JD and explicit candidate confirmations. Inspect the actual exported DOCX for structure and unsupported facts, then record raw and weighted coverage without rounding.
 4. Run the separately approved final-DOCX Gemini review using the exact instruction **Give me an ATS score**. The expanded automatic correction/re-export/recheck loop remains unverified and is not included.
 5. Deploy only after the task-specific gates pass; verify production SHA and alias separately from source tests.
+
+
+## 16 November correction — confirmation syntax is not first-person-only
+
+The Safe Merge Gate review of PR #423 identified that the writer prompt and candidate-evidence instructions had narrowed the owner-approved rule to first-person grammar. The direct 6 November owner-authored correction in [PR #319 comment #6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) permits an explicitly candidate-confirmed skill to be mapped into relevant existing project bullets across roles; it does not establish first-person wording as the exclusive confirmation syntax.
+
+The prompt and evidence input now say **explicit candidate confirmations**. The parser continues to accept positive first-person assertions and clearly labelled `Confirmed skills:` / `Confirmed experience:` statements. Job-description-only terms, formatting instructions, questions and negations remain non-evidence. The blanket-all path remains limited to the already recognized owner wording and still rejects exceptions; no broader blanket syntax was added. No biography facts may be invented.
+
+Source commits: `2e35b112b7f1582f7a87a6dd3f7d2fc7f55cf8a2`, `8857d7b506b9806ad54607bb258c3a162df213a1`, `c652012b0bde46cb30c876b1c50f45ccc9a67bec`, `04c4676f10e8286507e3161cfb68971a12aab60a`. On code head `04c4676f10e8286507e3161cfb68971a12aab60a`, Plan/REA schema `43781074076`, Kompas baseline `43781074158`, and WhatsApp recovery `43781074081` passed; full CI `43781074091` was still running when this record was written. This documentation follow-up advances the branch, so exact-head gates must rerun. Protected preview and actual exported-DOCX review remain separate gates.
