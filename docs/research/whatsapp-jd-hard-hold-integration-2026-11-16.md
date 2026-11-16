@@ -2,11 +2,15 @@
 
 **Date:** 16 November 2026  
 **Product:** Canonical MarketFit / WhatsApp resume tailoring  
-**Status:** Implemented on a current-master review branch; exact-head CI and release gates pending.
+**Status:** Proposed source behavior on a current-master review branch; exact owner approval, fallback label, protected preview and release gates pending.
 
-## Approved behavior
+## Owner-approved baseline and proposed hard-hold
 
-The 14 November owner-approved rule treats unsupported JD-only experience additions as a hard hold. They are not a shortfall that can be delivered with a disclaimer. The existing WhatsApp policy remains separate: a completed rewrite may be delivered below 95% raw JD overlap when its evidence-supported coverage and quality conditions are met; the 70% raw / 95% supported boundary is unchanged. A blocked rewrite uses the already-selected same-account library resume as the approved failsafe. This does not authorize sending the exact uploaded DOCX unchanged after a provider timeout; that remains a separate decision.
+The 14 Nov owner-authored rule says honest coverage gaps may be disclosed, but unsupported experience claims must never pass the delivery gate and unverified_jd_terms must not be treated as an acceptable shortfall. A separate 16 Nov owner instruction requires explicit Eshwar approval of the exact behavior that blocks the entire WhatsApp delivery for unverified/unsupported JD-only terms. Accessible owner-authored history does not contain that exact approval. Therefore the whole-delivery hard-hold implementation in this PR is proposed and unapproved; keep PR #427 DRAFT and do not merge or deploy it until exact approval and the legitimate protected preview are recorded.
+
+The 27 Oct owner instruction explicitly approves the closest-matched resume from the same account's library as the offline failsafe. It does not authorize sending the uploaded original after a provider timeout. The Safe Merge Gate review #5915152506 found the current fallback caption and tests do not explicitly enforce Original resume — NOT TAILORED; that label and assertion remain pending.
+
+ATS target provenance is separate: the 5 Oct owner minimum is at least 90% supported keywords; the 3 Nov owner target is 95–100% coverage of genuinely supported JD requirements. The 98% default was assistant wording, not an explicit user target. No owner-authored 6 Nov 70%/95% threshold decision or supersession was recovered; the 70/95 WhatsApp threshold remains repository-recorded/unverified, not approved policy. No live 95–100% match is claimed.
 
 ## Source correction
 
@@ -44,3 +48,14 @@ PR #427 was opened DRAFT. Exact pre-docs-finalization head `a3af7b361333ee4b4fea
 This source-level edge is not proven to have caused the 17 October 17:28 Chicago incident. A read-only Library search found several candidate DOCX files created 15–16 October, but the per-run source reference/R2 object version is missing, so none can be proven to be the exact file selected for the 17 October request. The generated output DOCX, request/webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. A matching Risk & Controls Atlanta/GA onsite contract JD was reopened read-only, but no near-match resume was substituted. The connected iZap WhatsApp business has no linked number, inbound webhook history or proven outbound delivery; no real send or replay was attempted.
 
 The legitimate protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, which is not available to this run. No production deployment, model call, DOCX export, R2 write, production mutation, billing change or external message occurred. Keep PR #411's uploaded-original-after-provider-timeout behavior separate and blocked. Do not claim live WhatsApp delivery or 95–100% resume/JD match from these tests.
+
+
+## 16 November approval and acceptance correction
+
+- PR #427 exact head d7189b76087b6f0298481528df083943716eb218 passed full CI 43804784848, WhatsApp recovery 43804784902, Kompas baseline 43804784882 and Plan/REA 43804784926. These validate source/tests only, not owner approval or release. Documentation-only commits have since changed the branch head; all four workflows must rerun on the new exact head.
+- The exact-head Vercel preview lookup returned zero deployments. The protected preview requires the owner-controlled private KOMPAS_VERCEL_API_TOKEN, which is unavailable to this run. Keep DRAFT.
+- The Safe Merge Gate review found the fallback label and test assertion missing. No code edit was made for that label because the local checkout and AGENTS-required Next.js guide are unavailable in this environment.
+- Read-only production Supabase aggregates: seven WhatsApp connected-service entries are disconnected; three Gmail sync rows are all stale since 10 Nov 14:44 UTC; 2,002 cached threads; 14,566 crawler jobs, 12,407 active across 21 portals; 15 active Kompas sessions, seven tombstones and 28 artifacts. No user IDs, email addresses, message bodies or resume content were selected.
+- The separate iZap business connector is disconnected and returned zero aggregate messages on 17 Oct. It is not the MFit Meta webhook and cannot establish whether the historical event was sent or delivered.
+- The exact 17 Oct generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID and signed delivery/read receipt remain missing. No replay, real send, model call, DOCX export, R2 write or production mutation occurred.
+- Canonical master is 11f14891cfc07ba706043c78d1c9b7432d92aec0; production alias remains READY at b94e1629c544048d84a2b048ae83b21b612ab9dd. The merged Plan & Vision data from PR #425 is not live because the normal deployment was canceled by the existing [ship] guard.
