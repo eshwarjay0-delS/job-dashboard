@@ -114,3 +114,8 @@ The separate Kompas Continuous Voice Delivery automation is disabled. No Bible-K
 - No real email/WhatsApp send, Gmail API/OAuth request, model call, DOCX generation, R2 mutation, manual crawl, production database write, billing change, secret read or device test occurred.
 
 Continue: keep the exact-head green PRs in DRAFT until their protected-preview and owner/device acceptance gates are met; next highest-priority work is the legitimate protected-preview unblock and the owner-authorized exported-DOCX acceptance for PR #423, while preserving the separate #411 uploaded-original approval gate.
+
+
+## Documentation change record
+
+The reconciliation is recorded on branch `docs/mfit-backlog-reconciliation-20261116`, created from master `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Initial evidence commit: `0b8b744e75403a9e5976a0afe0c495a0ed64c6e6`. This branch changes Plan & Vision, journal, REA, Completion Watch and this research note only; no runtime code or production configuration changed.
