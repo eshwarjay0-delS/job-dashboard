@@ -11,7 +11,7 @@ This is a current-master reconciliation of the approved WhatsApp resume, factual
 - Production alias: `job-dashboard-fawn.vercel.app`
 - READY production deployment: `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`
 - Production SHA: `b94e1629c544048d84a2b048ae83b21b612ab9dd`
-- The production alias is behind current master. No new runtime release was created in this continuation.
+- GitHub compare [production SHA → master](https://github.com/eshwarjay0-delS/job-dashboard/compare/b94e1629c544048d84a2b048ae83b21b612ab9dd...8ad319d1092fffa7e6a31a4da1b4dc61ac634934) reports 15 commits ahead, 0 behind. All changed files are CI/workflow, AGENTS, docs, tests and Plan/REA; no runtime source/config files changed. This is a documentation/test lag, not a pending runtime deployment. No new runtime release was created in this continuation.
 - PR #416 fixture privacy correction is merged at master SHA `8ad319d`; it replaces identifying fixture names/paths with synthetic candidates and reserved example.test identities.
 
 ## WhatsApp resume and 17 October incident
