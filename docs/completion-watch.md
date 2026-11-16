@@ -1,3 +1,5 @@
+# MFit Completion Watch
+
 ## 16 November 2026 01:43 UTC — master backlog and live-state reconciliation
 
 - Documentation reconciliation branch: `docs/mfit-backlog-reconciliation-20261116`, initial evidence commit `0b8b744e75403a9e5976a0afe0c495a0ed64c6e6` (docs-only; no runtime deployment). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; no runtime release was created in this documentation continuation. PR #416 fixture-privacy correction is merged into master at the current SHA.
@@ -14,7 +16,6 @@ Continue: keep runtime PRs DRAFT until protected preview and their specific owne
 
 ---
 
-# MFit Completion Watch
 
 ## 15 November 2026 09:28 UTC — PR #416 fixture correction and exact-head gates
 
