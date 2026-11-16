@@ -160,7 +160,7 @@ test("70% job-post overlap with 95% supported coverage is the clean delivery flo
   })
   assert.equal(draft.quality.status, "needs_review", "the shared 95% report floor remains separate")
   assert.equal(draft.quality.incomplete, false, "the document is complete even though raw overlap is below 95%")
-  assert.deepEqual(whatsappResumeRejectionReasons(draft), [], "the explicit WhatsApp shortfall path accepts the finished, supported result")
+  assert.deepEqual(Array.from(whatsappResumeRejectionReasons(draft)), [], "the explicit WhatsApp shortfall path accepts the finished, supported result")
   assert.equal(acceptableWhatsAppResume(draft), true)
 })
 test("69.9% is not a clean pass, and the finished file is still sendable", () => {
