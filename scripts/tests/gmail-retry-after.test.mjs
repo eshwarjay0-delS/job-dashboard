@@ -5,7 +5,8 @@ import { readFileSync } from 'node:fs'
 const helperSource = readFileSync(new URL('../../src/lib/gmail-retry-after.ts', import.meta.url), 'utf8')
 const match = helperSource.match(/export function gmailRetryDelaySeconds[\s\S]*?\n}/)
 assert.ok(match, 'the production Retry-After helper is present')
-const gmailRetryDelaySeconds = new Function('return (' + match[0].replace(/^export /, '') + ')')()
+const executable = match[0].replace(/^export /, '').replace(/\\(value: string \\| null, fallbackSeconds: number, nowMs = Date\\.now\\(\\)\\): number/, '(value, fallbackSeconds, nowMs = Date.now())')
+const gmailRetryDelaySeconds = new Function('return (' + executable + ')')()
 const NOW = Date.UTC(2026, 10, 16, 12, 0, 0)
 
 test('Retry-After delta-seconds is honored', () => {
