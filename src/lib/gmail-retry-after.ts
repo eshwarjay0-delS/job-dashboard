@@ -8,7 +8,7 @@
  * @param {number} [nowMs]
  * @returns {number}
  */
-export function gmailRetryDelaySeconds(value, fallbackSeconds, nowMs = Date.now()) {
+export function gmailRetryDelaySeconds(value: string | null, fallbackSeconds: number, nowMs = Date.now()): number {
   const fallback = Number.isFinite(fallbackSeconds) && fallbackSeconds > 0
     ? Math.max(1, Math.ceil(fallbackSeconds))
     : 15
