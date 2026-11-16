@@ -16,7 +16,7 @@ This is a current-master reconciliation of the approved WhatsApp resume, factual
 
 ## WhatsApp resume and 17 October incident
 
-The owner-authored 27 October instruction explicitly requested that, when tailoring is offline, the closest matched resume from the user's library be returned as a failsafe. Current master has the source path:
+Accessible prior-conversation retrieval recovered the direct owner message at `2026-10-27T15:14:08Z`: “Continue until done; even offline, give the closest matched resume from the user's library as failsafe.” This explicitly approves the closest matched same-account library resume as the offline failsafe. No direct owner wording was recovered approving the exact uploaded DOCX being sent unchanged after a provider timeout; that behavior appears only in assistant-authored implementation notes and remains a separate owner-decision gate. Current master has the source path:
 
 `fromLibrary` → `pickAndMake` → `chooseResume` → `generate` → `sendClosest`
 
