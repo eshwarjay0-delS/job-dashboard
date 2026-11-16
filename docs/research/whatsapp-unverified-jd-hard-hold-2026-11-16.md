@@ -39,3 +39,18 @@ Commits:
 The exact final branch head still requires full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema. MFit Safe Merge Gate review is separate. A legitimate protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; this run does not have that credential and will not bypass protection.
 
 No production deployment, model call, DOCX generation, R2 write, Meta request, real WhatsApp message, historical replay, database mutation or handset acceptance occurred. Do not claim the correction is live until the reviewed commit is deployed READY on the canonical production alias. Real WhatsApp delivery remains unverified; the connected iZap business currently has no linked WhatsApp number.
+
+
+## Historical incident artifacts and current delivery connection
+
+The matching forwarded **Security Engineer – Risk & Controls** job description for Atlanta/GA onsite contract work was independently reopened read-only from the connected Gmail account during the 16 November continuation. The private thread identifier and email body are intentionally not copied into this public repository.
+
+The exact original WhatsApp-uploaded resume is still not accessible in the Library during this run. The recorded `/J_Eshwar_44/General Security` path returns “Library path not found”; the resume inventory CSV is not the DOCX itself. No similarly named or near-match resume was substituted, and the prior 27,724-byte archive note/digest was not reverified against the WhatsApp upload.
+
+A read-only iZap WhatsApp connection check at `2026-11-16T03:02:36Z` reports:
+- no WhatsApp Business number connected (`connected=false`, registration `disconnected`);
+- no live inbound webhook history;
+- no proven outbound message reaching Meta;
+- no last provider error.
+
+No connection setup, real message, test send, R2 write or historical replay was attempted. The historical generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound message ID and signed delivered/read receipt remain missing.
