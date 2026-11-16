@@ -17,7 +17,7 @@ export function gmailRetryDelaySeconds(value, fallbackSeconds, nowMs = Date.now(
   const header = value.trim()
 
   // RFC Retry-After delta-seconds form.
-  if (/^\\d+$/.test(header)) {
+  if (/^\d+$/.test(header)) {
     const seconds = Number(header)
     return Number.isSafeInteger(seconds) ? Math.max(fallback, seconds) : fallback
   }
