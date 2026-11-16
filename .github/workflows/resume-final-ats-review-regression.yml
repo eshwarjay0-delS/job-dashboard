@@ -1,0 +1,46 @@
+name: Resume final DOCX Gemini review and correction regression
+
+on:
+  push:
+    branches:
+      - feat/resume-final-docx-gemini-loop-current-master-20261116-run12
+    paths:
+      - "src/lib/tailor.ts"
+      - "src/lib/claude.ts"
+      - "src/lib/resume-evidence.ts"
+      - "src/lib/resume-final-ats-review.ts"
+      - "scripts/tests/resume-final-ats-review.test.mjs"
+      - "scripts/tests/resume-final-ats-loop.test.mjs"
+      - ".github/workflows/resume-final-ats-review-regression.yml"
+  pull_request:
+    paths:
+      - "src/lib/tailor.ts"
+      - "src/lib/claude.ts"
+      - "src/lib/resume-evidence.ts"
+      - "src/lib/resume-final-ats-review.ts"
+      - "scripts/tests/resume-final-ats-review.test.mjs"
+      - "scripts/tests/resume-final-ats-loop.test.mjs"
+      - ".github/workflows/resume-final-ats-review-regression.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  final-docx-review:
+    name: final exported-DOCX Gemini review and bounded correction
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: TypeScript, lint and application checks
+        run: npm run check
+      - name: Final DOCX review and correction contract tests
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-loop.test.mjs

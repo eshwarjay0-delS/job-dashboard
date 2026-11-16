@@ -151,6 +151,9 @@ jobs:
       - name: Verify Gmail selected-sender and per-inbox thread isolation
         run: node --experimental-strip-types --test scripts/tests/gmail-send-account-isolation.test.mjs
 
+      - name: Verify final exported-DOCX Gemini review and evidence-only correction loop
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-loop.test.mjs
+
       - name: Build (Webpack; retry only known intermittent Google-font URL bug)
         run: |
           # Next 16 occasionally receives a valid Google Fonts /l/font?kit URL
