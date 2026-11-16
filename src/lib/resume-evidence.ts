@@ -8,7 +8,7 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
     "- Treat the uploaded resume as candidate-provided evidence, not proof that every statement is current or accurate.",
     "- If explicit candidate input conflicts with resume education, employment dates, employer, tenure or credential status, do not merge, average or silently choose; mark the fact unresolved and request correction before using it.",
     "- A credential described as pursuing, in progress, planned or studying for is not earned.",
-    "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence; only explicit first-person candidate confirmations can support a skill.",
+    "- Job-description requirements, including years of experience and preferred credentials or tools, are never candidate evidence; only explicit candidate confirmations can support a skill.",
     "- An explicitly confirmed skill may be mapped naturally into relevant existing project bullets across the selected resume's roles, including earlier roles, even when the original bullet does not name the tool. The confirmation supports the skill, not a new employer, project, title, date, location, contact, metric, credential or unsupported project detail.",
     "- Apply confirmations only to this request's selected account, resume and JD; never borrow another account's resume or profile.",
     `JOB DESCRIPTION (target requirements, not candidate evidence):\n${jd}`,
