@@ -19,6 +19,8 @@ on:
       - "fix/crawl-freshness-eteam-20261109"
     paths:
       - "src/lib/crawl/search.ts"
+      - "src/lib/crawl/collect.ts"
+      - "scripts/tests/crawl-collect.test.mjs"
       - "src/app/api/crawl/jobs/route.ts"
       - "src/lib/crawl/adapters.ts"
       - "src/lib/crawl/classify.ts"
