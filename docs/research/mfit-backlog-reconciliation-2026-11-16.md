@@ -11,7 +11,7 @@ This is a current-master reconciliation of the approved WhatsApp resume, factual
 - Production alias: `job-dashboard-fawn.vercel.app`
 - READY production deployment: `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`
 - Production SHA: `b94e1629c544048d84a2b048ae83b21b612ab9dd`
-- GitHub compare [production SHA → master](https://github.com/eshwarjay0-delS/job-dashboard/compare/b94e1629c544048d84a2b048ae83b21b612ab9dd...8ad319d1092fffa7e6a31a4da1b4dc61ac634934) reports 15 commits ahead, 0 behind. All changed files are CI/workflow, AGENTS, docs, tests and Plan/REA; no runtime source/config files changed. This is a documentation/test lag, not a pending runtime deployment. No new runtime release was created in this continuation.
+- GitHub compare [production SHA → master](https://github.com/eshwarjay0-delS/job-dashboard/compare/b94e1629c544048d84a2b048ae83b21b612ab9dd...8ad319d1092fffa7e6a31a4da1b4dc61ac634934) reports 15 commits ahead, 0 behind. Most changed files are CI/workflow, AGENTS, docs, tests and Plan/REA. `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`; `src/lib/plan-vision-journal.ts` is imported by the journal component and `/api/vision/live`. These changes update user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production config changed. PR #425 therefore needs a normal production deployment and READY/alias verification after Safe Merge Gate approval/merge. No deployment was attempted in this continuation.
 - PR #416 fixture privacy correction is merged at master SHA `8ad319d`; it replaces identifying fixture names/paths with synthetic candidates and reserved example.test identities.
 
 ## WhatsApp resume and 17 October incident
@@ -40,7 +40,7 @@ PR #423 is DRAFT at exact head `fccf93c1a3377149172d012e1158e5e2cea0a973`, based
 
 Remaining gates: legitimate protected Vercel preview using the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; owner-authorized baseline resume, exact JD and explicit confirmation; inspect the actual exported DOCX and record measured raw/weighted coverage. No owner document or model call was used here. Do not claim 95–100%, 98%, or live match success from the source tests.
 
-PR #417 final-DOCX Gemini score-only diagnostic remains DRAFT on a stacked base. No final DOCX was generated or sent to Gemini in this run. The separate automatic correction/re-export/re-review loop remains outside the score-only approval.
+Direct owner instruction at `2026-11-03T16:20:28Z` approves a mandatory Gemini loop for every resume update: compare the final exported DOCX with the original JD; ask exactly “Give me an ATS score”; record remaining/weak keywords; apply only evidence-supported corrections; re-export and recheck within a controlled retry budget; never invent experience, metrics or credentials or present a simulated official ATS score. PR #417 head `3ef8e54cc5e799cb7fbcc60c6a4c2e9b0963255d` implements only the score-only first stage and remains DRAFT on stacked base #414. The correction/re-export/recheck stage is approved but unimplemented. No personal DOCX or Gemini call occurred in this run.
 
 The Plan records a 6 November 70%/95% WhatsApp threshold. This run did not independently retrieve the original owner-authored threshold message; preserve the existing repository record and mark primary-source provenance as not re-retrieved rather than presenting this run as new approval.
 
@@ -102,20 +102,22 @@ The separate Kompas Continuous Voice Delivery automation is disabled. No Bible-K
 5. Two-inbox and phone acceptance for #424 are missing; Poke proactive worker is not enabled.
 6. Contract crawling remains manual/on-demand and needs an authorized admin for any manual run.
 7. The real Kompas 50-pair and native voice acceptance evidence is missing.
-8. The container could not resolve `github.com`; local clone/tests were unavailable. GitHub Actions exact-head results are the executable source-validation evidence.
+8. The scheduled container has no repository checkout and no `node_modules/next/dist/docs`; AGENTS.md requires reading the relevant Next.js guide before code edits. Local `npm run check`/build could not be run. GitHub source and Actions are accessible, so exact-head remote CI is the executable validation path for this documentation work.
 
 ## Actions in this continuation
 
 - Read current master, `AGENTS.md`, Plan/Journal/REA, Completion Watch and the Chief Relevance handoff.
+- Recovered the direct 27 Oct offline-library fallback approval and 3 Nov mandatory final-DOCX Gemini loop approval from accessible prior conversations; no claim is made that every chat was searched.
+- Corrected the deployment classification: Plan & Vision data/journal are imported into the admin UI/API and require a normal production deployment after merge.
 - Verified exact PR heads and GitHub Actions runs for #419, #422, #423 and #424; confirmed #416 merged into master.
 - Verified current production alias and selected Vercel error windows.
 - Queried Supabase using read-only aggregate SQL only; no personal Gmail contents or row-level account identifiers were retrieved.
 - Searched Library/conversation surfaces for the 17 October output artifact; no match was returned.
 - No real email/WhatsApp send, Gmail API/OAuth request, model call, DOCX generation, R2 mutation, manual crawl, production database write, billing change, secret read or device test occurred.
 
-Continue: keep the exact-head green PRs in DRAFT until their protected-preview and owner/device acceptance gates are met; next highest-priority work is the legitimate protected-preview unblock and the owner-authorized exported-DOCX acceptance for PR #423, while preserving the separate #411 uploaded-original approval gate.
+Continue: keep PR #425 DRAFT until its exact-head full CI and Safe Merge Gate review complete; after merge, deploy the Plan & Vision UI data update and verify READY plus the canonical alias. Next approved code slice is the mandatory final-DOCX Gemini score → evidence-only correction → re-export/recheck loop. This run did not implement that code because no local repository checkout or `node_modules/next/dist/docs` is mounted, as required by AGENTS.md before code edits; protected preview also needs the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, and real acceptance needs owner-authorized source/JD/confirmation and exported DOCX. Keep PR #411's separate uploaded-original timeout decision gate.
 
 
 ## Documentation change record
 
-The reconciliation is recorded on branch `docs/mfit-backlog-reconciliation-20261116`, created from master `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Initial evidence commit: `0b8b744e75403a9e5976a0afe0c495a0ed64c6e6`. This branch changes Plan & Vision, journal, REA, Completion Watch and this research note only; no runtime code or production configuration changed.
+The reconciliation is recorded on branch `docs/mfit-backlog-reconciliation-20261116`, created from master `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Initial evidence commit: `0b8b744e75403a9e5976a0afe0c495a0ed64c6e6`. This branch changes Plan & Vision admin UI data/journal plus REA and documentation; it does not change core resume/Gmail/crawler/Kompas feature logic or production configuration. Because the Plan & Vision modules are imported by the admin page/API, a normal production deployment is required after merge to publish the updated UI. No deployment occurred in this run.
