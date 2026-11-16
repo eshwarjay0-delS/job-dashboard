@@ -1,3 +1,5 @@
+# MFit Completion Watch
+
 ## 16 November 2026 13:00 UTC — Gmail Retry-After continuation
 
 - Production issue [#429](https://github.com/eshwarjay0-delS/job-dashboard/issues/429) records five Gmail 403 `rateLimitExceeded` responses on `/api/gmail/application-chains` and one unreadable history-page error. The API already returns HTTP 429 with `Retry-After: 30`; the Overview client used fixed 15/40/65-second waits and could retry before the server's requested pause.
@@ -10,8 +12,6 @@
 Continue: rerun full CI, Kompas baseline and Plan/REA schema on PR #432's final head; let MFit Safe Merge Gate review it; keep it DRAFT until the legitimate protected preview is available. Do not enable the Poke worker or call Gmail APIs to test this fix.
 
 ---
-
-# MFit Completion Watch
 
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
