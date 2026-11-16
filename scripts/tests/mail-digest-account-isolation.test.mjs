@@ -61,6 +61,7 @@ test("reply identity and saved drafts stay bound to the receiving inbox when dig
   assert.ok(page.includes('key={`${m.account}:${m.id}`}'), "switching account/thread remounts the reply composer instead of carrying stale recipient or sender state")
   assert.match(reply, /replyDraftKey\(data\.user\.id, mail\.account, mail\.id\)/)
   assert.match(reply, /accountEmail: mail\.account, threadId: mail\.id/)
+  assert.match(reply, /From: <strong>\{mail\.account\}<\/strong>/, "the visible From identity stays bound to the receiving inbox")
   assert.match(reply, /setAccountId\(typeof body\.accountId === "string" \? body\.accountId : null\)/)
   assert.match(reply, /\[mail\.id, mail\.account\]/)
 })
