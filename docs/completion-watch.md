@@ -1,5 +1,18 @@
 # MFit Completion Watch
 
+## 16 November 2026 21:16 UTC — WhatsApp incident evidence recheck and release boundary
+
+- Canonical MFit master at the start of this continuation: `6a112e42f375623197047e145eac2d08776d5ca2`. The WhatsApp fallback repair remains PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433), exact head `6a112e42f375623197047e145eac2d08776d5ca2`, DRAFT. Its four exact-head source gates are SUCCESS: full CI [43920312068](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312068) (48 steps), WhatsApp recovery [43920312058](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312058), Kompas baseline [43920312071](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312071), Plan/REA [43920312549](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312549). Safe Merge Gate reviewed this exact head and kept it DRAFT because the protected preview and external-delivery acceptance are not satisfied.
+- Read-only iZap recheck at 2026-11-16T21:15:50Z: one business, no linked WhatsApp numbers, disconnected registration, no live inbound webhook ever, no history backfill and no outbound Meta send ever proven. Date-scoped searches for `resume` and `DOCX` on 17 Oct 2026 in `America/Chicago` returned zero messages. This describes only the connected iZap business; it does not prove the historical event never occurred in another provider or store.
+- Read-only Vercel recheck: project `job-dashboard` reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at master SHA `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; `job-dashboard-fawn.vercel.app` still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The owner/authorized Vercel administrator must restore project availability; protected preview also requires the owner-controlled private token. No deployment or protection bypass was attempted.
+- The 17 Oct 17:28 Chicago incident remains historically unverified: exact uploaded DOCX bytes, generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID and signed delivered/read receipt are still missing. The same-name Library DOCX is not accepted as a substitute without byte/hash match. No real send, replay, Meta request, R2 write, production mutation or handset test occurred.
+- The separate MFit Safe Merge Gate is enabled and has reviewed #433. Kompas Continuous Voice Delivery is disabled; no Bible-Keeper automation was visible in the accessible automation inventory. No voice/caption edits were duplicated.
+- Approval/implementation/deployment remain separate: the #433 source repair is implemented and exact-head-tested; it is not merged, previewed, deployed or externally delivery-verified.
+
+Continue: restack PR #430's diagnostic-only crawler timeout/abort fix onto current master using only the collector, mocked regression tests, dedicated workflow and required plan/research records. Run exact-head full CI and Kompas baseline; keep contract crawling manual/on-demand only, Robert Half manual-only, and do not run a live crawl or restore a schedule.
+
+---
+
 ## 16 November 2026 17:23 UTC — restack WhatsApp fallback integrity on current master
 
 - Canonical master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Current production alias metadata still assigns `job-dashboard-fawn.vercel.app` to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; however Vercel project metadata reports `live:false` and latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Do not describe the new master or branch as publicly live.
