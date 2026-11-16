@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { readFileSync } from "node:fs"
 import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "../../src/lib/mail-digest.ts"
+import { readReplyDraft, replyDraftKey, saveReplyDraft } from "../../src/lib/mail-reply-draft.ts"
 
 test("digest sender mute is scoped to the receiving inbox", () => {
   const rules = [
@@ -62,6 +63,27 @@ test("reply identity and saved drafts stay bound to the receiving inbox when dig
   assert.match(reply, /accountEmail: mail\.account, threadId: mail\.id/)
   assert.match(reply, /setAccountId\(typeof body\.accountId === "string" \? body\.accountId : null\)/)
   assert.match(reply, /\[mail\.id, mail\.account\]/)
+})
+
+test("reply drafts are isolated by user, receiving inbox and provider thread ID", () => {
+  const values = new Map()
+  const storage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+  }
+  const firstInbox = replyDraftKey("user-a", "one@example.com", "same-provider-thread")
+  const normalizedFirstInbox = replyDraftKey("user-a", " ONE@example.com ", "same-provider-thread")
+  const secondInbox = replyDraftKey("user-a", "two@example.com", "same-provider-thread")
+  const otherUser = replyDraftKey("user-b", "one@example.com", "same-provider-thread")
+  const otherThread = replyDraftKey("user-a", "one@example.com", "different-thread")
+  const draft = { to: "recruiter@example.com", cc: "", bcc: "", subject: "Re: role", body: "Inbox one draft", files: [] }
+
+  saveReplyDraft(storage, firstInbox, draft)
+  assert.equal(firstInbox, normalizedFirstInbox, "account casing and surrounding whitespace normalize")
+  assert.equal(readReplyDraft(storage, firstInbox)?.body, "Inbox one draft")
+  assert.equal(readReplyDraft(storage, secondInbox), null, "same provider thread ID in another inbox cannot read this draft")
+  assert.equal(readReplyDraft(storage, otherUser), null, "another signed-in user cannot read this draft")
+  assert.equal(readReplyDraft(storage, otherThread), null, "another thread cannot read this draft")
 })
 
 
