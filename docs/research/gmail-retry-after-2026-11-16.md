@@ -29,7 +29,7 @@ Added `scripts/tests/gmail-retry-after.test.mjs` for:
 
 Updated `scripts/tests/mail-overview.test.mjs` to assert that the response header is read in the per-page retry path. The full CI workflow now runs both Gmail tests alongside `gmail-send-account-isolation.test.mjs`.
 
-Initial full CI `43871483417` failed Type-check with TS7006 for the two unannotated helper parameters. The helper now declares explicit TypeScript parameter/return types, and the source test removes those annotations only when extracting the function for its deterministic runtime checks. Corrections are commits `18d3e542ddfc2bf25fe19f7146a63550ed875c5a` and `928a601504cb628803a66f16aa1951a1514d2dfc`. On the intermediate docs head `a7ddebcbc20595797a097449e3728e522c492040`, Plan/REA `43872012037` and Kompas baseline `43872011582` passed; those results do not validate the subsequent code correction. Fresh exact-head full CI, baseline and Plan/REA checks are required.
+Initial full CI `43871483417` failed Type-check with TS7006 for the two unannotated helper parameters. Explicit types and source extraction were corrected in commits `18d3e542ddfc2bf25fe19f7146a63550ed875c5a` and `928a601504cb628803a66f16aa1951a1514d2dfc`. The next full CI `43872548358` passed lint/typecheck but failed one HTTP-date assertion: `toUTCString()` truncates milliseconds to whole seconds, so the test now expects the correct 45-second header in commit `738bac2e87e648558fce84a6cc6f70dc9dcde2f7`. Plan/REA `43872012037` and Kompas baseline `43872011582` passed only on an intermediate docs head; fresh exact-head checks are required.
 
 ## Preserved constraints
 
