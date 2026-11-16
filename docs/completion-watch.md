@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 16 November 2026 01:09 UTC — PR #423 WhatsApp shortfall test-harness correction
+
+- Canonical master remains `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`; production alias `job-dashboard-fawn.vercel.app` remains independently READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. PR #423 is not deployed.
+- Exact PR #423 head `35b8637bea530e3a47482d3aa2d2fa6017462001` full CI `43782645674` passed lint and type-check but failed one assertion in `scripts/tests/whatsapp-resume-acceptance.test.mjs` at the 70% raw-overlap / 95% supported-coverage boundary. The 103-case suite had 102 passes and one failure.
+- This was a test-harness issue, not a WhatsApp runtime regression: `loadTS` executes the module in a Node VM context, so the returned empty array had a different realm prototype from the host array used in `assert.deepEqual`. Test-only commit `9d347a98db6fc461b28b4dbfead0add5779c08e3` normalizes the returned array with `Array.from` while still asserting exactly zero rejection reasons. No threshold, channel policy, identity guard or send behavior changed.
+- Handoff updates: Plan Journal commit `bab74f783ff29dfe0f205c3fb9d640e5a95a54fc`; Plan & Vision revision `2026-11-16.3`, commit `3a81f8ab6791e6316368018e3bab3833b4b915c5`. The current branch head before this Completion Watch entry was `3a81f8ab6791e6316368018e3bab3833b4b915c5`; this documentation update creates a new head, so all exact-head workflows must be checked again.
+- Keep PR #423 DRAFT. Require full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on the final head, Safe Merge Gate review, legitimate protected preview, and owner-authorized source resume + exact JD + explicit confirmation with actual exported-DOCX inspection. No production deployment is needed for this test-only correction. No model call, DOCX export, Gemini score, R2 write, email/WhatsApp send or 95–100% / 98% live match is claimed.
+
+Continue: verify all four required workflows on the final PR #423 head; then let Safe Merge Gate sequence the shared Plan/REA branches. Do not merge or deploy solely because this test-only fix passes.
+
+---
+
 ## 16 November 2026 00:28 UTC — confirmed-skill confirmation syntax correction
 
 - Canonical master at the start of this continuation is `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. The latest independently recorded production runtime remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`, alias `job-dashboard-fawn.vercel.app`. PR #423 is not deployed.
