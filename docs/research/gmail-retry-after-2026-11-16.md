@@ -44,3 +44,16 @@ Initial full CI `43871483417` failed Type-check with TS7006 for the two unannota
 The Vercel project metadata currently reports `live:false`; its latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Alias metadata still points `job-dashboard-fawn.vercel.app` to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No public HTTP smoke or authenticated acceptance was established. PR #432 is DRAFT and not deployed. The legitimate protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run; an owner/authorized admin must also restore the project live state before release. Do not change billing, unpause the project or bypass Vercel protection.
 
 Continue with exact-final-head CI, Kompas baseline, Plan/REA schema and MFit Safe Merge Gate review. After the authorized preview and reviewed merge, deploy the approved master and verify the exact READY production SHA plus canonical alias. Keep two-inbox, selected-From, reconnect and narrow-mobile acceptance separate.
+
+
+## Exact-head validation refresh — 16 November 2026 15:57 UTC
+
+PR #432 exact current head `6b04a042a59b414d729c5e916ffad66ce6fd2c6b` now has all three source gates completed successfully:
+
+- Full CI `43873587418`: SUCCESS.
+- Plan Journal / REA schema `43873587419`: SUCCESS.
+- Kompas baseline `43873587424`: SUCCESS.
+
+The exact-head source/test validation supersedes the earlier pending-check statements above. It does not supersede the release blocker: Vercel project metadata reports `live:false`; latest production-targeted deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED; the canonical alias remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. SSO protection remains enabled for non-custom domains, and the owner-controlled `KOMPAS_VERCEL_API_TOKEN` is not available to this run.
+
+No protected preview, public HTTP smoke, authenticated Gmail API/OAuth call, inbox mutation, email/WhatsApp send or production deployment occurred. Do not change billing, unpause the project, bypass protection or infer fresh sync from cached rows. An owner/authorized admin must restore project live state and provide protected-preview access through the private channel before Safe Merge Gate review and release.
