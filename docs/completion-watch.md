@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 16 November 2026 21:54 UTC — current-master contract crawler diagnostics restack (#434)
+
+- Canonical master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Draft PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) uses branch `fix/crawler-abort-diagnostics-master-66291-20261116`; the current head before this evidence update is `e0281dd20586f784dd5989ad23dd4682480e3e73`.
+- The restack copies only the collector, its mocked tests, the dedicated crawler workflow and Apply documentation from the diagnostic-only portion of PR #430. It does not include PR #428's WhatsApp changes and does not edit PR #430 or #428.
+- Source commit `48989a908431f3366a3423e296ae0d88a3bde512` retains the 25-second default, distinguishes local AbortController timeout from upstream AbortError, includes the portal host, and preserves pacing after malformed URLs. Test commit `3c51532f74149b75de4603876f020b9881c83e8c` adds local-timeout, upstream-abort and malformed-URL pacing regressions. Workflow commit `936d8789da6126e5ac78d45e62518255d4b6df21` wires the collector suite.
+- Documentation commits: Apply `532bcc0b6a5694bd153faacb9a45554856a0d03e`; research note `5b9f7cd7f4a65f7653ab47be5b90ec343d4fe8ed`; Plan Journal `bcb6d93681def5376090adccab1919c041ba821b`; REA `e0281dd20586f784dd5989ad23dd4682480e3e73`.
+- Exact-head full CI, Kompas baseline, crawler freshness/collector workflow and Plan/REA schema are pending on this new master-targeted PR. The predecessor #430 focused tests do not validate #434. This environment could not clone GitHub because DNS resolution failed; no local npm test or build is claimed.
+- Vercel project `job-dashboard` remains `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. The canonical alias remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; no unpause, bypass or deployment was attempted.
+- Contract crawling remains manual/on-demand only; no daily cron. Robert Half remains manual-only; Right-to-Hire / Contract-to-Perm aliases remain unapproved. No live crawl, portal request, production-row mutation, application submission, email or WhatsApp send occurred.
+
+Continue: run exact-final-head full CI, Kompas baseline, crawler freshness/collector regressions and Plan/REA schema. Let MFit Safe Merge Gate review. Keep PR #434 DRAFT until all required checks and the legitimate protected preview/release gates are satisfied. Any production crawl requires a separate explicit manual request.
+
+---
+
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
 - Backlog reconciliation PR #425 is on branch `docs/mfit-backlog-reconciliation-20261116` (current head is shown on the PR; still DRAFT). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; GitHub compare shows master 15 commits ahead/0 behind. Most differences are CI/workflows, AGENTS, docs, tests and Plan/REA. However, `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`, and `src/lib/plan-vision-journal.ts` by the journal component and `/api/vision/live`; these are user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production configuration changed. After Safe Merge Gate approval and merge, a normal production deployment, READY check and canonical alias verification are required to publish the updated Plan & Vision UI. No deployment has occurred. PR #416 fixture-privacy correction is merged into master at the current SHA.
