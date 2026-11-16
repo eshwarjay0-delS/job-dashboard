@@ -579,3 +579,18 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 15 November 2026 — Poke-inspired Gmail/mobile current-master restack
+
+Continue: restack the approved account-scoped digest and mobile-navigation slice from PR #401 onto current canonical master.
+
+- Current master at restack start: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. The predecessor PR #401 is based on older master `46043ec6ca926b2ab82424d255367426685f294d`; its previous source checks are not reused.
+- Draft PR #424: https://github.com/eshwarjay0-delS/job-dashboard/pull/424, branch `fix/gmail-poke-mobile-master-8ad319-20261115`.
+- Restacked account-scoped digest sender mutes, account+provider-thread identity, receiving-inbox selection, saved reply identity tests, and the approved mobile no-cover navigation. Current master privacy fixtures and workflow checks are preserved; package and CI test registration were merged rather than copied from the stale branch.
+- Owner-approved mobile behavior: hidden when closed; when opened, the menu expands below the sticky header in normal flow and pushes page content down. It must not cover, dim, or make the page inert. Per-account Calendar targeting, a sync-health card, additional waiting-on-them semantics, proactive worker/scheduler and external notifications remain proposed or disabled.
+- Prior PR #401 checks are predecessor evidence only. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA must run on PR #424.
+- Protected preview, two authorized inboxes with colliding sender/thread IDs, independent sender mutes, receiving-inbox selection, selected-From preservation, affected-inbox reconnect and actual narrow-phone acceptance remain required. No Gmail API/OAuth, inbox mutation, email send, worker enablement or production database write occurred.
+- The 14 Nov Gmail sync freshness counts are a historical read-only snapshot; this run did not refresh the production sync tables or inspect the expired cron invocation. Do not claim current sync freshness or Poke-style background updates.
+
+Continue: run the exact-head gates, then Safe Merge Gate review and protected preview. Keep the proactive worker and external notifications disabled until separately approved.
