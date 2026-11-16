@@ -1,12 +1,16 @@
 /** Shared quality report for web, WhatsApp, and cached generations.
  * 95% is the shared report floor and the web-download floor; 98% is the target.
- * WhatsApp has a separate owner-approved shortfall path: a complete, readable
- * result below 95% raw overlap can still be sent with disclosed gaps. 70–94.9%
- * can be a clean pass only with at least 95% supported coverage and all independent
- * ATS, identity, role-completeness, and document-integrity checks satisfied.
- * A finished result below 70% is not a clean pass. See
- * whatsapp-resume-acceptance.ts; this report's needs_review status alone is not
- * a universal WhatsApp hold. */
+ * The current WhatsApp implementation has a separate shortfall path recorded
+ * in the 6 Nov repository research. Accessible prior-conversation retrieval
+ * did not recover an owner-authored message approving the numeric 70–94.9% /
+ * 95%-supported thresholds; a prior assistant summary is not direct approval.
+ * Preserve current behavior pending an explicit owner correction. A complete,
+ * readable result below 95% raw overlap can still be sent with disclosed gaps
+ * under that implementation; 70–94.9% is a clean pass only with at least 95%
+ * supported coverage and all independent ATS, identity, role-completeness,
+ * and document-integrity checks satisfied. A finished result below 70% is not
+ * a clean pass. See whatsapp-resume-acceptance.ts; needs_review is not a
+ * universal WhatsApp hold. */
 export const RESUME_MIN_COVERAGE = 0.95
 export const RESUME_TARGET_COVERAGE = 0.98
 
