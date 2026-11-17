@@ -18,6 +18,18 @@ Continue: poll PR #435's exact-head full CI, Kompas baseline and Plan/REA, then 
 
 # MFit Completion Watch
 
+## 17 November 2026 21:42 UTC — supersede the earlier Gmail no-cap interpretation
+
+- The latest accessible owner-authored correction at `2026-11-17T18:08:40Z` explicitly keeps the existing four-account ceiling; removal is not approved. This supersedes the earlier assistant-authored interpretation in the 13 Nov provenance note that the historical 3–4 account range should not be treated as a hard cap. The 17 Oct product vision is preserved as historical context; the current ceiling remains four until the owner explicitly approves a change.
+- Plan & Vision revision `2026-11-17.7` commit `ec93addacce8147c4dab7d01088cd868eee1f5cc` now states the current ceiling. The 13 Nov owner-approval provenance note has an explicit superseding addendum (commit `cbb3eaf0c91e58d4c774bbf7be1b9cb28283692c`); the old interpretation is retained, not erased.
+- PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) adds `scripts/tests/gmail-account-cap.test.mjs`, which scans all SQL migrations and asserts the latest `public.identity_list_google_workspace_accounts` definition retains primary-first ordering and `LIMIT 4`. Test commit `8093779b282c410e72812d21eaeca213bbf0635f`; CI wiring `4b06534e211c1446cb458416a148df66f90890b9`. Exact head `6d8258dda0627d08ef9cf92e9354a5f3aba4bf4c`: full CI `44173800670`, Kompas baseline `44173800729` and Plan/REA `44173800662` all SUCCESS.
+- PR #440 remains DRAFT/unapproved. Do not merge it or apply its no-cap migration. No Gmail API/OAuth, inbox read/write, email send, Poke worker, scheduler, production mutation or narrow-phone acceptance occurred.
+- Plan Journal commit `6e19c5388db3ca45b91db5560708ac9d29b87433`; REA commit `d04d700c9e69bd7b1c68f70840e4bea9b265cd01`. PR #442's previous head `40962060e587979a7b79bd5b8c5707fc458a4fdc` had Plan/REA `44175138333` and Kompas baseline `44175138173` SUCCESS, full CI `44175138258` IN PROGRESS. The provenance, Plan, journal and REA corrections advance the branch to `d04d700c9e69bd7b1c68f70840e4bea9b265cd01` before this Completion Watch update; exact-head checks must be rerun.
+- Keep PR #435 DRAFT until legitimate protected preview, two-authorized-inbox collision, selected-From preservation, reconnect/mute and narrow-phone acceptance. Keep the four-account ceiling and all proactive sending disabled.
+
+Continue: verify the final PR #435/PR #442 exact-head checks, then let MFit Safe Merge Gate sequence the shared Plan/REA files. Do not merge or deploy on predecessor checks.
+
+
 ## 17 November 2026 16:07 UTC — MFit continuation run 11
 
 - Canonical repository: eshwarjay0-delS/job-dashboard. Current master: 66291f677cbcc2318229ef9a3164961e6d3cdb6a. Accessible prior-context retrieval found explicit approvals and corrections for the approved scope below; it does not establish access to every conversation.
