@@ -19,7 +19,7 @@ Begin with the user's original baseline for each new JD. Preserve its identity, 
 
 ## Email target, not a claim of current functionality
 
-Support up to four connected Gmail accounts, a job-only inbox, interview-only calendar, and application statuses. Rejected applications leave the active view but retain history; do not silently delete mail. Save editable weekly availability, generate drafts, and send on approval. Automation is explicitly opted into, scoped, ordered and scheduled, with retry/idempotency controls. The current combined inbox, calendar and workflow sample pages are previews, not verified implementations of this target.
+Support multiple connected Gmail accounts (3–4 is a target range, not a hard cap), a job-only inbox, interview-only calendar, and application statuses. Rejected applications leave the active view but retain history; do not silently delete mail. Save editable weekly availability, generate drafts, and send on approval. Automation is explicitly opted into, scoped, ordered and scheduled, with retry/idempotency controls. The current combined inbox, calendar and workflow sample pages are previews, not verified implementations of this target.
 
 ## Authentication and boundaries
 
