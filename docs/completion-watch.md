@@ -598,3 +598,19 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 17 November 2026 — remove the unintended Gmail four-account ceiling
+
+Owner correction: 3–4 connected inboxes is an initial target range, not a hard maximum. The Plan already said this, but current source still capped the SQL attach/list RPCs, three API responses, two UI surfaces and mobile-update preference selections.
+
+- Draft PR #440: https://github.com/eshwarjay0-delS/job-dashboard/pull/440
+- Current recorded head: `239b2b8c0d85a331d9bf055b90e46a3ca63f4ad3`.
+- The forward-only migration replaces only `identity_attach_google_workspace_account` and `identity_list_google_workspace_accounts`, removing the count guard and LIMIT 4 while preserving user/Google-subject ownership, security-definer search path, audit writes and service-role-only grants.
+- API/UI and mobile preferences no longer impose four; per-account identity, selected From, duplicate/malformed email checks and the route's authenticated-account membership check remain.
+- Added a 12-inbox preference regression, SQL security/source checks, API/UI no-cap checks, and CI/prebuild wiring.
+- Exact-head full CI, Kompas baseline and Plan/REA schema are pending. No local npm execution was possible because the scheduled container has no checkout or node_modules; matching Next.js 16.3.8 route/client docs were reviewed from the upstream tag.
+- No Gmail API/OAuth call, inbox read, email, WhatsApp message, mobile notification, database migration application or production deployment occurred.
+- The canonical Vercel project reports `live: false`; the protected-preview credential is owner-controlled and unavailable here. Do not unpause it or bypass the gate. Real five-plus-account, selected-From, reconnect, mobile and account-isolation acceptance remains open. The Poke background worker remains disabled; the separate four-user batch limit is unchanged.
+
+Continue: verify all exact-head PR #440 checks; if green, let MFit Safe Merge Gate review. Keep DRAFT until legitimate protected preview and owner-consented five-plus-account acceptance are available.
