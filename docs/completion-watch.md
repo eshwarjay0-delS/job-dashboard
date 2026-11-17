@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 17 November 2026 15:34 UTC — PR #441 exact-head source verification
+
+- PR [#441](https://github.com/eshwarjay0-delS/job-dashboard/pull/441) is DRAFT and mergeable, head `1046415d1f440b3d01eeeea56543f62c9ae6f870`, based on PR #431 head `a74319cb87a3aff44e111987c59ce978d2f87c2a`. GitHub compare confirms 18 commits ahead / 0 behind.
+- Plan/REA schema workflow `44115781369` completed SUCCESS.
+- Dedicated final-DOCX workflow `44115781348` is IN PROGRESS at `npm ci`; typecheck/lint/application checks and focused tests have not yet run. No full CI, WhatsApp recovery or Kompas baseline run is visible yet.
+- The code uses the explicit candidate-confirmation rule from #431, not a first-person-only requirement. The Gemini score remains diagnostic and only source/explicit-confirmed gaps can be corrected.
+- No local checkout/Node dependencies, protected preview credential or owner-authorized personal resume/JD/confirmation bundle are available. No DOCX export or Gemini model call occurred. No production deploy or live match is claimed.
+
+Continue: wait for exact-head full and focused checks; then run WhatsApp recovery, Kompas baseline and Plan/REA again if any later commit changes the head. Keep PR #441 DRAFT pending protected preview and owner-authorized exported-DOCX acceptance.
+
+
 ## 17 November 2026 — approved final-DOCX Gemini loop restacked on confirmed-skill source
 
 - Direct owner approval is recorded in PR #395 comments for the 3 Nov 2026 16:20:28 UTC request: compare each complete final DOCX to the original JD and ask Gemini exactly “Give me an ATS score”; inspect remaining/weak terms; correct only evidence-supported gaps; re-export and recheck within a bounded retry budget.
