@@ -472,5 +472,6 @@ test("WhatsApp quality rejection logs partial counts but never raw pending-role 
   const log = source.slice(start, end)
   assert.match(log, /whatsappPartialDiagnostics\(result\.partial\)/)
   assert.doesNotMatch(log, /pendingRoles\s*:/)
-  assert.doesNotMatch(log, /result\.(?:resume|jd|account|profile|email|phone|token)\b/)
+  assert.doesNotMatch(log, /result\.(?:resume|account|profile|email|phone|token)\b/)
+  assert.doesNotMatch(log, /result\.jd_terms_unplaced(?!_reason\b)/)
 })
