@@ -93,7 +93,7 @@ test("parser rejects JSON values and strings that JavaScript would coerce into s
 
 test('resume plan records the approved final-DOCX loop and keeps live acceptance separate', () => {
   const plan = readFileSync(new URL('../../src/lib/plan-vision.ts', import.meta.url), 'utf8')
-  assert.match(plan, /PLAN_REVISION = "2026-11-17.3"/)
+  assert.match(plan, /PLAN_REVISION = "2026-11-17.16"/)
   assert.match(plan, /final-DOCX Gemini review is approved/)
   assert.match(plan, /current-master confirmed-skill branch/)
   assert.match(plan, /the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN/)
