@@ -1,0 +1,142 @@
+/* Phone-native live copilot shell.
+   Loaded after the legacy and answer-aside styles so the phone viewport wins.
+   The desktop-focus shell (html.kd) is deliberately excluded. */
+@media (max-width:760px) {
+  html:not(.kd) #view-copilot {
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    box-sizing:border-box;
+    padding:calc(env(safe-area-inset-top, 0px) + 8px) 0 0;
+    gap:0;
+    align-items:stretch;
+    overflow:hidden;
+    overscroll-behavior:contain;
+  }
+
+  html:not(.kd) #view-copilot > .overlay {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    width:100%;
+    max-width:none;
+    min-width:0;
+    min-height:0;
+    height:100%;
+    border-radius:0;
+    border-left:0;
+    border-right:0;
+  }
+
+  html:not(.kd) #view-copilot .bar-top {
+    flex:0 0 auto;
+    flex-wrap:wrap;
+  }
+
+  html:not(.kd) #view-copilot .bar-left {
+    min-width:0;
+  }
+
+  html:not(.kd) #view-copilot .bar-right {
+    flex:1 1 100%;
+    min-width:0;
+    flex-wrap:wrap;
+    justify-content:space-between;
+  }
+
+  html:not(.kd) #view-copilot .bar-actions {
+    flex:0 1 auto;
+    max-height:min(36dvh, 240px);
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+
+  html:not(.kd) #view-copilot .content {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    padding:10px 12px 8px;
+  }
+
+  html:not(.kd) #view-copilot #card {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+  }
+
+  html:not(.kd) #view-copilot .a {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+  }
+
+  html:not(.kd) #view-copilot #answer {
+    flex:1 1 auto;
+    min-height:0;
+    max-height:none;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+
+  html:not(.kd) #view-copilot .drawer {
+    flex:0 1 auto;
+    min-height:0;
+    max-height:32dvh;
+  }
+
+  html:not(.kd) #view-copilot .bar-ask {
+    position:sticky;
+    bottom:0;
+    flex:0 0 auto;
+    margin-top:auto;
+    padding:10px 12px;
+  }
+
+  html:not(.kd) #view-copilot .statusline {
+    flex:0 0 auto;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html:not(.kd) #view-copilot .bar-actions .pill,
+  html:not(.kd) #view-copilot .bar-actions .live-select,
+  html:not(.kd) #view-copilot .bar-ask .manual,
+  html:not(.kd) #view-copilot .bar-ask .send,
+  html:not(.kd) #view-copilot .mini,
+  html:not(.kd) #view-copilot .icon-btn {
+    min-height:44px;
+    touch-action:manipulation;
+  }
+
+  html:not(.kd) #view-copilot .bar-actions .pill {
+    height:48px;
+  }
+
+  html:not(.kd) #view-copilot .bar-actions .live-select,
+  html:not(.kd) #view-copilot .bar-ask .manual {
+    font-size:16px;
+  }
+
+  html:not(.kd) #view-copilot .bar-ask .send,
+  html:not(.kd) #view-copilot .mini,
+  html:not(.kd) #view-copilot .icon-btn {
+    min-width:44px;
+  }
+}
+
+@media (max-width:760px) and (orientation:landscape) {
+  html:not(.kd) #view-copilot .bar-actions {
+    max-height:min(28dvh, 160px);
+  }
+
+  html:not(.kd) #view-copilot .content {
+    padding-top:6px;
+  }
+}
