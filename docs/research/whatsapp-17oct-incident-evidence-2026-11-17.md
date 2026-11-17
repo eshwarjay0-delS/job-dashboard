@@ -47,3 +47,13 @@ No project unpause is authorized here. A future production release must use the 
 To close the historical incident, recover the exact uploaded DOCX bytes, generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound message ID and signed delivered/read receipt from the correct owner-authorized provider/number, then reconcile disputed candidate facts with the owner. Do not replay or resend the historical request.
 
 For the source repair, restore Vercel project availability and provide the protected-preview token through the authorized channel; then let MFit Safe Merge Gate review #433 and verify the intended production SHA/alias before any owner-consented acceptance. No live 95–100% resume match, Meta delivery or native device acceptance is claimed.
+
+
+## Additional accessible-file search — 17 November 2026, 23:03 UTC
+
+A semantic search across the accessible current conversation and Library for the 17 Oct 17:28 WhatsApp resume output did not identify a matching generated DOCX or delivery receipt. A metadata-only Library listing restricted to DOCX/PDF created between 2026-10-17T00:00:00Z and 2026-10-18T00:00:00Z returned zero items. The semantic search returned unrelated tailoring/reference files; none is accepted as the incident output. This is a bounded search of accessible sources, not proof that every prior chat, external provider archive or WhatsApp account was searched.
+
+The historical screenshot still proves a hard hold after automatic repair. The exact generated output DOCX, per-run R2 key/version, request/webhook correlation, Meta outbound message ID and signed delivered/read receipt remain unavailable. No replay, resend, R2 write, model call or real test message occurred.
+
+The latest canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR #433 remains a green source-tested DRAFT; PR #431 remains a green source-tested DRAFT. Neither has a legitimate protected preview or production release. The latest production attempt was canceled before build because the Git-linked Ignored Build Step skipped a commit without `[ship]`; this does not establish a project pause reason. The owner-controlled private `KOMPAS_VERCEL_API_TOKEN` remains unavailable to this run.
+

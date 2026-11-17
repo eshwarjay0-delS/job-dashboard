@@ -57,3 +57,17 @@ The Plan & Vision model is imported by the admin UI and live API, so the documen
 - No local code execution, real message, live crawl, production data mutation, DOCX export, Gemini call, deployment or device test occurred.
 
 Continue: let the active MFit Safe Merge Gate sequence the corrected #442 handoff and shared Plan/REA files. Once an authorized administrator provides protected-preview access through the private channel and confirms the Vercel project state, run the legitimate preview for #433 first and #431 next; do not unpause or bypass protection. Keep #441 stacked until #431 is accepted, then run full CI and Kompas baseline on #441's exact final head and perform owner-authorized exported-DOCX acceptance. Keep #435 two-inbox/narrow-phone, #432 protected preview, #434 manual crawler and #444 real-phone acceptance separate. Preserve #440's unapproved no-cap proposal, #427's unapproved whole-message hold, and Kompas 50-pair/native voice evidence gaps.
+
+
+## 17 November 2026 23:03 UTC — exact-head and incident-artifact addendum
+
+- PR #442 current head `8231b73b395beb94e60b9fca766421e639b65f13` has full CI 44188022412, Kompas baseline 44188022569 and Plan/REA 44188022273 SUCCESS. The branch remains DRAFT for Safe Merge Gate sequencing.
+- PR #435 current head `bb8faf1ee455f38f362456052e791578895beceb` has full CI 44175762883, baseline 44175762880 and Plan/REA 44175762922 SUCCESS. The latest owner correction keeps the four-account ceiling; PR #440 remains unapproved.
+- PR #433 (WhatsApp) and #431 (confirmed-skill resume) each have four exact-head source gates SUCCESS, but both remain DRAFT pending protected preview and their distinct owner acceptance. #434 crawler has four gates SUCCESS; #444 phone shell has five gates SUCCESS but still requires real phone acceptance.
+- #436 and #441 remain stacked and lack exact-head full CI/baseline; #439 remains stacked and lacks exact-head full CI/baseline. Do not reuse predecessor results.
+- Current accessible Library semantic search did not find the 17 Oct generated output DOCX; a date-scoped DOCX/PDF Library list for 17 Oct returned zero files. This does not prove every chat/provider archive was searched. Output DOCX, per-run R2/version, request correlation, Meta message ID and signed receipt remain missing.
+- Production alias remains READY at older SHA b94e1629; latest master deployment was canceled before build because the Ignored Build Step skipped a commit without [ship]. The project reports live:false without a pause reason. Protected preview requires the owner-controlled private KOMPAS_VERCEL_API_TOKEN. No deployment or bypass was attempted.
+- No local checkout/Next.js docs were available, so no local code tests/build ran. No real send, replay, crawl, production write, Gemini call or device acceptance occurred.
+
+Continue: run PR #433's legitimate protected preview and acceptance when the owner-controlled preview token and normal Vercel [ship] build path are available; then complete PR #431's authorized exported-DOCX acceptance. Keep all separate owner/device gates intact.
+
