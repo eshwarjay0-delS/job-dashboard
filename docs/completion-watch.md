@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 17 November 2026 19:05 UTC — PR #435 exact-head source gates pass
+
+- PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) exact head `fb1a65a9d44f258ed31cffc0f583c0356c99b5d9`: Plan/REA schema `44152800192` **SUCCESS**, Kompas baseline `44152800204` **SUCCESS**, full CI `44152800501` **SUCCESS**. The corrected source/test/docs branch is source-validated; this does not prove authenticated Gmail behavior or phone acceptance.
+- The schema correction keeps the latest owner boundary: existing four-account ceiling remains; removing it is unapproved; no proactive worker, background scheduler or external notification. Per-account receiving-inbox identity, sender preferences/digest actions and normal-flow mobile menu are approved.
+- Commits: test `67f8f854f20514fce24dd0a38914e069e9eda66e`; REA/source citation `dde2adec686a06d71a78efd024f07cdd6bfd8a26`; Plan Journal `45dab55838a75e87270527b68a24341f87d9a28b`; Completion Watch `fb1a65a9d44f258ed31cffc0f583c0356c99b5d9`. This next documentation-only update requires fresh exact-head checks.
+- Vercel project `job-dashboard` remains `live:false`; latest production deployment is CANCELED and the canonical alias remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`.
+- No Gmail API/OAuth request, inbox read/mutation, email send, proactive worker, device acceptance or production deployment occurred.
+
+Continue: let MFit Safe Merge Gate review the exact source-green draft; keep it DRAFT until legitimate protected preview, two-authorized-inbox collision/independent-mute/selected-From/reconnect checks and narrow-phone acceptance are complete. Do not merge or deploy based on unit/CI success alone.
+
+---
+
 ## 17 November 2026 18:44 UTC — Gmail Plan/REA schema correction on PR #435
 
 - Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) is the approved current-master Poke-inspired Gmail digest/mobile slice; its current pre-fix head was `827f280754a3d8f4eb8b5ecaed9a729bd77c3c0a`.
