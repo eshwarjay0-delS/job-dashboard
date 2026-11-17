@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 17 November 2026 18:44 UTC — Gmail Plan/REA schema correction on PR #435
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) is the approved current-master Poke-inspired Gmail digest/mobile slice; its current pre-fix head was `827f280754a3d8f4eb8b5ecaed9a729bd77c3c0a`.
+- Exact-head GitHub Actions: full CI `44150429971` **SUCCESS**; Kompas baseline `44150429960` **SUCCESS**; Plan/REA schema `44150430170` **FAILURE**. The schema log showed two precise failures in `scripts/tests/rea-register.test.mjs`: a prior-conversation approval source was incorrectly marked as a repository file path, and the test still asserted the superseded phrase `not a hard maximum`.
+- Latest owner correction at 18:08:40 UTC keeps the existing four-account ceiling; it supersedes the earlier assistant-authored target-not-maximum wording. PR #435 does not change the ceiling. The follow-up commits `67f8f854f20514fce24dd0a38914e069e9eda66e` and `dde2adec686a06d71a78efd024f07cdd6bfd8a26` update the test to assert the current ceiling and store the accessible conversation source as a label-only citation. No runtime Gmail behavior, OAuth, account-limit API/migration, proactive worker, scheduler or inbox data changed.
+- Plan & Vision journal and REA now record the failed run, exact correction and pending recheck; product baseline already preserves the current four-account ceiling. Journal update commit: `45dab55838a75e87270527b68a24341f87d9a28b`.
+- Vercel project `job-dashboard` still reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Alias `job-dashboard-fawn.vercel.app` remains on older READY production SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; no unpause, billing change or protection bypass was attempted.
+- No Gmail API/OAuth call, inbox read/mutation, real email/WhatsApp send, device acceptance or production deployment occurred.
+
+Continue: rerun full CI, Kompas baseline and Plan/REA schema on PR #435's new exact head. Keep it DRAFT until a legitimate protected preview and owner-authorized two-inbox collision/independent-mute/selected-From/reconnect and narrow-phone acceptance are complete; keep the proactive worker disabled and preserve the four-account ceiling.
+
+---
+
+
 ## 17 November 2026 18:08 UTC — latest owner correction keeps the four-account Gmail ceiling
 
 - The latest owner constraint at 18:08:40 UTC explicitly says removing the existing four-account ceiling remains unapproved. This supersedes earlier assistant-authored summaries that inferred “3–4 is a target, not a maximum.” Keep the current four-account ceiling; do not treat PR #440 as approved or live.
