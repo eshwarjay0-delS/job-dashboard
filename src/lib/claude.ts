@@ -6,6 +6,7 @@ import { fixHavingOpener, clampSummary } from "./resume/rules"
 import { FULL_EXPERIENCE_DEPTH, FULL_SUMMARY_WORDS, summaryWordCap } from "./resume-verbosity"
 import { parseConfirmedVocabulary, type RelationalPair } from "./keyword-targets"
 import { emptyRelatedPass, keywordsFromPass, parseRelatedPass, type RelatedPass } from "./constructed-jd"
+import { buildFinalAtsReviewPrompt, parseFinalAtsReview, type FinalAtsReview } from "./resume-final-ats-review"
 
 const RULES = `${J1_HEADER}
 
@@ -435,6 +436,40 @@ export async function expandJdKeywordsTwice(opts: {
   const first = await expandJdKeywords({ ...call, known })
   const second = await expandJdKeywords({ ...call, known: [...new Set([...known, ...first])] })
   return [...new Set([...first, ...second])]
+}
+
+/** Score the actual exported DOCX with Gemini only; never use this score as experience evidence. */
+export async function reviewFinalDocxWithGemini(opts: {
+  keys: LlmKeys;
+  jd: string;
+  docxText: string;
+  terms: readonly string[];
+  timeoutMs?: number;
+  usageSink?: TokenUsage[];
+}): Promise<FinalAtsReview> {
+  if (!opts.keys.gemini) return { status: "skipped_no_key", score: null, missing: [], weak: [] };
+  try {
+    const user = buildFinalAtsReviewPrompt({
+      jd: opts.jd,
+      docxText: opts.docxText,
+      terms: opts.terms,
+    });
+    const response = await callLLM({
+      keys: { gemini: opts.keys.gemini },
+      pref: "gemini",
+      tier: "light",
+      system: "You are a strict ATS reviewer. Return only the requested JSON. Use only the exact supplied JD target terms. Do not rewrite the resume, infer experience, or treat the JD as candidate evidence. The score is diagnostic only.",
+      user,
+      maxTokens: 1200,
+      temperature: 0,
+      timeoutMs: opts.timeoutMs ?? 7000,
+      usageSink: opts.usageSink,
+      purpose: "resume-ats-review",
+    });
+    return parseFinalAtsReview(response.text, opts.terms);
+  } catch {
+    return { status: "unavailable", score: null, missing: [], weak: [] };
+  }
 }
 
 const RELATED_PASS_SYSTEM = `You prepare resume material BEFORE any editing. Given a job post and the candidate's existing work, list related skills, experiences, points, bullets, skill-section lines, and one summary.

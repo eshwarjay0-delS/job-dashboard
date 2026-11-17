@@ -67,3 +67,29 @@ No file was modified, uploaded, sent or replayed. No model call or DOCX regenera
 ## 14 November 2026 — current status
 
 The 17 Oct 17:28 Chicago incident remains open. The source DOCX and matching JD are recorded as previously recovered in private storage, but conflicting chronology, education, tenure and credential facts remain quarantined. The exact generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt are still missing. The approved PR #392 offline fallback/pair-CAS work is separate and does not prove this historical run's output or delivery. No replay, replacement send, production R2 write or real Meta test was performed.
+
+
+## 17 November 2026 — read-only usage-event and historical-code correlation
+
+A read-only production Supabase query recovered one `public.usage_events` row at `2026-10-17T22:28:27.372685Z` matching the reported 17:28 Chicago window:
+
+- Row ID: `b9b2d16f-729e-4f3b-9cd9-c0a3e5fa2e71`
+- Channel/feature: `whatsapp / resume_tailor`
+- Recorded `score`: **87**; recorded model calls: **34**
+- `source_event_key`: null
+
+A Supabase edge log shows the successful database insert at `2026-10-17T22:28:26.745Z`: POST `/rest/v1/usage_events`, HTTP 201, request ID `01a14bfb-0df9-7e1a-9f98-7b3f7af13ea1`. This is the Supabase insert request ID, **not** the Meta webhook or message ID.
+
+The historical code active at the time clarifies the meaning and likely outcome:
+
+- Tailor commit `de92e657d1a4fa0b04fcd800544b86ab18e24b9a` sets `TailorResult.score` from raw JD keyword overlap after tailoring. It is not an ATS score, supported-coverage score, or probability of hiring.
+- The same commit's `src/lib/resume-quality.ts` sets both `RESUME_MIN_COVERAGE` and `RESUME_TARGET_COVERAGE` to 98%.
+- Webhook commit `f09faf41b45ade7f440357ab3de7583be0dbd36a` records usage and returns a hold message when `quality.status !== "coverage_met"`, before reading and sending the DOCX.
+
+Therefore the 87 raw-overlap event strongly indicates the run was held by the then-active 98% gate, rather than proving a document was delivered. The usage row does not store `quality.status`, a result token, DOCX hash, R2 object key, Meta message ID or delivery receipt; `source_event_key` is null. The historical webhook derived its R2 generation key from the sender number and Meta WAMID, neither of which is in this usage row. The exact message-to-run correlation remains unproven.
+
+The 6 Nov owner-approved WhatsApp policy supersedes the old 98% hard hold. The current production `src/lib/whatsapp-resume-acceptance.ts` at blob SHA `8b7781b8b2aa9dedf67641e68e083d5b3d73632b` has a 70% raw JD floor and a 95% supported-coverage floor; production deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` contains that policy. Do not restore the old 98% hard hold.
+
+Vercel runtime logs cannot recover the October event on this Hobby retention window (one hour). The accessible iZap business has no linked WhatsApp number or matching message history; this does not prove the Meta Cloud API never sent. The current Library search did not locate a generated DOCX correlated to this run. The earlier private-source recovery is recorded in the prior audit, but the source file and JD were not re-materialized or revalidated in this run.
+
+Still missing: the exact generated DOCX, per-run R2 object/version, Meta WAMID, signed delivered/read callback, and owner reconciliation of conflicting source chronology/education/credential facts. No replay, resend, R2 write, model call, email or WhatsApp test was performed.
