@@ -16,7 +16,7 @@ test("prompt begins with the exact owner-approved instruction and includes the f
     docxText: "Experience\nConfigured Splunk detections.",
     terms: TERMS,
   });
-  assert.equal(prompt.split("\n")[0], "Give me ATS score");
+  assert.equal(prompt.split("\n")[0], "Give me an ATS score");
   assert.match(prompt, /FINAL EXPORTED DOCX TEXT/);
   assert.match(prompt, /Configured Splunk detections/);
   assert.match(prompt, /SIEM, Splunk, incident response, IAM, CyberArk/);
