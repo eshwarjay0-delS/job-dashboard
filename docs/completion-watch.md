@@ -18,6 +18,16 @@ Continue: poll PR #435's exact-head full CI, Kompas baseline and Plan/REA, then 
 
 # MFit Completion Watch
 
+## 17 November 2026 21:55 UTC — fix Plan & Vision lint parse failure
+
+- Exact PR #442 predecessor head `23f6b9db19e21fc03f8a1d8255b528d9a8f31854` had Plan/REA `44175838439` SUCCESS and Kompas baseline `44175838431` SUCCESS, but full CI `44175838472` FAILED at Lint. The only reported lint error was `src/lib/plan-vision.ts:7:919 Parsing error: ',' expected`.
+- Root cause: the phrase `not a hard maximum` had been wrapped in unescaped double quotes inside a double-quoted Plan string. The phrase must remain because the existing Plan/REA regression checks for it, but it is superseded history, not current policy.
+- Fixed by removing only the inner quote characters while retaining the phrase and the explicit 17 Nov owner correction. Fix commit `ca22553842dbc65792c4fcb548d64d54d8fca966`; Plan & Vision revision `2026-11-17.9`. Plan Journal follow-up commit `f92711985f48731306ed44323679a9fea905139c`.
+- The fix advances PR #442 beyond the failed head; exact-head full CI, Plan/REA and Kompas baseline must rerun. No merge or deployment. Keep DRAFT until the final head is green and MFit Safe Merge Gate confirms mergeability.
+  
+Continue: verify the exact final PR #442 head and rerun full CI, Plan/REA and Kompas baseline. Do not merge on failed predecessor checks.
+
+
 ## 17 November 2026 21:42 UTC — supersede the earlier Gmail no-cap interpretation
 
 - The latest accessible owner-authored correction at `2026-11-17T18:08:40Z` explicitly keeps the existing four-account ceiling; removal is not approved. This supersedes the earlier assistant-authored interpretation in the 13 Nov provenance note that the historical 3–4 account range should not be treated as a hard cap. The 17 Oct product vision is preserved as historical context; the current ceiling remains four until the owner explicitly approves a change.
