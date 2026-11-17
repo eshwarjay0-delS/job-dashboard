@@ -47,3 +47,13 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 ## 14 November 2026 — manual-only guard exact-head validation
 
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
+
+
+## 17 November 2026 — explicit four-account ceiling correction (supersedes earlier interpretation)
+
+The latest accessible owner-authored correction at **2026-11-17T18:08:40Z** explicitly keeps the existing four-account ceiling; removal is not approved. This supersedes the earlier assistant-authored interpretation above that the historical 3–4 range should not be treated as a hard cap. Preserve the original 17 Oct product vision as historical context, but the current implementation ceiling remains four until the owner explicitly approves a change.
+
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440), which proposes removing the cap, remains DRAFT/unapproved. Do not merge it or apply its migration.
+- PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) adds `scripts/tests/gmail-account-cap.test.mjs`, which scans migration history and asserts that the latest `public.identity_list_google_workspace_accounts` definition retains primary-first ordering and `LIMIT 4`; the full-CI Gmail isolation step runs it.
+- Exact PR #435 head `6d8258dda0627d08ef9cf92e9354a5f3aba4bf4c` passed full CI `44173800670`, Kompas baseline `44173800729` and Plan/REA `44173800662`. The PR remains DRAFT pending protected preview, two-inbox collision, selected-From, reconnect/mute and narrow-phone acceptance.
+- This guard is source/test-only. No Gmail API/OAuth, inbox read/write, email send, scheduler activation, production mutation or device acceptance occurred.
