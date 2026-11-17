@@ -43,3 +43,10 @@ Changes:
 ## Next action
 
 Continue: verify full CI, Kompas baseline and Plan/REA schema on exact PR #440 head. If all pass, let MFit Safe Merge Gate review it. Do not merge or deploy until a legitimate protected preview and consented five-plus-account acceptance are available. Keep the separate four-user worker batch size and all per-account safeguards intact.
+
+
+## 17 November 2026 — CI contract-test correction
+
+The first exact-head full CI run for PR #440 (44090609728) failed only in scripts/tests/kompas-deploy-build.test.mjs. Its assertion compared the complete prebuild command with an old literal; the approved addition of google-workspace-no-hard-cap.test.mjs and mail-updates.test.mjs made that assertion stale. The job log recorded 62 passing tests and one failing assertion. Commit 80615a2b6d13e9ddc7714e22bf8f56918d0e2a80 changes the contract to assert the Kompas baseline remains first, every required prebuild regression suite is present, and the build command remains unchanged. This is a test-only correction; it does not change Gmail or Kompas runtime behavior. Exact-head CI, Kompas baseline and Plan/REA must rerun after the documentation updates. No local test/build was run because the scheduled environment has no checkout and could not resolve github.com. The PR remains DRAFT; no migration, OAuth call, inbox read, email, mobile notification, preview bypass or production deployment occurred.
+
+Next: wait for exact-head workflows, then let MFit Safe Merge Gate review. Keep protected preview and owner-consented five-plus-inbox acceptance as release gates.
