@@ -23,7 +23,6 @@ type GoogleAccount = {
 type ConnectionStatus = {
   google: {
     accounts: GoogleAccount[]
-    maxAccounts: number
     canAdd: boolean
   }
   whatsapp: {
@@ -40,7 +39,7 @@ type ConnectionStatus = {
 }
 
 const EMPTY: ConnectionStatus = {
-  google: { accounts: [], maxAccounts: 4, canAdd: true },
+  google: { accounts: [], canAdd: true },
   whatsapp: { phoneVerified: false, phoneLast4: null, optedIn: false, systemReady: false, connected: false, label: null },
 }
 
@@ -49,7 +48,7 @@ function googleErrorMessage(code: string | null) {
   const messages: Record<string, string> = {
     access_denied: "Google did not grant access. If this OAuth app is still in Testing, this Google address must be added as a test user.",
     redirect_uri_mismatch: "Google rejected the callback URL. Add the MarketFit callback URL to this OAuth client in Google Cloud.",
-    limit_reached: "This MarketFit account already has four Google accounts connected.",
+    limit_reached: "Google could not save this account. Please retry or reconnect.",
     already_linked: "That Google account is already linked to another MarketFit account.",
     refresh_token_missing: "Google did not return offline access. Reconnect and approve the requested access.",
     token_exchange_failed: "Google authorization completed, but MarketFit could not exchange the authorization code.",
@@ -337,7 +336,7 @@ export default function ConnectionsClient() {
         <p>
           {googleAccounts.length === 0
             ? "Connect your Gmail and MarketFit reads your job emails — RTRs, rates, interviews, follow-ups. Nothing else here works without it."
-            : `${googleAccounts.length} of ${status.google.maxAccounts} Google accounts connected. Sends and drafts use your primary account unless you pick another.`}
+            : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} connected. Sends and drafts use your primary account unless you pick another.`}
         </p>
       </header>
 
@@ -399,7 +398,7 @@ export default function ConnectionsClient() {
             <h2>Google accounts</h2>
             <p>Each card is one Gmail + Calendar grant. The reply profile inside powers Smart Reply for that inbox.</p>
           </div>
-          <span className="conn-count-pill">{googleAccounts.length} / {status.google.maxAccounts}</span>
+          <span className="conn-count-pill">{googleAccounts.length} connected</span>
         </div>
 
         <div className="conn-grid">
@@ -457,7 +456,7 @@ export default function ConnectionsClient() {
                   Add Google account
                   <small>{googleAccounts.length === 0
                     ? "Connect your first Gmail — everything else unlocks after this."
-                    : `${status.google.maxAccounts - googleAccounts.length} slot${status.google.maxAccounts - googleAccounts.length === 1 ? "" : "s"} left`}</small>
+                    : "Add another inbox; each account keeps its own identity and selected sender."}</small>
                 </button>
               )}
             </>
