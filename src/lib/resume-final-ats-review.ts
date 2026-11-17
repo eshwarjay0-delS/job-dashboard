@@ -70,7 +70,18 @@ export function parseFinalAtsReview(raw: string, allowedTerms: readonly string[]
     if (first < 0 || last <= first) throw new Error("missing_json_object");
     source = source.slice(first, last + 1);
     const parsed = JSON.parse(source) as { score?: unknown; missing?: unknown; weak?: unknown };
-    const scoreValue = typeof parsed.score === "string" ? Number(parsed.score.replace(/%/g, "").trim()) : Number(parsed.score);
+    let scoreValue: number;
+    if (typeof parsed.score === "number") {
+      scoreValue = parsed.score;
+    } else if (typeof parsed.score === "string") {
+      const rawScore = parsed.score.trim();
+      const numericText = (rawScore.endsWith("%") ? rawScore.slice(0, -1) : rawScore).trim();
+      if (!/^(?:\\d+(?:\\.\\d+)?|\\.\\d+)$/.test(numericText)) throw new Error("invalid_score_format");
+      scoreValue = Number(numericText);
+    } else {
+      // JSON coercion would otherwise turn null, booleans and arrays into scores.
+      throw new Error("invalid_score_type");
+    }
     if (!Number.isFinite(scoreValue) || scoreValue < 0 || scoreValue > 100) throw new Error("invalid_score");
     const canonical = new Map<string, string>();
     for (const term of unique(allowedTerms)) canonical.set(norm(term), term);
