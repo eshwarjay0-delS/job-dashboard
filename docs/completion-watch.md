@@ -1,3 +1,14 @@
+## 17 November 2026 19:14 UTC — PR #435 REA typecheck correction; release still gated
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) was at exact head `fcf30bab13d77f8a2e9d1046947f62100e39d7f5` when its latest checks completed: full CI `44155102448` FAILED during Type-check with TS2322 at `src/lib/rea-register.ts(11,237)`; Kompas baseline `44155102575` SUCCESS; Plan/REA schema `44155102417` SUCCESS. The cause was the REA top-level state literal `Implemented, source-tested; release blocked`, which is outside the supported state union.
+- Corrected the REA record to `Implemented, verification pending` in commit `0c90ccf60a4775a69be15aeb358bef3a1626c94b`. Updated Plan Journal in commit `f08dd52b6f591fa863b29350e552b4fec9658bd8`: records the exact failure and correction, and explicitly marks the earlier “3–4 accounts is a target, not a hard maximum” interpretation as superseded by the 17 Nov owner correction. The four-account ceiling remains; no-cap PR #440 is unapproved and untouched.
+- No Gmail runtime behavior changed in this correction. PR #435 still carries account-scoped sender/thread identity, correct receiving-inbox selection, and the approved normal-flow mobile menu. Selected-From persistence is not changed. No Gmail API/OAuth call, inbox read/write, email/WhatsApp send, proactive worker, scheduler or external notification occurred.
+- Vercel independently reports project `job-dashboard` `live:false`; latest production attempt `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Canonical alias `job-dashboard-fawn.vercel.app` remains READY on older deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Do not unpause the project, bypass protected preview, change billing or deploy this DRAFT.
+- The updated PR branch head after the REA and journal corrections is `f08dd52b6f591fa863b29350e552b4fec9658bd8`; this Completion Watch update creates a further documentation commit, so all exact-head workflows must be checked again afterward. Previous green results are not reused.
+- Continue: rerun full CI, Kompas baseline and Plan/REA schema on the final PR #435 head. Keep DRAFT until MFit Safe Merge Gate sequencing, legitimate protected preview, two authorized inboxes with same-thread/sender collision, independent mute, selected-From and affected-inbox reconnect checks, plus narrow-phone acceptance are complete. Preserve the four-account ceiling and keep proactive workers disabled.
+
+---
+
 # MFit Completion Watch
 
 ## 17 November 2026 19:05 UTC — PR #435 exact-head source gates pass
