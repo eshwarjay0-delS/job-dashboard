@@ -234,3 +234,6 @@ The canonical production alias is still READY on deployment `dpl_7QVykeYoWSswLDg
 The earlier Plan & Vision note that the exact hamburger interaction/layout was not approved is superseded by the recovered owner correction. The approved behavior is: hidden when closed; when opened, navigation expands below the sticky header in normal document flow and pushes page content down. It must not cover, dim or make the page inert; no overlay or scrim. Exact animation and styling remain implementation choices.
 
 PR #435 implements this behavior in its current-master mobile-navigation slice and passes exact-head full CI, Kompas baseline and Plan/REA checks. It remains DRAFT: protected preview, two-authorized-inbox collision/selected-From/reconnect acceptance and a real narrow-phone test are still required. Per-account Calendar targeting and exact waiting-on-them radar semantics remain proposed, not owner-approved.
+
+
+Exact-head status at 2026-11-17T05:44:18.589Z: PR #437 is DRAFT at `6c83abc187ecdedf1975f2bfa6b90dde32d6fcb8`; Kompas baseline `44025787975` and Plan/REA schema `44025788056` passed. Full CI `44025787971` is still running at the Kompas migration asset/lossless-import step; the Gmail regression has not yet been reported.

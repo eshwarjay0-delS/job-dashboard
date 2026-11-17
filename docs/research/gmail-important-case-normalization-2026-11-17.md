@@ -27,7 +27,7 @@ The change preserves the account component of the key and does not alter selecte
 - Helper commit: `2ee3bb5a9269d0a3f0cef08731aeaff1a83b5e1d`
 - Test commit: `77a70d0d2f10fc2e14247bb50dd4e6802e4531b6`
 - Branch: `fix/gmail-important-case-normalization-20261117`
-- PR #437: https://github.com/eshwarjay0-delS/job-dashboard/pull/437 (DRAFT), exact head b52c92acc3973113367be4d18d5fb6c5a4bb7b0e. Kompas baseline 44024701196 and Plan/REA schema 44024701210 SUCCESS; full CI 44024701268 remains IN_PROGRESS at the Kompas migration asset/lossless-import test step. The new regression runs later in the existing Gmail selected-sender/account-isolation step.
+- PR #437: https://github.com/eshwarjay0-delS/job-dashboard/pull/437 (DRAFT), exact head 6c83abc187ecdedf1975f2bfa6b90dde32d6fcb8. Kompas baseline 44025787975 and Plan/REA schema 44025788056 SUCCESS; full CI 44025787971 remains IN_PROGRESS at step 16, the Kompas migration asset/lossless-import test. The new regression runs later in the existing Gmail selected-sender/account-isolation step.
 - Local checkout/test execution: unavailable; `git ls-remote` could not resolve `github.com`. No local test success is claimed.
 
 ## Release and acceptance limits
