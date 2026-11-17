@@ -202,7 +202,6 @@ export async function GET() {
     return NextResponse.json({
       connected: accounts.some(a => a.gmail_enabled),
       accounts,
-      maxAccounts: 4,
       primaryAccountId: accounts.find(a => a.is_primary)?.id || accounts[0]?.id || null,
       ...(loaded.notice ? { snapshotNotice: loaded.notice } : {}),
     })
