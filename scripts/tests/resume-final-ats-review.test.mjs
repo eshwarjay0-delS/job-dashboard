@@ -79,6 +79,18 @@ test("duplicate and unknown model terms never escape the canonical term list", (
   assert.deepEqual(review.missing, ["SIEM"]);
   assert.deepEqual(review.weak, ["IAM"]);
 });
+test("parser rejects JSON values and strings that JavaScript would coerce into scores", () => {
+  const invalidScores = [null, true, false, [], [86], {}, "", " ", "86%%", "1e2", "0x10", "Infinity", "NaN", "101", "-1"];
+  for (const score of invalidScores) {
+    const review = parseFinalAtsReview(JSON.stringify({ score, missing: [], weak: [] }), TERMS);
+    assert.equal(review.status, "invalid_response", `score ${JSON.stringify(score)} must not be coerced`);
+    assert.equal(review.score, null);
+  }
+  assert.equal(parseFinalAtsReview('{"missing":[],"weak":[]}', TERMS).status, "invalid_response");
+  assert.equal(parseFinalAtsReview('{"score":0,"missing":[],"weak":[]}', TERMS).score, 0);
+  assert.equal(parseFinalAtsReview('{"score":"86.5 %","missing":[],"weak":[]}', TERMS).score, 86.5);
+});
+
 test('resume plan records the approved current-master final-DOCX restack without claiming live acceptance', () => {
   const plan = readFileSync(new URL('../../src/lib/plan-vision.ts', import.meta.url), 'utf8')
   assert.match(plan, /PLAN_REVISION = "2026-11-14.13"/)
