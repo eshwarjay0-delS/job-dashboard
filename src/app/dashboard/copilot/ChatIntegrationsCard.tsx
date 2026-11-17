@@ -12,7 +12,7 @@ type GoogleAccount = {
 }
 
 type Status = {
-  google?: { accounts?: GoogleAccount[]; maxAccounts?: number; canAdd?: boolean }
+  google?: { accounts?: GoogleAccount[]; canAdd?: boolean }
 }
 
 export default function ChatIntegrationsCard() {
@@ -33,8 +33,7 @@ export default function ChatIntegrationsCard() {
 
   const accounts = status.google?.accounts || []
   const connected = accounts.length > 0
-  const max = status.google?.maxAccounts || 4
-  const canAdd = status.google?.canAdd !== false && accounts.length < max
+  const canAdd = status.google?.canAdd !== false
 
   return (
     <div style={{ width: "100%", maxWidth: 680, margin: "4px 0 8px", borderRadius: 22, background: "var(--surface)", border: "1px solid var(--border)", overflow: "hidden", boxShadow: "0 8px 28px rgba(12,11,8,.05)" }}>
