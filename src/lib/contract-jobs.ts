@@ -4,7 +4,7 @@ export function contractTypes(text:string, employmentType=''):ContractType[]{
  const t=text.toLowerCase(),out:ContractType[]=[]
  if(/\b(?:c2c|corp[ -]to[ -]corp)\b/.test(t)&&!/\b(?:no|not|without)\s+(?:c2c|corp[ -]to[ -]corp)\b/.test(t))out.push('C2C')
  if(/\b1099\b/.test(t)&&!/\b(?:no|not)\s+1099\b/.test(t))out.push('1099')
- if(/\bc2h\b|contract[ -]to[ -]hire|contract[ -]to[ -]permanent/.test(t))out.push('C2H')
+ if(/\bc2h\b|contract[ -]to[ -]hire/.test(t))out.push('C2H')
  if(/\btemporary\b|\btemp[ -]to[ -]hire\b/.test(t)||/temporary/i.test(employmentType))out.push('Temporary')
  const contract=/\bcontract(?:or|ing)?\b/.test(t)||/contract/i.test(employmentType)||out.length>0
  if(contract&&/\bw[ -]?2\b/.test(t))out.unshift('W2')
