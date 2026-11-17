@@ -46,7 +46,7 @@ import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-sto
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
-import { acceptableWhatsAppResume, chosenResumeMatchesProfile, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable } from "@/lib/whatsapp-resume-acceptance"
+import { acceptableWhatsAppResume, chosenResumeMatchesProfile, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, whatsappPartialDiagnostics } from "@/lib/whatsapp-resume-acceptance"
 import { confirmedCandidateStatements } from "@/lib/resume-evidence"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
@@ -1027,6 +1027,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     console.error("[whatsapp] tailoring quality gate rejected draft", {
       coverage, supportedCoverage: result.supported_coverage,
       partial: !!result.partial, skillsOnly: !!result.skills_only,
+      ...whatsappPartialDiagnostics(result.partial),
       status: result.quality?.status, incomplete: !!result.quality?.incomplete,
       blockers: whatsappResumeRejectionReasons(result),
       roleCount: result.role_alignment?.length ?? 0,

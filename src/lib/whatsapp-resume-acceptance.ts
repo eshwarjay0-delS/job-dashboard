@@ -195,3 +195,22 @@ export function describeRejectionReasons(reasons: string[]): string[] {
   }
   return out
 }
+
+/**
+ * Privacy-minimal diagnostics for an incomplete WhatsApp draft.
+ * Never return role indexes, source text, provider errors, identities or paths.
+ */
+export function whatsappPartialDiagnostics(partial: unknown) {
+  const value = partial && typeof partial === "object"
+    ? partial as { failed?: unknown; total?: unknown; pendingRoles?: unknown; pendingProfile?: unknown }
+    : {}
+  const count = (input: unknown) =>
+    typeof input === "number" && Number.isSafeInteger(input) && input >= 0 ? input : 0
+
+  return {
+    partialFailed: count(value.failed),
+    partialTotal: count(value.total),
+    pendingRoleCount: Array.isArray(value.pendingRoles) ? value.pendingRoles.length : 0,
+    pendingProfile: value.pendingProfile === true,
+  }
+}

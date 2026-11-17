@@ -28,7 +28,7 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall, whatsappPartialDiagnostics } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
@@ -430,4 +430,48 @@ test("Nov4 hold transparency: rejection codes become plain words, unknowns dropp
   assert.equal(describeRejectionReasons(["quality_not_deliverable", "quality_not_deliverable"]).join(" | "), "the quality report does not clear the delivery bar")
   assert.equal(describeRejectionReasons(["some_future_blocker", "ats_check_failed"]).length, 0)
   assert.equal(describeRejectionReasons([]).length, 0)
+})
+
+test("partial diagnostics expose only safe counts and flags", () => {
+  const diagnostics = whatsappPartialDiagnostics({
+    failed: 2,
+    total: 6,
+    pendingRoles: [0, 3],
+    pendingProfile: true,
+    providerError: "sensitive raw provider detail",
+    resumeText: "private resume content",
+    jdText: "private job description",
+    accountEmail: "person@example.test",
+  })
+  assert.deepEqual({ ...diagnostics }, {
+    partialFailed: 2,
+    partialTotal: 6,
+    pendingRoleCount: 2,
+    pendingProfile: true,
+  })
+  assert.equal("providerError" in diagnostics, false)
+  assert.equal("resumeText" in diagnostics, false)
+  assert.equal("jdText" in diagnostics, false)
+  assert.equal("accountEmail" in diagnostics, false)
+  assert.deepEqual({ ...whatsappPartialDiagnostics({
+    failed: -1, total: "6", pendingRoles: "private", pendingProfile: "true",
+  }) }, {
+    partialFailed: 0,
+    partialTotal: 0,
+    pendingRoleCount: 0,
+    pendingProfile: false,
+  })
+})
+
+test("WhatsApp quality rejection logs partial counts but never raw pending-role data", () => {
+  const source = readFileSync(resolve(root, "src/app/api/whatsapp/webhook/route.ts"), "utf8")
+  const start = source.indexOf('console.error("[whatsapp] tailoring quality gate rejected draft"')
+  assert.ok(start >= 0)
+  const end = source.indexOf("if (await sendClosest", start)
+  assert.ok(end > start)
+  const log = source.slice(start, end)
+  assert.match(log, /whatsappPartialDiagnostics\(result\.partial\)/)
+  assert.doesNotMatch(log, /pendingRoles\s*:/)
+  assert.doesNotMatch(log, /result\.(?:resume|account|profile|email|phone|token)\b/)
+  assert.doesNotMatch(log, /result\.jd_terms_unplaced(?!_reason\b)/)
 })

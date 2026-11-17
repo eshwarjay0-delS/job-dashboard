@@ -626,3 +626,32 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 17 November 2026 — WhatsApp partial-draft diagnostics
+
+- Read-only 7-day production aggregation: 15 WhatsApp tailoring quality-gate rejections across 13 users, latest `2026-11-16T15:02:15Z`. Sampled blockers: `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable`, `role_evidence_gaps`; zero unverified additions and zero JD terms placed. This is not a factual 100% match or delivery proof.
+- The quality gate remains fail-closed. The new stacked diagnostic helper logs only validated `failed/total` counts, pending role count and pending-profile boolean. It does not log raw role indexes, provider errors, resume/JD text, identities, paths or tokens. Tests cover sanitization and route usage.
+- Branch `fix/whatsapp-partial-diagnostics-20261117`, PR #436 head `37a05189645fec8fdfa41bca39ba8b3aeabc2a62`, is stacked on PR #433 head `a693cef8f33a72501c769315311aa48e43b037c2` to avoid parallel edits to its webhook route. The workflow pull-request filters target only `master`/`main`, so exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA have not triggered on this non-master base. After #433 merges, retarget #436 to `master` and rerun all exact-head gates; no predecessor results are reused.
+- The separate 17 Oct 17:28 Chicago incident remains blocked by missing generated DOCX, R2 object/version, webhook/Meta correlation and signed delivery/read receipt. No replay, model call, R2 write or real WhatsApp send.
+- Vercel project remains `live:false`; protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. Do not unpause, change billing or bypass protection.
+
+Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; let Safe Merge Gate review; keep DRAFT until protected preview and the missing historical/user acceptance evidence are supplied.
+
+### PR #436 exact-head typecheck correction — 17 November 2026
+
+- Head `9888de5c54ffc03c157dc076fe3302ec95f397ec` passed Plan/REA schema `43987890177` but WhatsApp recovery `43987890244` failed at `npm run typecheck` before its test suite ran.
+- TypeScript identified four REA/Plan enum mismatches: journal `approval` and `delivery`, REA `method`, and one REA step `status`. The implementation helper/route were not the reported errors. Correct the values to the declared unions (`approved`, `in progress`, `Source and artifact analysis`, `Implemented`) and rerun the exact-head gates.
+- Full CI and Kompas baseline remain untriggered because PR #436 is stacked on PR #433's branch; retarget to `master` after the parent is accepted/merged.
+
+### PR #436 corrected-head regression result — 17 November 2026
+
+- Corrected exact head `3a4d850301a82156e9ad47982105ed3ea1d23ded` passed Plan/REA schema `43988186451` and WhatsApp resume recovery `43988186521`.
+- The previous `9888de5c54ffc03c157dc076fe3302ec95f397ec` TypeScript failure was corrected by restoring the declared Plan/REA enum values; the WhatsApp recovery suite then ran and passed.
+- Full CI and Kompas baseline remain untriggered because PR #436 is stacked on PR #433's feature branch; retarget to `master` after the parent is accepted/merged and run both exact-head gates.
+- No production deployment, R2 write, model call, real WhatsApp send or historical replay occurred.
+
+### PR #436 current exact-head evidence — 17 November 2026
+
+- Current head `1f6ecd9467e7aad662877d77448bd1c28367e3ca` passed Plan/REA schema `43988410037`; WhatsApp resume recovery `43988410069` is still IN PROGRESS. The previous corrected code head `3a4d850301a82156e9ad47982105ed3ea1d23ded` passed both Plan/REA `43988186451` and WhatsApp recovery `43988186521`.
+- Full CI and Kompas baseline remain untriggered because PR #436 is stacked on PR #433's feature branch. After #433 is accepted/merged, retarget #436 to `master` and run both exact-head gates.
