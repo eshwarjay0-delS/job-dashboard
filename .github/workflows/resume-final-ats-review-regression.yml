@@ -19,7 +19,8 @@ on:
       - "src/lib/rea-register.ts"
       - "docs/resume-quality-baseline.md"
       - "docs/completion-watch.md"
-      - "docs/research/resume-final-docx-gemini-ats-2026-11-14.md"
+      - "docs/research/resume-final-docx-gemini-ats-2026-11-17.md"
+      - "docs/research/whatsapp-resume-2026-10-17-failure-audit.md"
   pull_request:
     paths:
       - "src/lib/tailor.ts"
@@ -36,7 +37,7 @@ on:
       - "src/lib/rea-register.ts"
       - "docs/resume-quality-baseline.md"
       - "docs/completion-watch.md"
-      - "docs/research/resume-final-docx-gemini-ats-2026-11-14.md"
+      - "docs/research/resume-final-docx-gemini-ats-2026-11-17.md"
 
 permissions:
   contents: read
