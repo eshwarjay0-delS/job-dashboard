@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs"
 
 const css = readFileSync(new URL("../../public/kompas/styles.css", import.meta.url), "utf8")
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
+const mobileCss = readFileSync(new URL("../../public/kompas/mobile-shell.css", import.meta.url), "utf8")
+const manifest = JSON.parse(readFileSync(new URL("../../public/kompas/manifest.json", import.meta.url), "utf8"))
 
 function mediaBlock(source, query) {
   const start = source.indexOf(query)
@@ -46,4 +48,28 @@ test("desktop and the desktop shell keep the existing control bar", () => {
   assert.match(narrow, /html\.kd #view-copilot \.overlay \.bar-actions\{[^}]*flex-wrap:wrap !important/s)
   assert.doesNotMatch(narrow, /html\.kd #view-copilot \.overlay \.bar-actions #startBtn/)
   assert.doesNotMatch(narrow, /html\.kd #view-copilot \.overlay \.bar-actions #answerBtn/)
+})
+
+
+test("phone copilot fills the dynamic viewport and respects safe areas", () => {
+  assert.match(html, /name="viewport"[^>]*viewport-fit=cover/)
+  assert.ok(html.indexOf("mobile-shell.css") > html.indexOf("answer-aside.css"), "phone overrides load after the legacy panel styles")
+  assert.equal(manifest.display, "standalone")
+  assert.match(mobileCss, /height:100vh;\s*height:100dvh;/)
+  assert.match(mobileCss, /safe-area-inset-top/)
+  assert.match(mobileCss, /safe-area-inset-bottom/)
+  assert.match(mobileCss, /#view-copilot > \.overlay\s*\{[^}]*display:flex/s)
+  assert.match(mobileCss, /#view-copilot \.content\s*\{[^}]*min-height:0[^}]*overflow-y:auto/s)
+  assert.match(mobileCss, /#view-copilot #answer\s*\{[^}]*max-height:none[^}]*overflow-y:auto/s)
+  assert.match(mobileCss, /touch-action:manipulation/)
+  assert.match(mobileCss, /min-height:44px/)
+  assert.match(mobileCss, /min-width:44px/)
+  assert.match(mobileCss, /height:48px/)
+})
+
+test("phone shell leaves desktop-focus mode untouched and adapts landscape", () => {
+  const selectors = mobileCss.split("}").filter(Boolean).join("}")
+  assert.match(selectors, /html:not\(\.kd\)/)
+  assert.doesNotMatch(selectors, /html\.kd/)
+  assert.match(mobileCss, /@media \(max-width:760px\) and \(orientation:landscape\)/)
 })
