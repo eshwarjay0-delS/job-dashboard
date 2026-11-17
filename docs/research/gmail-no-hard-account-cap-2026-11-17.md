@@ -1,14 +1,14 @@
-# Gmail multi-account no-hard-cap correction — 17 November 2026
+# Gmail multi-account no-hard-cap proposal — 17 November 2026
 
-## Owner decision
+## Approval boundary
 
-The owner-approved Poke-inspired Gmail/mobile direction uses three to four connected inboxes as an initial target range, not a hard maximum. A user may connect more than four Google accounts. Account identity, receiving-inbox/thread keys, selected From, reconnect, notification preference and ownership must remain scoped to each account. The separate background worker batch size of four **users per invocation** is a resource setting and is not changed.
+The high-level Poke-inspired multi-account Gmail/mobile direction is owner-requested. Historical owner vision records 3–4 connected inboxes and four mobile toggles, but accessible prior-conversation retrieval did not recover a direct user-authored instruction removing the four-account ceiling. The no-cap change in PR #440 is therefore proposed, not approved. Do not merge it, apply its migration, or deploy it until direct owner confirmation is recorded. Preserve account ownership, receiving-inbox/thread identity, selected From and per-account reconnect. The separate background-worker batch size of four **users per invocation** is unchanged.
 
 ## Source audit on canonical master
 
 Master at the start of this slice: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`.
 
-The plan already said “not a hard cap,” but code still enforced four in several layers:
+A prior assistant-authored Plan & Vision summary described 3–4 as a target rather than a cap; that wording is not direct owner evidence and does not establish approval. The source audit found four-account checks in several layers:
 
 - `supabase/migrations/20261004_multi_google_workspace_accounts.sql`: `identity_attach_google_workspace_account` rejected a fifth account and `identity_list_google_workspace_accounts` returned only four.
 - `src/app/api/identity/google-workspace/accounts/route.ts`, `src/app/api/connections/status/route.ts`, and `src/app/api/gmail-sync/route.ts`: returned `maxAccounts: 4`; two also set `canAdd` false at four.
