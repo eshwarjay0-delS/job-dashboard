@@ -49,10 +49,9 @@ test('API and UI do not advertise or enforce a four-account product cap', () => 
   assert.match(statusRoute,/canAdd:\s*loaded\.source === "supabase"/)
 })
 
-test('product direction states that three to four accounts is a target, not a cap', () => {
+test('product direction records that removing the four-account ceiling needs direct owner confirmation', () => {
   const direction = read('PRODUCT_DIRECTION.md')
   const gmailVision = read('docs/gmail.md')
-  assert.match(direction,/multiple connected Gmail accounts/i)
-  assert.match(direction,/not a hard cap/i)
-  assert.match(gmailVision,/not a hard maximum/i)
+  assert.match(direction,/pending direct owner confirmation/i)
+  assert.match(gmailVision,/pending direct owner confirmation/i)
 })
