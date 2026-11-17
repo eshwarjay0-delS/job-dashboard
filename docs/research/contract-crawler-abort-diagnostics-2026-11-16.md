@@ -43,3 +43,12 @@ The dedicated crawler freshness workflow now runs `scripts/tests/crawl-collect.t
 ## Next
 
 Run all exact-head checks on the new master-targeted PR, then let MFit Safe Merge Gate review it. Keep the PR DRAFT until required checks and legitimate preview/release gates are satisfied. After any approved release, verify READY deployment and canonical alias separately; post-release crawl acceptance requires a separate explicit manual request.
+
+
+## 17 November 2026 — wire the existing manual-only policy regression
+
+The repository already contains `scripts/tests/crawl-manual-only.test.mjs`. It checks that `vercel.json` has no `/api/crawl/run` cron, that the manual POST route checks `adminOf(req)` before importing/running the crawler, that the compatibility GET route validates its secret before importing/running the crawler, and that Robert Half remains in the pending/manual-only adapter list. This continuation does not duplicate or rewrite that test.
+
+Workflow commit `c2e2e8aa84803eaef55635b913fc8b6bccafc8be` adds the existing test to both path filters and a dedicated execution step in `.github/workflows/crawl-freshness.yml`. The workflow retains `workflow_dispatch` and has no `schedule` trigger. `vercel.json` continues to contain other unrelated schedules (watchdog, Gmail and WhatsApp) but no `/api/crawl/*` contract-crawler cron. No schedule, adapter, route, portal permission, data or runtime behavior was changed.
+
+The workflow/Plan/REA documentation commits advance PR #434 beyond predecessor head `73b00ddaa93d88d3914adc6fdba18407109c0b9a`; exact-head crawler workflow, full CI, Kompas baseline and Plan/REA checks must be rerun. The Vercel project remains `live:false`; no preview, deployment, live crawl or production mutation occurred.
