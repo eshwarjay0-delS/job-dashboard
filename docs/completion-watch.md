@@ -1,9 +1,19 @@
 # MFit Completion Watch
 
+## 17 November 2026 15:20 UTC — correct the Gmail no-cap approval provenance
+
+- The current owner request explicitly includes Poke-inspired multi-account Gmail/mobile updates. Accessible prior-conversation retrieval did **not** recover a direct user-authored instruction to remove the existing four-account ceiling. Historical `docs/gmail.md` records 3–4 accounts and four mobile toggles but does not establish whether four is a hard maximum.
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) is therefore a **proposal**, not an approved limit change. Its SQL/API/UI/mobile no-cap implementation remains DRAFT; do not merge, apply the migration or deploy until direct owner confirmation is recorded. The high-level multi-account Gmail/mobile work remains approved and separate.
+- The previous exact-head full CI run `44096783012` failed because the no-cap regression asserted wording that was not supported by recovered owner evidence. The test now checks for the pending-confirmation boundary instead. Earlier head `133a60f1324d70e5a7ef1ef0899f5ed92dae7330` had full CI `44112404177` IN PROGRESS, with Plan/REA and Kompas baseline SUCCESS; those results are superseded by new exact-head runs after this correction.
+- No direct Gmail API/OAuth access, inbox read, email, notification, migration, preview bypass or deployment occurred. Production alias remains on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+
+Continue: verify exact-head CI and keep PR #440 DRAFT pending direct owner approval, legitimate protected preview and owner-consented five-plus-inbox acceptance. Continue the separately approved Poke digest/mobile work on its own branch without assuming a no-cap policy.
+
+
 ## 17 November 2026 15:10 UTC — Gmail no-cap exact-head CI wording correction
 
 - Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; the production alias `job-dashboard-fawn.vercel.app` independently resolves to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The master `Vercel` status is SUCCESS but does not prove the alias has moved.
-- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) is the owner-approved no-hard-cap implementation, branch `fix/gmail-account-cap-owner-correction-20261117`. Exact head before this correction: `d375f384439b1edf19f233f27a940878158501b5`.
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) is a proposed no-hard-cap implementation pending direct owner confirmation, branch `fix/gmail-account-cap-owner-correction-20261117`. Exact head before this correction: `d375f384439b1edf19f233f27a940878158501b5`.
 - Full CI run [44096783012](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44096783012) completed FAILURE in `scripts/tests/google-workspace-no-hard-cap.test.mjs:57`. The focused command reported 14/15 passing; the sole assertion expected `/not a hard maximum/i`, while `docs/gmail.md` used “not a product maximum.” This is a wording contract mismatch, not evidence of an account-isolation or SQL migration failure.
 - The branch correction changes the owner-vision wording to “not a hard maximum (not a product maximum)” so the executable test and documented product decision agree. No runtime code, migration, account ownership, selected-From, inbox identity or worker behavior changes in this follow-up.
 - Exact-head Plan/REA run `44096782861` and Kompas baseline `44096783401` passed on the prior head; they must rerun after this correction. No local checkout/node_modules is available and clone access to GitHub failed, so no local tests/build are claimed.
