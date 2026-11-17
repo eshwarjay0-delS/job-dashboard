@@ -637,3 +637,9 @@ Continue: verify all required exact-head checks on the latest #381 branch head, 
 - Vercel project remains `live:false`; protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. Do not unpause, change billing or bypass protection.
 
 Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; let Safe Merge Gate review; keep DRAFT until protected preview and the missing historical/user acceptance evidence are supplied.
+
+### PR #436 exact-head typecheck correction — 17 November 2026
+
+- Head `9888de5c54ffc03c157dc076fe3302ec95f397ec` passed Plan/REA schema `43987890177` but WhatsApp recovery `43987890244` failed at `npm run typecheck` before its test suite ran.
+- TypeScript identified four REA/Plan enum mismatches: journal `approval` and `delivery`, REA `method`, and one REA step `status`. The implementation helper/route were not the reported errors. Correct the values to the declared unions (`approved`, `in progress`, `Source and artifact analysis`, `Implemented`) and rerun the exact-head gates.
+- Full CI and Kompas baseline remain untriggered because PR #436 is stacked on PR #433's branch; retarget to `master` after the parent is accepted/merged.
