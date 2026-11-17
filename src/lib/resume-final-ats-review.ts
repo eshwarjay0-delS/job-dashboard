@@ -76,7 +76,7 @@ export function parseFinalAtsReview(raw: string, allowedTerms: readonly string[]
     } else if (typeof parsed.score === "string") {
       const rawScore = parsed.score.trim();
       const numericText = (rawScore.endsWith("%") ? rawScore.slice(0, -1) : rawScore).trim();
-      if (!/^(?:\\d+(?:\\.\\d+)?|\\.\\d+)$/.test(numericText)) throw new Error("invalid_score_format");
+      if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(numericText)) throw new Error("invalid_score_format");
       scoreValue = Number(numericText);
     } else {
       // JSON coercion would otherwise turn null, booleans and arrays into scores.
