@@ -650,3 +650,8 @@ Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/RE
 - The previous `9888de5c54ffc03c157dc076fe3302ec95f397ec` TypeScript failure was corrected by restoring the declared Plan/REA enum values; the WhatsApp recovery suite then ran and passed.
 - Full CI and Kompas baseline remain untriggered because PR #436 is stacked on PR #433's feature branch; retarget to `master` after the parent is accepted/merged and run both exact-head gates.
 - No production deployment, R2 write, model call, real WhatsApp send or historical replay occurred.
+
+### PR #436 current exact-head evidence — 17 November 2026
+
+- Current head `1f6ecd9467e7aad662877d77448bd1c28367e3ca` passed Plan/REA schema `43988410037`; WhatsApp resume recovery `43988410069` is still IN PROGRESS. The previous corrected code head `3a4d850301a82156e9ad47982105ed3ea1d23ded` passed both Plan/REA `43988186451` and WhatsApp recovery `43988186521`.
+- Full CI and Kompas baseline remain untriggered because PR #436 is stacked on PR #433's feature branch. After #433 is accepted/merged, retarget #436 to `master` and run both exact-head gates.
