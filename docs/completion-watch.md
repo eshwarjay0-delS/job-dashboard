@@ -618,3 +618,43 @@ Continue: obtain the authorized protected preview and owner-approved baseline/JD
 - PR #395 remains DRAFT and stacked on #393; full master-targeted CI, protected preview, and owner-authorized baseline/JD/confirmed-skill DOCX acceptance remain due. No personal resume/JD, Gemini call, DOCX export, deployment or live 98% match occurred.
 
 Continue: obtain the authorized protected preview and owner-approved baseline/JD/confirmed-skill DOCX acceptance for #393, then retarget #395 to master and run full CI on the final head.
+
+
+## 17 November 2026 — continuation run 11: evidence recovery and final-DOCX parser hardening
+
+### Verified implementation work
+
+PR #395 remains DRAFT on `feat/final-docx-gemini-current-20261114-run11`, exact head `f4cb26945d479c8abff6b9f50e4eef0e114f68ae`. This dependent branch is still based on the older confirmed-skill branch at `9cd81927b095289de0e4a39da74a8af2265cbc43`; it is not current master or production.
+
+- Fixed score parsing so JSON null/boolean/array coercions cannot become ATS scores; only finite numbers or strict decimal strings with one optional trailing percent sign in 0–100 are accepted.
+- Corrected the first prompt to the exact owner-approved text **“Give me an ATS score”**.
+- Added invalid-type/format regression coverage.
+- Exact-head final-DOCX workflow `44039964249`, WhatsApp recovery regression `44039964222`, and Plan/REA schema `44039964098` all SUCCESS. An earlier head failed because the regex was over-escaped; the corrected regex is on `f4cb269`. Full current-master CI is still deferred until the parent confirmed-skill acceptance and safe restack.
+
+### 17 October WhatsApp failure — new evidence, still open
+
+A read-only Supabase query found one `usage_events` row at `2026-10-17T22:28:27.372685Z` (`whatsapp/resume_tailor`), with raw score 87 and 34 model calls. Historical code defines that score as raw JD keyword overlap and enforced a 98% minimum; the webhook recorded usage and returned a hold before DOCX delivery when the quality status was not met. This strongly indicates a quality hold, not a delivered file. The event has no `source_event_key`; the Supabase insert request ID is not a Meta webhook ID. The exact generated DOCX, per-run R2 key/version, Meta WAMID and signed delivery/read receipt remain missing.
+
+The old 98% hard hold is superseded: the 6 Nov 70% raw / 95% supported WhatsApp policy is present in the current production acceptance module. Do not restore the old hard hold.
+
+Vercel Hobby runtime logs retain only one hour, so the October request logs are unavailable. The accessible iZap business has no linked WhatsApp number or matching history. The current Library search did not find a generated file correlated to the run. No real message, replay, resend, R2 write or device test occurred.
+
+### Priority PRs and acceptance gates
+
+| Area | Current source evidence | Remaining gate |
+|---|---|---|
+| WhatsApp resume | #433 head `a693cef8f33a72501c769315311aa48e43b037c2`, 4/4 source checks passed | Protected preview and real authorized delivery acceptance; historical output/Meta/R2 correlation still missing |
+| Resume/JD/confirmed experience | #431 head `a74319cb87a3aff44e111987c59ce978d2f87c2a`, 4/4 checks passed | Original resume, exact JD, explicit confirmations and exported-DOCX review |
+| Gmail/mobile | #432 source checks green; #435 head `b5138e57b0738a4a45724b76b227baa9b47a5b3c`, 3/3 passed; #437 is the separate Safe Gate continuation | Protected preview, two-inbox/selected-From/reconnect and actual narrow-phone acceptance |
+| Contract crawler | #434 head `73b00ddaa93d88d3914adc6fdba18407109c0b9a`, 4/4 passed | Protected preview and manual/on-demand operational acceptance; no daily cron or live crawl |
+| WhatsApp diagnostics | #436 head `0916bddb0429f61f5ab10825300120f30592738c` | Full CI and parent #433 sequencing |
+
+### Production and environment
+
+- Canonical master: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`.
+- Production alias `job-dashboard-fawn.vercel.app`: READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+- The newer production attempt for current master `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED; the project reports `live=false`. No deployment or protection bypass was attempted.
+- Kompas Continuous Voice Delivery is disabled; no voice/caption edits were duplicated. No Bible-Keeper audit was visible in the accessible automation inventory.
+- Local Git clone failed because GitHub DNS was unavailable in this runtime. Remote GitHub Actions executed `npm ci`, `npm run check`, the focused final-DOCX tests, WhatsApp recovery regressions and Plan/REA schema. No local Next runtime APIs were changed; the exact Next 16.3.8 TypeScript guide was reviewed from upstream.
+
+Continue: keep #395 DRAFT until #431 has owner-authorized exported-DOCX acceptance; then restack #395 onto current master and run full CI, protected preview and real DOCX/Gemini acceptance. Separately keep the 17 Oct incident open until the exact generated output, per-run R2 object/version, Meta WAMID, signed delivery/read receipt and owner fact reconciliation are recovered. Do not replay or resend.

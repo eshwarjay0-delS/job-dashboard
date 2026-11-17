@@ -93,8 +93,11 @@ test("parser rejects JSON values and strings that JavaScript would coerce into s
 
 test('resume plan records the approved current-master final-DOCX restack without claiming live acceptance', () => {
   const plan = readFileSync(new URL('../../src/lib/plan-vision.ts', import.meta.url), 'utf8')
-  assert.match(plan, /PLAN_REVISION = "2026-11-14.13"/)
+  assert.match(plan, /PLAN_REVISION = "2026-11-17.1"/)
   assert.match(plan, /On 14 Nov, the implementation from stale PR #289 is restacked on the current evidence-bound confirmed-skill branch PR #393 as a dependent draft/)
   assert.match(plan, /the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN/)
+  assert.match(plan, /Give me an ATS score/)
+  assert.match(plan, /The final-DOCX score parser accepts only finite JSON numbers or non-empty decimal strings with at most one trailing percent sign/)
+  assert.match(plan, /PR #395 head f4cb26945d479c8abff6b9f50e4eef0e114f68ae passed its exact-head final-DOCX, WhatsApp recovery and Plan\/REA source gates/)
   assert.match(plan, /No personal DOCX export or Gemini model call occurred/)
 })

@@ -53,3 +53,18 @@ The corrected exact-head checks above are source/CI validation only. PR #395 rem
 
 
 These corrected exact-head checks are source/CI validation only. PR #395 remains DRAFT; no protected preview, owner-authorized personal resume/JD/confirmation run, actual DOCX export, Gemini model call, production deployment or live 98% match has occurred.
+
+
+## 17 November 2026 — parser type guard and exact prompt correction
+
+Source review found that `Number(parsed.score)` coerced JSON `null`, booleans and arrays into numeric scores; JavaScript also accepts exponent and hexadecimal numeric strings. The prompt text in the first dependent draft also omitted the word “an” from the exact owner-approved instruction.
+
+The dependent PR #395 branch now:
+- Uses the exact prompt **“Give me an ATS score”**.
+- Accepts only finite JSON numbers or non-empty decimal strings with at most one trailing percent sign, within 0–100.
+- Rejects null, booleans, arrays, blank strings, malformed strings, exponent/hex strings and out-of-range values.
+- Adds regression cases for those values and a valid decimal-percent string.
+
+The first implementation run exposed an over-escaped decimal regex; that exact-head failure was fixed before the passing run. On head `f4cb26945d479c8abff6b9f50e4eef0e114f68ae`, the final-DOCX workflow `44039964249`, WhatsApp recovery regression `44039964222`, and Plan/REA schema `44039964098` all passed. This is source and synthetic-regression validation only; no personal DOCX export, Gemini model call, live 98% match, production deployment or owner acceptance occurred.
+
+PR #395 remains DRAFT on the older dependent base `fix/resume-confirmed-skill-current-3e710-20261114-run13` (base SHA `9cd81927b095289de0e4a39da74a8af2265cbc43`). The current-master confirmed-skill PR #431 still requires owner-authorized exported-DOCX acceptance before this stack can be safely restacked. Full current-master CI, protected preview and actual DOCX/Gemini acceptance remain pending.
