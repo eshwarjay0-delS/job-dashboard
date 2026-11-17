@@ -175,10 +175,16 @@ test('payIn reads the pay a recruiter wrote and nothing else; named punctuation 
   assert.equal(isTechTitle('Security Officer (Mid)'), false); assert.equal(isTechTitle('Security Engineer'), true)
 })
 
-test('all thirteen portals are registered once, each with a firm name, and none of the five new ones keeps a personal or key value in its source', () => {
+test('the active portal registry is exact and keeps unverified eTeam out until a compliant feed is verified', () => {
   const keys = ADAPTERS.map(a => a.portal)
+  const expectedActive = [
+    'beaconhill', 'collabera', 'teksystems', 'kforce', 'motion', 'everforth', 'oxford', 'insightglobal',
+    'inspyr', 'brooksource', 'eliassen', 'systemone',
+    'kore1', 'kavaliro', 'mitchellmartin', 'judge', 'genesis10', 'pyramid', 'addison', 'csi',
+  ]
   assert.equal(new Set(keys).size, keys.length)
-  for (const k of ['inspyr', 'brooksource', 'eteam', 'eliassen', 'systemone']) assert.ok(keys.includes(k), k)
+  assert.deepEqual([...keys].sort(), [...expectedActive].sort())
+  assert.ok(!keys.includes('eteam'), 'eTeam stays unregistered until its official interactive page exposes a verified public feed')
   assert.ok(ADAPTERS.every(a => a.firm && (a.fetchJobs || (a.listUrls && a.parseList))))
   for (const f of ['inspyr', 'brooksource', 'eteam', 'eliassen', 'systemone', 'snaphop']) {
     const src = readFileSync(new URL(`../../src/lib/crawl/portals/${f}.ts`, import.meta.url), 'utf8')

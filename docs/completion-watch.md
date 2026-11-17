@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 17 November 2026 12:07 UTC — crawler registry follow-up locally validated
+
+- Continue: finish the existing stacked registry-test correction without activating eTeam or changing the manual/on-demand crawler policy.
+- Revalidated the 20-adapter registry, eTeam pending state, collector, classifier and portal suites in the restored Node 22 sandbox: **31/31 passed**. `npm run check` exited 0: TypeScript passed, lint completed with existing warnings, autofill **133/133**, applications merge **15/15**; `git diff --check` passed; Plan Journal and REA schema regression **15/15 passed**.
+- The follow-up is source/test/documentation only. No live crawl, external portal mutation, application submission, production write, merge or deployment occurred. It was committed as `213f58c780b215eb1e2ea2a0397a2686eee21e67` and opened as draft [PR #439](https://github.com/eshwarjay0-delS/job-dashboard/pull/439); exact-head GitHub CI and the dedicated crawler workflow are now pending.
+- The MFit Safe Merge Gate remains the serialized reviewer. PR #434 is still draft and its protected preview is still a separate requirement.
+
+## 16 November 2026 22:24 UTC — crawler registry test-policy correction
+
+- A broad offline crawler suite found two pre-existing failing registry assertions in `scripts/tests/crawl-portals-3.test.mjs` and `crawl-portals-4.test.mjs` on both master `66291f677cbcc2318229ef9a3164961e6d3cdb6a` and PR #434 head `73b00ddaa93d88d3914adc6fdba18407109c0b9a`: the first still required eTeam in the active registry and the second still asserted 21 active adapters. The source and Apply plan correctly state 20 active adapters; eTeam is pending because its former feed returned HTTP 404 and its current official careers page is interactive without a verified compliant public feed.
+- Continue: keep eTeam excluded. Correct both stale tests to assert the exact 20 active adapters and explicit eTeam exclusion/pending status while retaining source-safety checks. Wire all `crawl-portals-*.test.mjs` tests into the dedicated crawler workflow; do not change the runtime crawler or enable unverified eTeam.
+- The correction is test/workflow/Plan & Vision only; no live crawl, portal request, production-row mutation, or crawler schedule change occurred.
+
+
 ## 16 November 2026 22:00 UTC — current-master contract crawler diagnostics restack (#434)
 
 - Canonical master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Draft PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) uses branch `fix/crawler-abort-diagnostics-master-66291-20261116`; the head before the Apply/Plan/REA evidence refresh was `05e17d5c43f96944b452f498546ae211443f208c`; the current head before this Completion Watch update is `6cd7b1c156e0bc3acb56413847dfda63791ec13a`.
