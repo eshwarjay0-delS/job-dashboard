@@ -24,4 +24,4 @@ The eTeam endpoint `/searchjobs/api/jobs` returned HTTP 404 on 9 November 2026. 
 
 ## Follow-up state
 
-The correction is a test/workflow/documentation follow-up stacked on PR #434. It remains a draft until exact-head GitHub CI and the dedicated crawler workflow complete, then MFit Safe Merge Gate must sequence it. PR #434 itself remains pending its legitimate protected preview. This test-only correction does not require a production deployment and does not authorize a live crawl or eTeam activation.
+The correction is a test/workflow/documentation follow-up stacked on PR #434. It was committed as 213f58c780b215eb1e2ea2a0397a2686eee21e67 and opened as draft PR #439 (https://github.com/eshwarjay0-delS/job-dashboard/pull/439). Exact-head GitHub CI and the dedicated crawler workflow must complete; MFit Safe Merge Gate must sequence it. PR #434 itself remains pending its legitimate protected preview. This test-only correction does not require a production deployment and does not authorize a live crawl or eTeam activation.

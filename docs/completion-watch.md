@@ -4,7 +4,7 @@
 
 - Continue: finish the existing stacked registry-test correction without activating eTeam or changing the manual/on-demand crawler policy.
 - Revalidated the 20-adapter registry, eTeam pending state, collector, classifier and portal suites in the restored Node 22 sandbox: **31/31 passed**. `npm run check` exited 0: TypeScript passed, lint completed with existing warnings, autofill **133/133**, applications merge **15/15**; `git diff --check` passed; Plan Journal and REA schema regression **15/15 passed**.
-- The follow-up is source/test/documentation only. No live crawl, external portal mutation, application submission, production write, merge or deployment occurred. Exact-head GitHub CI and the dedicated crawler workflow must rerun after the branch is pushed.
+- The follow-up is source/test/documentation only. No live crawl, external portal mutation, application submission, production write, merge or deployment occurred. It was committed as `213f58c780b215eb1e2ea2a0397a2686eee21e67` and opened as draft [PR #439](https://github.com/eshwarjay0-delS/job-dashboard/pull/439); exact-head GitHub CI and the dedicated crawler workflow are now pending.
 - The MFit Safe Merge Gate remains the serialized reviewer. PR #434 is still draft and its protected preview is still a separate requirement.
 
 ## 16 November 2026 22:24 UTC — crawler registry test-policy correction
