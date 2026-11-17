@@ -598,3 +598,14 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 17 November 2026 — Poke-inspired Gmail/mobile current-master restack
+
+- Current master at restack start: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Stale PR #424 head `581d2298f384af36e4f039d4929b8056890694c8` is 28 commits behind and diverged; its green checks are predecessor evidence only.
+- Current draft branch: `fix/gmail-poke-mobile-current-66291-20261116`. It restacks account-scoped digest sender mutes, account+provider-thread identity, correct receiving-inbox selection, and the approved normal-flow mobile navigation. The 3–4 account range remains a target, not a hard maximum.
+- Regression changes cover same sender/thread collisions across inboxes, independent mutes, receiving-inbox selection, reply identity, and mobile no-overlay/no-inert behavior with Escape/outside-click/focus return. Exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA are pending on this new head; PR #424's earlier results are not reused.
+- Vercel project `job-dashboard` currently reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Canonical alias metadata still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. Do not unpause, change billing or bypass protection.
+- No Gmail API/OAuth call, inbox mutation, email or WhatsApp send, proactive worker, scheduler, external notification, production write, two-inbox acceptance or real phone test occurred. Keep the worker disabled.
+
+Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; then let Safe Merge Gate review. Keep DRAFT until protected preview and two-inbox/narrow-phone acceptance are complete.
