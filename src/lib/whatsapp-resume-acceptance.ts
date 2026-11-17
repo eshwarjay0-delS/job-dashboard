@@ -1,9 +1,11 @@
 import type { TailorResult } from "./tailor"
 
 /** Return safe diagnostic codes only. Never log resume text, JD or sender identity.
- * A 100% evidence-supported score is necessary but not sufficient: every
- * requested section must be complete and unverified JD claims must be absent.
- * Overall JD overlap remains a separate, honest measure of missing skills.
+ * A 95% supported-coverage floor is required for a clean pass, but it is not
+ * the whole delivery decision: the rewrite must be complete, readable and
+ * free of unsupported JD-only experience. Honest coverage gaps below the
+ * clean-pass floor may still be delivered under the existing channel policy
+ * with the gaps disclosed. Raw JD overlap is a separate measure.
  */
 /** Supported-vocabulary floor for a clean WhatsApp pass that can be filed as a base.
  * A finished file under this share is still sent; the reply names the gap. */
