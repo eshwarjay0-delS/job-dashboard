@@ -626,3 +626,14 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 17 November 2026 — WhatsApp partial-draft diagnostics
+
+- Read-only 7-day production aggregation: 15 WhatsApp tailoring quality-gate rejections across 13 users, latest `2026-11-16T15:02:15Z`. Sampled blockers: `draft_parts_missing`, `quality_incomplete`, `quality_not_deliverable`, `role_evidence_gaps`; zero unverified additions and zero JD terms placed. This is not a factual 100% match or delivery proof.
+- The quality gate remains fail-closed. The new stacked diagnostic helper logs only validated `failed/total` counts, pending role count and pending-profile boolean. It does not log raw role indexes, provider errors, resume/JD text, identities, paths or tokens. Tests cover sanitization and route usage.
+- Branch `fix/whatsapp-partial-diagnostics-20261117` is stacked on PR #433 head `a693cef8f33a72501c769315311aa48e43b037c2` to avoid parallel edits to its webhook route. Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA remain pending; no predecessor results are reused.
+- The separate 17 Oct 17:28 Chicago incident remains blocked by missing generated DOCX, R2 object/version, webhook/Meta correlation and signed delivery/read receipt. No replay, model call, R2 write or real WhatsApp send.
+- Vercel project remains `live:false`; protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. Do not unpause, change billing or bypass protection.
+
+Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; let Safe Merge Gate review; keep DRAFT until protected preview and the missing historical/user acceptance evidence are supplied.
