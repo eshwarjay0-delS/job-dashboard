@@ -24,7 +24,9 @@ export const pageBody = (page: number) => JSON.stringify({ operationName: "GetJo
 /** "This is a 06+months contract opportunity" is Contract; "Fulltime opportunity" or "Permanent" is Full Time. */
 export function kindOf(description: string): string | undefined {
   const head = description.slice(0, 400)
-  if (/contract[- ]to[- ]hire|\bc2h\b|right[- ]to[- ]hire/i.test(head)) return "Contract to Hire"
+  if (/contract[- ]to[- ]hire|\bc2h\b/i.test(head)) return "Contract to Hire"
+  // Preserve Right To Hire as its source label; it is not an owner-approved C2H alias.
+  if (/\bright[- ]to[- ]hire/i.test(head)) return "Right To Hire"
   if (/\bcontract\b/i.test(head)) return "Contract"
   if (/\bfull[- ]?time\b|\bpermanent\b|\bdirect hire\b/i.test(head)) return "Full Time"
   return undefined
