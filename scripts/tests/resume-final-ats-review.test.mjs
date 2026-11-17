@@ -93,7 +93,7 @@ test("parser rejects JSON values and strings that JavaScript would coerce into s
 
 test('resume plan records the approved current-master final-DOCX restack without claiming live acceptance', () => {
   const plan = readFileSync(new URL('../../src/lib/plan-vision.ts', import.meta.url), 'utf8')
-  assert.match(plan, /PLAN_REVISION = "2026-11-17.2"/)
+  assert.match(plan, /PLAN_REVISION = "2026-11-17.3"/)
   assert.match(plan, /On 14 Nov, the implementation from stale PR #289 is restacked on the current evidence-bound confirmed-skill branch PR #393 as a dependent draft/)
   assert.match(plan, /the preview requires an authorized private KOMPAS_VERCEL_API_TOKEN/)
   assert.match(plan, /Give me an ATS score/)

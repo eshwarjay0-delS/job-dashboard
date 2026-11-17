@@ -624,12 +624,12 @@ Continue: obtain the authorized protected preview and owner-approved baseline/JD
 
 ### Verified implementation work
 
-PR #395 remains DRAFT on `feat/final-docx-gemini-current-20261114-run11`, exact head `f4cb26945d479c8abff6b9f50e4eef0e114f68ae`. This dependent branch is still based on the older confirmed-skill branch at `9cd81927b095289de0e4a39da74a8af2265cbc43`; it is not current master or production.
+PR #395 remains DRAFT on `feat/final-docx-gemini-current-20261114-run11`, latest head `1ded675d057a721af4b6196243f10e0f36ca57ed` (parser implementation commit `f4cb26945d479c8abff6b9f50e4eef0e114f68ae`). This dependent branch is still based on the older confirmed-skill branch at `9cd81927b095289de0e4a39da74a8af2265cbc43`; it is not current master or production.
 
 - Fixed score parsing so JSON null/boolean/array coercions cannot become ATS scores; only finite numbers or strict decimal strings with one optional trailing percent sign in 0–100 are accepted.
 - Corrected the first prompt to the exact owner-approved text **“Give me an ATS score”**.
 - Added invalid-type/format regression coverage.
-- Exact-head final-DOCX workflow `44039964249`, WhatsApp recovery regression `44039964222`, and Plan/REA schema `44039964098` all SUCCESS. An earlier head failed because the regex was over-escaped; the corrected regex is on `f4cb269`. Full current-master CI is still deferred until the parent confirmed-skill acceptance and safe restack.
+- Exact-head final-DOCX workflow `44040769632`, WhatsApp recovery regression `44040769643`, and Plan/REA schema `44040769776` all SUCCESS. An earlier head failed because the regex was over-escaped; the corrected regex is on `f4cb269`. Full current-master CI is still deferred until the parent confirmed-skill acceptance and safe restack.
 
 ### 17 October WhatsApp failure — new evidence, still open
 
