@@ -227,3 +227,10 @@ This is a source-level correction only. The proactive Poke-style worker remains 
 A read-only aggregate query confirmed 3 `mfit_gmail_sync` rows across 1 owner and 3 connected accounts; all 3 are older than 24 hours, with the latest sync at 2026-11-10 14:44:44 UTC. There are 2,002 cached thread rows across 3 accounts, last updated 2026-11-10 14:46:49 UTC. No provider thread ID is shared across accounts. This confirms the account identities are distinct, but it does not show fresh synchronization.
 
 The canonical production alias is still READY on deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Current master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; the Vercel project reports `live=false`, and its latest production deployment is CANCELED. PR #435 and this separate PR #437 are not production-live. The proactive worker remains disabled; no Gmail API/OAuth calls or notifications were made.
+
+
+## Owner-approved mobile no-cover correction — 4 October 2026, reaffirmed 15 November
+
+The earlier Plan & Vision note that the exact hamburger interaction/layout was not approved is superseded by the recovered owner correction. The approved behavior is: hidden when closed; when opened, navigation expands below the sticky header in normal document flow and pushes page content down. It must not cover, dim or make the page inert; no overlay or scrim. Exact animation and styling remain implementation choices.
+
+PR #435 implements this behavior in its current-master mobile-navigation slice and passes exact-head full CI, Kompas baseline and Plan/REA checks. It remains DRAFT: protected preview, two-authorized-inbox collision/selected-From/reconnect acceptance and a real narrow-phone test are still required. Per-account Calendar targeting and exact waiting-on-them radar semantics remain proposed, not owner-approved.
