@@ -39,7 +39,7 @@ const unique = (items: readonly string[]): string[] => {
 /** The first user-facing instruction is intentionally the exact owner-approved phrase. */
 export function buildFinalAtsReviewPrompt(input: FinalAtsReviewPromptInput): string {
   return [
-    "Give me ATS score",
+    "Give me an ATS score",
     "",
     "JOB DESCRIPTION:",
     String(input.jd || ""),
