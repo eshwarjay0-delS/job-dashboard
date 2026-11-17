@@ -8,7 +8,7 @@ Read-only continuation of the owner's unresolved WhatsApp resume incident. The s
 
 A private Library screenshot item captured at **2026-10-17T22:28:39Z (17:28:39 America/Chicago)** shows a job-description excerpt and an uploaded five-page DOCX of approximately 28 KB. The bot then stated that automatic repair had not reached the then-98% coverage target and that it had held the file, listing remaining JD terms.
 
-This is direct evidence of a **hard hold**, not a successful document delivery. It does not show an outbound DOCX attachment, a Meta message ID, a delivered/read receipt or the exact reason the quality gate held the file. The remaining-term list alone does not establish whether each item was simply missing from the resume or was an unsupported addition.
+This is direct evidence of a **hard hold**, not a successful document delivery. The owner correction at 2026-11-14T15:44:16Z likewise identifies the attempt as a hard hold after automatic repair, not a successful delivery. It does not show an outbound DOCX attachment, a Meta message ID, a delivered/read receipt or the exact reason the quality gate held the file. The remaining-term list alone does not establish whether each item was simply missing from the resume or was an unsupported addition.
 
 The 98% wording is historical. It must not be treated as the current WhatsApp delivery rule. The repository-recorded 6 Nov policy and the explicit 14 Nov correction supersede it: supported completed shortfalls are handled separately, while unsupported JD-only experience/credential claims remain a hard hold. Never invent certifications, experience, employers, dates, metrics or outcomes.
 
@@ -38,9 +38,9 @@ PR #411's uploaded-original-after-provider-timeout behavior remains a separate o
 
 ## Production release boundary
 
-The Vercel `job-dashboard` project reports `live:false`. Latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at master SHA `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The canonical alias `job-dashboard-fawn.vercel.app` remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+The Vercel `job-dashboard` project metadata reports `live:false`. Latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at master SHA `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Its build events show the configured Ignored Build Step exited 0 with `Skipped: no [ship] tag` and explicitly canceled the deployment before an application build; this is not a build failure. The project response did not identify a pause reason. The canonical alias `job-dashboard-fawn.vercel.app` remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No deployment, project unpause, billing change or protection bypass was attempted.
 
-An authorized Vercel administrator must restore project availability. The legitimate protected preview also requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN` through its approved secure channel. No project unpause, token retrieval, protection bypass, billing change, preview or deployment was attempted.
+No project unpause is authorized here. A future production release must use the normal reviewed Git-linked `[ship]` path after the task-specific acceptance gates pass. The legitimate protected preview also requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN` through its approved secure channel; this run cannot retrieve it or bypass protection.
 
 ## Exact blockers and next action
 
