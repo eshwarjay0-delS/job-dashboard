@@ -48,7 +48,7 @@ Perfact lives in eshwarjay0-delS/parfAct with main as the default branch. Its pr
 
 The owner requested a full MarketFit and Perfact audit against prior handoff and Markdown requirements, with production failures, security weaknesses and missing functionality fixed precisely rather than only documented.
 
-The product direction was consolidated around MarketFit for resume tailoring, multiple Gmail job email workflows and calendar handling (3–4 connected accounts is a target range, not a hard cap), WhatsApp, browser extension and mobile access, with Perfact as the interview preparation and live interview workspace.
+The product direction was consolidated around MarketFit for resume tailoring, multiple Gmail job email workflows and calendar handling (historical 3–4 connected-account range; removal of the four-account ceiling remains proposed pending direct owner confirmation), WhatsApp, browser extension and mobile access, with Perfact as the interview preparation and live interview workspace.
 
 The dashboard should make every major capability discoverable from web, mobile, extension and WhatsApp. The UI should be calm, polished and extremely easy to navigate.
 
