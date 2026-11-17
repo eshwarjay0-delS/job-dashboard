@@ -41,8 +41,7 @@ export async function GET() {
   return NextResponse.json({
     google: {
       accounts: accounts || [],
-      maxAccounts: 4,
-      canAdd: loaded.source === "supabase" && (accounts || []).length < 4,
+      canAdd: loaded.source === "supabase",
     },
     ...(loaded.notice ? { snapshotNotice: loaded.notice } : {}),
     whatsapp: {
