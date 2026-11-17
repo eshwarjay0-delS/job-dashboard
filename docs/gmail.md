@@ -220,3 +220,10 @@ Regression coverage checks owner/account identity, the constant-time bearer vali
 The approved rule is account + sender, not sender alone. A source audit found that the validator accepted mixed-case stored addresses while the lookup normalized only the incoming account and email. A valid legacy mixed-case rule could therefore be missed. The source correction normalizes both sides and keeps the receiving inbox in the comparison, so the same sender in two inboxes remains two separate tracking rules.
 
 This is a source-level correction only. The proactive Poke-style worker remains disabled; no Gmail API/OAuth call, email or WhatsApp notification was sent. Exact-head CI, protected preview, two-inbox acceptance and narrow-mobile verification remain separate release gates.
+
+
+## Production freshness and release status — 17 November 2026, 05:33 UTC
+
+A read-only aggregate query confirmed 3 `mfit_gmail_sync` rows across 1 owner and 3 connected accounts; all 3 are older than 24 hours, with the latest sync at 2026-11-10 14:44:44 UTC. There are 2,002 cached thread rows across 3 accounts, last updated 2026-11-10 14:46:49 UTC. No provider thread ID is shared across accounts. This confirms the account identities are distinct, but it does not show fresh synchronization.
+
+The canonical production alias is still READY on deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Current master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; the Vercel project reports `live=false`, and its latest production deployment is CANCELED. PR #435 and this separate PR #437 are not production-live. The proactive worker remains disabled; no Gmail API/OAuth calls or notifications were made.

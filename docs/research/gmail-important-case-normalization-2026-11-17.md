@@ -27,9 +27,17 @@ The change preserves the account component of the key and does not alter selecte
 - Helper commit: `2ee3bb5a9269d0a3f0cef08731aeaff1a83b5e1d`
 - Test commit: `77a70d0d2f10fc2e14247bb50dd4e6802e4531b6`
 - Branch: `fix/gmail-important-case-normalization-20261117`
-- GitHub Actions exact-head CI and Plan/REA checks: pending PR creation in this run.
+- PR #437: https://github.com/eshwarjay0-delS/job-dashboard/pull/437 (DRAFT), exact head b52c92acc3973113367be4d18d5fb6c5a4bb7b0e. Kompas baseline 44024701196 and Plan/REA schema 44024701210 SUCCESS; full CI 44024701268 remains IN_PROGRESS at the Kompas migration asset/lossless-import test step. The new regression runs later in the existing Gmail selected-sender/account-isolation step.
 - Local checkout/test execution: unavailable; `git ls-remote` could not resolve `github.com`. No local test success is claimed.
 
 ## Release and acceptance limits
 
-No Gmail API/OAuth request, inbox mutation, email send, WhatsApp send, production database write or device test occurred. This branch is not deployed. The separate Poke-style worker remains disabled. Protected preview, two-authorized-inbox behavior, selected-From/reconnect acceptance and a narrow-mobile device check are still required before production completion.
+A read-only aggregate query at 2026-11-17T05:33:05Z found 3 sync rows across 1 owner/3 accounts (all older than 24h; latest 2026-11-10 14:44:44 UTC), 2,002 cached threads (latest update 2026-11-10 14:46:49 UTC), and zero provider thread IDs shared across accounts. No Gmail message content was read. No Gmail API/OAuth request, inbox mutation, email send, WhatsApp send, production database write or device test occurred. This branch is not deployed. The separate Poke-style worker remains disabled. Protected preview, two-authorized-inbox behavior, selected-From/reconnect acceptance and a narrow-mobile device check are still required before production completion.
+
+
+## Production release snapshot — 17 November 2026, 05:33 UTC
+
+- Canonical alias: `job-dashboard-fawn.vercel.app` → READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+- Canonical master: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; neither PR #435 nor PR #437 is deployed.
+- Vercel project `live=false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. No deployment retry or protection bypass was attempted.
+- The Gmail sync snapshot is stale; the Poke worker remains disabled. Fresh sync and two-inbox/mobile acceptance are not demonstrated.
