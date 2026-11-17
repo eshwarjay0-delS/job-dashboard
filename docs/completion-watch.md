@@ -614,3 +614,15 @@ Owner correction: 3–4 connected inboxes is an initial target range, not a hard
 - The canonical Vercel project reports `live: false`; the protected-preview credential is owner-controlled and unavailable here. Do not unpause it or bypass the gate. Real five-plus-account, selected-From, reconnect, mobile and account-isolation acceptance remains open. The Poke background worker remains disabled; the separate four-user batch limit is unchanged.
 
 Continue: verify all exact-head PR #440 checks; if green, let MFit Safe Merge Gate review. Keep DRAFT until legitimate protected preview and owner-consented five-plus-account acceptance are available.
+
+
+## 17 November 2026 13:45 UTC — PR #440 CI failure isolated and regression guard corrected
+
+- PR #440's exact-head full CI run `44090609728` failed in `scripts/tests/kompas-deploy-build.test.mjs`, not in the new Gmail no-cap logic. The log showed 62/63 tests passing; the sole failure compared the entire `package.json` prebuild string against an older literal. PR #440 intentionally added the 12-inbox and mobile-update regression suites to prebuild, so the exact-string test rejected the additive suite list.
+- Fix commit `80615a2b6d13e9ddc7714e22bf8f56918d0e2a80` replaces that brittle equality with structural assertions: the Kompas baseline remains first, every pre-existing and newly added regression suite remains included, and the actual build command remains unchanged.
+- This correction changes a test only; it does not alter Gmail account behavior, Kompas runtime behavior, migrations or security boundaries.
+- Exact-head full CI, Kompas baseline and Plan/REA checks must rerun on the branch after this commit. No new workflow runs were visible immediately after the push.
+- The scheduled container has no checkout and cannot resolve `github.com` for a clone; no local npm test/build is claimed. Remote GitHub Actions is the execution path.
+- PR #440 remains DRAFT. No merge, production migration, Gmail OAuth/inbox access, email send, protected-preview bypass or deployment occurred. Production alias remains READY on the older `b94e1629c544048d84a2b048ae83b21b612ab9dd` SHA while master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; Vercel project metadata still reports `live:false` and the owner-controlled protected-preview credential is unavailable.
+
+Continue: verify the new exact-head PR #440 workflows, then hand the green result to the active MFit Safe Merge Gate; keep DRAFT pending legitimate protected preview and owner-consented five-plus-inbox acceptance.
