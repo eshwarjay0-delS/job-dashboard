@@ -1,5 +1,37 @@
 # MFit Completion Watch
 
+## 17 November 2026 — WhatsApp policy comment correction and priority backlog delta
+
+### Canonical source and release wall
+
+- Canonical MFit master remains 66291f677cbcc2318229ef9a3164961e6d3cdb6a.
+- Production alias job-dashboard-fawn.vercel.app remains READY on deployment dpl_7QVykeYoWSswLDgsQP99xF2piBn3, SHA b94e1629c544048d84a2b048ae83b21b612ab9dd. The latest production attempt dpl_GMD7eF8vAw52sXyTopSuHqebEJq6 is CANCELED by the ignored-build-step because the commit lacks [ship]; project metadata reports live=false. Do not claim current master or any new PR is live. Protected preview still requires the owner-controlled private KOMPAS_VERCEL_API_TOKEN; do not bypass or attempt to unpause the project from this run.
+- The connected MFit Safe Merge Gate is enabled and was reviewing #433; Kompas Continuous Voice Delivery is disabled, so this continuation makes no voice/audio/caption edits. No Bible-Keeper automation appeared in the accessible inventory.
+
+### Priority 1 — WhatsApp 17 Oct failure and approved fallback
+
+- PR #433 is a current-master DRAFT at exact head a693cef8f33a72501c769315311aa48e43b037c2. Exact-head full CI 43959332261, WhatsApp recovery 43959332295, Kompas baseline 43959332407 and Plan/REA 43959332597 all SUCCESS. It implements the narrow unsupported-JD-only hard hold and the approved closest matched same-account library fallback, labelled Original resume — NOT TAILORED; supported completed shortfalls retain the existing disclosure policy. It does not include #411 uploaded-original-after-timeout behavior or #427 whole-message hold.
+- Owner-authored context recovered for 16 Nov 05:39:53 UTC explicitly says: “Unsupported JD-only experience must never be delivered; 100% coverage is not deliverability.” The 14 Nov 15:44:16 UTC owner response also confirms the 17 Oct 17:28 Chicago attempt was held after automatic repair, not delivered. This resolves the prior policy-provenance question for #433 narrow hard hold.
+- A review comment identified an inaccurate top-level comment in src/lib/whatsapp-resume-acceptance.ts that said 100% evidence-supported coverage was necessary. The actual clean-pass supported-coverage floor is 95%; completed honest shortfalls remain deliverable under the existing policy, while unsupported JD-only claims remain a hard hold. Follow-up branch fix/whatsapp-supported-floor-comment-20261117 is stacked on #433 and corrects that comment only; no threshold or runtime behavior changes. Exact-head gates must run on its final head.
+- The historical 17 Oct output DOCX, exact uploaded-source byte/hash match, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. A fresh Library search surfaced similarly named resumes but no exact 17 Oct source/output match; the connected iZap business is disconnected with no linked number and its date-scoped search returned zero. This does not prove another provider/store has no records. No replay, resend, Meta request, R2 write, model call or production mutation occurred.
+
+### Other approved priority slices — source gates vs acceptance
+
+| Area | Current branch / exact head | Source gates | Remaining acceptance / release wall |
+|---|---|---|---|
+| Resume/JD/confirmed experience | PR #431, a74319cb87a3aff44e111987c59ce978d2f87c2a | Full CI 43972447062, WhatsApp recovery 43972447199, Kompas baseline 43972447249, Plan/REA 43972447039 all SUCCESS | Owner-authorized baseline resume + exact JD + explicit confirmation and actual exported-DOCX inspection; protected preview unavailable. Never equate CI with 95–100% live match. |
+| Gmail application-chain Retry-After | PR #432, 40b214458ff8acfabc7ab2a82e6c546e45fcdcbe | Full CI 43905714073, baseline 43905714097, Plan/REA 43905714093 SUCCESS | Protected preview blocked; no live Gmail API or email send. |
+| Contract crawler diagnostics | PR #434, 73b00ddaa93d88d3914adc6fdba18407109c0b9a | Full CI 43965936557, crawler 43965936596, baseline 43965936565, Plan/REA 43965936491 SUCCESS | Protected preview blocked; manual/on-demand only, Robert Half manual-only, no live crawl. |
+| Poke-inspired Gmail/mobile | PR #435, b5138e57b0738a4a45724b76b227baa9b47a5b3c | Full CI 43988493361, baseline 43988493279, Plan/REA 43988493296 SUCCESS | Two authorized inboxes, collision isolation, selected-From preservation, independent reconnect and real narrow-phone acceptance. Worker remains disabled. |
+| Gmail Important sender normalization | PR #437, 3dd0256d2783f55722bb4028b550c938a5e17903 | Full CI 44026214076, baseline 44026214087, Plan/REA 44026214099 SUCCESS | Two-inbox identity/selected-From/reconnect acceptance and protected preview. |
+| Final-DOCX Gemini loop | PR #395 remains stacked on stale resume branch; current-master confirmed-skill successor is #431 | Prior #395 parser/WhatsApp/Plan gates passed only on its old head; no full current-master gate | Restack after #431 is accepted; require actual final DOCX + original JD and bounded evidence-only correction/re-export/recheck. |
+| Kompas Chief Relevance | Production ancestry includes #113/#114/#115 and later answer-shape fixes; issue #120 remains open | Synthetic source/CI checks do not count as live answer pairs | 50 actual authenticated same-question Kompas/ChatGPT pairs, independent human scorecards, native Windows/WhatsApp/mobile acceptance and protected preview access. Voice task owns capture/audio work. |
+
+Continue: keep the WhatsApp comment follow-up stacked on #433 and run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on its final head. Keep #433 and the follow-up DRAFT until Safe Merge Gate sequencing and legitimate protected preview/production release are available. Then proceed to #431 owner-authorized exported-DOCX acceptance without fabricating candidate facts. Preserve #435/#437 two-inbox/mobile gates, #434 manual-only crawler policy, and #120 live 50-pair/native gaps. No real email or WhatsApp tests, live crawl, production mutation, billing change, preview bypass or device acceptance occurred.
+
+---
+
+
 ## 16 November 2026 21:16 UTC — WhatsApp incident evidence recheck and release boundary
 
 - Canonical MFit master at the start of this continuation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The WhatsApp fallback repair remains PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433), exact head `6a112e42f375623197047e145eac2d08776d5ca2`, DRAFT. Its four exact-head source gates are SUCCESS: full CI [43920312068](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312068) (48 steps), WhatsApp recovery [43920312058](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312058), Kompas baseline [43920312071](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312071), Plan/REA [43920312549](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312549). Safe Merge Gate reviewed this exact head and kept it DRAFT because the protected preview and external-delivery acceptance are not satisfied.
