@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 17 November 2026 15:10 UTC — Gmail no-cap exact-head CI wording correction
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; the production alias `job-dashboard-fawn.vercel.app` independently resolves to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The master `Vercel` status is SUCCESS but does not prove the alias has moved.
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) is the owner-approved no-hard-cap implementation, branch `fix/gmail-account-cap-owner-correction-20261117`. Exact head before this correction: `d375f384439b1edf19f233f27a940878158501b5`.
+- Full CI run [44096783012](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44096783012) completed FAILURE in `scripts/tests/google-workspace-no-hard-cap.test.mjs:57`. The focused command reported 14/15 passing; the sole assertion expected `/not a hard maximum/i`, while `docs/gmail.md` used “not a product maximum.” This is a wording contract mismatch, not evidence of an account-isolation or SQL migration failure.
+- The branch correction changes the owner-vision wording to “not a hard maximum (not a product maximum)” so the executable test and documented product decision agree. No runtime code, migration, account ownership, selected-From, inbox identity or worker behavior changes in this follow-up.
+- Exact-head Plan/REA run `44096782861` and Kompas baseline `44096783401` passed on the prior head; they must rerun after this correction. No local checkout/node_modules is available and clone access to GitHub failed, so no local tests/build are claimed.
+- PR #440 stays DRAFT. The protected-preview credential is owner-controlled and unavailable to this run. No migration was applied, no preview bypass or deployment occurred, and no Gmail OAuth/API access, inbox read, email, mobile notification or five-plus-inbox device test occurred. Production remains on `b94e1629`.
+
+Continue: verify full CI, Kompas baseline and Plan/REA schema on the new exact PR #440 head. Then let the active MFit Safe Merge Gate review; keep protected preview and owner-consented five-plus-inbox acceptance as independent release gates.
+
+
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
 - Backlog reconciliation PR #425 is on branch `docs/mfit-backlog-reconciliation-20261116` (current head is shown on the PR; still DRAFT). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; GitHub compare shows master 15 commits ahead/0 behind. Most differences are CI/workflows, AGENTS, docs, tests and Plan/REA. However, `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`, and `src/lib/plan-vision-journal.ts` by the journal component and `/api/vision/live`; these are user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production configuration changed. After Safe Merge Gate approval and merge, a normal production deployment, READY check and canonical alias verification are required to publish the updated Plan & Vision UI. No deployment has occurred. PR #416 fixture-privacy correction is merged into master at the current SHA.
