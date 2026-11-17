@@ -1,6 +1,6 @@
 /* Phone-native live copilot shell.
    Loaded after the legacy and answer-aside styles so the phone viewport wins.
-   The desktop-focus shell (html.kd) is deliberately excluded. */
+   The desktop-focus shell is deliberately excluded. */
 @media (max-width:760px) {
   html:not(.kd) #view-copilot {
     height:100vh;
