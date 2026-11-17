@@ -2,7 +2,7 @@
 
 ## Approval and scope
 
-This is an implementation slice of the owner's 10 November 2026 approved Poke-inspired direction: 3–4 connected Gmail accounts as a target range, with no hard maximum, account-specific inbox targeting, thread identity as user + receiving account + provider thread ID, no silent cross-account merge, selected-From preservation, and reconnecting only the affected inbox.
+This is an implementation slice of the owner's approved Poke-inspired multi-account Gmail direction: account-specific inbox targeting, thread identity as user + receiving account + provider thread ID, no silent cross-account merge, selected-From preservation, and reconnecting only the affected inbox. Historical docs record 3–4 connected accounts and four mobile toggles; the existing four-account ceiling remains because removal has not been owner-approved.
 
 The mobile navigation behavior is separately owner-approved by the 4 October, 5 October, and 11 November corrections: the hamburger expands the navigation below the sticky top bar in normal document flow and pushes page content down. It must not cover, dim, or make the page inert.
 
@@ -55,7 +55,7 @@ PR #375 remains DRAFT pending the legitimate protected Vercel preview. The canon
 
 ## Additional owner scope recovered 14 November
 
-The direct 17 October request also names fold-style thread/reply/contact panes, CC/BCC/attachments, Important meaning “track this sender,” a combined Important inbox, an automation feed, and mobile controls/updates. The 3–4 account range is a target, not a hard cap. The full product plan retains normal Gmail capabilities. The current code changes do not implement all of those items; they remain separate backlog work.
+The direct 17 October request also names fold-style thread/reply/contact panes, CC/BCC/attachments, Important meaning “track this sender,” a combined Important inbox, an automation feed, and mobile controls/updates. Historical docs record a 3–4 account range; the current four-account ceiling remains until explicit owner approval to remove it. The full product plan retains normal Gmail capabilities. The current code changes do not implement all of those items; they remain separate backlog work.
 
 The owner-authored correction confirms the mobile menu behavior: hidden when closed; when opened, it expands below the sticky header in normal flow and pushes page content down without overlay, scrim, dimming or page inertness. Exact animation and styling remain implementation choices. No per-account Calendar targeting, exact waiting-on-them radar semantics, or per-account sync-health card was approved in the retrieved owner context.
 
@@ -69,7 +69,7 @@ The reviewed PR #394 head `4121dc660c0cc6ff0938ddf21e353311403a64bf` passed full
 
 The account-scoped digest and mobile-navigation slice is restacked onto canonical master `8ad319d1092fffa7e6a31a4da1b4dc61ac634934` in branch `fix/gmail-poke-mobile-master-8ad319-20261115`. The restack preserves the newer WhatsApp fixture-privacy workflow and merges the test registration into the current master scripts rather than copying the stale package/CI files.
 
-The branch adds account-scoped sender-mute and waiting-on-them identity helpers, account+thread keys, receiving-inbox selection from digest/role/radar rows, and the approved normal-flow mobile navigation. Tests cover same-sender and colliding thread IDs across two inboxes, independent mutes, correct inbox selection, saved reply identity, all connected accounts without a four-account cap, no-cover mobile layout, Escape/outside-click close and focus return.
+The branch adds account-scoped sender-mute and waiting-on-them identity helpers, account+thread keys, receiving-inbox selection from digest/role/radar rows, and the approved normal-flow mobile navigation. Tests cover same-sender and colliding thread IDs across two inboxes, independent mutes, correct inbox selection, saved reply identity, the existing four-account ceiling without changing it, no-cover mobile layout, Escape/outside-click close and focus return.
 
 The mobile menu behavior is owner-approved; per-account Calendar targeting, exact waiting-on-them radar semantics beyond account+thread identity, per-account sync-health card, proactive worker/scheduler and external notifications remain unapproved or disabled. No Gmail API/OAuth request, inbox mutation, email send, worker enablement or notification delivery occurred.
 

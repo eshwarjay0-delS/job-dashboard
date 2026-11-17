@@ -36,3 +36,13 @@ Continue: verify the next daily cron with retained logs or add a separately revi
 ## 15 November 2026 — historical snapshot boundary
 
 The production-linked counts and 10 November sync timestamps above are a read-only 14 November snapshot, not a fresh query from 15 November. This run did not access Gmail APIs or query the production Gmail tables, so do not infer that a later daily crawl succeeded or that account data is current. The proactive Poke-style worker and external notifications remain disabled; the current PR only adds account-scoped UI identity and no new scheduler.
+
+
+## 17 November 2026 — fresh read-only production snapshot
+
+A read-only aggregate query on 17 Nov confirms that the Gmail cache has not advanced since 10 Nov:
+
+- `mfit_gmail_sync`: 3 rows, 1 owner, 3 accounts; all 3 rows are older than 24 hours; latest `last_sync_at` is 2026-11-10 14:44:44.277 UTC.
+- `mfit_gmail_threads`: 2,002 rows, the same 1 owner and 3 accounts; all 2,002 rows are older than 24 hours; latest `updated_at` is 2026-11-10 14:46:49.790 UTC.
+
+This is database-cache freshness evidence only. No Gmail API/OAuth request, inbox read/mutation, email send, scheduler change or production write was performed. The Poke-style proactive worker remains disabled; this snapshot does not authorize enabling it.

@@ -38,3 +38,12 @@ The 6 Nov owner-authored comment [#6817645128](https://github.com/eshwarjay0-del
 ## 15 November 2026 — mobile menu correction
 
 The latest accessible owner-authored correction confirms the concrete no-cover behavior described above. This record uses the accessible direct message and repository evidence only; it does not claim access to every prior conversation. The normal-flow implementation in the current PR matches that approved behavior. Narrow-phone device acceptance remains pending.
+
+
+## 17 November 2026 — later owner correction: no four-account ceiling removal
+
+The 14 November statements above are historical and must not be read as approval to remove the existing Gmail account limit. The latest owner constraint, recorded at 2026-11-17T18:08:40Z, explicitly says removal of the four-account ceiling remains unapproved. This supersedes earlier assistant-authored summaries that described the 3–4 historical range as permission for unlimited accounts. Keep the current four-account ceiling in place.
+
+- PR #435 remains a separate approved digest/mobile implementation slice; its current head `b5138e57b0738a4a45724b76b227baa9b47a5b3c` does not change account-limit routes or migrations.
+- PR #440's no-cap migration and API/UI changes remain DRAFT and unapproved. Do not merge the PR or apply its migration without a new explicit owner approval.
+- The historical 3–4 range and four mobile toggles remain useful product context, but they do not authorize behavior beyond the existing four-account limit.

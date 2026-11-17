@@ -217,7 +217,7 @@ Regression coverage checks owner/account identity, the constant-time bearer vali
 
 ## Poke-inspired account identity and mobile navigation — 13 November 2026
 
-The current implementation slice keeps the 3–4 account target range (not a hard maximum) and account boundary visible:
+The current implementation slice preserves the existing four-account ceiling and account boundaries. Historical docs record a 3–4 account range, but removing the ceiling remains unapproved:
 
 - Digest sender mute = receiving Gmail account + sender address. Muting the same recruiter in one inbox does not mute another inbox.
 - Digest and waiting-on-them thread identity = receiving account + provider thread ID. A provider thread ID collision across inboxes is not a global identity.
@@ -230,7 +230,7 @@ This source-level slice is not live acceptance. The exact-head CI and protected 
 
 ## Owner-authored scope confirmation recovered 14 November 2026
 
-Prior-context retrieval recovered the direct 17 October request: Poke-inspired multi-account inbox toggles; per-account identity and From selection; fold-style thread, reply and contact panes; CC/BCC/attachments; Important meaning “track this sender”; a combined Important inbox; an automation feed; and mobile controls/updates. The 3–4 connected-account range is a target, not a hard maximum. Gmail must retain regular Gmail capabilities while simplifying multiple inboxes.
+Prior-context retrieval recovered the direct 17 October request: Poke-inspired multi-account inbox toggles; per-account identity and From selection; fold-style thread, reply and contact panes; CC/BCC/attachments; Important meaning “track this sender”; a combined Important inbox; an automation feed; and mobile controls/updates. The historical 3–4 connected-account range records the intended multi-inbox scale; it does not approve removing the existing four-account ceiling. Keep the current cap until the owner explicitly approves a different limit. Gmail must retain regular Gmail capabilities while simplifying multiple inboxes.
 
 The owner-approved mobile behavior is hidden when closed; when opened, the navigation expands below the sticky header in normal document flow and pushes page content down. It must not cover, dim or make the page inert. Exact animation and styling remain implementation choices; narrow-phone acceptance is still pending.
 
@@ -253,6 +253,6 @@ No Gmail API/OAuth call, inbox read or mutation, email/WhatsApp send, worker ena
 
 ## 15 November 2026 — current-master implementation status
 
-Draft PR #424 restacks the account-scoped digest and mobile-navigation slice onto canonical master 8ad319. It adds per-account sender mute keys, account+provider-thread identity, correct receiving-inbox selection, and regression coverage. The 3–4 account range remains a target, not a hard cap.
+Draft PR #424 restacks the account-scoped digest and mobile-navigation slice onto canonical master 8ad319. It adds per-account sender mute keys, account+provider-thread identity, correct receiving-inbox selection, and regression coverage. The historical 3–4 account range remains the target; the existing four-account ceiling remains in force because its removal is not owner-approved.
 
 This is not full Gmail parity or a Poke-style proactive worker. No worker, scheduler, external notification or Meta template is enabled. No Gmail API/OAuth call, inbox mutation or email send occurred. The draft requires exact-head CI, protected preview, two-inbox collision/selected-From/reconnect acceptance and a narrow-phone check before release.
