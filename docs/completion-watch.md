@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 17 November 2026 21:22 UTC — guard manual-only contract crawling
+
+- Canonical master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The 12 Nov owner correction remains authoritative: contract crawling is manual/on-demand only, no daily contract-crawler cron, and Robert Half stays manual-only.
+- The existing `scripts/tests/crawl-manual-only.test.mjs` was already present on master. It asserts no Vercel `/api/crawl/run` cron, admin authorization before the manual POST runner, secret validation before the compatibility GET runner, and Robert Half remaining in the pending/manual-only adapter list. No duplicate test file was created.
+- Workflow commit `c2e2e8aa84803eaef55635b913fc8b6bccafc8be` wires that test into both `pull_request` and `push` path filters and adds a dedicated execution step in `.github/workflows/crawl-freshness.yml`. The workflow retains `workflow_dispatch` and has no `schedule` trigger. `vercel.json` has no `/api/crawl/*` cron; unrelated watchdog, Gmail and WhatsApp schedules are unchanged. The POST route remains admin-only and the GET compatibility route remains secret-protected.
+- Plan & Vision revision `2026-11-17.1` commit `08de74db7777071063e810b79cae5ec55ac63947`; research note update `aeab109a9f147b086283dfb14f865b6c1c161a6f`; REA commit `1ad05adda5410ee42c185933b4d7163d4ee28bf2`; Plan Journal commit `4f2c6dba6b8a1df7162a96673eb962ac0e0bbc94`.
+- PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) was previously green at predecessor head `73b00ddaa93d88d3914adc6fdba18407109c0b9a`: full CI `43965936557`, crawler regression `43965936596`, Kompas baseline `43965936565` and Plan/REA `43965936491` SUCCESS. The workflow and documentation commits advance it to `4f2c6dba6b8a1df7162a96673eb962ac0e0bbc94` before this Completion Watch update; exact-head crawler workflow, full CI, Kompas baseline and Plan/REA must be rerun. Predecessor green checks are not reused.
+- No live portal request, crawl, adapter, classifier, freshness cutoff, automatic retry, schedule, application submission, database mutation, email or WhatsApp send occurred. Right-to-Hire / Contract-to-Perm semantics remain unapproved. Vercel project `job-dashboard` remains `live:false`; latest production attempt `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED and the canonical alias remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No preview or deployment.
+  
+Continue: run the crawler freshness/manual-only workflow, full CI, Kompas baseline and Plan/REA on the final PR #434 head, then let MFit Safe Merge Gate review. Keep DRAFT until a legitimate protected preview is available; any live crawl requires a separate explicit manual request.
+
+
 ## 16 November 2026 22:00 UTC — current-master contract crawler diagnostics restack (#434)
 
 - Canonical master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Draft PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) uses branch `fix/crawler-abort-diagnostics-master-66291-20261116`; the head before the Apply/Plan/REA evidence refresh was `05e17d5c43f96944b452f498546ae211443f208c`; the current head before this Completion Watch update is `6cd7b1c156e0bc3acb56413847dfda63791ec13a`.
