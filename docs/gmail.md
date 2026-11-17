@@ -213,3 +213,10 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Important sender matching — 17 November 2026
+
+The approved rule is account + sender, not sender alone. A source audit found that the validator accepted mixed-case stored addresses while the lookup normalized only the incoming account and email. A valid legacy mixed-case rule could therefore be missed. The source correction normalizes both sides and keeps the receiving inbox in the comparison, so the same sender in two inboxes remains two separate tracking rules.
+
+This is a source-level correction only. The proactive Poke-style worker remains disabled; no Gmail API/OAuth call, email or WhatsApp notification was sent. Exact-head CI, protected preview, two-inbox acceptance and narrow-mobile verification remain separate release gates.
