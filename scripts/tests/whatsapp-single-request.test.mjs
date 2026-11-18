@@ -90,17 +90,31 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
-    '@/lib/whatsapp-resume-recovery': {
-      enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      claimResumeRecoveryWorker: async () => 'test-claim-token',
-      releaseResumeRecoveryWorker: async () => true,
+    '@/lib/whatsapp-resume-recovery': (() => {
+      // Model the production helper's atomic single-worker lease instead of
+      // returning a claim token to every concurrent route invocation.
+      let activeClaim = null
+      let claimSequence = 0
+      return {
+        enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
+        claimResumeRecoveryWorker: async () => {
+          if (activeClaim) return null
+          activeClaim = `test-claim-${++claimSequence}`
+          return activeClaim
+        },
+        releaseResumeRecoveryWorker: async (_jobId, token) => {
+          if (!token || activeClaim !== token) return false
+          activeClaim = null
+          return true
+        },
       patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,
       recordResumeDeliveryStatus: async () => {},
-      readResumeRecovery: async () => ({ status: 'pending' }),
-    },
+        readResumeRecovery: async () => ({ status: 'pending' }),
+      }
+    })(),
   }
   const { generate, captionFor, resumeGapReport } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor, resumeGapReport };')
   const files = { userDir: '/data/whatsapp/files/user', email: 'candidate5@example.test', said: 'your selected resume', depth: 0, rel: 'candidate5@example.test/GRC/resume.docx', abs: '/data/whatsapp/files/user/candidate5@example.test/GRC/resume.docx' }
