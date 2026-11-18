@@ -7,6 +7,8 @@ on:
       - "src/lib/crawl/collect.ts"
       - "scripts/tests/crawl-collect.test.mjs"
       - "scripts/tests/crawl-manual-only.test.mjs"
+      - "src/lib/crawl/portals/**"
+      - "scripts/tests/crawl-portals-*.test.mjs"
       - "src/app/api/crawl/jobs/route.ts"
       - "src/lib/crawl/adapters.ts"
       - "src/lib/crawl/classify.ts"
@@ -22,7 +24,8 @@ on:
       - "src/lib/crawl/search.ts"
       - "src/lib/crawl/collect.ts"
       - "scripts/tests/crawl-collect.test.mjs"
-      - "scripts/tests/crawl-manual-only.test.mjs"
+      - "src/lib/crawl/portals/**"
+      - "scripts/tests/crawl-portals-*.test.mjs"
       - "src/app/api/crawl/jobs/route.ts"
       - "src/lib/crawl/adapters.ts"
       - "src/lib/crawl/classify.ts"
@@ -51,3 +54,5 @@ jobs:
         run: node --experimental-strip-types --test scripts/tests/crawl-collect.test.mjs
       - name: Verify contract crawler remains manual-only
         run: node --experimental-strip-types --test scripts/tests/crawl-manual-only.test.mjs
+      - name: Run active portal registry and source-safety regressions
+        run: node --experimental-strip-types --test scripts/tests/crawl-portals-*.test.mjs
