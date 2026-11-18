@@ -118,7 +118,9 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: statuses.shift() || 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,

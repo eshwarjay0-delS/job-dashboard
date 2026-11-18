@@ -92,7 +92,9 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,
@@ -178,7 +180,9 @@ test('a below-floor rewrite still delivers the Word file and names what is missi
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,
@@ -233,7 +237,9 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,
@@ -290,7 +296,9 @@ test('a partial hold names the unfinished sections and invites a reply-redo; oth
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,

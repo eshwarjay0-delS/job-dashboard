@@ -16,6 +16,7 @@
 
 import { readFile, writeFile, mkdir, readdir, unlink, stat, rm } from "fs/promises"
 import path from "path"
+import { createHash } from "crypto"
 import {
   S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand,
   DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command,
@@ -28,6 +29,10 @@ export interface Blob {
   put(key: string, data: Buffer | string): Promise<void>
   /** Atomically create a key; false when another caller already created it. */
   putIfAbsent(key: string, data: Buffer | string): Promise<boolean>
+  /** Read bytes and the current opaque version for compare-and-swap. */
+  getWithEtag(key: string): Promise<{ data: Buffer; etag: string } | null>
+  /** Replace only if the current storage version still equals the supplied ETag. */
+  putIfMatch(key: string, etag: string, data: Buffer | string): Promise<boolean>
   /** Read raw bytes, or null if the key doesn't exist. */
   get(key: string): Promise<Buffer | null>
   /** Read as UTF-8 text, or null if absent. */
@@ -142,25 +147,69 @@ const safeSegments = storageSegments
 // ── Filesystem adapter (default): everything lives under DATA_DIR ──────────────
 class FsStorage implements Blob {
   constructor(private root: string) {}
-  private abs(key: string): string {
-    return path.join(this.root, ...safeSegments(key))
+  private locks = new Map<string, Promise<void>>()
+  private abs(key: string): string { return path.join(this.root, ...safeSegments(key)) }
+  // Local CAS is serialized per key within this adapter process; production multi-instance
+  // atomicity comes from R2 PutObject If-Match.
+  private async withKeyLock<T>(key: string, action: () => Promise<T>): Promise<T> {
+    const previous = this.locks.get(key) || Promise.resolve()
+    let release: () => void = () => {}
+    const gate = new Promise<void>(resolve => { release = resolve })
+    const tail = previous.then(() => gate)
+    this.locks.set(key, tail)
+    await previous
+    try { return await action() }
+    finally { release(); if (this.locks.get(key) === tail) this.locks.delete(key) }
   }
   async put(key: string, data: Buffer | string): Promise<void> {
-    const p = this.abs(key)
-    await mkdir(path.dirname(p), { recursive: true })
-    await writeFile(p, data)
+    await this.withKeyLock(key, async () => {
+      const p = this.abs(key); await mkdir(path.dirname(p), { recursive: true }); await writeFile(p, data)
+    })
   }
   async putIfAbsent(key: string, data: Buffer | string): Promise<boolean> {
-    const p = this.abs(key)
-    await mkdir(path.dirname(p), { recursive: true })
-    try { await writeFile(p, data, { flag: "wx" }); return true }
-    catch (e) { if ((e as NodeJS.ErrnoException).code === "EEXIST") return false; throw e }
+    return this.withKeyLock(key, async () => {
+      const p = this.abs(key); await mkdir(path.dirname(p), { recursive: true })
+      try { await writeFile(p, data, { flag: "wx" }); return true }
+      catch (e) { if ((e as NodeJS.ErrnoException).code === "EEXIST") return false; throw e }
+    })
+  }
+  async putIfMatch(key: string, etag: string, data: Buffer | string): Promise<boolean> {
+    try {
+      await this.s3.send(new PutObjectCommand({
+        Bucket: this.bucket, Key: this.norm(key),
+        Body: typeof data === "string" ? Buffer.from(data) : data,
+        IfMatch: etag,
+      }))
+      return true
+    } catch (e) {
+      const err = e as { name?: string; $metadata?: { httpStatusCode?: number } }
+      if (err.$metadata?.httpStatusCode === 412 || err.name === "PreconditionFailed") return false
+      throw e
+    }
   }
   async get(key: string): Promise<Buffer | null> {
-    try { return await readFile(this.abs(key)) } catch { return null }
+    return this.withKeyLock(key, async () => { try { return await readFile(this.abs(key)) } catch { return null } })
   }
   async getText(key: string): Promise<string | null> {
-    try { return await readFile(this.abs(key), "utf8") } catch { return null }
+    return this.withKeyLock(key, async () => { try { return await readFile(this.abs(key), "utf8") } catch { return null } })
+  }
+  async getWithEtag(key: string): Promise<{ data: Buffer; etag: string } | null> {
+    return this.withKeyLock(key, async () => {
+      try {
+        const data = await readFile(this.abs(key))
+        return { data, etag: createHash("sha256").update(data).digest("hex") }
+      } catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return null; throw e }
+    })
+  }
+  async putIfMatch(key: string, etag: string, data: Buffer | string): Promise<boolean> {
+    return this.withKeyLock(key, async () => {
+      let current: Buffer
+      try { current = await readFile(this.abs(key)) }
+      catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return false; throw e }
+      if (createHash("sha256").update(current).digest("hex") !== etag) return false
+      await writeFile(this.abs(key), data)
+      return true
+    })
   }
   async exists(key: string): Promise<boolean> {
     try { await stat(this.abs(key)); return true } catch { return false }
@@ -169,15 +218,13 @@ class FsStorage implements Blob {
     try { const s = await stat(this.abs(key)); return { size: s.size, mtime: s.mtime } } catch { return null }
   }
   async delete(key: string): Promise<void> {
-    try { await unlink(this.abs(key)) } catch { /* already gone */ }
+    await this.withKeyLock(key, async () => { try { await unlink(this.abs(key)) } catch { /* already gone */ } })
   }
   async deletePrefix(key: string): Promise<void> {
     if (!key) throw new Error("Cannot delete the storage root")
     try { await rm(this.abs(key), { recursive: true, force: true }) } catch { /* ignore */ }
   }
-  async list(prefix: string): Promise<string[]> {
-    return (await this.listInfo(prefix)).map(f => f.key)
-  }
+  async list(prefix: string): Promise<string[]> { return (await this.listInfo(prefix)).map(f => f.key) }
   async listInfo(prefix: string): Promise<{ key: string; size: number; mtime: Date }[]> {
     const normalizedPrefix = storageListPrefix(prefix)
     const base = this.abs(normalizedPrefix)
@@ -186,11 +233,11 @@ class FsStorage implements Blob {
       let entries
       try { entries = await readdir(dir, { withFileTypes: true }) } catch { return }
       for (const e of entries) {
-        const childRel = rel ? `${rel}/${e.name}` : e.name
+        const childRel = rel ? rel + "/" + e.name : e.name
         if (e.isDirectory()) await walk(path.join(dir, e.name), childRel)
         else {
           const s = await stat(path.join(dir, e.name)).catch(() => null)
-          out.push({ key: normalizedPrefix ? `${normalizedPrefix}/${childRel}` : childRel, size: s?.size ?? 0, mtime: s?.mtime ?? new Date(0) })
+          out.push({ key: normalizedPrefix ? normalizedPrefix + "/" + childRel : childRel, size: s?.size ?? 0, mtime: s?.mtime ?? new Date(0) })
         }
       }
     }
@@ -242,6 +289,15 @@ class R2Storage implements Blob {
       const r = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.norm(key) }))
       const bytes = await r.Body!.transformToByteArray()
       return Buffer.from(bytes)
+    } catch (e) { if (isNotFound(e)) return null; throw e }
+  }
+  async getWithEtag(key: string): Promise<{ data: Buffer; etag: string } | null> {
+    try {
+      const r = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.norm(key) }))
+      const etag = r.ETag
+      if (!etag) throw new Error("R2 GetObject omitted ETag; refusing a non-conditional recovery update")
+      const bytes = await r.Body!.transformToByteArray()
+      return { data: Buffer.from(bytes), etag }
     } catch (e) { if (isNotFound(e)) return null; throw e }
   }
   async getText(key: string): Promise<string | null> {
@@ -298,7 +354,7 @@ function makeBlob(): Blob {
     const unavailable = async (): Promise<never> => {
       throw new Error("Durable storage is not configured. Configure all R2 storage settings before saving data.")
     }
-    return { putIfAbsent: unavailable, put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
+    return { putIfAbsent: unavailable, put: unavailable, get: unavailable, getText: unavailable, getWithEtag: unavailable, putIfMatch: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
   }
   if (R2_BUCKET && R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
     return new R2Storage(R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)

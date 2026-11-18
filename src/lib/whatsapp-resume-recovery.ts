@@ -2,9 +2,12 @@
  * Durable WhatsApp resume recovery. The original JD and chosen source path survive
  * serverless timeouts and session consumption; no generated draft is delivered here.
  * Never log this record: it contains a candidate's JD and sender identity.
+ *
+ * Every state transition uses storage-version compare-and-swap. A Meta callback,
+ * a late HTTP response and a retry worker must never replace a newer state snapshot.
  */
 import { blob } from "./storage"
-import { createHash } from "crypto"
+import { createHash, randomBytes } from "crypto"
 import { retryDelayMs } from "./whatsapp-retry-policy"
 
 export type ResumeRecoveryJob = {
@@ -30,11 +33,40 @@ export type ResumeRecoveryJob = {
   deliveredMessageId?: string
   deliveryState?: "accepted" | "sent" | "delivered" | "read" | "failed"
   errorCode?: string
+  /** A per-run fencing token. Never log or expose it outside the signed Meta callback field. */
+  claimToken?: string
+  /** Six minutes exceeds this route's 300-second platform ceiling. */
+  claimUntil?: number
   /** The chat was already told this attempt did not send a file. Later quiet retries stay quiet. */
   toldUser?: boolean
 }
 
-export const recoveryKey = (id: string) => `whatsapp/resume-recovery/${id}.json`
+const RECOVERY_CAS_ATTEMPTS = 8
+const RECOVERY_CLAIM_MS = 6 * 60_000
+
+export const recoveryKey = (id: string) => "whatsapp/resume-recovery/" + id + ".json"
+
+type RecoveryDecision<T> = { result: T; next?: ResumeRecoveryJob }
+
+async function updateResumeRecovery<T>(
+  id: string,
+  mutate: (job: ResumeRecoveryJob) => RecoveryDecision<T>,
+): Promise<T | null> {
+  const key = recoveryKey(id)
+  for (let attempt = 0; attempt < RECOVERY_CAS_ATTEMPTS; attempt++) {
+    const snapshot = await blob.getWithEtag(key)
+    if (!snapshot) return null
+    let job: ResumeRecoveryJob
+    try { job = JSON.parse(snapshot.data.toString("utf8")) as ResumeRecoveryJob }
+    catch { return null }
+    if (job.version !== 1 || job.id !== id) return null
+    const decision = mutate(job)
+    if (!decision.next) return decision.result
+    if (await blob.putIfMatch(key, snapshot.etag, JSON.stringify(decision.next))) return decision.result
+    // Another writer won. Re-read and re-evaluate; never replay a stale snapshot.
+  }
+  throw new Error("WhatsApp resume recovery compare-and-swap retry limit reached")
+}
 
 export async function readResumeRecovery(id: string): Promise<ResumeRecoveryJob | null> {
   const raw = await blob.getText(recoveryKey(id))
@@ -45,29 +77,89 @@ export async function readResumeRecovery(id: string): Promise<ResumeRecoveryJob 
   } catch { return null }
 }
 
-export async function enqueueResumeRecovery(input: Omit<ResumeRecoveryJob, "version" | "status" | "createdAt" | "updatedAt" | "attempts" | "retryAt">): Promise<ResumeRecoveryJob> {
+export async function enqueueResumeRecovery(input: Omit<ResumeRecoveryJob,
+  "version" | "status" | "createdAt" | "updatedAt" | "attempts" | "retryAt" | "claimToken" | "claimUntil"
+>): Promise<ResumeRecoveryJob> {
   const now = Date.now()
   const fresh: ResumeRecoveryJob = { ...input, version: 1, status: "pending", createdAt: now, updatedAt: now, attempts: 0, retryAt: now }
   await blob.putIfAbsent(recoveryKey(input.id), JSON.stringify(fresh))
   return (await readResumeRecovery(input.id)) || fresh
 }
 
-export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecoveryJob>): Promise<void> {
-  const job = await readResumeRecovery(id)
-  if (!job || job.status === "delivered") return
-  // The immutable input is never overwritten by a stale retry.
-  const { id: _id, jd: _jd, from: _from, userId: _uid, ...updates } = patch
-  await blob.put(recoveryKey(id), JSON.stringify({ ...job, ...updates, updatedAt: Date.now() }))
+/** Atomically lease one pending job. Expired leases can be replaced; old workers are fenced. */
+export async function claimResumeRecoveryWorker(id: string): Promise<string | null> {
+  const now = Date.now()
+  return (await updateResumeRecovery(id, job => {
+    if (job.status !== "pending") return { result: null }
+    if (job.deliveryState === "accepted" || job.deliveryState === "sent" ||
+        job.deliveryState === "delivered" || job.deliveryState === "read") return { result: null }
+    if (job.claimToken && (job.claimUntil || 0) > now) return { result: null }
+    const token = randomBytes(16).toString("hex")
+    return { result: token, next: { ...job, claimToken: token, claimUntil: now + RECOVERY_CLAIM_MS, updatedAt: now } }
+  })) || null
 }
 
-export async function deferResumeRecovery(id: string, code: string, candidate?: { token: string; coverage: number; supportedCoverage: number }): Promise<void> {
-  const job = await readResumeRecovery(id)
-  if (!job || job.status === "delivered" || job.status === "uncertain" || job.status === "sending") return
-  const attempts = job.attempts + 1
-  const best = candidate && (!job.best || candidate.supportedCoverage > job.best.supportedCoverage ||
-    (candidate.supportedCoverage === job.best.supportedCoverage && candidate.coverage > job.best.coverage))
-    ? candidate : job.best
-  await patchResumeRecovery(id, { status: "pending", attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: code, best })
+/** Release only the lease owned by this worker; a stale worker cannot clear a newer lease. */
+export async function releaseResumeRecoveryWorker(id: string, token: string): Promise<boolean> {
+  const now = Date.now()
+  const result = await updateResumeRecovery(id, job => {
+    if (!token || job.claimToken !== token) return { result: false }
+    const next = { ...job, updatedAt: now }
+    delete next.claimToken
+    delete next.claimUntil
+    return { result: true, next }
+  })
+  return result ?? false
+}
+
+export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecoveryJob>, claimToken?: string): Promise<boolean> {
+  const {
+    id: _id, version: _version, createdAt: _createdAt, jd: _jd, from: _from, userId: _userId,
+    claimToken: _claimToken, claimUntil: _claimUntil, ...updates
+  } = patch
+  const now = Date.now()
+  const result = await updateResumeRecovery(id, job => {
+    if (job.status === "delivered" || job.deliveryState === "delivered" || job.deliveryState === "read")
+      return { result: false }
+    if (claimToken) {
+      if (job.claimToken !== claimToken || (job.claimUntil || 0) <= now) return { result: false }
+    } else if (job.claimToken && (job.claimUntil || 0) > now) {
+      return { result: false }
+    }
+    if (updates.status === "pending" &&
+        (job.deliveryState === "accepted" || job.deliveryState === "sent" ||
+         job.deliveryState === "delivered" || job.deliveryState === "read")) return { result: false }
+    if (updates.status === "sending" && job.status !== "pending" && job.status !== "sending")
+      return { result: false }
+    return { result: true, next: { ...job, ...updates, updatedAt: now } as ResumeRecoveryJob }
+  })
+  return result ?? false
+}
+
+export async function deferResumeRecovery(
+  id: string,
+  code: string,
+  candidate?: { token: string; coverage: number; supportedCoverage: number },
+  claimToken?: string,
+): Promise<boolean> {
+  const now = Date.now()
+  const result = await updateResumeRecovery(id, job => {
+    if (job.status === "delivered" || job.status === "uncertain" || job.status === "sending")
+      return { result: false }
+    if (claimToken) {
+      if (job.claimToken !== claimToken || (job.claimUntil || 0) <= now) return { result: false }
+    } else if (job.claimToken && (job.claimUntil || 0) > now) {
+      return { result: false }
+    }
+    if (job.deliveryState === "accepted" || job.deliveryState === "sent" ||
+        job.deliveryState === "delivered" || job.deliveryState === "read") return { result: false }
+    const attempts = job.attempts + 1
+    const best = candidate && (!job.best || candidate.supportedCoverage > job.best.supportedCoverage ||
+      (candidate.supportedCoverage === job.best.supportedCoverage && candidate.coverage > job.best.coverage))
+      ? candidate : job.best
+    return { result: true, next: { ...job, status: "pending", attempts, retryAt: now + retryDelayMs(attempts), errorCode: code, best, updatedAt: now } }
+  })
+  return result ?? false
 }
 
 /** Legacy bootstrap must not create a second job for a JD already queued, sending,
@@ -98,70 +190,91 @@ export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[
   }))
   return jobs.filter((j): j is ResumeRecoveryJob =>
     !!j && j.version === 1 && j.status === "pending" && j.retryAt <= now &&
-    j.createdAt <= now)
+    j.createdAt <= now && (!j.claimToken || (j.claimUntil || 0) <= now))
     .sort((a, b) => a.retryAt - b.retryAt).slice(0, limit)
 }
 
-/** Index by a one-way hash of Meta's message id; never scan every user's jobs on callbacks. */
 const messageIndexKey = (wamid: string) =>
-  `whatsapp/resume-message-index/${createHash("sha256").update(wamid).digest("hex")}.txt`
+  "whatsapp/resume-message-index/" + createHash("sha256").update(wamid).digest("hex") + ".txt"
 
-export async function markResumeDocumentAccepted(id: string, wamid: string): Promise<boolean> {
-  await blob.put(messageIndexKey(wamid), id)
-  const current = await readResumeRecovery(id)
-  if (!current) return false
-  // A signed failure callback can beat the original HTTP response. Keep the
-  // failed message id as a tombstone so a late HTTP 200 cannot resurrect it.
-  if (current.deliveryState === "failed" && current.deliveredMessageId === wamid) return false
-  if (current.status === "delivered" && current.deliveredMessageId && current.deliveredMessageId !== wamid) return false
-  // Meta HTTP 200 means accepted by the API, not delivered to the handset.
-  // Keep the job out of automatic resend while waiting for a signed callback.
-  await patchResumeRecovery(id, { status: "uncertain", deliveredMessageId: wamid, deliveryState: "accepted" })
-  return true
+async function ensureMessageIndex(wamid: string, id: string): Promise<boolean> {
+  const key = messageIndexKey(wamid)
+  const existing = await blob.getText(key)
+  if (existing !== null) return existing === id
+  if (await blob.putIfAbsent(key, id)) return true
+  return (await blob.getText(key)) === id
 }
 
-/** Authenticated Meta callbacks distinguish an API acceptance from real handset delivery. */
-export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | "delivered" | "read" | "failed", opaqueJobId?: string): Promise<void> {
-  if (!wamid) return
-  let id = await blob.getText(messageIndexKey(wamid))
-  // Meta echoes the opaque job id even if the original HTTP response timed out.
-  // Reconcile that ambiguous send instead of leaving it stuck or duplicating it.
-  if (!id && opaqueJobId && /^[a-f0-9]{64}$/.test(opaqueJobId)) {
-    const unknown = await readResumeRecovery(opaqueJobId)
-    if (unknown && !unknown.deliveredMessageId && (unknown.status === "uncertain" || unknown.status === "sending")) {
-      id = opaqueJobId
-      await blob.put(messageIndexKey(wamid), id)
-      await blob.put(recoveryKey(id), JSON.stringify({ ...unknown,
-        status: state === "failed" ? "pending" : (state === "delivered" || state === "read") ? "delivered" : "uncertain",
-        deliveredMessageId: wamid,
-        deliveryState: state, updatedAt: Date.now(),
-        ...(state === "failed" ? { attempts: unknown.attempts + 1, retryAt: Date.now() + retryDelayMs(unknown.attempts + 1), errorCode: "meta_delivery_failed" } : {}),
-      }))
-      if (state === "delivered" || state === "read")
-        console.info("[whatsapp] timed-out document reconciled as delivered", { job: id.slice(0, 12), state })
-      return
+export async function markResumeDocumentAccepted(id: string, wamid: string, attemptToken?: string): Promise<boolean> {
+  if (!wamid || !(await readResumeRecovery(id))) return false
+  if (!await ensureMessageIndex(wamid, id)) return false
+  const now = Date.now()
+  const result = await updateResumeRecovery(id, job => {
+    if (attemptToken) {
+      if (job.claimToken !== attemptToken || (job.claimUntil || 0) <= now) return { result: false }
+    } else if (job.claimToken && (job.claimUntil || 0) > now) {
+      return { result: false }
     }
+    if (job.deliveryState === "failed" && job.deliveredMessageId === wamid) return { result: false }
+    if (job.deliveryState === "sent" && job.deliveredMessageId === wamid) return { result: true }
+    if (job.deliveryState === "delivered" || job.deliveryState === "read")
+      return { result: job.deliveredMessageId === wamid }
+    if (job.status === "delivered") return { result: job.deliveredMessageId === wamid }
+    if (job.deliveredMessageId && job.deliveredMessageId !== wamid &&
+        (job.deliveryState === "accepted" || job.deliveryState === "sent")) return { result: false }
+    return { result: true, next: { ...job, status: "uncertain", deliveredMessageId: wamid, deliveryState: "accepted", updatedAt: now } }
+  })
+  return result ?? false
+}
+
+/** Authenticated Meta callbacks distinguish API acceptance from real handset delivery. */
+export async function recordResumeDeliveryStatus(
+  wamid: string,
+  state: "sent" | "delivered" | "read" | "failed",
+  opaqueJobId?: string,
+): Promise<void> {
+  if (!wamid) return
+  const opaqueMatch = /^([a-f0-9]{64})(?::([a-f0-9]{32}))?$/.exec(String(opaqueJobId || ""))
+  const opaqueId = opaqueMatch?.[1]
+  const attemptToken = opaqueMatch?.[2]
+  const indexKey = messageIndexKey(wamid)
+  let id = await blob.getText(indexKey)
+  if (id && opaqueId && id !== opaqueId) return
+  if (!id && opaqueId) {
+    const created = await blob.putIfAbsent(indexKey, opaqueId)
+    id = created ? opaqueId : await blob.getText(indexKey)
+    if (id !== opaqueId) return
   }
   if (!id) return
-  const job = await readResumeRecovery(id)
-  if (!job || job.deliveredMessageId !== wamid) return
-  if (state === "failed") {
-    if (job.deliveryState === "delivered" || job.deliveryState === "read") return
-    const attempts = job.attempts + 1
-    await blob.put(recoveryKey(id), JSON.stringify({
-      ...job, status: "pending", deliveryState: "failed", deliveredMessageId: wamid,
-      attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: "meta_delivery_failed",
-      updatedAt: Date.now(),
-    }))
-    return
-  }
-  const rank = { accepted: 0, sent: 1, delivered: 2, read: 3, failed: -1 }
-  if (rank[state] <= rank[job.deliveryState || "accepted"]) return
-  await blob.put(recoveryKey(id), JSON.stringify({ ...job, deliveryState: state,
-    // Only a signed delivered/read callback confirms handset receipt.
-    // A signed sent callback still cannot justify a duplicate automatic send.
-    status: state === "delivered" || state === "read" ? "delivered" : "uncertain",
-    updatedAt: Date.now() }))
-  if (state === "delivered" || state === "read")
+
+  const now = Date.now()
+  const updated = await updateResumeRecovery(id, job => {
+    const currentMessage = job.deliveredMessageId === wamid
+    const currentAttempt = !!attemptToken && job.claimToken === attemptToken && job.status === "sending"
+    const legacyInFlight = !attemptToken && !job.deliveredMessageId &&
+      (job.status === "uncertain" || job.status === "sending")
+    if (!currentMessage && !currentAttempt && !legacyInFlight) return { result: false }
+
+    if (state === "failed") {
+      if (job.deliveryState === "delivered" || job.deliveryState === "read") return { result: false }
+      if (job.deliveryState === "failed" && currentMessage) return { result: false }
+      const attempts = job.attempts + 1
+      return {
+        result: true,
+        next: { ...job, status: "pending", deliveredMessageId: wamid, deliveryState: "failed",
+          attempts, retryAt: now + retryDelayMs(attempts), errorCode: "meta_delivery_failed", updatedAt: now },
+      }
+    }
+
+    const rank = { accepted: 0, sent: 1, delivered: 2, read: 3, failed: -1 }
+    const currentState = currentMessage ? (job.deliveryState || "accepted") : "accepted"
+    if (rank[state] <= rank[currentState]) return { result: false }
+    return {
+      result: true,
+      next: { ...job, deliveredMessageId: wamid, deliveryState: state,
+        status: state === "delivered" || state === "read" ? "delivered" : "uncertain", updatedAt: now },
+    }
+  })
+  if (updated && (state === "delivered" || state === "read"))
     console.info("[whatsapp] resume handset delivery confirmed", { job: id.slice(0, 12), state })
 }

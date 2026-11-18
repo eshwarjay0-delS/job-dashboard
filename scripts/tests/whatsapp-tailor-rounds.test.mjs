@@ -224,7 +224,9 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
     '@/lib/resume-evidence': { confirmedCandidateStatements: () => [] },
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       hasResumeRecoveryForJD: async () => false,

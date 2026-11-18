@@ -82,7 +82,9 @@ function harness(runTailor) {
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      claimResumeRecoveryWorker: async () => 'test-claim-token',
+      releaseResumeRecoveryWorker: async () => true,
+      patchResumeRecovery: async () => true,
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,
