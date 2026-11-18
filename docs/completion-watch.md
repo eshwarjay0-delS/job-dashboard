@@ -1,3 +1,17 @@
+## 18 November 2026 02:09 UTC — direct Gmail account and mobile correction
+
+- Direct owner-authored message at `2026-11-17T21:18:26Z`: keep the existing four-account Gmail ceiling; removing it is not approved. The mobile menu must remain in normal flow below the sticky header, with no overlay, scrim, dimming or page inertness. Exact hamburger icon/button styling is not specified.
+- This direct message supersedes the earlier assistant-authored 18:08:40Z summary as the approval source. The historical 3–4 account wording in `docs/gmail.md` remains context; the current ceiling is four. PR #440's no-cap proposal stays unapproved.
+- Updated Plan & Vision to revision `2026-11-18.6`, added a provenance addendum, a dedicated REA session and a regression test. Plan commit `b19a3d0f11b275ad6f8830535892f3857643f07b`, revision commit `ef6e35d815b18d92bd9992e4541a4e0cc8cca23e`, provenance commit `b1b635758d98279394365a00c954dff22be87872`, REA commit `cc543c4b58c57829e39a515434a335d211d738d5`, regression commit `86671ac0bfec02571565ede36b399106de13bec2`, journal commit `20fed1a2ca07c63ceeb5926d231738ba4cd45a6f`.
+- PR #435 remains DRAFT. Its recorded source gates passed on head `9e041f6306e227d267317a174bb30b623d9db6c6`: full CI `44207751371`, Kompas baseline `44207751254`, Plan/REA `44207751272`. Real two-inbox collision, selected-From, reconnect/mute and narrow-phone acceptance remain missing. No Gmail API/OAuth, inbox mutation, outbound email or proactive worker was activated.
+- Read-only Supabase aggregate confirms 3 accounts across 1 owner, 2,002 cached threads, latest sync `2026-11-10 14:44:44.277 UTC`, latest thread update `14:46:49.790 UTC`, and zero sync/thread updates in the last 24h. This is not evidence of current synchronization.
+- Gmail Retry-After PR #432 has source gates green on head `40b214458ff8acfabc7ab2a82e6c546e45fcdcbe` (full CI `43905714073`, Plan/REA `43905714093`, Kompas baseline `43905714097`), but it is not live. The last 24h Vercel runtime-error query returned no grouped errors; the project reports `live:false`, so this is not proof of live use.
+- Production remains blocked: latest production attempt `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED, canonical alias remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`, and protected preview needs the owner-controlled private token. No unpause, bypass, billing change, preview or deployment occurred.
+
+Continue: finish exact-head full CI, Plan/REA and Kompas baseline on the final PR #442 branch head; then let Safe Merge Gate review it. After the authorized protected-preview path is restored, validate #435 with two inboxes and a narrow phone. Keep #440 unapproved and all Gmail workers/sends disabled.
+
+---
+
 ## 18 November 2026 01:46 UTC — exact-head REA correction verified
 
 - The earlier PR #442 Plan/REA failure is fixed without weakening the repository-path test. The external read-only aggregate `public.mfit_crawl_jobs and public.mfit_crawl_runs` is now a descriptive REA source label, not `sources[].path`.
