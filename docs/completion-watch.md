@@ -1,3 +1,12 @@
+## 18 November 2026 20:45 UTC — dedicated WhatsApp gate now runs route concurrency test
+
+- The workflow path filter already included `scripts/tests/whatsapp-single-request.test.mjs`, but its actual `node --test` command omitted it. The route-level same-JD concurrency test therefore ran in full CI but not in the dedicated WhatsApp recovery gate.
+- The child branch now adds that test file to the dedicated recovery command. Workflow commit: `9d5e357d68fcde807abc57f8b8d27e73b54dd466`; journal commit: `c881fe8faaa384b485ae9ad7db140ac1daca81a3`.
+- The prior exact-head recovery run `44393340914` began before this workflow change and does not validate the expanded command. A new exact-head recovery run is required.
+- No runtime behavior, external message, R2 write, production database or deployment changed.
+
+Continue: verify the new exact-head WhatsApp recovery and Plan/REA gates; then run full CI on parent #433 after Safe Merge Gate sequences this child correction.
+
 ## 18 November 2026 20:40 UTC — WhatsApp concurrency regression fixture correction
 
 - PR #433 exact head `04b74bbf63986134871c43374bbdc75c78e51677` full CI `44390742971` failed one test only: `same JD starts once concurrently and its lease releases for a deliberate retry` observed 2 tailor calls instead of 1 (93/94 passed).
