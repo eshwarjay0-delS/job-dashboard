@@ -110,14 +110,12 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   await run()
   assert.equal(runs, 2, 'resending the same pair deliberately can retry instead of disappearing')
   assert.equal(deliveries, 2)
-  const beforeTimeoutMessage = said.length
   failNext = true
   await run()
   assert.equal(runs, 3)
-  assert.equal(deliveries, 2, 'an upload-only provider timeout does not send the uploaded original')
-  assert.ok(said.length > beforeTimeoutMessage)
-  assert.match(said.at(-1) || '', /ran out of time just now/)
-  assert.doesNotMatch(said.at(-1) || '', /provider timeout/)
+  assert.equal(deliveries, 3, 'a provider failure sends only the explicitly selected same-account library fallback')
+  assert.match(docs.at(-1)?.caption || '', /Original resume — NOT TAILORED/)
+  assert.doesNotMatch(docs.at(-1)?.caption || '', /provider timeout/i)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'a failed rewrite also releases its claim')
   await run()
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
