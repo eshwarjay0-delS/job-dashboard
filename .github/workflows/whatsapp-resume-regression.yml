@@ -49,4 +49,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs scripts/tests/whatsapp-recovery-durability.test.mjs
+      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-single-request.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs scripts/tests/whatsapp-recovery-durability.test.mjs
