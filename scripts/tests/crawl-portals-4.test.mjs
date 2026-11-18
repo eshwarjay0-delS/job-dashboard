@@ -159,9 +159,10 @@ test('the technology filter leaves out engineers, managers, clerks and technicia
     assert.equal(isTechTitle(t), true, t)
 })
 
-test('twenty-one portals are registered once each; the ones still to read are listed', () => {
+test('twenty active portals are registered once each; eTeam remains pending until its public feed is verified', () => {
   const keys = ADAPTERS.map(a => a.portal)
-  assert.equal(new Set(keys).size, keys.length); assert.equal(keys.length, 21)
+  assert.equal(new Set(keys).size, keys.length); assert.equal(keys.length, 20)
   for (const k of ['kore1', 'kavaliro', 'mitchellmartin', 'judge', 'genesis10', 'pyramid', 'addison', 'csi']) assert.ok(keys.includes(k), k)
+  assert.ok(PENDING_PORTALS.includes('eteam'))
   assert.ok(!PENDING_PORTALS.some(k => keys.includes(k)))
 })
