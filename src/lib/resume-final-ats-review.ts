@@ -83,13 +83,21 @@ export function parseFinalAtsReview(raw: string, allowedTerms: readonly string[]
       throw new Error("invalid_score_type");
     }
     if (!Number.isFinite(scoreValue) || scoreValue < 0 || scoreValue > 100) throw new Error("invalid_score");
+    const hasStringArray = (value: unknown): value is string[] =>
+      Array.isArray(value) && value.every((candidate) => typeof candidate === "string");
+    if (
+      !Object.prototype.hasOwnProperty.call(parsed, "missing") ||
+      !Object.prototype.hasOwnProperty.call(parsed, "weak") ||
+      !hasStringArray(parsed.missing) ||
+      !hasStringArray(parsed.weak)
+    ) {
+      throw new Error("invalid_gap_arrays");
+    }
     const canonical = new Map<string, string>();
     for (const term of unique(allowedTerms)) canonical.set(norm(term), term);
-    const collect = (value: unknown): string[] => {
-      if (!Array.isArray(value)) return [];
+    const collect = (value: readonly string[]): string[] => {
       const out: string[] = [];
       for (const candidate of value) {
-        if (typeof candidate !== "string") continue;
         const term = canonical.get(norm(candidate));
         if (term) out.push(term);
       }
