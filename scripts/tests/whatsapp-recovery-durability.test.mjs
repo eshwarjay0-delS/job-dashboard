@@ -467,3 +467,134 @@ test("a Meta-sent document cannot be reset to pending by a late retry", async ()
   assert.equal(current.deliveryState, "sent")
   assert.equal(current.deliveredMessageId, "wamid-sent")
 })
+
+test("two workers paused on the same recovery ETag produce exactly one atomic claim", async () => {
+  let waiters = 0
+  let bothReadyResolve
+  let releaseResolve
+  const bothReady = new Promise(resolve => { bothReadyResolve = resolve })
+  const gate = new Promise(resolve => { releaseResolve = resolve })
+  const jobId = id(47)
+  let api
+  api = harness({ beforePutIfMatch: async key => {
+    if (key !== api.recoveryKey(jobId) || waiters >= 2) return
+    waiters++
+    if (waiters === 2) bothReadyResolve()
+    await gate
+  } })
+  await api.enqueueResumeRecovery(input(47))
+  const first = api.claimResumeRecoveryWorker(jobId)
+  const second = api.claimResumeRecoveryWorker(jobId)
+  await bothReady
+  releaseResolve()
+  const claims = await Promise.all([first, second])
+  assert.equal(claims.filter(Boolean).length, 1)
+  const winner = claims.find(Boolean)
+  const current = await api.readResumeRecovery(jobId)
+  assert.equal(current.claimToken, winner)
+  assert.ok(current.claimUntil > Date.now())
+})
+
+test("a signed failed callback wins an in-flight stale HTTP acceptance write", async () => {
+  let armed = false
+  let enteredResolve
+  let releaseResolve
+  const entered = new Promise(resolve => { enteredResolve = resolve })
+  const gate = new Promise(resolve => { releaseResolve = resolve })
+  const jobId = id(48)
+  let api
+  api = harness({ beforePutIfMatch: async key => {
+    if (armed && key === api.recoveryKey(jobId)) {
+      armed = false
+      enteredResolve()
+      await gate
+    }
+  } })
+  await api.enqueueResumeRecovery(input(48))
+  const token = await api.claimResumeRecoveryWorker(jobId)
+  await api.patchResumeRecovery(jobId, { status: "sending" }, token)
+  armed = true
+  const lateAcceptance = api.markResumeDocumentAccepted(jobId, "wamid-failed-race", token)
+  await entered
+  await api.recordResumeDeliveryStatus("wamid-failed-race", "failed", jobId + ":" + token)
+  releaseResolve()
+  assert.equal(await lateAcceptance, false)
+  const current = await api.readResumeRecovery(jobId)
+  assert.equal(current.status, "pending")
+  assert.equal(current.deliveryState, "failed")
+  assert.equal(current.deliveredMessageId, "wamid-failed-race")
+  assert.equal(current.attempts, 1)
+})
+
+test("an old delivered callback beats a newer retry acceptance that has not committed", async () => {
+  let armed = false
+  let enteredResolve
+  let releaseResolve
+  const entered = new Promise(resolve => { enteredResolve = resolve })
+  const gate = new Promise(resolve => { releaseResolve = resolve })
+  const jobId = id(49)
+  let api
+  api = harness({ beforePutIfMatch: async key => {
+    if (armed && key === api.recoveryKey(jobId)) {
+      armed = false
+      enteredResolve()
+      await gate
+    }
+  } })
+  await api.enqueueResumeRecovery(input(49))
+  const first = await api.claimResumeRecoveryWorker(jobId)
+  await api.patchResumeRecovery(jobId, { status: "sending" }, first)
+  assert.equal(await api.markResumeDocumentAccepted(jobId, "wamid-old-race", first), true)
+  await api.recordResumeDeliveryStatus("wamid-old-race", "failed", jobId + ":" + first)
+  assert.equal(await api.releaseResumeRecoveryWorker(jobId, first), true)
+  const second = await api.claimResumeRecoveryWorker(jobId)
+  assert.ok(second && second !== first)
+  await api.patchResumeRecovery(jobId, { status: "sending" }, second)
+  armed = true
+  const newAcceptance = api.markResumeDocumentAccepted(jobId, "wamid-new-race", second)
+  await entered
+  await api.recordResumeDeliveryStatus("wamid-old-race", "delivered", jobId + ":" + first)
+  releaseResolve()
+  assert.equal(await newAcceptance, false)
+  const current = await api.readResumeRecovery(jobId)
+  assert.equal(current.status, "delivered")
+  assert.equal(current.deliveryState, "delivered")
+  assert.equal(current.deliveredMessageId, "wamid-old-race")
+})
+
+test("a delivered callback wins an in-flight defer retry after a prior Meta failure", async () => {
+  let armed = false
+  let enteredResolve
+  let releaseResolve
+  const entered = new Promise(resolve => { enteredResolve = resolve })
+  const gate = new Promise(resolve => { releaseResolve = resolve })
+  const jobId = id(50)
+  let api
+  api = harness({ beforePutIfMatch: async key => {
+    if (armed && key === api.recoveryKey(jobId)) {
+      armed = false
+      enteredResolve()
+      await gate
+    }
+  } })
+  await api.enqueueResumeRecovery(input(50))
+  const token = await api.claimResumeRecoveryWorker(jobId)
+  await api.patchResumeRecovery(jobId, { status: "sending" }, token)
+  assert.equal(await api.markResumeDocumentAccepted(jobId, "wamid-defer-race", token), true)
+  await api.recordResumeDeliveryStatus("wamid-defer-race", "failed", jobId + ":" + token)
+  const before = await api.readResumeRecovery(jobId)
+  assert.equal(before.status, "pending")
+  assert.equal(before.deliveryState, "failed")
+  assert.equal(before.attempts, 1)
+  armed = true
+  const staleDefer = api.deferResumeRecovery(jobId, "late_defer", undefined, token)
+  await entered
+  await api.recordResumeDeliveryStatus("wamid-defer-race", "delivered", jobId + ":" + token)
+  releaseResolve()
+  assert.equal(await staleDefer, false)
+  const current = await api.readResumeRecovery(jobId)
+  assert.equal(current.status, "delivered")
+  assert.equal(current.deliveryState, "delivered")
+  assert.equal(current.deliveredMessageId, "wamid-defer-race")
+  assert.equal(current.attempts, 1)
+})
