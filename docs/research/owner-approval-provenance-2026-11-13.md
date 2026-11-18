@@ -11,7 +11,7 @@
 
 ### Gmail/mobile
 
-The historical owner-vision document docs/gmail.md, labelled as captured 17 October 2026, records 3–4 connected accounts, four mobile account toggles, per-account identity/From, inbox digest and Poke-style proactive mail. Preserve that as historical product direction; do not turn the range into a hard cap. The current 13 Nov owner instruction directly reaffirms Poke-inspired multi-account Gmail/mobile updates. Accessible prior-conversation retrieval did not recover a direct owner message specifying per-account Calendar targeting, exact waiting-on-them radar semantics or the exact hamburger interaction/layout; those details remain proposed. Keep PR #375 DRAFT.
+The historical owner-vision document docs/gmail.md, captured 17 October 2026, records 3–4 connected accounts, four mobile account toggles, per-account identity/From, inbox digest and Poke-style proactive mail. That range alone did not establish a hard cap; the later direct owner message on 17 November explicitly retains the existing four-account ceiling. The 13 Nov instruction directly reaffirms Poke-inspired multi-account Gmail/mobile updates. Per-account Calendar targeting and exact waiting-on-them radar semantics remain proposed. The 17 Nov owner message now directly specifies the mobile menu behavior: normal flow below the sticky header, no overlay, scrim, dimming or page inertness; exact icon/button styling remains unspecified. Keep PR #375 DRAFT.
 
 PR #375 head 8b4a480313504240c5f5ad69596074c7ecedf549 passed full CI 43494969062, Kompas baseline 43494968954, and Plan/REA schema 43494969251. There is no protected preview, two-inbox acceptance, real Gmail API call, inbox mutation, outbound email, or narrow-phone test.
 
@@ -24,6 +24,15 @@ PR #376 head 6f566197d763b6137c8608c2db3cd670a2278c5b passed full CI 43494635050
 ## Separate Kompas rollback release status
 
 PR #373 restored the approved pre-#372 answer path and merged as 026c72968e45314ff0a99f701942c966e79f0a1e. Its exact PR-head full CI, Kompas baseline, cross-device, Plan/REA and Windows packaging checks passed. The runtime rollback code is already deployed in READY production deployment dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb at ancestor SHA 024177889d092f30aaeada20fab649aa41c9d1f4. GitHub compare 024177..026c729 shows only documentation/Plan/REA files differ; the redundant deployment request for 026c729 was canceled by the Ignored Build Step, so only the exact merge SHA's documentation is not live. A preview attempt from PR #374 was also canceled by the same ignore gate. The project Git configuration enables deployments only on master; the protected preview workflow still requires the private KOMPAS_VERCEL_API_TOKEN. Do not change the ignore rule, bypass the token, or promote a preview.
+
+## 17 November 2026 21:18:26 UTC — direct owner correction for Gmail accounts and mobile navigation
+
+The owner directly required the existing four-account Gmail ceiling to remain; removing it is not approved. The same message requires the mobile menu to remain in normal flow below the sticky header, without an overlay, scrim, dimming or page inertness. This supersedes the earlier assistant-authored 18:08:40 UTC summary as the authoritative provenance and resolves the prior uncertainty about menu behavior. The exact hamburger icon/button styling was not specified.
+
+- PR #440, which proposes removing the cap, remains unapproved and must not be merged or applied.
+- PR #435's normal-flow mobile menu and four-account migration guard are the implementation candidate. Exact two-inbox collision, selected-From, reconnect/mute and narrow-phone acceptance remain outstanding.
+- Per-account Calendar targeting and waiting-on-them radar semantics remain proposed, not approved. Proactive workers, automatic notifications/sends and Gmail API/OAuth calls remain disabled until separately approved.
+- The historical 3–4 account description in docs/gmail.md remains preserved as context; the current implementation ceiling is four.
 
 ## Operational boundaries
 
@@ -49,9 +58,9 @@ Draft PR #381 adds a regression guard and corrects those comments and records. I
 PR #381 status-record predecessor `d66400fbb68e9b1fa1332a8f0ae77dfe16fceb85` passed full CI `43562602530`, manual-only regression `43562602396`, crawler regression `43562602437`, Kompas baseline `43562602417`, and Plan/REA schema `43562602388`. The full Webpack build completed with no failed steps. A documentation-only follow-up records these results and requires exact-head revalidation before Safe Merge Gate review. The production ancestor already has no `/api/crawl/run` cron; no runtime schedule change or crawl occurred.
 
 
-## 17 November 2026 — explicit four-account ceiling correction (supersedes earlier interpretation)
+## 17 November 2026 — four-account ceiling correction (superseded provenance note)
 
-The latest accessible owner-authored correction at **2026-11-17T18:08:40Z** explicitly keeps the existing four-account ceiling; removal is not approved. This supersedes the earlier assistant-authored interpretation above that the historical 3–4 range should not be treated as a hard cap. Preserve the original 17 Oct product vision as historical context, but the current implementation ceiling remains four until the owner explicitly approves a change.
+An assistant summary at **2026-11-17T18:08:40Z** reported that the existing four-account ceiling remained. The later direct owner-authored message at **2026-11-17T21:18:26Z** below is the authoritative source and also defines the mobile menu behavior. Preserve the earlier summary as history, but cite the direct owner message for current scope.
 
 - PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440), which proposes removing the cap, remains DRAFT/unapproved. Do not merge it or apply its migration.
 - PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) adds `scripts/tests/gmail-account-cap.test.mjs`, which scans migration history and asserts that the latest `public.identity_list_google_workspace_accounts` definition retains primary-first ordering and `LIMIT 4`; the full-CI Gmail isolation step runs it.
