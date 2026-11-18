@@ -1,5 +1,5 @@
 // WhatsApp must always deliver a resume file for the profile already chosen.
-// Nov 6, 2026: the EASM run refused a 30.8% rewrite and sent no file.
+// Nov 6, 2026: the EASM run refused a 30.8% rewrite; the selected same-account library resume is the approved offline failsafe.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -23,13 +23,13 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Candidate One\ncandidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const HOUSTON = 'Candidate One\ncandidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024\nReviewed supplier assessments and tracked remediation.'
 const SAINT_LOUIS = 'Candidate Two\ncandidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
 const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
 const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/GRC/easm.docx`
 const SAINT_LOUIS_PATH = `${TEST_USER_ROOT}/candidate2@example.test/GRC/grc.docx`
-const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
+const REWRITTEN = HOUSTON.replace('Reviewed supplier assessments and tracked remediation.', 'Reviewed supplier assessments; tracked remediation.')
 
 function harness(runTailor) {
   const docs = []
@@ -111,21 +111,18 @@ const low = {
   keyword_analysis: { matched: [], added: ['supplierninja'], missing: ['soc 2', 'tprm', 'supplier', 'vendor'] },
 }
 
-test('a below-floor rewrite still delivers that Word file and names the missing terms', async () => {
+test('a below-floor rewrite with an unsupported JD-only addition is held and sends the selected library resume', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
   await generate('15550101', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.match(docs[0].caption, /supplierninja/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
-  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.doesNotMatch(docs[0].body, /supplierninja/)
+  assert.doesNotMatch(docs[0].caption, /supplierninja/)
+  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
   assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
 
@@ -160,7 +157,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
-test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
+test('a finished rewrite with an unsupported JD-only addition stays held despite a role evidence gap', async () => {
   const finished = {
     ...low,
     token: 'easm-scored',
@@ -174,42 +171,59 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Skills your resume already supports: 30\.8%/)
-  assert.match(docs[0].caption, /ATS parse check: 92%/)
-  assert.match(docs[0].caption, /Risk factor:/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.doesNotMatch(docs[0].caption, /was not rewritten/)
-  assert.doesNotMatch(docs[0].caption, /marked incomplete/)
-  assert.doesNotMatch(docs[0].caption, /closest matching resume/)
-  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.doesNotMatch(docs[0].body, /supplierninja/)
+  assert.doesNotMatch(docs[0].caption, /supplierninja/)
+  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
 
-test('a slow constructed-JD rewrite sends the rewritten file, not the original', async () => {
+test('a slow completed rewrite sends only the evidence-preserving edited file', async () => {
   const finished = {
     token: 'iam-rewritten', score: 97, coverage: 97, supported_coverage: 98,
-    diff: [{ section: 'Experience', before: 'Administered access.', after: 'Administered access, using SailPoint and CyberArk.' }],
+    diff: [{ section: 'Experience', before: 'Reviewed supplier assessments and tracked remediation.', after: 'Reviewed supplier assessments; tracked remediation.' }],
     quality: { status: 'coverage_met', matched: 97, total: 100, missing: [], incomplete: false },
     quality_blockers: [],
+    unverified_added_keywords: [],
     ats: { score: 100, passed: true, checks: [], issues: [] },
-    keyword_analysis: { matched: ['okta'], added: ['sailpoint', 'cyberark'], missing: [] },
+    keyword_analysis: { matched: ['supplier assessments', 'remediation'], added: [], missing: [] },
   }
   const { generate, docs, said, filesFor } = harness(async () => {
     await new Promise(resolve => setTimeout(resolve, 50))
     return finished
   })
   await generate('15550101', {
-    jdId: 'iam-slow', jd: 'IAM consultant with SailPoint and CyberArk',
-    resumePath: HOUSTON_PATH, resumeName: 'Senior IAM Business Analyst',
+    jdId: 'iam-slow', jd: 'EASM cybersecurity engineer with supplier assessments and remediation',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].body, /Reviewed supplier assessments; tracked remediation/)
   assert.match(docs[0].caption, /97%/)
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
-  assert.doesNotMatch(docs[0].caption, /did not finish cleanly/)
   assert.doesNotMatch(docs[0].body, /candidate2/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+})
+
+test('a cached blocker-only unverified JD result is held and sends the selected library resume', async () => {
+  const blockerOnly = {
+    ...low,
+    token: 'easm-cached-hard-hold',
+    unverified_added_keywords: [],
+    quality_blockers: ['unverified_jd_terms'],
+    keyword_analysis: { matched: [], added: [], missing: ['soc 2', 'tprm', 'supplier', 'vendor'] },
+  }
+  const { generate, docs, said, filesFor } = harness(async () => blockerOnly)
+  await generate('15550101', {
+    jdId: 'easm-cached-hard-hold', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.doesNotMatch(docs[0].body, /supplierninja/)
+  assert.doesNotMatch(docs[0].caption, /supplierninja/)
+  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
 
 test('roles that were not rewritten still send the chosen library file', async () => {

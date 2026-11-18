@@ -1,5 +1,49 @@
 # MFit backlog reconciliation — 16 November 2026
 
+## 16 November 2026 04:31 UTC — continuation update (supersedes the 02:32 snapshot below)
+
+The earlier sections remain historical evidence. Use this addendum for current status.
+
+### Canonical source and production
+
+- Current canonical master: `11f14891cfc07ba706043c78d1c9b7432d92aec0` (PR #425 merged).
+- PR #425's normal Git-linked Vercel deployment `dpl_2MbEReRXNuKp19CXp4muJZ2gvbt3` is **CANCELED** by the configured Ignored Build Step because the merge commit did not include the required `[ship]` marker. The canonical `job-dashboard-fawn.vercel.app` alias remains READY at deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The Plan & Vision runtime data merged in #425 is not live. This is not a Vercel quota failure; do not bypass the normal release guard.
+- New approved hard-hold restack: [PR #427](https://github.com/eshwarjay0-delS/job-dashboard/pull/427), DRAFT, branch `fix/whatsapp-jd-hard-hold-current-master-20261116`, based on master `11f14891`. Exact pre-docs-finalization head `a3af7b361333ee4b4fead8629b673620091a8428` passed full CI `43803798646` (43 steps, including the WhatsApp selected-email/failsafe integration suite), WhatsApp recovery `43803798682`, Kompas baseline `43803798631`, and Plan/REA schema `43803798644`. A documentation-only finalization commit requires fresh exact-head checks. PR #427 is not merged, previewed or deployed.
+- The legitimate protected preview is still unavailable without the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. The Safe Merge Gate is enabled and will review; do not force-merge this security-sensitive hard-hold change or bypass Vercel protection.
+
+### WhatsApp resume failure and source/JD evidence
+
+- The 17 Oct 17:28 Chicago failure remains unverified. The matching Risk & Controls Atlanta/GA onsite contract JD was reopened read-only. The 15 Nov correction supersedes earlier claims that the exact uploaded source bytes were recovered: a prior private archive review found a similar copy, not proven to be the exact WhatsApp-uploaded file. Current Library search/list surfaced several candidate DOCX files created 15–16 Oct, but no per-run source reference/R2 object version proves which one was selected. A current Library listing for DOCX files created on 17 Oct returned no generated output file. The output DOCX, R2 object/version, request/webhook correlation, Meta message ID and signed delivered/read receipt remain missing. Do not replay.
+- The 14 Nov owner-approved hard hold rejects unsupported JD-only experience additions. The prior #426 head's full CI failed two stale integration expectations because tests expected the unsupported synthetic term `supplierninja` to be delivered; the source correctly selected the same-account library fallback. PR #427 corrects those integration assertions, adds blocker-only cached-result coverage, and preserves the 70% raw / 95% supported WhatsApp policy. This is source/test evidence, not a live resume/JD score.
+- [PR #423](https://github.com/eshwarjay0-delS/job-dashboard/pull/423) confirmed-skill alignment remains DRAFT at head `fccf93c1a3377149172d012e1158e5e2cea0a973`; its full CI, WhatsApp recovery, baseline and Plan/REA gates passed, but it is mergeable=false on stale base `8ad319d`. Protected preview, owner-authorized resume/JD/explicit-confirmation acceptance and exported-DOCX verification remain open.
+- [PR #417](https://github.com/eshwarjay0-delS/job-dashboard/pull/417) is only the score-only first stage of final-DOCX review. The 3 Nov owner approval for the bounded Gemini score → evidence-only correction → re-export → recheck loop supersedes the later 15 Nov note that said no approval had been found. The correction loop is still unimplemented; no exact retry count was specified, so reuse the existing request/deadline budget rather than inventing a new number.
+- [PR #411](https://github.com/eshwarjay0-delS/job-dashboard/pull/411) uploaded-original-after-provider-timeout behavior remains a separate unresolved approval. The approved same-account library fallback is not the same behavior.
+
+### Gmail/Poke and mobile
+
+- [PR #424](https://github.com/eshwarjay0-delS/job-dashboard/pull/424) multi-account Gmail digest/mobile navigation remains DRAFT at head `581d2298f384af36e4f039d4929b8056890694c8`; full CI, Kompas baseline and Plan/REA passed, but it is mergeable=false on stale base `8ad319d`. No protected preview, two-inbox acceptance or real phone acceptance exists.
+- Poke-inspired multi-account direction is approved at high level. The Poke worker remains disabled. Exact per-account Calendar targeting, a "waiting on them" radar and the final hamburger/navigation behavior are not owner-approved. No email was sent and no inbox state was mutated.
+
+### Contract job search/crawler
+
+- [PR #419](https://github.com/eshwarjay0-delS/job-dashboard/pull/419) C2H/Right To Hire classifier remains DRAFT at head `6532435cde0ecebf55c6b87a4b8311f75ff94c86`; full CI, crawler regression, Kompas baseline and Plan/REA passed, but the alias mapping has no recovered direct owner approval. Do not ship C2H semantics as approved.
+- [PR #422](https://github.com/eshwarjay0-delS/job-dashboard/pull/422) crawler-abort diagnostics remains DRAFT at head `eab1dcde9cad2db0d4b5e6b92739fa802a8bc153`; its full CI, crawler regression, Kompas baseline and Plan/REA passed. No crawl or portal request was made.
+- Manual/on-demand only remains authoritative; no daily cron. Robert Half remains manual navigation only. No admin crawl, job submission or database write occurred.
+
+### Kompas and evidence
+
+- Chief Relevance still lacks 50 authenticated same-question Kompas/ChatGPT answer pairs and independent human scorecards. Native Windows/phone/WhatsApp/mobile voice and cross-device acceptance are unverified.
+- Kompas Continuous Voice Delivery is disabled; no duplicate voice/caption work was started. No separate Bible-Keeper automation was visible in the accessible automation inventory.
+- No local repository checkout or `node_modules` is mounted in this scheduled environment. Source edits were made through GitHub; GitHub Actions is the test runner. No local npm test/build is claimed. The changed acceptance predicate is plain TypeScript and the tests are Node-based; no Next.js API was introduced.
+
+### Continue
+
+Continue: rerun exact-head checks after the PR #427 documentation finalization, then obtain MFit Safe Merge Gate review. Keep protected-preview, security-sensitive merge, production-release and real Meta acceptance gates separate. Next resume slices remain the approved final-DOCX Gemini correction loop and the confirmed-skill/role-evidence alignment; do not claim 95–100% live matching from synthetic CI.
+
+---
+
+
+
 ## Scope and evidence rules
 
 This is a current-master reconciliation of the approved WhatsApp resume, factual resume/JD alignment, Poke-inspired Gmail/mobile, contract crawler and Kompas work. Approval, source implementation, tests, deployment and real user acceptance are separate states. No synthetic or unit-test result is treated as a live 98% resume match, delivered WhatsApp document, working phone UI or completed Kompas voice test.

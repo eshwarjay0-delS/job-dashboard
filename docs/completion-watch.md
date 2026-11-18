@@ -1,5 +1,56 @@
 # MFit Completion Watch
 
+## 16 November 2026 — latest approval and live-acceptance correction (2026-11-16T04:58:25.054Z)
+
+This entry supersedes the 04:13 UTC wording where it described the exact whole-delivery WhatsApp hard hold as owner-approved. Preserve that earlier text as historical record; use this correction for current decisions.
+
+### WhatsApp and resume
+
+- The 14 Nov owner-authored rule is explicit: honest coverage gaps may be disclosed, but unsupported experience claims must never pass the delivery gate and unverified_jd_terms is not an acceptable shortfall.
+- A separate 16 Nov owner instruction requires explicit Eshwar approval of the exact behavior that blocks the entire WhatsApp delivery for unverified/unsupported JD-only claims. Accessible owner-authored history does not contain that exact approval. PR #427 is therefore DRAFT and unapproved, despite 4/4 exact-head workflows passing on d7189b76087b6f0298481528df083943716eb218: full CI 43804784848, WhatsApp recovery 43804784902, Kompas baseline 43804784882 and Plan/REA 43804784926. Documentation-only commits have since moved the branch; all four checks must rerun on the new exact head. Do not mark ready, merge or deploy this hard-hold behavior until exact owner approval and the legitimate protected preview are both recorded.
+- Safe Merge Gate review #5915152506 found the approved same-account library fallback caption and tests do not explicitly enforce Original resume — NOT TAILORED. Add that exact label and a regression assertion; keep the uploaded-original-after-provider-timeout behavior in PR #411 separately blocked.
+- The 27 Oct owner instruction explicitly approves the closest-matched resume from the same account's library as the offline failsafe. It does not authorize sending the uploaded original after a provider timeout.
+- The 17 Oct 17:28 Chicago incident remains unverified: no exact generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID or signed delivery/read receipt was found. The Library search found candidate source files but no matching output DOCX. iZap's separate business connector is disconnected and reports zero messages on 17 Oct; this does not prove the MFit Meta webhook state. MFit connected_services shows seven WhatsApp entries disconnected. No replay or real send occurred.
+
+### ATS target provenance
+
+- 5 Oct owner instruction: at least 90% supported keywords is a minimum.
+- 3 Nov owner instruction: iterative expansion/rescoring to 95–100% coverage of genuinely supported JD requirements.
+- The 98% default was assistant wording, not an explicit user target. No owner-authored 6 Nov 70%/95% threshold decision or supersession was recovered. Treat 70/95 as repository-recorded/unverified, not owner-approved. Never claim a live 95–100% match from unit tests or keyword counts; verify the final exported DOCX against the original JD and confirmed experience.
+- The 3 Nov final-DOCX Gemini score → evidence-only correction → re-export → recheck loop is approved; PR #417 implements only the score-only first stage.
+
+### Gmail, crawler and Kompas
+
+- Gmail: up to four accounts; preserve separate identities/chains, account-scoped digest/Important, selected-From and mobile navigation that expands below the sticky header and pushes content down. Per-account sync-health cards remain unapproved; proactive worker/notifications remain disabled. Read-only DB: three sync rows for one user, all stale since 10 Nov 14:44 UTC; 2,002 cached threads last updated 14:46 UTC. No email was sent.
+- Contract crawler: manual/on-demand only; no daily contract cron; Robert Half manual-only; no auto-apply. The 15 Nov correction says Right To Hire / Contract To Perm → C2H remains unapproved; keep PR #419 DRAFT. Read-only DB: 14,566 jobs, 12,407 active, 21 portals; latest crawl 10 Nov 11:00 UTC. No crawl was run.
+- Kompas: 15 active account sessions, 7 tombstones and 28 artifacts, latest update 9 Nov. This is persisted data, not proof of second-device or native acceptance. Real authenticated 50-pair answers/human scorecards and Windows/phone/WhatsApp acceptance remain open.
+
+### Release and execution
+
+- Canonical master: 11f14891cfc07ba706043c78d1c9b7432d92aec0. Production alias job-dashboard-fawn.vercel.app remains READY at deployment dpl_7QVykeYoWSswLDgsQP99xF2piBn3, SHA b94e1629c544048d84a2b048ae83b21b612ab9dd.
+- PR #425's Plan & Vision runtime data is merged but not live: deployment dpl_2MbEReRXNuKp19CXp4muJZ2gvbt3 was canceled by the existing [ship] ignored-build guard. Do not alter the guard or manually bypass it.
+- The separate eshwarjay0-delS/kompas repository is at main 73af22b83596206d6262543bb9ba69cb2778e889, zero open PRs. Its own CLAUDE.md requires npm run verify before code changes; this environment has no checkout/node_modules and cannot resolve GitHub, so no local verify/build was run. Its Cloudflare Pages/D1/admin configuration remains owner-side.
+- MFit Safe Merge Gate completed this run with no eligible merge. It reviewed #427 and left it DRAFT. Kompas Continuous Voice Delivery remains disabled; no duplicate voice/caption edits were made. No separate Bible-Keeper automation appeared in the accessible inventory.
+
+Continue: keep #427 DRAFT until exact hard-hold approval, fallback label/test and protected preview are satisfied. Then continue the approved confirmed-experience DOCX acceptance and final-DOCX Gemini correction loop; restack Gmail/crawler branches only after shared-file sequencing is safe. Do not claim any feature complete from CI alone.
+
+
+## 16 November 2026 04:13 UTC — Continue: restack the approved WhatsApp JD-only hard hold
+
+This entry supersedes the pre-merge status in the 02:32 UTC note below.
+
+- Canonical master is now `11f14891cfc07ba706043c78d1c9b7432d92aec0`; PR #425 merged at 03:28:08 UTC. The normal Git-linked Vercel deployment `dpl_2MbEReRXNuKp19CXp4muJZ2gvbt3` was CANCELED by the existing Ignored Build Step because the merge commit did not contain the required `[ship]` marker. The active `job-dashboard-fawn.vercel.app` alias remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Plan & Vision runtime data from #425 is merged but not live; do not bypass the release guard or claim it deployed.
+- The 14 Nov owner-approved unsupported JD-only hard hold was implemented on prior PR #426. Exact-head full CI `43795909634` failed two integration assertions (tests 43 and 45 of `scripts/tests/whatsapp-resume-failsafe.test.mjs`); 53/55 passed. The failing tests expected a DOCX containing the synthetic unsupported term `supplierninja` to be sent. The actual source correctly held that rewrite and selected the same-account library resume. This is a stale test expectation, not proof of a runtime delivery regression.
+- New current-master restack PR: [#427](https://github.com/eshwarjay0-delS/job-dashboard/pull/427), branch `fix/whatsapp-jd-hard-hold-current-master-20261116`, DRAFT and mergeable against master. It carries the fail-closed source predicate and two unit cases, updates the webhook tests to assert the selected same-account library fallback for non-empty unsupported additions and the blocker-only cached shape, and changes the slow-success fixture to a source-supported rephrase. Exact pre-docs-finalization head `a3af7b361333ee4b4fead8629b673620091a8428` passed full CI `43803798646` (43 steps), WhatsApp recovery `43803798682`, Kompas baseline `43803798631` and Plan/REA `43803798644`. The documentation-only finalization commit must rerun all four checks. Code/test commits: `6b5995e41d4b5adc21433de85007b8019357f580`, `1d9ee1fdd6bbeccc886f9527d227c4911eeb1ff5`, `1fb0bd284ae1dd4559c12feb3c500f4bebc5ce36`.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema are pending on the final restack. Keep the PR DRAFT until they pass and the MFit Safe Merge Gate reviews it. A legitimate protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection.
+- The 17 Oct 17:28 Chicago event remains unverified: the matching Risk & Controls Atlanta/GA onsite contract JD was reopened read-only. A read-only Library search found several candidate DOCX files created 15–16 Oct, but no per-run source reference/R2 object version proves which one the request selected; the generated output DOCX, request/webhook correlation, Meta message ID and signed delivery/read receipt are also missing. The read-only iZap status reported no linked WhatsApp Business number, inbound webhook history or proven outbound delivery. No replay, test send, model call, R2 write or production mutation occurred.
+- PR #411's uploaded-original-after-provider-timeout behavior remains a separate unresolved owner decision and must not be bundled into this hard-hold fix. The approved closest matched same-account library fallback remains distinct and unchanged.
+- PR #423 confirmed-skill alignment, PR #417 final-DOCX Gemini correction loop, PR #424 Poke-inspired Gmail/mobile, PR #419 C2H alias, PR #422 crawler diagnostics and approved Kompas work remain in the backlog with their separate preview/device/approval gates. Contract crawling remains manual/on-demand only; no daily contract cron and Robert Half remains manual-only. The Poke worker remains disabled. Kompas Continuous Voice Delivery is disabled; no duplicate voice/caption work was started.
+
+Continue: rerun exact-head checks after this documentation finalization, then obtain MFit Safe Merge Gate review for PR #427. Keep protected-preview, security-sensitive merge, production-release and real Meta acceptance gates separate.
+
+---
+
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
 - Backlog reconciliation PR #425 is on branch `docs/mfit-backlog-reconciliation-20261116` (current head is shown on the PR; still DRAFT). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; GitHub compare shows master 15 commits ahead/0 behind. Most differences are CI/workflows, AGENTS, docs, tests and Plan/REA. However, `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`, and `src/lib/plan-vision-journal.ts` by the journal component and `/api/vision/live`; these are user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production configuration changed. After Safe Merge Gate approval and merge, a normal production deployment, READY check and canonical alias verification are required to publish the updated Plan & Vision UI. No deployment has occurred. PR #416 fixture-privacy correction is merged into master at the current SHA.

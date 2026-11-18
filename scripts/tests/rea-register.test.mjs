@@ -79,9 +79,11 @@ test('Gmail and crawler scope details without direct owner approval stay blocked
  const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
  assert.match(plan,/not owner-approved/)
  assert.ok(plan.includes('historical owner-vision document docs/gmail.md'))
- assert.ok(plan.includes('not a hard maximum'))
+ assert.ok(plan.includes('up to four connected Gmail accounts'))
+ assert.match(plan,/mobile navigation is explicitly approved.*push content down/i)
+ assert.match(plan,/sync-health cards remain unapproved/i)
  assert.match(plan,/manual\/on-demand only/i)
- assert.match(plan,/not directly owner-confirmed/)
+ assert.match(plan,/Right To Hire \/ Contract To Perm → C2H remains unapproved/i)
 })
 
 test('WhatsApp offline fallback and confirmed-skill restacks remain blocked until acceptance', () => {
