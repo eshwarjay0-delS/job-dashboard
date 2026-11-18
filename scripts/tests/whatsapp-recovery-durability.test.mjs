@@ -432,3 +432,22 @@ test("R2 recovery CAS fails closed if GetObject omits its ETag", async () => {
   const store = loadR2Storage(async () => ({ Body: { transformToByteArray: async () => Buffer.from("before") } }))
   await assert.rejects(store.getWithEtag("whatsapp/resume-recovery/job.json"), /omitted ETag/)
 })
+
+
+test("a signed callback can reconcile an ambiguous send after its worker lease is released", async () => {
+  const api = harness()
+  const jobId = id(45)
+  await api.enqueueResumeRecovery(input(45))
+  const token = await api.claimResumeRecoveryWorker(jobId)
+  await api.patchResumeRecovery(jobId, { status: "sending" }, token)
+  await api.patchResumeRecovery(jobId, { status: "uncertain", errorCode: "delivery_unconfirmed" }, token)
+  assert.equal(await api.releaseResumeRecoveryWorker(jobId, token), true)
+  const afterRelease = await api.readResumeRecovery(jobId)
+  assert.equal(afterRelease.claimToken, undefined)
+  assert.equal(afterRelease.attemptToken, token)
+  await api.recordResumeDeliveryStatus("wamid-late", "delivered", jobId + ":" + token)
+  const current = await api.readResumeRecovery(jobId)
+  assert.equal(current.status, "delivered")
+  assert.equal(current.deliveryState, "delivered")
+  assert.equal(current.deliveredMessageId, "wamid-late")
+})

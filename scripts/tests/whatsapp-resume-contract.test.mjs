@@ -164,6 +164,7 @@ test('legacy recovery uses stable JD identity and refuses a duplicate persisted 
 
 test('Meta callback correlation distinguishes a newer attempt from an older message id', () => {
   assert.ok(queue.includes('const opaqueMatch = /^([a-f0-9]{64})(?::([a-f0-9]{32}))?$/'))
-  assert.match(queue, /job\.claimToken === attemptToken/)
+  assert.match(queue, /job\.attemptToken === attemptToken/)
+  assert.match(queue, /job\.claimToken !== attemptToken/)
   assert.match(queue, /job\.deliveredMessageId === wamid/)
 })

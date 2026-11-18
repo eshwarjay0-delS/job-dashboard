@@ -37,6 +37,8 @@ export type ResumeRecoveryJob = {
   claimToken?: string
   /** Six minutes exceeds this route's 300-second platform ceiling. */
   claimUntil?: number
+  /** Retained after lease release so late signed callbacks can reconcile this exact send attempt. */
+  attemptToken?: string
   /** The chat was already told this attempt did not send a file. Later quiet retries stay quiet. */
   toldUser?: boolean
 }
@@ -78,7 +80,7 @@ export async function readResumeRecovery(id: string): Promise<ResumeRecoveryJob 
 }
 
 export async function enqueueResumeRecovery(input: Omit<ResumeRecoveryJob,
-  "version" | "status" | "createdAt" | "updatedAt" | "attempts" | "retryAt" | "claimToken" | "claimUntil"
+  "version" | "status" | "createdAt" | "updatedAt" | "attempts" | "retryAt" | "claimToken" | "claimUntil" | "attemptToken"
 >): Promise<ResumeRecoveryJob> {
   const now = Date.now()
   const fresh: ResumeRecoveryJob = { ...input, version: 1, status: "pending", createdAt: now, updatedAt: now, attempts: 0, retryAt: now }
@@ -95,7 +97,7 @@ export async function claimResumeRecoveryWorker(id: string): Promise<string | nu
         job.deliveryState === "delivered" || job.deliveryState === "read") return { result: null }
     if (job.claimToken && (job.claimUntil || 0) > now) return { result: null }
     const token = randomBytes(16).toString("hex")
-    return { result: token, next: { ...job, claimToken: token, claimUntil: now + RECOVERY_CLAIM_MS, updatedAt: now } }
+    return { result: token, next: { ...job, claimToken: token, claimUntil: now + RECOVERY_CLAIM_MS, attemptToken: token, updatedAt: now } }
   })) || null
 }
 
@@ -115,7 +117,7 @@ export async function releaseResumeRecoveryWorker(id: string, token: string): Pr
 export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecoveryJob>, claimToken?: string): Promise<boolean> {
   const {
     id: _id, version: _version, createdAt: _createdAt, jd: _jd, from: _from, userId: _userId,
-    claimToken: _claimToken, claimUntil: _claimUntil, ...updates
+    claimToken: _claimToken, claimUntil: _claimUntil, attemptToken: _attemptToken, ...updates
   } = patch
   const now = Date.now()
   const result = await updateResumeRecovery(id, job => {
@@ -211,7 +213,7 @@ export async function markResumeDocumentAccepted(id: string, wamid: string, atte
   const now = Date.now()
   const result = await updateResumeRecovery(id, job => {
     if (attemptToken) {
-      if (job.claimToken !== attemptToken || (job.claimUntil || 0) <= now) return { result: false }
+      if (job.claimToken !== attemptToken || job.attemptToken !== attemptToken || (job.claimUntil || 0) <= now) return { result: false }
     } else if (job.claimToken && (job.claimUntil || 0) > now) {
       return { result: false }
     }
@@ -250,7 +252,7 @@ export async function recordResumeDeliveryStatus(
   const now = Date.now()
   const updated = await updateResumeRecovery(id, job => {
     const currentMessage = job.deliveredMessageId === wamid
-    const currentAttempt = !!attemptToken && job.claimToken === attemptToken && job.status === "sending"
+    const currentAttempt = !!attemptToken && job.attemptToken === attemptToken && (job.status === "sending" || job.status === "uncertain")
     const legacyInFlight = !attemptToken && !job.deliveredMessageId &&
       (job.status === "uncertain" || job.status === "sending")
     if (!currentMessage && !currentAttempt && !legacyInFlight) return { result: false }
