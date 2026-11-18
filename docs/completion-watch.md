@@ -1,3 +1,11 @@
+## 18 November 2026 03:52 UTC — exact-head Plan/REA assertion correction
+
+- PR #442 documentation head `3d632c8235dd09cfb6c9b53bb27aeb1faaaf19b6` triggered exact-head checks. Kompas baseline `44233310112` passed; full CI `44233310084` was in progress at the last check; Plan/REA schema `44233310037` failed one new assertion after 17/18 tests passed.
+- The failure was a documentation precision issue: the new REA next action said “protected-preview token” but omitted the literal owner-controlled `KOMPAS_VERCEL_API_TOKEN` name. The test correctly requires the exact blocker. The REA record is being corrected to name that credential; the regression is not weakened.
+- PR #442 remains DRAFT for Safe Merge Gate sequencing. No merge, preview, deployment, project unpause, protection bypass or external message occurred.
+
+---
+
 ## 18 November 2026 03:46 UTC — latest master, production and 17 Oct WhatsApp evidence
 
 - Canonical MFit master is `f5f7f105eb58ab0e964031ee453ba5a9f9201f43` (`test(crawler): align registry checks on master`). PR #442 remains DRAFT for Safe Merge Gate sequencing. Its reviewed branch head before this addendum was `26ada0e0c612b7de05d2560625938aa99545563a`; compare against current master shows 74 commits ahead and 1 behind from merge base `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Exact-head full CI `44221226831`, Kompas baseline `44221226586` and Plan/REA `44221226654` passed on that prior head. The latest Safe Merge Gate note says no eligible merge; do not merge or mark ready from this watch.
