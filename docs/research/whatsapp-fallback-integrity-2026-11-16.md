@@ -80,3 +80,15 @@ New synthetic regressions cover upload-only provider timeout, upload-only unsupp
 Vercel project metadata reports `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` is CANCELED at master `f5f7f105eb58ab0e964031ee453ba5a9f9201f43`. The canonical alias still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; no deployment, protection bypass or billing change was attempted.
 
 The 17 October 17:28 Chicago event remains historically unverified: exact output DOCX, per-run R2 object/version, request correlation, Meta message ID and signed delivery/read receipt are still missing. No real message, replay, model call, DOCX generation, R2 write, production mutation or handset test occurred.
+
+## 18 November 2026 — exact-head typecheck correction
+
+The upload-only fallback containment remains the intended approved behavior. The first exact-head check after the 18 Nov route/helper review exposed two compile regressions on PR #433 head `189320c77d8cf5004442364c4aca49e019900808`: `src/app/api/whatsapp/webhook/route.ts` referenced `IN_FLIGHT_MS` after the 300,000 ms declaration had been dropped from the restacked route, and `src/lib/whatsapp-resume-recovery.ts` compared `deliveryState` with `delivered`/`read` a second time after the earlier terminal guard had already narrowed those states. Full CI `44385137113` and WhatsApp recovery `44385136925` failed on those TypeScript errors; Kompas baseline on that head passed.
+
+Corrective commits on the same review branch:
+
+- `770de26af25744334e801dc0091530ac1dac7fa6` restores the 300,000 ms in-flight lease constant without changing the route's existing 300-second function ceiling
+- `ea01770d30d12a54e42a0ec0a46028b98eb608c7` keeps the terminal delivered/read guard and narrows the later pending-retry guard to accepted/sent, preserving duplicate-send protection
+- `d50aea28148a85b522db522ca80cc08956ed4254` adds a regression proving a Meta `sent` callback cannot be reset to `pending` by a late retry
+
+At exact head `d50aea28148a85b522db522ca80cc08956ed4254`, Plan/REA `44387330710` passed; full CI `44387330363`, WhatsApp recovery `44387330423` and Kompas baseline `44387330621` were still running at the last read. No local test/build is claimed because the environment cannot resolve `github.com` for a checkout. PR #433 remains DRAFT pending all exact-head gates, Safe Merge Gate review, legitimate protected preview and production READY/alias verification. Vercel project metadata still reports `live:false`; the latest production deployment is CANCELED and the canonical alias remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The owner-controlled protected-preview token is unavailable. No deployment, real Meta send, DOCX generation, R2 write, production mutation or historical replay occurred.
