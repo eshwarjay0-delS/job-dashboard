@@ -199,3 +199,13 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+## Crawler diagnostics and current production snapshot — 18 November 2026
+
+The contract crawler remains **manual/on-demand only**. The 12 Nov owner correction removed the daily contract-crawler schedule; do not restore it. Robert Half remains a manual navigation link only, pending express written permission or a sanctioned feed/API with commercial-aggregation rights. The Right-to-Hire / Contract-to-Perm alias semantics remain unapproved.
+
+The current-master diagnostics candidate is PR #434, exact head `63e1f3a238f4768b29d245a9b361f27fcaf4c07e`. It distinguishes a local AbortController timeout from an upstream AbortError, reports the portal host, and preserves request pacing after malformed URLs. Its full CI `44174855613`, crawler regression `44174855597`, Kompas baseline `44174855660` and Plan/REA `44174855645` all passed on that exact head. The PR remains DRAFT pending the legitimate protected preview and Safe Merge Gate review; these are source tests, not a live crawl.
+
+A read-only 18 Nov production aggregate found 14,566 stored jobs, 12,407 active, 9,550 active seen in the preceding 14 days, and 21 crawl runs. The latest completed run remains 10 Nov 2026 11:00:24–11:01:11 UTC: 6,818 jobs found/upserted across 20 portals with one recorded error. Latest job-seen timestamp remains 10 Nov 2026 11:01:11 UTC. No portal request, live crawl, application submission or production-row mutation was performed in this review.
+
+
