@@ -128,9 +128,10 @@ export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecov
     } else if (job.claimToken && (job.claimUntil || 0) > now) {
       return { result: false }
     }
+    // Delivered/read are already rejected by the terminal guard above.
+    // Accepted/sent remain non-retryable so an ambiguous send is not duplicated.
     if (updates.status === "pending" &&
-        (job.deliveryState === "accepted" || job.deliveryState === "sent" ||
-         job.deliveryState === "delivered" || job.deliveryState === "read")) return { result: false }
+        (job.deliveryState === "accepted" || job.deliveryState === "sent")) return { result: false }
     if (updates.status === "sending" && job.status !== "pending" && job.status !== "sending")
       return { result: false }
     return { result: true, next: { ...job, ...updates, updatedAt: now } as ResumeRecoveryJob }
