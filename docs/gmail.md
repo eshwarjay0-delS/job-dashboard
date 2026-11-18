@@ -39,6 +39,13 @@ The owner has 3–4 Gmail accounts connected. Gmail's "all inboxes" view is conf
 - **Per-account everything**: reply profiles, signatures, and compose identities are per account. The wrong "from" address is a bug, not a papercut.
 - **Simplify, don't duplicate**: if a view doesn't make multi-account life clearer than Gmail does, it doesn't ship.
 
+## Current owner constraints and acceptance boundary — 18 November 2026
+
+- **Account ceiling:** the current supported limit remains four connected Gmail accounts. The historical 3–4 account range and four mobile toggles are product context, not approval to exceed four. The 17 Nov owner correction explicitly says removal is not approved; PR #440 remains unapproved and its no-cap migration must not be applied.
+- **Identity:** keep receiving-account + provider-thread identity, per-account reply/From identity, independent sender mutes and reconnect. Never silently merge two inboxes.
+- **Mobile navigation:** the owner explicitly requires that navigation must not cover or block the view, even if requested (4 Oct 2026, 23:32:48Z). The normal-flow expansion below the sticky header in PR #435 is an implementation candidate; the exact layout/interaction was assistant-proposed, not separately owner-approved. Narrow-phone acceptance is still required.
+- **Automation:** Poke is a product reference, not permission to enable unattended sending. The proactive worker, scheduler, external notifications and automatic email sending remain disabled; drafts remain reviewable.
+
 ## Pillar 4 — Contact intelligence on every email (the skeleton rule)
 
 Whenever you open an email, a contact card for the sender appears alongside it — automatically:
