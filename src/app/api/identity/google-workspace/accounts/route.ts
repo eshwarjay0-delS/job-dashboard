@@ -20,8 +20,7 @@ export async function GET() {
   const loaded = await loadWorkspaceAccounts(user.id)
   return NextResponse.json({
     accounts: loaded.accounts,
-    maxAccounts: 4,
-    canAdd: loaded.source === "supabase" && loaded.accounts.length < 4,
+    canAdd: loaded.source === "supabase",
     ...(loaded.notice ? { snapshotNotice: loaded.notice } : {}),
   })
 }

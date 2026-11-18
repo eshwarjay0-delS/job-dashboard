@@ -41,6 +41,13 @@ test('mobile eligibility respects consent, account, first sync, age and Importan
   assert.equal(policy.validUpdatePreferences({...prefs,accounts:['a@example.com','a@example.com']}),false)
   assert.equal(policy.validUpdatePreferences({...prefs,accounts:['../../another-user']}),false)
 })
+test('mobile preferences accept more than four connected inboxes without merging account identity', () => {
+  const accounts = Array.from({length:8},(_,i)=>`inbox${i+1}@example.com`)
+  const many = {...prefs,accounts}
+  assert.equal(policy.validUpdatePreferences(many),true)
+  assert.equal(policy.eligibleMobile({...event,account:accounts[7]},many,true,now),true)
+  assert.equal(policy.eligibleMobile({...event,account:'other@example.com'},many,true,now),false)
+})
 function deliveryHarness({previous=0,fail=false,change=false,muted=false,disconnected=false}={}) {
   const rows = new Map([['whatsapp/linked/user.json',JSON.stringify({numbers:[{digits:'15555551234'}]})],['whatsapp/links/15555551234.json',JSON.stringify({userId:'user',verified:true})]])
   const feed=Array.from({length:8},(_,i)=>({...event,id:String(i)}))

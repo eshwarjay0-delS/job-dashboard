@@ -1,5 +1,27 @@
 # MFit Completion Watch
 
+## 17 November 2026 15:20 UTC — correct the Gmail no-cap approval provenance
+
+- The current owner request explicitly includes Poke-inspired multi-account Gmail/mobile updates. Accessible prior-conversation retrieval did **not** recover a direct user-authored instruction to remove the existing four-account ceiling. Historical `docs/gmail.md` records 3–4 accounts and four mobile toggles but does not establish whether four is a hard maximum.
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) is therefore a **proposal**, not an approved limit change. Its SQL/API/UI/mobile no-cap implementation remains DRAFT; do not merge, apply the migration or deploy until direct owner confirmation is recorded. The high-level multi-account Gmail/mobile work remains approved and separate.
+- The previous exact-head full CI run `44096783012` failed because the no-cap regression asserted wording that was not supported by recovered owner evidence. The test now checks for the pending-confirmation boundary instead. Earlier head `133a60f1324d70e5a7ef1ef0899f5ed92dae7330` had full CI `44112404177` IN PROGRESS, with Plan/REA and Kompas baseline SUCCESS; those results are superseded by new exact-head runs after this correction.
+- No direct Gmail API/OAuth access, inbox read, email, notification, migration, preview bypass or deployment occurred. Production alias remains on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+
+Continue: verify exact-head CI and keep PR #440 DRAFT pending direct owner approval, legitimate protected preview and owner-consented five-plus-inbox acceptance. Continue the separately approved Poke digest/mobile work on its own branch without assuming a no-cap policy.
+
+
+## 17 November 2026 15:10 UTC — Gmail no-cap exact-head CI wording correction
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; the production alias `job-dashboard-fawn.vercel.app` independently resolves to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The master `Vercel` status is SUCCESS but does not prove the alias has moved.
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) is a proposed no-hard-cap implementation pending direct owner confirmation, branch `fix/gmail-account-cap-owner-correction-20261117`. Exact head before this correction: `d375f384439b1edf19f233f27a940878158501b5`.
+- Full CI run [44096783012](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44096783012) completed FAILURE in `scripts/tests/google-workspace-no-hard-cap.test.mjs:57`. The focused command reported 14/15 passing; the sole assertion expected `/not a hard maximum/i`, while `docs/gmail.md` used “not a product maximum.” This is a wording contract mismatch, not evidence of an account-isolation or SQL migration failure.
+- The branch correction changes the owner-vision wording to “not a hard maximum (not a product maximum)” so the executable test and documented product decision agree. No runtime code, migration, account ownership, selected-From, inbox identity or worker behavior changes in this follow-up.
+- Exact-head Plan/REA run `44096782861` and Kompas baseline `44096783401` passed on the prior head; they must rerun after this correction. No local checkout/node_modules is available and clone access to GitHub failed, so no local tests/build are claimed.
+- PR #440 stays DRAFT. The protected-preview credential is owner-controlled and unavailable to this run. No migration was applied, no preview bypass or deployment occurred, and no Gmail OAuth/API access, inbox read, email, mobile notification or five-plus-inbox device test occurred. Production remains on `b94e1629`.
+
+Continue: verify full CI, Kompas baseline and Plan/REA schema on the new exact PR #440 head. Then let the active MFit Safe Merge Gate review; keep protected preview and owner-consented five-plus-inbox acceptance as independent release gates.
+
+
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
 - Backlog reconciliation PR #425 is on branch `docs/mfit-backlog-reconciliation-20261116` (current head is shown on the PR; still DRAFT). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; GitHub compare shows master 15 commits ahead/0 behind. Most differences are CI/workflows, AGENTS, docs, tests and Plan/REA. However, `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`, and `src/lib/plan-vision-journal.ts` by the journal component and `/api/vision/live`; these are user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production configuration changed. After Safe Merge Gate approval and merge, a normal production deployment, READY check and canonical alias verification are required to publish the updated Plan & Vision UI. No deployment has occurred. PR #416 fixture-privacy correction is merged into master at the current SHA.
@@ -598,3 +620,31 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 17 November 2026 — remove the unintended Gmail four-account ceiling
+
+Owner correction: 3–4 connected inboxes is an initial target range, not a hard maximum. The Plan already said this, but current source still capped the SQL attach/list RPCs, three API responses, two UI surfaces and mobile-update preference selections.
+
+- Draft PR #440: https://github.com/eshwarjay0-delS/job-dashboard/pull/440
+- Current recorded head: `239b2b8c0d85a331d9bf055b90e46a3ca63f4ad3`.
+- The forward-only migration replaces only `identity_attach_google_workspace_account` and `identity_list_google_workspace_accounts`, removing the count guard and LIMIT 4 while preserving user/Google-subject ownership, security-definer search path, audit writes and service-role-only grants.
+- API/UI and mobile preferences no longer impose four; per-account identity, selected From, duplicate/malformed email checks and the route's authenticated-account membership check remain.
+- Added a 12-inbox preference regression, SQL security/source checks, API/UI no-cap checks, and CI/prebuild wiring.
+- Exact-head full CI, Kompas baseline and Plan/REA schema are pending. No local npm execution was possible because the scheduled container has no checkout or node_modules; matching Next.js 16.3.8 route/client docs were reviewed from the upstream tag.
+- No Gmail API/OAuth call, inbox read, email, WhatsApp message, mobile notification, database migration application or production deployment occurred.
+- The canonical Vercel project reports `live: false`; the protected-preview credential is owner-controlled and unavailable here. Do not unpause it or bypass the gate. Real five-plus-account, selected-From, reconnect, mobile and account-isolation acceptance remains open. The Poke background worker remains disabled; the separate four-user batch limit is unchanged.
+
+Continue: verify all exact-head PR #440 checks; if green, let MFit Safe Merge Gate review. Keep DRAFT until legitimate protected preview and owner-consented five-plus-account acceptance are available.
+
+
+## 17 November 2026 13:45 UTC — PR #440 CI failure isolated and regression guard corrected
+
+- PR #440's exact-head full CI run `44090609728` failed in `scripts/tests/kompas-deploy-build.test.mjs`, not in the new Gmail no-cap logic. The log showed 62/63 tests passing; the sole failure compared the entire `package.json` prebuild string against an older literal. PR #440 intentionally added the 12-inbox and mobile-update regression suites to prebuild, so the exact-string test rejected the additive suite list.
+- Fix commit `80615a2b6d13e9ddc7714e22bf8f56918d0e2a80` replaces that brittle equality with structural assertions: the Kompas baseline remains first, every pre-existing and newly added regression suite remains included, and the actual build command remains unchanged.
+- This correction changes a test only; it does not alter Gmail account behavior, Kompas runtime behavior, migrations or security boundaries.
+- Exact-head full CI, Kompas baseline and Plan/REA checks must rerun on the branch after this commit. No new workflow runs were visible immediately after the push.
+- The scheduled container has no checkout and cannot resolve `github.com` for a clone; no local npm test/build is claimed. Remote GitHub Actions is the execution path.
+- PR #440 remains DRAFT. No merge, production migration, Gmail OAuth/inbox access, email send, protected-preview bypass or deployment occurred. Production alias remains READY on the older `b94e1629c544048d84a2b048ae83b21b612ab9dd` SHA while master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; Vercel project metadata still reports `live:false` and the owner-controlled protected-preview credential is unavailable.
+
+Continue: verify the new exact-head PR #440 workflows, then hand the green result to the active MFit Safe Merge Gate; keep DRAFT pending legitimate protected preview and owner-consented five-plus-inbox acceptance.

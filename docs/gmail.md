@@ -213,3 +213,8 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Scope proposal — 17 November 2026: account ceiling requires owner confirmation
+
+The historical owner vision records 3–4 connected Gmail accounts and four mobile toggles. That establishes a multi-account use case, but it does not establish whether four is a hard product maximum. Accessible prior-conversation retrieval did not recover a direct user-authored instruction to remove the four-account ceiling. Support beyond four therefore remains a proposal pending direct owner confirmation. PR #440 is intentionally DRAFT and must not be merged, have its migration applied, or be deployed until that approval is recorded. Preserve per-account receiving-inbox/thread identity, selected From, reconnect and owner isolation. The separate four-user-per-invocation worker batch size is unrelated and remains unchanged.

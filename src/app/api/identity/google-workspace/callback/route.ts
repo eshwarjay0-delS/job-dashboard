@@ -112,8 +112,7 @@ export async function GET(req: NextRequest) {
     p_calendar_enabled: true,
   })
   if (error) {
-    const message = error.message.includes("up to 4") ? "limit_reached" :
-      error.message.includes("another MarketFit account") ? "already_linked" : "save_failed"
+    const message = error.message.includes("another MarketFit account") ? "already_linked" : "save_failed"
     return redirectWith(req, state.returnTo, { google_error: message })
   }
 
