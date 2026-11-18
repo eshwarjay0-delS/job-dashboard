@@ -1,3 +1,13 @@
+## 18 November 2026 20:40 UTC — WhatsApp concurrency regression fixture correction
+
+- PR #433 exact head `04b74bbf63986134871c43374bbdc75c78e51677` full CI `44390742971` failed one test only: `same JD starts once concurrently and its lease releases for a deliberate retry` observed 2 tailor calls instead of 1 (93/94 passed).
+- Root cause is the route test's mock, not demonstrated production behavior: `claimResumeRecoveryWorker` returned a claim token unconditionally to both concurrent invocations. The real helper in `src/lib/whatsapp-resume-recovery.ts` uses ETag compare-and-swap and already has a two-worker one-winner durability regression.
+- A child branch `fix/whatsapp-single-request-atomic-test-mock-20261118` corrects the mock to allow one active token and token-matched release. Test-only commit: `1bbd10691463674f15d082f79a23927eb16bedc5`. No runtime route, storage policy, account isolation, delivery threshold or Meta send behavior changed.
+- Exact-head GitHub Actions on the child PR are still required. Parent #433 remains DRAFT and its source fix is not deployed. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection or change billing.
+- The 17 Oct 17:28 Chicago incident remains unverified. No output DOCX, per-run R2 version, webhook/Meta correlation, signed delivery/read receipt or owner fact reconciliation was recovered. No replay or resend.
+
+Continue: run the exact child-PR gates; after they pass, let MFit Safe Merge Gate sequence this test-only correction into #433. Then continue the separate protected-preview and owner-authorized WhatsApp acceptance gates.
+
 ## 18 November 2026 20:22 UTC — WhatsApp recovery CAS evidence and interleavings
 
 - The race report on predecessor head `f409ca5` is addressed in the current PR #433 branch: atomic ETag compare-and-swap (`b04dd14`), R2 adapter/attempt-fencing correction (`f83295d`, `c43d8c5`), callback attempt correlation (`189320c`). `updateResumeRecovery` now uses `GetObject` ETag plus conditional `PutObject If-Match`, re-reading and re-evaluating after a 412 rather than writing stale state.
