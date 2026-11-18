@@ -1,3 +1,15 @@
+## 18 November 2026 20:22 UTC — WhatsApp recovery CAS evidence and interleavings
+
+- The race report on predecessor head `f409ca5` is addressed in the current PR #433 branch: atomic ETag compare-and-swap (`b04dd14`), R2 adapter/attempt-fencing correction (`f83295d`, `c43d8c5`), callback attempt correlation (`189320c`). `updateResumeRecovery` now uses `GetObject` ETag plus conditional `PutObject If-Match`, re-reading and re-evaluating after a 412 rather than writing stale state.
+- Official Cloudflare R2 docs now verify the provider contract: [PutObject supports If-Match and checks it atomically at commit](https://developers.cloudflare.com/r2/api/s3/conditional-operations/); [conditional writes are serialized against committed state](https://developers.cloudflare.com/r2/reference/consistency/). The R2 adapter tests assert quoted ETag pass-through, 412 conflict, missing ETag fail-closed and other errors. No live R2 write.
+- Vercel env metadata has all four R2 key entries for production/preview (values not decrypted). `storageMode` fails closed on Vercel if the set is incomplete. Filesystem CAS is per-process only; production multi-instance CAS depends on R2.
+- New commit `08f5c1f71aa01b29f63ffbbd5eb7cb6f213858e6` adds four deterministic races: two workers/one ETag; failed callback vs in-flight HTTP acceptance; old delivered callback vs newer retry acceptance; delivered callback vs stale defer. Exact head at the last check: WhatsApp recovery `44389751909` and full CI `44389751945` IN PROGRESS; Kompas baseline `44389752006` and Plan/REA `44389751900` SUCCESS.
+- Release remains separate: Vercel project `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` CANCELED by `ignored-build-step`; alias `job-dashboard-fawn.vercel.app` remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; project env metadata has no `KOMPAS_VERCEL_API_TOKEN`. No preview/deployment, real Meta send, historical replay, DOCX generation or R2 write.
+
+Continue: wait for exact-head WhatsApp recovery `44389751909` and full CI `44389751945`, then let MFit Safe Merge Gate review #433. Keep it DRAFT; do not bypass Vercel ignored-build-step or missing protected-preview authorization. Historical 17 Oct 17:28 Chicago delivery remains unverified until the exact output DOCX, R2 object/version, request correlation, Meta message ID and signed receipt are recovered.
+
+---
+
 ## 18 November 2026 20:12 UTC — WhatsApp fallback restacked onto current master
 
 - PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) was fast-forward updated with the current canonical master commit `f5f7f105eb58ab0e964031ee453ba5a9f9201f43`; merge commit `61d545ffb3bf3801d04ffac454739c580f4ad3d7` preserves the full prior branch head `6761a980e067e021f50c617e7fb581a86902545a`. No contributor commit was overwritten.
