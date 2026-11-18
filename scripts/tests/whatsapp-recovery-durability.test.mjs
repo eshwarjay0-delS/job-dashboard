@@ -389,7 +389,7 @@ function loadR2Storage(send) {
     if (name === "@/lib/storagePolicy") return {
       storageSegments: key => String(key).split("/").filter(Boolean),
       storageListPrefix: key => String(key).replace(/^\/+|\/+$/g, ""),
-      storageMode: () => "available",
+      storageMode: () => "r2",
     }
     return require(name)
   }

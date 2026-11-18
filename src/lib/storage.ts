@@ -173,20 +173,6 @@ class FsStorage implements Blob {
       catch (e) { if ((e as NodeJS.ErrnoException).code === "EEXIST") return false; throw e }
     })
   }
-  async putIfMatch(key: string, etag: string, data: Buffer | string): Promise<boolean> {
-    try {
-      await this.s3.send(new PutObjectCommand({
-        Bucket: this.bucket, Key: this.norm(key),
-        Body: typeof data === "string" ? Buffer.from(data) : data,
-        IfMatch: etag,
-      }))
-      return true
-    } catch (e) {
-      const err = e as { name?: string; $metadata?: { httpStatusCode?: number } }
-      if (err.$metadata?.httpStatusCode === 412 || err.name === "PreconditionFailed") return false
-      throw e
-    }
-  }
   async get(key: string): Promise<Buffer | null> {
     return this.withKeyLock(key, async () => { try { return await readFile(this.abs(key)) } catch { return null } })
   }
@@ -281,6 +267,20 @@ class R2Storage implements Blob {
     } catch (e) {
       const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
       if (status === 412 || status === 409) return false
+      throw e
+    }
+  }
+  async putIfMatch(key: string, etag: string, data: Buffer | string): Promise<boolean> {
+    try {
+      await this.s3.send(new PutObjectCommand({
+        Bucket: this.bucket, Key: this.norm(key),
+        Body: typeof data === "string" ? Buffer.from(data) : data,
+        IfMatch: etag,
+      }))
+      return true
+    } catch (e) {
+      const err = e as { name?: string; $metadata?: { httpStatusCode?: number } }
+      if (err.$metadata?.httpStatusCode === 412 || err.name === "PreconditionFailed") return false
       throw e
     }
   }

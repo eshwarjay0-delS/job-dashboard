@@ -114,7 +114,9 @@ test('saved resumes are remeasured instead of trusted by date alone', () => {
 test('ambiguous Meta timeouts can be reconciled by opaque callback job id', () => {
   const sender = readFileSync(new URL('../../src/lib/whatsapp.ts', import.meta.url), 'utf8')
   assert.match(sender, /biz_opaque_callback_data: opaqueJobId/)
-  assert.match(queue, /timed-out document reconciled as delivered/)
+  assert.match(queue, /legacyInFlight/)
+  assert.match(queue, /currentAttempt/)
+  assert.match(queue, /putIfAbsent\(indexKey, opaqueId\)/)
 })
 
 test('WhatsApp never mistakes Meta API acceptance for handset delivery', () => {

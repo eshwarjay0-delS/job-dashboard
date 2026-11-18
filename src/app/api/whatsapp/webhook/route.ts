@@ -1122,7 +1122,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return
   }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
-  const accepted = await markResumeDocumentAccepted(job, sentId)
+  const accepted = await markResumeDocumentAccepted(job, sentId, claimToken)
   if (!accepted) { finished = true; return } // Signed failed-delivery callback already scheduled a retry.
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
