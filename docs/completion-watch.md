@@ -1,3 +1,16 @@
+## 18 November 2026 00:27 UTC — resume confirmed-skill and WhatsApp hard-hold reconciliation
+
+- Current-master PR [#431](https://github.com/eshwarjay0-delS/job-dashboard/pull/431) exact head `a74319cb87a3aff44e111987c59ce978d2f87c2a` has full CI 43972447062, WhatsApp recovery 43972447199, Kompas baseline 43972447249 and Plan/REA 43972447039 all SUCCESS. It remains DRAFT pending protected preview and owner-authorized baseline resume, exact JD, explicit confirmation and exported-DOCX inspection.
+- Confirmed-skill boundary: an explicitly confirmed skill can be placed in relevant existing project bullets across roles. Confirmation supports only that skill; no employer, project, action, outcome, date, title, location, contact, metric or credential may be invented. The JD is not candidate evidence.
+- The 14 Nov owner correction is authoritative: unsupported JD-only experience and cached `unverified_jd_terms` blockers are hard holds. The approved offline failsafe is the closest matched same-account library resume, labelled **Original resume — NOT TAILORED**. Sending the exact uploaded original after provider timeout remains unapproved.
+- PR [#441](https://github.com/eshwarjay0-delS/job-dashboard/pull/441) is stacked on #431. Its focused final-DOCX, WhatsApp and Plan/REA checks pass on head `2ab1d89dcc3a65e57a2c4176548dabdb8346515e`; exact-head full CI and Kompas baseline are not verified. No exported DOCX or Gemini review was run.
+- The 17 Oct 17:28 Chicago screenshot is evidence of a hard hold after automatic repair, not successful delivery. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain missing. No replay or resend.
+- Production alias remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; PR #431 is not deployed. Protected preview requires owner-controlled `KOMPAS_VERCEL_API_TOKEN`. No source/JD/confirmation bundle was authorized or processed in this run.
+
+Continue: keep #431 DRAFT until the legitimate preview and exported-DOCX acceptance are available. Keep #411's uploaded-original-after-timeout behavior unapproved. Recover the 17 Oct output and provider receipt from the correct authorized systems; do not replay or resend.
+
+---
+
 ## 18 November 2026 00:26 UTC — Poke-inspired Gmail account/mobile contract correction
 
 Continue: finish the exact-head full CI for PR #435, then keep its protected-preview and real inbox/device acceptance gates separate.
