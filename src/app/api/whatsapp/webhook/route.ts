@@ -80,6 +80,8 @@ const filesOf = (userId: string): string => (ACCOUNT_ID.test(userId) ? path.join
 // The rewrite stops by 240 s so reading the result, checking it and sending the file (uploading it to WhatsApp) still fit
 // inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
 const TAILOR_BUDGET_MS = 240_000
+// How long a job from Files holds its claim against being made twice: the function's own limit.
+const IN_FLIGHT_MS = 300_000
 // How long the first of a job post and a resume sent together waits for the other before asking for it.
 const PAIR_WAIT_MS = process.env.WHATSAPP_PAIR_WAIT_MS !== undefined ? Number(process.env.WHATSAPP_PAIR_WAIT_MS) || 0 : 2_000
 
