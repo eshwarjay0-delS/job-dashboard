@@ -1,4 +1,66 @@
+## 17 November 2026 20:55 UTC — lock the owner-approved Gmail account ceiling
+
+- Canonical master at the start of this slice: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Latest owner correction at `2026-11-17T18:08:40Z` keeps the existing four-account ceiling; removal remains unapproved. The historical 3–4 account range is not permission for a no-cap implementation. PR #440 remains DRAFT/unapproved and untouched.
+- PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) branch `fix/gmail-poke-mobile-current-66291-20261116` reached head `3c0fe5f12655b6d07e50141bd6a7e2b082ec98f6` before this Completion Watch commit. Added `scripts/tests/gmail-account-cap.test.mjs`, which scans migration history and asserts that the latest `public.identity_list_google_workspace_accounts` definition keeps primary-first ordering and `LIMIT 4`. Test commit `8093779b282c410e72812d21eaeca213bbf0635f`; full-CI wiring commit `4b06534e211c1446cb458416a148df66f90890b9`.
+- Plan & Vision revision `2026-11-17.5` records the cap and the regression guard (commit `80d698cd13bbce4b39d56d4b0f4931611ebff3cc`). Research note `docs/research/gmail-account-cap-guard-2026-11-17.md` commit `b9798ff335dfe3ff57757957cf895df00128fa69`; REA commit `40bc1eed71782e46bbbf47f4ac5b4a3a99bf0e2d`; Plan Journal commit `3c0fe5f12655b6d07e50141bd6a7e2b082ec98f6`.
+- This is a source/test/documentation-only guard. It does not alter the migration, account limit, Gmail runtime, OAuth, selected-From, inbox contents, Poke worker, scheduler or sending behavior.
+- The predecessor head `38fef8745fb0d1370c85fdc6fbe6373748d33e89` passed full CI `44157935687`, Kompas baseline `44157935703` and Plan/REA `44157935681`; those are not reused. Exact final head `6d8258dda0627d08ef9cf92e9354a5f3aba4bf4c` then passed full CI `44173800670`, Kompas baseline `44173800729` and Plan/REA `44173800662`; all three are SUCCESS. This verifies the source/test/docs head only, not preview, inbox or phone acceptance. Plan Journal commit `cd68b046fcb112886f6af84a3ab7ce1494fec428` and REA commit `701c4dfca8b793a6ce35a3ec6a9a9a16adee677a` record the exact-head pass. This Completion Watch update advances the branch again, so exact-head checks must rerun on the new documentation head.
+- Vercel project `job-dashboard` still reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at master `66291f6`. Canonical alias `job-dashboard-fawn.vercel.app` remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No preview, deployment, project unpause, billing change or protection bypass.
+- Keep PR #435 DRAFT until exact-head gates, MFit Safe Merge Gate review, legitimate protected preview, two-authorized-inbox collision/independent-mute/selected-From/reconnect acceptance and narrow-phone device acceptance. Keep Poke worker and automated sending disabled. No Gmail API/OAuth call, inbox read/write, email send, WhatsApp send, production mutation or device test.
+
+Continue: run full CI, Kompas baseline and Plan/REA on the final PR #435 head, then let MFit Safe Merge Gate sequence the draft. Preserve the four-account ceiling; do not merge or deploy on predecessor checks.
+
+---
+
+## 17 November 2026 19:14 UTC — PR #435 REA typecheck correction; release still gated
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) was at exact head `fcf30bab13d77f8a2e9d1046947f62100e39d7f5` when its latest checks completed: full CI `44155102448` FAILED during Type-check with TS2322 at `src/lib/rea-register.ts(11,237)`; Kompas baseline `44155102575` SUCCESS; Plan/REA schema `44155102417` SUCCESS. The cause was the REA top-level state literal `Implemented, source-tested; release blocked`, which is outside the supported state union.
+- Corrected the REA record to `Implemented, verification pending` in commit `0c90ccf60a4775a69be15aeb358bef3a1626c94b`. Updated Plan Journal in commit `f08dd52b6f591fa863b29350e552b4fec9658bd8`: records the exact failure and correction, and explicitly marks the earlier “3–4 accounts is a target, not a hard maximum” interpretation as superseded by the 17 Nov owner correction. The four-account ceiling remains; no-cap PR #440 is unapproved and untouched.
+- No Gmail runtime behavior changed in this correction. PR #435 still carries account-scoped sender/thread identity, correct receiving-inbox selection, and the approved normal-flow mobile menu. Selected-From persistence is not changed. No Gmail API/OAuth call, inbox read/write, email/WhatsApp send, proactive worker, scheduler or external notification occurred.
+- Vercel independently reports project `job-dashboard` `live:false`; latest production attempt `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Canonical alias `job-dashboard-fawn.vercel.app` remains READY on older deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Do not unpause the project, bypass protected preview, change billing or deploy this DRAFT.
+- The updated PR branch head after the REA and journal corrections is `f08dd52b6f591fa863b29350e552b4fec9658bd8`; this Completion Watch update creates a further documentation commit, so all exact-head workflows must be checked again afterward. Previous green results are not reused.
+- Continue: rerun full CI, Kompas baseline and Plan/REA schema on the final PR #435 head. Keep DRAFT until MFit Safe Merge Gate sequencing, legitimate protected preview, two authorized inboxes with same-thread/sender collision, independent mute, selected-From and affected-inbox reconnect checks, plus narrow-phone acceptance are complete. Preserve the four-account ceiling and keep proactive workers disabled.
+
+---
+
 # MFit Completion Watch
+
+## 17 November 2026 19:05 UTC — PR #435 exact-head source gates pass
+
+- PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) exact head `fb1a65a9d44f258ed31cffc0f583c0356c99b5d9`: Plan/REA schema `44152800192` **SUCCESS**, Kompas baseline `44152800204` **SUCCESS**, full CI `44152800501` **SUCCESS**. The corrected source/test/docs branch is source-validated; this does not prove authenticated Gmail behavior or phone acceptance.
+- The schema correction keeps the latest owner boundary: existing four-account ceiling remains; removing it is unapproved; no proactive worker, background scheduler or external notification. Per-account receiving-inbox identity, sender preferences/digest actions and normal-flow mobile menu are approved.
+- Commits: test `67f8f854f20514fce24dd0a38914e069e9eda66e`; REA/source citation `dde2adec686a06d71a78efd024f07cdd6bfd8a26`; Plan Journal `45dab55838a75e87270527b68a24341f87d9a28b`; Completion Watch `fb1a65a9d44f258ed31cffc0f583c0356c99b5d9`. This next documentation-only update requires fresh exact-head checks.
+- Vercel project `job-dashboard` remains `live:false`; latest production deployment is CANCELED and the canonical alias remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`.
+- No Gmail API/OAuth request, inbox read/mutation, email send, proactive worker, device acceptance or production deployment occurred.
+
+Continue: let MFit Safe Merge Gate review the exact source-green draft; keep it DRAFT until legitimate protected preview, two-authorized-inbox collision/independent-mute/selected-From/reconnect checks and narrow-phone acceptance are complete. Do not merge or deploy based on unit/CI success alone.
+
+---
+
+## 17 November 2026 18:44 UTC — Gmail Plan/REA schema correction on PR #435
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) is the approved current-master Poke-inspired Gmail digest/mobile slice; its current pre-fix head was `827f280754a3d8f4eb8b5ecaed9a729bd77c3c0a`.
+- Exact-head GitHub Actions: full CI `44150429971` **SUCCESS**; Kompas baseline `44150429960` **SUCCESS**; Plan/REA schema `44150430170` **FAILURE**. The schema log showed two precise failures in `scripts/tests/rea-register.test.mjs`: a prior-conversation approval source was incorrectly marked as a repository file path, and the test still asserted the superseded phrase `not a hard maximum`.
+- Latest owner correction at 18:08:40 UTC keeps the existing four-account ceiling; it supersedes the earlier assistant-authored target-not-maximum wording. PR #435 does not change the ceiling. The follow-up commits `67f8f854f20514fce24dd0a38914e069e9eda66e` and `dde2adec686a06d71a78efd024f07cdd6bfd8a26` update the test to assert the current ceiling and store the accessible conversation source as a label-only citation. No runtime Gmail behavior, OAuth, account-limit API/migration, proactive worker, scheduler or inbox data changed.
+- Plan & Vision journal and REA now record the failed run, exact correction and pending recheck; product baseline already preserves the current four-account ceiling. Journal update commit: `45dab55838a75e87270527b68a24341f87d9a28b`.
+- Vercel project `job-dashboard` still reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Alias `job-dashboard-fawn.vercel.app` remains on older READY production SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; no unpause, billing change or protection bypass was attempted.
+- No Gmail API/OAuth call, inbox read/mutation, real email/WhatsApp send, device acceptance or production deployment occurred.
+
+Continue: rerun full CI, Kompas baseline and Plan/REA schema on PR #435's new exact head. Keep it DRAFT until a legitimate protected preview and owner-authorized two-inbox collision/independent-mute/selected-From/reconnect and narrow-phone acceptance are complete; keep the proactive worker disabled and preserve the four-account ceiling.
+
+---
+
+
+## 17 November 2026 18:08 UTC — latest owner correction keeps the four-account Gmail ceiling
+
+- The latest owner constraint at 18:08:40 UTC explicitly says removing the existing four-account ceiling remains unapproved. This supersedes earlier assistant-authored summaries that inferred “3–4 is a target, not a maximum.” Keep the current four-account ceiling; do not treat PR #440 as approved or live.
+- The approved Poke-inspired Gmail digest/mobile slice remains separate. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) exact head `b5138e57b0738a4a45724b76b227baa9b47a5b3c` passed full CI `43988493361`, Kompas baseline `43988493279` and Plan/REA `43988493296`. It changes account-scoped digest sender/thread identity, receiving-inbox selection and the approved normal-flow mobile menu; it does not change the account ceiling. WhatsApp recovery did not trigger because the diff is Gmail-only.
+- PR [#440](https://github.com/eshwarjay0-delS/job-dashboard/pull/440) head `372dea6ac1937d0bb34f2b8df4676d28485ebda9` proposes a no-cap SQL migration/API/UI change. It remains DRAFT and unapproved; do not merge it or apply the migration.
+- Read-only production Supabase snapshot on 17 Nov: `mfit_gmail_sync` has 3 rows for 1 owner/3 accounts, all older than 24 hours (latest sync 10 Nov 14:44:44 UTC); `mfit_gmail_threads` has 2,002 rows for the same owner/accounts, all older than 24 hours (latest update 10 Nov 14:46:49 UTC). No Gmail API/OAuth request, inbox read/mutation or email send was made.
+- Vercel project `job-dashboard` reports `live:false`; latest deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at master `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The canonical alias remains READY on older deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; do not unpause the project or bypass protection.
+- Two-inbox collision/independent-mute/selected-From/reconnect acceptance and a real narrow-phone check remain open. The Poke-style proactive worker, scheduler, external notifications and outbound automation remain disabled.
+
+Continue: keep PR #435 DRAFT until a legitimate protected preview and owner-authorized two-inbox/narrow-phone acceptance are complete. Keep PR #440 DRAFT/unapproved; do not remove the four-account ceiling or apply its migration without new explicit owner approval.
 
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
@@ -598,3 +660,14 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 17 November 2026 — Poke-inspired Gmail/mobile current-master restack
+
+- Current master at restack start: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Stale PR #424 head `581d2298f384af36e4f039d4929b8056890694c8` is 28 commits behind and diverged; its green checks are predecessor evidence only.
+- Current draft branch: `fix/gmail-poke-mobile-current-66291-20261116`, latest head `eefc5d82e983f5572f59f1abdcba27ec7d9a8dc3`. It restacks account-scoped digest sender mutes, account+provider-thread identity, correct receiving-inbox selection, and the approved normal-flow mobile navigation. The 3–4 account range remains a target, not a hard maximum. The owner-authored mobile correction supersedes the earlier missing-context note: hidden when closed; open below the sticky header in normal flow, pushing content down without overlay, scrim, dimming or page inertness. The first exact-head Plan/REA runs 43986886158 (head eefc5d82) and 43986965407 (head 7d56cc85) failed only the regression assertion that unapproved per-account Calendar and waiting-on-them semantics retain the literal `not owner-approved` label. Commit e42f97e3bf59d0432f36ba94b2b6627d6f33decb restores that label while preserving the approved mobile correction; rerun all exact-head gates on the next head.
+- Regression changes cover same sender/thread collisions across inboxes, independent mutes, receiving-inbox selection, reply identity, and mobile no-overlay/no-inert behavior with Escape/outside-click/focus return. On exact head `1de0db764662986a9d7ac59b8ccd045b4672acc0`, full CI `43987079806`, Kompas baseline `43987079869` and Plan/REA `43987079911` all passed. WhatsApp recovery is not applicable because this Gmail-only diff changes no WhatsApp code; PR #424's earlier results are not reused.
+- Vercel project `job-dashboard` currently reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Canonical alias metadata still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. Do not unpause, change billing or bypass protection.
+- No Gmail API/OAuth call, inbox mutation, email or WhatsApp send, proactive worker, scheduler, external notification, production write, two-inbox acceptance or real phone test occurred. Keep the worker disabled.
+
+Continue: run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; then let Safe Merge Gate review. Keep DRAFT until protected preview and two-inbox/narrow-phone acceptance are complete.
