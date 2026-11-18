@@ -1,3 +1,17 @@
+## 18 November 2026 00:26 UTC — Poke-inspired Gmail account/mobile contract correction
+
+Continue: finish the exact-head full CI for PR #435, then keep its protected-preview and real inbox/device acceptance gates separate.
+
+- Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR [#435](https://github.com/eshwarjay0-delS/job-dashboard/pull/435) now has test-only commit `9e041f6306e227d267317a174bb30b623d9db6c6`. It corrects a misleading test title: the mobile UI renders every account returned by the server, while the latest server-side account-list migration enforces the approved `LIMIT 4`. No runtime behavior, SQL migration or account limit changed.
+- Exact new-head checks: Kompas baseline [44207751254](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44207751254) SUCCESS; Plan/REA [44207751272](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44207751272) SUCCESS; full CI [44207751371](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44207751371) was IN PROGRESS at the last check. Earlier green full CI on `bb8faf1` does not validate this new head.
+- Owner constraints: the existing four-account ceiling remains; PR #440's no-cap migration is unapproved. The owner explicitly requires mobile navigation not to cover or block the view (4 Oct 2026, 23:32:48Z). The normal-flow expansion below the sticky header is the current implementation candidate, not a separately owner-approved exact layout. The PR description now records this distinction.
+- Read-only production aggregate: one owner, three connected account IDs, 2,002 cached threads, zero cross-account thread-ID collisions; all three sync rows are older than 24 hours. Latest sync was 10 Nov 2026 14:44:44 UTC; latest thread update 14:46:49 UTC. This is not proof of a sync defect or live two-inbox acceptance.
+- Production alias `job-dashboard-fawn.vercel.app` remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Vercel project reports `live:false`; latest master attempt was CANCELED by the Ignored Build Step because the commit lacked `[ship]`. Protected preview still requires the owner-controlled private token. No deployment, project unpause, bypass or billing change.
+- No Gmail API/OAuth call, inbox read/write, email send, Poke worker/scheduler activation, notification delivery or phone test occurred. The Gmail connector profile read returned no profile data in this run, so two-authorized-inbox acceptance remains unavailable.
+- Keep PR #435 DRAFT pending exact-head full CI, legitimate protected preview, two authorized inboxes with colliding sender/thread identities, selected-From preservation, independent reconnect/mute and narrow-phone no-cover acceptance. Keep proactive worker, scheduler and sending disabled.
+
+---
+
 ## 17 November 2026 23:03 UTC — exact-head refresh and 17 Oct artifact search
 
 - Canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`.
