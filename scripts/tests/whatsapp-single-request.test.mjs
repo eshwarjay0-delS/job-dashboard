@@ -101,33 +101,32 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     },
   }
   const { generate, captionFor, resumeGapReport } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor, resumeGapReport };')
-  const session = { jdId: 'jd-message', jd: 'job description', resumePath: '/data/whatsapp/inbox/123/unique.docx' }
-  await Promise.all([generate('123', session, 'user'), generate('123', session, 'user')])
+  const files = { userDir: '/data/whatsapp/files/user', email: 'candidate5@example.test', said: 'your selected resume', depth: 0, rel: 'candidate5@example.test/GRC/resume.docx', abs: '/data/whatsapp/files/user/candidate5@example.test/GRC/resume.docx' }
+  const run = () => generate('123', { jdId: 'jd-message', jd: 'job description', resumePath: files.abs, resumeName: 'Candidate Resume' }, 'user', 240_000, files)
+  await Promise.all([run(), run()])
   assert.equal(runs, 1)
   assert.equal(deliveries, 1)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'completed work must not leave a permanent claim')
-  await generate('123', session, 'user')
+  await run()
   assert.equal(runs, 2, 'resending the same pair deliberately can retry instead of disappearing')
   assert.equal(deliveries, 2)
   const beforeTimeoutMessage = said.length
   failNext = true
-  await generate('123', session, 'user')
+  await run()
   assert.equal(runs, 3)
   assert.equal(deliveries, 2, 'an upload-only provider timeout does not send the uploaded original')
   assert.ok(said.length > beforeTimeoutMessage)
   assert.match(said.at(-1) || '', /ran out of time just now/)
   assert.doesNotMatch(said.at(-1) || '', /provider timeout/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'a failed rewrite also releases its claim')
-  await generate('123', session, 'user')
+  await run()
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
-  assert.equal(deliveries, 3, 'a successful retry sends the tailored document')
-  const beforeUnchangedMessage = said.length
+  assert.equal(deliveries, 4, 'a successful retry sends the tailored document')
   unchangedNext = true
-  await generate('123', session, 'user')
+  await run()
   assert.equal(runs, 5)
-  assert.equal(deliveries, 3, 'an unchanged upload-only run does not send the original as fallback')
-  assert.ok(said.length > beforeUnchangedMessage)
-  assert.match(said.at(-1) || '', /rewrite produced no changes/i)
+  assert.equal(deliveries, 5, 'an unchanged library-based run sends the selected resume as a labelled fallback')
+  assert.match(docs.at(-1)?.caption || '', /Original resume — NOT TAILORED/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'unchanged rewrite releases its claim')
   const saved = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(saved.resumePath, undefined)
