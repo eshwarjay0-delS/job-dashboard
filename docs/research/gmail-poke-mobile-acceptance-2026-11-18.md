@@ -17,7 +17,7 @@ The branch already includes account+thread identity, per-account sender mutes, r
 On exact head `9e041f6306e227d267317a174bb30b623d9db6c6`:
 - Kompas baseline workflow 44207751254 — SUCCESS.
 - Plan/REA schema workflow 44207751272 — SUCCESS.
-- Full CI workflow 44207751371 — IN PROGRESS at the last check; do not reuse the predecessor head's green full CI.
+- Full CI workflow 44207751371 — SUCCESS. All three source gates are green on this exact head; predecessor results were not reused.
 
 ## Read-only production state
 
@@ -36,7 +36,7 @@ The canonical production alias `job-dashboard-fawn.vercel.app` remains READY at 
 
 ## Required acceptance
 
-1. Complete full CI on the exact current PR #435 head.
+1. Full CI is complete on exact PR #435 head; keep the PR DRAFT until the remaining live acceptance gates pass.
 2. Run a legitimate protected preview through the owner-controlled access path.
 3. Use two authorized inboxes with colliding sender/thread identities; verify account badges, digest opening, per-account mute, selected From, reply-draft isolation and independent reconnect.
 4. Verify the mobile menu on a narrow phone and confirm it never covers or blocks the page.
