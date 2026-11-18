@@ -7,6 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { questionToAnswer } from "../../src/lib/kompasAnswer.ts";
 
 const appJs = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8");
@@ -23,7 +24,19 @@ test("pressQuestion keeps the whole formed question over a contained fragment", 
 });
 
 test("a client-formed question is never overwritten by the stream meta abstraction", () => {
-  assert.match(appJs, /opts\.pinned\) && !opts\.derived\) \{ card\.question = ev\.derived/);
+  const handler = appJs.match(/function applyAnswerStreamEvent\\(card, ev\\) \\{[\\s\\S]*?\\n\\}/)?.[0];
+  assert.ok(handler, "active stream-event handler must exist");
+  const apply = runInNewContext(`(${handler})`, {
+    isPlaceholderTitle: () => false,
+    formatCardAnswer: () => "",
+  });
+  const question = "How do you handle a failed Kerberos ticket?";
+  const card = { question, anchorQ: question, cardLayout: null };
+  const result = apply(card, { type: "meta", derived: "Authentication troubleshooting" });
+  assert.equal(result.kind, "meta-derived");
+  assert.equal(result.title, "Authentication troubleshooting");
+  assert.equal(card.question, question);
+  assert.equal(card.anchorQ, question);
 });
 
 test("the server takes the formed question at full length and keeps re-asks question calibrated", () => {
