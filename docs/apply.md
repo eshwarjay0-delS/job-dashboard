@@ -199,3 +199,13 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## 16 November 2026 — collector timeout diagnostics
+
+The crawler request helper retains its 25-second default timeout. The current diagnostics distinguish an abort triggered by the local AbortController from an upstream AbortError, include the portal host, and ensure malformed adapter URLs still advance the request-pacing clock. Mocked regressions cover all three cases. This is diagnostic-only: no automatic retry, portal adapter, source permission, classifier, freshness rule, schedule, or production row changes. Contract crawling remains manual/on-demand only; Robert Half remains manual-only; do not restore a daily contract cron or run a live crawl as part of this change.
+
+
+Predecessor PR #430 remains stacked on the WhatsApp fallback PR #428; its corrected focused crawler workflow passed 15 tests (5 freshness, 3 work-type classifier, 7 collector/timeout/pacing), but those results do not validate the current-master restack.
+
+The independent current-master restack is draft PR #434 on `fix/crawler-abort-diagnostics-master-66291-20261116`. On pre-documentation head `05e17d5c43f96944b452f498546ae211443f208c`, crawler workflow 43965569837 passed all 15 tests, Kompas baseline 43965569809 passed, and Plan/REA schema 43965569827 passed; full repository CI 43965569816 was still in progress. A subsequent documentation correction advances the branch, so all four checks must be re-read on the final head. These source tests are not a production crawl or proof that the historical Inspyr error was caused by the local timeout.
