@@ -1,5 +1,14 @@
 # Kompas — Master Vision
 
+## Phone-native live view — 17 November 2026
+
+Owner-approved scope: make the live copilot usable as a phone-first, full-screen experience that adapts to device size/resolution. The page already declares `viewport-fit=cover` and its PWA manifest uses `display: standalone`; the prior mobile CSS enlarged controls but did not give the copilot a dedicated dynamic-viewport flex layout.
+
+The draft phone shell adds `public/kompas/mobile-shell.css` after the legacy panel styles. On narrow screens it fills `100dvh`, accounts for top/bottom safe areas, keeps the answer and transcript scrolling within the copilot, uses 48px primary actions and 44px minimum touch targets, and has a landscape-specific control-height limit. All new selectors exclude the Windows desktop-focus shell, so desktop layout rules remain unchanged.
+
+This is a UI-only slice. Microphone, computer-audio, Caption Capture and input-source priority remain untouched and must stay coordinated with the separate Kompas voice workstream. The source regression is wired into full CI, but a passing source test is not a phone test. Acceptance still requires an installed or browser-based real iOS/Android check for safe areas, dynamic viewport changes, keyboard appearance, portrait/landscape, long-answer scrolling and touch targets.
+
+
 ## Desktop response calibration — 22 October 2026
 
 Owner confirms authentication is fixed and scopes this change to desktop responses. Exactly three audiences: **Recruiter + Engineer**, **Architect + Developer**, **Director**. The audience determines explanation style; the current question determines depth. Definitions and comparisons remain concise at every level. A requested real vulnerability example explains supported actions, bottlenecks, validation and business consequence. Architect/developer implementation questions can cover setup and integration step by step. Director answers retain technical reasoning at the operational/business level, with supported achievements and clearly proposed measurement choices.
