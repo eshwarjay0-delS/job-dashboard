@@ -163,9 +163,8 @@ export function deliveredWithShortfall(result: TailorResult): boolean {
     || reasons.includes("supported_coverage_below_floor")
 }
 
-/** The already-chosen file may go out only for the profile this run selected.
- * No selected email means the person uploaded that file. Two emails in one file
- * are a mixed profile and are not sent. */
+/** A fallback may go out only for an explicitly selected Files profile.
+ * Missing email is not proof of library ownership. Mixed-profile resumes are rejected. */
 export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
   const want = String(email || "").trim().toLowerCase()
   if (!want) return false

@@ -434,7 +434,7 @@ test("Nov4 hold transparency: rejection codes become plain words, unknowns dropp
 
 test("a missing selected library email fails closed", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
-  const text = "Candidate One\\ncandidate1@example.test"
+  const text = "Candidate One\ncandidate1@example.test"
   assert.equal(gate.chosenResumeMatchesProfile(text), false)
   assert.equal(gate.chosenResumeMatchesProfile(text, ""), false)
 })
