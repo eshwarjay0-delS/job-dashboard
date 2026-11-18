@@ -101,3 +101,16 @@ test('external crawler aggregates are labels, never repository paths', () => {
  assert.ok(entry.sources.some(s=>s.label.includes('Production crawler aggregates') && s.label.includes('read-only Supabase SELECT') && !s.path))
  assert.ok(!entry.sources.some(s=>s.path?.includes('public.mfit_crawl_jobs')))
 })
+
+test('17 Nov direct Gmail correction keeps the four-account cap and no-cover mobile menu', () => {
+ const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
+ const entry=REA_SESSIONS.find(s=>s.id==='gmail-four-account-no-cover-mobile-owner-correction-2026-11-18')
+ assert.ok(entry)
+ assert.equal(entry.area,'gmail')
+ assert.equal(entry.state,'Implemented, verification pending')
+ assert.ok(entry.sources.some(s=>s.label.includes('2026-11-17T21:18:26Z')))
+ assert.ok(plan.includes('2026-11-17T21:18:26Z'))
+ assert.ok(plan.includes('existing four-account ceiling'))
+ assert.ok(plan.includes('no overlay, scrim, dimming, or page inertness'))
+ assert.ok(plan.includes("PR #440's no-cap proposal remains unapproved"))
+})
