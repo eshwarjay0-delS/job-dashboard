@@ -24,7 +24,7 @@ import type { Tracked } from "@/lib/interview-track"
 
 import IgnoreControls from "./_components/ignore-controls"
 import { ignoreReason, type IgnoreRule } from "@/lib/gmail-ignore"
-import { interviewThreadKeys, mailHasInterview, interviewBoardHref } from "@/lib/interview-mail-link"
+import { interviewThreadKey, interviewThreadKeys, mailHasInterview, interviewBoardHref } from "@/lib/interview-mail-link"
 
 type AcctFn = (id: string) => { tint: string; email: string }
 
@@ -134,7 +134,7 @@ function groupByRole(mails: Mail[], isRecruiterDomain: (domain: string) => boole
   return groups
 }
 
-function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: string) => void; acct: AcctFn }) {
+function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: string, account: string) => void; acct: AcctFn }) {
   const [open, setOpen] = useState(false)
   const multi = group.vendors.length > 1
   return (
@@ -187,8 +187,8 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
       {open && (
         <div style={{ borderTop: "1px solid var(--border)", padding: "8px 12px 12px" }}>
           {group.mails.map(m => (
-            <MailRow key={m.id} m={m} on={false} restored={false} leaving={false}
-              onClick={() => onOpen(m.id)} {...rowProps(m, acct)} />
+            <MailRow key={interviewThreadKey(m.account, m.id)} m={m} on={false} restored={false} leaving={false}
+              onClick={() => onOpen(m.id, m.account)} {...rowProps(m, acct)} />
           ))}
         </div>
       )}
@@ -345,8 +345,9 @@ export default function MailPage() {
     leave(id)
   }
 
-  const openMail = (id: string) => {
+  const openMail = (id: string, inbox: string) => {
     setSel(id)
+    setSelectedInbox(inbox)
     setView("all")
     setTimeout(() => document.getElementById("reply")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
   }
@@ -488,7 +489,7 @@ export default function MailPage() {
                 </div>
               )}
               {radar.map(r => (
-                <div key={r.threadId} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 20px", boxShadow: "var(--shadow-card)", display: "flex", gap: 14, alignItems: "center" }}>
+                <div key={interviewThreadKey(r.account, r.threadId)} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 20px", boxShadow: "var(--shadow-card)", display: "flex", gap: 14, alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", color: r.daysWaiting >= 10 ? "var(--danger)" : "var(--accent-txt)", minWidth: 54 }}>
                     {r.daysWaiting}d
                   </span>
@@ -498,7 +499,7 @@ export default function MailPage() {
                       {(r.vendor || r.to || "").split("<")[0].trim().slice(0, 40)}{r.jobTitle ? ` · ${r.jobTitle}` : ""}
                     </div>
                   </div>
-                  <button className="btn-outline" style={{ minHeight: 38, flex: "none" }} onClick={() => openMail(r.threadId)}>Open</button>
+                  <button className="btn-outline" style={{ minHeight: 38, flex: "none" }} onClick={() => openMail(r.threadId, r.account)}>Open</button>
                 </div>
               ))}
             </div>

@@ -213,3 +213,46 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Poke-inspired account identity and mobile navigation — 13 November 2026
+
+The current implementation slice preserves the existing four-account ceiling and account boundaries. Historical docs record a 3–4 account range, but removing the ceiling remains unapproved:
+
+- Digest sender mute = receiving Gmail account + sender address. Muting the same recruiter in one inbox does not mute another inbox.
+- Digest and waiting-on-them thread identity = receiving account + provider thread ID. A provider thread ID collision across inboxes is not a global identity.
+- Opening a digest, role-card or waiting-on-them item selects the receiving inbox before opening the thread.
+- Selected-From persistence and per-account OAuth token binding remain governed by the existing Gmail send isolation path; reconnect is scoped to the affected inbox.
+- On narrow screens, the hamburger expands below the sticky top bar in normal flow and pushes content down. It does not cover, dim or make the page inert; outside click, link selection and Escape close it and return focus to the hamburger.
+
+This source-level slice is not live acceptance. The exact-head CI and protected preview remain required. Real acceptance must use two authorized inboxes with a shared provider thread ID/sender and a narrow phone viewport. No Gmail API, OAuth, inbox mutation or outbound email test is part of this work.
+
+
+## Owner-authored scope confirmation recovered 14 November 2026
+
+Prior-context retrieval recovered the direct 17 October request: Poke-inspired multi-account inbox toggles; per-account identity and From selection; fold-style thread, reply and contact panes; CC/BCC/attachments; Important meaning “track this sender”; a combined Important inbox; an automation feed; and mobile controls/updates. The historical 3–4 connected-account range records the intended multi-inbox scale; it does not approve removing the existing four-account ceiling. Keep the current cap until the owner explicitly approves a different limit. Gmail must retain regular Gmail capabilities while simplifying multiple inboxes.
+
+The owner-approved mobile behavior is hidden when closed; when opened, the navigation expands below the sticky header in normal document flow and pushes page content down. It must not cover, dim or make the page inert. Exact animation and styling remain implementation choices; narrow-phone acceptance is still pending.
+
+PR #387 implements only a narrow account-scoped digest identity and non-covering navigation slice. It does not complete the full Gmail scope, change selected-From persistence or reply composition, enable automated sending, or establish two-inbox/mobile acceptance.
+
+
+## 14 November 2026 — current-master restack
+
+The account-scoped digest and mobile no-cover slice from PR #394 head `4121dc660c0cc6ff0938ddf21e353311403a64bf` is being restacked onto canonical master `46043ec6ca926b2ab82424d255367426685f294d` as `fix/gmail-poke-mobile-current-master-46043-20261114`. Predecessor full CI `43593882886`, Kompas baseline `43593882825` and Plan/REA `43593882833` passed, but the new exact-head checks must rerun. The new PR remains DRAFT pending exact-head gates and the legitimate protected preview.
+
+Live acceptance still requires two authorized inboxes with colliding sender/thread IDs, correct receiving-inbox selection, selected-From preservation, independent reconnect and an actual narrow-phone device check. The background worker, scheduler, Meta template and external notifications remain disabled. No Gmail API/OAuth, inbox mutation or email send occurred.
+
+## 14 November 2026 — production sync freshness and worker gate
+
+Read-only production evidence shows three Gmail-enabled accounts for one user. All three durable `mfit_gmail_sync` rows last synced on 10 Nov 2026 at approximately 14:44 UTC; 2,002 cached threads were last updated at approximately 14:44–14:46 UTC. The daily `/api/gmail/crawl` cache warmer remains scheduled for 12:00 UTC, the production `CRON_SECRET` exists, and the cache freshness window is five minutes. A successful daily run should refresh the accounts, but the 14 Nov invocation is not inspectable now because Vercel Hobby runtime logs retain only one hour. No Gmail route error cluster was returned for seven days, and no Supabase `exceed_egress_quota` edge-log event was found in the preceding 24 hours; neither result proves that the cron completed successfully.
+
+The separate Poke-style proactive worker remains disabled because `GMAIL_UPDATES_SCHEDULER_ENABLED` and `WHATSAPP_GMAIL_UPDATE_TEMPLATE` are absent. The existing Important sender tracking and combined Important inbox already exist. PR #401 is a DRAFT current-master restack with full CI, Kompas baseline and Plan/REA green; protected preview, two-inbox collision/selected-From/reconnect tests and narrow-phone device acceptance remain open. PR #396's explicit snapshot secret is only an empty sensitive variable record, and removing the default HMAC fallback could strand legacy snapshots; require an owner-approved compatibility/migration path before merging it.
+
+No Gmail API/OAuth call, inbox read or mutation, email/WhatsApp send, worker enablement or production database write occurred. The next diagnostic is a retained daily-cron invocation/result or a separately reviewed per-account sync-run audit. Do not infer success from an empty runtime-error report.
+
+## 15 November 2026 — current-master implementation status
+
+Draft PR #424 restacks the account-scoped digest and mobile-navigation slice onto canonical master 8ad319. It adds per-account sender mute keys, account+provider-thread identity, correct receiving-inbox selection, and regression coverage. The historical 3–4 account range remains the target; the existing four-account ceiling remains in force because its removal is not owner-approved.
+
+This is not full Gmail parity or a Poke-style proactive worker. No worker, scheduler, external notification or Meta template is enabled. No Gmail API/OAuth call, inbox mutation or email send occurred. The draft requires exact-head CI, protected preview, two-inbox collision/selected-From/reconnect acceptance and a narrow-phone check before release.
