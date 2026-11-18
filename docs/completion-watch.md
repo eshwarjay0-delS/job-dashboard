@@ -1,3 +1,15 @@
+## 18 November 2026 20:05 UTC — WhatsApp fallback typecheck repair
+
+- PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) remains DRAFT. Its prior exact head `189320c77d8cf5004442364c4aca49e019900808` failed full CI `44385137113` and WhatsApp recovery `44385136925`: `IN_FLIGHT_MS` was missing from the restacked route and the recovery helper repeated `delivered`/`read` comparisons after its terminal guard. Kompas baseline on that prior head passed.
+- Corrective commits on the same branch restore the 300,000 ms in-flight lease (`770de26af25744334e801dc0091530ac1dac7fa6`), keep terminal delivery-state narrowing type-safe while still blocking retries after Meta acceptance/sent (`ea01770d30d12a54e42a0ec0a46028b98eb608c7`), and add a source-executed regression for a late retry after a Meta `sent` callback (`d50aea28148a85b522db522ca80cc08956ed4254`).
+- Current exact head at the last check: `d50aea28148a85b522db522ca80cc08956ed4254`. Plan/REA `44387330710` SUCCESS; full CI `44387330363`, WhatsApp recovery `44387330423` and Kompas baseline `44387330621` were IN PROGRESS. Previous-head results are not reused as final-head evidence. No local test/build is claimed; clone failed because the environment could not resolve `github.com`.
+- Production remains separate: Vercel project metadata `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` CANCELED; canonical alias `job-dashboard-fawn.vercel.app` still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The protected preview needs the owner-controlled `KOMPAS_VERCEL_API_TOKEN`; no preview, deployment, billing change or protection bypass occurred.
+- Historical 17 Oct 17:28 Chicago delivery remains unverified: output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID and signed delivered/read receipt are missing. No real WhatsApp send, replay, DOCX generation, R2 write or production mutation occurred.
+
+Continue: wait for all exact-head gates, then let MFit Safe Merge Gate review #433. Keep it DRAFT until the legitimate protected preview and production release/alias checks are available. Do not merge #411's distinct uploaded-original-after-provider-timeout behavior or send/replay the historical request.
+
+---
+
 # MFit Completion Watch
 
 ## 18 November 2026 — close the unapproved uploaded-original fallback path
