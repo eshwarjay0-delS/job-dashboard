@@ -1,3 +1,15 @@
+## 18 November 2026 00:29 UTC — Kompas phone shell and live quality gates
+
+- PR [#444](https://github.com/eshwarjay0-delS/job-dashboard/pull/444) exact head `8d1be1f3153e20b974d4f4dcfac7616453836192` passed six source gates: full CI 44143476207, account-session sync 44143476089, Kompas baseline 44143475852, Windows EXE 44143475922, Plan/REA 44143475909 and desktop-change skip 44143475922. It remains DRAFT. This is the approved 31 Oct phone-native full-screen UI slice; no voice, mic, computer-audio or Caption Capture code changes.
+- Real iOS/Android acceptance remains missing: installed PWA, safe areas, address-bar/keyboard, portrait/landscape, long-answer scrolling and touch targets. PR #444 also contains stale shared Gmail no-hard-cap wording; the 17 Nov owner correction keeps the four-account ceiling. Safe Merge Gate must reconcile this before merge.
+- The actual Kompas live quality gate still needs 50 consented same-question Kompas/ChatGPT pairs from approved original sources and independent human 0–4 scorecards. The private API token and source bundles are unavailable; no real pairs or scores were produced.
+- Kompas Continuous Voice Delivery is disabled in the accessible automation inventory. No duplicate voice/caption changes were made; native Windows/WhatsApp/mobile voice and session acceptance remain separate.
+- Production alias remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Latest master deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` was CANCELED by the Ignored Build Step because the commit lacked `[ship]`; no production release or protected-preview bypass was attempted.
+
+Continue: let Safe Merge Gate reconcile #444's shared Plan/REA drift; then require legitimate protected preview and real iOS/Android acceptance. Separately obtain authorized source/API access for the 50-pair live relevance benchmark and human grading. Do not duplicate the disabled voice task.
+
+---
+
 ## 18 November 2026 00:28 UTC — contract-crawler diagnostics and manual-only state
 
 - PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) exact head `63e1f3a238f4768b29d245a9b361f27fcaf4c07e` passes full CI 44174855613, crawler regression 44174855597, Kompas baseline 44174855660 and Plan/REA 44174855645. It remains DRAFT pending Safe Merge Gate review and legitimate protected preview. Source change distinguishes local timeout from upstream AbortError, records portal host and preserves pacing after malformed URLs.
