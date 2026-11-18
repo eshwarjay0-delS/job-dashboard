@@ -71,3 +71,19 @@ Continue: let the active MFit Safe Merge Gate sequence the corrected #442 handof
 
 Continue: run PR #433's legitimate protected preview and acceptance when the owner-controlled preview token and normal Vercel [ship] build path are available; then complete PR #431's authorized exported-DOCX acceptance. Keep all separate owner/device gates intact.
 
+
+
+## 18 November 2026 01:19 UTC — exact-head REA schema failure and correction
+
+The prior PR #442 head `011c017bdb431be890ec8d8376c2e86207c7f684` had full CI and Kompas baseline SUCCESS, but Plan/REA schema failed. The exact failing job `134486495979` showed the new `contract-crawler-diagnostics-manual-only-2026-11-18` REA entry stored the descriptive text `public.mfit_crawl_jobs and public.mfit_crawl_runs (read-only Supabase SELECT)` in `sources[].path`. The repository test correctly treats `path` as a repository-relative file path and verifies it with `existsSync`. The repair keeps the guard strict and moves this non-file evidence description into `sources[].label`. No database access, crawler request, runtime behavior, or source permission changed.
+
+Current source evidence rechecked:
+- WhatsApp integrity #433: exact head `a693cef8f33a72501c769315311aa48e43b037c2`; full CI `43959332261`, WhatsApp recovery `43959332295`, Kompas baseline `43959332407`, Plan/REA `43959332597` all SUCCESS. Still DRAFT; protected preview/production release and owner handset acceptance remain blocked.
+- Resume evidence alignment #431: exact head `a74319cb87a3aff44e111987c59ce978d2f87c2a`; full CI `43972447062`, WhatsApp recovery `43972447199`, Kompas baseline `43972447249`, Plan/REA `43972447039` all SUCCESS. Still DRAFT; owner-authorized resume/JD/confirmation and exported-DOCX inspection remain missing.
+- Final-DOCX Gemini loop #441: exact head `2ab1d89dcc3a65e57a2c4176548dabdb8346515e`; focused ATS `44120391958`, WhatsApp `44120392284`, Plan/REA `44120391772` SUCCESS, but exact-head full CI and Kompas baseline are not yet present. It remains stacked on #431.
+- Poke Gmail/mobile #435: exact head `9e041f6306e227d267317a174bb30b623d9db6c6`; full CI `44207751371`, Kompas baseline `44207751254`, Plan/REA `44207751272` SUCCESS. Existing four-account ceiling is preserved; no-cap PR #440 is unapproved. Two-inbox collision, selected-From, reconnect/mute and narrow-phone acceptance remain.
+- Crawler diagnostics #434: exact head `63e1f3a238f4768b29d245a9b361f27fcaf4c07e`; full CI `44174855613`, crawler regression `44174855597`, Kompas baseline `44174855660`, Plan/REA `44174855645` SUCCESS. Still DRAFT; no live crawl. Manual/on-demand only; Robert Half manual-only; C2H/Right-To-Hire semantics unapproved.
+
+Latest accessible owner correction on Gmail at 17 Nov 21:18:26 UTC retains the existing four-account ceiling. The 17 Oct WhatsApp 17:28 Chicago attempt is a hard hold after automatic repair, not a successful delivery. No output DOCX, per-run R2 object/version, request correlation, Meta message ID or signed delivery/read receipt was recovered. Do not replay or resend.
+
+Production remains at older READY alias SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; current master `66291f677cbcc2318229ef9a3164961e6d3cdb6a` is not deployed. The latest production attempt was canceled by the configured Ignored Build Step for lacking `[ship]`; no application build failure or pause reason was established. Protected preview access still requires the owner-controlled private token. No deployment, project unpause or bypass occurred.
