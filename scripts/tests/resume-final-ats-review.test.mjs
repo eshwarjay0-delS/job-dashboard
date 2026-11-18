@@ -36,6 +36,29 @@ test("parser accepts a bounded score and only canonical target terms", () => {
   });
 });
 
+test("parser rejects missing or malformed gap arrays instead of silently hiding them", () => {
+  const invalidPayloads = [
+    '{"score":91,"weak":[]}',
+    '{"score":91,"missing":[]}',
+    '{"score":91,"missing":null,"weak":[]}',
+    '{"score":91,"missing":"SIEM","weak":[]}',
+    '{"score":91,"missing":{},"weak":[]}',
+    '{"score":91,"missing":["SIEM",null],"weak":[]}',
+    '{"score":91,"missing":[],"weak":["IAM",1]}',
+  ];
+  for (const raw of invalidPayloads) {
+    const review = parseFinalAtsReview(raw, TERMS);
+    assert.equal(review.status, "invalid_response", raw);
+    assert.equal(review.score, null, raw);
+    assert.deepEqual(review.missing, [], raw);
+    assert.deepEqual(review.weak, [], raw);
+  }
+  assert.deepEqual(
+    parseFinalAtsReview('{"score":91,"missing":[],"weak":[]}', TERMS),
+    { status: "ok", score: 91, missing: [], weak: [] },
+  );
+});
+
 test("parser normalizes case and separators but rejects unlisted aliases and malformed scores", () => {
   assert.deepEqual(
     parseFinalAtsReview('{"score":100,"missing":["INCIDENT-RESPONSE"],"weak":[]}', TERMS),
