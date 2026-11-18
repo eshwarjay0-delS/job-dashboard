@@ -1,3 +1,15 @@
+## 18 November 2026 01:46 UTC — exact-head REA correction verified
+
+- The earlier PR #442 Plan/REA failure is fixed without weakening the repository-path test. The external read-only aggregate `public.mfit_crawl_jobs and public.mfit_crawl_runs` is now a descriptive REA source label, not `sources[].path`.
+- Fix commit: `545304c9ad08d0b16a14c30d38dac6ccc49b8417`. Exact-head checks on that commit: full CI `44216819539` SUCCESS; Plan/REA schema `44216819582` SUCCESS; Kompas baseline `44216819672` SUCCESS.
+- Added an explicit regression that the external aggregate remains a label and is never stored as a repository path. Regression commit: `980a63925f75f220734539c23a400b1abd53bc32`. The final branch head has changed again, so the three checks above do not validate the later test/journal/docs commits; exact-head reruns are required.
+- The MFit Safe Merge Gate's latest independent audit reported no eligible merge. Keep PR #442 DRAFT; do not mark it ready or merge it from this task.
+- Production remains blocked independently: Vercel project `job-dashboard` reports `live:false`; latest production attempt `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED; canonical alias `job-dashboard-fawn.vercel.app` remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview needs the owner-controlled private token. No unpause, protection bypass, billing change, preview or deployment occurred.
+
+Continue: run full CI, Plan/REA schema and Kompas baseline on the final PR #442 head after the added regression and handoff updates; then let Safe Merge Gate review it. Do not deploy until the owner/authorized administrator restores the normal protected release path.
+
+---
+
 ## 18 November 2026 01:19 UTC — repair REA source locator and refresh exact-head acceptance state
 
 - Canonical MFit master remains `011c017bdb431be890ec8d8376c2e86207c7f684`. The continuation branch is `docs/mfit-continuation-reconciliation-20261117-run11`; this update is documentation/evidence-model work only.
