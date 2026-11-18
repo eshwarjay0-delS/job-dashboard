@@ -88,7 +88,7 @@ test("reply drafts are isolated by user, receiving inbox and provider thread ID"
 })
 
 
-test("mobile inbox toggles follow every connected account without a four-account cap", () => {
+test("mobile inbox toggles render every server-returned account; the database contract enforces the four-account ceiling", () => {
   const page = readFileSync(new URL("../../src/app/dashboard/mail/page.tsx", import.meta.url), "utf8")
   const data = readFileSync(new URL("../../src/lib/use-gmail-data.ts", import.meta.url), "utf8")
   assert.match(page, /accounts\.map\(a =>/)
