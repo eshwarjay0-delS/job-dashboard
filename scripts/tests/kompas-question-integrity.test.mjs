@@ -24,7 +24,7 @@ test("pressQuestion keeps the whole formed question over a contained fragment", 
 });
 
 test("a client-formed question is never overwritten by the stream meta abstraction", () => {
-  const handler = appJs.match(/function applyAnswerStreamEvent\\(card, ev\\) \\{[\\s\\S]*?\\n\\}/)?.[0];
+  const handler = appJs.match(/function applyAnswerStreamEvent\(card, ev\) \{[\s\S]*?\n\}/)?.[0];
   assert.ok(handler, "active stream-event handler must exist");
   const apply = runInNewContext(`(${handler})`, {
     isPlaceholderTitle: () => false,
