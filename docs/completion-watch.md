@@ -1,3 +1,13 @@
+## 18 November 2026 20:58 UTC — final child-head evidence and documentation refresh
+
+- PR #447 exact head `03668d7a326bebada0b67f4e4e7ec39443c26cc3`: WhatsApp recovery [44394262959](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262959) **SUCCESS**, typecheck passed, 94 tests / 94 passed / 0 failed. The same-JD concurrent-start and lease-release regression passed.
+- Plan/REA [44394262234](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262234) **SUCCESS**.
+- This child PR is stacked on #433. Full CI and the master-only Kompas baseline do not trigger for this child base; after Safe Merge Gate integrates it into #433, require those gates on the updated parent head.
+- The current journal/watch update is documentation-only. It creates a new child head and triggers fresh exact-head WhatsApp recovery and Plan/REA runs; those latest runs are pending and must not inherit the 03668 results.
+- Parent #433 remains DRAFT. Production alias remains older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; latest master deployment attempt was canceled by the Ignored Build Step due to no `[ship]` marker. No deployment or external send occurred.
+
+Continue: verify the documentation-updated child head's new exact-head gates, then let MFit Safe Merge Gate sequence #447 into #433 and run full CI/baseline on the updated parent.
+
 ## 18 November 2026 20:52 UTC — WhatsApp child-PR gate results
 
 - Child PR [#447](https://github.com/eshwarjay0-delS/job-dashboard/pull/447), exact head `19608572885091f399102f6706dec9a00203cf8b`, is DRAFT and stacked on parent #433.
