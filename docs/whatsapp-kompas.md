@@ -160,3 +160,10 @@ The 27 October journal entry that said no runnable environment was available, an
 ## Public test-fixture privacy — 15 November 2026
 
 WhatsApp regression fixtures are synthetic only. Use `example.test` email identities and reserved fictional 555-0100 through 555-0199 phone numbers; never commit private resume bodies, real account contacts, user-specific library paths, or private document fingerprints. Keep distinct test identities distinct so account-isolation assertions remain meaningful. See `docs/research/whatsapp-test-fixture-privacy-2026-11-15.md`.
+
+
+## Same-account library fallback label — 16 November 2026
+
+The owner-approved offline failsafe is the closest matched resume from the same account's library. When the run source is the selected Files/library record, the fallback caption must say **Original resume — NOT TAILORED**. The caption-only correction is on branch `fix/whatsapp-library-fallback-not-tailored-label-20261116`; the exact selected file, profile check, document bytes and send/retry behavior are unchanged. The source-executed regression asserts the label on library fallback and its absence on a completed tailored DOCX.
+
+This does not authorize sending an uploaded original after a provider timeout (PR #411), and it does not decide whether the entire message should be blocked for unsupported JD-only terms (PR #427). No real WhatsApp message, protected preview or production release is claimed. See `docs/research/whatsapp-library-fallback-label-2026-11-16.md`.

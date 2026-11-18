@@ -856,7 +856,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (!chosenResumeMatchesProfile(text, files?.email)) return false
     const meta = await metaPromise
     const name = await outputNameFor(source)
-    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
+    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why, !!files)
     await patchResumeRecovery(job, { status: "sending" })
     sending = true
     try {
@@ -1696,9 +1696,10 @@ function unfinishedRewriteWhy(result: TailorResult): string {
   return "The rewrite did not finish cleanly."
 }
 
-function closestResumeCaption(name: string, label: string, why: string): string {
+function closestResumeCaption(name: string, label: string, why: string, markNotTailored = false): string {
   return [
     `*${name}*`,
+    ...(markNotTailored ? ["Original resume — NOT TAILORED"] : []),
     `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
     "Reply to this file to request changes.",
   ].join("\n")

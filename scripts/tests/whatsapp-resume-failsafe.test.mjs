@@ -143,6 +143,8 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
+  assert.ok(docs[0].caption.indexOf("Original resume — NOT TAILORED") < docs[0].caption.indexOf("This is your closest matching resume"))
   assert.match(docs[0].caption, /EASM Cybersecurity Engineer/)
   assert.match(docs[0].caption, /in GRC and IT Risk/)
   assert.match(docs[0].caption, /did not finish cleanly/)
@@ -157,6 +159,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /marked incomplete/)
   assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
@@ -183,6 +186,7 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
   assert.doesNotMatch(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].caption, /marked incomplete/)
   assert.doesNotMatch(docs[0].caption, /closest matching resume/)
+  assert.doesNotMatch(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
@@ -227,6 +231,7 @@ test('roles that were not rewritten still send the chosen library file', async (
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
   assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /Original resume — NOT TAILORED/)
   assert.match(docs[0].caption, /Some experience sections were not rewritten/)
   assert.match(docs[0].caption, /was not rewritten/)
   assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
@@ -250,4 +255,11 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
   assert.equal(docs.length, 0, 'a Saint Louis file is not sent for the Houston profile')
   assert.doesNotMatch(said.join('\n'), /candidate2/)
   assert.doesNotMatch(docs.map(d => d.body).join('\n'), /candidate2/)
+})
+
+
+test('the not-tailored label is restricted to Files/library-origin fallback', () => {
+  const source = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
+  assert.match(source, /closestResumeCaption\(name, chosenLabel\(files, session\.resumeName\), why, !!files\)/)
+  assert.match(source, /\.\.\.\(markNotTailored \? \["Original resume — NOT TAILORED"\] : \[\]\)/)
 })

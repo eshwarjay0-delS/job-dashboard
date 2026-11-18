@@ -165,3 +165,23 @@ The current-master candidates remain separate:
 - PR #400: exact-head source gates passed; protected preview, authorized source/JD/confirmation and exported-DOCX acceptance remain outstanding.
 
 No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are available. Do not replay it or claim delivery.
+
+
+## 16 November 2026 — restore the explicit label on the approved library fallback
+
+The 13 November handoff records that the initial-JD offline fallback should be labelled **Original resume — NOT TAILORED**. A current-master source recheck found that `closestResumeCaption` did not actually enforce that exact label. The new caption-only branch adds it only when the run carries the selected Files/library source marker. The upload-origin path, send eligibility, account selection, document bytes, retry state and external delivery calls are unchanged.
+
+Runtime commit: `9fb4bb3a2bacb83b02c90dbed3521b63313aa74f`. Test commit: `8c183200c24282d6ab0940c625d599faa9b4ad2a`. Exact-final-head CI, protected preview, Safe Merge Gate review and production READY verification remain pending. No live message or handset test occurred. PR #411's uploaded-original-after-timeout behavior remains separate and unapproved; the 17 October delivery incident remains unverified.
+
+
+## 16 November 2026 — exact JD recovered; source resume and confirmations remain open
+
+A read-only Gmail search recovered the matching **5+ years / Security Engineer – Risk & Controls / Atlanta, GA onsite / contract** JD in thread `1a1464393628992f`, forwarded on 16 October 2026 at 19:49 UTC. Its responsibilities and preferred blockchain/certification vocabulary are consistent with the 17 October screenshot's title, location and displayed missing terms. The exact JD itself is therefore available; it should not remain listed as missing.
+
+A distinct **12+ years** copy exists in thread `1a14663317ae0564` and adds React.js. It is a separate recruiter variant and must not be substituted for the 5+ years JD without evidence.
+
+The exact WhatsApp source DOCX is still not established. A separate 16 October Endpoint Engineer email contains a resume attachment, but the Gmail connector exposes only attachment metadata; it does not provide the attachment bytes for digest comparison. The multiple resume variants indexed in Library are not proven to be the 27,724-byte WhatsApp upload or the owner-authorized baseline for this run. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain missing.
+
+Accessible prior-context retrieval recovered the owner's 6 November general approval to map **skills he explicitly confirms** into relevant existing project context. It did not recover a specific skill-confirmation list for this JD. The JD's **5+ years** experience threshold is also not independently established by an owner-confirmed chronology. Recruiter-submitted “9+ years” rows, assistant-authored resume claims and JD requirements are not candidate evidence.
+
+**Acceptance remains blocked** on the owner-authorized source resume, explicit per-skill confirmations, verified chronology for the 5+ years requirement, actual exported-DOCX inspection and raw/weighted coverage. No model call, DOCX export, score, email/WhatsApp send, R2 write, database mutation or delivery claim was made.
