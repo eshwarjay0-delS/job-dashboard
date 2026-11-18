@@ -40,6 +40,15 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 - **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
 - There is no single resume — there's the right resume per job.
 
+## Current evidence and delivery policy — 18 November 2026
+
+- The JD is the target specification, not evidence that the candidate has performed the work. Use the original resume and explicit candidate confirmations as the evidence boundary.
+- An explicitly confirmed skill may be mapped naturally into relevant existing project bullets across roles. Confirmation supports only the named skill; it does not create an employer, project, action, outcome, date, title, location, contact, metric or credential.
+- Channel thresholds are distinct. Web downloads retain the strict 95% raw-JD-overlap gate. The repository-recorded 6 Nov WhatsApp policy permits a completed, readable result below 95% with honest gaps disclosed; a clean 70–94.9% result requires at least 95% supported coverage. A finished result below 70% is not a clean pass. A high keyword score never proves deliverability.
+- The latest owner correction (14 Nov 2026) is authoritative: unsupported JD-only experience must never be delivered. A cached `unverified_jd_terms` blocker is rejected even when its detail list is empty. Where the approved offline failsafe applies, use the closest matched resume from the same account's library and label it **Original resume — NOT TAILORED**.
+- This same-account library failsafe is separate from sending the exact uploaded original after a provider timeout; that behavior remains an unapproved owner-decision gate.
+- The 17 Oct 2026, 17:28 Chicago screenshot is evidence of a hard hold after automatic repair, not a successful delivery. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain missing.
+
 ## Credential-target regression — 20 October 2026
 
 The 19 October instruction to ignore certifications as tailoring targets is retained. The classifier now recognizes terminal-plus credential names and Salesforce Platform Developer I/II and CPQ Specialist without a Certified prefix. Unsupported credentials are removed from rewritten skills; original credentials remain. Evidence: `docs/research/credential-target-boundaries.md`. Live generation acceptance remains pending.
