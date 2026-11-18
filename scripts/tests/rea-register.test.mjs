@@ -98,6 +98,6 @@ test('WhatsApp offline fallback and confirmed-skill restacks remain blocked unti
 test('external crawler aggregates are labels, never repository paths', () => {
  const entry=REA_SESSIONS.find(s=>s.id==='contract-crawler-diagnostics-manual-only-2026-11-18')
  assert.ok(entry)
- assert.ok(entry.sources.some(s=>s.label.includes('public.mfit_crawl_jobs') && s.label.includes('read-only Supabase SELECT') && !s.path))
+ assert.ok(entry.sources.some(s=>s.label.includes('Production crawler aggregates') && s.label.includes('read-only Supabase SELECT') && !s.path))
  assert.ok(!entry.sources.some(s=>s.path?.includes('public.mfit_crawl_jobs')))
 })
