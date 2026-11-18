@@ -1,5 +1,18 @@
 # MFit Completion Watch
 
+## 16 November 2026 10:25 UTC — confirmed-skill alignment current-master restack
+
+- Canonical master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Production alias `job-dashboard-fawn.vercel.app` independently remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. GitHub compare shows master 43 commits ahead/0 behind; the differences are CI/workflows, AGENTS, docs, tests and Plan/REA, with no core resume/Gmail/crawler/Kompas feature code or production configuration changes. Plan & Vision data itself is user-visible and still requires a reviewed production release.
+- The owner-approved confirmed-skill rule remains anchored to PR #319 comment [#6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128): explicit candidate confirmations may map a named skill into relevant existing project bullets across roles, but do not create a new employer, project, action, outcome, date, title, location, contact, metric or credential. JD requirements, target scores and editing instructions are not candidate evidence.
+- Original PR #423 head `fccf93c1a3377149172d012e1158e5e2cea0a973` passed exact-head full CI `43784557000`, WhatsApp recovery `43784556944`, Kompas baseline `43784556952` and Plan/REA `43784556985`. Retargeting it to current master made it dirty because shared Plan/REA/Completion Watch files overlap; no merge was attempted. A clean restack branch `fix/resume-confirmed-skill-alignment-master-66291-20261116` was created from current master and populated with the reviewed source/test changes and resume research docs. New exact-head Actions are still pending; predecessor checks do not validate the restack.
+- Restack commits: `1ec73a42`, `f34c4472`, `521d8cc8`, `00aad666`, `2221907b`, `25baeb18`, `420630b4`, `15003d0c`, `00cc6f4d`, `45d266f3`. The copied changes do not modify Next.js APIs. The container has no repository checkout or `node_modules/next/dist/docs` and cannot resolve `github.com`; no local npm/test/build is claimed. GitHub Actions is the executable validation path.
+- Read-only production aggregate evidence: Gmail has 3 sync rows across 3 account IDs and 2,002 cached threads; latest sync remains 10 Nov 14:44:44 UTC. `connected_services` shows 1 Gmail-connected and 6 disconnected user records. Contract crawling's latest run remains 10 Nov 11:00:24–11:01:11 UTC (6,818 jobs upserted across 20 portals, one error); current `vercel.json` has no contract-crawler cron, consistent with manual/on-demand only. Kompas has 22 account-session rows including 7 tombstones, 15 non-deleted rows and 28 artifacts across one owner; latest update remains 9 Nov 21:47 UTC. No inbox contents, session payloads, account IDs or portal requests were read.
+- PR #428 same-account fallback label remains DRAFT with its four exact-head gates green but protected preview unavailable. PR #430 crawler diagnostics remains stacked on #428; 15/15 focused tests and Plan/REA passed on earlier heads, while full CI/baseline remain pending. The 17 Oct 17:28 Chicago WhatsApp incident remains open: exact source attachment byte identity, generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt are still missing. No replay, resend, real email/WhatsApp test, Gmail API call, live crawl or database write occurred.
+
+Continue: open the current-master confirmed-skill restack as a DRAFT PR, run full CI + WhatsApp recovery + Kompas baseline + Plan/REA on its exact head, and let MFit Safe Merge Gate sequence shared docs. Keep protected preview and owner-authorized source/JD/confirmation/exported-DOCX acceptance as separate gates.
+
+---
+
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
 - Backlog reconciliation PR #425 is on branch `docs/mfit-backlog-reconciliation-20261116` (current head is shown on the PR; still DRAFT). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; GitHub compare shows master 15 commits ahead/0 behind. Most differences are CI/workflows, AGENTS, docs, tests and Plan/REA. However, `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`, and `src/lib/plan-vision-journal.ts` by the journal component and `/api/vision/live`; these are user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production configuration changed. After Safe Merge Gate approval and merge, a normal production deployment, READY check and canonical alias verification are required to publish the updated Plan & Vision UI. No deployment has occurred. PR #416 fixture-privacy correction is merged into master at the current SHA.
@@ -598,3 +611,35 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 16 November 2026 — Continue: reverify the 17 Oct WhatsApp source/JD and threshold provenance
+
+Canonical source remains `eshwarjay0-delS/job-dashboard`. Current master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The public production alias `job-dashboard-fawn.vercel.app` is independently READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, exact production SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Vercel project metadata reports `live:false`; the protected preview path is unavailable in this run and requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. No deployment or alias change was attempted.
+
+### 17 October WhatsApp evidence
+
+- Reopened the private Library screenshot: five-page, approximately 28 KB DOCX at 5:25 PM; the bot then asked for a resume, said it was updating, and at 5:28 PM held the result against a 98% target. Without webhook IDs, this sequence does not establish a race or root cause.
+- Recovered a 27,724-byte DOCX member from the organized Library archive. Its SHA-256 matches the Library inventory entry. The screenshot's displayed filename/rounded size is consistent, but the actual WhatsApp media payload bytes are not accessible; exact upload-byte identity is not proven.
+- Connected Gmail read-only retrieval independently confirmed the matching 5+ years Atlanta onsite JD. A separate 12+ years recruiter variant was excluded.
+- The exact WhatsApp attachment bytes, generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt remain missing. No replay or resend.
+
+### Approval provenance correction
+
+The repository contains a dated 6 Nov owner-request record in `docs/research/whatsapp-scored-rewrite-2026-11-06.md` and the Plan Journal: “Do not refuse a file only because coverage is under 95 percent. The 70 to 94.9 percent clean pass and the website 95 percent gate stay.” The correct status is **repository-recorded 6 Nov owner approval; primary owner-authored message not independently re-retrieved in this run**. This supersedes the earlier 16 Nov wording that treated the threshold as unapproved, while preserving that earlier record as a snapshot of what was known then. Runtime is unchanged. The 14 Nov correction remains authoritative: honest gaps may be disclosed, but unsupported experience claims and `unverified_jd_terms` must never pass. The separate 6 Nov confirmed-skill cross-role correction is independently evidenced by owner-authored PR #319 comment #6817645128.
+
+### Current review queue
+
+- PR #431 confirmed-skill restack: head `507484441bf2e4e0406c810f2ed146e1da4db1c7`; full CI `43850808453`, WhatsApp recovery `43850808367`, Kompas baseline `43850808446`, Plan/REA `43850808403` all SUCCESS before this documentation/comment update. These runs do not validate the new head. Keep DRAFT; rerun exact-head gates.
+- PR #428 WhatsApp library-fallback label: head `34008374c99daf07f96e7a2c8028883f5cfbf686`; all four exact-head gates SUCCESS, but base is `11f14891`, behind current master. Safe Merge Gate must restack it; do not merge the stale branch.
+- PR #430 crawler abort diagnostics: head `c44b048e09b6b08ef30414f5e79ddeac8deeca81`, stacked on #428; crawler regression and Plan/REA passed, but full CI and Kompas baseline are not recorded on this exact head.
+- PR #432 Gmail Retry-After: current-master head `40b214458ff8acfabc7ab2a82e6c546e45fcdcbe`; full CI, Plan/REA and Kompas baseline SUCCESS. Protected preview, two-inbox isolation/selected-From/reconnect and narrow-phone acceptance remain.
+- PR #424 full Poke-inspired Gmail/mobile feature remains DRAFT on stale base `8ad319d`, non-mergeable; its prior full CI/baseline/Plan-REA results do not prove current-master or two-inbox/phone acceptance.
+- PR #411 uploaded-original-after-timeout remains DRAFT on stale base `17f8dada`, non-mergeable with no exact-head runs; that separate behavior still needs explicit owner approval. The 27 Oct same-account library fallback approval is not interchangeable.
+- PR #417 implements only the approved final-DOCX Gemini score-only first stage. The evidence-only correction/re-export/recheck loop remains unimplemented.
+- Contract crawler remains manual/on-demand only; Robert Half remains manual-only. No live crawl was run.
+- Kompas Continuous Voice Delivery is disabled; no duplicate audio/caption work was started.
+
+The local container could not resolve `github.com` for a repository clone and has no `node_modules/next/dist/docs`; no local npm/test/build was run. GitHub Actions is the available remote validation path. No private credential was accessed, no email or WhatsApp was sent, no Gmail API/OAuth mutation, R2 write, production DB write, model call or device test occurred.
+
+Continue: keep PR #431 DRAFT and rerun its exact-head CI/Plan-REA after this docs/comment commit; let Safe Merge Gate sequence #428/#430 shared files. The next high-priority source task remains the approved final-DOCX Gemini score → evidence-only correction → re-export/recheck loop, but local implementation is blocked until the repository checkout and AGENTS-required Next.js guide are available. Historical WhatsApp closure remains blocked on the exact output/R2/webhook/Meta evidence and owner reconciliation.
