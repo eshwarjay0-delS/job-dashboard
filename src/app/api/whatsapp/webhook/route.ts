@@ -48,7 +48,7 @@ import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, chosenResumeMatchesProfile, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable } from "@/lib/whatsapp-resume-acceptance"
 import { confirmedCandidateStatements } from "@/lib/resume-evidence"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { enqueueResumeRecovery, claimResumeRecoveryWorker, releaseResumeRecoveryWorker, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
@@ -80,9 +80,9 @@ const filesOf = (userId: string): string => (ACCOUNT_ID.test(userId) ? path.join
 // The rewrite stops by 240 s so reading the result, checking it and sending the file (uploading it to WhatsApp) still fit
 // inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
 const TAILOR_BUDGET_MS = 240_000
-// How long the first of a job post and a resume sent together waits for the other before asking for it.
 // How long a job from Files holds its claim against being made twice: the function's own limit.
 const IN_FLIGHT_MS = 300_000
+// How long the first of a job post and a resume sent together waits for the other before asking for it.
 const PAIR_WAIT_MS = process.env.WHATSAPP_PAIR_WAIT_MS !== undefined ? Number(process.env.WHATSAPP_PAIR_WAIT_MS) || 0 : 2_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
@@ -811,20 +811,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     await deferResumeRecovery(job, "provider_unavailable")
     return quiet ? undefined : sendText(from, "Your resume request is saved. Tailoring is unavailable; MarketFit will retry automatically.")
   }
-  // One claim per JD across workers.
-  const claimKey = `whatsapp/jobs/${job}`
-  const claimToken = randomBytes(6).toString("hex")
-  if (!await blob.putIfAbsent(claimKey, JSON.stringify({ at: Date.now(), token: claimToken }))) {
-    const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { at?: number }
-    if (held.at && Date.now() - held.at < IN_FLIGHT_MS)
-      return quiet ? undefined : sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
-    // A prior function was interrupted, or this is a legacy permanent claim. Replace it so a manual retry is never
-    // ignored forever. The six-minute lease outlives the platform's five-minute function ceiling.
-    await blob.put(claimKey, JSON.stringify({ at: Date.now(), token: claimToken }))
-  }
+  // The durable recovery record owns a six-minute ETag-CAS lease. This route is capped at 300 seconds.
+  const claimToken = await claimResumeRecoveryWorker(job)
+  if (!claimToken)
+    return quiet ? undefined : sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
   let finished = false
   let sending = false
   let told = false
+  let claimLost = false
   let failureCode = "quality_incomplete"
   // Fail-fast notice timer (Nov 4 baseline doctrine): declared here so the
   // outer finally can clear it; armed after the "Updating..." line below.
@@ -834,7 +828,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (quiet) {
       const current = await readResumeRecovery(job).catch(() => null)
       if (current?.toldUser) return undefined
-      await patchResumeRecovery(job, { toldUser: true }).catch(() => {})
+      if (await patchResumeRecovery(job, { toldUser: true }, claimToken).catch(() => false) === false) return undefined
     }
     told = true
     return sendText(from, text).catch(() => undefined)
@@ -847,7 +841,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd) return false
+    // Only a positively selected same-account Files entry is an approved fallback.
+    // A missing Files selection is an uploaded original, not proof of library ownership.
+    if (!resumePath || !jd || !files?.email || !files.userDir || !files.abs || files.abs !== resumePath) return false
+    const libraryRelative = path.relative(files.userDir, files.abs)
+    if (!libraryRelative || libraryRelative === "." || libraryRelative === ".." || libraryRelative.startsWith(".." + path.sep) || path.isAbsolute(libraryRelative)) return false
     const source = await readPath(resumePath).catch(() => null)
     if (!source) return false
     let text = ""
@@ -856,20 +854,24 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (!chosenResumeMatchesProfile(text, files?.email)) return false
     const meta = await metaPromise
     const name = await outputNameFor(source)
-    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
-    await patchResumeRecovery(job, { status: "sending" })
+    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why, !!files)
+    if (await patchResumeRecovery(job, { status: "sending" }, claimToken) === false) { claimLost = true; return false }
     sending = true
     try {
-      const sentId = await deliver(from, source, name, caption, { userId, jd, meta, changes: [], source: session.resumeName }, job)
+      const sentId = await deliver(from, source, name, caption, { userId, jd, meta, changes: [], source: session.resumeName }, job + ":" + claimToken)
       if (!sentId) throw new Error("WhatsApp document send returned no message id")
-      const accepted = await markResumeDocumentAccepted(job, sentId)
+      const accepted = await markResumeDocumentAccepted(job, sentId, claimToken)
       finished = true
       if (accepted && files) await markUsed(files.userDir, files.abs).catch(() => {})
       return true
     } catch (error) {
       const refused = /WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))
       if (refused) {
-        await patchResumeRecovery(job, { status: "pending" }).catch(() => {})
+        if (await patchResumeRecovery(job, { status: "pending" }, claimToken).catch(() => false) === false) {
+          claimLost = true
+          finished = true
+          return true
+        }
         sending = false
         failureCode = "whatsapp_http_rejected"
       } else failureCode = "delivery_unconfirmed"
@@ -956,8 +958,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     // A timeout and a provider failure are different errors with different
     // fixes, so they are told apart here and recorded apart (failureCode is
-    // persisted as the recovery record's errorCode). The already-chosen resume
-    // still goes out. Nothing here changes the retry routing when that send fails.
+    // persisted as the recovery record's errorCode). Only a selected same-account
+    // Files resume may go out as fallback; an upload-only original never does.
     const timedOut = /timed out/i.test(String(e))
     failureCode = timedOut ? "timeout" : "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
@@ -970,7 +972,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   }
 
   // Nothing came back different. Do not present the original as a tailored resume.
-  // Send that already-chosen file and say the rewrite produced no changes.
+  // Only a selected same-account Files resume can be the labelled fallback.
+  // Upload-only sessions receive a text outcome, not their uploaded original again.
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
@@ -1046,7 +1049,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!file) {
     failureCode = "file_missing"
     if (await sendClosest("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file. The tailored Word file could not be opened, and no verified same-account library fallback was available for this run. Your resume and this job are saved for another try.")
     return;
   }
 
@@ -1054,7 +1057,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
-    // The already-chosen resume is unchanged and is the file that goes out.
+    // A selected same-account Files resume may be the labelled fallback; upload-only input is not.
     if (await sendClosest("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
     await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
     return;
@@ -1093,22 +1096,27 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   }
   // Meta can accept an upload before the function sees its response. Never retry an
   // ambiguous send automatically: that could deliver duplicates.
-  await patchResumeRecovery(job, { status: "sending" })
+  if (await patchResumeRecovery(job, { status: "sending" }, claimToken) === false) { claimLost = true; finished = true; return }
   sending = true
   let sentId = ""
   try {
     sentId = await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
-      ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) }, job)
+      ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) }, job + ":" + claimToken)
   } catch (error) {
     // An explicit Meta HTTP rejection proves no document was accepted; retry it.
     // A timeout or unknown response is ambiguous and must not be sent twice.
     const refused = /WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))
     if (refused) {
-      await patchResumeRecovery(job, { status: "pending" })
+      if (await patchResumeRecovery(job, { status: "pending" }, claimToken) === false) {
+        claimLost = true
+        finished = true
+        return
+      }
       sending = false
       failureCode = "whatsapp_http_rejected"
-      // Meta rejected this upload, so nothing was accepted. The already-chosen resume can still go out.
+      // Meta rejected this upload, so nothing was accepted. Only a selected same-account Files fallback may go out.
       if (await sendClosest("WhatsApp refused the updated file.")) return
+      if (claimLost) { finished = true; return }
     } else failureCode = "delivery_unconfirmed"
     await sayOutcome(refused
       ? "I did not send a file. WhatsApp refused it. Your resume and this job are saved for another try."
@@ -1116,7 +1124,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return
   }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
-  const accepted = await markResumeDocumentAccepted(job, sentId)
+  const accepted = await markResumeDocumentAccepted(job, sentId, claimToken)
   if (!accepted) { finished = true; return } // Signed failed-delivery callback already scheduled a retry.
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
@@ -1131,7 +1139,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // that durable copy before removing the temporary inbox copy.
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep) &&
       session.resumeFiled && await existsPath(session.resumeFiled)) {
-    await patchResumeRecovery(job, { resumePath: session.resumeFiled })
+    await patchResumeRecovery(job, { resumePath: session.resumeFiled }, claimToken)
     const durable = await readResumeRecovery(job)
     if (durable?.resumePath === session.resumeFiled)
       await deletePath(session.resumePath).catch(() => {})
@@ -1140,6 +1148,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
     if (!finished && !sending) {
       const sent = await sendClosest("The rewrite did not finish cleanly.").catch(() => false)
+      if (claimLost) { finished = true; return }
       if (!sent && !told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
     } else if (!told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
   } finally {
@@ -1152,12 +1161,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (!finished) {
       if (sending) {
         const latest = await readResumeRecovery(job).catch(() => null)
-        if (latest?.status === "sending") await patchResumeRecovery(job, { status: "uncertain", errorCode: "delivery_unconfirmed" }).catch(() => {})
+        if (latest?.status === "sending") await patchResumeRecovery(job, { status: "uncertain", errorCode: "delivery_unconfirmed" }, claimToken).catch(() => false)
       }
-      else await deferResumeRecovery(job, failureCode, failedCandidate).catch(e => console.error("[whatsapp] recovery persistence failed", String(e).slice(0, 100)))
+      else await deferResumeRecovery(job, failureCode, failedCandidate, claimToken).catch(e => console.error("[whatsapp] recovery persistence failed", String(e).slice(0, 100)))
     }
-    const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { token?: string }
-    if (held.token === claimToken) await blob.delete(claimKey).catch(() => {})
+    await releaseResumeRecoveryWorker(job, claimToken).catch(() => false)
   }
 }
 
@@ -1696,9 +1704,10 @@ function unfinishedRewriteWhy(result: TailorResult): string {
   return "The rewrite did not finish cleanly."
 }
 
-function closestResumeCaption(name: string, label: string, why: string): string {
+function closestResumeCaption(name: string, label: string, why: string, markNotTailored = false): string {
   return [
     `*${name}*`,
+    ...(markNotTailored ? ["Original resume — NOT TAILORED"] : []),
     `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
     "Reply to this file to request changes.",
   ].join("\n")
