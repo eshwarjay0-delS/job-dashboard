@@ -74,3 +74,22 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+
+## 18 November 2026 — current release, phone shell and acceptance boundary
+
+Canonical master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The canonical production alias `job-dashboard-fawn.vercel.app` remains READY on older deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The latest master deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` was CANCELED because the configured Ignored Build Step printed `Skipped: no [ship] tag` and exited 0. The project reports `live:false`; that field does not identify a pause reason. No new deployment, alias promotion, protection bypass or billing change was attempted.
+
+### Phone-native shell (separate from voice work)
+
+PR [#444](https://github.com/eshwarjay0-delS/job-dashboard/pull/444) is the owner-approved 31 Oct UI-only request for a full-screen, device-adaptive Kompas phone view. Exact head `8d1be1f3153e20b974d4f4dcfac7616453836192` passed six source gates: full CI `44143476207`, account-session sync `44143476089`, Kompas baseline `44143475852`, Windows EXE `44143475922`, Plan/REA schema `44143475909`, and desktop-change skip gate `44143475922`. The PR remains DRAFT. Its scope is `public/kompas/mobile-shell.css`, markup and tests; it explicitly does not change microphone, computer audio, Caption Capture, input-source or voice pipeline behavior.
+
+A real iOS/Android acceptance pass remains required for installed-PWA behavior, safe-area cutouts, address-bar/keyboard changes, portrait/landscape, long-answer scrolling and touch targets. No device rendering or real phone test occurred in this run. The PR branch also carries an older Gmail no-hard-cap interpretation in its shared Plan & Vision copy; the 17 Nov owner correction now keeps the four-account ceiling. Safe Merge Gate must reconcile that shared-document drift before #444 can be merged.
+
+### Live quality and voice boundaries
+
+The live Kompas/ChatGPT gate remains at least 50 consented, same-question response pairs from identical approved resume/JD/reference sources, followed by independent human 0–4 scoring. The private `KOMPAS_API_TOKEN` and approved original source bundles were not available; no real paired responses or human scores were produced. Synthetic 50/54-fold tests are code gates only.
+
+The separate Kompas Continuous Voice Delivery automation is disabled in the accessible inventory. No voice, microphone, Caption Capture, computer-audio or latency code was edited here. Do not duplicate that work or claim native Windows/WhatsApp/mobile voice acceptance. The phone-shell UI is not a substitute for voice testing.
+
+Continue: let Safe Merge Gate sequence #444 and correct the shared four-account Plan/REA interpretation before merge. Obtain a legitimate protected preview and owner-consented iOS/Android device pass. Keep the 50-pair live evaluation and native Windows/WhatsApp acceptance open until real evidence exists.
