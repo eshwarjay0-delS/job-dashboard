@@ -13,7 +13,7 @@ test('job input is durably enqueued before interactive session consumption', () 
 })
 test('failed quality is retained for automatic recovery', () => {
   assert.match(webhook, /failureCode = "quality_rejected"/)
-  assert.match(webhook, /deferResumeRecovery\(job, failureCode, failedCandidate\)/)
+  assert.match(webhook, /deferResumeRecovery\(job, failureCode, failedCandidate, claimToken\)/)
 })
 test('a chosen-resume failsafe is labelled and is not presented as a tailored rewrite', () => {
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
@@ -77,9 +77,15 @@ test('failed pre-queue JD can be bootstrapped from retained session data', () =>
   assert.match(webhook, /last\.used/)
   assert.match(webhook, /legacy-resume-recovery/)
 })
-test('document delivery uses a durable sending lease before Meta call', () => {
-  assert.ok(webhook.indexOf('status: "sending"') < webhook.indexOf('sentId = await deliver('))
-  assert.match(webhook, /markResumeDocumentAccepted\(job, sentId\)/)
+test('document delivery owns a CAS lease and fences the per-attempt Meta callback', () => {
+  assert.ok(webhook.indexOf('const claimToken = await claimResumeRecoveryWorker(job)') < webhook.indexOf('sentId = await deliver('))
+  assert.ok(webhook.indexOf('patchResumeRecovery(job, { status: "sending" }, claimToken)') < webhook.indexOf('sentId = await deliver('))
+  assert.match(webhook, /job \+ ":" \+ claimToken/)
+  assert.match(webhook, /markResumeDocumentAccepted\(job, sentId, claimToken\)/)
+  assert.match(webhook, /releaseResumeRecoveryWorker\(job, claimToken\)/)
+  assert.match(queue, /claimUntil/)
+  assert.match(queue, /putIfMatch/)
+  assert.match(queue, /RECOVERY_CAS_ATTEMPTS = 8/)
 })
 test('identity is verified before WhatsApp document delivery', () => {
   assert.ok(webhook.indexOf('sameResumeIdentity(await extractText(source), await extractText(file))') < webhook.indexOf('sentId = await deliver('))
@@ -108,7 +114,9 @@ test('saved resumes are remeasured instead of trusted by date alone', () => {
 test('ambiguous Meta timeouts can be reconciled by opaque callback job id', () => {
   const sender = readFileSync(new URL('../../src/lib/whatsapp.ts', import.meta.url), 'utf8')
   assert.match(sender, /biz_opaque_callback_data: opaqueJobId/)
-  assert.match(queue, /timed-out document reconciled as delivered/)
+  assert.match(queue, /legacyInFlight/)
+  assert.match(queue, /currentAttempt/)
+  assert.match(queue, /putIfAbsent\(indexKey, opaqueId\)/)
 })
 
 test('WhatsApp never mistakes Meta API acceptance for handset delivery', () => {
@@ -125,7 +133,7 @@ test('a failed JD stays saved without asking for manual resubmission', () => {
 
 test('Meta acceptance preserves a recoverable original instead of deleting the only source', () => {
   assert.match(webhook, /session\.resumeFiled && await existsPath\(session\.resumeFiled\)/)
-  assert.match(webhook, /patchResumeRecovery\(job, \{ resumePath: session\.resumeFiled \}\)/)
+  assert.match(webhook, /patchResumeRecovery\(job, \{ resumePath: session\.resumeFiled \}, claimToken\)/)
   assert.match(webhook, /if \(durable\?\.resumePath === session\.resumeFiled\)/)
   assert.match(webhook, /const fallback = job\.resumeFiled \|\| ""/)
   assert.match(webhook, /path\.resolve\(fallback\)\.startsWith\(path\.resolve\(root\) \+ path\.sep\)/)
@@ -151,4 +159,12 @@ test('legacy recovery uses stable JD identity and refuses a duplicate persisted 
   assert.match(webhook, /const jdId = "legacy-" \+ jobKeyOf\(last\.jd\)/)
   assert.doesNotMatch(webhook, /const jdId = "legacy-" \+ last\.at/)
   assert.match(queue, /existing\.from === from && existing\.userId === userId && existing\.jd === jd/)
+})
+
+
+test('Meta callback correlation distinguishes a newer attempt from an older message id', () => {
+  assert.ok(queue.includes('const opaqueMatch = /^([a-f0-9]{64})(?::([a-f0-9]{32}))?$/'))
+  assert.match(queue, /job\.attemptToken === attemptToken/)
+  assert.match(queue, /job\.claimToken !== attemptToken/)
+  assert.match(queue, /job\.deliveredMessageId === wamid/)
 })
