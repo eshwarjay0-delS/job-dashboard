@@ -57,3 +57,16 @@ The historical screenshot still proves a hard hold after automatic repair. The e
 
 The latest canonical master remains `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. PR #433 remains a green source-tested DRAFT; PR #431 remains a green source-tested DRAFT. Neither has a legitimate protected preview or production release. The latest production attempt was canceled before build because the Git-linked Ignored Build Step skipped a commit without `[ship]`; this does not establish a project pause reason. The owner-controlled private `KOMPAS_VERCEL_API_TOKEN` remains unavailable to this run.
 
+
+
+## Additional read-only iZap and production recheck — 18 November 2026, 03:46 UTC
+
+The connected iZap account lists one business and no linked WhatsApp Business number. Its read-only connection check reports disconnected registration, no live inbound webhook, no history backfill and no outbound send proven. A date-scoped search for 17 October 2026 in `America/Chicago` returned zero messages.
+
+This is evidence only about that disconnected iZap business. It does **not** prove that the owner's personal WhatsApp, Meta WhatsApp Manager, another business number, a different provider or an external archive has no record. No message was sent, changed, replayed or downloaded.
+
+The same recheck confirms canonical master `f5f7f105eb58ab0e964031ee453ba5a9f9201f43`; Vercel project `job-dashboard` reports `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` is CANCELED on that exact SHA because the Ignored Build Step printed `Skipped: no [ship] tag`; and the canonical alias remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No unpause, preview bypass, billing change or deployment occurred.
+
+Seven-day production aggregation shows 15 WhatsApp quality-gate rejections across 13 users, latest 16 November 2026 15:02:15 UTC. Sampled events have 100% supported coverage but are partial/incomplete, with missing draft parts and role rewrites; they do not establish completed DOCX delivery. The same window returned no grouped Gmail runtime errors, which does not prove fresh synchronization.
+
+The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta outbound message ID and signed delivered/read receipt remain unavailable. The incident stays open. Recover those artifacts from the correct authorized provider/number and reconcile the source facts with the owner; do not replay or resend.
