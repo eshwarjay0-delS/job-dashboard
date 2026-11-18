@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 import { recipients, attachments, encodeGmailMessage } from '../../src/lib/gmail-message.ts'
 import { toWorkerNotifyOwner } from '../../src/lib/notify-rules.ts'
+import { validTracked, trackedBy } from '../../src/lib/mail-important.ts'
 import { hasCronBearer } from '../../src/lib/cronAuth.ts'
 
 const nodeRequire = createRequire(import.meta.url)
@@ -252,4 +253,17 @@ test('background tick refuses work before storage scan or delivery until flag an
   assert.match(updateTickSource, /WHATSAPP_GMAIL_UPDATE_TEMPLATE/)
   assert.match(updateTickSource, /status:503/)
   assert.match(updateTickSource, /hasCronBearer/)
+})
+
+
+test('Important sender matching normalizes stored addresses but never crosses inbox identity', () => {
+  const rules = [
+    { account: 'One@Example.com', email: 'Recruiter@Agency.com', name: 'Recruiter', at: 1 },
+    { account: 'Two@Example.com', email: 'Recruiter@Agency.com', name: 'Recruiter', at: 2 },
+  ]
+  assert.ok(rules.every(validTracked))
+  assert.equal(trackedBy(rules, 'one@example.com', 'recruiter@agency.com'), true)
+  assert.equal(trackedBy(rules, 'TWO@EXAMPLE.COM', 'RECRUITER@AGENCY.COM'), true)
+  assert.equal(trackedBy(rules, 'three@example.com', 'recruiter@agency.com'), false)
+  assert.equal(trackedBy(rules, 'one@example.com', 'other@agency.com'), false)
 })

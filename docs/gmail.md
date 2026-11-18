@@ -213,3 +213,27 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Important sender matching — 17 November 2026
+
+The approved rule is account + sender, not sender alone. A source audit found that the validator accepted mixed-case stored addresses while the lookup normalized only the incoming account and email. A valid legacy mixed-case rule could therefore be missed. The source correction normalizes both sides and keeps the receiving inbox in the comparison, so the same sender in two inboxes remains two separate tracking rules.
+
+This is a source-level correction only. The proactive Poke-style worker remains disabled; no Gmail API/OAuth call, email or WhatsApp notification was sent. Exact-head CI, protected preview, two-inbox acceptance and narrow-mobile verification remain separate release gates.
+
+
+## Production freshness and release status — 17 November 2026, 05:33 UTC
+
+A read-only aggregate query confirmed 3 `mfit_gmail_sync` rows across 1 owner and 3 connected accounts; all 3 are older than 24 hours, with the latest sync at 2026-11-10 14:44:44 UTC. There are 2,002 cached thread rows across 3 accounts, last updated 2026-11-10 14:46:49 UTC. No provider thread ID is shared across accounts. This confirms the account identities are distinct, but it does not show fresh synchronization.
+
+The canonical production alias is still READY on deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Current master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; the Vercel project reports `live=false`, and its latest production deployment is CANCELED. PR #435 and this separate PR #437 are not production-live. The proactive worker remains disabled; no Gmail API/OAuth calls or notifications were made.
+
+
+## Owner-approved mobile no-cover correction — 4 October 2026, reaffirmed 15 November
+
+The earlier Plan & Vision note that the exact hamburger interaction/layout was not approved is superseded by the recovered owner correction. The approved behavior is: hidden when closed; when opened, navigation expands below the sticky header in normal document flow and pushes page content down. It must not cover, dim or make the page inert; no overlay or scrim. Exact animation and styling remain implementation choices.
+
+PR #435 implements this behavior in its current-master mobile-navigation slice and passes exact-head full CI, Kompas baseline and Plan/REA checks. It remains DRAFT: protected preview, two-authorized-inbox collision/selected-From/reconnect acceptance and a real narrow-phone test are still required. Per-account Calendar targeting and exact waiting-on-them radar semantics remain proposed, not owner-approved.
+
+
+Exact-head status at 2026-11-17T05:44:18.589Z: PR #437 is DRAFT at `6c83abc187ecdedf1975f2bfa6b90dde32d6fcb8`; Kompas baseline `44025787975` and Plan/REA schema `44025788056` passed. Full CI `44025787971` is still running at the Kompas migration asset/lossless-import step; the Gmail regression has not yet been reported.
