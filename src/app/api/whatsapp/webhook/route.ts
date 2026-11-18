@@ -960,8 +960,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     // A timeout and a provider failure are different errors with different
     // fixes, so they are told apart here and recorded apart (failureCode is
-    // persisted as the recovery record's errorCode). The already-chosen resume
-    // still goes out. Nothing here changes the retry routing when that send fails.
+    // persisted as the recovery record's errorCode). Only a selected same-account
+    // Files resume may go out as fallback; an upload-only original never does.
     const timedOut = /timed out/i.test(String(e))
     failureCode = timedOut ? "timeout" : "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
@@ -974,7 +974,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   }
 
   // Nothing came back different. Do not present the original as a tailored resume.
-  // Send that already-chosen file and say the rewrite produced no changes.
+  // Only a selected same-account Files resume can be the labelled fallback.
+  // Upload-only sessions receive a text outcome, not their uploaded original again.
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
@@ -1050,7 +1051,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!file) {
     failureCode = "file_missing"
     if (await sendClosest("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file. The tailored Word file could not be opened, and no verified same-account library fallback was available for this run. Your resume and this job are saved for another try.")
     return;
   }
 
@@ -1058,7 +1059,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
-    // The already-chosen resume is unchanged and is the file that goes out.
+    // A selected same-account Files resume may be the labelled fallback; upload-only input is not.
     if (await sendClosest("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
     await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
     return;
@@ -1111,7 +1112,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       await patchResumeRecovery(job, { status: "pending" })
       sending = false
       failureCode = "whatsapp_http_rejected"
-      // Meta rejected this upload, so nothing was accepted. The already-chosen resume can still go out.
+      // Meta rejected this upload, so nothing was accepted. Only a selected same-account Files fallback may go out.
       if (await sendClosest("WhatsApp refused the updated file.")) return
     } else failureCode = "delivery_unconfirmed"
     await sayOutcome(refused

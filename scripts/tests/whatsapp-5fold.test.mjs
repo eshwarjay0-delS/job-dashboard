@@ -132,30 +132,29 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.match(said.at(-1), /document upload is unconfirmed/)
 
   file = null
+  const beforeMissing = said.length
   await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
-  assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
-  assert.match(docs[0].caption, /updated Word file could not be opened/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs.length, 0, 'upload-only input is not an approved library fallback')
+  assert.ok(said.length > beforeMissing, 'the user receives a text outcome when no library fallback exists')
+  assert.doesNotMatch(said.at(-1) || '', /closest matching resume/i)
 
   docs.length = 0
   file = Buffer.from('candidate2@example.test')
   samePerson = false
+  const beforeIdentity = said.length
   await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /identity\/contact\/date verification/)
-  assert.match(docs[0].caption, /closest matching resume/)
+  assert.equal(docs.length, 0, 'upload-only input is not sent after an identity mismatch')
+  assert.ok(said.length > beforeIdentity)
+  assert.match(said.at(-1) || '', /identity\/contact\/date verification/i)
 
   file = Buffer.from('candidate1@example.test')
   samePerson = true
   sendError = new Error('WA sendDoc 500: no')
   await generate('15550101', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 3)
+  assert.equal(docs.length, 0, 'a refused upload does not trigger an upload-only original fallback')
   assert.match(said.at(-1), /WhatsApp refused it/)
   assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
 
@@ -163,5 +162,6 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   const stalled = generate('15550101', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
   const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
   assert.equal(timed, 'done')
+  assert.equal(docs.length, 0, 'a timed-out upload-only run sends no original attachment')
   assert.match(said.at(-1), /ran out of time just now/) // Nov4: a timeout says so, instead of the generic tailor failure line.
 })
