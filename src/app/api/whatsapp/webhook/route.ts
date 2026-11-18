@@ -847,7 +847,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd) return false
+    // Only a positively selected same-account Files entry is an approved fallback.
+    // A missing Files selection is an uploaded original, not proof of library ownership.
+    if (!resumePath || !jd || !files?.email || !files.userDir || !files.abs || files.abs !== resumePath) return false
+    const libraryRelative = path.relative(files.userDir, files.abs)
+    if (!libraryRelative || libraryRelative === "." || libraryRelative === ".." || libraryRelative.startsWith(".." + path.sep) || path.isAbsolute(libraryRelative)) return false
     const source = await readPath(resumePath).catch(() => null)
     if (!source) return false
     let text = ""

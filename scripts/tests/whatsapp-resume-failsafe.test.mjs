@@ -29,6 +29,7 @@ const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
 const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/GRC/easm.docx`
 const SAINT_LOUIS_PATH = `${TEST_USER_ROOT}/candidate2@example.test/GRC/grc.docx`
+const UPLOADED_PATH = `/data/inbox/15550101/uploaded.docx`
 const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
 
 function harness(runTailor) {
@@ -48,7 +49,7 @@ function harness(runTailor) {
     'next/server': {},
     '@/lib/storage': {
       blob: storage,
-      readPath: async p => p === HOUSTON_PATH ? Buffer.from(HOUSTON) : p === SAINT_LOUIS_PATH ? Buffer.from(SAINT_LOUIS) : null,
+      readPath: async p => p === HOUSTON_PATH || p === UPLOADED_PATH ? Buffer.from(HOUSTON) : p === SAINT_LOUIS_PATH ? Buffer.from(SAINT_LOUIS) : null,
       writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true,
     },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/user-resumes' },
@@ -110,6 +111,42 @@ const low = {
   ats: { score: 90, passed: true, checks: [], issues: [] },
   keyword_analysis: { matched: [], added: [], missing: ['soc 2', 'tprm', 'supplier', 'vendor'] },
 }
+
+test('provider timeout never sends an uploaded original without a selected library resume', async () => {
+  const { generate, docs, said } = harness(async () => { throw new Error('provider down') })
+  await generate('15550101', {
+    jdId: 'upload-timeout', jd: 'EASM cybersecurity engineer',
+    resumePath: UPLOADED_PATH, resumeName: 'uploaded.docx',
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0)
+  assert.ok(said.length > 0)
+})
+
+test('unsupported JD-only claims never fall back to an uploaded original without a library pick', async () => {
+  const unsafe = {
+    ...low,
+    unverified_added_keywords: ['supplierninja'],
+    quality_blockers: ['unverified_jd_terms'],
+    keyword_analysis: { ...low.keyword_analysis, added: ['supplierninja'] },
+  }
+  const { generate, docs, said } = harness(async () => unsafe)
+  await generate('15550101', {
+    jdId: 'upload-unsupported', jd: 'EASM cybersecurity engineer with SupplierNinja',
+    resumePath: UPLOADED_PATH, resumeName: 'uploaded.docx',
+  }, TEST_USER_ID, 60_000)
+  assert.equal(docs.length, 0)
+  assert.ok(said.length > 0)
+})
+
+test('a library fallback must use the exact selected library path', async () => {
+  const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
+  await generate('15550101', {
+    jdId: 'upload-mismatched-library', jd: 'EASM cybersecurity engineer',
+    resumePath: UPLOADED_PATH, resumeName: 'uploaded.docx',
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 0)
+  assert.ok(said.length > 0)
+})
 
 test('a supported low-coverage rewrite still delivers that Word file and names the missing terms', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
