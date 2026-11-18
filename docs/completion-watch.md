@@ -1,3 +1,15 @@
+## 18 November 2026 20:52 UTC — WhatsApp child-PR gate results
+
+- Child PR [#447](https://github.com/eshwarjay0-delS/job-dashboard/pull/447), exact head `19608572885091f399102f6706dec9a00203cf8b`, is DRAFT and stacked on parent #433.
+- WhatsApp recovery workflow [44393570790](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44393570790) **SUCCESS**. The exact command ran 94 tests: 94 passed, 0 failed, including the same-JD concurrent-start test and deliberate retry after lease release.
+- Plan/REA schema workflow [44393570770](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44393570770) **SUCCESS**.
+- Full CI and the master-only Kompas baseline do not trigger on this child PR because its base is the parent feature branch. After Safe Merge Gate integrates #447 into #433, require fresh full CI/baseline on the updated #433 head.
+- Parent #433 remains DRAFT. Its earlier exact-head full CI failure (run `44390742971`) was the route test mock granting a claim to every concurrent invocation. The production helper uses ETag compare-and-swap; the child test double now models one active lease and token-matched release.
+- Production remains unchanged: Vercel project `live:false`; latest production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` was canceled by Ignored Build Step because there was no `[ship]` marker; canonical alias remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No deploy or bypass was attempted.
+- The 17 Oct 17:28 incident remains a hard hold with no verified generated DOCX, R2 version, webhook correlation, Meta message ID or signed delivery/read receipt. No replay/send occurred.
+
+Continue: Safe Merge Gate should sequence #447 into #433, then run exact-head full CI/baseline on the parent. Keep the protected preview and production release gates separate.
+
 ## 18 November 2026 20:45 UTC — dedicated WhatsApp gate now runs route concurrency test
 
 - The workflow path filter already included `scripts/tests/whatsapp-single-request.test.mjs`, but its actual `node --test` command omitted it. The route-level same-JD concurrency test therefore ran in full CI but not in the dedicated WhatsApp recovery gate.
