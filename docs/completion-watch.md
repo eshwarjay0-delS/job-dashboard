@@ -1,3 +1,14 @@
+## 18 November 2026 20:12 UTC — WhatsApp fallback restacked onto current master
+
+- PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) was fast-forward updated with the current canonical master commit `f5f7f105eb58ab0e964031ee453ba5a9f9201f43`; merge commit `61d545ffb3bf3801d04ffac454739c580f4ad3d7` preserves the full prior branch head `6761a980e067e021f50c617e7fb581a86902545a`. No contributor commit was overwritten.
+- Exact restacked-head results: WhatsApp recovery `44388132693` SUCCESS, Kompas baseline `44388132609` SUCCESS, Plan/REA schema `44388132554` SUCCESS; full CI `44388132566` was still IN PROGRESS. Earlier TypeScript failures on head `189320c` were corrected by `770de26`, `ea01770` and `d50aea`; those failed predecessor runs are not treated as current evidence.
+- The approved fallback boundary is unchanged: only an explicit same-account Files selection, exact path match and account-root containment can be sent as the original library failsafe; uploaded-original-after-timeout remains unapproved. No live WhatsApp message or historical replay.
+- Vercel remains `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` is CANCELED; `job-dashboard-fawn.vercel.app` remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The protected preview still needs owner-controlled `KOMPAS_VERCEL_API_TOKEN`. No preview/deploy, billing change or protection bypass.
+
+Continue: wait for full CI `44388132566`, then let MFit Safe Merge Gate review #433. Keep it DRAFT until protected preview and production READY/alias verification are available; do not replay the 17 Oct event or merge #411's separate uploaded-original-after-timeout behavior.
+
+---
+
 ## 18 November 2026 20:05 UTC — WhatsApp fallback typecheck repair
 
 - PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) remains DRAFT. Its prior exact head `189320c77d8cf5004442364c4aca49e019900808` failed full CI `44385137113` and WhatsApp recovery `44385136925`: `IN_FLIGHT_MS` was missing from the restacked route and the recovery helper repeated `delivered`/`read` comparisons after its terminal guard. Kompas baseline on that prior head passed.
