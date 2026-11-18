@@ -1,3 +1,7 @@
+## 18 November 2026 01:46 UTC — REA source-locator validation
+
+The external read-only crawler aggregate had been placed in `sources[].path`, causing the exact Plan/REA schema workflow to fail because that field is reserved for repository-relative files. Fix commit `545304c9ad08d0b16a14c30d38dac6ccc49b8417` moved the description into `sources[].label` without weakening the existence check. Full CI `44216819539`, Plan/REA `44216819582` and Kompas baseline `44216819672` passed on that exact fix commit. A focused regression was added in `980a63925f75f220734539c23a400b1abd53bc32`; the final updated branch requires fresh exact-head workflows. Vercel remains `live:false`, its latest production deployment is CANCELED, and the canonical alias still points to older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No deployment, live crawl, production write or external send occurred.
+
 # MFit continuation evidence and backlog reconciliation — 17 November 2026
 
 ## Scope and source boundary
