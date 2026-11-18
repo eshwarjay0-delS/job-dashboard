@@ -1,5 +1,28 @@
 # MFit Completion Watch
 
+## 17 November 2026 15:34 UTC — PR #441 exact-head source verification
+
+- PR [#441](https://github.com/eshwarjay0-delS/job-dashboard/pull/441) is DRAFT and mergeable, head `1046415d1f440b3d01eeeea56543f62c9ae6f870`, based on PR #431 head `a74319cb87a3aff44e111987c59ce978d2f87c2a`. GitHub compare confirms 18 commits ahead / 0 behind.
+- Plan/REA schema workflow `44115781369` completed SUCCESS.
+- Dedicated final-DOCX workflow `44115781348` is IN PROGRESS at `npm ci`; typecheck/lint/application checks and focused tests have not yet run. No full CI, WhatsApp recovery or Kompas baseline run is visible yet.
+- The code uses the explicit candidate-confirmation rule from #431, not a first-person-only requirement. The Gemini score remains diagnostic and only source/explicit-confirmed gaps can be corrected.
+- No local checkout/Node dependencies, protected preview credential or owner-authorized personal resume/JD/confirmation bundle are available. No DOCX export or Gemini model call occurred. No production deploy or live match is claimed.
+
+Continue: wait for exact-head full and focused checks; then run WhatsApp recovery, Kompas baseline and Plan/REA again if any later commit changes the head. Keep PR #441 DRAFT pending protected preview and owner-authorized exported-DOCX acceptance.
+
+
+## 17 November 2026 — approved final-DOCX Gemini loop restacked on confirmed-skill source
+
+- Direct owner approval is recorded in PR #395 comments for the 3 Nov 2026 16:20:28 UTC request: compare each complete final DOCX to the original JD and ask Gemini exactly “Give me an ATS score”; inspect remaining/weak terms; correct only evidence-supported gaps; re-export and recheck within a bounded retry budget.
+- The current-master confirmed-skill parent is PR #431 head `a74319cb87a3aff44e111987c59ce978d2f87c2a`. New dependent branch `feat/final-docx-gemini-restack-confirmed-skills-20261117` adds the strict Gemini reviewer/parser, actual DOCX text review, at most two supported-only correction/re-export/re-review rounds, explicit candidate-confirmation project-context guard, diagnostic result fields, focused tests and a dedicated workflow. It does not add the unapproved first-person-only restriction and does not change WhatsApp delivery thresholds.
+- Source commits so far: `c700d0e143d640dd9bbf4abf89c234a05e1c19be` (Gemini reviewer), `3e37cfa919f695a036b4db8f6d6276a67a34138a` (export confirmed-skill guard), `d3fc45c33ed385357b9d989d02aebdca4056ec2b` (bounded final-DOCX loop), `b85d855172218ea65722cdbc792e4d755c11b48c`, `91d58039ca2acd793d880947b2112e2efd244096`, `3514200948251892aa4d7411f061e62eee6362c9`, `7f55e2d2f5a0056d26688ec57e96779cf9eea2a8`. Plan/REA, remaining evidence docs and exact-head verification are being added next.
+- No local checkout or Node dependencies are available; no local build/test is claimed. The dedicated workflow runs `npm run check` and focused tests when GitHub Actions starts.
+- Protected preview requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. An owner-authorized baseline/JD/confirmation DOCX bundle is not available; no personal document was processed, no Gemini call or DOCX export occurred, and no live 98% match is claimed. Production alias remains older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+- The 17 Oct 17:28 Chicago WhatsApp incident remains separate and open: prior research reports the source DOCX and JD were recovered, but the exact generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt remain missing. Do not replay or resend. The 6 Nov WhatsApp threshold is repository-recorded with provenance limitation, not independently re-retrieved in this run.
+
+Continue: finish Plan & Vision journal/REA and evidence docs, create the dependent DRAFT PR, then verify exact-head full CI/WhatsApp/Kompas/Plan-REA. Keep protected preview and real owner-authorized DOCX acceptance separate; do not deploy or close the historical WhatsApp incident.
+
+
 ## 16 November 2026 10:25 UTC — confirmed-skill alignment current-master restack
 
 - Canonical master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Production alias `job-dashboard-fawn.vercel.app` independently remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. GitHub compare shows master 43 commits ahead/0 behind; the differences are CI/workflows, AGENTS, docs, tests and Plan/REA, with no core resume/Gmail/crawler/Kompas feature code or production configuration changes. Plan & Vision data itself is user-visible and still requires a reviewed production release.

@@ -104,9 +104,13 @@ test('role repair omits already-covered and unsupported terms', () => {
   )
 })
 
-test('role gap-fill uses role-scoped evidence and never appends the global unseen list', () => {
+test('role gap-fill stays role-scoped while global unseen terms remain profile-only', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
-  assert.match(tailor, /missingRoleEvidenceTerms\(sourceTerms, currentTerms, cur\.required\[i\]\)/)
+  assert.match(tailor, /const requiredTerms = focus \? \(focusTerms \|\| \[\]\) : cur\.required\[i\]/)
+  assert.match(tailor, /const sourceMissing = missingRoleEvidenceTerms\(sourceTerms, currentTerms, requiredTerms\)/)
+  assert.match(tailor, /const missing = \[\.\.\.new Set\(\[\.\.\.sourceMissing, \.\.\.confirmedMissing, \.\.\.weakToRewrite\]\)\]/)
+  assert.match(tailor, /if \(sec\.skills !== false && \(unseen\.length \|\| \(!focus && cur\.partial\)\)\) todo\.push\(\{ role: -1, skills: unseen, add: 0 \}\)/)
+  assert.match(tailor, /todo\.push\(\{ role: i, skills: missing, add \}\)/)
   assert.doesNotMatch(tailor, /const missing = [^\n]*\.\.\.unseen/)
 })
 
