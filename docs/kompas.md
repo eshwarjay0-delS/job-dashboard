@@ -119,3 +119,14 @@ The owner requires natural, technically defensible first-person experience and g
 ## Single-source BNY audio + written guide pipeline — 2 November 2026
 
 BNY NotebookLM audio recommendations and uploaded BNY PDF materials belong to ONE unified source-grounded dossier, not a "PDF finished / audio optional" split. The dossier source API now accepts attributed audio transcripts, requires matching original media identities when the client names required audio hashes, retains media provenance, and rejects incomplete audio coverage before generation. Source-content extraction is separate from evidence of personal achievement: a narrated example does not verify a candidate incident or metric. The actual two M4A recordings remain untranscribed in this execution environment, so no audio-complete PDF or live end-to-end transcription success is asserted. See docs/research/kompas-dual-dossier-intelligence.md.
+
+
+## Phone-native shell acceptance — 18 November 2026
+
+The owner-approved 31 Oct request for a full-screen, device-adaptive Kompas phone view is implemented as a narrow UI-only candidate in PR #444. Exact head `8d1be1f3153e20b974d4f4dcfac7616453836192` passed six source gates: full CI 44143476207, account-session sync 44143476089, Kompas baseline 44143475852, Windows EXE 44143475922, Plan/REA 44143475909 and the desktop-change skip gate 44143475922. PR #444 remains DRAFT; it does not change microphone, computer audio, Caption Capture or voice handling.
+
+Actual iOS/Android acceptance is still required for installed-PWA behavior, safe-area cutouts, address-bar and keyboard changes, portrait/landscape, long-answer scrolling and touch targets. The PR branch contains stale shared Gmail Plan & Vision wording that predates the 17 Nov four-account correction; Safe Merge Gate must reconcile that before merge.
+
+The canonical production alias remains READY at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Latest master deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` was canceled by the Ignored Build Step because the commit lacked `[ship]`; no production release of #444 or newer master docs is claimed.
+
+The live 50-pair Kompas-versus-ChatGPT evaluation and independent human scoring remain unperformed because the private `KOMPAS_API_TOKEN` and approved original source bundles are unavailable. Native Windows, WhatsApp and mobile voice/session acceptance remains separate and unverified. The Kompas Continuous Voice Delivery automation is disabled in the accessible inventory; no duplicate audio/caption/voice changes were made in this continuation.
