@@ -1,3 +1,13 @@
+## 18 November 2026 00:28 UTC — contract-crawler diagnostics and manual-only state
+
+- PR [#434](https://github.com/eshwarjay0-delS/job-dashboard/pull/434) exact head `63e1f3a238f4768b29d245a9b361f27fcaf4c07e` passes full CI 44174855613, crawler regression 44174855597, Kompas baseline 44174855660 and Plan/REA 44174855645. It remains DRAFT pending Safe Merge Gate review and legitimate protected preview. Source change distinguishes local timeout from upstream AbortError, records portal host and preserves pacing after malformed URLs.
+- Owner correction remains authoritative: contract crawler manual/on-demand only; no daily cron. Robert Half remains manual-only; Right-to-Hire / Contract-to-Perm semantics remain unapproved. No live crawl or portal request was made.
+- Read-only production aggregate: 14,566 stored jobs, 12,407 active, 9,550 active seen in 14 days, 21 runs. Latest run 10 Nov 2026 11:00:24.379466–11:01:11.601 UTC across 20 portals, 6,818 found/upserted, one error. Latest job-seen timestamp 10 Nov 11:01:11.191 UTC.
+- Production gate: latest master deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED because the Ignored Build Step found no `[ship]` tag. The canonical alias remains READY at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview still requires owner-controlled `KOMPAS_VERCEL_API_TOKEN`; no unpause, bypass, billing change or deploy.
+- Continue: keep #434 DRAFT until protected preview and Safe Merge Gate review. A live crawl requires a separate explicit owner request. Preserve the manual-only policy, Robert Half exclusion and unapproved C2H/Right-to-Hire boundary.
+
+---
+
 ## 18 November 2026 00:27 UTC — resume confirmed-skill and WhatsApp hard-hold reconciliation
 
 - Current-master PR [#431](https://github.com/eshwarjay0-delS/job-dashboard/pull/431) exact head `a74319cb87a3aff44e111987c59ce978d2f87c2a` has full CI 43972447062, WhatsApp recovery 43972447199, Kompas baseline 43972447249 and Plan/REA 43972447039 all SUCCESS. It remains DRAFT pending protected preview and owner-authorized baseline resume, exact JD, explicit confirmation and exported-DOCX inspection.
