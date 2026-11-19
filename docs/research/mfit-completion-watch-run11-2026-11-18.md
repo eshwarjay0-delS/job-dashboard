@@ -92,3 +92,8 @@ No local checkout or local npm tests/build were available in this execution envi
 - The 17 Oct 17:28 Chicago screenshot still proves a hard hold, not delivery. The exact source upload/output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain unavailable. The Library search in this run did not recover the output. No replay, resend, R2 write or live WhatsApp test occurred.
 
 **Continue:** let MFit Safe Merge Gate sequence test-only #447 into parent #433, then require fresh full CI and Kompas baseline on the exact updated parent head. Keep both DRAFT until the protected preview, provider-level R2 validation and owner acceptance of the storage/recovery release risk are satisfied. Do not deploy current master: its production build is intentionally skipped without a reviewed `[ship]` commit, and the live alias remains on `b94e162`.
+
+
+## 19 November 2026 — PR #442 REA schema typecheck correction
+
+Exact-head full CI run 44424148278 failed Type-check at `src/lib/rea-register.ts:356`. The new read-only audit record used `area: "all"` and a custom method label not admitted by `ReaSession`. The record is corrected to `area: "platform"` and `method: "Source and artifact analysis"`, matching the declared schema without changing the observed finding. No runtime behavior, production state, or external service was modified. Fresh full CI and Plan/REA schema checks on the new exact PR head are required; PR #442 remains DRAFT for Safe Merge Gate sequencing.
