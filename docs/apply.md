@@ -199,3 +199,8 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## 19 November 2026 — portal abort diagnostics
+
+The shared collector retains its 25-second default timeout and request pacing. Its diagnostic path now distinguishes a local AbortController timeout from an upstream AbortError and includes the portal host; malformed URLs still pass through the cleanup/pacing `finally` block. Mocked regressions cover both abort sources and malformed-URL pacing. This is diagnostic-only: no retry, portal, permission, classifier, freshness, schedule or production-row behavior changes. Contract crawling remains manual/on-demand; no daily cron; eTeam remains excluded and Robert Half remains manual-only. No live crawl was run.
