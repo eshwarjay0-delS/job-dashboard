@@ -15,6 +15,7 @@ import { Card } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
+import { gmailRetryAutoWaitMs, gmailRetryDelaySeconds, gmailRetryWaitLabel } from "@/lib/gmail-retry-after"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
 import { filterChainsByStage, compareChainsByStagePriority, STAGE_OPTIONS_PRIORITY } from "@/lib/submission-track"
 import { OVERVIEW_SNAPSHOT_KEY_PREFIX, readOverviewSnapshot, keepOverviewSnapshot, mergeChains, snapshotIsFresh } from "@/lib/overview-cache"
@@ -488,11 +489,30 @@ function OverviewInner() {
           const busy = response.status === 429 || /RATE_LIMIT|rate ?limit|quota|too many requests|could not be read/i.test(message)
           if (!busy) throw new Error(message)
           if (attempt >= 3) throw new Error("Gmail kept asking MarketFit to slow down")
-          for (let left = [15, 40, 65][attempt]!; left > 0; left--) {
-            if (!active) throw new Error("stopped")
-            setScanStatus(`Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken. Carrying on in ${left} ${left === 1 ? "second" : "seconds"}.`)
-            await new Promise(resolve => setTimeout(resolve, 1000))
+          const fallbackSeconds = [15, 40, 65][attempt]!
+          const pauseSeconds = gmailRetryDelaySeconds(response.headers.get("Retry-After"), fallbackSeconds)
+          const waitMs = gmailRetryAutoWaitMs(pauseSeconds)
+          if (waitMs === null) {
+            throw new Error(`Gmail requested a long cooldown (${gmailRetryWaitLabel(pauseSeconds)}). This inbox was paused without an automatic retry; do not refresh it until the requested cooldown has passed.`)
           }
+          if (!active) throw new Error("stopped")
+          setScanStatus(`Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken. Retrying in ${gmailRetryWaitLabel(pauseSeconds)}.`)
+          await new Promise<void>((resolve, reject) => {
+            if (controller.signal.aborted) {
+              reject(new Error("stopped"))
+              return
+            }
+            const timer = setTimeout(() => {
+              controller.signal.removeEventListener("abort", abort)
+              resolve()
+            }, waitMs)
+            const abort = () => {
+              clearTimeout(timer)
+              controller.signal.removeEventListener("abort", abort)
+              reject(new Error("stopped"))
+            }
+            controller.signal.addEventListener("abort", abort, { once: true })
+          })
         }
       }
       // Read important progress from every inbox before backfilling the rest.
@@ -524,7 +544,9 @@ function OverviewInner() {
             } while (token && active)
           } catch (e) {
             if (!active) return
-            failures.set(selected, `${selected}: ${e instanceof Error ? e.message : "Could not read history"}. History is incomplete. Refresh to retry.`)
+            const detail = e instanceof Error ? e.message : "Could not read history"
+            const longCooldown = detail.includes("Gmail requested a long cooldown")
+            failures.set(selected, `${selected}: ${detail}. History is incomplete.${longCooldown ? " Do not refresh this inbox until the requested cooldown has passed." : " Refresh to retry."}`)
             setIssues([...failures.values()])
           }
         }
@@ -539,8 +561,9 @@ function OverviewInner() {
           setChains(fresh)
           paintedRef.current = fresh
         }
+        const longCooldown = [...failures.values()].some(message => message.includes("long cooldown"))
         setScanStatus(failures.size
-          ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.`
+          ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.${longCooldown ? " A long Gmail cooldown was respected; no early retry was sent." : ""}`
           : `History scan finished for ${pending.length} inboxes. ${scanned} conversation checks completed.`)
       }
     }
