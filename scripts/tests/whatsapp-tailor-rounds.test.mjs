@@ -12,7 +12,7 @@ const read = (file) => readFileSync(new URL('../../' + file, import.meta.url), '
 const tailorSrc = read('src/lib/tailor.ts')
 const routeSrc = read('src/app/api/whatsapp/webhook/route.ts')
 const SANDBOX = '15555501023'
-const IDENTITY = 'Eshwar Jay\njayeshwar44@gmail.com | (314) 255-9156\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const IDENTITY = 'Candidate One\njayCandidate One44@example.test | (314) 255-9156\nAnalyst, Acme  Jan 2021 - Mar 2024'
 const JD = 'Senior Security Analyst. Monitor SIEM alerts, investigate endpoint threats, and write detections for the security operations center each week.'
 
 function load(file, mocks = {}, extra = '') {
@@ -138,7 +138,7 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
   const sessionKey = `whatsapp/session-${SANDBOX}.json`
   const resumePath = `/data/whatsapp/inbox/${SANDBOX}/resume.docx`
   const seed = () => entries.set(sessionKey, JSON.stringify({
-    version: 3, resumePath, resumeName: 'Eshwar Resume', resumeAt: Date.now(), seen: [], updatedAt: Date.now(),
+    version: 3, resumePath, resumeName: 'Candidate One Resume', resumeAt: Date.now(), seen: [], updatedAt: Date.now(),
   }))
   seed()
   const blob = {
@@ -194,7 +194,7 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
       NOT_CHECKED_MESSAGE: 'unchecked',
       siteOf: () => 'https://job-dashboard-fawn.vercel.app',
     },
-    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
+    '@/lib/profile': { extractProfile: async () => ({ firstName: 'Candidate One' }) },
     '@/lib/plain-failure': { plainFailure: () => 'plain failure' },
     '@/lib/resume-identity': { sameResumeIdentity },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
