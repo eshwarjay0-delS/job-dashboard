@@ -108,3 +108,20 @@ Vercel project metadata has R2 env entries `R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACC
 New deterministic interleaving tests on commit `08f5c1f71aa01b29f63ffbbd5eb7cb6f213858e6` cover: two workers paused on the same ETag (one claim winner), a signed failed callback racing an in-flight HTTP acceptance, an old delivered callback racing a newer retry acceptance, and a delivered callback racing a stale defer after a prior Meta failure. The earlier stale-retry write test remains. Exact-head WhatsApp recovery `44389751909` and full CI `44389751945` were running; Kompas baseline `44389752006` and Plan/REA `44389751900` passed.
 
 Release remains blocked: Vercel project reports `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` is CANCELED by `ignored-build-step`; canonical alias still points to READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; project env metadata does not contain `KOMPAS_VERCEL_API_TOKEN`. No deployment, real WhatsApp send, historical replay, DOCX generation, R2 mutation or production write occurred.
+
+
+## 19 November 2026 — Meta callback attempt-token transport audit
+
+The current-master WhatsApp recovery route creates a SHA-256 job identifier (64 lowercase hex characters), leases it with a 16-byte random token (32 lowercase hex characters), and calls the document sender with `jobId:claimToken`. The recovery state machine already parses this exact pair so signed Meta callbacks can be correlated to the specific attempt, including a callback that arrives before the HTTP send response.
+
+A source audit found that `src/lib/whatsapp.ts` only included `biz_opaque_callback_data` when the supplied value matched exactly 64 hex characters. The tokenized 97-character value was therefore silently omitted from the outbound Meta message. The callback handler then lacked the attempt token required to reject a stale callback from a previous retry. Its legacy tokenless branch could also match a newer tokenized job while that job was sending.
+
+Child PR [#453](https://github.com/eshwarjay0-delS/job-dashboard/pull/453), stacked on parent [#450](https://github.com/eshwarjay0-delS/job-dashboard/pull/450), fixes both boundaries:
+- The sender accepts only a legacy 64-hex job ID or the exact 64-hex + colon + 32-hex attempt form.
+- A tokenless callback can update only a pre-fencing job with no current `attemptToken`.
+- A mocked `sendDocument` regression inspects the actual JSON body for tokenized, legacy and malformed values.
+- A recovery-store regression proves a tokenless callback cannot complete a tokenized active attempt and the matching token can.
+
+This is a confirmed current source defect, **not proof of the historical 17 October 17:28 Chicago event's root cause**. The output DOCX, per-run R2 object/version, request correlation, Meta message ID and signed delivered/read receipt remain missing. Do not replay or resend the historical event.
+
+Exact-head WhatsApp recovery and Plan/REA checks are pending after the child documentation update. Safe Merge Gate must sequence the child into #450, then run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the integrated current-master parent. Vercel project `live:false`, CANCELED latest production attempt, older READY canonical alias and owner-controlled protected-preview credential remain separate release blockers. No real Meta request, DOCX generation, R2 write, production mutation or deployment occurred.
