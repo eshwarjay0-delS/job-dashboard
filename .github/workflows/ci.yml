@@ -35,6 +35,9 @@ jobs:
         run: npm run lint
         continue-on-error: false
 
+      - name: Verify non-modal in-flow dashboard navigation
+        run: node --test scripts/tests/dashboard-shell.test.mjs
+
       - name: Type-check
         run: npx tsc --noEmit --skipLibCheck
         continue-on-error: false
