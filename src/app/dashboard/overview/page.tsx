@@ -15,6 +15,7 @@ import { Card } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
+import { gmailRetryDelaySeconds } from "@/lib/gmail-retry-after"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
 import { filterChainsByStage, compareChainsByStagePriority, STAGE_OPTIONS_PRIORITY } from "@/lib/submission-track"
 import { OVERVIEW_SNAPSHOT_KEY_PREFIX, readOverviewSnapshot, keepOverviewSnapshot, mergeChains, snapshotIsFresh } from "@/lib/overview-cache"
@@ -488,7 +489,9 @@ function OverviewInner() {
           const busy = response.status === 429 || /RATE_LIMIT|rate ?limit|quota|too many requests|could not be read/i.test(message)
           if (!busy) throw new Error(message)
           if (attempt >= 3) throw new Error("Gmail kept asking MarketFit to slow down")
-          for (let left = [15, 40, 65][attempt]!; left > 0; left--) {
+          const fallbackSeconds = [15, 40, 65][attempt]!
+          const pauseSeconds = gmailRetryDelaySeconds(response.headers.get("Retry-After"), fallbackSeconds)
+          for (let left = pauseSeconds; left > 0; left--) {
             if (!active) throw new Error("stopped")
             setScanStatus(`Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken. Carrying on in ${left} ${left === 1 ? "second" : "seconds"}.`)
             await new Promise(resolve => setTimeout(resolve, 1000))
