@@ -1205,7 +1205,8 @@ html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
   max-height:32px !important;
   font-size:13px !important;
   padding:0 12px !important;
-  flex:0 0 auto !important;
+  flex:1 1 0 !important;
+  min-width:min-content !important;
 }
 html.kd #view-copilot .overlay .bar-actions .asking{flex:0 1 auto !important;height:28px !important;font-size:12px !important}
 html.kd #view-copilot .overlay .bar-actions .asking .live-select{height:28px !important;max-height:28px !important;max-width:8rem !important;font-size:12px !important;padding:0 8px !important}
@@ -1332,13 +1333,16 @@ html.kd,html.kd body,html.kd #view-copilot,html.kd #view-copilot .overlay{
   contain:none !important;
 }
 html.kd #view-copilot .overlay .bar-actions{
-  position:absolute !important;
-  top:-48px !important;
-  height:48px !important;
-  min-height:48px !important;
-  max-height:48px !important;
-  overflow:hidden !important;
-  z-index:250 !important;
+  position:relative !important;
+  top:auto !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:44px !important;
+  max-height:none !important;
+  overflow:visible !important;
+  z-index:5 !important;
 }
 html.kd #chatBtn,
 html.kd #prevBtn,
@@ -1454,22 +1458,24 @@ html.kd #exitCopilot{display:none !important}
 html.kd #view-copilot{z-index:220 !important;overflow:visible !important}
 html.kd #view-copilot .overlay{overflow:visible !important}
 html.kd #view-copilot .overlay .bar-actions{
-  position:absolute !important;
-  top:-48px !important;
-  left:8px !important;
-  right:200px !important;
-  width:auto !important;
-  height:48px !important;
-  min-height:48px !important;
-  max-height:48px !important;
+  position:relative !important;
+  top:auto !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:44px !important;
+  max-height:none !important;
   z-index:5 !important;
-  justify-content:flex-start !important;
+  display:flex !important;
+  justify-content:space-evenly !important;
   align-items:center !important;
-  flex-wrap:nowrap !important;
-  gap:4px !important;
-  padding:0 4px !important;
-  overflow:hidden !important;
+  flex-wrap:wrap !important;
+  gap:6px !important;
+  padding:4px 8px !important;
+  overflow:visible !important;
   background:transparent !important;
+  box-sizing:border-box !important;
 }
 html.kd #view-copilot .overlay .bar-actions .pill,
 html.kd #view-copilot .overlay .bar-actions #startBtn,
@@ -1486,23 +1492,23 @@ html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn{
    Scrolling the answer hides the question; scrolling up brings it back.
    Buttons keep their labels inside themselves and scroll sideways instead of painting on each other. */
 html.kd #view-copilot .overlay .bar-actions{
-  left:8px !important;
-  right:200px !important;
-  overflow-x:auto !important;
-  overflow-y:hidden !important;
-  scrollbar-width:none !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  overflow:visible !important;
 }
-html.kd #view-copilot .overlay .bar-actions .pill,
-html.kd #view-copilot .overlay .bar-actions #startBtn,
-html.kd #view-copilot .overlay .bar-actions #answerBtn,
-html.kd #view-copilot .overlay .bar-actions #screenCaptureAnswerBtn,
-html.kd #view-copilot .overlay .bar-actions #micBtn,
-html.kd #view-copilot .overlay .bar-actions #sysBtn{
-  flex:0 0 auto !important;
-  min-width:max-content !important;
+html.kd #view-copilot .overlay .bar-actions > #micBtn,
+html.kd #view-copilot .overlay .bar-actions > #sysBtn,
+html.kd #view-copilot .overlay .bar-actions > #startBtn,
+html.kd #view-copilot .overlay .bar-actions > #answerBtn,
+html.kd #view-copilot .overlay .bar-actions > #autoBtn,
+html.kd #view-copilot .overlay .bar-actions > #follow{
+  flex:1 1 0 !important;
+  width:auto !important;
+  min-width:min-content !important;
   max-width:none !important;
-  overflow:hidden !important;
-  text-overflow:ellipsis !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
   white-space:nowrap !important;
 }
 html.kd .update-pill{

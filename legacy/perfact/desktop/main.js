@@ -208,7 +208,8 @@ function beginChromeSignIn({ interactive = false } = {}) {
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
-const appPathFor = () => activeSite === "marketfit" ? "/kompas/index.html" : "/index.html";
+const PAGE_BUILD = "kompas-20261119-latest";
+const appPathFor = () => (activeSite === "marketfit" ? "/kompas/index.html" : "/index.html") + "?v=" + PAGE_BUILD;
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
 const FORWARD_HEADERS = ["content-type", "accept", "x-audio-mime", "x-whisper-prompt", "x-speech-hint", "x-speech-lang", "x-speech-for", "x-kompas-app"];
@@ -667,6 +668,11 @@ async function serve(req) {
     });
     if (isMarketFitApi && response && response.status === 401 && typeof recoverSignInAfter401 === "function") {
       recoverSignInAfter401();
+    }
+    if (/\.(?:html|js|css|json)$/i.test(rel)) {
+      const fresh = new Headers(response.headers);
+      fresh.set("cache-control", "no-store");
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers: fresh });
     }
     return response;
   } catch (err) {

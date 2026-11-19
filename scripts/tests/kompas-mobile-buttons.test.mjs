@@ -36,12 +36,12 @@ test("narrow web puts Stop and AI Answer on one full 48px row", () => {
   assert.match(bar, /flex-wrap:wrap/)
 })
 
-test("desktop and the desktop shell keep the existing control bar", () => {
+test("desktop control rows stretch the full window and do not clip into the title bar", () => {
   const desktop = css.slice(0, css.indexOf("@media (max-width:900px)"))
-  assert.match(desktop, /#view-copilot \.overlay \.bar-actions\{[^}]*flex-wrap:nowrap/s)
-  assert.match(desktop, /#view-copilot \.overlay \.bar-actions\{[^}]*height:48px/s)
-  assert.match(desktop, /html\.kd #view-copilot \.overlay \.bar-actions\{[^}]*top:-48px !important/s)
-  assert.match(desktop, /html\.kd #view-copilot \.overlay \.bar-actions\{[^}]*flex-wrap:nowrap !important/s)
+  assert.match(desktop, /html\.kd #view-copilot \.overlay \.bar-actions\{[^}]*width:100% !important/s)
+  assert.match(desktop, /html\.kd #view-copilot \.overlay \.bar-actions\{[^}]*justify-content:space-evenly !important/s)
+  assert.doesNotMatch(desktop, /top:-48px !important/)
+  assert.doesNotMatch(desktop, /right:200px !important/)
   const narrow = mediaBlock(css, "@media (max-width:900px)")
   assert.match(narrow, /html\.kd #view-copilot \.overlay \.bar-actions\{[^}]*flex-wrap:wrap !important/s)
   assert.doesNotMatch(narrow, /html\.kd #view-copilot \.overlay \.bar-actions #startBtn/)

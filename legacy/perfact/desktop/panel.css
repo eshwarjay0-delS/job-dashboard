@@ -6,15 +6,15 @@ html.kd,html.kd body{height:100%;overflow:hidden}
 html.kd body{background:var(--bg)}
 
 /* ---- one title bar: drag it to move the window ---- */
-.kd-bar{position:fixed;left:0;right:0;top:0;height:42px;z-index:100;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;
-  background:var(--surface);border-bottom:1px solid var(--line);-webkit-app-region:drag;user-select:none;overflow:hidden}
+.kd-bar{position:fixed;left:0;right:0;top:0;min-height:44px;height:auto;z-index:100;display:flex;align-items:center;justify-content:space-evenly;gap:8px;padding:0 6px 0 10px;
+  background:var(--surface);border-bottom:1px solid var(--line);-webkit-app-region:drag;user-select:none;overflow:visible}
 .kd-bar button,.kd-bar input,.kd-bar label,.kd-bar select,.kd-bar .more-wrap,.kd-bar .more-menu{-webkit-app-region:no-drag}
-.kd-left{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;overflow:hidden}
+.kd-left{display:flex;align-items:center;gap:8px;flex:1 1 0;min-width:0;overflow:visible;justify-content:flex-start}
 .kd-left .brand-dot{width:12px;height:12px;flex:0 0 auto}
 .kd-word{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-.03em;white-space:nowrap;flex:0 0 auto}
 .kd-left #exitCopilot{flex:0 0 auto}
 .kd-left .persona-chip{flex:1 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.kd-livetools{display:flex;align-items:center;gap:4px;flex:0 0 auto;overflow:visible}
+.kd-livetools{display:flex;align-items:center;justify-content:space-evenly;gap:4px;flex:1 1 0;min-width:0;overflow:visible}
 .kd-bar:not(.kd-live) #exitCopilot,.kd-bar:not(.kd-live) .persona-chip{display:none}
 .kd-bar:not(.kd-live) .kd-livetools > :not(#micBtn):not(#sysBtn){display:none}
 html.kd .bar-actions #micBtn,html.kd .bar-actions #sysBtn{display:inline-flex !important;flex:0 0 36px;width:36px;height:36px;visibility:visible !important}
@@ -22,7 +22,7 @@ html.kd .bar-actions #micBtn svg,html.kd .bar-actions #sysBtn svg{width:16px;hei
 .kd-bar .icon-btn{width:32px;height:32px}
 .kd-bar .rec{font-size:12.5px}
 .kd-spacer{flex:0 0 8px}
-.kd-right{display:flex;align-items:center;gap:2px;flex:0 0 auto;justify-content:flex-end}
+.kd-right{display:flex;align-items:center;gap:6px;flex:1 1 0;min-width:0;justify-content:space-evenly;overflow:visible}
 .kd-private{display:inline-flex;align-items:center;gap:8px;margin-right:6px;font:500 13px/1 var(--label);color:var(--muted);cursor:pointer}
 .kd-private .tgl{width:34px;height:20px}
 .kd-private .tgl::after{width:14px;height:14px}
@@ -71,6 +71,7 @@ html.kd .overlay .bar-top{display:none}
 html.kd .overlay>*{flex-shrink:0}
 html.kd .live-mid{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;min-width:0;overflow:hidden}
 html.kd #barAsk,html.kd #status{flex:0 0 auto}
+html.kd #tabPreview,html.kd .tab-preview,html.kd #screenBtn,html.kd #screenCaptureAnswerBtn{display:none !important}
 html.kd .overlay .content{flex:1 1 auto;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column;padding:12px 42px 8px}
 html.kd .overlay .card{flex:1 1 auto;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column}
 html.kd .overlay .q{flex:0 0 auto;max-height:6.2em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
