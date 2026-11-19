@@ -18,7 +18,11 @@ Draft PR [#454](https://github.com/eshwarjay0-delS/job-dashboard/pull/454) resta
 
 `scripts/tests/gmail-retry-after.test.mjs` covers numeric, HTTP-date, missing, invalid, overflow, shorter-than-fallback and interleaved-account inputs. `scripts/tests/mail-overview.test.mjs` asserts that the actual page retry path reads the response header. Full CI now runs these with the existing selected-sender/account-isolation suite.
 
-The isolated helper suite was run from the exact source/test content in a temporary local directory: **5 passed, 0 failed**. On intermediate docs head `b8590b66272bbdca28c84100fb478e8223d69364`, Kompas baseline `44516816186` and Plan/REA schema `44516816120` passed; full CI `44516816009` was still running at dependency installation/Lint. This diagnostic update advances the PR head, so exact-head CI, baseline and schema checks must be reverified. No older PR #432 result is reused.
+The isolated helper suite passed **5/5**. The focused Gmail/Overview/account-isolation suite reported **40/40** on pre-correction final PR head `6eefc48823c888c2067070fed3cd3e209300fc62`. Exact-head full CI `44522509481`, Kompas baseline `44522509341` and Plan/REA schema `44522509383` all completed SUCCESS on that head. Runtime change commit `6256ba450658bb3cb64f8507a2ed3898f51a3ac9`, parser commit `1a085218551cea907b95854a49d8363136abcf40`, and test corrections `98c347a299eef0a4b1382eb8e07fd2f98e31d99d` / `e9868c521f9470fd6cd11e1c8453abec0cdd8ac5` are recorded separately from the later documentation commits. This evidence correction advances the PR head; all three required workflows must rerun on the new exact head.
+
+## Adjacent Gmail/mobile approval boundary
+
+The direct 5 October owner message supports four-account capability/target, not a hard maximum. Keep the existing server-side `LIMIT 4` unchanged until explicit approval to alter it; the no-cap migration in PR #440 remains unapproved. The direct 4 October mobile-navigation feedback establishes that navigation must not obstruct the page. Normal-flow expansion below the sticky header is an implementation candidate, not separately owner-approved, and still requires narrow-phone acceptance. This Retry-After change does not alter account limits or mobile navigation.
 
 ## Current release boundary
 
