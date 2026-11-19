@@ -40,3 +40,12 @@ No Gmail API/OAuth request, personal inbox read or mutation, outbound email, Pok
 ## Exact-head schema correction — 19 November 2026 23:09 UTC
 
 Safe Merge Gate full CI run 44626858570 failed at TypeScript because the new REA record used a state string outside the existing `ReaSession.state` union. The record now uses the existing `Implemented, verification pending` state; only `src/lib/rea-register.ts` was changed by commit `c7c35c8240be5b60112e89458c9116cd6c297b5d`. The prior Plan/REA schema run 44626858546 and Kompas baseline 44626858670 were green on the pre-fix head, but all exact-head checks must rerun after the journal/Plan/Completion Watch documentation updates. This correction changes no Gmail runtime code and does not activate the Poke worker, notifications, scheduler or sending. No inbox access, OAuth call or email send occurred.
+
+
+## Merge and release status — 19 November 2026 23:35 UTC
+
+PR #458 was merged through the normal GitHub squash path. Reviewed head `287efe2b93848fc37c0c9c52ebff5a70b3449ed8`; master merge commit `e035b4131ea34a62ba31e51dca198d77b3d0057e`. Exact-head full CI 44635765212, Plan/REA schema 44635765107 and Kompas baseline 44635765113 all completed SUCCESS. The final REA state correction from `c7c35c8240be5b60112e89458c9116cd6c297b5d` is included.
+
+The production Git-linked deployment `dpl_9pTGwEdn1B6ekEKfHcoFqpeocoCd` was CANCELED by the configured Ignored Build Step because the merge commit did not contain the required `[ship]` marker. This is not a build failure or rate-limit response. The two canonical aliases still point to READY deployment `dpl_A8i4LFvu1EqqdKWmLe1SpiT1NUAN`, SHA `1c6c1622cddf533e8b268a51d0e4350e508a158e`. The Vercel project reports `live=false`; the legitimate protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`. No marker was added and no manual deployment or protection bypass was attempted.
+
+The source fix is merged but not live. Keep the Poke worker, scheduler, notifications and sending disabled. Protected preview, two-inbox collision, selected-From, reconnect and narrow-phone acceptance remain separate. No Gmail API/OAuth call, personal inbox read/mutation, email send or device acceptance occurred.
