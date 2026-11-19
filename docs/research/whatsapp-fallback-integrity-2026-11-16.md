@@ -134,3 +134,10 @@ Child PR #453 exact head `2f5fe4ee21fda8d97ffe357694a0e9e6081fa2b6` passed Whats
 A read-only iZap connection check at `2026-11-19T10:20:05.108125Z` found no linked WhatsApp number, disconnected registration, no live inbound history and no outbound send proven to reach Meta. Thus iZap cannot corroborate the historical 17 Oct 17:28 event. Accessible Files search did not locate the exact output DOCX; this is not proof that no copy exists in every external source.
 
 The documentation update creates a new child PR head, so exact-head WhatsApp recovery and Plan/REA must rerun. Full CI and Kompas baseline are required after Safe Merge Gate integrates child #453 into parent #450. Vercel project `live:false`, canceled latest production attempt and older READY canonical alias remain. No real Meta send, DOCX generation, R2 write, production mutation or historical replay occurred.
+
+
+## 19 November 2026 — final child-head regression gates
+
+The final docs head of child PR #453, `275e81652d9e0386a39789565510045b284c7118`, passed WhatsApp recovery/typecheck workflow `44504932318`: `npm ci`, TypeScript and the five targeted Node test files completed with 96 passed, 0 failed. Plan/REA schema workflow `44504932177` also passed. The code-bearing predecessor `2f5fe4ee21fda8d97ffe357694a0e9e6081fa2b6` independently passed the same 96/96 suite and Plan/REA. Full CI and Kompas baseline remain required after Safe Merge Gate integrates the child into parent #450.
+
+The tests are source-level/synthetic. They do not contact Meta, generate a DOCX, write R2 or prove delivery. iZap still has no linked WhatsApp number and cannot provide the historical 17 Oct receipt. Keep the exact output DOCX, per-run R2 version, request correlation, Meta message ID and signed delivery/read receipt as open evidence gaps.
