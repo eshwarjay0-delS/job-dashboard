@@ -6,6 +6,11 @@ const FIXTURES = [
   'whatsapp-5fold.test.mjs',
   'whatsapp-resume-failsafe.test.mjs',
   'whatsapp-single-request.test.mjs',
+  'whatsapp-library.test.mjs',
+  'whatsapp-recovery-durability.test.mjs',
+  'whatsapp-resume-acceptance.test.mjs',
+  'whatsapp-resume-contract.test.mjs',
+  'whatsapp-tailor-rounds.test.mjs',
 ]
 const SYNTHETIC_NAMES = new Set(['Candidate', 'Candidate One', 'Candidate Two'])
 const RESERVED_TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
@@ -13,14 +18,16 @@ const RESERVED_TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 for (const file of FIXTURES) {
   test(file + ' contains only reserved synthetic identity and contact data', () => {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8')
-    const scanSource = source.replace(/\\n/g, '\n')
+    const scanSource = source.replace(/\\n/g, '\n').replace(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/ig, '')
     const emails = scanSource.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig) ?? []
     const phones = scanSource.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g) ?? []
     const identityNames = [...source.matchAll(/(?:firstName|lastName|fullName|candidateName|displayName)\s*:\s*['"]([^'"]+)['"]/g)].map(match => match[1])
-    const resumeHeaderNames = [...source.matchAll(/const\s+(?:HOUSTON|SAINT_LOUIS|src)\s*=\s*['"](Candidate(?: One| Two)?)(?:\\n|\\)/g)].map(match => match[1])
+    const resumeHeaderNames = [...source.matchAll(/const\s+(?:HOUSTON|SAINT_LOUIS|src|IDENTITY)\s*=\s*['"](Candidate(?: One| Two)?)(?:\\n|\\)/g)].map(match => match[1])
     const outputNames = [...source.matchAll(/outputNameFor:\s*async\s*\(\)\s*=>\s*['"]([^'"]+)['"]/g)].map(match => match[1])
     const whatsappRecipients = [...source.matchAll(/(?:generate|sendText|sendDocument)\(\s*['"](\d{7,15})['"]/g)].map(match => match[1])
 
+    assert.doesNotMatch(source, /\b(?:Eshwar|Ishu|Janjirala|Jyothishwar)\b/i, file + ' must not contain owner or personal fixture names')
+    assert.doesNotMatch(source, /(?:J_Eshwar_44|Eshwar_44|Ishu_44)/i, file + ' must not contain personal account paths')
     assert.ok(
       emails.every(email => /^candidate\d+@example\.test$/i.test(email)),
       file + ' must use only candidateN@example.test addresses',
