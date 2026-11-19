@@ -6,7 +6,7 @@ The active MFit Safe Merge Gate reviewed the Gmail Retry-After work in PR [#454]
 
 ## Current-master implementation
 
-Branch: `fix/gmail-retry-after-master-bounded-20261119`, based on canonical master `1c6c1622cddf533e8b268a51d0e4350e508a158e`. The older PR #454 branch was not edited; this is a clean restack on current master.
+Draft PR [#458](https://github.com/eshwarjay0-delS/job-dashboard/pull/458), branch `fix/gmail-retry-after-master-bounded-20261119`, based on canonical master `1c6c1622cddf533e8b268a51d0e4350e508a158e`. The older PR #454 branch was not edited; this is a clean restack on current master.
 
 - `gmailRetryDelaySeconds` continues to honor numeric and HTTP-date values and never shortens a valid delay below the existing 15/40/65-second fallback floor.
 - A syntactically numeric value beyond JavaScript's safe-integer range becomes a conservative hold sentinel, not the short fallback.
