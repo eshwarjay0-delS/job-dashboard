@@ -1,3 +1,44 @@
+## 18 November 2026 20:58 UTC — final child-head evidence and documentation refresh
+
+- PR #447 exact head `03668d7a326bebada0b67f4e4e7ec39443c26cc3`: WhatsApp recovery [44394262959](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262959) **SUCCESS**, typecheck passed, 94 tests / 94 passed / 0 failed. The same-JD concurrent-start and lease-release regression passed.
+- Plan/REA [44394262234](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262234) **SUCCESS**.
+- This child PR is stacked on #433. Full CI and the master-only Kompas baseline do not trigger for this child base; after Safe Merge Gate integrates it into #433, require those gates on the updated parent head.
+- The current journal/watch update is documentation-only. It creates a new child head and triggers fresh exact-head WhatsApp recovery and Plan/REA runs; those latest runs are pending and must not inherit the 03668 results.
+- Parent #433 remains DRAFT. Production alias remains older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; latest master deployment attempt was canceled by the Ignored Build Step due to no `[ship]` marker. No deployment or external send occurred.
+
+Continue: verify the documentation-updated child head's new exact-head gates, then let MFit Safe Merge Gate sequence #447 into #433 and run full CI/baseline on the updated parent.
+
+## 18 November 2026 20:52 UTC — WhatsApp child-PR gate results
+
+- Child PR [#447](https://github.com/eshwarjay0-delS/job-dashboard/pull/447), exact head `19608572885091f399102f6706dec9a00203cf8b`, is DRAFT and stacked on parent #433.
+- WhatsApp recovery workflow [44393570790](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44393570790) **SUCCESS**. The exact command ran 94 tests: 94 passed, 0 failed, including the same-JD concurrent-start test and deliberate retry after lease release.
+- Plan/REA schema workflow [44393570770](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44393570770) **SUCCESS**.
+- Full CI and the master-only Kompas baseline do not trigger on this child PR because its base is the parent feature branch. After Safe Merge Gate integrates #447 into #433, require fresh full CI/baseline on the updated #433 head.
+- Parent #433 remains DRAFT. Its earlier exact-head full CI failure (run `44390742971`) was the route test mock granting a claim to every concurrent invocation. The production helper uses ETag compare-and-swap; the child test double now models one active lease and token-matched release.
+- Production remains unchanged: Vercel project `live:false`; latest production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` was canceled by Ignored Build Step because there was no `[ship]` marker; canonical alias remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No deploy or bypass was attempted.
+- The 17 Oct 17:28 incident remains a hard hold with no verified generated DOCX, R2 version, webhook correlation, Meta message ID or signed delivery/read receipt. No replay/send occurred.
+
+Continue: Safe Merge Gate should sequence #447 into #433, then run exact-head full CI/baseline on the parent. Keep the protected preview and production release gates separate.
+
+## 18 November 2026 20:45 UTC — dedicated WhatsApp gate now runs route concurrency test
+
+- The workflow path filter already included `scripts/tests/whatsapp-single-request.test.mjs`, but its actual `node --test` command omitted it. The route-level same-JD concurrency test therefore ran in full CI but not in the dedicated WhatsApp recovery gate.
+- The child branch now adds that test file to the dedicated recovery command. Workflow commit: `9d5e357d68fcde807abc57f8b8d27e73b54dd466`; journal commit: `c881fe8faaa384b485ae9ad7db140ac1daca81a3`.
+- The prior exact-head recovery run `44393340914` began before this workflow change and does not validate the expanded command. A new exact-head recovery run is required.
+- No runtime behavior, external message, R2 write, production database or deployment changed.
+
+Continue: verify the new exact-head WhatsApp recovery and Plan/REA gates; then run full CI on parent #433 after Safe Merge Gate sequences this child correction.
+
+## 18 November 2026 20:40 UTC — WhatsApp concurrency regression fixture correction
+
+- PR #433 exact head `04b74bbf63986134871c43374bbdc75c78e51677` full CI `44390742971` failed one test only: `same JD starts once concurrently and its lease releases for a deliberate retry` observed 2 tailor calls instead of 1 (93/94 passed).
+- Root cause is the route test's mock, not demonstrated production behavior: `claimResumeRecoveryWorker` returned a claim token unconditionally to both concurrent invocations. The real helper in `src/lib/whatsapp-resume-recovery.ts` uses ETag compare-and-swap and already has a two-worker one-winner durability regression.
+- A child branch `fix/whatsapp-single-request-atomic-test-mock-20261118` corrects the mock to allow one active token and token-matched release. Test-only commit: `1bbd10691463674f15d082f79a23927eb16bedc5`. No runtime route, storage policy, account isolation, delivery threshold or Meta send behavior changed.
+- Exact-head GitHub Actions on the child PR are still required. Parent #433 remains DRAFT and its source fix is not deployed. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection or change billing.
+- The 17 Oct 17:28 Chicago incident remains unverified. No output DOCX, per-run R2 version, webhook/Meta correlation, signed delivery/read receipt or owner fact reconciliation was recovered. No replay or resend.
+
+Continue: run the exact child-PR gates; after they pass, let MFit Safe Merge Gate sequence this test-only correction into #433. Then continue the separate protected-preview and owner-authorized WhatsApp acceptance gates.
+
 ## 18 November 2026 20:22 UTC — WhatsApp recovery CAS evidence and interleavings
 
 - The race report on predecessor head `f409ca5` is addressed in the current PR #433 branch: atomic ETag compare-and-swap (`b04dd14`), R2 adapter/attempt-fencing correction (`f83295d`, `c43d8c5`), callback attempt correlation (`189320c`). `updateResumeRecovery` now uses `GetObject` ETag plus conditional `PutObject If-Match`, re-reading and re-evaluating after a 412 rather than writing stale state.
