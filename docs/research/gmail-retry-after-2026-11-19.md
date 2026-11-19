@@ -35,3 +35,8 @@ The page is a Client Component. The Next.js v16.3.8 upstream guides for [Server 
 Canonical master `1c6c1622cddf533e8b268a51d0e4350e508a158e` is independently READY at production deployment `dpl_A8i4LFvu1EqqdKWmLe1SpiT1NUAN`, alias `job-dashboard-fawn.vercel.app`. This deployment does not contain the current branch's Retry-After change. No protected preview or deployment was attempted; Safe Merge Gate review, exact-head full CI/Plan-REA/Kompas baseline, protected preview, production READY + canonical alias, two-inbox collision, selected-From, reconnect and narrow-phone acceptance remain required.
 
 No Gmail API/OAuth request, personal inbox read or mutation, outbound email, Poke scheduler activation or device test occurred. Cached rows are not evidence of fresh sync.
+
+
+## Exact-head schema correction — 19 November 2026 23:09 UTC
+
+Safe Merge Gate full CI run 44626858570 failed at TypeScript because the new REA record used a state string outside the existing `ReaSession.state` union. The record now uses the existing `Implemented, verification pending` state; only `src/lib/rea-register.ts` was changed by commit `c7c35c8240be5b60112e89458c9116cd6c297b5d`. The prior Plan/REA schema run 44626858546 and Kompas baseline 44626858670 were green on the pre-fix head, but all exact-head checks must rerun after the journal/Plan/Completion Watch documentation updates. This correction changes no Gmail runtime code and does not activate the Poke worker, notifications, scheduler or sending. No inbox access, OAuth call or email send occurred.
