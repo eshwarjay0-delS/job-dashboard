@@ -11,8 +11,8 @@ const require = createRequire(import.meta.url)
 const read = (file) => readFileSync(new URL('../../' + file, import.meta.url), 'utf8')
 const tailorSrc = read('src/lib/tailor.ts')
 const routeSrc = read('src/app/api/whatsapp/webhook/route.ts')
-const SANDBOX = '15555501023'
-const IDENTITY = 'Candidate One\njayCandidate One44@example.test | (314) 255-9156\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const SANDBOX = '12025550103'
+const IDENTITY = 'Candidate One\ncandidate44@example.test | (314) 255-9156\nAnalyst, Acme  Jan 2021 - Mar 2024'
 const JD = 'Senior Security Analyst. Monitor SIEM alerts, investigate endpoint threats, and write detections for the security operations center each week.'
 
 function load(file, mocks = {}, extra = '') {
