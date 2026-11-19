@@ -22,7 +22,7 @@ The isolated helper suite passed **5/5**. The focused Gmail/Overview/account-iso
 
 ## Adjacent Gmail/mobile approval boundary
 
-The direct 5 October owner message supports four-account capability/target, not a hard maximum. Keep the existing server-side `LIMIT 4` unchanged until explicit approval to alter it; the no-cap migration in PR #440 remains unapproved. The direct 4 October mobile-navigation feedback establishes that navigation must not obstruct the page. Normal-flow expansion below the sticky header is an implementation candidate, not separately owner-approved, and still requires narrow-phone acceptance. This Retry-After change does not alter account limits or mobile navigation.
+The latest owner-authored correction retrieved at 2026-11-19T14:02:57Z (08:02 Chicago) confirms the existing four-account ceiling; keep server-side `LIMIT 4`, and PR #440's no-cap migration remains unapproved. Mobile navigation must expand below the sticky header in normal document flow, pushing content down without overlay, scrim, dimming or page inertness; narrow-phone acceptance remains required. This Retry-After change does not alter account limits or mobile navigation.
 
 ## Current release boundary
 
