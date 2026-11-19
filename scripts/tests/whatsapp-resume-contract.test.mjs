@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { sendDocument } from '../../src/lib/whatsapp.ts'
 
 const webhook = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
 const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
@@ -167,4 +168,43 @@ test('Meta callback correlation distinguishes a newer attempt from an older mess
   assert.match(queue, /job\.attemptToken === attemptToken/)
   assert.match(queue, /job\.claimToken !== attemptToken/)
   assert.match(queue, /job\.deliveredMessageId === wamid/)
+})
+
+
+test('Meta send forwards only valid legacy or attempt-scoped opaque callback data', async () => {
+  const originalFetch = globalThis.fetch
+  const keys = ['WHATSAPP_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID']
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]))
+  const requests = []
+  process.env.WHATSAPP_TOKEN = 'unit-test-token'
+  process.env.WHATSAPP_PHONE_NUMBER_ID = '123456789'
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init })
+    return requests.length % 2 === 1
+      ? { ok: true, json: async () => ({ id: 'media-test' }), text: async () => '' }
+      : { ok: true, json: async () => ({ messages: [{ id: 'wamid.test' }] }), text: async () => '' }
+  }
+  try {
+    const jobId = 'a'.repeat(64)
+    const attemptToken = 'b'.repeat(32)
+    const cases = [
+      [jobId + ':' + attemptToken, jobId + ':' + attemptToken],
+      [jobId, jobId],
+      [jobId + ':short-token', undefined],
+      ['not-an-opaque-id', undefined],
+    ]
+    for (const [opaque, expected] of cases) {
+      const start = requests.length
+      assert.equal(await sendDocument('15550101', Buffer.from('synthetic-docx'), 'resume.docx', 'test', opaque), 'wamid.test')
+      const message = JSON.parse(requests[start + 1].init.body)
+      assert.equal(message.biz_opaque_callback_data, expected)
+    }
+    assert.equal(requests.length, cases.length * 2)
+  } finally {
+    globalThis.fetch = originalFetch
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key]
+      else process.env[key] = previous[key]
+    }
+  }
 })
