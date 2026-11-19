@@ -1,3 +1,15 @@
+## 19 November 2026 05:50 UTC — current-master WhatsApp validation restack
+
+- Opened draft PR [#450](https://github.com/eshwarjay0-delS/job-dashboard/pull/450), branch `fix/whatsapp-fallback-integrity-current-master-20261119`, base master `d03f18892015bdfceb277500978cbacd95ae7808`, head `322acf7516061e93df0000c5a07d45db51f3c0a7`. GitHub compare reports 53 commits ahead / 0 behind. This preserves PR #433 and child #447; neither existing branch was rewritten.
+- PR #450 carries #433's owner-approved unsupported-JD hard hold and explicit selected same-account library fallback label, plus #447's test-only mock that models one active atomic lease and token-matched release. It does not add uploaded-original-after-timeout or whole-message hold behavior.
+- Parent #433 exact head `04b74bbf63986134871c43374bbdc75c78e51677` failed full CI `44390742971` because its test mock granted two concurrent claims. Child #447 head `322acf7516061e93df0000c5a07d45db51f3c0a7` passed WhatsApp recovery `44394663903` and Plan/REA `44394664245`; those child-base runs did not run master-only full CI or Kompas baseline. PR #450 now needs fresh exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA.
+- The latest Safe Merge Gate reports project `live:false`, latest production attempt CANCELED by Ignored Build Step, and the canonical alias still on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview requires the owner-controlled `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. No unpause, bypass, billing change, preview, deployment, real Meta send, DOCX generation, R2 write or production mutation.
+- The 17 Oct 17:28 Chicago attempt remains a visible hold, not proof of delivery. Output DOCX, per-run R2 object/version, request correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. No replay or replacement send.
+
+Continue: verify all four exact-head workflows on PR #450, then let MFit Safe Merge Gate review. Keep it DRAFT until the protected preview and production READY/alias gates are legitimately satisfied. Keep PR #411's uploaded-original-after-timeout behavior separate and unapproved.
+
+---
+
 ## 18 November 2026 20:58 UTC — final child-head evidence and documentation refresh
 
 - PR #447 exact head `03668d7a326bebada0b67f4e4e7ec39443c26cc3`: WhatsApp recovery [44394262959](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262959) **SUCCESS**, typecheck passed, 94 tests / 94 passed / 0 failed. The same-JD concurrent-start and lease-release regression passed.
