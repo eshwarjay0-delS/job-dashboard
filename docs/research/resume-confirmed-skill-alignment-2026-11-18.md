@@ -5,7 +5,8 @@
 Continue the owner-approved resume/JD alignment work and preserve the 17 October WhatsApp incident without inventing candidate history or replaying a message.
 
 - The JD is target context, not evidence that the candidate performed the work.
-- An explicitly confirmed skill may be mapped naturally into relevant existing project bullets across roles. Confirmation supports only the named skill. It does not create a new employer, project, action, outcome, date, title, location, contact, metric or credential.
+- A literal candidate confirmation supports only the named skill. It does not create a new employer, project, action, outcome, date, title, location, contact, metric or credential.
+- The 6 Nov repository handoff records a cross-role mapping exception, but targeted accessible prior-conversation retrieval on 19 Nov did not recover the alleged 09:55 CT primary owner message or the phrase “you have experience with all of them evenly”. PR #319 comment #6817645128 is a handoff summary, not the original user message. Preserve the exception as repository-recorded, not independently reverified primary approval; do not apply it until the original wording is recovered or the owner explicitly reaffirms that exact scope. Until then, use source-resume evidence and literal candidate confirmations only where the existing role/project context supports them.
 - The 14 November owner correction is authoritative: unsupported JD-only experience must never be delivered. A cached `unverified_jd_terms` blocker is rejected even when its detail list is empty.
 - The separately approved offline failsafe is the closest matched resume from the same-account library, labelled **Original resume — NOT TAILORED**. Sending the exact uploaded original after provider timeout remains unapproved.
 
@@ -21,15 +22,15 @@ The 10 November research record documents prior recovery of the original input D
 
 ## Current source candidate
 
-PR [#431](https://github.com/eshwarjay0-delS/job-dashboard/pull/431) restacks confirmed-skill role mapping on current master `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Exact head `a74319cb87a3aff44e111987c59ce978d2f87c2a` passed:
-- Full CI 43972447062.
-- WhatsApp recovery 43972447199.
-- Kompas baseline 43972447249.
-- Plan/REA schema 43972447039.
+PR #431 is the current-master confirmed-skill alignment restack. Its current exact head is fa0037c2b3436f13dfeb7e1fa60eaa714c7f32b5, based on master d03f18892015bdfceb277500978cbacd95ae7808. Exact-head gates passed:
+- Full CI 44388165144.
+- WhatsApp recovery 44388164799.
+- Kompas baseline 44388164907.
+- Plan/REA schema 44388164888.
 
-The PR remains DRAFT. It is not deployed and does not establish a live 95–100% match. Protected preview and owner-authorized source resume + exact JD + explicit confirmation + exported-DOCX review remain necessary.
+The PR remains DRAFT. Its source checks do not resolve the 6 Nov cross-role approval provenance, do not establish an owner-authorized source resume + exact JD + literal confirmation bundle, and do not replace protected-preview or exported-DOCX acceptance. No live 95–100% match is claimed.
 
-Dependent PR [#441](https://github.com/eshwarjay0-delS/job-dashboard/pull/441) is stacked on #431. Its focused final-DOCX, WhatsApp and Plan/REA checks passed on exact head `2ab1d89dcc3a65e57a2c4176548dabdb8346515e`; exact-head full CI and Kompas baseline are not verified. No final DOCX or Gemini call occurred in this run.
+Dependent PR #441 is stacked on #431 at exact head 951d60dcb19912b94bf4499edb3770862c3b43e8. Focused final-DOCX ATS review 44346453217, WhatsApp recovery 44346452959 and Plan/REA 44346453106 passed; full CI and Kompas baseline are not recorded on that stacked head. The separately owner-approved 3 Nov final-DOCX Gemini loop remains unaccepted against a real exported DOCX; no Gemini call or DOCX export occurred.
 
 ## Release state and next checks
 
@@ -40,3 +41,8 @@ Next:
 2. Inspect the actual exported DOCX for grammar, role/project relevance, identity, format, supported coverage and zero unsupported claims.
 3. Keep #411's uploaded-original-after-provider-timeout behavior unapproved.
 4. Recover the 17 October output DOCX, R2/version, webhook correlation and signed Meta receipt from the correct owner-authorized systems; never replay or resend.
+
+
+## 19 November 2026 — approval-provenance correction
+
+The latest targeted accessible-conversation retrieval did not recover the alleged 6 Nov 09:55 CT primary user message or the quoted cross-role instruction. PR #319 comment #6817645128 is a repository handoff summary, not the original message. PR #431 comment 6996129057 and PR #442 comment 6996131933 record this correction. Keep the historical exception as repository-recorded; do not represent it as independently verified primary approval. The 3 Nov final-DOCX Gemini instruction is separately direct-owner-approved and is not withdrawn by this finding.
