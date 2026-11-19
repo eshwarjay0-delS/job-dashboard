@@ -35,8 +35,12 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
-    if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
-    if (/^i\s+(?:have|possess)\s+(?:no|not|never)\b/i.test(line)) return []
+    const positiveConfirmation = /^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|i['’]ve\s+(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i
+    if (!positiveConfirmation.test(line)) return []
+    // Equivalent first-person contractions must not be rejected, but an explicit
+    // negative immediately after a confirmation verb must never become skill evidence.
+    const negativeConfirmation = /^(?:i\s+(?:(?:have|possess)\s+(?:no|not|never)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\s+(?:no|not|never)\b)|i['’]ve\s+(?:(?:no|not|never)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\s+(?:no|not|never)\b)|(?:confirmed experience|confirmed skills)\s*:\s*(?:no|not|never|without)\b)/i
+    if (negativeConfirmation.test(line)) return []
     const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
     const hasException = /\b(?:except|excluding|but|however|not|never|without)\b/i.test(line)
     // Never truncate a blanket statement with an exception into a false "all skills" confirmation.

@@ -14,6 +14,20 @@ test('an exception cannot confirm every requirement', () => {
   assert.deepEqual(confirmedCandidateStatements(['I used AWS but not GCP']), ['I used AWS'])
 })
 
+for (const input of ["I've used AWS", 'I’ve deployed CyberArk EPM', "I've personally tested Splunk"]) {
+  test(\`equivalent first-person contraction is accepted: \${input}\`, () => {
+    assert.deepEqual(confirmedCandidateStatements([input]), [input])
+  })
+}
+for (const input of ['I used no AWS', "I've used no AWS", 'Confirmed skills: no AWS', 'Confirmed experience: never used AWS']) {
+  test(\`explicit negative confirmation is rejected: \${input}\`, () => {
+    assert.deepEqual(confirmedCandidateStatements([input]), [])
+  })
+}
+test('contraction keeps the positive clause but not a negated JD term', () => {
+  assert.deepEqual(confirmedCandidateStatements(["I've used AWS but not GCP"]), ["I've used AWS"])
+})
+
 test('technical punctuation remains part of confirmed skills', () => {
   assert.deepEqual(confirmedCandidateStatements(['I have experience with .NET, Node.js and ASP.NET']), ['I have experience with .NET, Node.js and ASP.NET'])
   assert.deepEqual(confirmedCandidateStatements(['I used Node.js. Add AWS']), ['I used Node.js'])
