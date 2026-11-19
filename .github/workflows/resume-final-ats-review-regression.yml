@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/final-docx-gemini-restack-confirmed-skills-20261117
+      - test/resume-evidence-display-regressions-20261118
     paths:
       - "src/lib/tailor.ts"
       - "src/lib/claude.ts"
