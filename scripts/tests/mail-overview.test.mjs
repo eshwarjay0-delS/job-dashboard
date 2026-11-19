@@ -424,7 +424,7 @@ test('opening and closing one application\'s map does not read Gmail\'s history 
   assert.ok(page.includes('const timer = setTimeout('))
   assert.ok(page.includes('controller.signal.addEventListener("abort", abort, { once: true })'))
   assert.ok(page.includes('clearTimeout(timer)'))
-  assert.equal((page.match(/controller\\.signal\\.removeEventListener\\("abort", abort\\)/g) || []).length, 2)
+  assert.equal(page.split('controller.signal.removeEventListener("abort", abort)').length - 1, 2)
   assert.ok(page.includes('Gmail requested a long cooldown'))
   assert.ok(!page.includes('for (let left = pauseSeconds; left > 0; left--)'), 'long delays must not create a per-second countdown')
   assert.ok(page.includes('Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken.'))
