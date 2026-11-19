@@ -24,7 +24,7 @@ Draft PR [#458](https://github.com/eshwarjay0-delS/job-dashboard/pull/458), bran
 
 Commits: `5b4f9d517da53e124990c8d8e0648a6b1e898d2b`, `603bfc74069f9abb9b5145121075eb3cd8e8882b`, `25913153153010f35e97b71c0ffad7ae7cc3c5de`, `4af6df68cf043a156de356268506beec93ea094f`, `e96e17457a0c3391e6932bdb3abb9ceeffbf9b0c5`.
 
-The added cases cover delta-seconds, HTTP-date, missing/invalid values, shorter-than-fallback values, interleaved account responses, overflow, the 24-hour timer boundary, human-readable long-wait labels, the absence of a per-second loop and abortable cleanup. GitHub Actions exact-head results are pending; no local full test run is claimed.
+The added cases cover delta-seconds, HTTP-date, missing/invalid values, shorter-than-fallback values, interleaved account responses, overflow, the 24-hour timer boundary, human-readable long-wait labels, the absence of a per-second loop and abortable cleanup. Exact head 5ceee7fb494425d6d3aaced9c9027ee074d7e4ff passed full CI 44624954359, Plan/REA schema 44624954365 and Kompas baseline 44624954387. The first full-CI attempt 44622620354 failed only on prefer-const for the timer; the fix and listener-cleanup regression are included in the passing head. No local full test run is claimed.
 
 ## Next.js guidance and environment limitation
 
