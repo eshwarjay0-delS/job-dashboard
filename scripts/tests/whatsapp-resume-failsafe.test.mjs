@@ -23,8 +23,8 @@ const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
   '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
 })
 
-const HOUSTON = 'Candidate One\ncandidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
-const SAINT_LOUIS = 'Candidate Two\ncandidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
+const HOUSTON = 'Candidate One\candidate1@example.test | 202-555-0101\nAnalyst, Acme  Jan 2021 - Mar 2024'
+const SAINT_LOUIS = 'Candidate Two\candidate2@example.test | 202-555-0102\nAnalyst, Acme  Jan 2019 - Jun 2022'
 const TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 const TEST_USER_ROOT = `/data/user-resumes/${TEST_USER_ID}`
 const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/GRC/easm.docx`
