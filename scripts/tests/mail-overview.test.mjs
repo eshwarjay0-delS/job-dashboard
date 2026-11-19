@@ -419,7 +419,7 @@ test('opening and closing one application\'s map does not read Gmail\'s history 
   assert.ok(page.includes('const readPage = async (query: URLSearchParams) =>'))
   assert.ok(page.includes('const fallbackSeconds = [15, 40, 65][attempt]!'))
   assert.ok(page.includes('gmailRetryDelaySeconds(response.headers.get("Retry-After"), fallbackSeconds)'))
-  assert.ok(page.includes('for (let left = pauseSeconds; left > 0; left--)'))
+  assert.ok(page.includes('gmailRetryAutoWaitMs(pauseSeconds)'))\n  assert.ok(page.includes('gmailRetryWaitLabel(pauseSeconds)'))\n  assert.ok(page.includes('timer = setTimeout('))\n  assert.ok(page.includes('controller.signal.addEventListener(\"abort\", abort, { once: true })'))\n  assert.ok(page.includes('Gmail requested a long cooldown'))\n  assert.ok(!page.includes('for (let left = pauseSeconds; left > 0; left--)'), 'large Retry-After values must not create a per-second loop')
   assert.ok(page.includes('Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken.'))
   assert.ok(page.includes('const j = await readPage(query)'))
   // The endpoint answers a limit as one (429), not as a broken server (500), in plain words.
