@@ -31,6 +31,14 @@ test('missing and invalid headers keep the existing bounded fallback schedule', 
   assert.equal(gmailRetryDelaySeconds('-30', 65, NOW), 65)
 })
 
+test('a Retry-After HTTP-date beyond one day is held instead of retried early', () => {
+  const date = new Date(NOW + 25 * 60 * 60 * 1000).toUTCString()
+  const seconds = gmailRetryDelaySeconds(date, 15, NOW)
+  assert.ok(seconds >= 25 * 60 * 60)
+  assert.equal(gmailRetryAutoWaitMs(seconds), null)
+  assert.equal(gmailRetryWaitLabel(seconds), 'more than 1 day')
+})
+
 test('a server delay shorter than the fallback never makes the client retry earlier', () => {
   assert.equal(gmailRetryDelaySeconds('2', 15, NOW), 15)
   assert.equal(gmailRetryDelaySeconds('0', 40, NOW), 40)
