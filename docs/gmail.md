@@ -213,3 +213,14 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Receiving-inbox sender identity correction — 19 November 2026
+
+The account-scoped Important rule is keyed by the receiving Gmail account **and** sender address. A source review found a normalization asymmetry: lookups lowercased the requested account and sender, but previously stored values were compared as-is. A valid mixed-case stored rule could therefore be missed even though the same rule should match.
+
+The current-master correction trims and lowercases both stored and requested account/sender values before comparison. The account component remains part of the key, so the same sender in two inboxes stays independently tracked. This does not merge accounts, change selected-From behavior, remove the four-account ceiling, or enable a worker.
+
+The latest owner correction (19 Nov 2026, 08:20 UTC) reaffirms the existing four-account ceiling and requires the mobile menu to expand below the sticky header in normal document flow, pushing content down without an overlay, scrim, dimming or page inertness. The Poke-style proactive worker, notifications and sending remain disabled. No Gmail API/OAuth request, inbox mutation or outbound message was used for this source/test correction.
+
+Source-level regression cases cover mixed-case stored and requested values, same-sender separation across two inboxes, a different receiving account, and a different sender. Exact-head GitHub Actions, protected preview, two-authorized-inbox/selected-From/reconnect acceptance and narrow-phone verification remain separate gates.
