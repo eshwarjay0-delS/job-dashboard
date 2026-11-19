@@ -847,16 +847,20 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd) return false
+    // Only an explicitly selected same-account Files entry is an approved fallback.
+    // A fresh upload is not permission to resend the uploaded original or pick another library file.
+    if (!resumePath || !jd || !files?.email || !files.userDir || !files.abs || files.abs !== resumePath) return false
+    const libraryRelative = path.relative(files.userDir, files.abs)
+    if (!libraryRelative || libraryRelative === "." || libraryRelative === ".." || libraryRelative.startsWith(".." + path.sep) || path.isAbsolute(libraryRelative)) return false
     const source = await readPath(resumePath).catch(() => null)
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
     // Never substitute a resume from the other email. The path was chosen for this run.
-    if (!chosenResumeMatchesProfile(text, files?.email)) return false
+    if (!chosenResumeMatchesProfile(text, files.email)) return false
     const meta = await metaPromise
     const name = await outputNameFor(source)
-    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
+    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why, true)
     await patchResumeRecovery(job, { status: "sending" })
     sending = true
     try {
@@ -888,8 +892,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   await saveSession(from, cur)
 
   if (!quiet) await sendText(from, files
-    ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
-    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`)
+    ? `Updating ${files.said}. If the rewrite cannot be completed, I may send only this selected library resume, labelled "Original resume — NOT TAILORED".`
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. I will send a Word file only if the rewrite passes the checks; if it cannot be completed, I'll explain here. I will not send the uploaded original as a fallback.`)
 
   // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
   // 240s budget in silence and then fail. At 60s, if the run is still going,
@@ -900,7 +904,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // function stays alive under after() up to maxDuration.
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get a Word file here: the updated resume if the rewrite finishes, or the resume already chosen for this job if it does not.").catch(() => {})
+      sendText(from, files
+        ? "Still working on your resume — the rewrite has been running for a minute. If it cannot be completed, only the selected library resume may be sent, labelled Original resume — NOT TAILORED."
+        : "Still working on your resume — the rewrite has been running for a minute. If it cannot be completed, I will explain here; the uploaded original will not be sent as a fallback.").catch(() => {})
     }, 60_000)
   }
 
@@ -1046,7 +1052,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!file) {
     failureCode = "file_missing"
     if (await sendClosest("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file. The tailored Word file could not be opened, and no verified same-account library resume was explicitly selected for this run. Your resume and this job are saved for another try.")
     return;
   }
 
@@ -1696,9 +1702,10 @@ function unfinishedRewriteWhy(result: TailorResult): string {
   return "The rewrite did not finish cleanly."
 }
 
-function closestResumeCaption(name: string, label: string, why: string): string {
+function closestResumeCaption(name: string, label: string, why: string, markNotTailored = false): string {
   return [
     `*${name}*`,
+    ...(markNotTailored ? ["Original resume — NOT TAILORED"] : []),
     `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
     "Reply to this file to request changes.",
   ].join("\n")
