@@ -125,3 +125,12 @@ Child PR [#453](https://github.com/eshwarjay0-delS/job-dashboard/pull/453), stac
 This is a confirmed current source defect, **not proof of the historical 17 October 17:28 Chicago event's root cause**. The output DOCX, per-run R2 object/version, request correlation, Meta message ID and signed delivered/read receipt remain missing. Do not replay or resend the historical event.
 
 Exact-head WhatsApp recovery and Plan/REA checks are pending after the child documentation update. Safe Merge Gate must sequence the child into #450, then run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the integrated current-master parent. Vercel project `live:false`, CANCELED latest production attempt, older READY canonical alias and owner-controlled protected-preview credential remain separate release blockers. No real Meta request, DOCX generation, R2 write, production mutation or deployment occurred.
+
+
+## 19 November 2026 — exact-head regression results and provider availability
+
+Child PR #453 exact head `2f5fe4ee21fda8d97ffe357694a0e9e6081fa2b6` passed WhatsApp recovery/typecheck workflow `44504421816`: `npm run typecheck` succeeded and the targeted five-file Node suite reported 96 passed, 0 failed. Plan/REA schema workflow `44504421824` also passed. The tests mock the Meta sender and inspect the actual request JSON; they do not contact Meta.
+
+A read-only iZap connection check at `2026-11-19T10:20:05.108125Z` found no linked WhatsApp number, disconnected registration, no live inbound history and no outbound send proven to reach Meta. Thus iZap cannot corroborate the historical 17 Oct 17:28 event. Accessible Files search did not locate the exact output DOCX; this is not proof that no copy exists in every external source.
+
+The documentation update creates a new child PR head, so exact-head WhatsApp recovery and Plan/REA must rerun. Full CI and Kompas baseline are required after Safe Merge Gate integrates child #453 into parent #450. Vercel project `live:false`, canceled latest production attempt and older READY canonical alias remain. No real Meta send, DOCX generation, R2 write, production mutation or historical replay occurred.
