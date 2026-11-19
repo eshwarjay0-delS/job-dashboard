@@ -69,7 +69,7 @@ test('overflow and extremely long waits become an explicit hold, not a fallback 
 
 test('long wait labels stay readable without a per-second countdown', () => {
   assert.equal(gmailRetryWaitLabel(1), '1 second')
-  assert.equal(gmailRetryWaitLabel(61), '2 minutes')
-  assert.equal(gmailRetryWaitLabel(3601), '2 hours')
-  assert.equal(gmailRetryWaitLabel(86401), '2 days')
+  assert.equal(gmailRetryWaitLabel(61), 'about 2 minutes')
+  assert.equal(gmailRetryWaitLabel(3601), 'about 2 hours')
+  assert.equal(gmailRetryWaitLabel(86401), 'more than 1 day')
 })
