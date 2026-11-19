@@ -47,12 +47,15 @@ export function gmailRetryWaitLabel(seconds: number): string {
   if (seconds < 60) return `${seconds} ${seconds === 1 ? "second" : "seconds"}`
   if (seconds < 60 * 60) {
     const minutes = Math.ceil(seconds / 60)
-    return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`
+    return `about ${minutes} ${minutes === 1 ? "minute" : "minutes"}`
   }
   if (seconds < 24 * 60 * 60) {
     const hours = Math.ceil(seconds / (60 * 60))
-    return `${hours} ${hours === 1 ? "hour" : "hours"}`
+    return `about ${hours} ${hours === 1 ? "hour" : "hours"}`
   }
-  const days = Math.ceil(seconds / (24 * 60 * 60))
-  return `${days} ${days === 1 ? "day" : "days"}`
+  const days = Math.floor(seconds / (24 * 60 * 60))
+  const remainder = seconds % (24 * 60 * 60)
+  return remainder === 0
+    ? `${days} ${days === 1 ? "day" : "days"}`
+    : `more than ${days} ${days === 1 ? "day" : "days"}`
 }
