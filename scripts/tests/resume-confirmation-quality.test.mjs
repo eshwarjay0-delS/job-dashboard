@@ -26,7 +26,7 @@ test('the owner-approved explicit blanket confirmation covers all supplied requi
 })
 
 test('second-person blanket wording is not a candidate experience confirmation', () => {
-  for (const statement of ['You have experience with all required skills', 'Do you have experience with all required skills?']) {
+  for (const statement of ['You have experience with all required skills', 'You have experience with all of them evenly.', 'Do you have experience with all required skills?']) {
     assert.equal(explicitlyConfirmsAllRequirements([statement]), false)
     assert.deepEqual(confirmedCandidateStatements([statement]), [])
   }

@@ -37,11 +37,13 @@ const base = { keys: {}, jd: 'Security Analyst\nMicrosoft Sentinel and Python', 
 test('only an explicit candidate experience statement confirms the complete JD set', () => {
   for (const statement of [
     'I have experience with all required and preferred skills in this JD.',
-    'You have experience with all of them evenly.',
     'My experience covers every listed technology.',
     'I possess all required skills.',
+    'I have experience with all of them evenly.'
   ]) assert.equal(explicitlyConfirmsAllRequirements([statement]), true, statement)
   for (const statement of [
+    'You have experience with all of them evenly.',
+    'Do you have experience with all required skills?',
     'Add all keywords to my resume.',
     'Spread every keyword evenly.',
     'The ideal candidate must have experience with all requirements.',
@@ -51,10 +53,12 @@ test('only an explicit candidate experience statement confirms the complete JD s
 
 test('forced keyword placement and role repair use candidate evidence, not the JD alone', () => {
   const source = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
-  assert.match(source, /const forcedJdKws = explicitlyConfirmsAllRequirements\(immediatePrefs\)/)
-  assert.match(source, /const missing = forcedJdKws\.filter\(k => !covered\.has\(k\)\)/)
-  assert.match(source, /const unseen = forcedJdKws\.filter\(k => !cur\.afterKw\.has\(k\)\)/)
-  assert.match(source, /const left = forcedJdKws\.filter\(k => !cur\.afterKw\.has\(k\)/)
+  assert.match(source, /const candidateStatements = confirmedCandidateStatements\(immediatePrefs\)/)
+  assert.match(source, /const confirmedJdKws = explicitlyConfirmsAllRequirements\(immediatePrefs\)/)
+  assert.match(source, /coveredJdKeywords\(candidateStatements\.join\("\\n"\), jdKws\)/)
+  assert.match(source, /const forcedJdKws = \[\.\.\.new Set\(\[/)
+  assert.match(source, /coveredJdKeywords\(text, jdKws\)/)
+  assert.match(source, /confirmedJdKws/)
 })
 
 test('profile generation receives evidence from current and earlier roles without gaining permission to rewrite their bullets', async () => {

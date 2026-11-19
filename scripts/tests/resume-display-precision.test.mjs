@@ -15,7 +15,11 @@ test('displayed coverage never rounds across delivery, target or complete bounda
 test('shared result fields and web ring retain fractional precision', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
   const page = readFileSync(new URL('../../src/app/dashboard/resume/result/page.tsx', import.meta.url), 'utf8')
-  assert.match(tailor, /coverage: coveragePercent\(best\.cov\)/)
+  // The final exported DOCX is authoritative; the in-memory ratio is only a fallback if extraction fails.
+  assert.match(tailor, /const exportedText = \(await docxText\(buffer\)\)/)
+  assert.match(tailor, /const exportedCovered = coveredJdKeywords\(exportedText, scoreKws\)/)
+  assert.match(tailor, /coverage: exportedRecount \? exportedRecount\.coverage : coveragePercent\(best\.cov\)/)
+  assert.match(tailor, /supported_coverage: exportedRecount \? exportedRecount\.supportedCoverage : coveragePercent\(attainableCoverage\)/)
   // The share of the post's own skill terms (shareOf, 26 Oct 2026), still kept to one decimal place.
   assert.match(tailor, /coveragePercent\(shareOf\(afterKw\)\)/)
   assert.doesNotMatch(page, /Math\.round\(coverage\)/)
