@@ -254,7 +254,8 @@ export async function recordResumeDeliveryStatus(
   const updated = await updateResumeRecovery(id, job => {
     const currentMessage = job.deliveredMessageId === wamid
     const currentAttempt = !!attemptToken && job.attemptToken === attemptToken && (job.status === "sending" || job.status === "uncertain")
-    const legacyInFlight = !attemptToken && !job.deliveredMessageId &&
+    // Tokenless callbacks are accepted only for pre-fencing jobs; a current attempt must match its token.
+    const legacyInFlight = !attemptToken && !job.attemptToken && !job.deliveredMessageId &&
       (job.status === "uncertain" || job.status === "sending")
     if (!currentMessage && !currentAttempt && !legacyInFlight) return { result: false }
 
