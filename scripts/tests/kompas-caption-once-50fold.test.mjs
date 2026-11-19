@@ -194,7 +194,21 @@ test("wiring and privacy: one-shot only, no screen loop, native window selected 
   // Voice dictation remains the last known-good full-turn intake path, never
   // filtered through the stricter screenshot-only focus recognizer.
   assert.doesNotMatch(app,/const hasCompleteAsk = immediateAsk\.split/);
-  assert.match(app,/await flushHeard\(options\.captionOnce \? 250 : 1500\)/);
+  const captionOnceAt = app.indexOf("if (options.captionOnce)");
+  const manualPressAt = app.indexOf("const pressAt = Date.now()", captionOnceAt);
+  assert.ok(captionOnceAt >= 0 && manualPressAt > captionOnceAt);
+  const captionOnlyBranch = app.slice(captionOnceAt, manualPressAt);
+  assert.match(captionOnlyBranch, /return await generateAnswer\(frozen, page, \{ pinned: true, derived: frozen, source: "caption-window" \}\)/);
+  assert.doesNotMatch(captionOnlyBranch, /flushHeard/);
+  const turnWindowAt = app.indexOf("// Turn window", manualPressAt);
+  assert.ok(turnWindowAt > manualPressAt);
+  const pressFlow = app.slice(manualPressAt, turnWindowAt);
+  const autoBranchAt = pressFlow.indexOf("} else if ((running && captures.length) || finals.size) {");
+  assert.ok(autoBranchAt > 0);
+  const manualBranch = pressFlow.slice(0, autoBranchAt);
+  assert.match(manualBranch, /if \(!fromAuto\) \{[\s\S]*Do not wait on flushHeard before the request/);
+  assert.doesNotMatch(manualBranch, /await flushHeard/);
+  assert.match(pressFlow.slice(autoBranchAt), /await flushHeard\(1500\)/);
   assert.doesNotMatch(app,/explicit-ask-before-trailing-narration/);
   assert.match(screen,/const captionMode =/);
   assert.match(screen,/max_tokens: captionMode \? 1200 : 4096/);
