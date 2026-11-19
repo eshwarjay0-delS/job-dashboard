@@ -213,9 +213,9 @@ test("28.5% is not a clean pass, and the finished file is still sendable", () =>
 })
 test("Houston and Saint Louis emails are not treated as the same profile", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
-  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com"), true)
-  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
-  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\nCandidate Onejay05@example.test", "Candidate Onejay05@example.test"), true)
+  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\njayCandidate One44@example.test", "Candidate Onejay05@example.test"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\nCandidate Onejay05@example.test\njayCandidate One44@example.test", "Candidate Onejay05@example.test"), false)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
@@ -365,7 +365,7 @@ test("sanitizing an unsafe claim cannot override the independent role-completene
   assert.ok(whatsappResumeRejectionReasons(unsafe).includes("roles_unrewritten"))
 })
 
-// Job-post terms switch (JD_TERMS_ALWAYS_ON_SKILLS, default on). Eshwar, 29 Oct 2026: "If it is mentioned in JD that
+// Job-post terms switch (JD_TERMS_ALWAYS_ON_SKILLS, default on). Candidate One, 29 Oct 2026: "If it is mentioned in JD that
 // presented then it is our responsibility to include it in the updated resume every time".
 const loadWithEnv = (rel, env) => {
   const source = readFileSync(resolve(root, rel), "utf8")
