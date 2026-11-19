@@ -13,6 +13,8 @@ on:
       - ".github/workflows/resume-final-ats-review-regression.yml"
       - "src/lib/resume-evidence.ts"
       - "scripts/tests/resume-confirmation-quality.test.mjs"
+      - "scripts/tests/resume-display-precision.test.mjs"
+      - "scripts/tests/resume-profile-evidence.test.mjs"
       - "scripts/tests/whatsapp-resume-contract.test.mjs"
       - "src/lib/plan-vision.ts"
       - "src/lib/plan-vision-journal.ts"
@@ -60,4 +62,4 @@ jobs:
       - name: TypeScript, lint and application checks
         run: npm run check
       - name: Final DOCX ATS review tests
-        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-loop.test.mjs scripts/tests/resume-confirmation-quality.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/resume-final-ats-review.test.mjs scripts/tests/resume-final-ats-loop.test.mjs scripts/tests/resume-confirmation-quality.test.mjs scripts/tests/resume-display-precision.test.mjs scripts/tests/resume-profile-evidence.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs
