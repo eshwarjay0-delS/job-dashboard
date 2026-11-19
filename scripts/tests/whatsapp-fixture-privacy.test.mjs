@@ -6,6 +6,7 @@ const FIXTURES = [
   'whatsapp-5fold.test.mjs',
   'whatsapp-resume-failsafe.test.mjs',
   'whatsapp-single-request.test.mjs',
+  'whatsapp-resume-acceptance.test.mjs',
 ]
 const SYNTHETIC_NAMES = new Set(['Candidate', 'Candidate One', 'Candidate Two'])
 const RESERVED_TEST_USER_ID = '00000000-0000-4000-8000-000000000001'
