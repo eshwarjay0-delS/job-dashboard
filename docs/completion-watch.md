@@ -1,3 +1,13 @@
+## 19 November 2026 06:08 UTC — journal enum regression corrected
+
+- Documentation head `2718159f8958382bc617f9dc2056bab351f18cfa` failed full CI `44469329494` and WhatsApp recovery `44469329441` at TypeScript checking. The two new Plan Journal entries used descriptive approval/delivery strings outside the declared unions (`approved|proposed|unapproved|rejected` and `blocked|planned|in progress|deployed|superseded`).
+- Kompas baseline `44469329435` and Plan/REA `44469329600` passed. The journal entries are corrected to valid enum values (`approved` / `proposed`; `in progress` / `blocked`) while keeping scope details in their descriptive fields. No runtime behavior changed. This correction creates a new head and all exact-head gates must rerun.
+- The earlier pre-correction PR #450 head `1e4c8b123dd06f1a4bac21e0cf5bea8f62230a27` passed all four gates, but it does not validate the current head.
+
+Continue: wait for fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the corrected head. Do not merge or deploy while any gate is pending or failed.
+
+---
+
 ## 19 November 2026 06:05 UTC — confirmed-skill approval reverified; Gemini loop remains unapproved
 
 - Fresh targeted personal-context retrieval found a direct owner-authored message at **14 Nov 2026 09:26:05 UTC**: “Confirmed first-person skills may map to relevant existing projects across roles; no invented employer/project/action/result/date/metric/credential.” This is renewed approval for first-person-confirmed skills in relevant existing project context only. It does not permit JD-only claims, second-person wording, editing instructions, target scores or invented facts.
