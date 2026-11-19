@@ -29,6 +29,7 @@ The identity boundary is still receiving Gmail account + sender address. The fix
 - Predecessor full CI: `44026214076` SUCCESS.
 - Predecessor Kompas baseline: `44026214087` SUCCESS.
 - Predecessor Plan/REA: `44026214099` SUCCESS.
+- Current-master PR #452 head: `a18e83a35ce79f03eb2ec70f8b8303ec12c8f94d` (source and Plan/REA documentation commit).
 - New current-master restack: exact-head full CI, Kompas baseline and Plan/REA pending.
 - Vercel project `job-dashboard`: `live=false`; latest production deployment `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` CANCELED.
 - Canonical alias: `job-dashboard-fawn.vercel.app` → READY `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. This does not include the current master or this change.
