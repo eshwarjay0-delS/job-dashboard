@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 19 November 2026 — latest queued question and cache bust
+
+Owner Eshwar, 9:25–9:27 AM CT, resumed 19 Nov. A press with many queued questions answers the latest one, then folds the next two seconds of transcript if it changes the question. The request starts without the old 1.5s flush. The desktop rows stretch the full window. Build `kompas-20261119-latest` is on the page, the script URLs, and the desktop load query. #326 `e8ce442`, #327 `a7b2334`, and #328 `cd70190` stay. #397 spoken answers, the clarify popup, session memory, grounding, opacity, and the Chat/Level row stay. `authDisabled.ts` was not edited.
+
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 
 - Backlog reconciliation PR #425 is on branch `docs/mfit-backlog-reconciliation-20261116` (current head is shown on the PR; still DRAFT). Canonical master: `8ad319d1092fffa7e6a31a4da1b4dc61ac634934`. Production alias `job-dashboard-fawn.vercel.app` remains READY at `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; GitHub compare shows master 15 commits ahead/0 behind. Most differences are CI/workflows, AGENTS, docs, tests and Plan/REA. However, `src/lib/plan-vision.ts` is imported by `src/app/dashboard/admin/vision/[product]/page.tsx`, and `src/lib/plan-vision-journal.ts` by the journal component and `/api/vision/live`; these are user-visible Plan & Vision runtime data. No core resume/Gmail/crawler/Kompas feature logic or production configuration changed. After Safe Merge Gate approval and merge, a normal production deployment, READY check and canonical alias verification are required to publish the updated Plan & Vision UI. No deployment has occurred. PR #416 fixture-privacy correction is merged into master at the current SHA.

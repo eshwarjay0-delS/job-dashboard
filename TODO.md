@@ -1,3 +1,9 @@
+## 2026-11-19 — Latest queued question, full-width desktop rows, cache bust (visible on the desktop window)
+
+AI Answer with several queued questions answers the latest one and starts in the same turn. The next two seconds of transcript are folded in once if they change the question. The desktop title row and the Start / AI Answer row stretch the full window. The share preview stays hidden. The page build is `kompas-20261119-latest`, and the desktop shell loads that query so a cached 12 Nov page is not reused. Skip-login, WASAPI loopback, and a remembered hide-from-taskbar yes were rechecked and left in place. Question bank, rehearsal, and the DOCX reader load after the answer page.
+
+**Checked locally. Not a click-through of the installed Windows app.** The row layout is the visible change. The queued-question choice has no screen of its own until a live session has a backlog.
+
 ## 2026-11-14 — Spoken answer, live clarify popup, session memory (visible on the Kompas card and the separate context panel)
 
 The left answer no longer draws Claim/Context/Result or a First on every bullet. Order stays the model's order. "In general, teams", dictionary openers, "First, -", and "That part is not in the sources" are removed. The clarify box is a separate popup (bottom sheet at <=900px), updates as transcript lines arrive, and does not wait for AI Answer. Desktop hides the Change tab / Stop tab audio preview; computer audio still runs. Repeated caption tokens such as ENDPORT and CITI are dropped from the Heard line. Each session stores the last six turns and stated facts in sessionStorage, IndexedDB, and the local session row, and the answer request sends that compact memory. A name or number that is not on the eshwarjay05 resume or already said is removed. Skip-login and the Gmail snapshot were not edited.

@@ -42,7 +42,8 @@ async function checkForUpdate() {
     document.body.append(b);
   } catch {}
 }
-setInterval(checkForUpdate, 60000);
+checkForUpdate();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(); });
 async function showCapabilityVersion() {
   try {
     const c = await (await fetch("/api/capabilities", { cache: "no-store" })).json();
@@ -2130,14 +2131,10 @@ async function applyRawAudioConstraints(stream) {
   }
 }
 function showTabPreview(owner) {
-  // Computer audio stays on the capture stream. The thumbnail must not cover the answer.
-  const box = $("tabPreview");
-  const video = $("tabPreviewVideo");
-  const track = owner && owner.getVideoTracks ? owner.getVideoTracks()[0] : null;
-  if (video && track && track.readyState === "live") {
-    try { video.muted = true; video.srcObject = typeof MediaStream === "function" ? new MediaStream([track]) : owner; } catch {}
-  }
-  if (box) { box.hidden = true; box.classList.add("hidden"); }
+  // Audio stays on the capture stream. No thumbnail and no share-picker chrome.
+  const tracks = owner && owner.getVideoTracks ? owner.getVideoTracks() : [];
+  for (const track of tracks) { try { track.enabled = false; } catch {} }
+  hideTabPreview();
 }
 function hideTabPreview() {
   const box = $("tabPreview");
@@ -4146,6 +4143,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   appendDrawer(who, text, Date.now());
   showCaption(who, text, false);
   updatePending();
+  noteLateContext(who, text);
   if (who === "Them" && typeof interruptionFlush === "function" && (Q_CUE.test(text) || (typeof opensNewAsk === "function" && opensNewAsk(text)))) {
     try {
       const cardShowing = !!(cards[idx] && typeof hasAnswer === "function" && hasAnswer(cards[idx]));
@@ -4925,6 +4923,7 @@ function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
 async function generateAnswerRequest(question, card, opts = {}) {
   question = cleanHeardQuestion(String(question || "").trim()); if (!question) return;
   card = card || addCard(question, ["…"]);
+  if (opts && opts.consolidated && !opts.lateFold && !opts.reask && !opts.regen) armLateContext(card, String(card.question || question || ""));
   if (cleanHeardQuestion(card.question) === question) { card.question = question; if (!card.anchorQ || cleanHeardQuestion(card.anchorQ) === question) card.anchorQ = question; }
   if (!card.qid) card.qid = "q" + (cardSeq++);
   const qid = card.qid;
@@ -4954,7 +4953,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
   const prevAnswer = card.answer, prevMeta = card.meta;
-  const keepOld = !!opts.retries && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
+  const keepOld = (!!opts.retries || !!opts.lateFold) && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
   // A timer abort is not a supersede: the request died on our own watchdog, so
@@ -5589,6 +5588,25 @@ function livePressDecision(opts) {
   return { listening: false, question: "", reason: "none" };
 }
 
+let lateContext = null;
+function armLateContext(card, question) {
+  const api = typeof KompasLatestAsk === "object" && KompasLatestAsk;
+  const ms = api && api.LATE_CONTEXT_MS ? api.LATE_CONTEXT_MS : 2000;
+  lateContext = { card, question: String(question || "").replace(/\s+/g, " ").trim(), until: Date.now() + ms, restarted: false };
+}
+function noteLateContext(who, text) {
+  const late = lateContext;
+  const api = typeof KompasLatestAsk === "object" && KompasLatestAsk;
+  if (!late || late.restarted || !late.card || Date.now() > late.until) return;
+  if (who !== "Them" && who !== questionSource()) return;
+  const folded = api && api.foldLateContext ? api.foldLateContext(late.question, text) : { question: late.question, changed: false };
+  if (!folded.changed) return;
+  late.restarted = true;
+  late.card.question = folded.question;
+  late.card.heard = [late.card.heard, (who || "Them") + ": " + String(text || "").replace(/\s+/g, " ").trim()].filter(Boolean).join("\n");
+  showPressed(late.card, folded.question);
+  void generateAnswer(late.card.heard || folded.question, late.card, { consolidated: true, derived: folded.question, pinned: true, lateFold: true });
+}
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -5618,9 +5636,17 @@ async function aiAnswer(fromAuto, options = {}) {
       showPressed(page, frozen);
       return await generateAnswer(frozen, page, { pinned: true, derived: frozen, source: "caption-window" });
     }
-    if ((running && captures.length) || finals.size) {
-      flushing = true; if (!fromAuto) status("Catching your last words…", "live");
-      try { await flushHeard(options.captionOnce ? 250 : 1500); } catch { /* words already written still get answered */ }
+    const pressAt = Date.now();
+    const pressPlan = (typeof KompasLatestAsk === "object" && KompasLatestAsk && KompasLatestAsk.answerPressSchedule)
+      ? KompasLatestAsk.answerPressSchedule(pressAt, pressAt)
+      : { startDelayMs: 0, lateContextMs: 2000 };
+    if (!fromAuto) {
+      // A manual press starts with the lines already written. The next 2s fold in.
+      // Do not wait on flushHeard before the request.
+      void pressPlan;
+    } else if ((running && captures.length) || finals.size) {
+      flushing = true;
+      try { await flushHeard(1500); } catch { /* words already written still get answered */ }
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
@@ -5667,11 +5693,17 @@ async function aiAnswer(fromAuto, options = {}) {
         if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
       } catch {}
     }
+    if (!fromAuto && !typedText && !anyway && typeof KompasLatestAsk === "object" && KompasLatestAsk) {
+      const latest = KompasLatestAsk.selectLatestQueuedAsk(pending);
+      const queued = KompasLatestAsk.countQueuedAsks(pending);
+      if (latest && queued >= 2) liveResolved = latest;
+    }
+    const latestQueued = !!(liveResolved && typeof KompasLatestAsk === "object" && KompasLatestAsk && KompasLatestAsk.countQueuedAsks(pending) >= 2);
     if (liveResolved && typeof resolveStutterRephrase === "function") {
       const st = resolveStutterRephrase(liveResolved);
       if (st.text) liveResolved = st.text;
     }
-    if (!fromAuto && !typedText && !anyway) {
+    if (!fromAuto && !typedText && !anyway && !latestQueued) {
       try {
         const tail = liveResolved || pending.filter(x => x && x.text).map(x => x.text).join(" ");
         const themCap = captures.find(c => c.who === "Them");

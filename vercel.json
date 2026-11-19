@@ -48,6 +48,15 @@
       ]
     },
     {
+      "source": "/kompas/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/kompas/version.json",
       "headers": [
         {
