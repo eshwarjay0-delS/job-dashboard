@@ -1,5 +1,13 @@
 # MFit Completion Watch
 
+## 19 November 2026 06:30 UTC — crawler REA schema failure corrected
+
+- The first exact-head Plan/REA schema run on PR #451 documentation head `85b7fa815607de3f8fb9e094ee8ba70df4e26081` failed: run [44472497942](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44472497942) reported `ERR_INVALID_TYPESCRIPT_SYNTAX` (expected comma, got semicolon) in `src/lib/rea-register.ts`. The REA entry had been inserted as an executable `REA_SESSIONS.unshift(...)` call inside the typed array literal.
+- Corrected the entry to a normal array element in commit `57882b8ea9fc4633cf642251151af6d8253cb64b`. No runtime crawler code or policy changed. The pre-fix crawler workflow [44472497911](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44472497911) and Kompas baseline [44472497915](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44472497915) passed; full CI [44472497945](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44472497945) was still in progress at that head. None of those results validates the corrected head.
+- Continue: verify full CI, crawler freshness/collector, Kompas baseline and Plan/REA on the latest corrected PR #451 head before asking MFit Safe Merge Gate to review. Keep DRAFT; no live crawl, production write, deployment or permission change.
+
+---
+
 ## 19 November 2026 06:27 UTC — current-master contract crawler abort diagnostics restack (#451)
 
 - Continue: carry the approved diagnostic-only contract crawler slice forward without changing the manual/on-demand policy.
