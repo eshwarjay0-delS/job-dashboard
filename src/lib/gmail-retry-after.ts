@@ -1,8 +1,8 @@
 /**
  * Convert the response's Retry-After header into a safe whole-second wait.
  * The fallback remains bounded by the caller's existing retry schedule; a
- * valid server delay is never shortened. The function is stateless so each
- * account/page response controls only its own retry.
+ * valid server delay is never shortened. Values too large for an automatic
+ * browser wait become an explicit hold rather than an early retry.
  * @param {string | null} value
  * @param {number} fallbackSeconds
  * @param {number} [nowMs]
@@ -19,11 +19,42 @@ export function gmailRetryDelaySeconds(value: string | null, fallbackSeconds: nu
   // RFC Retry-After delta-seconds form.
   if (/^\d+$/.test(header)) {
     const seconds = Number(header)
-    return Number.isSafeInteger(seconds) ? Math.max(fallback, seconds) : fallback
+    if (!Number.isSafeInteger(seconds)) return Number.MAX_SAFE_INTEGER
+    return Math.max(fallback, seconds)
   }
 
   // RFC HTTP-date form. Round up so the client never retries early.
   const retryAt = Date.parse(header)
   if (!Number.isFinite(retryAt)) return fallback
   return Math.max(fallback, Math.ceil((retryAt - nowMs) / 1000))
+}
+
+
+/** Long server delays are preserved, but a single browser scan never parks
+ * itself for more than one day. Longer values are surfaced as a manual hold.
+ */
+export const MAX_AUTOMATIC_GMAIL_RETRY_MS = 24 * 60 * 60 * 1000
+
+export function gmailRetryAutoWaitMs(seconds: number): number | null {
+  if (!Number.isSafeInteger(seconds) || seconds <= 0) return null
+  const milliseconds = seconds * 1000
+  return Number.isSafeInteger(milliseconds) && milliseconds <= MAX_AUTOMATIC_GMAIL_RETRY_MS
+    ? milliseconds
+    : null
+}
+
+export function gmailRetryWaitLabel(seconds: number): string {
+  if (!Number.isSafeInteger(seconds) || seconds <= 0) return "an unusually long period"
+  if (seconds > 365 * 24 * 60 * 60) return "an unusually long period"
+  if (seconds < 60) return `${seconds} ${seconds === 1 ? "second" : "seconds"}`
+  if (seconds < 60 * 60) {
+    const minutes = Math.ceil(seconds / 60)
+    return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`
+  }
+  if (seconds < 24 * 60 * 60) {
+    const hours = Math.ceil(seconds / (60 * 60))
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`
+  }
+  const days = Math.ceil(seconds / (24 * 60 * 60))
+  return `${days} ${days === 1 ? "day" : "days"}`
 }
