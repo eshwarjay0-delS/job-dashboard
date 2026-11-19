@@ -1,3 +1,12 @@
+## 19 November 2026 00:38 UTC — complete the new REA record schema
+
+- The `ReaSession` type also requires a `commits: string[]` field. Added `commits: []` to the new Kompas handoff record because this audit has no source-code merge commit of its own.
+- The record remains after the `REA_SESSIONS` declaration. The previous Plan/REA failure run `44429409415` was for the earlier `db67954` head, where the record still preceded the declaration; it is not a result for the corrected head `025d2a`.
+
+Continue: verify exact-head Plan/REA schema and full CI after this correction; keep PR #442 DRAFT.
+
+---
+
 ## 19 November 2026 00:35 UTC — REA registry declaration-order correction
 
 - Source inspection found the new Kompas REA `REA_SESSIONS.unshift(...)` call at the very top of `src/lib/rea-register.ts`, before `export const REA_SESSIONS` is declared. That would reference the registry before initialization.

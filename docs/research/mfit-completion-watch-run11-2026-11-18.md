@@ -107,3 +107,8 @@ The Chief Relevance handoff's 18 Nov ledger still named master 66291 and the pri
 ## 19 November 2026 — REA registry declaration-order correction
 
 A source review found that the new Kompas REA `REA_SESSIONS.unshift` call had been prepended before `export const REA_SESSIONS` in `src/lib/rea-register.ts`. It was moved unchanged to the end of the file, after the registry declaration and existing records. This corrects declaration order only. Fresh exact-head Plan/REA schema and full CI are required; no runtime behavior, deployment or production state changed.
+
+
+## 19 November 2026 — complete the new REA record schema
+
+The new Kompas REA record was moved after the registry declaration, then completed with the required `commits: []` field from the `ReaSession` type. The previous Plan/REA failure 44429409415 is for the earlier `db67954` head and does not describe the corrected head. Fresh exact-head Plan/REA and full CI are required.
