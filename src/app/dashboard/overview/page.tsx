@@ -502,16 +502,15 @@ function OverviewInner() {
               reject(new Error("stopped"))
               return
             }
-            let timer: ReturnType<typeof setTimeout>
+            const timer = setTimeout(() => {
+              controller.signal.removeEventListener("abort", abort)
+              resolve()
+            }, waitMs)
             const abort = () => {
               clearTimeout(timer)
               controller.signal.removeEventListener("abort", abort)
               reject(new Error("stopped"))
             }
-            timer = setTimeout(() => {
-              controller.signal.removeEventListener("abort", abort)
-              resolve()
-            }, waitMs)
             controller.signal.addEventListener("abort", abort, { once: true })
           })
         }
