@@ -884,3 +884,31 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 19 November 2026 — cross-role confirmed-skill approval provenance correction
+
+The 6 Nov repository handoff records a cross-role confirmed-skill mapping exception. A targeted accessible prior-conversation retrieval did not recover the alleged 09:55 CT primary owner message or the exact phrase “you have experience with all of them evenly”. PR #319 comment #6817645128 is a handoff summary, not the original user message. PR #431 comment 6996129057 and PR #442 comment 6996131933 record this finding. Preserve the exception as **repository-recorded; primary owner wording not independently reverified in accessible context**. The current continuation's request for meaningful resume/JD/confirmed-experience alignment does not explicitly reaffirm that exact cross-role exception.
+
+Until the original wording is recovered or the owner explicitly reaffirms the exact scope, use source-resume evidence and literal candidate confirmations only where the existing role/project context supports them. The JD is target context, not candidate evidence. Do not invent employers, projects, actions, outcomes, dates, titles, locations, contacts, metrics or credentials.
+
+### Resume source gates
+
+- PR #431 is DRAFT at exact head fa0037c2b3436f13dfeb7e1fa60eaa714c7f32b5; full CI 44388165144, WhatsApp recovery 44388164799, Kompas baseline 44388164907 and Plan/REA 44388164888 passed. Provenance resolution, legitimate protected preview, owner-authorized source resume + exact JD + literal confirmation, and exported-DOCX inspection remain outstanding.
+- PR #441 is stacked on #431 at exact head 951d60dcb19912b94bf4499edb3770862c3b43e8; focused final-DOCX ATS review 44346453217, WhatsApp recovery 44346452959 and Plan/REA 44346453106 passed. Full CI and Kompas baseline are not recorded on that stacked head. The 3 Nov final-DOCX Gemini loop is separately direct-owner-approved, but no authorized source/JD/confirmation bundle, DOCX export or Gemini call occurred.
+
+### Other priorities carried forward
+
+- WhatsApp #433 exact head 04b74bbf63986134871c43374bbdc75c78e51677: full CI 44390742971 failed one of 94 tests (route mock allowed two concurrent claims); WhatsApp recovery 44390742957, Kompas baseline 44390742960 and Plan/REA 44390743067 passed. Test-only child #447 exact head 322acf7516061e93df0000c5a07d45db51f3c0a7 passed dedicated WhatsApp recovery 44394663903 (94/94) and Plan/REA 44394664245; full CI/baseline are not triggered on its feature-branch base. The active Safe Merge Gate retains sequencing. #433 also requires actual R2 conditional-write validation and owner risk acceptance before release.
+- Gmail/mobile #435 exact head 583e50189a1501d5faa1a463a0a25c74869e0ae3: full CI 44388440169, Kompas baseline 44388440296, Plan/REA 44388440186 passed; two-inbox, selected-From, reconnect/mute and narrow-phone acceptance remain open. The four-account ceiling remains; proactive worker and notifications remain disabled.
+- Contract crawler #434 exact head e2562b92d2ceec83fd95eb1a3c825680c8519aa9: full CI 44297698669, crawler regression 44297698613, baseline 44297698795, Plan/REA 44297698303 passed. Protected preview and a separately authorized manual crawl remain open. Manual/on-demand only; no daily cron; Robert Half manual-only; C2H aliases unapproved.
+- Kompas phone shell #444 exact head 8d1be1f3153e20b974d4f4dcfac7616453836192 has five source/package gates passed; actual iOS/Android acceptance remains missing. No voice/caption code was touched because Kompas Continuous Voice Delivery is disabled.
+- Chief Relevance still requires 50 authenticated same-question Kompas/ChatGPT pairs and independent human scoring; synthetic tests are not substitutes.
+
+### Production and execution boundary
+
+Canonical master is d03f18892015bdfceb277500978cbacd95ae7808. Vercel project job-dashboard reports live=false; latest production attempt dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i is CANCELED by the configured Ignored Build Step because the commit lacks [ship]. The canonical alias independently remains READY on dpl_7QVykeYoWSswLDgsQP99xF2piBn3, SHA b94e1629c544048d84a2b048ae83b21b612ab9dd. Protected preview requires the owner-controlled private KOMPAS_VERCEL_API_TOKEN, unavailable to this run. Do not add a no-op [ship] marker, unpause the project, bypass protection or change billing.
+
+No local repository checkout or installed Next.js guide was available; no local npm build/test is claimed. GitHub Actions is the validation path. No real resume/DOCX/model call, email/WhatsApp send, live crawl, R2 write, production mutation, deployment or user-device test occurred. MFit Completion Watch and Safe Merge Gate remain enabled; Kompas Continuous Voice Delivery is disabled; no separate Bible-Keeper automation was found in the accessible inventory.
+
+**Continue:** let the active Safe Merge Gate sequence #447 into #433, then require fresh full CI and Kompas baseline on the resulting exact parent head. Keep #433 DRAFT until provider-level R2 validation, owner risk acceptance, legitimate protected preview and the reviewed production release path are satisfied. Carry the resume, Gmail/mobile, crawler and Kompas acceptance gaps forward without dropping them.
