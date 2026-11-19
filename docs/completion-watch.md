@@ -1,3 +1,16 @@
+## 19 November 2026 10:26 UTC — final child-head WhatsApp gates verified
+
+- Child PR #453 final docs head `275e81652d9e0386a39789565510045b284c7118` passed WhatsApp recovery/typecheck [44504932318](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44504932318): `npm ci`, `npm run typecheck`, and all five targeted Node test files completed; **96 passed, 0 failed** (~1.19 s). Plan/REA schema [44504932177](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44504932177) also passed.
+- The earlier code-bearing child head `2f5fe4ee21fda8d97ffe357694a0e9e6081fa2b6` also passed 96/96 and Plan/REA. The final docs update is therefore validated on its own exact head.
+- Full CI and Kompas baseline are not triggered on the stacked child base. Safe Merge Gate must integrate #453 into parent #450 and run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the integrated current-master parent.
+- PR #453 remains DRAFT; parent #450 remains DRAFT. No merge or deployment was performed. The canonical production alias remains on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; protected preview is still unavailable.
+- A read-only iZap check at `2026-11-19T10:20:05.108125Z` found no linked WhatsApp number, no inbound history and no outbound send proven to reach Meta. This cannot corroborate the 17 Oct event. The exact output DOCX, R2 object/version, request correlation, Meta message ID and signed delivered/read receipt remain missing.
+- The 17 Oct 17:28 event is still a quality hold in the screenshot, not evidence of successful delivery. The current callback-token defect is a separate source-level reliability finding, not the proven historical root cause.
+
+Continue: Safe Merge Gate reviews #453, sequences it into #450, and requires full CI + WhatsApp recovery + Kompas baseline + Plan/REA on the integrated current-master parent. Keep release and actual signed handset acceptance separate.
+ 
+---
+
 ## 19 November 2026 10:20 UTC — exact-head WhatsApp callback tests pass; provider evidence still absent
 
 - Child PR [#453](https://github.com/eshwarjay0-delS/job-dashboard/pull/453) exact head `2f5fe4ee21fda8d97ffe357694a0e9e6081fa2b6` passed WhatsApp recovery/typecheck [44504421816](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44504421816): `npm run typecheck` passed and the five targeted test files reported **96 passed, 0 failed** (~992 ms). Plan/REA schema [44504421824](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44504421824) also passed. This is source-level/synthetic evidence only.
