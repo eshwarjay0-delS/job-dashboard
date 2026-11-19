@@ -150,7 +150,7 @@ export async function sendDocument(to: string, data: Buffer, filename: string, c
     headers: { ...auth(), "content-type": "application/json" },
     body: JSON.stringify({
       messaging_product: "whatsapp", to, type: "document",
-      ...(opaqueJobId && /^[a-f0-9]{64}$/.test(opaqueJobId) ? { biz_opaque_callback_data: opaqueJobId } : {}),
+      ...(opaqueJobId && /^[a-f0-9]{64}(?::[a-f0-9]{32})?$/.test(opaqueJobId) ? { biz_opaque_callback_data: opaqueJobId } : {}),
       document: { id, filename, ...(caption ? { caption: caption.slice(0, 1000) } : {}) },
     }),
     signal: AbortSignal.timeout(20000),
