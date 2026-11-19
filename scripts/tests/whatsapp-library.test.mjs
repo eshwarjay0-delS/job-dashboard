@@ -26,8 +26,8 @@ const pick = load('src/lib/library-pick.ts')
 const roles = load('src/lib/role-match.ts')
 const USERS = path.join('/data', 'user-resumes')
 const USER_DIR = path.join(USERS, 'user1')
-const SOC = path.join(USER_DIR, 'a@example.test', 'SOC Analyst', 'SOC.docx')
-const APPSEC = path.join(USER_DIR, 'a@example.test', 'AppSec Engineer', 'AppSec.docx')
+const SOC = path.join(USER_DIR, 'candidate1@example.test', 'SOC Analyst', 'SOC.docx')
+const APPSEC = path.join(USER_DIR, 'candidate1@example.test', 'AppSec Engineer', 'AppSec.docx')
 const JD = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
 
 function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null, floorOk = true, kompasConsumes = false } = {}) {
@@ -37,19 +37,19 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
   const blob = {
     getText: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v) }, delete: async k => { store.delete(k) },
     putIfAbsent: async (k, v) => { if (store.has(k)) return false; store.set(k, v); return true },
-    get: async k => (k.startsWith('tailored/') ? Buffer.from('a@example.test tailored resume') : null),
+    get: async k => (k.startsWith('tailored/') ? Buffer.from('candidate1@example.test tailored resume') : null),
   }
   const mocks = {
     // These cases exercise resume tailoring; channel transport has its own acceptance suite.
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async input => { channelCalls.push(input); return kompasConsumes } },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
     'next/server': {},
-    '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@example.test at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
+    '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of candidate1@example.test at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
     '@/lib/llm': { resolveKeys: () => ({}), hasAnyKey: () => true, keysFor: async () => ({ gemini: 'g' }), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, /* Nov4 ATS contract: mocked deliverable results carry a passing ATS check */ ats: { score: 100, passed: true, checks: [], issues: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Application Security Engineer', company: 'Acme', location: '' }) },
-    '@/lib/whatsapp': { sendText: async (to, t) => { said.push(t) }, sendDocument: async (to, f, n, caption) => { docs.push(caption); events.push('delivered'); return 'wamid-' + docs.length }, downloadMedia: async () => Buffer.from('a@example.test uploaded resume') },
+    '@/lib/whatsapp': { sendText: async (to, t) => { said.push(t) }, sendDocument: async (to, f, n, caption) => { docs.push(caption); events.push('delivered'); return 'wamid-' + docs.length }, downloadMedia: async () => Buffer.from('candidate1@example.test uploaded resume') },
     '@/lib/owner': { isOwnerWhatsApp: () => false }, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/resume-identity': { sameResumeIdentity: () => true },
     '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() }, '@/lib/docx': { extractText: async b => b.toString() },
@@ -60,11 +60,11 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
     '@/lib/library-pick-store': {
-      libraryOf: async () => ({ index: {}, counts: { 'a@example.test': 2, 'b@example.test': 1 } }),
-      numberedEmails: async () => ({ slots: ['a@example.test', 'b@example.test'], sure }),
+      libraryOf: async () => ({ index: {}, counts: { 'candidate1@example.test': 2, 'candidate2@example.test': 1 } }),
+      numberedEmails: async () => ({ slots: ['candidate1@example.test', 'candidate2@example.test'], sure }),
       candidatesFor: async () => [
-        { path: SOC, email: 'a@example.test', folder: 'SOC Analyst', name: 'SOC', depth: 0, keywords: ['splunk'], at: 1 },
-        { path: APPSEC, email: 'a@example.test', folder: 'AppSec Engineer', name: 'AppSec', depth: 0, keywords: ['burp suite', 'owasp'], at: 2 },
+        { path: SOC, email: 'candidate1@example.test', folder: 'SOC Analyst', name: 'SOC', depth: 0, keywords: ['splunk'], at: 1 },
+        { path: APPSEC, email: 'candidate1@example.test', folder: 'AppSec Engineer', name: 'AppSec', depth: 0, keywords: ['burp suite', 'owasp'], at: 2 },
         ...extra,
       ],
     },
@@ -73,8 +73,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/chief-approvals': {},
     '@/lib/resume-library-store': {
       existingForJob: async () => have,
-      saveTailored: async o => { saved.push(o); return { email: 'a@example.test', category: 'AppSec Engineer', abs: path.join(o.userDir, 'a@example.test', 'AppSec Engineer', 'made.docx') } },
-      saveUpload: async o => { uploads.push(o); return { abs: path.join(o.userDir, 'a@example.test', 'AppSec Engineer', 'Mine__0123456789abcdef.docx'), folder: 'a@example.test / AppSec Engineer', name: 'Mine', read: true, existed: false } },
+      saveTailored: async o => { saved.push(o); return { email: 'candidate1@example.test', category: 'AppSec Engineer', abs: path.join(o.userDir, 'candidate1@example.test', 'AppSec Engineer', 'made.docx') } },
+      saveUpload: async o => { uploads.push(o); return { abs: path.join(o.userDir, 'candidate1@example.test', 'AppSec Engineer', 'Mine__fixtureabcdef1234.docx'), folder: 'candidate1@example.test / AppSec Engineer', name: 'Mine', read: true, existed: false } },
       markUsed: async (dir, abs) => { used.push(abs); events.push('counted') },
       readShelf: async () => ({ uses: {} }),
       relOf: (dir, abs) => path.relative(dir, abs).split(path.sep).join('/'),
@@ -123,31 +123,31 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.saved.length, 1)
   assert.equal(b.saved[0].userDir, USER_DIR)
   assert.equal(b.saved[0].depth, 1, 'made from a resume the person wrote')
-  assert.equal(b.saved[0].from, 'a@example.test/AppSec Engineer/AppSec.docx')
+  assert.equal(b.saved[0].from, 'candidate1@example.test/AppSec Engineer/AppSec.docx')
   assert.deepEqual([...b.saved[0].asked].sort(), ['burp suite', 'owasp', 'threat modeling'])
   assert.match(b.docs.at(-1), /Saved in your Files: a@x\.com \/ AppSec Engineer/)
   assert.match(b.docs.at(-1), /Started from your \*AppSec\* resume \(in AppSec Engineer\)/)
   assert.deepEqual(b.used, [APPSEC], 'the pick is counted in its folder record')
   assert.equal(b.logs.length, 1)
   assert.equal(b.logs[0].agree, true)
-  assert.equal(b.logs[0].used, 'a@example.test/AppSec Engineer/AppSec.docx')
+  assert.equal(b.logs[0].used, 'candidate1@example.test/AppSec Engineer/AppSec.docx')
 
   await b.wa.handle('15550001', { type: 'text', id: 'm3', text: { body: 'redo' } }, await b.wa.loadSession('15550001'), 'user1')
   assert.equal(b.runs.length, 2, 'redo makes it again')
 })
 
 // Two resumes titled for the job: the niche between them is the agent's to choose (the title came first).
-const AS1 = path.join(USER_DIR, 'a@example.test', 'AppSec Engineer', 'AppSec Web.docx')
-const AS2 = path.join(USER_DIR, 'a@example.test', 'AppSec Engineer', 'AppSec Cloud.docx')
-const titled = (p, name, keywords, at) => ({ path: p, email: 'a@example.test', folder: 'AppSec Engineer', name, title: 'Application Security Engineer', depth: 0, keywords, at })
+const AS1 = path.join(USER_DIR, 'candidate1@example.test', 'AppSec Engineer', 'AppSec Web.docx')
+const AS2 = path.join(USER_DIR, 'candidate1@example.test', 'AppSec Engineer', 'AppSec Cloud.docx')
+const titled = (p, name, keywords, at) => ({ path: p, email: 'candidate1@example.test', folder: 'AppSec Engineer', name, title: 'Application Security Engineer', depth: 0, keywords, at })
 
 test('the agent\'s pick is used when it differs from the code\'s, and the disagreement is logged', async () => {
   const b = bot({ agent: { index: 1, why: 'the cloud one' }, extra: [titled(AS1, 'AppSec Web', ['burp suite', 'owasp'], 3), titled(AS2, 'AppSec Cloud', ['aws'], 4)] })
   await b.wa.handle('15550002', { type: 'text', id: 'm1', text: { body: `${JD}\n1` } }, {}, 'user1')
   assert.equal(b.runs[0].givenPath, AS2, 'a number under the job description answers the question; the agent chose between the two titled for it')
   assert.equal(b.logs[0].agree, false)
-  assert.equal(b.logs[0].agent, 'a@example.test/AppSec Engineer/AppSec Cloud.docx')
-  assert.equal(b.logs[0].code, 'a@example.test/AppSec Engineer/AppSec Web.docx')
+  assert.equal(b.logs[0].agent, 'candidate1@example.test/AppSec Engineer/AppSec Cloud.docx')
+  assert.equal(b.logs[0].code, 'candidate1@example.test/AppSec Engineer/AppSec Web.docx')
   assert.equal(b.logs[0].titled, 2)
 })
 
@@ -166,11 +166,11 @@ Duration: 12 Months
 Technical skills
 - Must possess basic knowledge of EC2, Elastic Beanstalk, CloudWatch, Docker, ActiveMQ, RDS/Postgres, Firebase and Sentry.
 - Must possess knowledge of languages including Java, Kotlin and SQL.`
-const CYBER = path.join(USER_DIR, 'a@example.test', 'Identity and Access Management', 'Cyber Security Analyst.docx')
-const AI_APPSEC = path.join(USER_DIR, 'a@example.test', 'AI Security and Governance', 'AI plus AppSec.docx')
+const CYBER = path.join(USER_DIR, 'candidate1@example.test', 'Identity and Access Management', 'Cyber Security Analyst.docx')
+const AI_APPSEC = path.join(USER_DIR, 'candidate1@example.test', 'AI Security and Governance', 'AI plus AppSec.docx')
 const library = () => [
-  { path: AI_APPSEC, email: 'a@example.test', folder: 'AI Security and Governance', name: 'AI plus AppSec', title: 'AI Security Engineer', depth: 0, keywords: ['burp suite', 'owasp'], at: 9 },
-  { path: CYBER, email: 'a@example.test', folder: 'Identity and Access Management', name: 'Cyber Security Analyst', depth: 0, keywords: ['splunk'], at: 5 },
+  { path: AI_APPSEC, email: 'candidate1@example.test', folder: 'AI Security and Governance', name: 'AI plus AppSec', title: 'AI Security Engineer', depth: 0, keywords: ['burp suite', 'owasp'], at: 9 },
+  { path: CYBER, email: 'candidate1@example.test', folder: 'Identity and Access Management', name: 'Cyber Security Analyst', depth: 0, keywords: ['splunk'], at: 5 },
 ]
 
 test('a "Security Analyst" post starts from the resume titled for it, not the one with the most keywords or the right folder', async () => {
@@ -201,7 +201,7 @@ test('"Make another one with selecting Cybersecurity Analyst resume" is an instr
   assert.equal(b.logs.at(-1).hint, 'Cybersecurity Analyst')
 
   // The file already made for this job must not be sent back when another base resume was named.
-  const again = bot({ have: { abs: APPSEC, file: { path: 'a@example.test/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 19) } }, extra: library(), agent: null })
+  const again = bot({ have: { abs: APPSEC, file: { path: 'candidate1@example.test/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 19) } }, extra: library(), agent: null })
   await again.wa.handle(N, { type: 'text', id: 'm9', text: { body: `${JD}\n1` } }, {}, 'user1')
   assert.match(again.docs.at(-1), /You already have this one/)
   await again.wa.handle(N, { type: 'text', id: 'm10', text: { body: said } }, await again.wa.loadSession(N), 'user1')
@@ -242,7 +242,7 @@ test('no agent answer: the code\'s pick stands', async () => {
 })
 
 test('a job made before is sent again as it is: no new run, nothing saved', async () => {
-  const have = { abs: APPSEC, file: { path: 'a@example.test/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 18) } }
+  const have = { abs: APPSEC, file: { path: 'candidate1@example.test/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 18) } }
   const b = bot({ have })
   await b.wa.handle('15550004', { type: 'text', id: 'm1', text: { body: `${JD}\n1` } }, {}, 'user1')
   assert.equal(b.runs.length, 0)
@@ -252,7 +252,7 @@ test('a job made before is sent again as it is: no new run, nothing saved', asyn
 })
 
 test('a job made before below the 90% floor is made again, not sent again (owner, 26 Oct 2026: "the baseline is serve atleast 90% match")', async () => {
-  const have = { abs: APPSEC, file: { path: 'a@example.test/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 23) } }
+  const have = { abs: APPSEC, file: { path: 'candidate1@example.test/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 23) } }
   const b = bot({ have, floorOk: false })
   await b.wa.handle('15550014', { type: 'text', id: 'm1', text: { body: `${JD}\n1` } }, {}, 'user1')
   assert.equal(b.runs.length, 1, 'made again')
@@ -271,7 +271,7 @@ test('the email question answered by swipe-reply is an answer, not a change requ
 })
 
 test('after a job made before is resent, a resume sent alone is never fitted to that old job description', async () => {
-  const have = { abs: APPSEC, file: { path: 'a@example.test/AppSec Engineer/AppSec.docx', role: 'r', company: 'c', category: 'AppSec Engineer', at: 1, depth: 1 } }
+  const have = { abs: APPSEC, file: { path: 'candidate1@example.test/AppSec Engineer/AppSec.docx', role: 'r', company: 'c', category: 'AppSec Engineer', at: 1, depth: 1 } }
   const b = bot({ have })
   await b.wa.handle(SESSION, { type: 'text', id: 'm1', text: { body: JD } }, {}, 'user1')
   await b.wa.handle(SESSION, { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession(SESSION), 'user1')
@@ -290,8 +290,8 @@ test('a number under the job description is not trusted when the kept numbering 
 })
 
 test('redo starts again from what the person wrote, never from the resume made for this job, and skips the kept result', async () => {
-  const MADE = path.join(USER_DIR, 'a@example.test', 'AppSec Engineer', 'AppSec (tailored)__0123456789abcdef.docx')
-  const b = bot({ extra: [{ path: MADE, email: 'a@example.test', folder: 'AppSec Engineer', name: 'AppSec made', depth: 1, keywords: ['burp suite', 'owasp', 'threat modeling'], at: 3, job: 'job-1' }] })
+  const MADE = path.join(USER_DIR, 'candidate1@example.test', 'AppSec Engineer', 'AppSec (tailored)__fixtureabcdef1234.docx')
+  const b = bot({ extra: [{ path: MADE, email: 'candidate1@example.test', folder: 'AppSec Engineer', name: 'AppSec made', depth: 1, keywords: ['burp suite', 'owasp', 'threat modeling'], at: 3, job: 'job-1' }] })
   await b.wa.handle(SESSION, { type: 'text', id: 'm1', text: { body: `${JD}
 1` } }, {}, 'user1')
   await b.wa.handle(SESSION, { type: 'text', id: 'm2', text: { body: 'redo' } }, await b.wa.loadSession(SESSION), 'user1')
@@ -324,7 +324,7 @@ test('a message that arrives while a job is being picked is kept, and the same j
   assert.equal(b.runs.length, 2, 'two different jobs, each made once')
   const now = await b.wa.loadSession(SESSION)
   assert.equal(now.pending, undefined, 'nothing was asked: the email was remembered')
-  assert.equal(now.last?.email, 'a@example.test')
+  assert.equal(now.last?.email, 'candidate1@example.test')
   // The two runs interleave; each pick is counted only after a resume went out, never before.
   assert.deepEqual([...b.events].sort(), ['counted', 'counted', 'delivered', 'delivered'])
   assert.equal(b.events[0], 'delivered', 'a pick is counted once its resume is delivered')
@@ -340,21 +340,21 @@ test('asked once, then remembered: the next job starts at once from that email, 
   const other = 'Cloud Security Engineer for AWS guardrails, IAM reviews, GuardDuty triage and Terraform policy as code.'
   await b.wa.handle(N, { type: 'text', id: 'm3', text: { body: other } }, await b.wa.loadSession(N), 'user1')
   assert.equal(b.runs.length, 2, 'the second job is not asked about')
-  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *a@example.test* resumes.')))
+  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *candidate1@example.test* resumes.')))
 
   await b.wa.handle(N, { type: 'text', id: 'm4', text: { body: 'use 2' } }, await b.wa.loadSession(N), 'user1')
   assert.match(b.said.at(-1), /every job now starts from your \*b@y\.com\* resumes/)
-  assert.equal((await b.wa.loadSession(N)).preferredEmail, 'b@example.test')
-  // The next job goes to b@example.test: it holds no resume in this stand-in, which the bot says plainly.
+  assert.equal((await b.wa.loadSession(N)).preferredEmail, 'candidate2@example.test')
+  // The next job goes to candidate2@example.test: it holds no resume in this stand-in, which the bot says plainly.
   await b.wa.handle(N, { type: 'text', id: 'm5', text: { body: `${other} Also Wiz and Prisma Cloud.` } }, await b.wa.loadSession(N), 'user1')
-  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *b@example.test* resumes.')))
+  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *candidate2@example.test* resumes.')))
   assert.match(b.said.at(-1), /no resume of \*b@y\.com\*/)
   assert.equal(b.runs.length, 2)
 
   // A number under the job description wins for that job and is remembered.
   await b.wa.handle(N, { type: 'text', id: 'm6', text: { body: `${other} Kubernetes too.\n1` } }, await b.wa.loadSession(N), 'user1')
   assert.equal(b.runs.length, 3)
-  assert.equal((await b.wa.loadSession(N)).last?.email, 'a@example.test')
+  assert.equal((await b.wa.loadSession(N)).last?.email, 'candidate1@example.test')
 })
 
 test('a resume sent with the job post is filed in Files once, and what is made from it is filed beside it', async () => {
@@ -369,7 +369,7 @@ test('a resume sent with the job post is filed in Files once, and what is made f
   const made = b.saved.at(-1)
   assert.equal(made.userDir, MY_FILES)
   assert.equal(made.depth, 1)
-  assert.equal(made.from, 'a@example.test/AppSec Engineer/Mine__0123456789abcdef.docx')
+  assert.equal(made.from, 'candidate1@example.test/AppSec Engineer/Mine__fixtureabcdef1234.docx')
   assert.match(b.docs.at(-1), /Saved in your Files: a@x\.com \/ AppSec Engineer/)
 })
 
@@ -422,7 +422,7 @@ test('explicit profile switching bypasses the optional Kompas channel', async ()
   const b = bot({ kompasConsumes: true })
   await b.wa.handle('15550001', { type: 'text', id: 'profile-switch', text: { body: 'use 2' } }, {}, 'user1', true)
   assert.equal(b.channelCalls.length, 0)
-  assert.equal((await b.wa.loadSession('15550001')).preferredEmail, 'b@example.test')
+  assert.equal((await b.wa.loadSession('15550001')).preferredEmail, 'candidate2@example.test')
   assert.equal(b.runs.length, 0)
 })
 
@@ -433,11 +433,11 @@ test('use 1 stays after a finished run records the other email', async () => {
   assert.match(b.said.at(-1), /every job now starts from your \*a@x\.com\*/)
   const key = 'whatsapp/session-15550021.json'
   const session = JSON.parse(b.store.get(key))
-  session.last = { jd: 'older job', email: 'b@example.test', at: Date.now() }
+  session.last = { jd: 'older job', email: 'candidate2@example.test', at: Date.now() }
   b.store.set(key, JSON.stringify(session))
   const other = 'Cloud Security Engineer for AWS guardrails, IAM reviews, GuardDuty triage and Terraform policy as code.'
   await b.wa.handle(N, { type: 'text', id: 'job', text: { body: other } }, await b.wa.loadSession(N), 'user1')
-  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *a@example.test* resumes.')))
+  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *candidate1@example.test* resumes.')))
   assert.equal(b.runs[0].givenPath, APPSEC)
 })
 
