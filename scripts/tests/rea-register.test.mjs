@@ -94,3 +94,41 @@ test('WhatsApp offline fallback and confirmed-skill restacks remain blocked unti
  assert.match(whatsapp.limits,/protected preview/i)
  assert.match(skills.limits,/exported-DOCX acceptance/i)
 })
+
+test('external crawler aggregates are labels, never repository paths', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='contract-crawler-diagnostics-manual-only-2026-11-18')
+ assert.ok(entry)
+ assert.ok(entry.sources.some(s=>s.label.includes('Production crawler aggregates') && s.label.includes('read-only Supabase SELECT') && !s.path))
+ assert.ok(!entry.sources.some(s=>s.path?.includes('public.mfit_crawl_jobs')))
+})
+
+test('17 Nov direct Gmail correction keeps the four-account cap and no-cover mobile menu', () => {
+ const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
+ const entry=REA_SESSIONS.find(s=>s.id==='gmail-four-account-no-cover-mobile-owner-correction-2026-11-18')
+ assert.ok(entry)
+ assert.equal(entry.area,'gmail')
+ assert.equal(entry.state,'Implemented, verification pending')
+ assert.ok(entry.sources.some(s=>s.label.includes('2026-11-17T21:18:26Z')))
+ assert.ok(plan.includes('2026-11-17T21:18:26Z'))
+ assert.ok(plan.includes('existing four-account ceiling'))
+ assert.ok(plan.includes('no overlay, scrim, dimming, or page inertness'))
+ assert.ok(plan.includes("PR #440's no-cap proposal remains unapproved"))
+})
+
+
+test('18 Nov WhatsApp evidence keeps disconnected iZap scoped and historical delivery unproven', () => {
+ const entry=REA_SESSIONS.find(s=>s.id==='mfit-live-status-and-17oct-izap-recheck-2026-11-18-0346')
+ assert.ok(entry)
+ assert.equal(entry.area,'resume')
+ assert.equal(entry.state,'Implemented, verification pending')
+ const iZap=entry.steps.find(s=>s.label==='Recheck the 17 Oct iZap evidence source')
+ assert.ok(iZap)
+ assert.match(iZap.finding,/no linked WhatsApp Business number/)
+ assert.match(iZap.finding,/zero/)
+ assert.match(iZap.finding,/does not establish/)
+ assert.match(entry.limits,/generated 17 Oct output DOCX/)
+ assert.match(entry.next,/KOMPAS_VERCEL_API_TOKEN/)
+ const plan=readFileSync(path.join(root,'src/lib/plan-vision.ts'),'utf8')
+ assert.match(plan,/read-only iZap recheck on 18 Nov 2026/)
+ assert.match(plan,/personal WhatsApp or another provider has no record/)
+})
