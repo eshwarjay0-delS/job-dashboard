@@ -1,3 +1,17 @@
+## 19 November 2026 10:20 UTC — exact-head WhatsApp callback tests pass; provider evidence still absent
+
+- Child PR [#453](https://github.com/eshwarjay0-delS/job-dashboard/pull/453) exact head `2f5fe4ee21fda8d97ffe357694a0e9e6081fa2b6` passed WhatsApp recovery/typecheck [44504421816](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44504421816): `npm run typecheck` passed and the five targeted test files reported **96 passed, 0 failed** (~992 ms). Plan/REA schema [44504421824](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44504421824) also passed. This is source-level/synthetic evidence only.
+- The direct mocked sender test now verifies the actual Meta message JSON includes the exact `64hex:32hex` attempt token; legacy 64-hex IDs remain supported and malformed values are omitted. The recovery test confirms tokenless legacy callbacks cannot mark a tokenized active attempt delivered.
+- A fresh read-only iZap check at `2026-11-19T10:20:05.108125Z` confirms the business has **no linked WhatsApp number**, registration is disconnected, no live inbound has ever arrived and no outbound send has ever been proven to reach Meta. This integration cannot provide the missing 17 Oct delivery evidence.
+- The docs update records these results in Plan & Vision revision `2026-11-19.5`, the journal and REA. It creates a new PR #453 head; exact-head WhatsApp recovery and Plan/REA must be rerun. Full CI and Kompas baseline are required after Safe Merge Gate integrates #453 into parent #450.
+- The 17 Oct 17:28 Chicago incident remains unverified: exact output DOCX, R2 object/version, request correlation, Meta message ID and signed delivered/read receipt are missing. The accessible Files search did not locate the output artifact; this does not prove it is absent from every possible source. No replay or resend.
+- Production is still not live on the repaired source: Vercel project reports `live:false`; latest production attempt is CANCELED; `job-dashboard-fawn.vercel.app` points to READY `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview credential remains owner-controlled and unavailable. Do not unpause, bypass protection or deploy around the gate.
+- No real Meta send, DOCX generation, R2 write, production mutation, deployment or device test occurred.
+
+Continue: rerun exact-head WhatsApp recovery and Plan/REA on the new PR #453 head; then let MFit Safe Merge Gate integrate it into #450 and require full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the integrated master-targeted parent.
+ 
+---
+
 ## 19 November 2026 10:17 UTC — WhatsApp Meta callback attempt-token transport repair
 
 - **Continue: preserve the attempt token through the Meta send adapter and verify the recovery callback state machine.** The parent WhatsApp fallback PR [#450](https://github.com/eshwarjay0-delS/job-dashboard/pull/450) is a current-master DRAFT at `7e794037141b85d8de9cfb5c1d76a787a883ba0f`; its full CI [44469659655](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44469659655), WhatsApp recovery [44469659713](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44469659713), Kompas baseline [44469659703](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44469659703) and Plan/REA [44469659726](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44469659726) passed.
