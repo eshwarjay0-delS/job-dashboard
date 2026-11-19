@@ -97,3 +97,8 @@ No local checkout or local npm tests/build were available in this execution envi
 ## 19 November 2026 — PR #442 REA schema typecheck correction
 
 Exact-head full CI run 44424148278 failed Type-check at `src/lib/rea-register.ts:356`. The new read-only audit record used `area: "all"` and a custom method label not admitted by `ReaSession`. The record is corrected to `area: "platform"` and `method: "Source and artifact analysis"`, matching the declared schema without changing the observed finding. No runtime behavior, production state, or external service was modified. Fresh full CI and Plan/REA schema checks on the new exact PR head are required; PR #442 remains DRAFT for Safe Merge Gate sequencing.
+
+
+## 19 November 2026 — current master and Kompas handoff correction
+
+The Chief Relevance handoff's 18 Nov ledger still named master 66291 and the prior canceled production deployment. Current master is `d03f18892015bdfceb277500978cbacd95ae7808`, which merges PR #446's test-only question-integrity regression and changes no runtime behavior. Vercel project `job-dashboard` reports `live:false`; latest master production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` is CANCELED by the Ignored Build Step. The canonical alias remains READY on `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Updated `docs/kompas.md` and `docs/kompas/CHIEF_RELEVANCE_HANDOFF.md` to match these facts. No deployment, alias promotion, project setting change, protected-preview bypass, model call or native device test occurred. The accessible automation inventory shows Kompas Continuous Voice Delivery disabled and no separate Bible-Keeper task among the 12 visible automations.

@@ -78,7 +78,7 @@ Continue: reconcile PR #262 against current master without discarding #258, obta
 
 ## 18 November 2026 — current release, phone shell and acceptance boundary
 
-Canonical master is `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The canonical production alias `job-dashboard-fawn.vercel.app` remains READY on older deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The latest master deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` was CANCELED because the configured Ignored Build Step printed `Skipped: no [ship] tag` and exited 0. The project reports `live:false`; that field does not identify a pause reason. No new deployment, alias promotion, protection bypass or billing change was attempted.
+Canonical master is `d03f18892015bdfceb277500978cbacd95ae7808`, which merges PR #446's test-only question-integrity regression; no runtime behavior changed. The canonical production alias `job-dashboard-fawn.vercel.app` remains READY on older deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The latest master production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` for `d03f188` is CANCELED because the configured Ignored Build Step printed `Skipped: no [ship] tag` and exited 0; the project reports `live:false`. The project reports `live:false`; that field does not identify a pause reason. No new deployment, alias promotion, protection bypass or billing change was attempted.
 
 ### Phone-native shell (separate from voice work)
 

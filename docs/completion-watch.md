@@ -1,3 +1,14 @@
+## 19 November 2026 00:30 UTC — refresh Kompas handoff to exact master/alias
+
+- Current master is `d03f18892015bdfceb277500978cbacd95ae7808`, merging PR #446's test-only question-integrity regression; no runtime behavior changed.
+- Vercel project `job-dashboard` reports `live:false`. Latest master production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` is CANCELED by the Ignored Build Step (no `[ship]` marker). The canonical alias still points to READY `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`.
+- Updated `docs/kompas.md` and `docs/kompas/CHIEF_RELEVANCE_HANDOFF.md` to reflect the current master and exact production attempt. No runtime code, release setting or alias changed.
+- The accessible automation inventory shows MFit Safe Merge Gate enabled, Kompas Continuous Voice Delivery disabled, and no separate Bible-Keeper task among the 12 visible automations.
+
+Continue: keep the #447 → #433 WhatsApp sequence with Safe Merge Gate; independently verify the current #442 full CI after its REA schema correction. Do not unpause Vercel, add a `[ship]` marker, bypass preview protection or claim current master is live.
+
+---
+
 ## 19 November 2026 00:20 UTC — PR #442 REA schema typecheck correction
 
 - PR #442 exact head `1c81cd88ee5a755359fb87e1b2a4b1e296818cf3` failed full CI run [44424148278](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44424148278) at Type-check. Lint passed; downstream checks were skipped.
