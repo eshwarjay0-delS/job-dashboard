@@ -102,3 +102,8 @@ Exact-head full CI run 44424148278 failed Type-check at `src/lib/rea-register.ts
 ## 19 November 2026 — current master and Kompas handoff correction
 
 The Chief Relevance handoff's 18 Nov ledger still named master 66291 and the prior canceled production deployment. Current master is `d03f18892015bdfceb277500978cbacd95ae7808`, which merges PR #446's test-only question-integrity regression and changes no runtime behavior. Vercel project `job-dashboard` reports `live:false`; latest master production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` is CANCELED by the Ignored Build Step. The canonical alias remains READY on `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Updated `docs/kompas.md` and `docs/kompas/CHIEF_RELEVANCE_HANDOFF.md` to match these facts. No deployment, alias promotion, project setting change, protected-preview bypass, model call or native device test occurred. The accessible automation inventory shows Kompas Continuous Voice Delivery disabled and no separate Bible-Keeper task among the 12 visible automations.
+
+
+## 19 November 2026 — REA registry declaration-order correction
+
+A source review found that the new Kompas REA `REA_SESSIONS.unshift` call had been prepended before `export const REA_SESSIONS` in `src/lib/rea-register.ts`. It was moved unchanged to the end of the file, after the registry declaration and existing records. This corrects declaration order only. Fresh exact-head Plan/REA schema and full CI are required; no runtime behavior, deployment or production state changed.

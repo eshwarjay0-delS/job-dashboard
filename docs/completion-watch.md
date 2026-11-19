@@ -1,3 +1,13 @@
+## 19 November 2026 00:35 UTC — REA registry declaration-order correction
+
+- Source inspection found the new Kompas REA `REA_SESSIONS.unshift(...)` call at the very top of `src/lib/rea-register.ts`, before `export const REA_SESSIONS` is declared. That would reference the registry before initialization.
+- Moved the same REA record unchanged to the end of the file, after the registry declaration and existing records. No product code or release configuration changed.
+- The new exact head needs fresh Plan/REA schema and full CI; no result from the preceding head is reused.
+
+Continue: verify exact-head Plan/REA and full CI for PR #442; keep DRAFT under Safe Merge Gate.
+
+---
+
 ## 19 November 2026 00:30 UTC — refresh Kompas handoff to exact master/alias
 
 - Current master is `d03f18892015bdfceb277500978cbacd95ae7808`, merging PR #446's test-only question-integrity regression; no runtime behavior changed.
