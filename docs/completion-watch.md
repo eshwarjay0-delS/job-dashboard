@@ -1,4 +1,165 @@
+## 19 November 2026 06:08 UTC — journal enum regression corrected
+
+- Documentation head `2718159f8958382bc617f9dc2056bab351f18cfa` failed full CI `44469329494` and WhatsApp recovery `44469329441` at TypeScript checking. The two new Plan Journal entries used descriptive approval/delivery strings outside the declared unions (`approved|proposed|unapproved|rejected` and `blocked|planned|in progress|deployed|superseded`).
+- Kompas baseline `44469329435` and Plan/REA `44469329600` passed. The journal entries are corrected to valid enum values (`approved` / `proposed`; `in progress` / `blocked`) while keeping scope details in their descriptive fields. No runtime behavior changed. This correction creates a new head and all exact-head gates must rerun.
+- The earlier pre-correction PR #450 head `1e4c8b123dd06f1a4bac21e0cf5bea8f62230a27` passed all four gates, but it does not validate the current head.
+
+Continue: wait for fresh full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the corrected head. Do not merge or deploy while any gate is pending or failed.
+
+---
+
+## 19 November 2026 06:05 UTC — confirmed-skill approval reverified; Gemini loop remains unapproved
+
+- Fresh targeted personal-context retrieval found a direct owner-authored message at **14 Nov 2026 09:26:05 UTC**: “Confirmed first-person skills may map to relevant existing projects across roles; no invented employer/project/action/result/date/metric/credential.” This is renewed approval for first-person-confirmed skills in relevant existing project context only. It does not permit JD-only claims, second-person wording, editing instructions, target scores or invented facts.
+- PR [#431](https://github.com/eshwarjay0-delS/job-dashboard/pull/431) head `fa0037c2b3436f13dfeb7e1fa60eaa714c7f32b5` is current-master based and mergeable/DRAFT. Exact-head full CI [44388165144](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44388165144), WhatsApp recovery [44388164799](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44388164799), Kompas baseline [44388164907](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44388164907), and Plan/REA [44388164888](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44388164888) are SUCCESS. PR body was corrected to cite the 14 Nov direct message; comment [7001168024](https://github.com/eshwarjay0-delS/job-dashboard/pull/431#issuecomment-7001168024) records the renewed scope. Actual source resume + exact JD + first-person confirmation + exported-DOCX acceptance and protected preview remain outstanding.
+- The same 14 Nov owner correction says the final-DOCX Gemini correction/re-export/recheck loop was proposed, not directly owner-approved. PR #441 and #417 descriptions were corrected; #441 comment [7001070636](https://github.com/eshwarjay0-delS/job-dashboard/pull/441#issuecomment-7001070636) records the hold. Keep #417/#441/#448 DRAFT; no Gemini call or user DOCX processing.
+- Plan & Vision revision is now `2026-11-19.3`; the new journal records both the first-person confirmation approval and the separate Gemini approval hold. This documentation change advances PR #450 again and requires fresh exact-head CI.
+
+Continue: verify all four exact-head workflows on the newest PR #450 documentation head; keep the confirmed-skill alignment in #431 separate from the unapproved Gemini loop, and require actual exported-DOCX evidence before claiming live resume quality.
+
+---
+
+## 19 November 2026 06:00 UTC — WhatsApp exact-head gates pass; resume approval correction
+
+- PR [#450](https://github.com/eshwarjay0-delS/job-dashboard/pull/450) pre-documentation head `1e4c8b123dd06f1a4bac21e0cf5bea8f62230a27` passed all four exact-head gates: full CI [44467839576](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44467839576), WhatsApp recovery [44467839555](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44467839555), Kompas baseline [44467839513](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44467839513), and Plan/REA [44467839592](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44467839592) — all SUCCESS. GitHub reported mergeable=true; PR remains DRAFT. The following documentation-only correction creates a new head; these results must not be reused as proof for that new head.
+- The new Plan & Vision revision `2026-11-19.2` records the successful pre-documentation head and preserves the separate release blocker. It also corrects an approval-provenance conflict: the latest owner-authored 14 Nov 09:26 UTC correction says the final-DOCX Gemini correction/re-export/recheck loop was proposed, not directly owner-approved. The original 3 Nov owner-authored message was not recovered in the latest accessible-context search. PR [#441](https://github.com/eshwarjay0-delS/job-dashboard/pull/441) description was corrected and comment [7001070636](https://github.com/eshwarjay0-delS/job-dashboard/pull/441#issuecomment-7001070636) records the hold. Keep #441/#448 DRAFT; do not invoke Gemini on user documents or enable automatic correction/re-export/recheck until direct approval is recovered. The separate confirmed-skill mapping in #431 remains distinct.
+- Direct Vercel project lookup still reports `live:false`. Latest production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` was canceled by the configured Ignored Build Step because the commit message had no `[ship]` tag. Canonical alias remains on older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` / SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Environment metadata contains no `KOMPAS_VERCEL_API_TOKEN`. No unpause, bypass, billing change, preview or deployment.
+- A Library search for the 17 Oct 17:28 Chicago generated output DOCX and provider receipt did not surface the exact output or signed delivery evidence. The connected iZap business previously had no linked WhatsApp number or matching 17 Oct messages; this is limited to that business and does not prove no event occurred elsewhere. Output DOCX, per-run R2 object/version, request correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. No replay or replacement send.
+
+Continue: rerun full CI, WhatsApp recovery, Kompas baseline and Plan/REA on the new documentation head; then let MFit Safe Merge Gate review. Keep PR #450 DRAFT until legitimate protected preview and production READY/alias are available. Continue the separate approved confirmed-skill alignment in #431; keep the final-DOCX Gemini correction loop blocked pending direct owner approval.
+
+---
+
+## 19 November 2026 05:50 UTC — current-master WhatsApp validation restack
+
+- Opened draft PR [#450](https://github.com/eshwarjay0-delS/job-dashboard/pull/450), branch `fix/whatsapp-fallback-integrity-current-master-20261119`, base master `d03f18892015bdfceb277500978cbacd95ae7808`, head `322acf7516061e93df0000c5a07d45db51f3c0a7`. GitHub compare reports 53 commits ahead / 0 behind. This preserves PR #433 and child #447; neither existing branch was rewritten.
+- PR #450 carries #433's owner-approved unsupported-JD hard hold and explicit selected same-account library fallback label, plus #447's test-only mock that models one active atomic lease and token-matched release. It does not add uploaded-original-after-timeout or whole-message hold behavior.
+- Parent #433 exact head `04b74bbf63986134871c43374bbdc75c78e51677` failed full CI `44390742971` because its test mock granted two concurrent claims. Child #447 head `322acf7516061e93df0000c5a07d45db51f3c0a7` passed WhatsApp recovery `44394663903` and Plan/REA `44394664245`; those child-base runs did not run master-only full CI or Kompas baseline. PR #450 now needs fresh exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA.
+- The latest Safe Merge Gate reports project `live:false`, latest production attempt CANCELED by Ignored Build Step, and the canonical alias still on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. Protected preview requires the owner-controlled `KOMPAS_VERCEL_API_TOKEN`, unavailable to this run. No unpause, bypass, billing change, preview, deployment, real Meta send, DOCX generation, R2 write or production mutation.
+- The 17 Oct 17:28 Chicago attempt remains a visible hold, not proof of delivery. Output DOCX, per-run R2 object/version, request correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. No replay or replacement send.
+
+Continue: verify all four exact-head workflows on PR #450, then let MFit Safe Merge Gate review. Keep it DRAFT until the protected preview and production READY/alias gates are legitimately satisfied. Keep PR #411's uploaded-original-after-timeout behavior separate and unapproved.
+
+---
+
+## 18 November 2026 20:58 UTC — final child-head evidence and documentation refresh
+
+- PR #447 exact head `03668d7a326bebada0b67f4e4e7ec39443c26cc3`: WhatsApp recovery [44394262959](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262959) **SUCCESS**, typecheck passed, 94 tests / 94 passed / 0 failed. The same-JD concurrent-start and lease-release regression passed.
+- Plan/REA [44394262234](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44394262234) **SUCCESS**.
+- This child PR is stacked on #433. Full CI and the master-only Kompas baseline do not trigger for this child base; after Safe Merge Gate integrates it into #433, require those gates on the updated parent head.
+- The current journal/watch update is documentation-only. It creates a new child head and triggers fresh exact-head WhatsApp recovery and Plan/REA runs; those latest runs are pending and must not inherit the 03668 results.
+- Parent #433 remains DRAFT. Production alias remains older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; latest master deployment attempt was canceled by the Ignored Build Step due to no `[ship]` marker. No deployment or external send occurred.
+
+Continue: verify the documentation-updated child head's new exact-head gates, then let MFit Safe Merge Gate sequence #447 into #433 and run full CI/baseline on the updated parent.
+
+## 18 November 2026 20:52 UTC — WhatsApp child-PR gate results
+
+- Child PR [#447](https://github.com/eshwarjay0-delS/job-dashboard/pull/447), exact head `19608572885091f399102f6706dec9a00203cf8b`, is DRAFT and stacked on parent #433.
+- WhatsApp recovery workflow [44393570790](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44393570790) **SUCCESS**. The exact command ran 94 tests: 94 passed, 0 failed, including the same-JD concurrent-start test and deliberate retry after lease release.
+- Plan/REA schema workflow [44393570770](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44393570770) **SUCCESS**.
+- Full CI and the master-only Kompas baseline do not trigger on this child PR because its base is the parent feature branch. After Safe Merge Gate integrates #447 into #433, require fresh full CI/baseline on the updated #433 head.
+- Parent #433 remains DRAFT. Its earlier exact-head full CI failure (run `44390742971`) was the route test mock granting a claim to every concurrent invocation. The production helper uses ETag compare-and-swap; the child test double now models one active lease and token-matched release.
+- Production remains unchanged: Vercel project `live:false`; latest production attempt `dpl_AknmUNcd9Cgo8mTiZz3Ex7FEfb9i` was canceled by Ignored Build Step because there was no `[ship]` marker; canonical alias remains READY on older SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. No deploy or bypass was attempted.
+- The 17 Oct 17:28 incident remains a hard hold with no verified generated DOCX, R2 version, webhook correlation, Meta message ID or signed delivery/read receipt. No replay/send occurred.
+
+Continue: Safe Merge Gate should sequence #447 into #433, then run exact-head full CI/baseline on the parent. Keep the protected preview and production release gates separate.
+
+## 18 November 2026 20:45 UTC — dedicated WhatsApp gate now runs route concurrency test
+
+- The workflow path filter already included `scripts/tests/whatsapp-single-request.test.mjs`, but its actual `node --test` command omitted it. The route-level same-JD concurrency test therefore ran in full CI but not in the dedicated WhatsApp recovery gate.
+- The child branch now adds that test file to the dedicated recovery command. Workflow commit: `9d5e357d68fcde807abc57f8b8d27e73b54dd466`; journal commit: `c881fe8faaa384b485ae9ad7db140ac1daca81a3`.
+- The prior exact-head recovery run `44393340914` began before this workflow change and does not validate the expanded command. A new exact-head recovery run is required.
+- No runtime behavior, external message, R2 write, production database or deployment changed.
+
+Continue: verify the new exact-head WhatsApp recovery and Plan/REA gates; then run full CI on parent #433 after Safe Merge Gate sequences this child correction.
+
+## 18 November 2026 20:40 UTC — WhatsApp concurrency regression fixture correction
+
+- PR #433 exact head `04b74bbf63986134871c43374bbdc75c78e51677` full CI `44390742971` failed one test only: `same JD starts once concurrently and its lease releases for a deliberate retry` observed 2 tailor calls instead of 1 (93/94 passed).
+- Root cause is the route test's mock, not demonstrated production behavior: `claimResumeRecoveryWorker` returned a claim token unconditionally to both concurrent invocations. The real helper in `src/lib/whatsapp-resume-recovery.ts` uses ETag compare-and-swap and already has a two-worker one-winner durability regression.
+- A child branch `fix/whatsapp-single-request-atomic-test-mock-20261118` corrects the mock to allow one active token and token-matched release. Test-only commit: `1bbd10691463674f15d082f79a23927eb16bedc5`. No runtime route, storage policy, account isolation, delivery threshold or Meta send behavior changed.
+- Exact-head GitHub Actions on the child PR are still required. Parent #433 remains DRAFT and its source fix is not deployed. Protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; do not bypass protection or change billing.
+- The 17 Oct 17:28 Chicago incident remains unverified. No output DOCX, per-run R2 version, webhook/Meta correlation, signed delivery/read receipt or owner fact reconciliation was recovered. No replay or resend.
+
+Continue: run the exact child-PR gates; after they pass, let MFit Safe Merge Gate sequence this test-only correction into #433. Then continue the separate protected-preview and owner-authorized WhatsApp acceptance gates.
+
+## 18 November 2026 20:22 UTC — WhatsApp recovery CAS evidence and interleavings
+
+- The race report on predecessor head `f409ca5` is addressed in the current PR #433 branch: atomic ETag compare-and-swap (`b04dd14`), R2 adapter/attempt-fencing correction (`f83295d`, `c43d8c5`), callback attempt correlation (`189320c`). `updateResumeRecovery` now uses `GetObject` ETag plus conditional `PutObject If-Match`, re-reading and re-evaluating after a 412 rather than writing stale state.
+- Official Cloudflare R2 docs now verify the provider contract: [PutObject supports If-Match and checks it atomically at commit](https://developers.cloudflare.com/r2/api/s3/conditional-operations/); [conditional writes are serialized against committed state](https://developers.cloudflare.com/r2/reference/consistency/). The R2 adapter tests assert quoted ETag pass-through, 412 conflict, missing ETag fail-closed and other errors. No live R2 write.
+- Vercel env metadata has all four R2 key entries for production/preview (values not decrypted). `storageMode` fails closed on Vercel if the set is incomplete. Filesystem CAS is per-process only; production multi-instance CAS depends on R2.
+- New commit `08f5c1f71aa01b29f63ffbbd5eb7cb6f213858e6` adds four deterministic races: two workers/one ETag; failed callback vs in-flight HTTP acceptance; old delivered callback vs newer retry acceptance; delivered callback vs stale defer. Exact head at the last check: WhatsApp recovery `44389751909` and full CI `44389751945` IN PROGRESS; Kompas baseline `44389752006` and Plan/REA `44389751900` SUCCESS.
+- Release remains separate: Vercel project `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` CANCELED by `ignored-build-step`; alias `job-dashboard-fawn.vercel.app` remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; project env metadata has no `KOMPAS_VERCEL_API_TOKEN`. No preview/deployment, real Meta send, historical replay, DOCX generation or R2 write.
+
+Continue: wait for exact-head WhatsApp recovery `44389751909` and full CI `44389751945`, then let MFit Safe Merge Gate review #433. Keep it DRAFT; do not bypass Vercel ignored-build-step or missing protected-preview authorization. Historical 17 Oct 17:28 Chicago delivery remains unverified until the exact output DOCX, R2 object/version, request correlation, Meta message ID and signed receipt are recovered.
+
+---
+
+## 18 November 2026 20:12 UTC — WhatsApp fallback restacked onto current master
+
+- PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) was fast-forward updated with the current canonical master commit `f5f7f105eb58ab0e964031ee453ba5a9f9201f43`; merge commit `61d545ffb3bf3801d04ffac454739c580f4ad3d7` preserves the full prior branch head `6761a980e067e021f50c617e7fb581a86902545a`. No contributor commit was overwritten.
+- Exact restacked-head results: WhatsApp recovery `44388132693` SUCCESS, Kompas baseline `44388132609` SUCCESS, Plan/REA schema `44388132554` SUCCESS; full CI `44388132566` was still IN PROGRESS. Earlier TypeScript failures on head `189320c` were corrected by `770de26`, `ea01770` and `d50aea`; those failed predecessor runs are not treated as current evidence.
+- The approved fallback boundary is unchanged: only an explicit same-account Files selection, exact path match and account-root containment can be sent as the original library failsafe; uploaded-original-after-timeout remains unapproved. No live WhatsApp message or historical replay.
+- Vercel remains `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` is CANCELED; `job-dashboard-fawn.vercel.app` remains on older READY SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The protected preview still needs owner-controlled `KOMPAS_VERCEL_API_TOKEN`. No preview/deploy, billing change or protection bypass.
+
+Continue: wait for full CI `44388132566`, then let MFit Safe Merge Gate review #433. Keep it DRAFT until protected preview and production READY/alias verification are available; do not replay the 17 Oct event or merge #411's separate uploaded-original-after-timeout behavior.
+
+---
+
+## 18 November 2026 20:05 UTC — WhatsApp fallback typecheck repair
+
+- PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) remains DRAFT. Its prior exact head `189320c77d8cf5004442364c4aca49e019900808` failed full CI `44385137113` and WhatsApp recovery `44385136925`: `IN_FLIGHT_MS` was missing from the restacked route and the recovery helper repeated `delivered`/`read` comparisons after its terminal guard. Kompas baseline on that prior head passed.
+- Corrective commits on the same branch restore the 300,000 ms in-flight lease (`770de26af25744334e801dc0091530ac1dac7fa6`), keep terminal delivery-state narrowing type-safe while still blocking retries after Meta acceptance/sent (`ea01770d30d12a54e42a0ec0a46028b98eb608c7`), and add a source-executed regression for a late retry after a Meta `sent` callback (`d50aea28148a85b522db522ca80cc08956ed4254`).
+- Current exact head at the last check: `d50aea28148a85b522db522ca80cc08956ed4254`. Plan/REA `44387330710` SUCCESS; full CI `44387330363`, WhatsApp recovery `44387330423` and Kompas baseline `44387330621` were IN PROGRESS. Previous-head results are not reused as final-head evidence. No local test/build is claimed; clone failed because the environment could not resolve `github.com`.
+- Production remains separate: Vercel project metadata `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` CANCELED; canonical alias `job-dashboard-fawn.vercel.app` still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The protected preview needs the owner-controlled `KOMPAS_VERCEL_API_TOKEN`; no preview, deployment, billing change or protection bypass occurred.
+- Historical 17 Oct 17:28 Chicago delivery remains unverified: output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID and signed delivered/read receipt are missing. No real WhatsApp send, replay, DOCX generation, R2 write or production mutation occurred.
+
+Continue: wait for all exact-head gates, then let MFit Safe Merge Gate review #433. Keep it DRAFT until the legitimate protected preview and production release/alias checks are available. Do not merge #411's distinct uploaded-original-after-provider-timeout behavior or send/replay the historical request.
+
+---
+
 # MFit Completion Watch
+
+## 18 November 2026 — close the unapproved uploaded-original fallback path
+
+- Owner review on PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) at 11:18 UTC found that `sendClosest()` could send `session.resumePath` on provider timeout, quality rejection and other failure paths even when no Files/library selection existed. The acceptance helper treated a missing selected email as permission. The owner rechecked current master `f5f7f105eb58ab0e964031ee453ba5a9f9201f43` and production alias SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; both resolve to the same route/helper blob SHAs (`7ec8dd7727ca454bde76ad794f921b2206efae82` and `8b7781b8b2aa9dedf67641e68e083d5b3d73632b`). This is a live source-level policy risk, not proof that a real document was sent.
+- Code/test commit [`b70201f`](https://github.com/eshwarjay0-delS/job-dashboard/commit/b70201f29b539fd3c6b37aad69f4c678a3c6957b) on PR #433 now permits fallback only when a selected same-account Files record is explicit, its `abs` path exactly equals the run's `session.resumePath`, and the path remains under that account's library root. `chosenResumeMatchesProfile()` fails closed when the selected email is absent. Existing valid same-account library fallback remains covered.
+- Added executable route regressions for (1) provider timeout with upload-only input, (2) unsupported JD-only hard hold with upload-only input, and (3) a Files selection whose path does not match the run; added an acceptance-helper regression for missing/empty email. The test fixture uses synthetic candidate data and a synthetic inbox path.
+- Exact-head workflows on code commit b70201f29b539fd3c6b37aad69f4c678a3c6957b: Kompas baseline [44295809959](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44295809959) SUCCESS; Plan/REA schema [44295809871](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44295809871) SUCCESS; full CI [44295810009](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44295810009) and WhatsApp recovery [44295809782](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44295809782) were still IN PROGRESS at the last check. No local test/build is claimed.
+- PR #433 remains DRAFT. Vercel project metadata reports `live:false`; latest production deployment `dpl_7xExEMJyGkWJJTEgqE8DwXAhtKRf` is CANCELED at master SHA `f5f7f105eb58ab0e964031ee453ba5a9f9201f43`. The public alias still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3` at SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The protected preview still requires the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; no deployment or bypass was attempted.
+- The 17 Oct 17:28 Chicago event remains historically unverified. The exact output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation are missing. No real WhatsApp/Meta send, replay, DOCX generation, R2 write, production mutation or handset test occurred.
+
+Continue: wait for full CI and WhatsApp recovery on the corrected exact head, then let MFit Safe Merge Gate review it. Keep #433 DRAFT until the legitimate protected preview and production READY/alias checks are available. Do not send or replay the 17 Oct request, and do not merge #411's separate uploaded-original-after-timeout behavior.
+
+---
+
+## 16 November 2026 21:16 UTC — WhatsApp incident evidence recheck and release boundary
+
+- Canonical MFit master at the start of this continuation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. The WhatsApp fallback repair remains PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433), exact head `6a112e42f375623197047e145eac2d08776d5ca2`, DRAFT. Its four exact-head source gates are SUCCESS: full CI [43920312068](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312068) (48 steps), WhatsApp recovery [43920312058](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312058), Kompas baseline [43920312071](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312071), Plan/REA [43920312549](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/43920312549). Safe Merge Gate reviewed this exact head and kept it DRAFT because the protected preview and external-delivery acceptance are not satisfied.
+- Read-only iZap recheck at 2026-11-16T21:15:50Z: one business, no linked WhatsApp numbers, disconnected registration, no live inbound webhook ever, no history backfill and no outbound Meta send ever proven. Date-scoped searches for `resume` and `DOCX` on 17 Oct 2026 in `America/Chicago` returned zero messages. This describes only the connected iZap business; it does not prove the historical event never occurred in another provider or store.
+- Read-only Vercel recheck: project `job-dashboard` reports `live:false`; latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED at master SHA `66291f677cbcc2318229ef9a3164961e6d3cdb6a`; `job-dashboard-fawn.vercel.app` still points to older READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`. The owner/authorized Vercel administrator must restore project availability; protected preview also requires the owner-controlled private token. No deployment or protection bypass was attempted.
+- The 17 Oct 17:28 Chicago incident remains historically unverified: exact uploaded DOCX bytes, generated output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID and signed delivered/read receipt are still missing. The same-name Library DOCX is not accepted as a substitute without byte/hash match. No real send, replay, Meta request, R2 write, production mutation or handset test occurred.
+- The separate MFit Safe Merge Gate is enabled and has reviewed #433. Kompas Continuous Voice Delivery is disabled; no Bible-Keeper automation was visible in the accessible automation inventory. No voice/caption edits were duplicated.
+- Approval/implementation/deployment remain separate: the #433 source repair is implemented and exact-head-tested; it is not merged, previewed, deployed or externally delivery-verified.
+
+Continue: restack PR #430's diagnostic-only crawler timeout/abort fix onto current master using only the collector, mocked regression tests, dedicated workflow and required plan/research records. Run exact-head full CI and Kompas baseline; keep contract crawling manual/on-demand only, Robert Half manual-only, and do not run a live crawl or restore a schedule.
+
+---
+
+## 16 November 2026 17:23 UTC — restack WhatsApp fallback integrity on current master
+
+- Canonical master at branch creation: `66291f677cbcc2318229ef9a3164961e6d3cdb6a`. Current production alias metadata still assigns `job-dashboard-fawn.vercel.app` to READY deployment `dpl_7QVykeYoWSswLDgsQP99xF2piBn3`, runtime SHA `b94e1629c544048d84a2b048ae83b21b612ab9dd`; however Vercel project metadata reports `live:false` and latest production deployment `dpl_GMD7eF8vAw52sXyTopSuHqebEJq6` is CANCELED. Do not describe the new master or branch as publicly live.
+- PR [#433](https://github.com/eshwarjay0-delS/job-dashboard/pull/433) is a DRAFT current-master restack. Code/test commit: `1b520b9e84438ea47bfbd8c65835c210464df588`. It combines two independently approved behaviors that share the same fallback path: (1) the 14 Nov hard hold for unsupported JD-only experience claims, including blocker-only cached results; (2) the 27 Oct closest matched same-account library failsafe, labelled **Original resume — NOT TAILORED** only for a Files/library-origin fallback.
+- The supported low-coverage test fixture now contains no unsupported JD-only addition, so it continues to test the existing disclosed-shortfall path. A separate integration case verifies an unsupported SupplierNinja addition falls back to the selected library bytes rather than sending the generated rewrite. The normal acceptance suite also covers a legacy blocker-only cache result. A completed tailored DOCX is explicitly asserted not to carry the fallback label.
+- Previous PR #426's exact-head full CI failed two integration assertions because its fixture expected a rewrite containing an unsupported JD-only addition to be sent; the source hard hold correctly routed to the library fallback. PR #428 carried the approved caption label but was separate. #433 restacks both behaviors and repairs the test distinction on current master. #426 and #428 remain open until #433's exact-head gates and Safe Merge Gate review establish whether they can be closed as superseded.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema for #433 are pending after the code and documentation commits. No local test/build is claimed: this scheduled environment has no repository checkout or installed Next.js package. The route-helper change was checked against the official Next.js v16.3.8 Route Handler guide; it does not alter the handler signature.
+- Protected preview is unavailable because the owner-controlled private `KOMPAS_VERCEL_API_TOKEN` is not present. Project `live:false` is an additional release wall. No preview protection, access control or billing limit was bypassed; no deployment was attempted.
+- Preserve boundaries: #411's uploaded-original-after-provider-timeout behavior still needs its own explicit owner decision; #427's whole-message hard-hold semantics remain a separate approval question. Do not enable Poke workers, run a manual contract crawl, send real WhatsApp/email, or replay the 17 Oct event.
+- The 17 Oct 17:28 Chicago incident remains unverified: output DOCX, per-run R2 object/version, request/webhook correlation, Meta message ID, signed delivered/read receipt and owner fact reconciliation remain missing. The connected iZap business had no linked WhatsApp number at the last read-only check; no real delivery test was possible.
+
+Continue: finish exact-head CI and the dedicated WhatsApp recovery regression for #433, then let MFit Safe Merge Gate review it. Keep the branch DRAFT until the legitimate protected preview and production availability return; do not claim historical delivery or native acceptance.
+
+---
 
 ## 16 November 2026 02:32 UTC — approval provenance and Plan & Vision deployment correction
 

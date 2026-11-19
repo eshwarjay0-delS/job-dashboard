@@ -8,6 +8,7 @@ on:
       - 'src/lib/made-floor.ts'
       - 'src/lib/whatsapp-resume-acceptance.ts'
       - 'src/lib/whatsapp-resume-recovery.ts'
+      - 'src/lib/storage.ts'
       - 'src/lib/whatsapp.ts'
       - 'src/lib/whatsapp-retry-policy.ts'
       - 'src/app/api/whatsapp/**'
@@ -17,6 +18,7 @@ on:
       - 'scripts/tests/whatsapp-resume-failsafe.test.mjs'
       - 'scripts/tests/whatsapp-single-request.test.mjs'
       - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
+      - 'scripts/tests/whatsapp-recovery-durability.test.mjs'
       - '.github/workflows/whatsapp-resume-regression.yml'
   pull_request:
     paths:
@@ -47,4 +49,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs
+      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-single-request.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs scripts/tests/whatsapp-recovery-durability.test.mjs
