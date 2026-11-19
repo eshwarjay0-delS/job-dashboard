@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 19 November 2026 23:09 UTC — PR #458 REA schema correction
+
+- Continue: rerun exact-head validation for the approved Gmail Retry-After reliability fix in PR [#458](https://github.com/eshwarjay0-delS/job-dashboard/pull/458). Current branch: `fix/gmail-retry-after-master-bounded-20261119`.
+- Safe Merge Gate independently found that full CI `44626858570` failed TypeScript at `src/lib/rea-register.ts(10,179)`: the REA state `Implemented; source gates passed, acceptance pending` was not in the existing `ReaSession.state` union. Plan/REA schema `44626858546` and Kompas baseline `44626858670` passed on the pre-fix head `937541eb2c1d6f381d7397d8c50e58bfb44f1624`.
+- Corrected only the REA state to the existing supported `Implemented, verification pending`; commit `c7c35c8240be5b60112e89458c9116cd6c297b5d`. No runtime Gmail code, account isolation, Poke worker, scheduler, notifications or sending changed. The journal and Plan & Vision record the correction. Exact-head full CI, Plan/REA and Kompas baseline must rerun on the final branch head.
+- Production remains READY on master `1c6c1622cddf533e8b268a51d0e4350e508a158e`, deployment `dpl_A8i4LFvu1EqqdKWmLe1SpiT1NUAN`, alias `job-dashboard-fawn.vercel.app`; PR #458 is not deployed. Do not merge or deploy until Safe Merge Gate review and the legitimate protected preview are complete. Two-inbox collision, selected-From, reconnect and narrow-phone acceptance remain separate.
+- No Gmail API/OAuth call, personal inbox read/mutation, outbound email, WhatsApp send, R2 write, model call or device test occurred. The proactive Poke worker remains disabled.
+
+---
+
 ## 19 November 2026 21:25 UTC — current-master Gmail restack, owner corrections and security handoff
 
 - **Continue: verify and finish PR #458 (ready for review), the bounded Gmail Retry-After fix on current master.** PR [#458](https://github.com/eshwarjay0-delS/job-dashboard/pull/458), branch `fix/gmail-retry-after-master-bounded-20261119`, is based on exact master `1c6c1622cddf533e8b268a51d0e4350e508a158e`; it does not edit the stale PR #454 branch. The canonical production alias `job-dashboard-fawn.vercel.app` is independently READY at `dpl_A8i4LFvu1EqqdKWmLe1SpiT1NUAN`, exact SHA `1c6c1622cddf533e8b268a51d0e4350e508a158e`. The new Retry-After code is not in that deployment.
