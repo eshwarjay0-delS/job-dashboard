@@ -468,6 +468,27 @@ test("a Meta-sent document cannot be reset to pending by a late retry", async ()
   assert.equal(current.deliveredMessageId, "wamid-sent")
 })
 
+test("tokenless legacy callback cannot update a tokenized active attempt", async () => {
+  const api = harness()
+  const jobId = id(51)
+  await api.enqueueResumeRecovery(input(51))
+  const token = await api.claimResumeRecoveryWorker(jobId)
+  assert.ok(token)
+  await api.patchResumeRecovery(jobId, { status: "sending" }, token)
+
+  await api.recordResumeDeliveryStatus("wamid-stale-legacy", "delivered", jobId)
+  const afterLegacy = await api.readResumeRecovery(jobId)
+  assert.equal(afterLegacy.status, "sending")
+  assert.equal(afterLegacy.deliveryState, undefined)
+  assert.equal(afterLegacy.deliveredMessageId, undefined)
+
+  await api.recordResumeDeliveryStatus("wamid-current", "delivered", jobId + ":" + token)
+  const afterCurrent = await api.readResumeRecovery(jobId)
+  assert.equal(afterCurrent.status, "delivered")
+  assert.equal(afterCurrent.deliveryState, "delivered")
+  assert.equal(afterCurrent.deliveredMessageId, "wamid-current")
+})
+
 test("two workers paused on the same recovery ETag produce exactly one atomic claim", async () => {
   let waiters = 0
   let bothReadyResolve
