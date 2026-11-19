@@ -213,9 +213,9 @@ test("28.5% is not a clean pass, and the finished file is still sendable", () =>
 })
 test("Houston and Saint Louis emails are not treated as the same profile", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
-  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\nCandidate Onejay05@example.test", "Candidate Onejay05@example.test"), true)
-  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\njayCandidate One44@example.test", "Candidate Onejay05@example.test"), false)
-  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\nCandidate Onejay05@example.test\njayCandidate One44@example.test", "Candidate Onejay05@example.test"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\nCandidate candidate5@example.test", "Candidate candidate5@example.test"), true)
+  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\njayCandidate candidate44@example.test", "Candidate candidate5@example.test"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Candidate One\nCandidate candidate5@example.test\njayCandidate candidate44@example.test", "Candidate candidate5@example.test"), false)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
@@ -434,7 +434,7 @@ test("Nov4 hold transparency: rejection codes become plain words, unknowns dropp
 
 test("a missing selected library email fails closed", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
-  const text = "Candidate One\ncandidate1@example.test"
+  const text = "Candidate One\candidate1@example.test"
   assert.equal(gate.chosenResumeMatchesProfile(text), false)
   assert.equal(gate.chosenResumeMatchesProfile(text, ""), false)
 })
