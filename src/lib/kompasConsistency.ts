@@ -672,7 +672,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
     }
   }
-  if (route.route !== "short" && !/\bExample:/.test(body)) {
+  if (!/\bExample:/.test(body)) {
     const fact = resumeFacts(resume)[0]
     if (fact) {
       const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
@@ -681,12 +681,10 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     }
   }
   const bridge = jdGapBridge(question, resume, jd)
-  if (route.route !== "short" && bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
+  if (bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
     body = `${body} ${bridge}`.trim()
   }
-  if (route.route === "short") {
-    if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
-  } else body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  body = extendFromResume(body, question, resume, route.floor, route.ceiling)
   const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))

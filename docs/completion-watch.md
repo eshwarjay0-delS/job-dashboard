@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet screen audit, not shipped
+
+Row log of start, session, answers, clarifier, chat, screen share, transcription, transcript, and settings. Explain-how is back on the design-later band, which restores the baseline lock. Typecheck is clean. Invisibility was not copied. No signed-in Parakeet session. No ship marker.
+
 ## 20 November 2026 — Chat, screen, transcript, UI parity, not shipped
 
 Thirty checks each. First run chat 25/30; the other four areas were 30/30. Rerun 30/30 in all five. Export says Interviewer and stays in time order. No Playwright in this environment. No live listen. No ship marker.

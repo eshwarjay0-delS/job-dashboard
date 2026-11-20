@@ -8,6 +8,7 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
+export type { AnswerLevel }
 import { repairDictation } from "./kompasDictation.ts"
 import { dropUngroundedLogistics, ungroundedLogisticsSentences } from "./kompasLogisticsPhrases.ts"
 
@@ -210,7 +211,7 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
     case "value": return "opener"
     case "personal-experience": return "star"
     case "scenario": return "follow-up"
-    case "technical-deep-dive": return "follow-up"
+    case "technical-deep-dive": return "design-later"
     case "logistics":
     case "acknowledgement":
     case "closing": return "yes-no"

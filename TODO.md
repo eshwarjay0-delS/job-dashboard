@@ -1,3 +1,9 @@
+## 2026-11-20 — Parakeet screen audit (no live listen, no ship)
+
+Every Kompas screen was walked from the page source and set beside the public Parakeet notes. The row log is `docs/research/kompas-parakeet-parity-audit-2026-11-20.md`. Fixed: empty-session copy, chat placeholder, live-tab title, explain-how length band, and the type errors that failed CI. Invisibility claims were not copied. Playwright is still not installed. No ship marker.
+
+**Checked by the baseline gate (SAML band) and the 30-fold suites. Not a signed-in Parakeet session and not a live listen.**
+
 ## 2026-11-20 — Chat, screen, transcript, and UI 30-fold (no live listen, no ship)
 
 Thirty checks each for chat send/stream/follow-up, in-page tab preview, You vs Interviewer labels, ordered copyable transcript, and the lightweight controls. First surface run: chat 25/30, screen 30/30, transcription 30/30, transcript 30/30, UI 30/30. Rerun: 30/30 in each. A full question that starts with How is not a follow-up. The export says Interviewer, sorts by time, and drops a repeated line. Playwright is not installed here, so this was not a browser click-through. The first-word budget stays 1.4s and has no visible UI until a live session. No ship marker.
