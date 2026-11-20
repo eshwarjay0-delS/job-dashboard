@@ -1,3 +1,9 @@
+## 2026-11-20 — Parakeet session 4 invents settings and skips half a question (no UI)
+
+Owner log on PR #473. Later in the same video, Long, Auto. Cisco security levels became a personal 100 / 0 / 50 story. A merged FTD and ASA question answered only the difference, at about 200 words, and invented an ASA-to-FTD migration. The screen button showed a heading and no body, and the stored text followed the conversation instead of the page. Not the 10-question gate. Resume lines were not re-checked. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
 ## 2026-11-20 — Parakeet session 3 hedges, then answers the wrong voice (no UI)
 
 Owner log on PR #473. Long, Auto, same public video, frozen video clock. Check Point was hedged toward FortiGate and then padded with unsupported platforms. Auto also answered an ad and fired twice. The manual key answered the candidate. "Stealth" was heard as "sales" and rewritten into a different topic at about 190 words. The follow-up kept "I agree." Not the 10-question gate. Resume lines were not re-checked. No product code. Skip-login was not edited.

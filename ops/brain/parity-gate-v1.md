@@ -46,6 +46,8 @@ Session 2 is a different spoken video, not these 10 questions. On that log, two 
 
 Session 3 is the same video with Long and Auto on. It is still not these 10 questions. Detail is in `ops/brain/parakeet-session-3.md`. An ad, a duplicate, the candidate's own line, and a mis-heard word rewritten into a different topic are hard fails. A hedge that then adds "various platforms" is still an unsupported claim. A follow-up that keeps the previous wrong stance fails with it.
 
+Session 4 is later in that video. Detail is in `ops/brain/parakeet-session-4.md`. A personal number that is not on the resume fails. Two asks in one line must both be answered, or clarified from those words. A screen grab that answers the last spoken topic instead of the page is not a pass. None of these video sittings is the 10-question gate.
+
 ## Where the code is
 
 No code in this note. The checks land in the same places as `ops/brain/parakeet-session-1.md`: `repairStoryShape` (`src/lib/kompasGuards.ts`), `gateDisplayedAnswer` and `jdGapBridge` (`src/lib/kompasConsistency.ts`), the FIGURES line in `answerForVerifiedUser` (`src/lib/kompasAnswerService.ts`), `unsupportedClaims` (`src/lib/kompasSourceRetrieval.ts`). The "right?" fire is `lexicalTurn` in `public/kompas/vad-loader.mjs` and `scheduleAuto` in `public/kompas/app.js`. The label opener is `technicalThesis` in `src/lib/kompasConsistency.ts`.
