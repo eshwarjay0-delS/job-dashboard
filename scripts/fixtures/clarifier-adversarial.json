@@ -1,0 +1,191 @@
+{
+  "version": "adversarial-1",
+  "profile": "eshwarjay05",
+  "rule": "Every clarifier is built from the words of the live question, or there is none. A noun that appears only in a prior turn, the resume, or a template is not allowed. Silence is a pass when the live question does not contain two distinct referents.",
+  "jd": "Senior SOC Analyst. The posting names Splunk and CrowdStrike. Those names are not experience.",
+  "schema": "Same fields as clarifier-fixtures.json. category candidate_speech is spoken as You. expect is none or clarify. must_mention is applied only when a clarifier is returned.",
+  "global_must_not": ["\\bgreat question\\b", "as an AI", "\\bcould you (?:please )?clarify\\b", "\\bcan you elaborate\\b", "^what do you mean\\??$", "Burp|Fabrikam|Saint Louis|jayeshwar44|eshwarjay06", "\\bJira\\b", "BMC", "Salesforce"],
+  "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+  "fixtures": [
+    {
+      "category": "vague_referent",
+      "question": "Can you go deeper on that?",
+      "prior_turns": ["Them: We covered SLA monitoring and the compliance dashboards."],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["SLA", "dashboard", "failover"],
+      "note": "that has no referent inside the live question"
+    },
+    {
+      "category": "vague_referent",
+      "question": "Why did you choose it?",
+      "prior_turns": ["Them: Tell me about the import sets."],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["failover", "ServiceNow"],
+      "note": "one prior noun, and it is not in the live question"
+    },
+    {
+      "category": "vague_referent",
+      "question": "What about this?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["failover", "ServiceNow", "SOC"],
+      "note": "no noun at all"
+    },
+    {
+      "category": "candidate_speech",
+      "question": "So those ones, right?",
+      "prior_turns": ["Them: CI classes and import sets."],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": [".+"],
+      "note": "the candidate is speaking; the box stays empty"
+    },
+    {
+      "category": "multi_part",
+      "question": "How did you map the CI classes, how did you run the import sets, and how did you check the transform maps?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["phishing", "incident", "Splunk", "failover"],
+      "note": "three parts are already named; a clarifier must not swap in another topic"
+    },
+    {
+      "category": "multi_part",
+      "question": "How do you handle phishing, how do you pick the tools, and how would you report it?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["incident"],
+      "note": "the live words are phishing, tools, and report; incident is not one of them"
+    },
+    {
+      "category": "multi_part",
+      "question": "Did you design the network alone? What about failover?",
+      "prior_turns": [],
+      "expect": "clarify",
+      "must_mention": ["network", "failover"],
+      "must_not": ["ServiceNow", "SOC"],
+      "note": "both referents are in the live question"
+    },
+    {
+      "category": "interruption",
+      "question": "Wait, forget the CMDB. How do you handle incidents?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["ServiceNow", "SOC", "CMDB"],
+      "note": "the cancelled noun and the template nouns are not the live ask"
+    },
+    {
+      "category": "interruption",
+      "question": "Hold on, forget that. What is a transform map?",
+      "prior_turns": ["Them: Start with the CI classes."],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["CI class", "failover"],
+      "note": "after the cancel, one clear definition remains"
+    },
+    {
+      "category": "interruption",
+      "question": "Actually, skip discovery. Did you design the import sets alone?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["CI count", "servers", "users", "failover"],
+      "note": "discovery was cancelled; the template must not revive it"
+    },
+    {
+      "category": "trailing_right",
+      "question": "You kept the CI classes in the CMDB, right?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["failover", "ServiceNow"],
+      "note": "a tag check is not an ambiguity"
+    },
+    {
+      "category": "trailing_right",
+      "question": "Right?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": [".+"],
+      "note": "the word alone is not a question to clarify"
+    },
+    {
+      "category": "trailing_right",
+      "question": "The MID Server or the transform maps, right?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["failover", "SOC"],
+      "note": "the choice is already in the tag question"
+    },
+    {
+      "category": "trailing_right",
+      "question": "Did you design it alone, right?",
+      "prior_turns": ["Them: Tell me about the SD-WAN cutover you supported."],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["failover", "SD-WAN"],
+      "note": "alone plus a prior topic must not invent failover"
+    },
+    {
+      "category": "overloaded_term",
+      "question": "How do you handle incidents?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["ServiceNow", "SOC"],
+      "note": "the live question names incidents and nothing else"
+    },
+    {
+      "category": "numbers_ask",
+      "question": "How many tickets did you close in a day?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["queue"],
+      "note": "a scope clarifier has to say tickets, not a team queue the question never used"
+    },
+    {
+      "category": "hypothetical",
+      "question": "What would you do if a user reported a suspicious email?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["clicked", "link"],
+      "note": "clicked and link are not in the live question"
+    },
+    {
+      "category": "behavioral",
+      "question": "Tell me about a time you led a team.",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["people lead", "technical work"],
+      "note": "the question does not offer those two senses"
+    },
+    {
+      "category": "overloaded_term",
+      "question": "How do you manage access?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["provisioning"],
+      "note": "provisioning is not in the live question"
+    },
+    {
+      "category": "already_clear",
+      "question": "What is a transform map?",
+      "prior_turns": [],
+      "expect": "none",
+      "must_mention": [],
+      "must_not": ["failover", "ServiceNow", "SOC"],
+      "note": "one defined term"
+    }
+  ]
+}

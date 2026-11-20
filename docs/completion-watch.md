@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Brain ops notes, not a product change
+
+PR #467 was still open, draft, and conflicting at head `f5df791c` when these notes were written. Do not merge it from this record. Do not add a ship marker. The notes are on `cursor/kompas-brain-ops`: answer folds, a 20-case clarifier file (11/20 against that head; the old 47 still pass), research, and five pre-live risks. No Kompas runtime file was edited. No live listen.
+
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
 
 The resume baseline on live 1c6c1622 (Length=Long, Senior SOC Analyst, Architect + Developer) is now in the same consistency pull request. Length was ignored because the live request hardcoded balanced. A reports answer was replaced by a shorter ServiceNow sentence. SOC answers closed on ITIL. The incident card was the six-word confirm stub. Typed questions still showed "Context shows up with the next answer." The session length is now what the request sends. A late replace keeps a longer on-topic stream. Off-topic platform sentences are dropped. The confirm stub is not served, shown, or returned by the fast path. The right panel paints Say this or nothing. No ship marker. Do not merge. Do not poll production.

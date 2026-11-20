@@ -1,3 +1,9 @@
+## 2026-11-20 — Brain notes only: answer folds, 20 clarifier cases, PR #467 risks (no UI change)
+
+Docs and an offline clarifier file. No answer-path edit, no clarifier edit, no merge, no ship. PR #467 was still open at head `f5df791c` (draft, conflicting). Existing clarifier fixtures on that head: 47/47. New adversarial file: 11/20. The nine fails return a clarifier whose nouns are not in the live question. Visible UI: nothing changed.
+
+**Checked offline against the PR head. Not a live listen-through.**
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.

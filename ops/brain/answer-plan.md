@@ -1,0 +1,28 @@
+# Answer plan — next folds
+
+Read on master `2da44026`: `masterPromptBlock` in `src/lib/kompasMasterPrompt.ts`, `lengthPlan` in `src/lib/kompasAnswer.ts`, `visibleLengthBand` in `src/lib/kompasDissection.ts`, `POST` in `src/app/api/kompas/answer/route.ts` (it only calls `answerForVerifiedUser`), and the system string built in `answerForVerifiedUser` (`src/lib/kompasAnswerService.ts`). Voice text is `naturalNarrationGuidance` (`src/lib/kompasNaturalNarration.ts`) and `SPOKEN_STYLE_PROMPT` (`src/lib/kompasSpokenStyle.ts`).
+
+PR #467 is not on this branch. Its unmerged head `f5df791c` adds `answerRoute`, `shapeDisplayedAnswer`, `technicalThesis`, `jdGapBridge`, and `levelAwareBand`. The folds below assume that head is the code Chief will touch. Do not redo those functions from scratch.
+
+Baseline. The comment above `PK_WORDS` says those medians come from Parakeet. Parakeet is the slow, misfiring baseline (about 7 s, and it lifts claims the candidate just said). Kompas is about 1 s. Long means 120–180 words, first person, a little feeling and curiosity, a story that lands, and a gap said as “less hands-on with X; my Y transfers because…”. No new employers, tools, stories, or numbers. Houston resume only (`eshwarjay05`).
+
+Rank is impact ÷ cost. Cost is the size of the edit and the tests it shakes, not calendar time.
+
+| # | Ratio | Fold | Change |
+|---|---|---|---|
+| 1 | 5 | Do not speak the thesis stub | `technicalThesis` (`kompasConsistency.ts`) returns “Discovery is what this question is about.” and “How do you keep import sets accurate comes down to one point.” `streamAnswer` in `kompasAnswerService.ts` shows that string before the model. Replace it with the first real sentence, or show nothing until that sentence exists. |
+| 2 | 5 | One grammatical gap clause | `jdGapBridge` pastes the raw bullet: “I've had less direct hands-on with Splunk; my Configuration Management: setting up… transfers because it is the same kind of work.” Emit “I've had less hands-on with X; my Y transfers because…” where Y is a short noun already in one resume line. |
+| 3 | 4 | No sliced padding | `extendFromResume` appends a word-slice of a resume line to hit the floor. Keep whole sentences only. Under the floor, leave the short honest answer. |
+| 4 | 4 | Story lands, then stops | Story shape: the point, what he did, why, one number that is already in the resume. `shapeDisplayedAnswer` still adds `jdGapBridge` whenever `route !== "short"`. Do not add the bridge on `route === "story"`. |
+| 5 | 2.5 | Clarifier from the live question only | `clarifyingFromQuestion` and `templateFor` (`scopeLine`, `overloadedLine`, `numberLine`, `multiLine`, `hypotheticalLine`) insert failover, ServiceNow, SOC, a team queue, “clicked the link”. If both options are not spans of the live question, return `[]`. Adversarial run: 11/20. |
+| 6 | 2.5 | A finished “right?” is still a question | `lexicalTurn` (`public/kompas/vad-loader.mjs`) returns `wait` for `/right?$/`, so smart-turn never runs. `scheduleAuto` and `scheduleUnsure` (`public/kompas/app.js`) return before the pause. Fire when the words before “right?” are already an ask; otherwise return `unsure` and let smart-turn decide. |
+| 7 | 2.5 | Do not wait forever on Silero | `themQuietNow` returns 0 while `__kompasSileroLive` is set and `__kompasVadEndedAt` is 0. `maybeLoadSilero` points MicVAD at the system stream. If `onSpeechEnd` never runs, Auto never fires. After the 700 ms lexical pause, fall back to the RMS clock. |
+| 8 | 2 | Firewall must not blank the card | Probe on the CI-class snippet: a `You:` line that shares a 3-gram with the answer, plus a tool token the snippet does not contain. `dropCandidateOnly` returned `""`. `candidateLines` also treats a Them line that contains “I” as the candidate. Match `You:` lines and a tool token, not every 3-gram. |
+| 9 | 2 | Long is 120–180, including stories | `lengthPlan` multiplies story 182 by `LEN_MULT.long` 1.3 (about 237) before any gate. `levelAwareBand(..., "long")` on a “tell me about a time” question returned floor 150, aim 360, ceiling 360. Cap that ceiling at 180. Pass `answerRoute`’s floor and ceiling into the user prompt from `answerForVerifiedUser`. |
+| 10 | 2 | Say the example, do not label it | `shapeDisplayedAnswer` writes `Example:` plus the first resume line, then “I did ” plus that line. Speak “For example,” and one sentence, using `asFact`. One first-person line, not a worksheet. |
+| 11 | 1.5 | One spoken prompt | `MASTER_PROMPT_TEXT` still says the card is Script + bullets and that sentence one is a bullet. `naturalNarrationGuidance` says the opposite. `masterPromptBlock` should be the spoken rules; the card layout stays after the guards. |
+| 12 | 1.5 | Feeling only when the source has the stake | In `naturalNarrationGuidance`, `KIND.experience` and the engineer `AUDIENCE` may allow one feeling or one curious beat. `naturalNarrationFlags` flags a feeling word that is not in the resume or the question. The design offer (“Want me to go deeper…”) stays inside `KIND.design`. |
+| 13 | 1.5 | Stay on the tool they named | `focusOnAskedTool` only matches “how does X work”. Use the same keep-or-drop for any tool token in the question, so a later sentence cannot wander off to an earlier topic. |
+| 14 | 1.5 | Show the band the model was given | `visibleLengthBand` and `lengthPlan` disagree (a definition ceiling of 50 versus a concept cap of 170). The user message in `answerForVerifiedUser` should quote one floor, one aim, and one ceiling from `answerRoute` or `levelAwareBand`, not a second table. |
+
+Not a fold: do not add employers, metrics, or a Saint Louis line to make a story land. If the Houston resume has no number for that question, the story has no number.
