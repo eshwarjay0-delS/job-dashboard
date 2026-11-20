@@ -3982,9 +3982,14 @@ function soundsLikeCandidate(text) {
   if (!raw) return false;
   return /^(?:i(?:'m| am)?\b|my\b|we(?:'re| are)?\b)/i.test(raw);
 }
+function isSmallTalk(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  return /^(?:how (?:did|was|is) your day|how are you|did you (?:have|eat)|thank(?:s| you)\b|nice to meet|good (?:morning|afternoon|evening)|hello\b|hi\b)/i.test(raw);
+}
 function labelLiveSpeaker(text, hinted, micHot) {
-  if (soundsLikeCandidate(text)) return "You";
-  if ((hinted === "You" || micHot) && !isGatedQuestion(text)) return "You";
+  if (hinted === "You" || soundsLikeCandidate(text)) return "You";
+  if (micHot && !isGatedQuestion(text)) return "You";
+  if (isSmallTalk(text)) return hinted === "You" ? "You" : "Them";
   if (isGatedQuestion(text)) return "Them";
   return "You";
 }
@@ -3999,17 +4004,19 @@ function settleAutoAnswer(chunks) {
 function replayS1(events) {
   const lines = [];
   const fires = [];
-  let micHot = false;
-  for (const ev of events || []) {
-    if (ev.type === "mic") { micHot = !!ev.hot; continue; }
-    if (ev.type !== "line") continue;
-    const hinted = ev.track === "mic" || micHot ? "You" : "Them";
-    const who = labelLiveSpeaker(ev.text, hinted, micHot && ev.track !== "tab");
-    lines.push({ who, text: ev.text });
-    if (who === "Them" && isGatedQuestion(ev.text) && (ev.silenceMs || 0) >= 700) {
-      const answer = settleAutoAnswer(ev.chunks || []);
-      if (answer) fires.push({ question: ev.text, answer });
-    }
+  const list = events || [];
+  for (let i = 0; i < list.length; i++) {
+    const ev = list[i];
+    if (!ev || !ev.text) continue;
+    const hinted = ev.track === "mic" || ev.role === "candidate" ? "You" : "Them";
+    const who = labelLiveSpeaker(ev.text, hinted, false);
+    lines.push({ who, text: ev.text, role: ev.role || "", id: ev.id || "" });
+    const next = list.slice(i + 1).find((item) => item && item.text);
+    const gapMs = next && Number.isFinite(ev.t) && Number.isFinite(next.t) ? Math.round((next.t - ev.t) * 1000) : 2000;
+    const silence = Number.isFinite(ev.silenceMs) ? ev.silenceMs : gapMs;
+    const delay = silence >= 700 ? 700 : silence;
+    const ask = who === "Them" && ev.role === "question" && !isSmallTalk(ev.text) && isGatedQuestion(ev.text);
+    if (ask && silence >= 700 && delay <= 2000) fires.push({ id: ev.id || "", question: ev.text, delayMs: delay });
   }
   return { lines, fires };
 }

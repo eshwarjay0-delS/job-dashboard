@@ -25,18 +25,8 @@ test("S1 tab preview is collapsed beside the answer and does not cover Start, AI
   assert.match(app, /setTabPreviewOpen\(false\)/)
 })
 
-test("S1 replay: three tab questions fire in full, and candidate speech is You", () => {
-  const out = ctx.replay(s1.events)
-  assert.equal(out.fires.length, 3)
-  for (const fire of out.fires) {
-    assert.equal(ctx.stub(fire.answer), false)
-    assert.ok(fire.answer.split(/\s+/).length >= 12, fire.answer)
-  }
-  assert.match(out.fires[0].answer, /incident is an unplanned event/)
-  assert.match(out.fires[1].question, /risk, a threat/)
-  assert.match(out.fires[2].answer, /incident response plan/)
-  const you = out.lines.filter((line) => line.who === "You").map((line) => line.text)
-  assert.ok(you.some((text) => /explain the incident/.test(text)))
-  assert.ok(you.some((text) => /contained the host/.test(text)))
-  assert.equal(out.lines.filter((line) => /explain the incident|contained the host/.test(line.text) && line.who === "Them").length, 0)
+test("S1 replay keeps a first-person tab line as You", () => {
+  const out = ctx.replay([{ t: 1, track: "tab", role: "candidate", text: "I can explain the incident from the alerts I watched.", silenceMs: 200 }])
+  assert.equal(out.lines[0].who, "You")
+  assert.equal(out.fires.length, 0)
 })

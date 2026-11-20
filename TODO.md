@@ -1,6 +1,6 @@
 ## 2026-11-20 — S1 live: tab preview, Auto on tab audio, speaker split (no ship)
 
-The shared-tab panel is collapsed beside the answer until Tab is pressed, so it does not cover Start, AI Answer, or More. Auto on a tab question keeps the full streamed sentence and drops the confirm stub. A first-person line on the tab track is You, including while the mic is hot. Replay: scripts/fixtures/s1-taskmaster-replay.json.
+The shared-tab panel is collapsed beside the answer until Tab is pressed, so it does not cover Start, AI Answer, or More. Auto on a tab question keeps the full streamed sentence and drops the confirm stub. A first-person line on the tab track is You, including while the mic is hot. Acceptance replay: scripts/fixtures/replay-s1.json (XQC_t7uplBo, 0:00–5:44, q1–q5).
 
 **Visible in a live session: the Tab button and the docked preview. Not a live listen-through.**
 

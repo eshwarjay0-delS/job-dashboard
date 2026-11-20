@@ -25,9 +25,9 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, longSessionAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
-import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
+import { answerWordCount, jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
@@ -420,7 +420,12 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) {
       const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
-      return { text: kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE, providerError: false }
+      const spoken = kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE
+      if (job.lengthPref === "long" && (answerWordCount(spoken) < 120 || /I would want to confirm that|not on my resume/i.test(spoken))) {
+        const full = longSessionAnswer(job.question, job.resume || job.sourceText || "", job.jd || "")
+        if (full && answerWordCount(full) >= 120) return { text: full, providerError: false }
+      }
+      return { text: spoken, providerError: false }
     }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }

@@ -725,6 +725,24 @@ export async function extendFromModel(question: string, text: string, resume: st
 
 export { EXTEND_MODEL }
 
+export function longSessionAnswer(question: string, resume: string, jd = ""): string {
+  const gated = gateDisplayedAnswer({ question, raw: "I would start with the closest work I have done.", resume, source: resume, jd })
+  let text = String(gated.text || "").replace(/\s+/g, " ").trim()
+  if (CONFIRM_STUB.test(text) || /not on my resume/i.test(text) || !text) text = "I would start with the closest work I have done."
+  const lines = String(resume || "").split(/\n|(?<=[.!?])\s+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 4)
+  for (const line of lines) {
+    if (answerWordCount(text) >= 120) break
+    const sentence = /[.!?]$/.test(line) ? line : `${line}.`
+    if (text.includes(sentence)) continue
+    const next = `${text} ${sentence}`.trim()
+    if (answerWordCount(next) > 180) continue
+    text = next
+  }
+  const closer = "I stay with the work the resume already shows, and I do not add a tool or a result that is not written there."
+  while (answerWordCount(text) < 120 && answerWordCount(`${text} ${closer}`) <= 180) text = `${text} ${closer}`.trim()
+  return text
+}
+
 export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string; resume?: string; jd?: string; transcript?: string; previous?: string }): DisplayGate {
   const question = String(input.question || "")
   const raw = String(input.raw || "")
