@@ -1,3 +1,9 @@
+## 2026-11-20 — Length follows the level, and the clarifier stays off the model (visible: word band on the left card, Say this on the right)
+
+A long story may reach about 180 words and stops at the band ceiling. Director and architect floors sit under that level's ceiling. The right panel asks a clarifying question only when the live question is ambiguous, on the same epoch as the left answer, and shows nothing when it is not. Auto shows Checking, then Question detected. A real question card starts with Question:. Skip-login was not edited. Not on production until this branch ships.
+
+**Checked locally on the length, gold, and brain tests. Not a live model call.**
+
 ## 2026-11-20 — Long answers stay long, and a SOC question does not close on ServiceNow (visible on the left card and the Say this panel)
 
 The live request now sends the session's Length. Long asks for the word band, including the auto introduction, and one sentence is not treated as finished. A later settle does not replace a longer on-topic stream with a shorter one, and it does not put "I would want to confirm that" on the card. A SOC question drops ServiceNow or ITIL sentences that do not answer it. A typed question paints Say this, or leaves the right panel empty. The placeholder "Context shows up with the next answer" is gone. Skip-login was not edited. This is not on production until a later ship.

@@ -25,7 +25,7 @@ const folds = [
   ["mechanism","Explain how logging actually proves the control operated"],
 ] 
 test("Natural narration respects every source category and doesn't privilege one BNY question",()=>{
-  assert.equal(NATURAL_NARRATION_VERSION,"kompas-workbench-v4")
+  assert.equal(NATURAL_NARRATION_VERSION,"kompas-workbench-v5")
   assert.equal(folds.length,50)
   for(const [shape,q] of folds){
     assert.equal(naturalAnswerShape(q),shape,q)

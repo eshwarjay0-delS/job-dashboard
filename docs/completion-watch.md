@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Length and clarifier after #460
+
+#460 is merged as be2e12d7 and production READY on dpl_2ZtjR8LdyJqZJabkFvDhk9K7aws8. /kompas/version.json shows that SHA. /api/health was 200. /login was 307 to /dashboard. /api/admin/overview was 401. The next slice keeps the #460 bands, caps a long story at 180 words on screen, and replaces the canned clarifier with a no-model line tied to the live question epoch. Done, used, howto, and go-deeper design-later routing stay. No second production check until this branch ships.
+
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
 
 The resume baseline on live 1c6c1622 (Length=Long, Senior SOC Analyst, Architect + Developer) is now in the same consistency pull request. Length was ignored because the live request hardcoded balanced. A reports answer was replaced by a shorter ServiceNow sentence. SOC answers closed on ITIL. The incident card was the six-word confirm stub. Typed questions still showed "Context shows up with the next answer." The session length is now what the request sends. A late replace keeps a longer on-topic stream. Off-topic platform sentences are dropped. The confirm stub is not served, shown, or returned by the fast path. The right panel paints Say this or nothing. No ship marker. Do not merge. Do not poll production.

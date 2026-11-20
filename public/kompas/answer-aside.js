@@ -469,12 +469,14 @@
   }
   function paintLocal() {
     var aside = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
+    if (typeof window.__kompasAskEpoch === "number") aside.epoch = window.__kompasAskEpoch;
     if (!aside.partial && !aside.breakdown.claim && !aside.question) return;
     if (!pageResume() && aside.question) aside.sayNow = aside.sayNow || "I don't have a resume on this device, so I won't invent a story. I can answer from the job description.";
     acceptFresh(aside);
   }
   function acceptFresh(aside) {
     if (!aside || !aside.context || !Array.isArray(aside.context.leads) || !Array.isArray(aside.questions)) return;
+    if (aside.epoch != null && typeof window.__kompasAskEpoch === "number" && aside.epoch !== window.__kompasAskEpoch) return;
     var key = stem(aside.question);
     var last = history[history.length - 1];
     if (last && stem(last.question) === key) {
@@ -531,6 +533,7 @@
 
   function accept(aside) {
     if (!aside || !aside.context || !Array.isArray(aside.context.leads) || !Array.isArray(aside.questions)) return;
+    if (aside.epoch != null && typeof window.__kompasAskEpoch === "number" && aside.epoch !== window.__kompasAskEpoch) return;
     var key = stem(aside.question);
     byQuestion.push({ key: key, aside: aside });
     if (byQuestion.length > 8) byQuestion.shift();
