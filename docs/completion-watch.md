@@ -1,3 +1,20 @@
+## 20 November 2026 — Resume confirmed-skill restack and new review regressions
+
+Continue: exact-head remote validation of the current-master resume alignment slice. The new branch `fix/resume-confirmed-skill-current-master-restack-20261120-1142z` starts at master `2da44026c0ab58ab2966b9371992efaf93427de4`, carries PR #466 source/test changes, and adds the Safe Merge Gate review regressions for negative candidate statements and overly broad IAM/Python project context. The original PR #466 branch is preserved.
+
+- Owner-approved rule: a positive candidate assertion or clearly labelled `Confirmed skills:` / `Confirmed experience:` may support only the named skill, mapped to relevant existing projects across roles; JD-only wording, questions, negations and formatting requests do not prove experience.
+- Negative cases added: `My background lacks AWS`, `My skills don't include Splunk`, `My experience includes no Okta`, plus labelled negative statements. Positive contrast keeps only the positive clause.
+- Context cases added: generic user/security wording alone must not transfer IAM; generic data/service wording alone must not transfer Python. Specific identity/access/MFA and automation/API/ETL context remain positive.
+- Current master to #466 base comparison showed only documentation and Kompas changes after that base; the carried resume source/test files were disjoint. The original #466 branch was not rewritten.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA remain pending on the final current-master branch. Local clone/test is unavailable because GitHub DNS fails in this sandbox. No source resume/JD, model generation, exported DOCX or 98% live match was tested.
+- Keep the PR draft; the Vercel protected-preview path still requires the private owner-controlled token and must not be bypassed.
+
+### WhatsApp fallback review finding
+
+PR #450's path-equality and same-email checks do not prove the user explicitly selected that Library resume: `pickAndMake` can populate `files.abs` from the automatic `chooseResume` match. The latest owner correction requires explicit selection, not merely a same-account automatic closest match. Preserve normal initial selection; do not merge the fallback branch until selection provenance is captured and regression-tested. This is a source-level gap, not proof of the 17 Oct incident root cause.
+
+Continue: complete exact-head remote gates for the current-master resume restack, then let MFit Safe Merge Gate sequence it. Keep the WhatsApp fallback provenance gap visible without duplicating the active #450/#453 branch work.
+
 # MFit Completion Watch
 
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
