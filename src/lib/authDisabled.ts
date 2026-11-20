@@ -114,8 +114,20 @@ export function disabledOwnerAsUser(env: Env = process.env) {
 function ownerSession(env: Env = process.env) {
   const user = disabledOwnerAsUser(env)
   const expiresAt = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60
+  // supabase-js sends session.access_token as the Bearer token on every
+  // PostgREST request (fetchWithAuth -> _getAccessToken -> auth.getSession).
+  // The literal "auth-disabled" is neither a JWT nor a publishable key, so
+  // PostgREST rejected every data read with PGRST301 401 ("Expected 3 parts
+  // in JWT; got 1") — that is what took the Gmail accounts page down
+  // (GET /api/connections/status -> 503, 0/4 accounts, WhatsApp unknown),
+  // even though the Google connection itself was fine. The anon/publishable
+  // key is the correct no-real-session token: the gateway accepts it as
+  // role anon. Fall back to the literal only when Supabase isn't configured
+  // at all (demo mode: the stub client never hits the network, so the token
+  // is never sent).
+  const accessToken = String(env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim() || "auth-disabled"
   return {
-    access_token: "auth-disabled",
+    access_token: accessToken,
     refresh_token: "auth-disabled",
     token_type: "bearer",
     expires_in: 365 * 24 * 60 * 60,
