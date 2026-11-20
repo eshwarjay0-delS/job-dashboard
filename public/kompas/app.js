@@ -3973,8 +3973,8 @@ function themQuietNow() {
 function scheduleUnsure() {
   const lines = pendingHeard().filter(t => t.who === "Them" && (!captureStartedAt || t.at >= captureStartedAt));
   const tail = lines.length ? lines[lines.length - 1].text : "";
-  if (!tail || /right\?\s*$/i.test(tail)) return;
-  autoTimer = setTimeout(() => { void resolveUnsure(tail); }, QUESTION_PAUSE_MS);
+  if (!tail) return;
+  autoTimer = setTimeout(() => { void resolveUnsure(tail); }, /right\?\s*$/i.test(tail) ? 1400 : QUESTION_PAUSE_MS);
 }
 async function resolveUnsure(tail) {
   if (!autoOn || armsAuto()) return;
@@ -4006,7 +4006,7 @@ function scheduleAuto() {
     const themQuietMs = themQuietNow();
     const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
     const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
-    if (/right\?\s*$/i.test(tail)) return;
+    if (/right\?\s*$/i.test(tail) && (themQuietMs || 0) < 1400) { autoTimer = setTimeout(fire, 1400 - (themQuietMs || 0)); return; }
     if ((themQuietMs || 0) < QUESTION_PAUSE_MS) { autoTimer = setTimeout(fire, QUESTION_PAUSE_MS - (themQuietMs || 0)); return; }
     const confirmed = confirmAutoQuestion(tail).ok;
     const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });

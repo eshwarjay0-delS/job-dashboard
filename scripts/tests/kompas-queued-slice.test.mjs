@@ -12,8 +12,9 @@ const GOLD = [["a", 125, 90, 180], ["b", 152, 70, 160], ["c", 77, 75, 125], ["h"
 test("long stories pass 300, floors stay under the ceiling, gold lengths hold", () => {
   for (let fold = 0; fold < 20; fold++) {
     const story = levelAwareBand("Tell me about a time you led an incident.", "architect", "long")
-    assert.ok(story.ceiling > 300)
-    assert.ok(story.aim > 300)
+    assert.equal(story.ceiling, 180)
+    assert.equal(story.aim, 150)
+    assert.equal(story.floor, 120)
     assert.ok(story.floor < story.ceiling)
     const follow = levelAwareBand("How did you verify that?", "director", "balanced")
     assert.ok(follow.ceiling > follow.floor)

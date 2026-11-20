@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Review blockers, not shipped
+
+Streamed thesis is a spoken sentence. Long is 120–180 in one call. A trailing right? does not fire before 1.4 seconds. Adversarial clarifier 20/20 and the original 47/47. The CMDB sentence is kept. No ship marker.
+
 ## 20 November 2026 — Thesis first, not shipped
 
 A technical answer is a thesis, how it works, one Example, and one resume line. The thesis streams first. Candidate-only tools and practices are dropped. How-does-this-tool stays on that tool. No ship marker.

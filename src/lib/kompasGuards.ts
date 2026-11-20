@@ -559,10 +559,11 @@ export function resumeToolLexicon(resume: string): Set<string> {
 export function sentenceUsesUnknownTool(sentence: string, resume: string): boolean {
   const lex = resumeToolLexicon(resume)
   const bag = String(resume || "").toLowerCase()
+  if (/less direct hands-on with/i.test(sentence)) return false
   const names = String(sentence || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
   return names.some((name) => {
-    const token = name.toLowerCase()
-    if (TOOL_STOP.has(token)) return false
+    const token = name.replace(/\.+$/g, "").toLowerCase()
+    if (!token || TOOL_STOP.has(token)) return false
     return !lex.has(token) && !bag.includes(token)
   })
 }

@@ -8,6 +8,7 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
+export type { AnswerLevel }
 import { repairDictation } from "./kompasDictation.ts"
 import { dropUngroundedLogistics, ungroundedLogisticsSentences } from "./kompasLogisticsPhrases.ts"
 
@@ -210,7 +211,7 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
     case "value": return "opener"
     case "personal-experience": return "star"
     case "scenario": return "follow-up"
-    case "technical-deep-dive": return "follow-up"
+    case "technical-deep-dive": return "design-later"
     case "logistics":
     case "acknowledgement":
     case "closing": return "yes-no"
@@ -259,17 +260,14 @@ export function levelAwareBand(question: string, level: AnswerLevel = "engineer"
   const kind = lengthKind(question, dissectQuestion(question).shape)
   const levelCeiling = QUESTION_LENGTH[kind][level].ceiling
   const longStory = length === "long" && (kind === "star" || /\btell me about a time\b/i.test(question))
-  let ceiling = longStory ? Math.max(band.ceiling, 360) : Math.min(band.ceiling, level === "engineer" ? band.ceiling : Math.max(levelCeiling, FOLLOW_UP_FLOOR + 1))
-  if (!longStory && (level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
+  if (length === "long") return { type: longStory ? "story" : band.type, floor: 120, aim: 150, ceiling: 180 }
+  let ceiling = Math.min(band.ceiling, level === "engineer" ? band.ceiling : Math.max(levelCeiling, FOLLOW_UP_FLOOR + 1))
+  if ((level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
     ceiling = Math.min(band.ceiling, FOLLOW_UP_FLOOR + 1)
   }
-  let floor = longStory ? 150 : Math.min(band.floor, Math.max(8, ceiling - 1))
-  if (length === "long" && !longStory) {
-    ceiling = Math.max(ceiling, 160)
-    floor = Math.max(floor, 120)
-  }
-  const aim = longStory ? Math.max(150, Math.min(ceiling, 360)) : Math.min(Math.max(band.aim, floor), ceiling)
-  return { type: longStory ? "story" : band.type, floor, aim, ceiling }
+  const floor = Math.min(band.floor, Math.max(8, ceiling - 1))
+  const aim = Math.min(Math.max(band.aim, floor), ceiling)
+  return { type: band.type, floor, aim, ceiling }
 }
 
 function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand {

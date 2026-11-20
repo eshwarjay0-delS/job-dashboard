@@ -33,7 +33,12 @@ export function smartTurnEnabled(flag = globalThis.KOMPAS_SMART_TURN) {
 export function lexicalTurn(text, pauseMs) {
   const raw = String(text || "").replace(/\s+/g, " ").trim()
   if (!Number.isFinite(pauseMs) || pauseMs < QUESTION_PAUSE_MS) return "wait"
-  if (/right\?\s*$/i.test(raw)) return "wait"
+  if (/right\?\s*$/i.test(raw)) {
+    if (pauseMs < 1400) return "wait"
+    const stem = raw.replace(/,?\s*right\?\s*$/i, "").trim()
+    if (stem.split(/\s+/).filter(Boolean).length < 3) return "wait"
+    return "fire"
+  }
   const words = raw.split(/\s+/).filter(Boolean)
   if (words.length < 4) return "wait"
   if (/^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there)\b/i.test(raw)) return "wait"

@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, extendFromModel, EXTEND_MODEL, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -403,12 +403,7 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
 async function finishSpoken(job: AnswerJob, text: string): Promise<{ text: string; providerError: boolean }> {
   const settled = spokenAfterModel(job, text)
   if (settled.providerError || !settled.text.trim() || !job.orKey) return settled
-  if (settled.text.trim().split(/\s+/).length >= answerRoute(job.question).floor) return settled
-  const more = await extendFromModel(job.question, settled.text, job.resume || "", job.jd || "", async (prompt) => {
-    const out = await fetchOpenRouter(job.orKey || "", EXTEND_MODEL, "Use only the resume facts. Add no new employer, tool, or number.", prompt, 500, AbortSignal.timeout(20000))
-    return out.text
-  })
-  return { text: more, providerError: false }
+  return settled
 }
 
 function spokenAfterModel(job: AnswerJob, text: string): { text: string; providerError: boolean } {
@@ -1084,8 +1079,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const band = spokenCut.modes[spokenLevel] || modeBand(spokenShape, spokenLevel)
     const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
     plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
-    if (cardControls.length === "long") plan.words = Math.min(300, Math.round(plan.words * 1.5))
-    if (cardControls.length === "long" && levelAwareBand(question, spokenLevel, "long").type === "story") plan.words = levelAwareBand(question, spokenLevel, "long").aim
+    if (cardControls.length === "long") plan.words = 150
     else if (cardControls.length === "short") plan.words = Math.max(16, Math.round(plan.words * 0.65))
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))

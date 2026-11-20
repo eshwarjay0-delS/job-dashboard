@@ -1,3 +1,9 @@
+## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
+
+The streamed first sentence is a real answer, not a label. Length Long is one 120–180 word call. A question ending in "right?" waits until 1.4 seconds, so it does not fire early. The 20 adversarial clarifier cases pass, and the original 47 still pass. "I maintained the CMDB." stays. No ship marker.
+
+**Checked offline. Not a live listen-through.**
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.

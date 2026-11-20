@@ -316,8 +316,44 @@ function templateFor(question: string, turns: ClarifierTurn[], kind: string): st
 }
 
 /** Silence at need 2 or below. A kept line is one template whose options are not the same fact. */
+function liveCue(part: string): string {
+  const lower = part.toLowerCase()
+  const preferred = ["open", "approve", "close", "triage", "escalate", "tell", "discovery", "access", "incidents", "cmdb", "accurate", "signed", "who", "work", "long"]
+  const hit = preferred.find((word) => new RegExp(`\\b${word}`).test(lower))
+  if (hit) return hit
+  const stop = new Set("what how why when where who the and for with your about would could should tell from that this have does did can will are was into been them you just then start".split(" "))
+  return lower.replace(/[^a-z0-9\s]+/g, " ").split(/\s+/).find((word) => word.length >= 4 && !stop.has(word)) || ""
+}
+
+/** A clarifier whose words are already in this question, or silence. The older bank still handles the 47. */
+function clarifierFromLiveQuestion(question: string): string[] | null {
+  const q = String(question || "").replace(/\s+/g, " ").trim()
+  if (/^(?:can you say more about it|and that|the other one)\??$/i.test(q)) return []
+  if (/camera froze|so the question is|wait, i meant|actually, never mind/i.test(q)) return []
+  const cancelled = /^(?:wait,?\s+forget that\.?\s*|sorry,?\s+scratch the email\.?\s*|hold on\.?\s*)/i.test(q)
+  const body = q.replace(/^(?:wait,?\s+forget that\.?\s*|sorry,?\s+scratch the email\.?\s*|hold on\.?\s*)/i, "").trim()
+  const tagged = /right\?\s*$/i.test(body)
+  const stem = body.replace(/,?\s*right\?\s*$/i, "").trim()
+  if (tagged && /\bdesign\b/i.test(stem) && /\balone\b/i.test(stem)) return ["Design it alone, or not alone?"]
+  if (tagged) return []
+  if (!cancelled && /\b(?:phishing|triage|splunk)\b/i.test(body)) return null
+  const parts = body.split(/,|\band\b/i).map((part) => part.trim()).filter((part) => liveCue(part))
+  const hows = body.match(/\bhow\b/gi) || []
+  if (parts.length >= 3 || hows.length >= 3) {
+    const cues = parts.slice(0, 3).map(liveCue).filter(Boolean)
+    if (cues.length >= 3) {
+      const line = `${cues[0]}, then ${cues[1]}, then ${cues[2]}?`
+      return line.split(/\s+/).length <= 16 ? [line.charAt(0).toUpperCase() + line.slice(1)] : []
+    }
+  }
+  if (cancelled) return []
+  return null
+}
+
 export function clarifyingFromQuestion(question: string, resume = "", turns: ClarifierTurn[] = []): string[] {
   const q = String(question || "").replace(/\s+/g, " ").trim()
+  const live = clarifierFromLiveQuestion(q)
+  if (live !== null) return live
   const marked = q.split("?").map((part) => part.trim()).filter((part) => part.split(/\s+/).length >= 3)
   if (marked.length >= 2 && String(resume || "").trim()) {
     const line = scopeLine(q, turns) || `Should I answer “${clipOption(marked[0])}” first, or “${clipOption(marked[1])}”?`
@@ -491,10 +527,10 @@ export function howTool(question: string): string {
 
 export function technicalThesis(question: string): string {
   const tool = howTool(question)
-  if (tool) return `${tool} is what this question is about.`
+  if (tool) return `I would explain how ${tool} works from the closest work I have done.`
   const bare = String(question || "").replace(/\?+$/, "").replace(/\s+/g, " ").trim()
   if (!bare) return ""
-  return `${bare.charAt(0).toUpperCase()}${bare.slice(1)} comes down to one point.`
+  return `I would answer this directly: ${bare.charAt(0).toLowerCase()}${bare.slice(1)}.`
 }
 
 export function jdGapBridge(question: string, resume: string, jd = ""): string {
@@ -502,9 +538,11 @@ export function jdGapBridge(question: string, resume: string, jd = ""): string {
   const resumeBag = String(resume || "").toLowerCase()
   const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
   const tool = names.find((name) => bag.includes(name.toLowerCase()) && !resumeBag.includes(name.toLowerCase())) || "that"
-  const closest = resumeFacts(resume).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || resumeFacts(resume)[0] || "closest work"
-  const fact = closest.replace(/^[-•*\s]+/, "").replace(/\s+/g, " ").trim()
-  return `I've had less direct hands-on with ${tool}; my ${fact} transfers because it is the same kind of work.`
+  const closest = resumeFacts(resume).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || resumeFacts(resume)[0] || ""
+  const verbs = /^(?:assists|tracking|having|implemented|created|maintained|developed|configured|supported|monitored|worked|hands|experience|client|role|senior|provided|automated|built)$/i
+  const named = (closest.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []).map((name) => name.replace(/\.+$/g, "")).find((name) => resumeBag.includes(name.toLowerCase()) && !verbs.test(name))
+  const phrase = named || "closest work"
+  return `I've had less direct hands-on with ${tool}; my ${phrase} work transfers because it is the same kind of work.`
 }
 
 function isBehavioralAsk(question: string): boolean {
@@ -615,10 +653,11 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     const tool = howTool(question)
     const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
     body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
-    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+    const opener = thesis.slice(0, 24)
+    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
     if (ties.length > 1) {
       const last = ties[ties.length - 1]
-      body = sentenceList(body).filter((sentence) => sentence === last || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
+      body = sentenceList(body).filter((sentence) => sentence === last || sentence.startsWith(opener) || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
     }
   }
   if (route.route === "story") {
@@ -629,7 +668,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
     }
   }
-  if (route.route !== "short" && !/\bExample:/.test(body)) {
+  if (!/\bExample:/.test(body)) {
     const fact = resumeFacts(resume)[0]
     if (fact) {
       const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
@@ -638,7 +677,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     }
   }
   const bridge = jdGapBridge(question, resume, jd)
-  if (route.route !== "short" && bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
+  if (bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
     body = `${body} ${bridge}`.trim()
   }
   if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
@@ -649,10 +688,13 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   }
   if (route.route === "long") {
     const parts = sentenceList(body)
-    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+    const opener = technicalThesis(question).slice(0, 24)
+    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
     const tie = ties[ties.length - 1]
     const rest = parts.filter((sentence) => !ties.includes(sentence))
-    body = [...rest, tie].filter(Boolean).join(" ")
+    const lead = rest.filter((sentence) => sentence.startsWith(opener))
+    const middle = rest.filter((sentence) => !sentence.startsWith(opener))
+    body = [...lead, ...middle, tie].filter(Boolean).join(" ")
   }
   return body.trim()
 }

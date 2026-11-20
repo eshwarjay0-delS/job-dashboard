@@ -52,6 +52,8 @@ test("a CDN failure keeps the lexical pause gate and shows no error", async () =
   try {
     assert.equal(lexicalTurn("What tools do you know in SIEM?", 800), "fire")
     assert.equal(lexicalTurn("You used Splunk, right?", 800), "wait")
+    assert.equal(lexicalTurn("You used Splunk, right?", 1400), "fire")
+    assert.equal(lexicalTurn("right?", 1400), "wait")
     assert.equal(lexicalTurn("The incident process you followed last quarter", 500), "wait")
     assert.equal(await runSmartTurnOrLexical({
       text: "The incident process you followed last quarter",

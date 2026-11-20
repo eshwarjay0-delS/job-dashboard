@@ -2,6 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { answerRoute, extendFromModel, gateDisplayedAnswer, jdGapBridge } from "../../src/lib/kompasConsistency.ts"
+import { dropUnknownToolSentences } from "../../src/lib/kompasGuards.ts"
 import { goldWordCount, loadGold } from "../../scripts/eval-gold.mjs"
 
 const gold = loadGold(readFileSync(new URL("../fixtures/brain-gold-answers.md", import.meta.url), "utf8"))
@@ -32,7 +33,8 @@ test("a short technical answer is extended and closes on a resume example", () =
     source: RESUME,
   })
   assert.ok(gated.words >= 120, `words ${gated.words}`)
-  assert.match(gated.text, /comes down to one point/)
+  assert.match(gated.text, /I would answer this directly/)
+  assert.doesNotMatch(gated.text, /comes down to one point|what this question is about/)
   assert.doesNotMatch(gated.text, /^Having\b|great question/i)
   if (gated.ceiling >= 120) assert.match(gated.text, /Example:/)
   const bullets = gated.text.split("\n").filter((line) => /^\s*[-•]/.test(line))
@@ -50,7 +52,13 @@ test("a JD-only tool is a hands-on bridge, not a stub", () => {
   assert.match(bridged.text, /I've had less direct hands-on with Splunk/)
   assert.match(bridged.text, /transfers because/)
   assert.doesNotMatch(bridged.text, /not on my resume|would want to confirm/)
-  assert.match(jdGapBridge("How do you use Splunk?", RESUME, "Splunk ES"), /less direct hands-on with Splunk/)
+  const bridge = jdGapBridge("How do you use Splunk?", RESUME, "Splunk ES")
+  assert.match(bridge, /less direct hands-on with Splunk/)
+  assert.doesNotMatch(bridge, /\.\s+transfers/)
+  assert.match(bridge, /work transfers because/)
+  const kept = dropUnknownToolSentences(`I maintained the CMDB. ${bridge}`, RESUME)
+  assert.match(kept, /I maintained the CMDB/)
+  assert.match(kept, /Splunk/)
 })
 
 test("the thesis sentence is streamed before the model", () => {
@@ -68,9 +76,9 @@ test("a technical answer is thesis, how it works, one example, and one resume li
     source: RESUME,
   })
   const sentences = gated.text.split(/(?<=[.!?])\s+/)
-  assert.match(sentences[0], /comes down to one point|phishing/i)
+  assert.match(sentences[0], /I would answer this directly|phishing/i)
   assert.match(gated.text, /Example:/)
-  const ties = sentences.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+  const ties = sentences.filter((sentence) => /^I did\b/.test(sentence))
   assert.equal(ties.length, 1)
   assert.match(gated.text, new RegExp(ties[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"))
 })
