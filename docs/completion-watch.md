@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet session 2, spoken misses
+
+Owner video log on draft PR #473. Two of five asks are hard fails: a fragment, and a question that never fired. Not the 10-question gate. No runtime edit. No ship marker.
+
 ## 20 November 2026 — Parity gate v1, not run
 
 Owner comment on draft PR #473. The ship bar is 10 typed-then-spoken questions on the Houston Fortinet resume. Not run. No runtime edit. No ship marker. Do not treat another listen as this gate.

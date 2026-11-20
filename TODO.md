@@ -1,3 +1,9 @@
+## 2026-11-20 — Parakeet session 2 misses spoken questions (no UI)
+
+Owner video log on PR #473. Five asks from a public mock interview, background tab, seeks. Two hard fails: a fragment answered as only the physical layer, and traceroute never fired. The answers that appeared are generic, not marked as invented claims. Not the 10-question gate. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
 ## 2026-11-20 — Parity gate v1 is the ship bar (no UI)
 
 Owner comment on PR #473. Ten fixed Fortinet questions, typed then spoken, Parakeet and Kompas. Pass needs 0 hard fails, honest bridges on questions 8–10, first words at or under 1.0 s on 8 of 10, and Long inside 120–180 on 9 of 10. The gate was not run. The Fortinet resume is still not in this checkout. No product code. Skip-login was not edited.

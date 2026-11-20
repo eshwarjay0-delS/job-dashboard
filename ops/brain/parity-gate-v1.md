@@ -42,6 +42,8 @@ Kompas has to match or beat that.
 
 Question 4 is not a pure mechanism. The earlier session note treated Parakeet's load-balancer answer as the pattern because it made no personal claim. This gate asks for the concept and one resume "I" line. That line still has to be on the resume.
 
+Session 2 is a different spoken video, not these 10 questions. On that log, two of five asks are already hard fails: one fired on a fragment, one never fired. Detail is in `ops/brain/parakeet-session-2.md`. A background tab and manual seeks do not count as the spoken half of this gate. A partial question and a missed question still fail it.
+
 ## Where the code is
 
 No code in this note. The checks land in the same places as `ops/brain/parakeet-session-1.md`: `repairStoryShape` (`src/lib/kompasGuards.ts`), `gateDisplayedAnswer` and `jdGapBridge` (`src/lib/kompasConsistency.ts`), the FIGURES line in `answerForVerifiedUser` (`src/lib/kompasAnswerService.ts`), `unsupportedClaims` (`src/lib/kompasSourceRetrieval.ts`). The "right?" fire is `lexicalTurn` in `public/kompas/vad-loader.mjs` and `scheduleAuto` in `public/kompas/app.js`. The label opener is `technicalThesis` in `src/lib/kompasConsistency.ts`.
