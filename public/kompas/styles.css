@@ -213,7 +213,8 @@ html.kompas-auth-off #view-login{display:none !important}
 .send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .send:hover{background:var(--surface-2)}
 
-.content{position:relative;padding:16px 42px 10px}
+.content{position:relative;padding:16px 42px 10px;display:flex;align-items:flex-start;gap:12px}
+.content .card{flex:1 1 auto;min-width:0}
 /* Prev/Next response toggles live on the action bar as pills (owner, 23 Oct 2026) — no absolute-positioned corner buttons. */
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -1634,14 +1635,15 @@ html.kd #view-copilot #answer{
   }
 }
 
-/* Live shared-tab preview (PIP-style) inside the session overlay, top-left. */
-.tab-preview,#tabPreview{display:none;position:absolute;left:12px;top:56px;z-index:8;width:400px;background:#111;border:1px solid var(--line,#2a2a30);border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-.tab-preview:not(.hidden):not([hidden]),#tabPreview:not(.hidden):not([hidden]){display:block}
-.tab-preview.hidden,[hidden].tab-preview{display:none}
+/* Shared-tab preview docks beside the answer. Collapsed by default, so it never covers Start, AI Answer, or More. */
+.tab-preview,#tabPreview{display:none;position:relative;left:auto;top:auto;z-index:1;width:168px;flex:0 0 168px;margin:12px 12px 0 0;background:#111;border:1px solid var(--line,#2a2a30);border-radius:10px;overflow:hidden;box-shadow:none}
+.tab-preview:not(.is-collapsed):not([hidden]),#tabPreview:not(.is-collapsed):not([hidden]){display:block}
+#tabPreview.is-collapsed{display:none !important}
+#tabPreview[hidden]{display:none !important}
 .tab-preview-stage{position:relative}
-.tab-preview video{display:block;width:100%;height:220px;object-fit:contain;background:#000}
+.tab-preview video{display:block;width:100%;height:96px;object-fit:contain;background:#000}
 .tab-preview-actions{position:absolute;top:8px;left:8px;display:flex;gap:6px;flex-wrap:wrap}
 .tab-preview-action{appearance:none;border:0;border-radius:6px;background:rgba(20,20,24,.82);color:#f2f2f4;font-size:11px;line-height:1.2;cursor:pointer;padding:5px 8px}
 .tab-preview-action:hover{background:rgba(40,40,48,.92)}
 .overlay.collapsed .tab-preview{display:none}
-@media (max-width:620px){.tab-preview{width:180px;left:8px;top:48px}.tab-preview video{height:100px}}
+@media (max-width:620px){.tab-preview,#tabPreview{width:140px;flex-basis:140px}.tab-preview video{height:80px}}

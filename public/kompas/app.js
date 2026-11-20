@@ -2190,13 +2190,30 @@ async function applyRawAudioConstraints(stream) {
     try { await track.applyConstraints(SYS_AUDIO_CONSTRAINTS); } catch {}
   }
 }
+function setTabPreviewOpen(open) {
+  const box = $("tabPreview");
+  if (!box) return;
+  box.classList.toggle("is-collapsed", !open);
+  box.hidden = !open;
+}
 function showTabPreview(owner) {
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
+  const toggle = $("tabPreviewToggle");
   if (!box || !video || !owner) return;
-  try { video.srcObject = owner; video.muted = true; const play = video.play(); if (play && play.catch) play.catch(() => {}); } catch {}
-  box.hidden = false;
-  box.classList.remove("hidden");
+  const tracks = previewVideoTracks(owner.getVideoTracks ? owner.getVideoTracks() : []);
+  if (!tracks.length) { setTabPreviewOpen(false); if (toggle) toggle.hidden = true; return; }
+  try {
+    video.srcObject = new MediaStream(tracks);
+    video.muted = true;
+    const play = video.play();
+    if (play && play.catch) play.catch(() => {});
+  } catch {}
+  setTabPreviewOpen(false);
+  if (toggle) toggle.hidden = false;
+}
+function previewVideoTracks(tracks) {
+  return (Array.isArray(tracks) ? tracks : []).filter((track) => track && track.kind === "video" && track.readyState !== "ended");
 }
 function hideTabPreview() {
   const box = $("tabPreview");
@@ -2215,6 +2232,7 @@ async function changeSharedTab() {
   syncSrc();
   await startSys();
 }
+$("tabPreviewToggle")?.addEventListener("click", (e) => { e.preventDefault(); const box = $("tabPreview"); setTabPreviewOpen(!!(box && box.hidden)); });
 $("tabPreviewFull")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); const video = $("tabPreviewVideo"); try { video && video.requestFullscreen && video.requestFullscreen(); } catch {} });
 $("tabPreviewChange")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void changeSharedTab(); });
 $("tabPreviewStop")?.addEventListener("click", (e) => {
@@ -2848,8 +2866,10 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(opt.forceYou ? "You" : who, clean, false, opt.spokenAt); }
-    else if (running) showCaption(who, clean, true);
+    const micHot = !!(opt.forceYou || (captures.some(c => c.who === "You" && (c.voiced || c.forceYou))));
+    const heardWho = labelLiveSpeaker(clean, opt.forceYou ? "You" : who, micHot);
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(heardWho, clean, false, opt.spokenAt); }
+    else if (running) showCaption(heardWho, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
 
@@ -3957,8 +3977,39 @@ function oneQuestionLine(text) {
 }
 function soundsLikeCandidate(text) {
   const raw = String(text || "").replace(/\s+/g, " ").trim();
-  if (!raw || questionEnded(raw)) return false;
-  return /^(?:i(?:'m| am)\b|i [a-z]|my \b|we(?:'re| are)\b)/i.test(raw);
+  if (!raw) return false;
+  return /^(?:i(?:'m| am)?\b|my\b|we(?:'re| are)?\b)/i.test(raw);
+}
+function labelLiveSpeaker(text, hinted, micHot) {
+  if (soundsLikeCandidate(text)) return "You";
+  if ((hinted === "You" || micHot) && !isGatedQuestion(text)) return "You";
+  if (isGatedQuestion(text)) return "Them";
+  return "You";
+}
+function answerIsStub(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  return /^I would want to confirm that\.?$/i.test(t) || /^That is not on my resume\b/i.test(t);
+}
+function settleAutoAnswer(chunks) {
+  const kept = (chunks || []).map((part) => String(part || "").replace(/\s+/g, " ").trim()).filter((part) => part && !answerIsStub(part) && part.split(/\s+/).filter(Boolean).length >= 12);
+  return kept.length ? kept[kept.length - 1] : "";
+}
+function replayS1(events) {
+  const lines = [];
+  const fires = [];
+  let micHot = false;
+  for (const ev of events || []) {
+    if (ev.type === "mic") { micHot = !!ev.hot; continue; }
+    if (ev.type !== "line") continue;
+    const hinted = ev.track === "mic" || micHot ? "You" : "Them";
+    const who = labelLiveSpeaker(ev.text, hinted, micHot && ev.track !== "tab");
+    lines.push({ who, text: ev.text });
+    if (who === "Them" && isGatedQuestion(ev.text) && (ev.silenceMs || 0) >= 700) {
+      const answer = settleAutoAnswer(ev.chunks || []);
+      if (answer) fires.push({ question: ev.text, answer });
+    }
+  }
+  return { lines, fires };
 }
 function liveInterviewer() {
   if (captures.some(c => c.who === "Them") || pendingHeard().some(t => t.who === "Them")) return "Them";
@@ -4327,9 +4378,11 @@ function dedupeCaptionTokens(text) {
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
+  const micHot = !!(typeof captures !== "undefined" && captures.some(c => c.who === "You" && (c.voiced || c.forceYou)));
+  const hinted = who;
   const pieces = lookedAgain ? [text] : splitUtterances(text);
-  if (pieces.length > 1) { for (const piece of pieces) onTranscript(utteranceWho(piece), piece, true, spokenAt); return; }
-  who = utteranceWho(text);
+  if (pieces.length > 1) { for (const piece of pieces) onTranscript(labelLiveSpeaker(piece, hinted, micHot), piece, true, spokenAt); return; }
+  who = labelLiveSpeaker(text, hinted, micHot);
   if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
   if (captureStartedAt && !startedAt) startClock();
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
@@ -5254,7 +5307,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const show = (t) => {
     if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
     let spoken = sayAloud(t).trim();
-    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work.";
+    if (answerIsStub(spoken)) return;
     if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;

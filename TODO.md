@@ -1,3 +1,9 @@
+## 2026-11-20 — S1 live: tab preview, Auto on tab audio, speaker split (no ship)
+
+The shared-tab panel is collapsed beside the answer until Tab is pressed, so it does not cover Start, AI Answer, or More. Auto on a tab question keeps the full streamed sentence and drops the confirm stub. A first-person line on the tab track is You, including while the mic is hot. Replay: scripts/fixtures/s1-taskmaster-replay.json.
+
+**Visible in a live session: the Tab button and the docked preview. Not a live listen-through.**
+
 ## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
 
 The streamed first sentence is a real answer, not a label. Length Long is one 120–180 word call. A question ending in "right?" waits until 1.4 seconds, so it does not fire early. The 20 adversarial clarifier cases pass, and the original 47 still pass. "I maintained the CMDB." stays. No ship marker.
