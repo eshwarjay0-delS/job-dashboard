@@ -1,5 +1,12 @@
 # Kompas — Master Vision
 
+## Phone-native live view — 19 November 2026
+
+The owner-approved 31 October request is a full-screen, phone-first Kompas live copilot that adapts to device size and resolution. The current-master restack adds `public/kompas/mobile-shell.css` after the existing answer-aside styles. On narrow screens it uses `100dvh`, respects top and bottom safe areas, contains answer/transcript scrolling inside the copilot, keeps primary controls at 48px and other touch targets at least 44px, and constrains the control rail in landscape. Selectors explicitly exclude the Windows desktop-focus shell.
+
+This is a UI-only slice. It does not change microphone capture, computer audio, Caption Capture, input-source priority, answer generation, authentication or session synchronization. The existing current-master desktop-control assertions are retained; the new phone tests cover safe areas, viewport, internal scrolling, touch sizes, landscape and desktop-focus isolation. Exact-head CI, Kompas baseline and Plan/REA must pass on the restacked branch. No real iOS/Android device test, protected preview, production deployment or live acceptance is claimed. Real-device acceptance still needs safe-area cutouts, address-bar/keyboard resizing, portrait/landscape, long-answer scrolling and touch-target checks.
+
+
 ## Desktop response calibration — 22 October 2026
 
 Owner confirms authentication is fixed and scopes this change to desktop responses. Exactly three audiences: **Recruiter + Engineer**, **Architect + Developer**, **Director**. The audience determines explanation style; the current question determines depth. Definitions and comparisons remain concise at every level. A requested real vulnerability example explains supported actions, bottlenecks, validation and business consequence. Architect/developer implementation questions can cover setup and integration step by step. Director answers retain technical reasoning at the operational/business level, with supported achievements and clearly proposed measurement choices.
