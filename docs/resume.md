@@ -100,3 +100,7 @@ The latest owner correction requires the exact label **Original resume — NOT T
 ## Quality and acceptance
 
 The 98% figure is a target, not a claim of live resume/JD match. Unit tests and keyword counts do not replace an owner-authorized baseline resume, exact JD, explicit confirmations, an exported-DOCX inspection and measured output coverage. The expanded automatic Gemini correction/re-export/recheck loop remains proposed, not approved; do not run it without direct owner approval.
+
+
+### Missing-skill negatives — 20 November 2026
+Statements such as `My skills are missing AWS`, `My experience is missing Splunk`, and `My background is missing Okta` are negative and must never expand candidate evidence. In a mixed list (`Confirmed skills: AWS, missing GCP`), retain the positive item only. This parser correction is covered by synthetic regressions; exact-head CI is pending and no personal resume was processed.
