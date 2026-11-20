@@ -1310,7 +1310,8 @@ function renderCard() {
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
   const heardQ = interviewerOnly(cleanHeardQuestion(draft || c.question));
-  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : questionHeader(heardQ).replace(/^(?:Question:\s*)+/, "");
+  const lined = oneQuestionLine(heardQ);
+  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : String(lined || "").replace(/^(?:Question:\s*)+/, "");
   $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
