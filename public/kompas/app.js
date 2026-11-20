@@ -2190,11 +2190,21 @@ async function applyRawAudioConstraints(stream) {
     try { await track.applyConstraints(SYS_AUDIO_CONSTRAINTS); } catch {}
   }
 }
+function previewVideoTracks(tracks) {
+  return (Array.isArray(tracks) ? tracks : []).filter((track) => track && track.kind === "video" && track.readyState !== "ended");
+}
 function showTabPreview(owner) {
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
   if (!box || !video || !owner) return;
-  try { video.srcObject = owner; video.muted = true; const play = video.play(); if (play && play.catch) play.catch(() => {}); } catch {}
+  const tracks = previewVideoTracks(owner.getVideoTracks ? owner.getVideoTracks() : []);
+  if (!tracks.length) { hideTabPreview(); return; }
+  try {
+    video.srcObject = new MediaStream(tracks);
+    video.muted = true;
+    const play = video.play();
+    if (play && play.catch) play.catch(() => {});
+  } catch {}
   box.hidden = false;
   box.classList.remove("hidden");
 }
@@ -2996,6 +3006,16 @@ function appendDrawer(who, text, at) {
   body.scrollTop = body.scrollHeight;
 }
 function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text, t.at)); }
+function cleanTranscriptText(lines, typed) {
+  const rows = (Array.isArray(lines) ? lines : []).map((line) => {
+    const who = line && line.who === "You" ? "You" : "Interviewer";
+    const text = String(line && line.text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return text ? who + ": " + text : "";
+  }).filter(Boolean);
+  const draft = String(typed || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (draft && rows[rows.length - 1] !== "You: " + draft) rows.push("You (typed): " + draft);
+  return rows.join("\n");
+}
 // Nothing is answered phrase-by-phrase. Everything heard piles up; AI Answer (or Auto, once the
 // speaker goes quiet) merges it, derives ONE big question from all of it, and answers that in full.
 let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer = null;
@@ -6795,6 +6815,14 @@ $("copyBtn").onclick = async () => {
   logAction("copy");
   const c = cards[idx]; if (!c) return;
   try { await navigator.clipboard.writeText(`${c.question}\n\n${plainAnswer(c.answer)}`); status("Copied.", "live"); }
+  catch { status("The browser blocked clipboard access.", "err"); }
+};
+$("copyTranscriptBtn").onclick = async () => {
+  logAction("copy-transcript");
+  const typed = $("manualInput") && $("manualInput").value;
+  const text = cleanTranscriptText(transcript, typed);
+  if (!text) { status("Nothing to copy yet.", "live"); return; }
+  try { await navigator.clipboard.writeText(text); status("Transcript copied.", "live"); }
   catch { status("The browser blocked clipboard access.", "err"); }
 };
 $("resumeReplaceBtn").onclick = () => { const input = $("resumeReplaceFile"); if (input) input.click(); };

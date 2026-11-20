@@ -1,3 +1,9 @@
+## 2026-11-20 — Parity scope: tab preview, transcript copy, chat draft (no live listen, no ship)
+
+The shared-tab panel shows the video track only, so call audio stays on the capture stream. Copy on the live transcript writes plain lines, and a typed chat line is added once when it is not already the last You line. Desktop Tauri/WASAPI is a docs spike only. Answer relevance, realism, length, tone, speed, and the clarifier were left on pull request 467.
+
+**Visible when a session is sharing a tab or the transcript drawer is open. Not a live listen-through.**
+
 ## 2026-11-20 — Parity upgrade keeps only new, evidence-backed fixes (no live listen, no ship)
 
 Pull request 477 no longer repeats the claim filter, the gap bridge, the length band, or the first-person lines that pull request 467 already has. Nothing new is added until a forwarded Parakeet session log shows a gap. Upgrade pull requests still have to cover at least 3 areas and list "new this round" once that evidence is in.

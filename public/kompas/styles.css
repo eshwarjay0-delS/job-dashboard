@@ -311,6 +311,7 @@ html.desktop-focus #view-copilot .card .q.live{max-height:calc(7em + 15px)}
 
 .drawer{border-top:1px solid var(--line);max-height:220px;display:flex;flex-direction:column;animation:viewIn .2s var(--ease) both}
 .drawer-head{padding:8px 16px;font-weight:700;font-size:13.5px;display:flex;gap:10px;align-items:baseline}
+.drawer-head #copyTranscriptBtn{margin-left:auto;align-self:center}
 .drawer-body{overflow-y:auto;padding:0 16px 10px;display:flex;flex-direction:column;gap:5px}
 /* The live transcript reads as a chat: Them on the left, You on the right, one bubble per turn (owner, 27 Oct 2026). */
 .drawer-body .tl{max-width:84%;padding:7px 11px;border-radius:14px;border-bottom-left-radius:4px;background:var(--surface-2);border:1px solid var(--line);align-self:flex-start;overflow-wrap:anywhere}

@@ -6,6 +6,10 @@ Each upgrade pull request touches at least 3 of these areas: answers, clarifier,
 
 The parity upgrade pull request adds only fixes that pull request 467 and master do not already have, and only when a forwarded Parakeet session log shows the gap. The claim filter, the gap bridge, the length band, and first-person lines are already on 467, so they are not repeated here.
 
+## 20 November 2026 — Parity scope, new gaps only, not shipped
+
+The in-session tab preview shows video tracks only. Call audio stays on the background capture stream. The live transcript copies as plain You / Interviewer lines, and a typed chat line is included once. A Tauri/WASAPI note is docs only. Relevance, realism, length, human tone, speed, and the clarifier stay on pull request 467 and are not repeated. No ship marker.
+
 ## 20 November 2026 — Parity prep removed, not shipped
 
 The prep that redid the claim filter, the gap bridge, length, and first-person prose was taken off pull request 477. No product change remains until a forwarded session log. No ship marker.
