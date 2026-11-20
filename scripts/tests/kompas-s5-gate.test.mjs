@@ -90,7 +90,7 @@ function runOnce() {
   return notes.join("|")
 }
 
-const NOUN_STOP = new Set("the and for with you your that this those these when where what which who how then from into over after before during not did was were are have has had will would can could should must may its our but all any one two new old keep write show also only plus team part call test path role tool name".split(" "))
+const NOUN_STOP = new Set("the and for with you your that this those these when where what which who how then from into over after before during not did was were are have has had will would can could should must may its our but all any one two new old keep write show also only plus team part call test path role tool name if".split(" "))
 
 function properNouns(text) {
   const found = new Set()
@@ -106,6 +106,7 @@ test("bridge templates use only nouns from the Houston resume file", () => {
   const source = HOUSTON_RESUME.toLowerCase()
   assert.equal(source.includes("mckesson"), false)
   assert.equal(source.includes("eshwarjay05"), true)
+  assert.match(HOUSTON_RESUME, /Fortinet AWS Cloud Networking Engineer/)
   const missing = []
   for (const template of bridgeTemplates()) {
     assert.doesNotMatch(template, /McKesson|I led the ServiceNow/i)
@@ -114,6 +115,17 @@ test("bridge templates use only nouns from the Houston resume file", () => {
     }
   }
   assert.deepEqual([...new Set(missing)], [])
+})
+
+test("a loaded session resume is the allow-list", () => {
+  const loaded = "Senior ServiceNow Developer at Paypal.\nMigrated apps using Terraform and CloudFormation."
+  const got = applyHonestyGate({
+    question: "You led that migration yourself, right?",
+    answer: "Yes, I personally led it at McKesson.",
+    resume: loaded,
+  })
+  assert.match(got.text, /Terraform/)
+  assert.doesNotMatch(got.text, /FortiGate|McKesson/)
 })
 
 test("S5 fixtures, 10 folds, same result each time", () => {

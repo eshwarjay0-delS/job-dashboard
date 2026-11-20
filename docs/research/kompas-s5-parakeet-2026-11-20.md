@@ -12,7 +12,7 @@ Source: the Parakeet S5 live notes for this task. This is a product comparison, 
 
 - Screen analyze is a button and Ctrl+Shift+Enter. It grabs one frame from the tab share already held. It does not call `getDisplayMedia` again and it does not open the tab preview. The frame goes to the existing answer API as one stream. The card keeps the full screen body. A GWLB bug gets a short corrected HCL block. If the model or the frame is missing, the card shows one sentence.
 - A manual AI Answer press, including Ctrl+Enter, does not say "no new question". If the latest interviewer question was already answered, it is asked again from another angle. Speech within about two seconds of that question stays with it.
-- After generation, a server check rewrites an incident, employer, tool, or personal number that is not in the Houston `eshwarjay05` resume. A Saint Louis or `jayeshwar44` resume is not the source. A leading "right?" question gets scope ("I led X; the rest was the team"). A "went wrong" question uses the McKesson incident-tracking work or says the outage is not on the resume.
+- After generation, a server check uses the resume text the answer prompt already loaded. A Saint Louis profile is not that source. When no resume was loaded, the default is the Fortinet Houston summary, because that docx is not in the repo. A leading "right?" question scopes the FortiGate-VM work and says the wider cutover was a team effort. A "went wrong" question uses the active/passive failover testing and does not invent an outage. McKesson is not in the default fixture.
 
 ## What was not verified
 

@@ -1,10 +1,9 @@
 /**
  * Post-generation honesty gate (Parakeet S5).
- * The source file is the eshwarjay05 platform resume. Bridges may use only
- * lines from that file. ServiceNow is a tool in that resume, not a role the
- * speaker led. A leading "right?" answer scopes the real migration and
- * failover lines and says which part was the team's, without a new name.
- * A "went wrong" answer uses failover testing during those migrations.
+ * The allow-list is the resume text the answer prompt already loaded.
+ * The Fortinet Houston file is only the default when that text is missing,
+ * or when the text is the Saint Louis profile. The full Fortinet docx is not
+ * in the repo; the default file is the owner summary of that resume.
  */
 import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -12,15 +11,6 @@ import { fileURLToPath } from "node:url"
 
 export const HOUSTON_RESUME_PATH = join(dirname(fileURLToPath(import.meta.url)), "kompas-houston-resume.txt")
 export const HOUSTON_RESUME = readFileSync(HOUSTON_RESUME_PATH, "utf8")
-
-const LINE = {
-  migrate: "Migrated apps using Terraform, Ansible, CloudFormation; standardized VPC, subnets, NAT, TGW.",
-  provision: "Provisioned cloud infrastructure via Terraform and CloudFormation, integrating with ServiceNow Change Management and enforcing policy-as-code with OPA and AWS Config Rules.",
-  regions: "Proven ability to design HA/DR solutions, optimize cloud cost/performance, and manage multi-region deployments.",
-  failover: "Performed SQL Server administration tasks including failover clustering, mirroring, version upgrades, patching in high-availability (HA) environments.",
-  firewall: "Secured infrastructure by auditing firewall policies, ensuring compliance and integrity across segmented environments.",
-  teams: "Collaborated with security and application teams to embed change control via ServiceNow and audit evidence into deployment pipelines.",
-} as const
 
 const SAINT_LOUIS = /jayeshwar44|jayeshwar24|eshwarjay06|saint louis university/i
 const LEADING_RIGHT = /,\s*right\??\s*$/i
@@ -55,52 +45,63 @@ function personalNumber(sentence: string): string[] {
   return found
 }
 
-const POOL = [
-  LINE.migrate,
-  LINE.provision,
-  LINE.regions,
-  LINE.failover,
-  LINE.firewall,
-  LINE.teams,
-  "The automation was the part I can speak to. The wider cutover was a team effort, and I will not invent a name for that team.",
-]
+function resumeLines(source: string): string[] {
+  return String(source || "").split(/\n+/).map((line) => line.replace(/\s+/g, " ").trim()).filter((line) => line.length > 12)
+}
 
-function fitSpoken(core: string): string {
+function lineMatching(source: string, pattern: RegExp): string {
+  return resumeLines(source).find((line) => pattern.test(line)) || resumeLines(source)[0] || ""
+}
+
+function fitSpoken(core: string, source: string): string {
+  const pool = resumeLines(source)
   let parts = core.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
   let text = parts.join(" ")
   let i = 0
-  while (count(text) < 120 && i < POOL.length) {
-    parts.push(POOL[i++].replace(/\s+/g, " ").trim())
+  while (count(text) < 120 && i < pool.length) {
+    const next = pool[i++]
+    if (text.includes(next.slice(0, 48))) continue
+    parts.push(next)
     text = parts.join(" ")
   }
   while (count(text) > 180 && parts.length > 1) {
-    const next = parts.slice(0, -1).join(" ")
-    if (count(next) < 120) break
+    const shorter = parts.slice(0, -1).join(" ")
+    if (count(shorter) < 120) break
     parts = parts.slice(0, -1)
     text = parts.join(" ")
   }
   return text
 }
 
-export function scopeAnswer(): string {
-  return fitSpoken("I did not take that migration on alone. I migrated apps using Terraform, Ansible, and CloudFormation, and I standardized VPC, subnets, NAT, and TGW. I provisioned that infrastructure with Terraform and CloudFormation, and the resume also shows multi-region deployments. The failover work I can point to is failover clustering, mirroring, version upgrades, and patching in high-availability environments, plus auditing firewall policies. I collaborated with security and application teams. Those teams owned the cutover decisions outside the automation. ServiceNow on this resume is only the change-management tool. I will not add a name the resume does not show.")
+export function scopeAnswer(resume = HOUSTON_RESUME): string {
+  const source = honestySource(resume)
+  const lead = lineMatching(source, /fortigate|migrat|ftd/i)
+  const ha = lineMatching(source, /active\/passive|failover|ha cluster/i)
+  const owned = /fortigate-vm/i.test(source) ? "I led the FortiGate-VM deployments and the HA clusters." : ""
+  return fitSpoken(`I did not take that on alone. ${lead} ${ha} ${owned} The wider cutover was a team effort. I will not add a name the resume does not show.`, source)
 }
 
-export function wentWrongAnswer(): string {
-  return fitSpoken("The resume does not name an outage, so I will not invent one. The grounded situation is the failover testing and validation during those migration cutovers. I migrated apps using Terraform, Ansible, and CloudFormation. The resume shows failover clustering, mirroring, version upgrades, and patching in high-availability environments, and it shows firewall policies being audited. If a cutover went wrong, I would say the failover check failed before the new path was trusted, keep the old path up, and write down what the test showed. I collaborated with security and application teams. The call on the wider cutover was a team effort. I will not name an outage or an employer that is not in the resume.")
+export function wentWrongAnswer(resume = HOUSTON_RESUME): string {
+  const source = honestySource(resume)
+  const cutover = lineMatching(source, /zero-downtime|cutover|active\/passive/i)
+  const move = lineMatching(source, /ftd|six aws|fortinet migration/i)
+  return fitSpoken(`The resume does not name an outage, so I will not invent one. The grounded situation is the active/passive failover testing during those cutovers. ${cutover} ${move} If the check failed, I would keep the old path up and write down what the test showed. The wider cutover was a team effort.`, source)
 }
 
-export function designBridge(): string {
-  return fitSpoken("I have not run that design as a personal story, so I will not invent one. The infrastructure work on the resume is Terraform and CloudFormation, including multi-region deployments, plus failover clustering and firewall policy audits. I collaborated with security and application teams. The wider cutover was a team effort. I will not name an employer the resume does not show.")
+export function designBridge(resume = HOUSTON_RESUME): string {
+  const source = honestySource(resume)
+  const gw = lineMatching(source, /gateway load balancer|transit gateway|fortigate/i)
+  return fitSpoken(`I have not invented a personal outage for this design. ${gw} The wider cutover was a team effort. I will not add a name the resume does not show.`, source)
 }
 
-export function bridgeTemplates(): string[] {
-  return [scopeAnswer(), wentWrongAnswer(), designBridge(), ...POOL, gapBridge()]
+export function bridgeTemplates(resume = HOUSTON_RESUME): string[] {
+  const source = honestySource(resume)
+  return [scopeAnswer(source), wentWrongAnswer(source), designBridge(source), ...resumeLines(source), gapBridge(undefined, source)]
 }
 
-function gapBridge(tool?: string): string {
+function gapBridge(tool: string | undefined, source: string): string {
   const toolLine = tool ? `I have not used ${tool}. ` : ""
-  return `${toolLine}That detail is not on my resume, so I will not invent it. ${LINE.migrate}`
+  return `${toolLine}That detail is not on my resume, so I will not invent it. ${lineMatching(source, /migrat|fortigate|deploy/i)}`
 }
 
 function employerHits(sentence: string, source: string): string[] {
@@ -143,17 +144,17 @@ export function applyHonestyGate(input: { question: string; answer: string; resu
   const reasons: string[] = []
   if (LEADING_RIGHT.test(question) && YES_LEAD.test(answer)) {
     reasons.push("leading-yes")
-    return { text: scopeAnswer(), rewritten: true, reasons }
+    return { text: scopeAnswer(source), rewritten: true, reasons }
   }
   if (WENT_WRONG.test(question) && claimsIncident(answer, source)) {
     reasons.push("invented-incident")
-    return { text: wentWrongAnswer(), rewritten: true, reasons }
+    return { text: wentWrongAnswer(source), rewritten: true, reasons }
   }
   const sentences = answer.split(/(?<=[.!?])\s+/).filter(Boolean)
   const joined = sentences.join(" ")
   if (/\bgateway load balancer|inspection vpc|gwlb\b/i.test(question) && (employerHits(joined, source).length || toolHits(joined, source).length || claimsIncident(joined, source))) {
     reasons.push("design-bridge")
-    return { text: designBridge(), rewritten: true, reasons }
+    return { text: designBridge(source), rewritten: true, reasons }
   }
   let changed = false
   const kept = sentences.map((sentence) => {
@@ -167,9 +168,9 @@ export function applyHonestyGate(input: { question: string; answer: string; resu
     if (tools.length) reasons.push(`tool:${tools[0]}`)
     if (numbers.length) reasons.push(`number:${numbers[0]}`)
     if (incident) reasons.push("incident")
-    if (WENT_WRONG.test(question) || incident) return wentWrongAnswer()
-    if (LEADING_RIGHT.test(question)) return scopeAnswer()
-    return gapBridge(tools[0])
+    if (WENT_WRONG.test(question) || incident) return wentWrongAnswer(source)
+    if (LEADING_RIGHT.test(question)) return scopeAnswer(source)
+    return gapBridge(tools[0], source)
   })
   if (!changed) return { text: answer, rewritten: false, reasons: [] }
   const text = kept.join(" ").replace(/\s+/g, " ").trim()
