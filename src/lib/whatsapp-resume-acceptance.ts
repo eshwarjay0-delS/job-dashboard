@@ -12,22 +12,20 @@ export const WHATSAPP_SUPPORTED_FLOOR = 95
  * 95% remains the target and is named in the caption when the file is short of it.
  * A complete draft from 70% through 94.9% is a clean pass when supported coverage
  * is already at 95%, so an honest gap does not block filing.
- * Below 70% is not a clean pass. It is still sent when the rewrite finished,
- * with the missing terms named. A failed or incomplete rewrite sends the
- * already-chosen resume instead. TAILOR_DELIVER_WITH_SHORTFALL=0 or
- * JD_TERMS_ALWAYS_ON_SKILLS=0 restores the strict under-95% clean-pass refusal. */
+ * Below 70% is not a clean pass. A finished, evidence-supported file can still
+ * be sent with the missing terms named. A failed or incomplete rewrite is not
+ * itself deliverable; the webhook may fall back only after proving an explicitly
+ * selected same-account Files/Library source. This helper does not prove selection.
+ * TAILOR_DELIVER_WITH_SHORTFALL=0 or JD_TERMS_ALWAYS_ON_SKILLS=0 restores the
+ * strict under-95% clean-pass refusal. */
 export const WHATSAPP_JOB_POST_FLOOR = 70
 
-/** Coverage and added job-post terms are labelled on the WhatsApp reply.
- * They do not, by themselves, make a finished Word file unusable.
- * role_evidence_gaps is the same kind of gap: the file was edited and scored,
- * and a role is under the 98% evidence target. Missing terms stay in the caption.
- * roles_unrewritten, a missing part, and a skills-only outage are not in this
- * set. Those are unfinished, and the already-chosen library file is the backup. */
+/** Honest coverage and role-evidence gaps can be disclosed on a finished file.
+ * Unverified JD-only additions are a hard hold, never a deliverable shortfall.
+ * roles_unrewritten, a missing part, and a skills-only outage are unfinished. */
 const WHATSAPP_SHORTFALL_REASONS = new Set([
   "jd_coverage_below_floor",
   "supported_coverage_below_floor",
-  "unverified_jd_terms",
   "quality_not_deliverable",
   "role_evidence_gaps",
 ])
@@ -148,28 +146,30 @@ export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false
   if (result.unchanged || !result.diff?.length) return false
   if (result.skills_only || result.partial || result.quality?.incomplete) return false
+  // A stale/cache result may have an empty detail list but still carry this blocker.
+  if (result.unverified_added_keywords?.length) return false
+  if (result.quality_blockers?.includes("unverified_jd_terms")) return false
   if (atsExportUnreadable(result.ats)) return false
   return whatsappResumeRejectionReasons(result).every(reason =>
     WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")
 }
 
-/** The usable rewrite is under a coverage floor, or it added job-post terms.
- * The reply names that shortfall. An incomplete draft is not a shortfall delivery.
+/** A usable rewrite is below a raw or supported coverage floor.
+ * Unverified JD-only additions are a hard hold, never a shortfall delivery.
  * A clean 70–94.9% pass has no rejection reasons, so this stays false for it. */
 export function deliveredWithShortfall(result: TailorResult): boolean {
   if (!whatsappRewriteUsable(result)) return false
   const reasons = whatsappResumeRejectionReasons(result)
   return reasons.includes("jd_coverage_below_floor")
     || reasons.includes("supported_coverage_below_floor")
-    || reasons.includes("unverified_jd_terms")
 }
 
-/** The already-chosen file may go out only for the profile this run selected.
- * No selected email means the person uploaded that file. Two emails in one file
- * are a mixed profile and are not sent. */
+/** Validate the profile identity after the caller has established a Files/Library selection.
+ * A missing profile email is not proof of ownership. Mixed-profile resumes are rejected.
+ * This check does not establish that the caller actually recorded an explicit selection. */
 export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
-  if (!email) return true
-  const want = email.toLowerCase()
+  const want = String(email || "").trim().toLowerCase()
+  if (!want) return false
   const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
   return found.length === 1 && found[0] === want
 }
