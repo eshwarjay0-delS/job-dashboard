@@ -1,40 +1,17 @@
 # Adversarial clarifier run
 
-Code under test: PR #467 head `f5df791c`, not this branch. The clarifier was not edited.
+Code under test: PR #467 head `f5df791c`. The clarifier was not edited.
 
-Command:
+Command: `REPO` pointed at that head, then `node --no-warnings --experimental-strip-types scripts/run-clarifier-adversarial.mjs`.
 
-`REPO=/tmp/pr467 node --no-warnings --experimental-strip-types scripts/run-clarifier-adversarial.mjs`
+Existing suite on that head: **47/47**. New file: **13/20**. Per-case lines are in `ops/brain/clarifier-adversarial-results.json`.
 
-Existing suite on that same head: `scripts/run-clarifier-fixtures.mjs` → **47/47**.
+Fails:
 
-New file: `scripts/fixtures/clarifier-adversarial.json` (20 cases). Rule: a clarifier’s options come from the live question, or there is no clarifier. `must_not` is applied to the clarifier text. `.+` still means the whole box is empty. The say line may quote the resume.
-
-**11 pass, 9 fail.**
-
-| Category | Pass |
-|---|---|
-| vague_referent | 3/3 |
-| candidate_speech | 1/1 |
-| multi_part | 2/3 |
-| interruption | 1/3 |
-| trailing_right | 3/4 |
-| overloaded_term | 0/2 |
-| numbers_ask | 0/1 |
-| hypothetical | 0/1 |
-| behavioral | 0/1 |
-| already_clear | 1/1 |
-
-Fails (clarifier that was returned):
-
-1. Phishing / tools / report → “the incident itself, then the tools”.
-2. “Wait, forget the CMDB. How do you handle incidents?” → SOC vs ServiceNow.
-3. “Actually, skip discovery. Did you design the import sets alone?” → “CI count, or the servers and users”.
-4. “Did you design it alone, right?” after an SD-WAN turn → “overall SD-WAN design, or a specific piece like failover”.
-5. “How do you handle incidents?” → SOC vs ServiceNow.
-6. “How many tickets did you close in a day?” → “the whole team's queue”.
-7. Suspicious email → “clicked the link”.
-8. “Tell me about a time you led a team.” → “people lead” vs “technical work”.
-9. “How do you manage access?” → “provisioning”.
-
-The grounded pass is “Did you design the network alone? What about failover?” → “Should I answer the network design first, or the failover?”
+1. “Sorry, scratch the email. How large was the CMDB?” → “The CI classes, or the record count?”
+2. “How do you open a change, how do you approve it, and how do you close it?” → no clarifier.
+3. “What about discovery, and access, and incidents?” → no clarifier.
+4. “How did you set up the CMDB, how did you keep it accurate, and who used it?” → no clarifier.
+5. “Hold on. How do you triage alerts, how do you escalate them, and who do you tell?” → “triage, then escalation” (drops “tell”; “escalation” is not the live word).
+6. “How does that work, how long did it take, and who signed off?” → no clarifier.
+7. “Did you design it alone, right?” → “overall SD-WAN design, or a specific piece like failover.”

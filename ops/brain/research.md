@@ -1,31 +1,37 @@
 # Research notes — dossier, grounding tags, desktop shell
 
-Public pages only. No tool run that spends money. Houston profile only; none of this is a new biography.
+20 Nov 2026. Houston profile only. No new employers, tools, or numbers. These are recommendations for Chief, not a build.
 
-## (a) Cited dossier, GPT Researcher / STORM shape
+Kompas already has two of the hooks. `whereFrom` in `src/lib/kompasSourceRetrieval.ts` attaches a passage id and a quote to a spoken sentence when three tokens overlap. `answerForVerifiedUser` in `src/lib/kompasAnswerService.ts` reads a prepared dossier and gives up at 110 ms. The desktop shell is Electron 44 (`legacy/perfact/desktop/package.json`). `legacy/perfact/desktop/main.js` already takes Windows output audio with Chromium's WASAPI loopback (`audio: "loopback"`).
 
-STORM (Shao et al., NAACL 2024, [arXiv:2402.14207](https://arxiv.org/abs/2402.14207), [code](https://github.com/stanford-oval/storm)) writes a long article by discovering perspectives, asking questions against retrieved sources, then expanding an outline with citations. The authors’ own caveat: source bias and over-association of unrelated facts.
+## (a) Cited dossier, gpt-researcher / STORM
 
-GPT Researcher ([github.com/assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher)) plans sub-queries, reads pages, and returns a markdown report with citations. Its published deep-agent comparison ([BENCHMARK.md](https://github.com/assafelovic/gpt-researcher/blob/main/deep_agents/BENCHMARK.md)) reports more verified citations than a raw search tool on the same harness. That benchmark is their web pipeline, not this repo.
+STORM (Shao, Jiang, Kanell, Xu, Khattab, Lam, NAACL 2024, [arXiv:2402.14207](https://arxiv.org/abs/2402.14207)) researches a topic by asking questions from several perspectives, grounds those questions on sources, then writes an outline and a long article. The authors' own editor feedback names the failure mode that matters here: source bias, and stitching unrelated facts together. A live interview cannot wait for that loop.
 
-Use the shape, not the web. Before a session, build a short dossier from the Houston resume and the JD already on the request: an outline of 4–6 questions the interviewer might ask, each with the resume line id that can answer it, or an explicit gap. Do not run it on the 1-second answer path. Do not let a cited web sentence become “I did”.
+[GPT Researcher](https://github.com/assafelovic/gpt-researcher) is the lighter shape of the same idea: plan a few questions, retrieve, write a report that cites what it retrieved. Use that shape once, before the interview, not on the live answer path. One dossier per job description. Each paragraph cites either a resume line or a public page about a tool. A tool page may explain what the tool does. It may not become a sentence that starts with "I".
 
 ## (b) Sentence-level grounding tags
 
-ALCE (Gao, Yen, Yu, Chen, EMNLP 2023, [arXiv:2305.14627](https://arxiv.org/abs/2305.14627), [code](https://github.com/princeton-nlp/ALCE)) asks the model to attach a passage citation to each statement, then scores whether the passage supports it. On their ELI5 set, even the best systems lacked full citation support about half the time. The useful part for Kompas is the tag, not their NLI judge.
+ALCE (Gao, Yen, Yu, Chen, EMNLP 2023, [arXiv:2305.14627](https://arxiv.org/abs/2305.14627)) scores citations per sentence: citation recall is whether the cited passage supports the sentence. That is the right bar, and it does not need their NLI model to start.
 
-Each spoken sentence gets a hidden tag: a resume line id, `jd` (gap only), or `none`. Strip the tag before the card and before TTS. `gateDisplayedAnswer` already drops some ungrounded products; the tag makes the drop explainable. A sentence tagged `none` that states a personal fact does not ship. A `jd` tag may only appear inside the gap clause from fold 2 of `ops/brain/answer-plan.md`.
+`whereFrom` is already that tag, local and cheap. The missing piece is the gate. A spoken sentence with no tag is not shown. One exception: the honest gap sentence, tagged `bridge`, which is allowed to name a tool the resume does not contain and must not claim he ran it. Tags stay off the spoken card. They are for the check and the side panel.
 
-## (c) Tauri 2 + WASAPI loopback + sherpa-onnx Moonshine Tiny, versus the Electron shell
+## (c) Tauri 2 + WASAPI loopback + sherpa-onnx Moonshine Tiny
 
-Today the shell is Electron in `legacy/perfact/desktop` (`electron` ^44.5.1). `main.js` loads the live site. Computer audio is WASAPI loopback: `setDisplayMediaRequestHandler` calls `loopbackCapture()` and passes `audio: "loopback"` (`output-loopback.cjs`, `main.js` around the display-media handler). The REA register records the published `kompas-desktop-latest` asset at 162,251,677 bytes (13 Nov 2026). That number is the installer, not a memory measurement from this session.
+Tauri 2 does not ship WASAPI loopback. The sherpa-onnx Tauri sample captures a microphone through cpal ([docs](https://k2-fsa.github.io/sherpa/onnx/tauri/vad-asr-mic.html)). Loopback is a separate plugin, for example [tauri-plugin-system-audio](https://github.com/Subcue/tauri-plugin-system-audio), which opens the default output device with `AUDCLNT_STREAMFLAGS_LOOPBACK`. That is a new shell, not a patch on the Electron app that already does this.
 
-Tauri 2 is the smaller shell ([v2.tauri.app](https://v2.tauri.app/)); on Windows it uses the system WebView. sherpa-onnx already has a Tauri v2 mic sample ([VAD + ASR](https://k2-fsa.github.io/sherpa/onnx/tauri/vad-asr-mic.html)). WASAPI loopback from Rust is a separate capture path (cpal loopback, as in [tauri-plugin-system-audio](https://github.com/Subcue/tauri-plugin-system-audio)). Moonshine Tiny is an English ASR model, 27M parameters ([model card](https://huggingface.co/moonshine-ai/moonshine-tiny)). The sherpa int8 pack lists `encode.int8.onnx` 17M, `preprocess.onnx` 6.5M, `cached_decode.int8.onnx` 43M, `uncached_decode.int8.onnx` 51M ([sherpa Moonshine models](https://k2-fsa.github.io/sherpa/onnx/moonshine/models.html)). It transcribes. It does not answer, and it does not fix a lifted claim.
+sherpa-onnx's Moonshine Tiny English int8 build is an offline model: an encoder plus two decoders ([model page](https://k2-fsa.github.io/sherpa/onnx/moonshine/models.html)). The streaming Tiny card is 34M parameters, English only, and the model card says it can invent words on short or noisy audio ([Moonshine Streaming Tiny](https://huggingface.co/moonshine-ai/moonshine-streaming-tiny)). Interview loopback is that audio. Names like ServiceNow, CMDB, and KYC are where a tiny English model drifts. The dollar cost of the weights is zero. The cost that matters is replacing a working shell.
 
 ## Top 2
 
-**1. Sentence-level grounding tags.** Cost: a tag on each sentence in `shapeDisplayedAnswer` / `gateDisplayedAnswer`, stripped in the same function before return, plus an offline check that every personal sentence has a resume line id. No new model and no network. Risk: a missed strip speaks “[resume:4]” aloud; a wrong id makes a false sentence look sourced. Mitigation: the spoken string is the text with tags removed, and the id must match a line that contains the same tool tokens.
+**1. Sentence-level tags, on `whereFrom`.**
 
-**2. Local cited dossier (STORM outline, GPT Researcher citations, resume+JD corpus only).** Cost: one prep pass when the session starts, stored with the session, read by the answer prompt as an outline. Not on the token-by-token path. Risk: over-association (STORM’s published failure) and a JD line written as experience. Mitigation: every dossier bullet is `resume` or `gap`, and the answer route may quote a `gap` only through `jdGapBridge`.
+- Cost: no model call and no new dependency. A filter in the display gate.
+- Risk: a strict filter drops the one true gap sentence. The `bridge` tag is the exception, and it has to be the only untagged-source sentence on the card. If that exception is missing, he cannot say he has not used a JD tool.
 
-The desktop rewrite is third. It replaces a loopback path that already exists, redoes content protection and the Chrome handoff, and adds an English ASR model that does not touch answer relevance. Build it only if the installed Electron loopback is the measured problem.
+**2. One cited dossier per JD, gpt-researcher shape, built before the interview.**
+
+- Cost: one research job per job description, offline. Not a call on the live answer, and not a STORM multi-perspective loop.
+- Risk: a cited paragraph about a tool slides into the spoken "I" voice. STORM's editors already saw unrelated facts get joined. The dossier is explanation material. Personal history stays on the resume lines. If a sentence's only citation is a web page, it cannot be spoken as his work.
+
+The Tauri + Moonshine shell is third. It does not fix a wrong answer, and it replaces loopback that already works. Revisit it only after the tags and the dossier are in, and only if cloud speech is the bill that has to go.

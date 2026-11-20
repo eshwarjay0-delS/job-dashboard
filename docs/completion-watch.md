@@ -2,7 +2,7 @@
 
 ## 20 November 2026 — Brain ops notes, not a product change
 
-PR #467 was still open, draft, and conflicting at head `f5df791c` when these notes were written. Do not merge it from this record. Do not add a ship marker. The notes are on `cursor/kompas-brain-ops`: answer folds, a 20-case clarifier file (11/20 against that head; the old 47 still pass), research, and five pre-live risks. No Kompas runtime file was edited. No live listen.
+PR #467 was still open, draft, and conflicting at head `f5df791c` when these notes were written. Do not merge it from this record. Do not add a ship marker. The notes are on `cursor/kompas-brain-ops`: answer folds, a 20-case clarifier file (13/20 against that head; the old 47 still pass), research, and five pre-live risks. No Kompas runtime file was edited. No live listen.
 
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
 

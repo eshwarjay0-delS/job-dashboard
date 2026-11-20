@@ -1,8 +1,8 @@
-## 2026-11-20 — Brain notes only: answer folds, 20 clarifier cases, PR #467 risks (no UI change)
+## 2026-11-20 — Brain notes only: answer folds, 20 clarifier cases, PR #467 risks (no UI)
 
-Docs and an offline clarifier file. No answer-path edit, no clarifier edit, no merge, no ship. PR #467 was still open at head `f5df791c` (draft, conflicting). Existing clarifier fixtures on that head: 47/47. New adversarial file: 11/20. The nine fails return a clarifier whose nouns are not in the live question. Visible UI: nothing changed.
+Docs under `ops/brain/`. No product code, no clarifier change, no merge, no deploy. PR #467 was still an open draft at `f5df791c` (conflicting). Its 47 clarifier cases pass offline. Twenty new adversarial cases, scored on that head, pass 13 and fail 7. The fails are a CMDB size ask that invents "CI classes", multi-part asks with no clarifier or a dropped third part, and "Did you design it alone, right?" pulling in SD-WAN and failover. Cheap checks on that head: the streamed thesis is "Splunk is what this question is about.", the gap bridge is not speakable and the tool filter drops it, long-story `levelAwareBand` aims at 360 words, and a question ending in "right?" does not auto-fire. Skip-login was not edited.
 
-**Checked offline against the PR head. Not a live listen-through.**
+**Nothing visible.** Not a live listen-through.
 
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
