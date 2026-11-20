@@ -87,7 +87,7 @@ const nextConfig = {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "img-src 'self' data: blob: https:",
           "font-src 'self' https://fonts.gstatic.com",
-          "connect-src 'self' https://cdn.jsdelivr.net https://ccoreilly.github.io",
+          "connect-src 'self' https://cdn.jsdelivr.net https://ccoreilly.github.io https://huggingface.co https://cdn-lfs.huggingface.co https://us.aws.cdn.hf.co https://eu.aws.cdn.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co",
           "worker-src 'self' blob: https://cdn.jsdelivr.net",
           "media-src 'self' blob:",
           // Uploaded PDF previews are rendered in a local blob iframe.

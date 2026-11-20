@@ -1,51 +1,153 @@
-// Fixed questions and a fixed sample answer. No model call.
-// A definition stays shorter than a story, and story labels never reach the card.
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import vm from "node:vm"
-import { classify, lengthPlan } from "../../src/lib/kompasAnswer.ts"
+import { answerRoute, extendFromModel, gateDisplayedAnswer, jdGapBridge } from "../../src/lib/kompasConsistency.ts"
+import { goldWordCount, loadGold } from "../../scripts/eval-gold.mjs"
 
-const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
-const start = app.indexOf("function spokenShape")
-const end = app.indexOf("function sayAloud")
-const context = {}
-vm.runInNewContext(app.slice(start, end) + "\nthis.spokenShape = spokenShape;", context)
+const gold = loadGold(readFileSync(new URL("../fixtures/brain-gold-answers.md", import.meta.url), "utf8"))
+const RESUME = [
+  "Senior ServiceNow Developer at McKesson.",
+  "Assists with ServiceNow platform incident resolution and tracks each ticket from creation to closure.",
+  "Closed 12 change requests in one quarter and kept the business updated while the work moved.",
+  "Built fraud investigation workflows for evidence, escalation, and audit documentation.",
+  "Configured role-based access controls and segregation of duties for finance teams.",
+  "Created dashboards for SLA adherence and compliance status across the business applications.",
+  "Maintained the CMDB classes and their relationships so discovery imports stayed accurate.",
+  "Implemented change workflows with approvals, so each request had an owner and a due date.",
+  "Supported GRC and security operations processes, including evidence for audit reviews.",
+  "Monitored the open incidents each morning and sent the status to the business owners.",
+].join(" ")
 
-const SAMPLE = [
-  "## Where I've done this",
-  "**Situation:** The Dallas SIEM went quiet.",
-  "**Task:** I had to prove the gap.",
-  "**Action:** I checked the collector.",
-  "**Result:** The alerts came back.",
-  "I would start with the collector.",
-].join("\n")
+function median(nums) {
+  const sorted = [...nums].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
 
-test("a definition is shorter than a story, and both answer the question they were given", () => {
-  const definition = "What is a SIEM?"
-  const story = "Tell me about a time you handled a SIEM outage."
-  const defPlan = lengthPlan(classify(definition).tier, definition, "engineer")
-  const storyPlan = lengthPlan(classify(story).tier, story, "engineer")
-  assert.ok(defPlan.words < storyPlan.words, defPlan.words + " vs " + storyPlan.words)
-  assert.ok(defPlan.words <= 180)
-  assert.equal(classify(story).tier, 1)
+test("a short technical answer is extended and closes on a resume example", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How would you investigate a phishing email?",
+    raw: "I start with the message the employee forwarded.",
+    resume: RESUME,
+    source: RESUME,
+  })
+  assert.ok(gated.words >= 120, `words ${gated.words}`)
+  assert.match(gated.text, /comes down to one point/)
+  assert.doesNotMatch(gated.text, /^Having\b|great question/i)
+  if (gated.ceiling >= 120) assert.match(gated.text, /Example:/)
+  const bullets = gated.text.split("\n").filter((line) => /^\s*[-•]/.test(line))
+  assert.ok(bullets.length <= 8)
 })
 
-test("a sample answer loses its story labels and its side heading", () => {
-  const spoken = context.spokenShape(SAMPLE)
-  assert.doesNotMatch(spoken, /situation\s*:/i)
-  assert.doesNotMatch(spoken, /task\s*:/i)
-  assert.doesNotMatch(spoken, /action\s*:/i)
-  assert.doesNotMatch(spoken, /result\s*:/i)
-  assert.doesNotMatch(spoken, /^#{1,6}\s/m)
-  assert.match(spoken, /I would start with the collector/)
-  assert.match(spoken, /Dallas SIEM went quiet/)
+test("a JD-only tool is a hands-on bridge, not a stub", () => {
+  const bridged = gateDisplayedAnswer({
+    question: "How do you use Splunk?",
+    raw: "That is not on my resume, so I will not invent it.",
+    resume: RESUME,
+    jd: "Splunk ES, CrowdStrike, Qualys",
+    source: RESUME,
+  })
+  assert.match(bridged.text, /I've had less direct hands-on with Splunk/)
+  assert.match(bridged.text, /transfers because/)
+  assert.doesNotMatch(bridged.text, /not on my resume|would want to confirm/)
+  assert.match(jdGapBridge("How do you use Splunk?", RESUME, "Splunk ES"), /less direct hands-on with Splunk/)
 })
 
-test("the live card does not print a timing line or a reconnecting status", () => {
-  assert.equal(app.includes('status("Reconnecting.'), false)
-  // The 150s last-resort watchdog uses this error; it is a retry status, not a timing line on the card.
-  assert.match(app, /Answer request timed out/)
-  assert.equal(app.includes('meta = "⚡'), false)
-  assert.match(app, /function spokenShape/)
+test("the thesis sentence is streamed before the model", () => {
+  const service = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
+  const at = service.indexOf("technicalThesis(job.question)")
+  const model = service.indexOf("streamOpenRouter(job.orKey as string")
+  assert.ok(at > 0 && model > at)
+})
+
+test("a technical answer is thesis, how it works, one example, and one resume line", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How would you investigate a phishing email?",
+    raw: "I start with the message the employee forwarded and I do not click the link.",
+    resume: RESUME,
+    source: RESUME,
+  })
+  const sentences = gated.text.split(/(?<=[.!?])\s+/)
+  assert.match(sentences[0], /comes down to one point|phishing/i)
+  assert.match(gated.text, /Example:/)
+  const ties = sentences.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+  assert.equal(ties.length, 1)
+  assert.match(gated.text, new RegExp(ties[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"))
+})
+
+test("how a missing tool works stays on that tool and adds the gap bridge", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How does Splunk work?",
+    raw: "EDR watches the host and I isolate the machine. A SIEM searches the mail.",
+    previous: "EDR watches the host and I isolate the machine.",
+    resume: RESUME,
+    jd: "Splunk ES",
+    source: RESUME,
+  })
+  assert.match(gated.text, /Splunk/)
+  assert.match(gated.text, /less direct hands-on with Splunk/)
+  assert.doesNotMatch(gated.text, /isolate the machine/)
+})
+
+test("a candidate's Sophos practice does not enter the answer", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How do you handle endpoint tools?",
+    raw: "I keep a personal Sophos practice at home. I assist with ServiceNow incident resolution at McKesson.",
+    resume: RESUME,
+    source: RESUME,
+    transcript: "You: I keep a personal Sophos practice at home.",
+  })
+  assert.doesNotMatch(gated.text, /Sophos|personal Sophos practice/i)
+  assert.match(gated.text, /ServiceNow|McKesson/)
+})
+
+test("a candidate's employer from the transcript never enters the answer", () => {
+  const gated = gateDisplayedAnswer({
+    question: "Tell me about a time you led an incident.",
+    raw: "At Northern Trust I led the fraud program for 40 people. I assist with ServiceNow incident resolution at McKesson and closed 12 change requests.",
+    resume: RESUME,
+    jd: "SOC analyst",
+    source: RESUME,
+    transcript: "You: At Northern Trust I led the fraud program.",
+  })
+  assert.doesNotMatch(gated.text, /Northern Trust/)
+  assert.match(gated.text, /ServiceNow|McKesson|12/)
+})
+
+test("the model extends only when resume facts still miss the floor", async () => {
+  let calls = 0
+  const resume = "I tracked incidents at McKesson."
+  const held = await extendFromModel("How would you investigate a phishing email?", "word ".repeat(160), resume, "", async () => { calls++; return "extra" })
+  assert.equal(calls, 0)
+  assert.ok(held.startsWith("word"))
+  const grown = await extendFromModel("How would you investigate a phishing email?", "I start with the message.", resume, "", async () => {
+    calls++
+    return "I tracked incidents at McKesson and kept each ticket moving until it closed."
+  })
+  assert.equal(calls, 1)
+  assert.match(grown, /McKesson/)
+  const blocked = await extendFromModel("How would you investigate a phishing email?", "I start with the message.", resume, "", async () => "I deployed NotATool across Northern Trust.")
+  assert.doesNotMatch(blocked, /NotATool|Northern Trust/)
+})
+
+test("gold replay median is measured after the floor binds", () => {
+  const buckets = { short: [], long: [], story: [] }
+  for (const item of gold.items) {
+    const gated = gateDisplayedAnswer({
+      question: item.question,
+      raw: item.answer.split(/\s+/).slice(0, 40).join(" "),
+      resume: gold.resume,
+      jd: gold.jd,
+      source: gold.resume,
+    })
+    buckets[answerRoute(item.question).route].push(gated.words)
+  }
+  const shorts = median(buckets.short)
+  const longs = median(buckets.long)
+  const stories = median(buckets.story)
+  assert.ok(shorts <= 60, `short median ${shorts}`)
+  assert.ok(buckets.short.every((n) => n <= 60))
+  assert.ok(longs >= 120, `long median ${longs}`)
+  assert.ok(stories >= 150, `story median ${stories}`)
+  console.log(`replay median short ${shorts} long ${longs} story ${stories}`)
 })

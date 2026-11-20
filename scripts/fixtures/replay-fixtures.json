@@ -1,0 +1,986 @@
+[
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 0,
+    "end_s": 1,
+    "speaker": "interviewer",
+    "text": "How did your day go?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 1,
+    "end_s": 9,
+    "speaker": "candidate",
+    "text": "Uh, it went well. Uh, as I have night shift, I woke up in the afternoon and I got ready.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 9,
+    "end_s": 11,
+    "speaker": "interviewer",
+    "text": "Okay. Are you okay?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 11,
+    "end_s": 12,
+    "speaker": "candidate",
+    "text": "Yeah, yeah.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 12,
+    "end_s": 14,
+    "speaker": "interviewer",
+    "text": "Took enough rest?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 14,
+    "end_s": 15,
+    "speaker": "candidate",
+    "text": "Yeah, ma'am.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 15,
+    "end_s": 18,
+    "speaker": "interviewer",
+    "text": "Okay, all right. Shall we get started?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 18,
+    "end_s": 19,
+    "speaker": "candidate",
+    "text": "Yeah, I'm sure.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 19,
+    "end_s": 23,
+    "speaker": "interviewer",
+    "text": "Okay. Ashish, can you tell me about yourself, please?",
+    "q_id": 1,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 23,
+    "end_s": 76,
+    "speaker": "candidate",
+    "text": "Uh, I'm Ashish and I've completed my engineering in the year of 2023 in Sri Devi Institute of Engineering College and I've completed my CH version 12 and currently I'm working as a SOC analyst L1 in Northern Trust Company where I focus on identifying, analyzing and escalating the potential threats to the L2. And I'm constantly learning myself and updating myself through real-time uh simulation labs and other open-source resources. Yes, cybersecurity, especially SOC, excites me because it is continuous learning method and technology and investigations. And yeah, my goal is to become a highly skilled in SOC environment. And yeah, I'm searching for a a better role for the sake of my growth and improve my skills.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 76,
+    "end_s": 90,
+    "speaker": "interviewer",
+    "text": "Wonderful. Thanks for that briefing. And you know, there are a lot of opportunities in today's world like development, coding, testing and so on. But why did you choose cybersecurity as your career?",
+    "q_id": 2,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 90,
+    "end_s": 151,
+    "speaker": "candidate",
+    "text": "Ma'am, uh during my engineering when I first saw how coding works and first started learning coding, I was not so much comfortable, basically interested on that domain. So, I started digging out what are the opportunities I have around the for my career opportunities. Then I found this cybersecurity. Basically, I was not having much knowledge on this, how it works, what jobs do I get and how to start my learning in this career opportunity and then I found my one of my brother's friend who is also work as a SOC analyst now it's been 6 years he's working in this in organization as a SOC analyst and he has guided me through what is SOC, what is the cybersecurity and what are what are the options do we have and how SOC aligns to my career opportunity growth and and all so hence I'm here as a cybersecurity aspirant and wishing to grow in this cybersecurity as a SOC analyst.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 151,
+    "end_s": 159,
+    "speaker": "interviewer",
+    "text": "Okay, that's wonderful to hear. All right, can you tell me the roles and responsibilities of a security analyst?",
+    "q_id": 3,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 159,
+    "end_s": 200,
+    "speaker": "candidate",
+    "text": "Some roles and responsibilities as an L1 it is identifying, analyzing and triaging the events logs which we receive in the SIEM uh tools and then escalating it to L2 uh basically L2 deep drives and threat hunting performs threat hunting and then escalates it to the L3 where they decide and the further uh operations they take care and then finally it ends over there. Totally there are three levels L1, L2 and L3 where L1 as I work in the organization as a first responder to any incident happening in our organization.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 200,
+    "end_s": 205,
+    "speaker": "interviewer",
+    "text": "Okay, and what sort of reports do you prepare as SOC L1?",
+    "q_id": 4,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 205,
+    "end_s": 230,
+    "speaker": "candidate",
+    "text": "As a SOC L1 I basically monitor all the alerts which is received in the system and then search for any escalations available, any incident reports or any event that is suspicious and then I document all the indicator of compromise and then I escalate it to the L2 if it is any suspicious activity found.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 230,
+    "end_s": 235,
+    "speaker": "interviewer",
+    "text": "Okay, all right. And can you tell me what you know about routing?",
+    "q_id": 5,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 235,
+    "end_s": 274,
+    "speaker": "candidate",
+    "text": "Uh basically a router router is a device. It It basically routes the data packets sent from the host. For example, I want to send a data packet to a particular uh IP address. For example, I'm IP address A and I want to talk to IP address B. And And in the network, there are multiple IP addresses. For example, A B C D. Uh using router, it routes my data packet to the destination IP that is IP B without any loss of data too and a loss of data and ensuring confidentiality. Uh the routing happens.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 274,
+    "end_s": 284,
+    "speaker": "interviewer",
+    "text": "Okay. And what is the goal of routing? You said that it moves packets from one host to another, isn't it? So, what is the goal?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 284,
+    "end_s": 299,
+    "speaker": "candidate",
+    "text": "The goal of routing is to ensure the confidentiality and reliable data transfer. Uh so that no other IP address out of the network or inside the network that has no authority access it or reads it.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 299,
+    "end_s": 310,
+    "speaker": "interviewer",
+    "text": "Okay. It is also for selecting the best path to travel to the destination, isn't it? Okay, great. And what are the devices that you use for routing?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 310,
+    "end_s": 313,
+    "speaker": "candidate",
+    "text": "Uh we use router.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 313,
+    "end_s": 318,
+    "speaker": "interviewer",
+    "text": "Yes. And what about routing tables?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 318,
+    "end_s": 320,
+    "speaker": "candidate",
+    "text": "Uh no, ma'am. I know.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 320,
+    "end_s": 324,
+    "speaker": "interviewer",
+    "text": "The device is router, but do you know about routing tables?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 324,
+    "end_s": 326,
+    "speaker": "candidate",
+    "text": "No, ma'am.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 326,
+    "end_s": 344,
+    "speaker": "interviewer",
+    "text": "Okay. So, routing tables is where the routers will consult to make decisions about which path to move from one host to the destination to send packets on. And this is determined by the routing algorithm. And that will be consulted with the routing tables. That's where you program it.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 344,
+    "end_s": 344,
+    "speaker": "candidate",
+    "text": "Okay.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 344,
+    "end_s": 348,
+    "speaker": "interviewer",
+    "text": "Okay. Uh can you tell me about",
+    "q_id": 6,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 348,
+    "end_s": 380,
+    "speaker": "candidate",
+    "text": "A firewall is basically a wall between public IP and private IP. Acts as an control over incoming and outgoing packets. Basically, it monitors, analyzes, and blocks the data packets if it is suspicious. And lets in if it is a a legitimate one. Basically, we how firewall works is basically we write the rules. And according to the rules, the packets are scanned, analyzed, and then blocked if it is a suspicious.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 380,
+    "end_s": 394,
+    "speaker": "interviewer",
+    "text": "Excellent. Very well explained. Very nice. So, what does it do? You said it is going to block the traffic. How exactly it happens? What all happens? How does it protect the network? Or what does it protect it from?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 394,
+    "end_s": 479,
+    "speaker": "candidate",
+    "text": "Basically, in the network, the main thing happens is data transfer. From one node to another. For example, I'm I'm in a private IP host, and I need some data from the public IP. For example, from the YouTube, Google, or some other sources. So, basically YouTube and Google are public IPs. So, once I request any IP any data from the uh uh Google, though the data transfer happens through the IP addresses. Uh basically, the address which I request is the IP address itself. And then once the IP address sends me the requested data, uh then it travels through So, it travels through through the firewall. And if the uh if my rules definition is it is a legitimate one, then it allows inside, or else it blocks it. Uh the same goes with the uh transferring of files to one device to another device. Once it is uh uh received to my device, it scans it and then uh checks for all the suspicious activities. Uh basically, sorry. Uh basically, uh it is a kind of uh uh father it acts as a father. It it stands in between the door in front of the door and uh asks whether you are a legitimate one or not. Why are you coming in? What is the purpose of it? And then it allows inside.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 479,
+    "end_s": 484,
+    "speaker": "interviewer",
+    "text": "Very good. So basically it helps uh prevent unauthorized access to the network.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 484,
+    "end_s": 485,
+    "speaker": "candidate",
+    "text": "Yeah.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 485,
+    "end_s": 491,
+    "speaker": "interviewer",
+    "text": "And it also stops sensitive information from leaving a network as well, both incoming and outgoing.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 491,
+    "end_s": 495,
+    "speaker": "candidate",
+    "text": "Yeah, and it also helps prevent malicious softwares.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 495,
+    "end_s": 496,
+    "speaker": "interviewer",
+    "text": "Right.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 496,
+    "end_s": 502,
+    "speaker": "interviewer",
+    "text": "Okay, nice. Can you tell me what an incident is?",
+    "q_id": 7,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 502,
+    "end_s": 522,
+    "speaker": "candidate",
+    "text": "Um any incident any threat that is uh uh exploited through a vulnerability and it has damaged and caused harm is called an incident and it has to be immediately mitigated and uh uh action should be taken immediately.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 522,
+    "end_s": 531,
+    "speaker": "interviewer",
+    "text": "Very good. So since you mentioned threat and vulnerability, can you tell me the difference between risk, threat, and vulnerability? How do you define these three?",
+    "q_id": 8,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 531,
+    "end_s": 563,
+    "speaker": "candidate",
+    "text": "Um risk is the potential danger that can occur uh when a threat is exploited using a vulnerability. And what is a threat? A threat is a potential danger uh that can occur uh when uh a vulnerability is exploited which can cause harm. And what is vulnerability? Vulnerability is a flaw uh in the software, hardware, process, or a human behavior uh that can lead to uh a threat and uh can be exploited and cause uh severe damage to the organization.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 563,
+    "end_s": 572,
+    "speaker": "interviewer",
+    "text": "Excellent, very good. So when the risk materializes, it becomes an incident. Can you tell me about the incident response plan?",
+    "q_id": 9,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 572,
+    "end_s": 582,
+    "speaker": "candidate",
+    "text": "Yeah, ma'am. Uh basic first is the detection and then analyzing and then containing, mitigating, and documenting and the lessons and objectives.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 582,
+    "end_s": 585,
+    "speaker": "interviewer",
+    "text": "Okay, so initially someone has to report the incident, isn't it?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 585,
+    "end_s": 586,
+    "speaker": "candidate",
+    "text": "Correct, ma'am.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 586,
+    "end_s": 588,
+    "speaker": "interviewer",
+    "text": "And how is that done?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 588,
+    "end_s": 673,
+    "speaker": "candidate",
+    "text": "Ma'am, it is done through uh for example, uh I'm an end user, I got a phishing email, then I then I give a then I raise a ticket. I would have expecting the email is phishing email, then I can analyze it. And the second one, I can use endpoint EDRs. Uh basically, EDRs are endpoint detection and response. I can track the all the incoming and outgoing data. For example, SMTP. I can track it. If any malicious found, then I can on my own, I can analyze it and contain it. And also, I can do it through SIEM tools like Splunk, QRadar, and Microsoft Sentinel. Where we get alert and basically, we predefine the rules over there when the suspicious activity, for example, the event ID is 4624 occurs after 4625 multiple failed logins occurs, it basically shows us as a brute force attack. So, once this occurs, I get an alert. For example, I can I'll exceed my failed login more than three if the user types the wrong password more than three times, I should get an alert. In this way, we can analyze multiple attacks and even uh phishing emails so that we be cautious.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 673,
+    "end_s": 687,
+    "speaker": "interviewer",
+    "text": "Very good. Very nice. So, for a person to report an incident, he must be aware that an incident or a security breach has to be reported. And that's done through security training awareness sessions. Okay. Can you tell me what networking is?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 687,
+    "end_s": 701,
+    "speaker": "candidate",
+    "text": "Uh basically, communicating uh between the devices is called networking uh which includes two or more devices or host we call it as is called networking.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 701,
+    "end_s": 705,
+    "speaker": "interviewer",
+    "text": "Okay. So, what are all the devices that are there in the network?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 705,
+    "end_s": 709,
+    "speaker": "candidate",
+    "text": "A switch, a router, hubs.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 709,
+    "end_s": 711,
+    "speaker": "interviewer",
+    "text": "And also protocols, isn't it?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 711,
+    "end_s": 713,
+    "speaker": "candidate",
+    "text": "Protocols, yeah. Yeah.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 713,
+    "end_s": 721,
+    "speaker": "interviewer",
+    "text": "For communication. Okay. And can you tell me the difference between Trojan and virus?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 721,
+    "end_s": 763,
+    "speaker": "candidate",
+    "text": "Ma'am, virus is a malicious program that once it is inserted uh it damages the system like getting overheated or performing the few softwares by itself and stops working. Basically, viruses can be caught or found through anti-viruses which acts like a mother. And the Trojans uh Well, ma'am, I'm not sure. I'm not able to recall what is Trojans. Even it is a malicious code, I can tell you in the brief.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 763,
+    "end_s": 788,
+    "speaker": "interviewer",
+    "text": "Yes, it's a mali- Yeah. Yes, you are partially right. So, virus basically attaches to file and it spreads when those files are run. It could be an executable. So, what it does is it self-replicates by attaching to other files and it infects a system. But whereas Trojan, it doesn't act like that. It relies on deception to get a user to install it.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 788,
+    "end_s": 789,
+    "speaker": "candidate",
+    "text": "Okay.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 789,
+    "end_s": 808,
+    "speaker": "interviewer",
+    "text": "Okay, so that's the main difference. And the virus will spread by infecting other files. But whereas the Trojan will disguise itself as a legitimate software to gain access to a system. Okay. And the both are malicious software. Both Trojan and virus are malicious, but the way it acts is what uh the difference.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 808,
+    "end_s": 809,
+    "speaker": "candidate",
+    "text": "Behavior is different. Okay.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 809,
+    "end_s": 810,
+    "speaker": "interviewer",
+    "text": "Yes.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 810,
+    "end_s": 811,
+    "speaker": "candidate",
+    "text": "Thank you, ma'am.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 811,
+    "end_s": 816,
+    "speaker": "interviewer",
+    "text": "Yeah. Okay. And uh what is EDR?",
+    "q_id": 10,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "XQC_t7uplBo",
+    "start_s": 816,
+    "end_s": 836,
+    "speaker": "candidate",
+    "text": "EDR is endpoint detection response. Uh basically, we install agents in our uh endpoint devices for my PC or my mobile phone or any networking devices in organizations uh to monitor uh each and every activity for the sake of uh finding the malicious activities.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 0,
+    "end_s": 3,
+    "speaker": "candidate",
+    "text": "I'm doing great. Did you have your breakfast?",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 3,
+    "end_s": 6,
+    "speaker": "interviewer",
+    "text": "Yes, I did. [laughter] What about you?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 6,
+    "end_s": 9,
+    "speaker": "candidate",
+    "text": "I didn't have to. Thank you so much.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 9,
+    "end_s": 25,
+    "speaker": "interviewer",
+    "text": "Well, let's get started. And uh may I note a little bit about yourself, your background, what did you study, what's your experience like and what do you know about and networking sock and what your day-to-day job looks like.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 25,
+    "end_s": 117,
+    "speaker": "candidate",
+    "text": "Yes, sure. Uh so first of all thank you so much uh for giving me this opportunity to introduce myself. So I'm Lakshmi Bodhihar. So I have completed my engineering in 2018 uh in ENC background. So after that I got a uh chance to work in um testing domain. So but uh because of COVID and all uh it was a bit gap the company got closed and then uh I got an opportunity uh to work in one of the reputed MNC company that is Techmahindra and there I have joined as a associate software engineer. So but uh there I got an opportunity to work as uh as a sock analyst L1. So there I have worked for about 2 years. uh I got a little bit exposure on Splunk also I have worked on Microsoft Sentinel for like about one one and one one and a half years. So then uh after that because of my pregnancy and my health issues uh I was bit away from this work. So I got a I take a gap. So after that uh after healing myself I was keep on updating myself on my uh like previous work and I used to work on uh online labs also to keep update myself on this uh cyber security. So after that now I feel like I'm perfect to uh start my career again. So I'm seeking for a job.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 117,
+    "end_s": 121,
+    "speaker": "interviewer",
+    "text": "Okay, that sounds very optimistic. Yeah.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 121,
+    "end_s": 130,
+    "speaker": "interviewer",
+    "text": "Okay. So you told me that you have been working as a test engineer and then how did you land up in Tech Mahindra as a sock analyst?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 130,
+    "end_s": 195,
+    "speaker": "candidate",
+    "text": "actually uh that uh I got uh that uh opportunity in my college uh campus time but the uh that company was a startup company and uh uh after like almost one year uh uh during the covid time uh I don't know what happened suddenly they told like okay we are going to shutting down so uh we are terminating you all I we just got that mail and it got terminated. So and after that I was just randomly searching for testing roles. I got an opportunity in tech mahindra as associate software engineer and that time the jobs I was really wanted to you know get into an organization. Uh so then I just uh applied for the job and uh they have taken a basic interview and they have given me an opportunity to work in cyber security. So that was not like uh targeted role but I got it what I could say just failed. I don't know.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 195,
+    "end_s": 197,
+    "speaker": "interviewer",
+    "text": "Okay. You grabbed the opportunity.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 197,
+    "end_s": 229,
+    "speaker": "candidate",
+    "text": "Yes, I grabbed that of course and yeah the initially uh to be frank I was not that aware about this like I know like what is cyber security and all but not completely about the role as a sock L1 and all. So after got a I got a KT for some months. I was like really interested in this job and I really felt that this job is uh same time risky as well as very responsible job. So I was very excited to work on this role.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 229,
+    "end_s": 232,
+    "speaker": "interviewer",
+    "text": "Okay. Why do you say it's risky?",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 232,
+    "end_s": 266,
+    "speaker": "candidate",
+    "text": "It's definitely risky because uh see a small ignorance can lead to a very big loss a very big impact for the organization. So we have to be aware uh throughout our shifts we have to be available for uh like whenever any uh uh additional uh weekends calls and all the time because uh it will lead to a very huge loss maybe a financial loss uh maybe a you know data leakage or anything so we have to be like very alert while doing our job.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 266,
+    "end_s": 270,
+    "speaker": "interviewer",
+    "text": "Okay. So you meant it to be a very responsible job.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 270,
+    "end_s": 273,
+    "speaker": "candidate",
+    "text": "Yes. Uh it's very responsible job.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 273,
+    "end_s": 281,
+    "speaker": "interviewer",
+    "text": "Okay. As a mother uh how do you uh manage doing rotational shifts working 24/7?",
+    "q_id": "v2-1",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 281,
+    "end_s": 306,
+    "speaker": "candidate",
+    "text": "Uh uh now my baby is uh like about 2 years and I have my mother at my home. She'll take care of him uh completely and he is adjusted with everyone in the home. So uh most of the time uh I like I spend time with him but it is not like uh he's completely depending on me. So I can manage the work.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 306,
+    "end_s": 315,
+    "speaker": "interviewer",
+    "text": "Okay. Got it. Can you tell me how your dayto-day uh life looks like as a sock analyst? What do you start with on a day?",
+    "q_id": "v2-2",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 315,
+    "end_s": 383,
+    "speaker": "candidate",
+    "text": "Uh I Yes. uh as a sock analyst uh every day first whenever uh when I should visit to my office first I used to check like any uh cyber security attacks are going on like just online search for some time and then I'll start with my mails I'll see if any mail uh I'm getting like any uh from my seniors all those things after that I'll check with the alerts start with my monitoring work I'll see if I'm getting any alert alerts uh on a daily basis and then uh I'll prioritize the alerts based on their severity. Then I will assign them and I'll work on the alerts. Uh so once every uh uh the day completes I'll uh uh gather all the information like uh how much alerts we received like what are true positive what are false positive what are the root cause analysis we'll document all the things for that particular day and uh I'll send the shift hand over to my seniors as well as my manager that's how I used to work",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 383,
+    "end_s": 385,
+    "speaker": "interviewer",
+    "text": "what are the same tools that you have worked on",
+    "q_id": "v2-3",
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 385,
+    "end_s": 392,
+    "speaker": "candidate",
+    "text": "okay I have worked on Microsoft sentinel And initially I got exposure to Splunk also.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 392,
+    "end_s": 395,
+    "speaker": "interviewer",
+    "text": "Okay. So your experience lies more with Sentinel.",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 395,
+    "end_s": 397,
+    "speaker": "candidate",
+    "text": "Sentinel.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 397,
+    "end_s": 403,
+    "speaker": "interviewer",
+    "text": "Okay. All right. And uh can you explain to me how Sentinel works?",
+    "q_id": "v2-4",
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 403,
+    "end_s": 428,
+    "speaker": "candidate",
+    "text": "Centralizer SIM security SIM tool uh which first collects the locks uh from the data source devices and the locks will be indexed and uh indexed logs will be uh uh retracted uh on the uh console uh for sock analyst sock analyst to interact with the logs.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 428,
+    "end_s": 433,
+    "speaker": "interviewer",
+    "text": "Okay. And uh how does the dashboard look like? what all you will be able to see",
+    "q_id": "v2-5",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 433,
+    "end_s": 467,
+    "speaker": "candidate",
+    "text": "uh the dashboard looks like uh we can see uh like what are the uh alerts uh the incidents the reports options uh we have uh the description and all the se uh what kind of alerts like severity all that options and uh we can see the the overview of the uh dashboard uh how many alerts are there? How many alerts are you know active? Active all those things we can see.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 467,
+    "end_s": 478,
+    "speaker": "interviewer",
+    "text": "Okay. And have you had an experience of uh where you mistakenly identified a true positive as a false positive?",
+    "q_id": "v2-6",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 478,
+    "end_s": 514,
+    "speaker": "candidate",
+    "text": "No, I don't have that kind of experience because most of the alerts we got are like most of the alerts were like false positive only. Uh rarely we used to get the true positives uh on a daily basis. uh so whenever we I feel any uh alert is suspicious uh I would definitely not close it with having any kind of confusion so we used to I used to escalate it so used to do the deeper investigation with my seniors and then we used to finally if it is true positive we'll take the proper action and all and then uh to close the alert",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 514,
+    "end_s": 516,
+    "speaker": "interviewer",
+    "text": "okay you said you will escalate",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": false
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 516,
+    "end_s": 519,
+    "speaker": "interviewer",
+    "text": "at what instant you will escalate",
+    "q_id": "v2-7",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 519,
+    "end_s": 521,
+    "speaker": "interviewer",
+    "text": "when do you escalate",
+    "q_id": null,
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 521,
+    "end_s": 563,
+    "speaker": "candidate",
+    "text": "Uh yes. So if I feel like uh if any alerts uh which are I feel like they are false false positive uh I I will close them. But if I feel like any alerts are like uh very suspicious uh like uh based on the initial triage if I feel like the alert is not false positive and it's even more suspicious then I'll escalate it to the L2 uh based on like if the IP is malicious or URL is malicious and uh and any kind of uh user interaction is not there but still that uh alert is notified Uh so then I'll escalate it.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 563,
+    "end_s": 569,
+    "speaker": "interviewer",
+    "text": "Okay. Can you tell me some of the trending cyber attacks?",
+    "q_id": "v2-8",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 569,
+    "end_s": 575,
+    "speaker": "candidate",
+    "text": "Um yeah in 2026 uh like real cyber attacks you're asking.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 575,
+    "end_s": 606,
+    "speaker": "candidate",
+    "text": "Uh yeah in 2026 there was a cyber attack on like US health care system uh for uh the ransomware attack. So which leads to the whole uh health healthcare center to close its uh clinical uh laboratories, their hospital and their clo disclose their electronic devices. Uh it it's a it was a very big attack that happened that was a ransomware deployment.",
+    "q_id": null,
+    "end_s_approx": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 606,
+    "end_s": 610,
+    "speaker": "interviewer",
+    "text": "Okay. And what do you know about SQL injection?",
+    "q_id": "v2-9",
+    "end_s_approx": true,
+    "is_question": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 610,
+    "end_s": 637,
+    "speaker": "candidate",
+    "text": "Uh SQL injection is uh a type of a cyber attack where the attacker injects the malicious SQL code into the website uh to uh look like a you know uh it will look like a malicious website but it will you know he will inject it into the input of the uh data server to uh receive to excfiltrate the data.",
+    "q_id": null,
+    "end_s_approx": true,
+    "split": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 637,
+    "end_s": 642,
+    "speaker": "interviewer",
+    "text": "Okay. And do you know about cross-sight scripting XSS?",
+    "q_id": "v2-10",
+    "end_s_approx": true,
+    "is_question": true
+  },
+  {
+    "video": "eUlD63RbCnc",
+    "start_s": 642,
+    "end_s": 657,
+    "speaker": "candidate",
+    "text": "Uh cross-ite scripting is also a type of a cyber attack. So uh where an uh attacker will uh inject the malicious script uh into the uh website.",
+    "q_id": null,
+    "end_s_approx": true
+  }
+]

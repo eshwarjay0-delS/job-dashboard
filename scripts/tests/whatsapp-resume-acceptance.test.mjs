@@ -213,6 +213,7 @@ test("28.5% is not a clean pass, and the finished file is still sendable", () =>
 })
 test("Houston and Saint Louis emails are not treated as the same profile", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", ""), false)
   assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com"), true)
   assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
   assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)

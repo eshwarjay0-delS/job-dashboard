@@ -31,8 +31,8 @@ test("2. the 1.5 s bleed window is judged by when the words were said", () => {
   const them = [{ text: "Can you walk me through the vault design?", at: 1100, spokenAt: 1000 }];
   assert.equal(api.micBleed("can you walk me through the vault design", 4000, them, 1300), true);
   assert.equal(api.spokenWallTime(9000, 10000, 50000), 49000);
-  assert.ok(src.includes("transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt })"));
-  assert.ok(src.includes("onTranscript(who, clean, false, opt.spokenAt)"));
+  assert.ok(src.includes("transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt, forceYou: !!cap.forceYou })"));
+  assert.ok(src.includes("onTranscript(opt.forceYou ? \"You\" : who, clean, false, opt.spokenAt)"));
 });
 test("2 failsafe. no timing falls back to return time; your own words said later are kept", () => {
   const them = [{ text: "Can you walk me through the vault design?", at: 1100, spokenAt: 1000 }];
@@ -55,7 +55,7 @@ test("3 failsafe. the gate fails open, only labels, and Answer anyway answers th
   assert.equal(api.turnGate({ toString() { throw new Error("bad"); } }).outcome, "answer");
   assert.ok(body("function noteTurnGate()").includes("catch"));
   assert.ok(!body("function noteTurnGate()").includes("return false"));
-  assert.ok(src.includes("noteTurnGate();\n  if (!autoOn || !armsAuto()) return;"));
+  assert.ok(src.includes("noteTurnGate();\n  if (!autoOn) return;\n  if (!armsAuto()) { scheduleUnsure(); return; }"));
   const lines = [{ who: "Them", text: "Okay, thanks." }];
   assert.equal(api.answerAnywayLines({ lines, at: 1000 }, { fromAuto: false, pending: 0, typed: "", now: 9000 }), lines);
   assert.equal(api.answerAnywayLines({ lines, at: 1000 }, { fromAuto: true, pending: 0, typed: "", now: 9000 }), null);   // never automatic
