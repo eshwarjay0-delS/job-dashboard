@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Kompas run 2 on the same pull request, not merged
+
+The resume baseline on live 1c6c1622 (Length=Long, Senior SOC Analyst, Architect + Developer) is now in the same consistency pull request. Length was ignored because the live request hardcoded balanced. A reports answer was replaced by a shorter ServiceNow sentence. SOC answers closed on ITIL. The incident card was the six-word confirm stub. Typed questions still showed "Context shows up with the next answer." The session length is now what the request sends. A late replace keeps a longer on-topic stream. Off-topic platform sentences are dropped. The confirm stub is not served, shown, or returned by the fast path. The right panel paints Say this or nothing. No ship marker. Do not merge. Do not poll production.
+
+Continue: one exact-head CI check on the pull request after this push. After a later reviewed ship, check the Kompas page once.
+
 ## 20 November 2026 — Kompas consistency pass, not merged
 
 Owner Eshwar asked for consistency on the live question: relevance, length, and a right panel that helps. Skip-login stays on. The value off-confirmed-by-eshwar remains the only off switch. Admin routes stay locked. Branch fix/google-only-login-production-auth-20261113 was not merged or revived.

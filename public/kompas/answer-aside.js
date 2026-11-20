@@ -76,7 +76,6 @@
     panel.id = "answerAside";
     panel.setAttribute("aria-label", "Answer context");
     panel.hidden = true;
-    panel.appendChild(el("p", "aside-empty", "No resume is stored on this device. I will use the job description only."));
     host.appendChild(panel);
 
     btn.addEventListener("click", function () { setOpen(!panel.classList.contains("is-open")); });
@@ -143,7 +142,7 @@
     list.textContent = "";
     var lines = mode === "boosters" ? (aside.boosters || []) : (aside.questions || []);
     lines.forEach(function (line) { addLi(list, line, whyFor(current, line)); });
-    if (!lines.length) list.appendChild(el("li", "", mode === "boosters" ? "No booster for this line." : "No question for this line."));
+    if (!lines.length) return;
     if (title) title.textContent = mode === "boosters" ? "Say this" : "Say this";
     var qBtn = document.getElementById("asideModeQuestions");
     var bBtn = document.getElementById("asideModeBoosters");
@@ -195,15 +194,6 @@
     panel.appendChild(bar);
     if (!pageResume() && aside.question) panel.appendChild(el("p", "aside-empty", "No resume is stored on this device. I will use the job description only."));
     if (aside.partial) panel.appendChild(el("p", "aside-live", aside.partial));
-    var breakdown = aside.breakdown || {};
-    ["Claim", "Context", "Result"].forEach(function (name) {
-      var line = breakdown[name.toLowerCase()];
-      if (!line) return;
-      var section = el("section", "aside-break");
-      section.appendChild(el("h3", "", name));
-      section.appendChild(el("p", "aside-breakdown", line));
-      panel.appendChild(section);
-    });
     if (aside.summary) {
       var sum = el("p", "aside-summary", aside.summary);
       var sumWhy = whyFor(aside, aside.summary);
@@ -216,21 +206,7 @@
       if (nowWhy) now.title = nowWhy;
       panel.appendChild(now);
     }
-    var context = el("section");
-    var leadLines = aside.context.leads || [];
-    var touchLines = aside.context.touchPoints || [];
-    if (leadLines.length || touchLines.length) {
-    context.appendChild(el("h3", "", "Context"));
-    var leads = el("ul", "aside-leads");
-    leadLines.forEach(function (line) { addLi(leads, line, whyFor(aside, line)); });
-    context.appendChild(leads);
-    if (touchLines.length) {
-    context.appendChild(el("div", "aside-kicker", "Touch points"));
-    var touches = el("ul", "aside-touches");
-    touchLines.forEach(function (line) { addLi(touches, line, whyFor(aside, line)); });
-    context.appendChild(touches);
-    }
-    }
+    var sayLines = (aside.questions || []).concat(aside.boosters || []).concat(aside.sayNow ? [aside.sayNow] : []).filter(Boolean);
     var back = el("section");
     var head = el("div", "aside-switch");
     head.appendChild(el("h3", "", "Say this"));
@@ -254,8 +230,7 @@
     var qs = el("ul", "aside-questions");
     qs.id = "asideModeList";
     back.appendChild(qs);
-    panel.appendChild(context);
-    panel.appendChild(back);
+    if (sayLines.length) panel.appendChild(back);
     paintMode(aside);
   }
 
@@ -263,7 +238,6 @@
     var panel = document.getElementById("answerAside");
     if (!panel) return;
     panel.textContent = "";
-    panel.appendChild(el("p", "aside-empty", "Context shows up with the next answer."));
   }
 
   function onQuestion() {
@@ -274,7 +248,7 @@
     manual = null;
     var hit = lookup(stemNow);
     if (hit) render(hit);
-    else if (stemNow) { current = null; renderWaiting(); }
+    else if (stemNow) { current = null; paintLocal(); }
   }
 
   var brain = { claims: [], topics: [], threads: [], questions: [], answers: [], prewarm: "", log: [], last: "", lastShown: "" };

@@ -39,3 +39,31 @@ Caches serve only when the question, the epoch, and the session are the same. A 
 | Prioritize a Qualys scan | howto | 101 | 70 | 100 | 160 |
 
 This is a deterministic local gate. It is not a live model call, not an installed Windows session, and not a production check. The pull request has no ship marker. Production stays on the previous build until a later reviewed ship.
+
+## Live audio from the 19 Nov production session
+
+The box Chrome session on live `1c6c1622` (YouTube SOC mock, tab audio, no resume on that device) showed five more failures. `scripts/tests/kompas-live-audio.test.mjs` covers them.
+
+1. **Dropped digits.** The display sanitizer is `withoutInventedNumbers` in `src/lib/kompasAnswerPresentation.ts`, and the same replace in `presentAnswer` in `public/kompas/app.js`. It deleted every digit that was not already in the resume, including the digit inside a label. "L1/L2/L3" became "L" and "layer-3" became "layer-". A digit glued to a letter or a hyphen is now kept. A loose metric that is not in the resume is still removed. The figure guard in `kompasGuards.ts` rewrites unsupported result numbers to words such as "several"; it does not delete the digit out of "L1", because a digit glued to a letter is not a separate figure.
+
+2. **Auto firing on fragments.** Tab audio labels every speaker INTERVIEWER, so the candidate's answers were tagged "Question detected" and Auto opened a card for each fragment: 28 cards in about 5 minutes, including "Okay are okay Yeah yeah." Auto now requires a real interrogative or imperative ask. Filler and a candidate's own story are not asks. A line from the user (You) is never auto-answered, and neither is a paraphrase of what the user just said. A near-identical ask that is already on a card is not answered again.
+
+3. **Level.** Choosing Interview type Technical was writing the answering level back to Technical HR + Engineer. Architect + Developer and Director now stay selected. The live Level box still opens on the level saved with the session.
+
+4. **Stop.** The Start/Stop button was calling `wrapSession`, which left the live view and returned to the session list. Stop now only stops listening. The exit control still leaves the session.
+
+5. **Empty right-panel chips.** Claim, Context, Touch points, and "No booster for this line" are not drawn when there is nothing to say. The panel shows "Say this" when it has a line, and nothing when it does not.
+
+## Live baseline with a resume (run 2, still production 1c6c1622)
+
+The session had a resume attached. Role was Senior SOC Analyst at First National Bank. Level was Architect + Developer, which matched the session. Length was Long. `scripts/tests/kompas-run2-baseline.test.mjs` covers the questions from that run. This is still a local gate, not a live model call.
+
+1. **Length=Long never left the session.** `readLiveAnswerControls` always sent balanced, so the wizard's Long choice did not reach the answer request or the auto introduction. The live request now sends the session length. When that length is long, the prompt asks for the visible band and will not treat one sentence as finished. The prep introduction for a long session asks for about 120 words and must not open with "Having". A stored identity shorter than 90 words is not installed as that long introduction.
+
+2. **A late replace shrank a good stream.** The reports answer grew, then a settle replaced it with a shorter ServiceNow sentence. `keepLongerAnswer` keeps the longer streamed text when the shorter settle is under three quarters of it, unless the shorter one is the one that actually fits the question. The confirm stub is never the text that replace sends.
+
+3. **Resume bias.** SOC questions were closed with ServiceNow and ITIL even though the role is a SOC analyst. A platform sentence is kept when the question is about that platform, or the role line is that platform. Otherwise those sentences are dropped. If nothing on-topic remains, the card says the resume does not cover it instead of filling with the other platform.
+
+4. **Right panel placeholder.** Typed questions were left on "Context shows up with the next answer" because the answer stream never sends an aside payload. That string is gone. A new question paints Say this from the resume, or leaves the panel empty.
+
+5. **Incident stub at 0.28s.** "I would want to confirm that" is not served from the book, not shown by the card, and not returned by the confirm fast path. The fast path now returns the honest line. The route table still generates a mid-confidence incident story.

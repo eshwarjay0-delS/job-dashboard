@@ -99,6 +99,83 @@ export function judgeNarrative(question: string, answer: string, source: string)
   }
 }
 
+const FILLER_WORD = /\b(?:okay|ok|yeah|yes|um+|uh+|right|alright|so|and|well|like)\b/gi
+
+/** Filler and a candidate's own story are not an interviewer ask. */
+export function isRealAsk(text: string): boolean {
+  const raw = String(text || "").replace(/\s+/g, " ").trim()
+  if (!raw) return false
+  const filler = raw.replace(FILLER_WORD, " ").replace(/\s+/g, " ").trim()
+  if (!filler || filler.split(/\s+/).filter(Boolean).length < 4) return false
+  const ownStory = /^(?:i(?:'m| am)|my first|my |it(?:'s| is) been|i have|i was|i work|he(?:'s| is)|she(?:'s| is))\b/i.test(filler)
+  const asks = /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do)|why (?:did|do|would) you|can you|could you|do you know|explain|describe|define)\b/i
+  if (ownStory && !asks.test(filler)) return false
+  if (/\?\s*$/.test(raw) && /\b(?:what|how|why|when|where|who|which|can|could|would|do|did|have|are|is|tell|walk|explain|describe)\b/i.test(raw)) return true
+  return asks.test(filler)
+}
+
+/** The ask mostly repeats something the user already said. */
+export function paraphrasesOwnSpeech(ask: string, ownLines: string[]): boolean {
+  const words = askTokens(ask)
+  if (words.length < 4) return false
+  return (ownLines || []).some((line) => {
+    const theirs = new Set(askTokens(line))
+    const hit = words.filter((word) => theirs.has(word)).length
+    return hit / words.length >= 0.7
+  })
+}
+
+export function autoMayAnswer(input: { speaker?: string; text?: string; recentQuestions?: string[]; ownLines?: string[] }): { fire: boolean; reason: string } {
+  const speaker = String(input.speaker || "")
+  const text = String(input.text || "")
+  if (speaker === "You") return { fire: false, reason: "own-speech" }
+  if (!isRealAsk(text)) return { fire: false, reason: "not-a-question" }
+  if (paraphrasesOwnSpeech(text, input.ownLines || [])) return { fire: false, reason: "paraphrase" }
+  if ((input.recentQuestions || []).some((question) => sameQuestion(text, question))) return { fire: false, reason: "duplicate" }
+  return { fire: true, reason: "ask" }
+}
+
+/** A late settle must not replace a longer streamed answer with a shorter one, or with the confirm stub. */
+export function keepLongerAnswer(streamed: string, next: string, question = "", jd = ""): string {
+  const stub = (value: string) => /^I would want to confirm that\.?$/i.test(String(value || "").trim())
+  const prior = String(streamed || "").trim()
+  const settled = String(next || "").trim()
+  if (stub(settled) || stub(prior)) return !stub(prior) && answerWordCount(prior) > 12 ? prior : HONEST_LINE
+  const before = answerWordCount(prior)
+  const after = answerWordCount(settled)
+  if (before >= 24 && after > 0 && after < Math.floor(before * 0.75)) {
+    if (!resumeFitsQuestion(question, jd, prior) && resumeFitsQuestion(question, jd, settled)) return settled
+    return prior
+  }
+  return settled || prior
+}
+
+const OFF_PLATFORM = /\b(?:servicenow|itil|flow designer|integrationhub)\b/i
+const SECURITY_ROLE = /\b(?:soc|security|phishing|edr|siem|qualys|ransomware|incident|cyber)\b/i
+
+/** Resume facts count only when they answer this question. An unrelated platform is filler. */
+export function resumeFitsQuestion(question: string, jd: string, answer: string): boolean {
+  if (!OFF_PLATFORM.test(answer)) return true
+  if (OFF_PLATFORM.test(question)) return true
+  const role = String(jd || "").split(/[.\n]/)[0] || ""
+  return OFF_PLATFORM.test(role) && !SECURITY_ROLE.test(role)
+}
+
+/** Drop sentences that import an unrelated platform. If nothing on-topic remains, say so plainly. */
+export function dropOffTopicResume(question: string, jd: string, answer: string): string {
+  const text = String(answer || "").trim()
+  if (!text || resumeFitsQuestion(question, jd, text)) return text
+  const kept = text.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !OFF_PLATFORM.test(sentence))
+  return kept.join(" ").trim() || HONEST_LINE
+}
+
+export function levelAfterInterviewType(mode: string, currentLevel: string): string {
+  const level = currentLevel || "engineer"
+  if (mode === "coding") return "architect"
+  if (mode === "final") return "director"
+  return level
+}
+
 export function lengthBandFor(question: string): VisibleLength {
   return visibleLengthBand(question)
 }

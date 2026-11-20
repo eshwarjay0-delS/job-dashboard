@@ -548,7 +548,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "formatSeg", "starSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); const key = { lengthSeg: "length", toneSeg: "tone", formatSeg: "format", starSeg: "star", modeSeg: "mode" }[id]; draft[key] = key === "star" ? b.dataset.v === "on" : b.dataset.v;
   // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
-  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "engineer", technical: "", coding: "architect", final: "director" }[b.dataset.v]; const picked = $("interviewerSelect").value; if (who && !(who === "engineer" && (picked === "architect" || picked === "director"))) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
+  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); $("interviewerSelect").value = levelAfterInterviewType(b.dataset.v, $("interviewerSelect").value); } saveWizardDraft(); }; });
 // The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
 // call saveWizardDraft from their own handlers (clicks, not input events).
 ["input", "change"].forEach(ev => document.querySelectorAll(".wiz-pane").forEach(p => p.addEventListener(ev, saveWizardDraft)));
@@ -759,6 +759,7 @@ function bookMatch(q, depthKey) {
     if (!sameAsk(q, it.q)) continue;                                 // keyword overlap is not the same question
     if (it.epoch != null && book.epoch != null && it.epoch !== book.epoch) continue;
     if (it.session && book.session && it.session !== book.session) continue;
+    if (/^I would want to confirm that\.?$/i.test(String(it.text || "").trim())) continue;
     return it;
   }
   return null;
@@ -989,6 +990,7 @@ function speakerFirst(s) {
 function seedIdentity(s) {
   window.__speakerName = speakerFirst(s);
   let id = s.resume && s.prep && s.prep.identity;
+  if (id && String(s.length || "").toLowerCase() === "long" && String(id).trim().split(/\s+/).length < 90) id = "";
   if (id && window.KompasCorrect && window.KompasCorrect.asSpeaker) id = window.KompasCorrect.asSpeaker(id, window.__speakerName);
   const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter(Boolean) : [s.resume ? "Press Start — answers appear here." : "No resume is stored on this device. I will use the job description only, and I will not invent a work history."] };
   const ph = cards.findIndex(c => /^(Preparing…|Ready)$/.test(c.question));
@@ -1626,6 +1628,12 @@ function showCodingLevels(sel, mode) {
   void mode;
 }
 // A session saved on a level that is no longer offered opens on the nearest one kept, never on a blank list.
+function levelAfterInterviewType(mode, currentLevel) {
+  const level = currentLevel || "engineer";
+  if (mode === "coding") return "architect";
+  if (mode === "final") return "director";
+  return level;
+}
 function keptLevel(v, mode) {
   const near = { hr: "engineer", technical_hr: "engineer", analyst: "engineer", developer: "architect", peer: "engineer", supervisor: "director", lead: "director" };
   return ladderFor(mode).includes(v) ? v : near[v] || "engineer";
@@ -2872,11 +2880,7 @@ function showCaption(who, text, isInterim) {
 // unchanged: this is only how the drawer shows it.
 const DRAWER_FILLER = /^(?:and|so|but|or|um+|uh+|er|erm|okay|ok|yeah|yes|right|hmm+|like)[.,!?]*$/i;
 function utteranceTag(text) {
-  const raw = String(text || "").replace(/\s+/g, " ").trim();
-  const filler = raw.replace(/\b(?:okay|ok|yeah|yes|um+|uh+|right|alright|so|and|well)\b/gi, " ").replace(/\s+/g, " ").trim();
-  if (!filler || filler.split(/\s+/).length < 4) return "No question";
-  if (/^(?:i(?:'m| am)|my first|it(?:'s| is) been)\b/i.test(filler) && !/\b(?:tell me|walk me|what|how|can you)\b/i.test(filler)) return "No question";
-  return /[?]$/.test(raw) || /\b(?:tell me|walk me|how (?:do|would|did) you|what (?:is|are|do)|why (?:did|do|would) you|can you|explain|describe|project that you)\b/i.test(filler) ? "Question detected" : "No question";
+  return questionEnded(text) ? "Question detected" : "No question";
 }
 function stitchUtterance(previous, next) {
   const cur = String(next || "").replace(/\s+/g, " ").trim();
@@ -3710,11 +3714,24 @@ function interruptionFlush(opts) {
 function questionEnded(text) {
   const raw = String(text || "").replace(/\s+/g, " ").trim();
   if (!raw) return false;
-  const filler = raw.replace(/\b(?:okay|ok|yeah|yes|um+|uh+|right|alright|so|and|well)\b/gi, " ").replace(/\s+/g, " ").trim();
-  if (!filler || filler.split(/\s+/).length < 4) return false;
-  if (/^(?:i(?:'m| am)|my first|it(?:'s| is) been|he(?:'s| is)|she(?:'s| is))\b/i.test(filler) && !/\b(?:tell me|walk me|how (?:do|would) you|what (?:is|are)|can you|could you)\b/i.test(filler)) return false;
-  if (!/[?]$/.test(raw) && !/\b(?:tell me|walk me|how (?:do|would|did) you|what (?:is|are|do)|why (?:did|do|would) you|can you|could you|explain|describe|difference between|do you know)\b/i.test(filler)) return false;
-  return true;
+  const filler = raw.replace(/\b(?:okay|ok|yeah|yes|um+|uh+|right|alright|so|and|well|like)\b/gi, " ").replace(/\s+/g, " ").trim();
+  if (!filler || filler.split(/\s+/).filter(Boolean).length < 4) return false;
+  const ownStory = /^(?:i(?:'m| am)|my first|my |it(?:'s| is) been|i have|i was|i work|he(?:'s| is)|she(?:'s| is))\b/i.test(filler);
+  const asks = /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do)|why (?:did|do|would) you|can you|could you|do you know|explain|describe|define)\b/i;
+  if (ownStory && !asks.test(filler)) return false;
+  if (/\?\s*$/.test(raw) && /\b(?:what|how|why|when|where|who|which|can|could|would|do|did|have|are|is|tell|walk|explain|describe)\b/i.test(raw)) return true;
+  return asks.test(filler);
+}
+function paraphrasesOwn(text) {
+  const own = (typeof transcript !== "undefined" && transcript || []).filter(t => t && t.who === "You").slice(-4);
+  const A = askTokens(text);
+  if (A.length < 4) return false;
+  return own.some(t => {
+    const B = new Set(askTokens(t.text));
+    let n = 0;
+    for (const w of A) if (B.has(w)) n++;
+    return n / A.length >= 0.7;
+  });
 }
 function confirmAutoQuestion(text) {
   const stutter = resolveStutterRephrase(text);
@@ -3747,6 +3764,7 @@ async function confirmAutoAndAnswer(tail) {
     const data = await res.json();
     if (!data || data.noQuestion || !data.derived) return;
     if (!questionEnded(data.derived)) return;
+    if (paraphrasesOwn(data.derived)) return;
     if (cards.some(c => sameAsk(data.derived, c.question || ""))) return;
     if (!autoOn || !armsAuto()) return;
     await aiAnswer(true);
@@ -3820,7 +3838,7 @@ function clearAuthLocalState() {
   } catch {}
 }
 
-const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+const armsAuto = () => pendingHeard().some(t => t.who === "Them" && questionEnded(t.text) && !paraphrasesOwn(t.text));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
@@ -4696,8 +4714,12 @@ function sessionAnswerControls(s) {
   };
 }
 function readLiveAnswerControls() {
-  // Format, tone, length and STAR are not chosen from the row or from old saved prefs.
-  return { format: "full_script", length: "balanced", tone: "simple", star: false };
+  // The live length menu is hidden. The session's Long / Short choice is what was asked for.
+  const saved = (typeof current !== "undefined" && current && current.length) || "";
+  const selected = (typeof $ === "function" && $("liveLength") && $("liveLength").value) || "";
+  const raw = String(saved || selected || "balanced").toLowerCase();
+  const length = /^(?:short|brief|concise)$/.test(raw) ? "short" : /^(?:long|detailed|deep)$/.test(raw) ? "long" : "balanced";
+  return { format: "full_script", length, tone: "simple", star: false };
 }
 function syncLiveAnswerControls(s) {
   const k = sessionAnswerControls(s || current || {});
@@ -5066,7 +5088,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
   let renderQueued = false;
   const show = (t) => {
     if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
-    const spoken = sayAloud(t).trim();
+    let spoken = sayAloud(t).trim();
+    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "That is not on my resume, so I will not invent it.";
     if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
