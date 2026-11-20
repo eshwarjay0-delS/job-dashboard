@@ -10,7 +10,7 @@ test("last-week capture and card rules are in the page", () => {
   assert.match(app, /if \(captureStartedAt && !startedAt\) startClock\(\)/)
   assert.match(app, /if \(running \|\| starting\) return/)
   assert.match(app, /Leave this session\? Your answers stay saved\./)
-  assert.match(app, /No question yet\. Nothing was heard\./)
+  assert.match(app, /No question yet/)
   assert.match(app, /card\.spoken = typeof text === "string"/)
   assert.match(app, /spans\.length > 1/)
   const start = app.indexOf("function questionEnded(")

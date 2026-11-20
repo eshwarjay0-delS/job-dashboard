@@ -5761,11 +5761,6 @@ async function aiAnswer(fromAuto, options = {}) {
     let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
-    const onIntro = cards[idx] && /^(Your introduction)$/.test(cards[idx].question);
-    if (!typedText && !pending.length && !pendingHeard().length && !onIntro) {
-      status("No question yet. Nothing was heard.", "live");
-      return;
-    }
     // Answer anyway (slice 2): a press right after "Nothing question-like" or
     // "Listening, no new question yet" answers those same lines / re-asks.
     let anyway = false, silenceAnyway = false, liveResolved = "";
