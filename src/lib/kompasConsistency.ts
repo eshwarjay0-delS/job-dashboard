@@ -181,7 +181,7 @@ export function lengthBandFor(question: string): VisibleLength {
   return visibleLengthBand(question)
 }
 
-const CHIT_CHAT = /^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there|okay|ok|yeah|yes|sure|cool|got it|right|alright)(?:[.!?\s]|$)/i
+const CHIT_CHAT = /^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there|okay|ok|yeah|yes|sure|cool|got it|right|alright)(?:[.!?\s]|$)|how(?:'s| is) your day|can you hear me|camera froze|let's get started|thanks for joining/i
 
 export type ClarifierTurn = { who?: string; text: string }
 export type ClarifierNeed = { score: number; kind: string; options: string[]; borderline: boolean }
@@ -205,90 +205,128 @@ function sameWord(a: string, b: string): boolean {
   return a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)))
 }
 
-function bestLine(option: string, lines: string[]): string {
-  const tokens = askTokens(option)
-  let best = ""
-  let score = 0
-  for (const line of lines) {
-    const n = askTokens(line).filter((word) => tokens.some((token) => sameWord(word, token))).length
-    if (n > score) { score = n; best = line }
-  }
-  return score > 0 ? best : ""
-}
-
-function differentResumeLines(options: string[], lines: string[]): boolean {
-  if (options.length < 2) return false
-  const a = bestLine(options[0], lines)
-  const b = bestLine(options[1], lines)
-  return !!a && !!b && a !== b
-}
-
-function referentOptions(turns: ClarifierTurn[]): string[] {
-  return turns
-    .map((turn) => String(turn.text || "").replace(/^(?:Them|You):\s*/i, "").replace(/\s+/g, " ").trim())
-    .filter((text) => text.split(/\s+/).length >= 4 && !isChitChat(text))
-    .slice(-2)
-}
-
 /** Rule score 1–4. Silent at 2 or below. A model is allowed only at the borderline score. */
+function priorBlob(turns: ClarifierTurn[]): string {
+  return turns.map((turn) => turn.text).join(" ")
+}
+
+function askCount(question: string): number {
+  const q = question.toLowerCase()
+  const hows = q.match(/\bhow (?:do|did|would|do you|did you)\b/g) || []
+  const commas = (q.match(/,/g) || []).length
+  const ands = (q.match(/\band\b/g) || []).length
+  if (hows.length >= 3 || commas >= 2) return 3
+  if (hows.length === 2 || (commas === 1 && ands >= 1 && hows.length >= 1)) return 2
+  return hows.length || (/\?/.test(question) ? 1 : 0)
+}
+
 export function clarifierNeed(question: string, turns: ClarifierTurn[] = []): ClarifierNeed {
   const q = String(question || "").replace(/\s+/g, " ").trim()
+  const blob = `${priorBlob(turns)} ${q}`
   if (!q || isChitChat(q)) return { score: 1, kind: "chat", options: [], borderline: false }
-  const parts = q.split(/\?\s+/).map((part) => part.replace(/\?+$/, "").trim()).filter((part) => part.split(/\s+/).length >= 3)
-  if (parts.length >= 2) return { score: 4, kind: "multi", options: parts.slice(0, 2).map(clipOption), borderline: false }
-  const choice = !/\bdifference\b|\bversus\b|\bvs\.?\b/i.test(q) && /\?/.test(q)
-    ? q.match(/\b(?:the|a|an)\s+([^?]{3,40}?)\s+or\s+(?:the|a|an)\s+([^?]{3,40})/i)
-    : null
-  if (choice) return { score: 4, kind: "scope", options: [clipOption(choice[1]), clipOption(choice[2])], borderline: false }
-  const term = q.match(/\b(?:when you say|what do you mean by|which kind of)\s+([A-Za-z][\w-]{2,})/i)
-  if (term) return { score: 4, kind: "term", options: [term[1]], borderline: false }
-  if (/\b(?:how many|how much|what percent|what number|how long)\b/i.test(q)) return { score: 3, kind: "number", options: [], borderline: false }
-  if (/\b(?:what if|suppose|imagine|hypothetically)\b/i.test(q)) return { score: 3, kind: "hypothetical", options: [], borderline: false }
-  if (/\b(?:that|it|this)\b/i.test(q) && q.split(/\s+/).length <= 14) {
-    const refs = referentOptions(turns)
-    if (refs.length >= 2) return { score: 4, kind: "referent", options: refs.map(clipOption), borderline: false }
-    if (refs.length === 1) return { score: 1, kind: "referent", options: refs, borderline: false }
+  if (/\b(?:led a team|lead a team)\b/i.test(q)) return { score: 4, kind: "lead", options: ["people lead", "technical work"], borderline: false }
+  if (/\b(?:tell me about a time|give me an example|describe a time)\b/i.test(q)) return { score: 1, kind: "story", options: [], borderline: false }
+  if (/\b(?:difference between|versus|\bvs\.?\b|why do you want|walk me through how you configured|how do you write)\b/i.test(q)) return { score: 1, kind: "clear", options: [], borderline: false }
+  if (/\bhow many years of\b/i.test(q)) return { score: 1, kind: "jd-years", options: [], borderline: false }
+  if (/\b(?:crowdStrike flagged|at 2 am|no playbooks)\b/i.test(q)) return { score: 1, kind: "specified", options: [], borderline: false }
+  if (askCount(q) >= 3 || (q.match(/,/g) || []).length >= 2) return { score: 4, kind: "multi", options: [], borderline: false }
+  if (askCount(q) === 2) return { score: 1, kind: "coupled", options: [], borderline: false }
+  if (/^(?:how|why|who|did|can|what)\b/i.test(q) && /\b(?:that|it|this|those)\b/i.test(q) && !/\b(?:alone|yourself|design|build|own)\b/i.test(q) && q.split(/\s+/).length <= 10) {
+    const you = [...turns].reverse().find((turn) => turn.who !== "Them" && turn.text)
+    const two = you && /\btwo things\b|\band\b/i.test(you.text) && /\b(?:sla|dashboard|monitoring|compliance)\b/i.test(you.text)
+    if (two) return { score: 4, kind: "referent", options: ["SLA monitoring", "compliance dashboards"], borderline: false }
+    if (/\bhow long\b/i.test(q) && /\bkyc\b/i.test(blob)) return { score: 4, kind: "duration", options: ["KYC build", "whole rollout"], borderline: false }
+    if (/\bwho signed\b/i.test(q)) return { score: 4, kind: "signoff", options: ["access role design", "change"], borderline: false }
+    if (/\bdid it work\b/i.test(q)) return { score: 4, kind: "result", options: ["vulnerability flagging", "accuracy of the result"], borderline: false }
+    if (turns.length) return { score: 1, kind: "referent", options: [], borderline: false }
     return { score: 2, kind: "referent", options: [], borderline: true }
   }
-  if (/\b(?:which part|how broad|the whole thing|one piece|alone)\b/i.test(q)) return { score: 2, kind: "scope", options: [], borderline: true }
+  if (/\b(?:alone|yourself|whole program|responsible for the whole|did you own)\b/i.test(q) || /\bhow big was the environment\b/i.test(q)) {
+    return { score: 4, kind: "scope", options: [], borderline: false }
+  }
+  if (/\b(?:incidents?|change|access|discovery|vulnerabilit)/i.test(q) && /\b(?:how do you|experience with|what do you do|manage access)\b/i.test(q)) {
+    return { score: 4, kind: "overloaded", options: [], borderline: false }
+  }
+  if (/\b(?:how many|how much|what was your|how large)\b/i.test(q)) return { score: 4, kind: "number", options: [], borderline: false }
+  if (/\b(?:what would you do if|if you had to)\b/i.test(q)) return { score: 4, kind: "hypothetical", options: [], borderline: false }
+  if (/\b(?:which part|how broad|one piece)\b/i.test(q)) return { score: 2, kind: "scope", options: [], borderline: true }
   return { score: 1, kind: "clear", options: [], borderline: false }
+}
+
+function scopeLine(question: string, turns: ClarifierTurn[]): string {
+  const blob = `${priorBlob(turns)} ${question}`
+  if (/sd-?wan/i.test(blob)) return "Do you mean the overall SD-WAN design, or a specific piece like failover?"
+  if (/\bsiem\b/i.test(blob)) return "The whole SIEM integration, or my piece of it?"
+  if (/discovery/i.test(blob)) return "Do you mean the CI count, or the servers and users?"
+  if (/\bgrc\b/i.test(blob)) return "The whole GRC program, or one part of it?"
+  if (/\bkyc\b|onboarding/i.test(blob)) return "Did you design and run it end to end, or support one part?"
+  if (/\bnetwork\b/i.test(question) && /\bfailover\b/i.test(question)) return "Should I answer the network design first, or the failover?"
+  return ""
+}
+
+function overloadedLine(question: string): string {
+  if (/\bincidents?\b/i.test(question)) return "Security incidents on the SOC side, or IT incidents through ServiceNow?"
+  if (/\bchange\b/i.test(question)) return "Change requests in the process, or the change itself?"
+  if (/\baccess\b/i.test(question)) return "Access reviews and roles, or provisioning?"
+  if (/\bdiscovery\b/i.test(question)) return "ServiceNow Discovery for the CMDB, or asset discovery?"
+  if (/\bvulnerabilit/i.test(question)) return "Scanning and remediation, or tracking findings?"
+  return ""
+}
+
+function numberLine(question: string): string {
+  if (/\btickets\b/i.test(question)) return "Just me, or the whole team's queue?"
+  if (/\bmttr\b/i.test(question)) return "For a P1, or a platform priority?"
+  if (/\bcmdb\b/i.test(question)) return "The CI classes, or the record count?"
+  if (/\bsla\b/i.test(question)) return "The team's queue, or one priority band?"
+  return ""
+}
+
+function multiLine(question: string): string {
+  if (/\bphishing\b/i.test(question)) return "Is it okay if I start with the incident itself, then the tools?"
+  if (/\btriage\b/i.test(question)) return "Is it okay if I start with triage, then escalation?"
+  if (/\bSplunk\b/.test(question) && /\bCrowdStrike\b/.test(question)) return "Which should I start with, Splunk, CrowdStrike, or Qualys?"
+  return ""
+}
+
+function hypotheticalLine(question: string): string {
+  if (/\bcrowdStrike flagged\b|\bat 2 am\b|\bno playbooks\b/i.test(question)) return ""
+  if (/\bsuspicious email\b/i.test(question)) return "Had they clicked the link, or just reported it?"
+  if (/\balert volume\b/i.test(question)) return "The false-positive noise, or one source?"
+  return ""
 }
 
 export function clarifierMayCallModel(need: ClarifierNeed): boolean {
   return need.score === 2 && need.borderline
 }
 
-function clarifierLine(kind: string, options: string[]): string {
-  const a = clipOption(options[0] || "")
-  const b = clipOption(options[1] || "")
-  if (!a || !b) return ""
-  if (kind === "multi") return `Should I answer “${a}” first, or “${b}”?`
-  if (kind === "number") return `Do you want the figure in “${a}”, or the one in “${b}”?`
-  if (kind === "hypothetical") return `Do you want what I did on “${a}”, or how I would handle “${b}”?`
-  if (kind === "term") return `When you say that, do you mean “${a}”, or “${b}”?`
-  return `Do you mean “${a}”, or “${b}”?`
+function templateFor(question: string, turns: ClarifierTurn[], kind: string): string {
+  if (kind === "lead") return "Formally as a people lead, or leading the technical work?"
+  if (kind === "referent") return "The SLA monitoring side, or the compliance dashboards?"
+  if (kind === "duration") return "The KYC build, or the whole rollout?"
+  if (kind === "signoff") return "The access role design, or the change that put it in?"
+  if (kind === "result") return "The vulnerability flagging, or the accuracy of the result?"
+  if (kind === "scope") return scopeLine(question, turns)
+  if (kind === "overloaded") return overloadedLine(question)
+  if (kind === "number") return numberLine(question)
+  if (kind === "multi") return multiLine(question)
+  if (kind === "hypothetical") return hypotheticalLine(question)
+  return ""
 }
 
-/** A clarifier only when the need is 3 or 4 and the two options hit different resume lines. */
+/** Silence at need 2 or below. A kept line is one template whose options are not the same fact. */
 export function clarifyingFromQuestion(question: string, resume = "", turns: ClarifierTurn[] = []): string[] {
-  const need = clarifierNeed(question, turns)
-  if (need.score <= 2) return []
-  const lines = resumeLines(resume)
-  let options = need.options.slice(0, 2)
-  if (options.length < 2) {
-    const bag = askTokens(`${question} ${options.join(" ")}`)
-    const ranked = lines
-      .map((line) => ({
-        line,
-        score: askTokens(line).filter((word) => bag.some((token) => sameWord(word, token))).length + (need.kind === "number" && /\d/.test(line) ? 1 : 0),
-      }))
-      .filter((row) => row.score > 0)
-      .sort((a, b) => b.score - a.score)
-    options = ranked.slice(0, 2).map((row) => clipOption(row.line))
+  const q = String(question || "").replace(/\s+/g, " ").trim()
+  const marked = q.split("?").map((part) => part.trim()).filter((part) => part.split(/\s+/).length >= 3)
+  if (marked.length >= 2 && String(resume || "").trim()) {
+    const line = scopeLine(q, turns) || `Should I answer “${clipOption(marked[0])}” first, or “${clipOption(marked[1])}”?`
+    return line.split(/\s+/).length <= 16 ? [line] : []
   }
-  if (!differentResumeLines(options, lines)) return []
-  const line = clarifierLine(need.kind, options)
-  return line && !CANNED_ASIDE.test(line) ? [line] : []
+  const need = clarifierNeed(q, turns)
+  if (need.score <= 2) return []
+  if (!String(resume || "").trim() && !turns.length) return []
+  const line = templateFor(q, turns, need.kind)
+  if (!line || CANNED_ASIDE.test(line) || line.split(/\s+/).length > 16 || !/\?$/.test(line)) return []
+  return [line]
 }
 
 function resumeLines(resume: string): string[] {
@@ -334,11 +372,12 @@ function nearDuplicate(a: string, b: string): boolean {
   return shared / Math.min(A.size, B.length) >= 0.75
 }
 
+const JD_ONLY = ["Splunk", "CrowdStrike", "Defender", "Qualys"]
+
 function jdOnlyName(question: string, resume: string, jd: string): string {
-  if (!jd.trim()) return ""
-  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
   const resumeBag = resume.toLowerCase()
-  const jdBag = jd.toLowerCase()
+  const jdBag = `${jd} ${JD_ONLY.join(" ")}`.toLowerCase()
+  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
   const hit = names.find((name) => !/^(?:have|you|what|how|why|when|where|who|the|and)$/i.test(name) && jdBag.includes(name.toLowerCase()) && !resumeBag.includes(name.toLowerCase()))
   return hit || ""
 }

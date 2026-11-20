@@ -470,7 +470,7 @@
     };
   }
   function chitChat(text) {
-    return /^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there|okay|ok|yeah|yes|sure|cool|got it|right|alright)(?:[.!?\s]|$)/i.test(String(text || "").trim());
+    return /^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there|okay|ok|yeah|yes|sure|cool|got it|right|alright)(?:[.!?\s]|$)|how(?:'s| is) your day|can you hear me|camera froze|let's get started|thanks for joining/i.test(String(text || "").trim());
   }
   function emptyAside(question) {
     return { question: question, partial: "", mode: "boosters", breakdown: { claim: "", context: "", result: "" }, context: { leads: [], touchPoints: [] }, questions: [], boosters: [], summary: "", sayNow: "", blocked: true };

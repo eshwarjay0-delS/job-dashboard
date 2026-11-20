@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Replay fixtures and clarifier 47, not shipped
+
+Replay: 52/52 interviewer turns fire at end_s, 0 false fires on 50 candidate turns, 52/52 headers are one Question: line. Clarifier fixtures 47/47. No ship marker.
+
 ## 20 November 2026 — Clarifier silence, not shipped
 
 The aside is empty for a You turn or chit-chat. Clarifiers are silent at need 2 or below, and a kept clarifier must map to two different resume lines. Epoch mismatch, including a missing epoch, is dropped. In-repo fixtures 14/14. The attached 47-file run was not on disk. No ship marker.

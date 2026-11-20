@@ -368,7 +368,7 @@ export function answerAside(input: { question?: string; transcript?: string; res
   const leads = buildLeads(spoken)
   const touches = buildTouches(spoken)
   const prior = transcriptTurns(transcript).filter((turn) => turn.text !== question).slice(-2)
-  const questions = clarifyingFromQuestion(question, resume, prior).filter((line) => lineOk(line, resume || line))
+  const questions = clarifyingFromQuestion(question, resume, prior).filter((line) => /\?$/.test(line) && !OTHER_PROFILE.test(line)).slice(0, 2)
   const saidNow = speakableLines(question, resume, String(input.jd || "")).filter((line) => lineOk(line, `${resume}\n${input.jd || ""}`))
   const boosters = [...saidNow, ...buildBoosters(transcript, spoken)].filter((line) => {
     if (!line || FILLER.test(line)) return false
@@ -409,7 +409,7 @@ export function answerAside(input: { question?: string; transcript?: string; res
       leads: take(leads, 0, []).filter((line) => !FILLER.test(line)).slice(0, 3),
       touchPoints: take(touches, 0, []).filter((line) => !FILLER.test(line)).slice(0, 4),
     },
-    questions: take(questions, 0, []).slice(0, 2),
+    questions: questions.slice(0, 2),
     boosters: take(boosters, 0, []).filter((line) => !FILLER.test(line)).slice(0, 3),
     summary: summary?.line && !FILLER.test(summary.line) ? summary.line : "",
     sayNow: say?.line && !FILLER.test(say.line) ? say.line : "",

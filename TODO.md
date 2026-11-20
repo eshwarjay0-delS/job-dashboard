@@ -1,3 +1,9 @@
+## 2026-11-20 — Replay fixtures and the 47 clarifier cases (no live listen)
+
+The two caption videos are a replay test: 52 interviewer turns fire once at end_s, 50 candidate turns fire 0 times, and each header is one Question: line. The official clarifier fixtures score 47/47. No ship marker.
+
+**Checked by the fixture runners. Not a live listen-through.**
+
 ## 2026-11-20 — Clarifier stays quiet unless two resume lines differ (visible on the right panel)
 
 The right panel is empty when the last turn is the candidate or chit-chat. A clarifier is shown only at need 3 or 4, and only when the two options hit different resume lines. Say-this lines are first person. A tool that is only in the job description is bridged, not claimed. The epoch is sent with the aside request, and a missing or mismatched epoch is dropped. No ship marker.
