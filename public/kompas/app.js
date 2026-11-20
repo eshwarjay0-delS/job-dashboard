@@ -724,7 +724,7 @@ function personaLabel(seniority, role) {       // "Senior" + "Senior Cybersecuri
 function setPersonaChip(s) {
   const chip = $("personaChip"); if (!chip) return;
   const p = s && s.prep && s.prep.persona;
-  const label = p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : (s && s.role) || "";
+  const label = (s && s.role) || (p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "");
   chip.textContent = label; chip.classList.toggle("hidden", !label);
   chip.title = p && p.voice ? "Voice: " + p.voice : "";
 }
@@ -1291,7 +1291,7 @@ function renderCard() {
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
   const heardQ = cleanHeardQuestion(draft || c.question);
-  const qLabel = questionEnded(heardQ) && !/^Question:/i.test(heardQ) ? "Question: " + heardQ : heardQ;
+  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ) || /^Question:/i.test(heardQ)) ? heardQ : "Question: " + heardQ;
   $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
@@ -2933,7 +2933,8 @@ let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer =
 const AUTO_QUIET_MS = 2200;
 function pendingHeard() { return transcript.filter(t => t.seq > answeredSeq); }
 function updatePending() {
-  const n = pendingHeard().length, b = $("pendCount"); if (!b) return;
+  const who = typeof liveInterviewer === "function" ? liveInterviewer() : "Them";
+  const n = pendingHeard().filter(t => t.who === who && questionEnded(t.text)).length, b = $("pendCount"); if (!b) return;
   b.textContent = n; b.classList.toggle("hidden", !n);
   $("answerBtn").title = n ? `Answer everything heard since the last answer — ${n} line${n > 1 ? "s" : ""} (Ctrl+Enter)` : "Answer the latest question again (Ctrl+Enter)";
 }
@@ -3861,7 +3862,16 @@ function candidateSide(turn) {
   if (turn.who === "You" && captures.some(c => c.who === "Them")) return true;
   return paraphrasesOwn(turn.text);
 }
-const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && captureStartedAt && t.at >= captureStartedAt && !candidateSide(t) && questionEnded(t.text) && !duplicateAsk(t.text));
+function soundsLikeCandidate(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw || questionEnded(raw)) return false;
+  return /^(?:i(?:'m| am)\b|i [a-z]|my \b|we(?:'re| are)\b)/i.test(raw);
+}
+function liveInterviewer() {
+  if (captures.some(c => c.who === "Them") || pendingHeard().some(t => t.who === "Them")) return "Them";
+  return questionSource();
+}
+const armsAuto = () => pendingHeard().some(t => t.who === liveInterviewer() && (!captureStartedAt || t.at >= captureStartedAt) && !candidateSide(t) && questionEnded(t.text) && !duplicateAsk(t.text));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
@@ -4201,6 +4211,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
     if (echoOfThem(text) >= 0.5) { logDecision("drop-mic-echo", who, text); logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
     if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true, spokenAt); }, 2000); return; }   // their words may still be on the way: look again
   }
+  if (who === "Them" && soundsLikeCandidate(text)) who = "You";
   logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   const prior = transcript.length && transcript[transcript.length - 1].who === who ? transcript[transcript.length - 1].text : "";
@@ -5747,7 +5758,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // — framing, setup and pausing fillers included — not from the last
     // eight lines. Older turns stay in the transcript and reach the answer
     // as earlier context; they are not re-formed into questions.
-    let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+    let pending = turnWindow(pendingHeard(), liveInterviewer(), t => t.who === liveInterviewer() && !soundsLikeCandidate(t.text) && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
     // Answer anyway (slice 2): a press right after "Nothing question-like" or
@@ -5805,7 +5816,7 @@ async function aiAnswer(fromAuto, options = {}) {
           status("Waiting for the question to finish…", "live");
           await new Promise((r) => setTimeout(r, gate.waitMs || MANUAL_INCOMPLETE_WAIT_MS));
           try { await flushHeard(400); } catch {}
-          pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+          pending = turnWindow(pendingHeard(), liveInterviewer(), t => t.who === liveInterviewer() && !soundsLikeCandidate(t.text) && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
         }
       } catch {}
     }
