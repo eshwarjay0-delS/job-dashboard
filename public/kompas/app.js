@@ -586,6 +586,10 @@ function finishWizard() {
   LS.set("sessions", sessions);
   clearWizardDraft();              // the setup became a session; the next new session starts clean
   launchCopilot(s);
+  show("copilot");
+  if ($("connectPanel")) $("connectPanel").classList.add("hidden");
+  sessionReadyUntil = Date.now() + 30000;
+  void start();
 }
 
 /* ------------------------------- copilot (live, v2) ------------------------------------------
@@ -1304,7 +1308,7 @@ function renderCard() {
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
   const heardQ = cleanHeardQuestion(draft || c.question);
-  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ) || /^Question:/i.test(heardQ)) ? heardQ : "Question: " + heardQ;
+  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : oneQuestionLine(heardQ);
   $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
@@ -2961,7 +2965,7 @@ const AUTO_QUIET_MS = 2200;
 function pendingHeard() { return transcript.filter(t => t.seq > answeredSeq); }
 function updatePending() {
   const who = typeof liveInterviewer === "function" ? liveInterviewer() : "Them";
-  const asks = pendingHeard().filter(t => t.who === who && questionEnded(t.text));
+  const asks = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
   const n = asks.length, b = $("pendCount"); if (!b) return;
   if (asks[0] && Date.now() - Number(asks[0].at || 0) > 90000) status("A question has been waiting 90 seconds.", "live");
   b.textContent = n; b.classList.toggle("hidden", !n);
@@ -3892,6 +3896,25 @@ function candidateSide(turn) {
   if (turn.who === "You" && captures.some(c => c.who === "Them")) return true;
   return paraphrasesOwn(turn.text);
 }
+function splitUtterances(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return [];
+  return raw.split(/\s*(?:\.{2,}|…)\s+|(?<=[.?!])\s+|\s+(?=(?:what|how|why|when|where|who|can you|could you|tell me|do you|did you|have you)\b)/i).map(s => s.trim()).filter(Boolean);
+}
+function isGatedQuestion(text) {
+  let raw = String(text || "").replace(/\s+/g, " ").trim().replace(/^(?:Question:\s*)+/i, "").replace(/^[-•*]\s+/, "");
+  const words = raw.split(/\s+/).filter(Boolean);
+  if (words.length < 4) return false;
+  if (/^(?:i(?:'m| am)?|my |we )\b/i.test(raw) && !/\b(?:can you|could you|tell me|what do you|how do you|why do you)\b/i.test(raw)) return false;
+  return /\?\s*$/.test(raw) || /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do) you|why (?:did|do|would) you|can you|could you|explain|describe)\b/i.test(raw);
+}
+function utteranceWho(text) { return isGatedQuestion(text) ? "Them" : "You"; }
+function oneQuestionLine(text) {
+  let q = String(text || "").replace(/\s+/g, " ").trim();
+  while (/^Question:\s*/i.test(q)) q = q.replace(/^Question:\s*/i, "");
+  q = q.split(/\s+/).filter(Boolean).slice(0, 20).join(" ");
+  return q ? "Question: " + q : "";
+}
 function soundsLikeCandidate(text) {
   const raw = String(text || "").replace(/\s+/g, " ").trim();
   if (!raw || questionEnded(raw)) return false;
@@ -3901,19 +3924,21 @@ function liveInterviewer() {
   if (captures.some(c => c.who === "Them") || pendingHeard().some(t => t.who === "Them")) return "Them";
   return questionSource();
 }
-const armsAuto = () => pendingHeard().some(t => t.who === liveInterviewer() && (!captureStartedAt || t.at >= captureStartedAt) && !candidateSide(t) && questionEnded(t.text) && !duplicateAsk(t.text));
+const armsAuto = () => pendingHeard().some(t => utteranceWho(t.text) === "Them" && isGatedQuestion(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
   if (!autoOn || !armsAuto()) return;
-  const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+  const gated = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+  const tail = gated.length ? gated[gated.length - 1].text : "";
   const wait = autoWaitMs(tail);
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
     const themCap = captures.find(c => c.who === "Them");
     const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
-    const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+    const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+    const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
     const confirmed = confirmAutoQuestion(tail).ok;
     const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });
     if (!decision.fire) {
@@ -4233,6 +4258,9 @@ function dedupeCaptionTokens(text) {
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
+  const pieces = lookedAgain ? [text] : splitUtterances(text);
+  if (pieces.length > 1) { for (const piece of pieces) onTranscript(utteranceWho(piece), piece, true, spokenAt); return; }
+  who = utteranceWho(text);
   if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
   if (captureStartedAt && !startedAt) startClock();
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }

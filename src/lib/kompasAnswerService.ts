@@ -441,7 +441,8 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   // Source grounding (29 Oct 2026): a named employer, tool or figure the candidate's own sources do not back is a core
   // item. Empty with no sources, so a sourceless turn repairs exactly as before.
   const sourceCheck = repairLoopSourceChecks(job.question, text, job.sourceDocs)
-  const short = job.controls?.length === "long" && text.trim().split(/\s+/).filter(Boolean).length < visibleLengthBand(job.question).floor
+  const longFloor = job.controls?.length === "long" ? levelAwareBand(job.question, job.level === "architect" || job.level === "director" ? job.level : "engineer", "long").floor : visibleLengthBand(job.question).floor
+  const short = job.controls?.length === "long" && text.trim().split(/\s+/).filter(Boolean).length < longFloor
     ? [`the answer is under the long floor; add the missing steps from the job description and do not invent a personal history`]
     : []
   return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck, ...short], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...short, ...parts, ...tangents] }

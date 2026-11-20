@@ -69,7 +69,7 @@ test("auto does not answer filler, candidate speech, own words, or a duplicate",
   assert.equal(ctx.ended(candidate), false)
   assert.equal(ctx.ended(ask), true)
   assert.equal(ctx.own("Can you explain routing tables where routers consult the path?"), true)
-  assert.match(app, /candidateSide\(t\)/)
+  assert.match(app, /isGatedQuestion\(t\.text\)/)
   assert.match(app, /duplicateAsk\(t\.text\)/)
 })
 
@@ -110,7 +110,7 @@ test("a Them-track candidate line is not an ask, and the session role wins the h
   assert.equal(ctx.candidate("I studied computer science and I worked the queue."), true)
   assert.equal(ctx.candidate("Can you tell me about yourself?"), false)
   assert.match(app, /const label = \(s && s\.role\)/)
-  assert.match(app, /Question: \" \+ heardQ/)
-  assert.match(app, /filter\(t => t\.who === who && questionEnded\(t\.text\)\)/)
+  assert.match(app, /oneQuestionLine\(heardQ\)/)
+  assert.match(app, /filter\(t => isGatedQuestion\(t\.text\) && utteranceWho\(t\.text\) === \"Them\"\)/)
   assert.match(app, /!captureStartedAt \|\| t\.at >= captureStartedAt/)
 })
