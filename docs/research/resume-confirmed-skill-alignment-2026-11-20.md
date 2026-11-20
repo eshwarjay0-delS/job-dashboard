@@ -35,3 +35,14 @@ The current master-to-#466-base comparison showed only documentation and Kompas 
 ## Next
 
 Continue: verify all exact-head workflows for the current-master restack, repair any failures without inventing candidate facts, and let the MFit Safe Merge Gate review before merge. Keep it draft until protected preview and separate owner-authenticated resume/JD/DOCX acceptance are available.
+
+## 20 November 2026 — missing-skill parser review follow-up
+
+Static review of the #472 restack found that the confirmation parser accepted three negative forms as positive candidate evidence: `My skills are missing AWS`, `My experience is missing Splunk`, and `My background is missing Okta`. The existing guard recognized `lack/lacking` and `is not/are not`, but not `is/are missing`.
+
+The source correction now rejects those forms (and bare `missing` after the confirmation prefix). It also treats `missing` as an exception boundary in mixed lists, so `Confirmed skills: AWS, missing GCP` yields only the positive AWS prefix. Existing positive-contrast behavior such as `My experience includes AWS, but not GCP` remains intact.
+
+- Source: `src/lib/resume-evidence.ts`, commit `3c2411762e49512ca00d881e4abaefffbe640e42`.
+- Regression: `scripts/tests/resume-confirmation-quality.test.mjs`, commit `6aae62afc97d5d674c45fadbdfb9cf5baf514610`.
+- Source-derived JS regex sanity checks passed for the six reviewed cases. No repository-local Node test/build was run; the sandbox has no checkout/Next.js dependency tree and cannot clone GitHub. Exact-head remote CI is pending.
+- PR: [#472](https://github.com/eshwarjay0-delS/job-dashboard/pull/472). No owner resume/JD, live generation, DOCX export, WhatsApp send, protected preview or production deployment occurred.
