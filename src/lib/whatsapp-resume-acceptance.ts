@@ -168,7 +168,7 @@ export function deliveredWithShortfall(result: TailorResult): boolean {
  * No selected email means the person uploaded that file. Two emails in one file
  * are a mixed profile and are not sent. */
 export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
-  if (!email) return false
+  if (!email) return true
   const want = email.toLowerCase()
   const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
   return found.length === 1 && found[0] === want
