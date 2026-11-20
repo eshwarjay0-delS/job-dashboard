@@ -8,7 +8,7 @@
 export type NaturalAnswerShape =
   | "identity" | "experience" | "follow-up" | "design" | "scenario" | "mechanism" | "direct"
 
-export const NATURAL_NARRATION_VERSION = "kompas-workbench-v4"
+export const NATURAL_NARRATION_VERSION = "kompas-workbench-v5"
 
 const DESIGN_ASK = /^(?:(?:um+|uh+|so|yeah|yes|ok(?:ay)?|right|well|then|now|like|please)[,.\s]+)*(?:please\s+)?design\b|\bdesign me\b|\bhow (?:would|could|should|do|did) (?:you|we|i) design\b|\b(?:can|could|would) you design\b|\bhow you (?:would|could|should) design\b/i
 
@@ -38,6 +38,7 @@ const CORE = [
   "Do not use empty phrasing such as delve, underscore, tapestry, shed light, pivotal role, robust framework, it is important to note, in conclusion, or in today's landscape. Keep the fact. Drop the frame.",
   "Open on the answer in the interviewer's words: the check, the decision, or the break. Never restate or praise the question.",
   "When the question is about work you did, prefer one worked example over a list of capabilities: say for example, then the sources, the join or key, and the actual batch or case. After the action, name the simpler path you rejected with rather than. If you did not do the thing they asked, say so in one short clause, then the nearest sourced work. For a failure or recovery question, start at the failed step, rerun only the affected batch, and say how you checked you did not create duplicates or gaps. Do not invent years, systems, or a case to fill the example.",
+  "Do not open every first question with \"Thank you for this opportunity. Let me introduce myself.\" Do not close with \"That's it\" or \"Yeah, pretty much.\" Do not land on \"For me, X is not just a Y.\" Do not wrap a real process in \"I follow a structured development process.\" Do not pad one mode with the other mode's sentences to look more complete.",
   "Length follows the question type first, then the mode; mode changes stance more than volume.",
   "On a blame or post-mortem question, name the pressure, own the miss, and do not deflect. Confidence is calm. It is not a boast.",
   "Sound like a clear teacher talking to one listener: the hook first, plain words, one idea per sentence. Signpost with First, Then, and The result. Agreeable, and easy to follow.",
@@ -45,7 +46,7 @@ const CORE = [
 
 const KIND: Record<NaturalAnswerShape, string> = {
   identity: "IDENTITY VOICE: give a coherent career arc from documented experience. Connect responsibilities, work and impact; no invented turning-point scene or forced metaphor.",
-  experience: "EXPERIENCE VOICE: one actually supported situation; what caused concern, what was your responsibility, the technical check or decision, the real obstacle if documented, and what the evidence established. STAR is an internal structure, never spoken as labels. If only a broad responsibility is sourced, don't invent a named incident. Prefer a single worked example to a list of systems.",
+  experience: "EXPERIENCE VOICE: one actually supported situation; what caused concern, what was your responsibility, the technical check or decision, the real obstacle if documented, and what the evidence established. STAR is an internal structure, never spoken as labels. If only a broad responsibility is sourced, don't invent a named incident. Prefer a single worked example to a list of systems. INCIDENT VOICE by mode, so the three answers do not share one artifact list. Director: impact and decision first, who owns the residual, then stop. Architect: the boundary that failed, the evidence that showed it, what contained the blast radius. Engineer: the failed step, the artifacts you attached, how you verified the fix and that you did not create a duplicate. Technical HR: what broke, what you did, that it was checked, then stop.",
   "follow-up": "FOLLOW-UP VOICE: stay in the same project and facts. State the requested precise artifact, check, permission, observation or approval boundary first. If the record lacks it, distinguish what was personally documented from the test you would perform. No fresh story or restart.",
   design: "DESIGN VOICE: Name the map in one short sentence. Build only the first layer, as thought in progress. End with a named-layer checkpoint such as \"Want me to go deeper on the storage layer, or shall I keep sketching the whole shape?\" Keep optional tangents explicitly optional or out of scope. Follow-ups do not restart the map. Never invent components, metrics or years. The director gives the decision and tradeoff first, then the offer. The engineer gives a concrete behavior, then the mechanism, then the offer. The architect gives the boundary, a short ramble, a return, then the offer.",
   scenario: "SCENARIO VOICE: identify an explicit, testable assumption. Show the evidence that would disprove it, the operational constraint, a safe action or decision, and how you'd check the outcome. Use 'I would' for hypothetical work and don't pretend the case happened.",

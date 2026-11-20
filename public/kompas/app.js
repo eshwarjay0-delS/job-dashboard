@@ -770,6 +770,7 @@ function noteLiveQuestion(q) {
   if (liveAskKey && key !== liveAskKey) { sessionRunEpoch++; book.epoch = sessionRunEpoch; }
   liveAskKey = key;
   book.epoch = sessionRunEpoch;
+  try { window.__kompasAskEpoch = sessionRunEpoch; } catch {}
 }
 async function readAnswerStream(res) {
   const txt = await res.text(); let text = "", meta = {};
@@ -1290,7 +1291,8 @@ function renderCard() {
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
-  const qLabel = cleanHeardQuestion(draft || c.question);
+  const heardQ = cleanHeardQuestion(draft || c.question);
+  const qLabel = questionEnded(heardQ) && !/^Question:/i.test(heardQ) ? "Question: " + heardQ : heardQ;
   $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
@@ -3843,6 +3845,7 @@ function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
   if (!autoOn || !armsAuto()) return;
+  status("Checking", "live");
   const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
   const wait = autoWaitMs(tail);
   autoTimer = setTimeout(function fire() {
@@ -3861,6 +3864,7 @@ function scheduleAuto() {
       if (waitMore) autoTimer = setTimeout(fire, waitMore);
       return;
     }
+    status("Question detected", "live");
     void confirmAutoAndAnswer(tail);
   }, wait);
 }

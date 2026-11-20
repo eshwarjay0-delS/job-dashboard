@@ -104,9 +104,9 @@ const JARGON: Jargon[] = [
 // Plain instructions only. The v1 wording ("I would not open a build walk", "One because is enough") was written to
 // hit the depth and confidence word counters, and a model copies odd phrasing into the spoken answer.
 const VOICE: Record<AnswerLevel, string> = {
-  engineer: "Plain and accessible, for technical HR or an engineer screen. Say what it is, why the role needs it, and one example from my own work. Then stop.",
-  director: "Decision first, then the business risk and who owns it. At most one sentence on how it works. No build walkthrough.",
-  architect: "Precise. Say how it works, where it breaks, and what contains it. Use only the technical terms the question or my resume already uses.",
+  engineer: "Plain and accessible. For technical HR, say what it is, why the role needs it, and one example, then stop. For an engineer interviewer on a mechanism, an incident, or a process, go to the failed step or the current check, then stop or leave a checkpoint. Do not recite a capability list.",
+  director: "Decision first, then the business risk and who owns it. At most one sentence on how it works. No tool inventory and no build walkthrough. On an incident: the impact, the call you made, who owns the residual, then stop.",
+  architect: "Precise. Say how it works, where it breaks, and what contains it. Use only the technical terms the question or my resume already uses. On an incident: the failed boundary, the evidence that showed it, what contained the blast radius.",
 }
 
 /**
@@ -201,6 +201,7 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
   if (/\bhow do you\b/i.test(q) && !design) return "howto"
   if (design && DEEPER_ON.test(q)) return "design-later"
   if (design) return "design-first"
+  // "Go deeper …" stays design-later. The pass-4 note that mapped every deeper ask to follow-up is superseded by that lock.
   if (DEEPER_ON.test(q)) return "design-later"
   switch (shape) {
     case "definition": return "definition"
@@ -209,8 +210,8 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
     case "intro":
     case "value": return "opener"
     case "personal-experience": return "star"
-    case "scenario": return "design-first"
-    case "technical-deep-dive": return "design-later"
+    case "scenario": return "follow-up"
+    case "technical-deep-dive": return "follow-up"
     case "logistics":
     case "acknowledgement":
     case "closing": return "yes-no"
@@ -249,6 +250,29 @@ export function visibleLengthBand(question: string, shape?: AnswerShape): Visibl
     case "design-later": return { type: kind, floor: 70, aim: 100, ceiling: 160 }
     default: return { type: kind, floor: 12, aim: 24, ceiling: 45 }
   }
+}
+
+const FOLLOW_UP_FLOOR = 50
+
+/**
+ * The #460 band stays the ceiling. The floor drops so a director or architect
+ * ceiling is always strictly above it, including above the follow-up floor
+ * when that band itself allows the extra word. A long story may aim at 180
+ * and still stops at the band ceiling. The 300-word generation cap is not a display ceiling.
+ */
+export function levelAwareBand(question: string, level: AnswerLevel = "engineer", length: "short" | "balanced" | "long" = "balanced"): VisibleLength {
+  const band = visibleLengthBand(question)
+  const kind = lengthKind(question, dissectQuestion(question).shape)
+  const levelCeiling = QUESTION_LENGTH[kind][level].ceiling
+  let ceiling = Math.min(band.ceiling, levelCeiling)
+  if ((level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
+    ceiling = Math.min(band.ceiling, FOLLOW_UP_FLOOR + 1)
+  }
+  const floor = Math.min(band.floor, Math.max(8, ceiling - 1))
+  let aim = Math.min(band.aim, ceiling)
+  const story = kind === "star" || /\btell me about a time\b/i.test(question)
+  if (length === "long" && story) aim = Math.min(ceiling, Math.max(aim, 180))
+  return { type: band.type, floor, aim, ceiling }
 }
 
 function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand {
@@ -655,7 +679,7 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
     echo ? `The first sentence must use the interviewer's own words: ${echo}.` : "The first sentence answers the ask in the interviewer's own terms.",
     asksForCode(question)
       ? `Mode ${level}. Code first at every level: one fenced, runnable block in the language asked for, before any words. After the block, at most ${mode.aimWords} spoken words. ${mode.voice}`
-      : `Mode ${level}. ${lengthLine} ${mode.voice}`,
+      : `Mode ${level}. Stay under ${mode.maxWords} words. Do not pad to hit ${mode.aimWords}. ${mode.voice} Length follows the question type first. Mode changes what you lead with, not how much you fill. ${lengthLine}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
     // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
@@ -1354,9 +1378,9 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
   direct: {
-    engineer: (l) => `On ${l}, I check the evidence before I call it done.`,
-    director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
-    architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
+    engineer: (l) => `On ${l}, here is the short answer from my own work.`,
+    director: (l) => `On ${l}, the call is mine, and I will say it first.`,
+    architect: (l) => `On ${l}, I would start with where it sits and where it breaks.`,
   },
 } as Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>>
 
@@ -1647,6 +1671,14 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const stop = mode.aimWords
   const parts = [naturalOpener(opener(premiseLead(lead)))]
   if (vagueAsk(question)) return trimToWords(vagueReply(question, level), mode.maxWords)
+  if (/\b(?:raising an SR|support request|reinstall|metadata disappears)\b/i.test(question) && !BLAME_ASK.test(question)) {
+    const incident = level === "director"
+      ? [`On ${lead}, the impact is what I lead with, and the decision sits with me.`, `The residual on ${lead} has an owner, and I do not hand the story down as a tool list.`]
+      : level === "architect"
+        ? [`On ${lead}, I start at the boundary that failed and the evidence that showed it.`, `What contained ${lead} matters more in this pass than the full attachment list.`]
+        : [`On ${lead}, I start at the failed step, not the whole system.`, `I would attach the identifiers, the timestamp, the error, and the steps to reproduce, then say how I checked the fix.`]
+    parts.splice(0, parts.length, ...incident)
+  }
   if (BLAME_ASK.test(question)) {
     parts[0] = `The pressure was real, and the miss was mine: ${blameClause(question)}.`
     parts.splice(1, 0, level === "director"

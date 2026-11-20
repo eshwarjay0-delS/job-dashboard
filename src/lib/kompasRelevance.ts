@@ -177,7 +177,7 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   p.intent==="value" || p.intent==="introduction" ? "Open with the relevant experience. Name a tool only when it shows that fit." : "",
   INTRO.test(question) && CLOSING.test(question) ? "The interviewer also asked what questions you have. After the introduction, ask one specific question about this team." : "",
   p.intent==="experience-story" ? "One supported story: what was weak, what you reviewed, what changed. Do not promote yourself to an authority the resume does not give." : "",
-  p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric." : "",
+  p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric. A how-do-you or have-you-done-X process is one pass: the decision or the first check, one example, then stop. It is not a design-me-X, and it does not need a named-layer checkpoint." : "",
   p.intent==="design" ? "Name the map in one short sentence. Build only the first layer. End by offering one named layer, or say what stays out of scope. Do not design the entire system." : "",
   p.intent==="follow-up" && p.technicalDepth==="deep" ? "The interviewer asked to go deeper on the same subject. Sentence one adds the mechanism or reason the previous answer did not already give. Do not repeat that answer's opening." : "",
  ].filter(Boolean).join("\n")
