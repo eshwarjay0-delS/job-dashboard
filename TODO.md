@@ -1,3 +1,39 @@
+## 2026-11-20 — Parakeet session 4 invents settings and skips half a question (no UI)
+
+Owner log on PR #473. Later in the same video, Long, Auto. Cisco security levels became a personal 100 / 0 / 50 story. A merged FTD and ASA question answered only the difference, at about 200 words, and invented an ASA-to-FTD migration. The screen button showed a heading and no body, and the stored text followed the conversation instead of the page. Not the 10-question gate. Resume lines were not re-checked. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
+## 2026-11-20 — Parakeet session 3 hedges, then answers the wrong voice (no UI)
+
+Owner log on PR #473. Long, Auto, same public video, frozen video clock. Check Point was hedged toward FortiGate and then padded with unsupported platforms. Auto also answered an ad and fired twice. The manual key answered the candidate. "Stealth" was heard as "sales" and rewritten into a different topic at about 190 words. The follow-up kept "I agree." Not the 10-question gate. Resume lines were not re-checked. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
+## 2026-11-20 — Parakeet session 2 misses spoken questions (no UI)
+
+Owner video log on PR #473. Five asks from a public mock interview, background tab, seeks. Two hard fails: a fragment answered as only the physical layer, and traceroute never fired. The answers that appeared are generic, not marked as invented claims. Not the 10-question gate. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
+## 2026-11-20 — Parity gate v1 is the ship bar (no UI)
+
+Owner comment on PR #473. Ten fixed Fortinet questions, typed then spoken, Parakeet and Kompas. Pass needs 0 hard fails, honest bridges on questions 8–10, first words at or under 1.0 s on 8 of 10, and Long inside 120–180 on 9 of 10. The gate was not run. The Fortinet resume is still not in this checkout. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
+## 2026-11-20 — Parakeet session 1 is honesty, not speed (no UI)
+
+Owner log on PR #473: ten typed Parakeet answers for a WWT / Fortinet JD. Three timed finishes are about 1.2 s, 1.5 s, and 1.5 s. Technical answers sit around 120–144 words. The logged misses are an invented cutover, a quantity upgrade, a flat yes on a one-token tool, and agreeing with "you led that, right?". This checkout has no Fortinet resume, so those in-resume labels were not re-checked. No product code. Skip-login was not edited.
+
+**Nothing visible.** Not a live Kompas listen.
+
+## 2026-11-20 — Brain notes only: answer folds, 20 clarifier cases, PR #467 risks (no UI)
+
+Docs under `ops/brain/`. No product code, no clarifier change, no merge, no deploy. PR #467 was still an open draft at `f5df791c` (conflicting). Its 47 clarifier cases pass offline. Twenty new adversarial cases, scored on that head, pass 13 and fail 7. The fails are a CMDB size ask that invents "CI classes", multi-part asks with no clarifier or a dropped third part, and "Did you design it alone, right?" pulling in SD-WAN and failover. Cheap checks on that head: the streamed thesis is "Splunk is what this question is about.", the gap bridge is not speakable and the tool filter drops it, long-story `levelAwareBand` aims at 360 words, and a question ending in "right?" does not auto-fire. Skip-login was not edited.
+
+**Nothing visible.** Not a live listen-through.
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.

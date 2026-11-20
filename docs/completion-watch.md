@@ -1,5 +1,29 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet session 4, settings and a screen grab
+
+Owner log on draft PR #473. A personal security-level story, a dropped half of a merged question, and a screen answer that did not read the page. Not the 10-question gate. No runtime edit. No ship marker.
+
+## 20 November 2026 — Parakeet session 3, Long and Auto
+
+Owner log on draft PR #473. A hedge, then an ad, a duplicate, the candidate's line, and a mis-hear rewritten into another topic. Not the 10-question gate. No runtime edit. No ship marker.
+
+## 20 November 2026 — Parakeet session 2, spoken misses
+
+Owner video log on draft PR #473. Two of five asks are hard fails: a fragment, and a question that never fired. Not the 10-question gate. No runtime edit. No ship marker.
+
+## 20 November 2026 — Parity gate v1, not run
+
+Owner comment on draft PR #473. The ship bar is 10 typed-then-spoken questions on the Houston Fortinet resume. Not run. No runtime edit. No ship marker. Do not treat another listen as this gate.
+
+## 20 November 2026 — Parakeet session 1, notes only
+
+Owner log on draft PR #473. Three timed Parakeet finishes are about 1.2 s, 1.51 s, and 1.53 s. Four answers are marked as bluffs: invented incident, quantity upgrade, flat yes, leading yes. The Fortinet resume is not in this checkout, so those labels were not re-checked. No runtime edit. No ship marker. Do not live-test PR #467 from this note.
+
+## 20 November 2026 — Brain ops notes, not a product change
+
+PR #467 was still open, draft, and conflicting at head `f5df791c` when these notes were written. Do not merge it from this record. Do not add a ship marker. The notes are on `cursor/kompas-brain-ops`: answer folds, a 20-case clarifier file (13/20 against that head; the old 47 still pass), research, and five pre-live risks. No Kompas runtime file was edited. No live listen.
+
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
 
 The resume baseline on live 1c6c1622 (Length=Long, Senior SOC Analyst, Architect + Developer) is now in the same consistency pull request. Length was ignored because the live request hardcoded balanced. A reports answer was replaced by a shorter ServiceNow sentence. SOC answers closed on ITIL. The incident card was the six-word confirm stub. Typed questions still showed "Context shows up with the next answer." The session length is now what the request sends. A late replace keeps a longer on-topic stream. Off-topic platform sentences are dropped. The confirm stub is not served, shown, or returned by the fast path. The right panel paints Say this or nothing. No ship marker. Do not merge. Do not poll production.
