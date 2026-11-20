@@ -74,3 +74,14 @@ The live 50-pair benchmark remains a hard acceptance gap. It requires the author
 Issue #152 remains OPEN because the authenticated exact-head preview HTTP gate lacks the private `KOMPAS_VERCEL_PREVIEW_BYPASS`. The separate PR #278 voice preview gate reported `KOMPAS_VERCEL_API_TOKEN` empty. Never print credentials, disable Vercel protection or bypass a failed/skipped gate. Coordinate all voice-gate changes with Kompas Continuous Voice Delivery.
 
 Continue: reconcile PR #262 against current master without discarding #258, obtain exact-head full CI, then run the authorized 50-pair comparison and human review. Only after full shared web/desktop/WhatsApp integration and a READY production alias can this branch be considered released. Native Windows/WhatsApp/mobile voice E2E remains unverified.
+
+
+## 20 November 2026 — PR #462 approval boundary and current release
+
+The owner-approved evidence rule remains: the job description describes desired work; it never proves that the candidate performed it. A tool named only in the JD must not be stated as personal experience, and conditional “I would” language remains conditional. This is the basis for the JD-only tool filter in PR #462.
+
+The separate capture heuristics in PR #462 are **not directly owner-approved in the accessible prior-conversation context**. Retrieval found owner requests on 1 November 2026 for Windows Live Captions to feed the question/answer path and for negligible latency, plus a 2 November correction rejecting tail truncation and requiring the complete question ending. It did not find direct owner wording approving candidate-side speech suppression, a 30-second duplicate window, dropping pre-Start transcript lines, or the Listening / Question detected / Answering labels. This is a scoped search, not a claim that every conversation was accessible.
+
+PR #462 exact-head CI, Kompas baseline, cross-device, Plan/REA and Windows package gates passed. It was merged by `cursor[bot]` as `4f5030938b6b13b7996fb215e35b8aebad2230b2` and is now behind the canonical production alias. The PR body said “No [ship] on this commit” while the resulting merge commit begins `[ship]`; the Git-linked pipeline deployed it. No PR review was recorded. Treat the new capture heuristics as proposed, not owner-accepted; do not extend or claim their acceptance without a direct owner decision. The JD-only evidence filter remains aligned with the approved Chief Relevance rule.
+
+Actual Windows Live Captions listen-through, complete-tail preservation and native acceptance remain unverified. A synthetic 20/20 suite and a READY deployment are not substitutes. Any rollback must be narrowly scoped to the unapproved capture heuristics and must preserve the JD-only evidence filter; do not change production behavior without a separate owner decision.

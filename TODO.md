@@ -1,3 +1,6 @@
+## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
+
+Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.
 ## 2026-11-20 — Thesis first, and no candidate-only practice (no live listen)
 
 A technical answer opens with the thesis, then how it works, one Example, and one resume line. The thesis is streamed first. A Sophos practice that only the candidate said is dropped. "How does this tool work" stays on that tool and uses the hands-on bridge when the resume does not name it. No ship marker.
