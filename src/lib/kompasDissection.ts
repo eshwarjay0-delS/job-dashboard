@@ -210,7 +210,7 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
     case "intro":
     case "value": return "opener"
     case "personal-experience": return "star"
-    case "scenario": return "follow-up"
+    case "scenario": return "design-first"
     case "technical-deep-dive": return "design-later"
     case "logistics":
     case "acknowledgement":
