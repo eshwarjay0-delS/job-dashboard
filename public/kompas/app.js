@@ -553,6 +553,23 @@ function segSet(id, val) { const box = $(id); if (!box) return; [...box.children
 // call saveWizardDraft from their own handlers (clicks, not input events).
 ["input", "change"].forEach(ev => document.querySelectorAll(".wiz-pane").forEach(p => p.addEventListener(ev, saveWizardDraft)));
 
+function sameInterviewSetup(a, b) {
+  const field = (row, key) => String(row && row[key] || "").trim();
+  return field(a, "company") === field(b, "company") && field(a, "role") === field(b, "role") && field(a, "jd") === field(b, "jd") && field(a, "resume") === field(b, "resume");
+}
+// Refresh and Start must not mint another interview for a setup that is already open.
+function openInterview(setup) {
+  sessions = LS.get("sessions", []);
+  return (sessions || []).find((row) => row && row.id && !row.endedAt && !liveElsewhere(row) && sameInterviewSetup(row, setup)) || null;
+}
+function reopenInterview(existing) {
+  clearWizardDraft();
+  launchCopilot(existing, sessionOpen(existing) ? { resume: true } : undefined);
+  show("copilot");
+  if ($("connectPanel")) $("connectPanel").classList.add("hidden");
+  sessionReadyUntil = Date.now() + 30000;
+  void start();
+}
 function finishWizard() {
   if (draft && draft.editId) return finishEditWizard();
   const s = {
@@ -582,6 +599,8 @@ function finishWizard() {
     difficulty: ($("difficultySelect") || {}).value || "standard",
     dossierSize: ($("dossierSize") || {}).value || "auto",
   };
+  const existing = openInterview(s);
+  if (existing) { reopenInterview(existing); return; }
   sessions.unshift(s);
   LS.set("sessions", sessions);
   clearWizardDraft();              // the setup became a session; the next new session starts clean
@@ -2029,6 +2048,12 @@ function boostedLoopbackStream(ctx, sourceNode) {
 let starting = false;
 async function start() {
   if (running || starting) return;
+  if (!current && typeof launchCopilot === "function" && typeof LS !== "undefined") {
+    const rows = LS.get("sessions", []);
+    const anyOpen = Array.isArray(rows) ? rows.find((row) => row && row.id && !row.endedAt && !(typeof liveElsewhere === "function" && liveElsewhere(row))) : null;
+    if (anyOpen) launchCopilot(anyOpen, typeof sessionOpen === "function" && sessionOpen(anyOpen) ? { resume: true } : undefined);
+    if (!current) { status("Open a session first. Start does not create a new interview.", "live"); return; }
+  }
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
   starting = true;
   sessionReadyUntil = 0;

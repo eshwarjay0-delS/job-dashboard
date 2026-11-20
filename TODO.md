@@ -1,3 +1,11 @@
+## 2026-11-20 — Kompas 10-fold delivery (answer path, not a second live listen yet)
+
+The dashboard Kompas page answers through POST /api/answer, rewritten to POST /api/kompas/answer. A timeout, 429, 5xx, or empty stream retries, then uses gpt-oss-20b, then a cached Houston resume answer of 120–180 words. Length Long is forced into that band. Terraform, Graviton, and an unnamed cutover keep an honest bridge. "Right?" does not open with yes. Create & Start and Start reuse an open interview instead of minting another row. The live script sends one session id and does not create a session per call.
+
+**Before, production 3a1b0bb7, read-only, one session id, no new account-session rows:** 99/100 delivered, 35/100 in the 120–180 band, 7 invented claims, 16 gap bridges missed. One answer was empty (OPENROUTER_UNAVAILABLE). First token p50 202 ms, p95 4563 ms. Total p50 4061 ms, p95 6282 ms.
+
+**Checked offline:** 10-fold gate, S1 replay, S5 gate, clarifiers 47/47, adversarial 20/20, baseline 92/92, tsc, eslint 0 errors. The after production run is still pending. This answer-path change is invisible until that deploy.
+
 ## 2026-11-20 — Parakeet S5 screen, latest question, honesty gate (no live listen, no ship)
 
 Screen analyze is the Screen button and Ctrl+Shift+Enter. It grabs one frame of the tab already shared and does not open a new share prompt or the tab preview. The full job text stays on the card. A Terraform Gateway Load Balancer bug is corrected to gateway and GENEVE in a short block. If the frame or the model is missing, the card shows one sentence. AI Answer and Ctrl+Enter answer the latest interviewer question, including about two seconds of speech after it, and they do not say "no new question". If that question was already answered, the next press uses a different angle. The honesty rewrite uses the resume the answer already loaded. The default fixture is the Fortinet Houston summary, because that docx is not in the repo. It does not name McKesson. The default file is read from the repo path so the cross-domain answer-service loader can evaluate it. This is invisible until a live session.

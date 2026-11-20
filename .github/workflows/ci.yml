@@ -81,6 +81,9 @@ jobs:
       - name: Verify Parakeet S5 screen, press, and honesty gate
         run: node scripts/kompas-s5-gate.mjs
 
+      - name: Verify Kompas offline 10-fold delivery gate
+        run: node --experimental-strip-types --test scripts/tests/kompas-live-10fold-gate.test.mjs
+
       - name: Verify secure web-to-desktop interview transfer and long instructions
         run: node --test scripts/tests/kompas-desktop-ticket.test.mjs
 
