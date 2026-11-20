@@ -22,10 +22,11 @@ test("long stories pass 300, floors stay under the ceiling, gold lengths hold", 
       if (id === "h") assert.ok(words > 50 && words <= ceiling)
       else assert.ok(words >= floor && words <= ceiling, id)
     }
-    assert.equal(draftClarify("Did you design it alone?"), "Do you mean the overall design, or one piece such as failover?")
+    assert.equal(draftClarify("Did you design it alone?"), "")
     assert.equal(draftClarify("What is routing?"), "")
-    const two = clarifyingFromQuestion("Did you design the network alone? What about failover?")
+    const two = clarifyingFromQuestion("Did you design the network alone? What about failover?", "Designed the network segmentation for the plant.\nBuilt the failover runbook for the cluster.")
     assert.ok(two.length >= 1 && two.length <= 2)
+    assert.equal(clarifyingFromQuestion("Did you design the network alone? What about failover?").length, 0)
     const said = speakableLines("incident resolution and fraud investigation", "Assists with ServiceNow platform incident resolution and fraud investigation workflows for audit documentation.")
     assert.ok(said.length <= 2)
     assert.equal(speakableLines("routing tables", "Senior ServiceNow Developer with Flow Designer.").length, 0)

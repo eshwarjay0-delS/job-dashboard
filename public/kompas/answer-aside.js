@@ -449,7 +449,9 @@
   function liveAside(question, transcript, resume) {
     var lines = resumeLines(resume);
     var heard = String(transcript || "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
-    var last = heard.length ? heard[heard.length - 1].replace(/^(?:Them|You):\s*/i, "") : "";
+    var lastRaw = heard.length ? heard[heard.length - 1] : "";
+    var last = lastRaw.replace(/^(?:Them|You):\s*/i, "");
+    if (/^You:/i.test(lastRaw) || chitChat(last) || chitChat(question)) return emptyAside(question);
     var bag = (question + " " + last).toLowerCase();
     lines.sort(function (a, b) {
       var score = function (line) { return line.toLowerCase().split(/\s+/).filter(function (w) { return w.length > 4 && bag.indexOf(w) >= 0; }).length; };
@@ -461,21 +463,29 @@
       mode: /\?$/.test(last) ? "questions" : "boosters",
       breakdown: { claim: lines[0] || "", context: lines[1] || "", result: lines[2] || "" },
       context: { leads: lines.slice(0, 3), touchPoints: lines.slice(0, 4).map(function (line) { return line.split(/\s+/).slice(0, 8).join(" "); }) },
-      questions: /\bdesign/i.test(question) && /\balone\b/i.test(question) ? ["Do you mean the overall design, or one piece such as failover?"] : [],
-      boosters: lines.slice(0, 2).map(function (line) { return /\byou\b/i.test(line) ? line : line.replace(/[.]+$/, "") + ", and I can walk you through that."; }),
+      questions: [],
+      boosters: lines.slice(0, 2),
       summary: "",
-      sayNow: lines[0] ? (/\byou\b/i.test(lines[0]) ? lines[0] : lines[0].replace(/[.]+$/, "") + ", and I can walk you through that.") : "",
+      sayNow: lines[0] || "",
     };
+  }
+  function chitChat(text) {
+    return /^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there|okay|ok|yeah|yes|sure|cool|got it|right|alright)(?:[.!?\s]|$)/i.test(String(text || "").trim());
+  }
+  function emptyAside(question) {
+    return { question: question, partial: "", mode: "boosters", breakdown: { claim: "", context: "", result: "" }, context: { leads: [], touchPoints: [] }, questions: [], boosters: [], summary: "", sayNow: "", blocked: true };
   }
   function paintLocal() {
     var aside = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
-    if (typeof window.__kompasAskEpoch === "number") aside.epoch = window.__kompasAskEpoch;
+    aside.epoch = window.__kompasAskEpoch;
+    if (aside.blocked) { acceptFresh(aside); return; }
     if (!aside.partial && !aside.breakdown.claim && !aside.question) return;
     if (!pageResume() && aside.question) aside.sayNow = aside.sayNow || "I don't have a resume on this device, so I won't invent a story. I can answer from the job description.";
     acceptFresh(aside);
   }
   function acceptFresh(aside) {
     if (!aside || !aside.context || !Array.isArray(aside.context.leads) || !Array.isArray(aside.questions)) return;
+    if (aside.epoch == null || window.__kompasAskEpoch == null || aside.epoch !== window.__kompasAskEpoch) return;
     var key = stem(aside.question);
     var last = history[history.length - 1];
     if (last && stem(last.question) === key) {
@@ -499,7 +509,7 @@
     if (!local.breakdown.claim && local.question) local.breakdown.claim = local.question;
     acceptFresh(local);
     if (typeof fetch !== "function") return;
-    var payload = JSON.stringify({ question: questionText(), transcript: transcriptText(), resume: pageResume() + memoryFacts() });
+    var payload = JSON.stringify({ question: questionText(), transcript: transcriptText(), resume: pageResume() + memoryFacts(), epoch: window.__kompasAskEpoch });
     fetch("/api/kompas/aside", { method: "POST", headers: { "content-type": "application/json" }, body: payload }).then(function (res) {
       return res && res.ok && res.json ? res.json() : null;
     }).then(function (data) {

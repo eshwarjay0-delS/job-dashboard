@@ -1,7 +1,7 @@
 // Context panel for the live answer (owner, 12 Nov 2026, 8:32 PM CT).
 // Deterministic. Built from the resume already on the answer request.
 // No second model call, no poll. The spoken answer is untouched.
-import { clarifyingFromQuestion, speakableLines } from "./kompasConsistency.ts"
+import { clarifyingFromQuestion, isChitChat, speakableLines, type ClarifierTurn } from "./kompasConsistency.ts"
 import { validateStatement } from "./kompasGloss.ts"
 import { lookupTerm } from "./kompasLexicon.ts"
 import { extractClaims, longStatementCue, screenSuggestion } from "./kompasSessionMind.ts"
@@ -332,10 +332,34 @@ function keepLine(line: string, transcript: string, said: string[], fallbackWhy:
   return { line: checked.ok ? screened.line : checked.line, why: checked.ok ? screened.why || fallbackWhy : checked.reason }
 }
 
+function emptyAside(question: string): AnswerAside {
+  return {
+    question, mode: "boosters", context: { leads: [], touchPoints: [] }, questions: [], boosters: [],
+    summary: "", sayNow: "", claims: [], breakdown: { claim: "", context: "", result: "" }, partial: "", trace: [],
+  }
+}
+
+export function transcriptTurns(transcript: string): ClarifierTurn[] {
+  return String(transcript || "").split("\n").map((line) => line.trim()).filter(Boolean).map((line) => ({
+    who: /^You:/i.test(line) ? "You" : "Them",
+    text: line.replace(/^(?:Them|You):\s*/i, "").trim(),
+  }))
+}
+
+/** The last turn is the candidate, or the line is chit-chat. The box stays empty. */
+export function asideBlocked(transcript: string, question: string): boolean {
+  const turns = transcriptTurns(transcript)
+  const last = turns[turns.length - 1]
+  if (last && last.who === "You") return true
+  if (last && isChitChat(last.text)) return true
+  return isChitChat(question)
+}
+
 /** Context, questions, and boosters. Pure. Same input, same panel. No model call. */
-export function answerAside(input: { question?: string; transcript?: string; resume?: string; said?: string[]; nudge?: string; clarify?: string }): AnswerAside {
+export function answerAside(input: { question?: string; transcript?: string; resume?: string; jd?: string; said?: string[]; nudge?: string; clarify?: string }): AnswerAside {
   const question = String(input.question || "").replace(/\s+/g, " ").trim()
   const transcript = String(input.transcript || "").slice(0, 12000)
+  if (asideBlocked(transcript, question)) return emptyAside(question)
   const said = (input.said || []).map((line) => String(line || "")).filter(Boolean)
   const resume = cleanResume(String(input.resume || ""))
   const why = triggerSpan(transcript, question)
@@ -343,8 +367,9 @@ export function answerAside(input: { question?: string; transcript?: string; res
   const breakdown = buildBreakdown(spoken)
   const leads = buildLeads(spoken)
   const touches = buildTouches(spoken)
-  const questions = clarifyingFromQuestion(question).filter((line) => lineOk(line, resume || line))
-  const saidNow = speakableLines(question, resume).filter((line) => lineOk(line, resume))
+  const prior = transcriptTurns(transcript).filter((turn) => turn.text !== question).slice(-2)
+  const questions = clarifyingFromQuestion(question, resume, prior).filter((line) => lineOk(line, resume || line))
+  const saidNow = speakableLines(question, resume, String(input.jd || "")).filter((line) => lineOk(line, `${resume}\n${input.jd || ""}`))
   const boosters = [...saidNow, ...buildBoosters(transcript, spoken)].filter((line) => {
     if (!line || FILLER.test(line)) return false
     return !/handoff|bottleneck/i.test(line) || /handoff|bottleneck/i.test(transcript)

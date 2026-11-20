@@ -186,14 +186,13 @@ fold("left answer drops connector prefixes, generic lines, headings, and repeats
 })
 
 fold("the right panel is a say-now line or a question the ask itself opened", () => {
-  const alone = "Did you design it alone?"
-  const clarify = clarifyingFromQuestion(alone)
-  assert.match(clarify.join(" "), /overall design|failover/)
+  const clarify = clarifyingFromQuestion("Did you design it alone?")
+  assert.equal(clarify.length, 0)
   assert.equal(clarifyingFromQuestion("How do you prioritize vulnerabilities from a Qualys scan when everything is marked critical?").length, 0)
   const lines = speakableLines("How do you prioritize vulnerabilities from a Qualys scan when everything is marked critical?", SOC)
   assert.ok(lines.length >= 1)
   assert.match(lines.join(" "), /\bI\b/)
-  assert.match(lines.join(" "), /\byou\b/)
+  assert.doesNotMatch(lines.join(" "), /walk you through/i)
   assert.doesNotMatch(lines.join(" "), /what part of this do you want first|want me to keep this short/i)
   assert.doesNotMatch(lines.join(" "), /jayeshwar44|eshwarjay05/)
   return { clarify: clarify[0], line: lines[0] }

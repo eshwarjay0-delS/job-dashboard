@@ -36,7 +36,7 @@ test("each action is a pure function and the policy is deterministic", () => {
   assert.equal(summarizeLine(LONG).split(/\s+/).length <= 18, true)
   assert.match(draftBooster("the catalog stalled", RESUME), /catalog/i)
   assert.equal(draftClarify("What is Flow Designer?"), "")
-  assert.equal(draftClarify("Did you design it alone?"), "Do you mean the overall design, or one piece such as failover?")
+  assert.equal(draftClarify("Did you design it alone?"), "")
   assert.match(draftShortAnswer("Have you worked with Flow Designer?", RESUME), /^Yes, Flow Designer/)
   assert.equal(draftShortAnswer("Have you worked with Citibank?", RESUME), "Not directly.")
   assert.equal(prewarmQuestion("How would you design the"), "How would you design the?")

@@ -97,8 +97,11 @@ test("a new question changes the speakable line, and an ambiguous design ask is 
   assert.match(`${a.sayNow} ${b.sayNow}`, /catalog/i)
   assert.doesNotMatch(`${a.sayNow} ${b.sayNow}`, CANNED)
   const alone = answerAside({ question: "Did you design it alone?", resume: HOUSTON })
-  assert.match(alone.questions.join(" "), /overall design|failover/i)
-  assert.doesNotMatch(alone.questions.join(" "), CANNED)
+  assert.equal(alone.questions.length, 0)
+  const you = answerAside({ question: "How would you design the catalog?", resume: HOUSTON, transcript: "You: I owned the catalog." })
+  assert.equal(you.questions.length, 0)
+  assert.equal(you.sayNow, "")
+  assert.equal(you.context.leads.length, 0)
 })
 
 test("logistics is not coached in the panel", () => {

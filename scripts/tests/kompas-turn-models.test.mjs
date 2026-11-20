@@ -24,7 +24,7 @@ test("a clarifier appears only when the resume lacks the named evidence", () => 
   assert.equal(clarifierNeeded("Have you used Qualys?", RESUME), true)
   assert.equal(clarifierNeeded("Have you used ServiceNow?", RESUME), false)
   assert.equal(clarifyingFromQuestion("What is routing?", RESUME).length, 0)
-  assert.ok(clarifyingFromQuestion("Did you design it alone?").length >= 1)
+  assert.equal(clarifyingFromQuestion("Did you design it alone?").length, 0)
 })
 
 test("the model files stay behind a kill switch and are not on the first paint", () => {

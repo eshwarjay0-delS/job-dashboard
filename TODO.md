@@ -1,3 +1,9 @@
+## 2026-11-20 — Clarifier stays quiet unless two resume lines differ (visible on the right panel)
+
+The right panel is empty when the last turn is the candidate or chit-chat. A clarifier is shown only at need 3 or 4, and only when the two options hit different resume lines. Say-this lines are first person. A tool that is only in the job description is bridged, not claimed. The epoch is sent with the aside request, and a missing or mismatched epoch is dropped. No ship marker.
+
+**Checked on kompas-clarifier-fixtures, 14/14. The 47-file bundle was not on disk.**
+
 ## 2026-11-20 — Story shape and gold eval (no visible screen)
 
 A behavioral story is reordered from its own sentences: direct first line, first-person actions in at least half the sentences, and a resume result at the end with no invented number. The model rewrite runs only when that repair still misses. `npm run eval:gold` scores the gold set offline and caches by answer hash. It is not part of a live answer. No ship marker.

@@ -2,6 +2,7 @@
 // Event-driven. Every action is a pure function. Nothing is written to disk.
 // The only model call in the product stays the main answer. This file never calls one.
 
+import { clarifyingFromQuestion } from "./kompasConsistency.ts"
 import { extractClaims, longStatementCue, screenSuggestion, type SessionClaim } from "./kompasSessionMind.ts"
 
 export type LineIntent = "question" | "long-statement" | "wrap-up" | "yes-no" | "explanation" | "other"
@@ -114,9 +115,7 @@ export function draftBooster(text: string, resume = ""): string {
 }
 
 export function draftClarify(text: string): string {
-  const asked = String(text || "").replace(/\s+/g, " ").trim()
-  if (/\bdesign\b/i.test(asked) && /\balone\b/i.test(asked)) return "Do you mean the overall design, or one piece such as failover?"
-  return ""
+  return clarifyingFromQuestion(text)[0] || ""
 }
 
 export function draftShortAnswer(text: string, resume: string): string {

@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Clarifier silence, not shipped
+
+The aside is empty for a You turn or chit-chat. Clarifiers are silent at need 2 or below, and a kept clarifier must map to two different resume lines. Epoch mismatch, including a missing epoch, is dropped. In-repo fixtures 14/14. The attached 47-file run was not on disk. No ship marker.
+
 ## 20 November 2026 — Story shape and gold eval, not shipped
 
 Story answers are repaired by reordering existing sentences. A model rewrite is requested only when that repair still misses the shape. `npm run eval:gold` is offline. Baseline with no key: length fit 5.00, claim faithfulness 4.70, model rubric skipped. No ship marker.
