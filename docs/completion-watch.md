@@ -1,3 +1,41 @@
+### Plan/REA schema failure corrected
+
+Initial exact-head Plan/REA run `44731786821` failed because the REA entry treated the branch name as a source file path. I corrected it to the actual research-note path and added the missing Resume/Research/Test references to Plan & Vision. On corrected pre-watch-update head `f84a0a242201794f8fa57f830c77be84eb82cf4a`, Plan/REA `44732005021` and Kompas baseline `44732004928` passed; full CI `44732004932` and WhatsApp recovery `44732005028` were still running. The Completion Watch update itself will advance the head, so recheck all exact-head gates afterward. No test result from the failed or predecessor head is reused.
+
+## 20 November 2026 — Resume confirmed-skill restack PR #472
+
+Continue: exact-head remote validation of the current-master resume alignment slice. Draft PR [#472](https://github.com/eshwarjay0-delS/job-dashboard/pull/472) starts from master `2da44026c0ab58ab2966b9371992efaf93427de4`, carries PR #466 source/test work, and adds Safe Merge Gate regressions for negative candidate statements and overly broad IAM/Python project context. The original PR #466 branch remains preserved.
+
+- Owner-approved rule: positive candidate assertions or clearly labelled `Confirmed skills:` / `Confirmed experience:` may support only the named skill, mapped to relevant existing projects across roles; JD-only wording, questions, negations and formatting requests do not prove experience.
+- Negative cases added: `My background lacks AWS`, `My skills don't include Splunk`, `My experience includes no Okta`, plus labelled negative statements. Positive contrast keeps only the positive clause.
+- Context cases added: generic user/security wording alone must not transfer IAM; generic data/service wording alone must not transfer Python. Specific identity/access/MFA and automation/API/ETL context remain positive.
+- Current master to #466 base comparison showed only documentation and Kompas changes after that base; the carried resume source/test files were disjoint. The original #466 branch was not rewritten.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA remain pending on the final PR head. Local clone/test is unavailable because GitHub DNS fails in this sandbox. No source resume/JD, model generation, exported DOCX or 98% live match was tested.
+- Keep the PR draft; protected preview and production deployment are not authorized by these source/test changes.
+
+### WhatsApp fallback review finding
+
+PR #450's path-equality and same-email checks do not prove the user explicitly selected that Library resume: `pickAndMake` can populate `files.abs` from the automatic `chooseResume` match. The latest owner correction requires explicit selection, not merely a same-account automatic closest match. Preserve normal initial selection; do not merge the fallback branch until selection provenance is captured and regression-tested. This is a source-level gap, not proof of the 17 Oct incident root cause.
+
+Continue: complete exact-head remote gates for PR #472, repair any failures without inventing candidate facts, and let MFit Safe Merge Gate review. Keep the WhatsApp fallback provenance gap visible without duplicating active #450/#453 branch work.
+
+## 20 November 2026 — Resume confirmed-skill restack and new review regressions
+
+Continue: exact-head remote validation of the current-master resume alignment slice. The new branch `fix/resume-confirmed-skill-current-master-restack-20261120-1142z` starts at master `2da44026c0ab58ab2966b9371992efaf93427de4`, carries PR #466 source/test changes, and adds the Safe Merge Gate review regressions for negative candidate statements and overly broad IAM/Python project context. The original PR #466 branch is preserved.
+
+- Owner-approved rule: a positive candidate assertion or clearly labelled `Confirmed skills:` / `Confirmed experience:` may support only the named skill, mapped to relevant existing projects across roles; JD-only wording, questions, negations and formatting requests do not prove experience.
+- Negative cases added: `My background lacks AWS`, `My skills don't include Splunk`, `My experience includes no Okta`, plus labelled negative statements. Positive contrast keeps only the positive clause.
+- Context cases added: generic user/security wording alone must not transfer IAM; generic data/service wording alone must not transfer Python. Specific identity/access/MFA and automation/API/ETL context remain positive.
+- Current master to #466 base comparison showed only documentation and Kompas changes after that base; the carried resume source/test files were disjoint. The original #466 branch was not rewritten.
+- Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA remain pending on the final current-master branch. Local clone/test is unavailable because GitHub DNS fails in this sandbox. No source resume/JD, model generation, exported DOCX or 98% live match was tested.
+- Keep the PR draft; the Vercel protected-preview path still requires the private owner-controlled token and must not be bypassed.
+
+### WhatsApp fallback review finding
+
+PR #450's path-equality and same-email checks do not prove the user explicitly selected that Library resume: `pickAndMake` can populate `files.abs` from the automatic `chooseResume` match. The latest owner correction requires explicit selection, not merely a same-account automatic closest match. Preserve normal initial selection; do not merge the fallback branch until selection provenance is captured and regression-tested. This is a source-level gap, not proof of the 17 Oct incident root cause.
+
+Continue: complete exact-head remote gates for the current-master resume restack, then let MFit Safe Merge Gate sequence it. Keep the WhatsApp fallback provenance gap visible without duplicating the active #450/#453 branch work.
+
 # MFit Completion Watch
 
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
@@ -679,3 +717,17 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 20 November 2026 — confirmed-skill parser correction
+
+Continue: exact-head CI for the current-master resume-alignment PR #472.
+
+- Static review found `My skills are missing AWS`, `My experience is missing Splunk`, and `My background is missing Okta` were accepted by the confirmation parser as positive candidate evidence.
+- Source commit `3c2411762e49512ca00d881e4abaefffbe640e42` now rejects `is/are missing` and bare `missing` negatives; test commit `6aae62afc97d5d674c45fadbdfb9cf5baf514610` covers those forms and verifies `Confirmed skills: AWS, missing GCP` retains only AWS. Positive contrast `AWS, but not GCP` remains.
+- Documentation commits: resume `4b5c01524e2fd3adc62289b1504c39fe7c5fbc89`, research `81b22cdee37d0118a83edb84d375c24be136fdd7`, Plan & Vision `f6806cb2f5edd4fd81f008fe51516d76791b176` (revision bump `87cb8ce906f4c992a252f8e6dd0a7ae138d3335f`), REA `36f2aab31120ff2ec1e0cd73244ce913fdf01e09` (follow-up `c09bc66be2bbbe9b4f2880f079a84e631f0143a2`), and journal `d610f1c5cdc9f51b05b0ee14c075b91d3163063e`.
+- Source-derived JavaScript regex sanity checks passed. No repository-local Node test/build was run; exact-head GitHub Actions full CI, WhatsApp recovery, Kompas baseline and Plan/REA are pending. Earlier pre-watch-update runs are not reused.
+- PR #472 remains DRAFT; Safe Merge Gate review and owner-authenticated resume/JD/exported-DOCX acceptance are still required. No live resume/JD, model call, DOCX export, WhatsApp send, production data write or deployment occurred.
+- Production is unchanged: alias `job-dashboard-fawn.vercel.app` is READY at older SHA `5af72c125649b1306dd804704963edc40d1d3215`; project reports `live=false` and latest production deployment canceled. Protected preview is blocked by the reported Vercel Hobby usage limit/HTTP 402, reset reported for 1 Dec 2026.
+
+Next: verify all required exact-head workflows; if any fail, fix only the focused parser/test/docs change. Let Safe Merge Gate review. Do not claim a live 95–100% resume/JD match without owner-authorized output and DOCX inspection.

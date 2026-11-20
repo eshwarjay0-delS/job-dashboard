@@ -1,3 +1,4 @@
+import './resume-confirmation-quality.test.mjs'
 // Resume guards (src/lib/resume-round-trip-guard.ts, src/lib/resume-keyword-report.ts). Tests written before the code.
 // All resumes here are invented example data (example.com, 555 numbers).
 import test from 'node:test'
