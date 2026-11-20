@@ -1,3 +1,4 @@
+import { levelAwareBand, visibleLengthBand, type AnswerLevel } from "./kompasDissection.ts"
 import { resumeRoles, type ResumeRole, type ResumeRoles } from "../../src/lib/kompasResume.ts"
 import { CTX, STRUCTURAL, figureContextKeys, figureMentions, hasContext, mentionAt, mentionSupported } from "./kompasFigureContext.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
@@ -543,4 +544,120 @@ export async function verifyAnswer(
     const prefix = l.match(/^\s*[-•*]\s*/)?.[0] || ""
     return prefix + out[k++]
   }).join("\n"), fixed }
+}
+
+const TOOL_STOP = new Set("i the a an and but for with from this that when where what how why who you your our not".split(" "))
+
+/** Capitalized tools named in the resume text. */
+export function resumeToolLexicon(resume: string): Set<string> {
+  const out = new Set<string>()
+  for (const match of String(resume || "").matchAll(/\b[A-Z][A-Za-z0-9+.#-]{1,}/g)) out.add(match[0].toLowerCase())
+  return out
+}
+
+/** A capitalized tool in the sentence that the resume never names. */
+export function sentenceUsesUnknownTool(sentence: string, resume: string): boolean {
+  const lex = resumeToolLexicon(resume)
+  const bag = String(resume || "").toLowerCase()
+  const names = String(sentence || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  return names.some((name) => {
+    const token = name.toLowerCase()
+    if (TOOL_STOP.has(token)) return false
+    return !lex.has(token) && !bag.includes(token)
+  })
+}
+
+export function dropUnknownToolSentences(text: string, resume: string): string {
+  return String(text || "").split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !sentenceUsesUnknownTool(sentence, resume)).join(" ")
+}
+
+export function meetsLengthFloor(question: string, text: string, level: AnswerLevel = "engineer", length: "short" | "balanced" | "long" = "balanced"): boolean {
+  const band = levelAwareBand(question, level, length)
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean).length
+  return words >= band.floor && words <= band.ceiling
+}
+
+export function isStoryAsk(question: string): boolean {
+  return visibleLengthBand(question).type === "story"
+}
+
+const SHAPE_STOP = new Set("that this with from have been were they them your just into over also when what then than some only more most".split(" "))
+
+function storySentences(text: string): string[] {
+  return String(text || "").replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+}
+
+function preambleSentence(sentence: string): boolean {
+  return /^(?:so|well|sure|absolutely|of course|great question|that(?:'s| is) a (?:great|good) question|let me|i(?:'d| would) be happy|having\b|in general|to (?:answer|start)|first of all)\b/i.test(sentence)
+    || /^(?:a|an|the)\s+(?:\w+\s+){0,6}(?:is|are|means|refers to)\b/i.test(sentence)
+}
+
+function actionSentence(sentence: string): boolean {
+  return /\bI(?:'d|'ll|'ve|'m)?\b/.test(sentence)
+}
+
+function storyNumbers(text: string): string[] {
+  return (String(text || "").match(/\d[\d,]*(?:\.\d+)?/g) || []).map((n) => n.replace(/,/g, ""))
+}
+
+function inventedNumber(sentence: string, bag: string): boolean {
+  const allowed = new Set(storyNumbers(bag))
+  return storyNumbers(sentence).some((n) => !allowed.has(n))
+}
+
+function resultSentence(sentence: string, resume: string, question: string): boolean {
+  if (inventedNumber(sentence, `${resume}\n${question}`)) return false
+  const bag = resume.toLowerCase()
+  const tokens = (sentence.toLowerCase().match(/[a-z][a-z0-9+]{3,}/g) || []).filter((t) => !SHAPE_STOP.has(t))
+  const overlap = tokens.filter((t) => bag.includes(t)).length
+  const resumeNums = new Set(storyNumbers(resume))
+  const numbered = storyNumbers(sentence).some((n) => resumeNums.has(n))
+  if (numbered && overlap >= 1) return true
+  return overlap >= 2 && /\b(?:result|contained|closed|reduced|finished|resolved|delivered|saved)\b/i.test(sentence)
+}
+
+export type StoryShape = { text: string; ok: boolean; needsRewrite: boolean; reasons: string[] }
+
+/** Reorder or trim a story. No new sentence is written. */
+export function repairStoryShape(question: string, text: string, resume: string): StoryShape {
+  const original = String(text || "").replace(/\s+/g, " ").trim()
+  if (!isStoryAsk(question) || !original) return { text: original, ok: true, needsRewrite: false, reasons: [] }
+  let parts = storySentences(original).filter((s) => !inventedNumber(s, `${resume}\n${question}`))
+  if (!parts.length) parts = storySentences(original)
+  const reasons: string[] = []
+  if (parts.length && preambleSentence(parts[0])) {
+    const direct = parts.findIndex((s, i) => i > 0 && actionSentence(s) && !preambleSentence(s))
+    if (direct > 0) {
+      const [line] = parts.splice(direct, 1)
+      parts = [line, ...parts.filter((s) => !preambleSentence(s))]
+    } else parts = parts.filter((s) => !preambleSentence(s))
+    reasons.push("shape-open")
+  }
+  let resultAt = -1
+  for (let i = 0; i < parts.length; i++) if (resultSentence(parts[i], resume, question)) resultAt = i
+  if (resultAt > 0 && resultAt !== parts.length - 1) {
+    const [line] = parts.splice(resultAt, 1)
+    parts.push(line)
+    reasons.push("shape-result")
+  }
+  const overlap = (sentence: string) => {
+    const bag = resume.toLowerCase()
+    return (sentence.toLowerCase().match(/[a-z][a-z0-9+]{3,}/g) || []).filter((t) => !SHAPE_STOP.has(t) && bag.includes(t)).length
+  }
+  parts = parts.filter((sentence, index) => index === 0 || index === parts.length - 1 || actionSentence(sentence) || overlap(sentence) >= 2)
+  const ratio = () => parts.length ? parts.filter(actionSentence).length / parts.length : 0
+  if (ratio() < 0.5) {
+    const spare = parts.map((s, i) => ({ s, i })).filter((row) => row.i !== 0 && row.i !== parts.length - 1 && !actionSentence(row.s))
+    for (const row of spare) {
+      if (ratio() >= 0.5) break
+      parts = parts.filter((s) => s !== row.s)
+    }
+    reasons.push("shape-action")
+  }
+  const out = parts.join(" ")
+  const opens = !!parts.length && !preambleSentence(parts[0]) && actionSentence(parts[0])
+  const actions = ratio() >= 0.5
+  const ends = !!parts.length && resultSentence(parts[parts.length - 1], resume, question)
+  const ok = opens && actions && ends
+  return { text: out || original, ok, needsRewrite: !ok, reasons: ok ? [] : (reasons.length ? reasons : ["shape"]) }
 }

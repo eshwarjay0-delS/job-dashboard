@@ -1,6 +1,59 @@
+## 2026-11-20 — Parakeet screen audit (no live listen, no ship)
+
+Every Kompas screen was walked from the page source and set beside the public Parakeet notes. The row log is `docs/research/kompas-parakeet-parity-audit-2026-11-20.md`. Fixed: empty-session copy, chat placeholder, live-tab title, explain-how length band, and the type errors that failed CI. Invisibility claims were not copied. Playwright is still not installed. No ship marker.
+
+**Checked by the baseline gate (SAML band) and the 30-fold suites. Not a signed-in Parakeet session and not a live listen.**
+
+## 2026-11-20 — Chat, screen, transcript, and UI 30-fold (no live listen, no ship)
+
+Thirty checks each for chat send/stream/follow-up, in-page tab preview, You vs Interviewer labels, ordered copyable transcript, and the lightweight controls. First surface run: chat 25/30, screen 30/30, transcription 30/30, transcript 30/30, UI 30/30. Rerun: 30/30 in each. A full question that starts with How is not a follow-up. The export says Interviewer, sorts by time, and drops a repeated line. Playwright is not installed here, so this was not a browser click-through. The first-word budget stays 1.4s and has no visible UI until a live session. No ship marker.
+
+**Checked by scripts/tests/kompas-30fold-surfaces.test.mjs. Not a live listen-through.**
+
+## 2026-11-20 — 30-fold Parakeet parity (no live listen, no ship)
+
+Offline scores for 30 relevance, 30 length, 30 clarifier, and 30 usage cases. `parakeet-40.md` is not in the repo. The bar is `scripts/fixtures/brain-gold-answers.md` plus the gold rubric in `scripts/eval-gold.mjs`. Houston resume only. A case passes when Kompas is at least as high as that bar on relevance, realism, length fit, and clarifier fit, and not lower on grounding. First measured run: relevance 3/30, length 0/30, clarifier 24/30, usage 30/30. After the fixes: 30/30 in each area. The first-word budget is 1.4s. That change has no visible UI until a live session. Skip-login was not edited. No ship marker.
+
+**Checked by scripts/tests/kompas-30fold.test.mjs. Not a live listen-through.**
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.
+## 2026-11-20 — Thesis first, and no candidate-only practice (no live listen)
+
+A technical answer opens with the thesis, then how it works, one Example, and one resume line. The thesis is streamed first. A Sophos practice that only the candidate said is dropped. "How does this tool work" stays on that tool and uses the hands-on bridge when the resume does not name it. No ship marker.
+
+**Checked on kompas-answer-shape. Not a live listen-through.**
+
+## 2026-11-20 — Answer shape, JD bridge, and no video-candidate facts (no live listen)
+
+Technical answers open on the point, grow from resume facts when they are under the floor, and can close with Example. A tool that is only in the job description is a hands-on bridge, not a stub. A employer that appears only in the candidate's transcript is left out. No ship marker.
+
+**Checked on kompas-answer-shape. Replay median: short 40, long 129.5, story 153. Short answers are capped at 60. Not a live listen-through.**
+
+## 2026-11-20 — Replay fixtures and the 47 clarifier cases (no live listen)
+
+The two caption videos are a replay test: 52 interviewer turns fire once at end_s, 50 candidate turns fire 0 times, and each header is one Question: line. The official clarifier fixtures score 47/47. No ship marker.
+
+**Checked by the fixture runners. Not a live listen-through.**
+
+## 2026-11-20 — Clarifier stays quiet unless two resume lines differ (visible on the right panel)
+
+The right panel is empty when the last turn is the candidate or chit-chat. A clarifier is shown only at need 3 or 4, and only when the two options hit different resume lines. Say-this lines are first person. A tool that is only in the job description is bridged, not claimed. The epoch is sent with the aside request, and a missing or mismatched epoch is dropped. No ship marker.
+
+**Checked on kompas-clarifier-fixtures, 14/14. The 47-file bundle was not on disk.**
+
+## 2026-11-20 — Story shape and gold eval (no visible screen)
+
+A behavioral story is reordered from its own sentences: direct first line, first-person actions in at least half the sentences, and a resume result at the end with no invented number. The model rewrite runs only when that repair still misses. `npm run eval:gold` scores the gold set offline and caches by answer hash. It is not part of a live answer. No ship marker.
+
+**Checked on kompas-story-shape and the gold script. Not a live listen-through.** Length fit 5.00 and faithfulness 4.70 with no OpenRouter key, so the 1–5 model rubric was skipped.
+
+## 2026-11-20 — CDN speech models, no Vercel transfer (no visible screen until a live listen)
+
+A session start loads Silero v5 and the onnxruntime wasm from jsDelivr, and smart-turn v3.2 from a pinned Hugging Face revision. The weights are not in /public. KOMPAS_VAD is on unless set to off. Smart-turn runs only when the wording is unsure. If the CDN fails, the 700 ms pause gate continues and no error is shown. No ship marker. No UI was restyled.
+
+**Checked on kompas-turn-models. Not a live listen-through.**
 
 ## 2026-11-20 — Capture ignores the candidate, and a JD-only tool is not experience (visible: Question header and the line status)
 

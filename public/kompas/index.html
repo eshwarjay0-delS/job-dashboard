@@ -78,7 +78,7 @@
     </div>
     <div class="session-list" id="sessionList"></div>
     <div class="empty-sessions hidden" id="emptySessions">
-      <p>Your sessions will appear here.</p>
+      <p>No sessions yet. Create one, then connect the call.</p>
       <button class="hidden" id="newSessionBtn2" tabindex="-1" aria-hidden="true"></button>
     </div>
   </main>
@@ -479,8 +479,9 @@
   <div class="overlay" id="overlay">
     <aside id="tabPreview" class="tab-preview hidden" hidden>
       <div class="tab-preview-stage">
-        <video id="tabPreviewVideo" muted playsinline autoplay></video>
+        <video id="tabPreviewVideo" muted playsinline autoplay title="Live tab preview"></video>
         <div class="tab-preview-actions">
+          <button type="button" id="tabPreviewFull" class="tab-preview-action">Fullscreen</button>
           <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
           <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
         </div>
@@ -535,6 +536,8 @@
               </div>
             </div>
             <button class="mi" role="menuitem" id="collapseBtn"><span class="mi-ico">—</span>Minimise panel</button>
+            <button class="mi" role="menuitem" id="resumeReplaceBtn"><span class="mi-ico">↻</span>Replace resume</button>
+            <input id="resumeReplaceFile" type="file" accept=".txt,.md,.pdf,.docx,text/plain" hidden>
             <button class="mi" role="menuitem" id="exportBtn"><span class="mi-ico">⇩</span>Export answers</button>
             <button class="mi" role="menuitem" id="getTranscriptBtn"><span class="mi-ico">⤓</span>Download transcript</button>
             <button class="mi mi-danger" role="menuitem" id="clearBtn"><span class="mi-ico">⌫</span>Clear answers</button>
@@ -603,7 +606,7 @@
     </div>
     </div>
     <div class="bar bar-ask" id="barAsk">
-      <input class="manual" id="manualInput" placeholder="Type a question — included with the mic and the call when you press AI Answer" />
+      <input class="manual" id="manualInput" placeholder="Type a question, then press Enter" title="Enter sends. Ctrl+Enter answers what was heard." />
       <button class="send" id="sendBtn" title="Answer this question (Enter)" aria-label="Answer"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3.5v5.2a1.8 1.8 0 0 1-1.8 1.8H3.2"/><path d="M6 8.2 3.2 10.5 6 12.8"/></svg></button>
     </div>
     <div class="statusline" id="status">Ready — press Start to listen to the call.</div>
