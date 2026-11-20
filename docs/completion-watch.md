@@ -709,3 +709,11 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+## 20 November 2026 — crawler abort diagnostics — conflict restack on latest master; validation pending
+
+PR #471's safe restack became `mergeable_state=dirty` after master advanced through PR #467 (`25b6046c0e3a80f48d020f8220d33f60b54df10c`). The conflict is in shared Plan/REA documentation, not a reason to overwrite either side. A new branch `safe-merge/crawler-abort-diagnostics-master-20261120-1455z` was created from that exact master and the diagnostic source/test change was re-applied additively. Original PRs #470 and #471 remain untouched.
+
+The new branch preserves the 600 ms pacing and 25,000 ms default timeout, distinguishes local timeout from upstream AbortError with portal attribution, and keeps malformed URL parsing inside timer/pacing cleanup. It adds two deterministic regression tests. No retry/backoff, adapter, permission, freshness, classifier, schedule, storage or application behavior changes.
+
+All checks must run on the new exact head: full CI, crawler freshness/collector regression, Plan/REA schema and Kompas baseline. The prior #470/#471 results are predecessor evidence only. Keep the replacement PR draft until protected preview/release requirements are legitimately satisfied. No manual crawl, portal request, production-row mutation, cron restoration, ship marker or deployment.
