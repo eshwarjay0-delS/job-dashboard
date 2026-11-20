@@ -29,5 +29,6 @@ test("lowering opacity fades the panels and strengthens the answer text", () => 
   assert.match(css, /font-weight:var\(--answer-weight, 560\)/)
   assert.doesNotMatch(css, /max\(var\(--panel-a\),0\.94\)/)
   assert.match(css, /justify-content:space-evenly !important/)
-  assert.match(css, /#tabPreview\{display:none !important/)
+  assert.match(css, /#tabPreview\.is-collapsed\{display:none !important/)
+  assert.doesNotMatch(css, /#tabPreview\{[^}]*position:absolute/)
 })

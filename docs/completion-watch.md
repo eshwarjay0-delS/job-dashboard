@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — S1 live fixes, not shipped
+
+Tab preview is collapsed beside the answer. Auto commits the full stream, not the confirm stub. Candidate lines on tab-plus-mic audio stay You. Gate: scripts/tests/kompas-s1-replay.test.mjs. No ship marker.
+
 ## 20 November 2026 — Review blockers, not shipped
 
 Streamed thesis is a spoken sentence. Long is 120–180 in one call. A trailing right? does not fire before 1.4 seconds. Adversarial clarifier 20/20 and the original 47/47. The CMDB sentence is kept. No ship marker.

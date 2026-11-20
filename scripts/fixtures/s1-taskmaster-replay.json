@@ -1,0 +1,56 @@
+{
+  "id": "taskmaster-s1",
+  "build": "25b6046",
+  "note": "Three spoken questions on shared tab audio, one stub-then-full stream, and candidate lines that the live pass labeled THEM.",
+  "events": [
+    {
+      "type": "line",
+      "track": "tab",
+      "silenceMs": 1600,
+      "text": "Can you tell me what an incident is?",
+      "chunks": [
+        "I would want to confirm that.",
+        "An incident is an unplanned event that disrupts a service, and I record the evidence before I close it."
+      ]
+    },
+    {
+      "type": "mic",
+      "hot": true
+    },
+    {
+      "type": "line",
+      "track": "tab",
+      "silenceMs": 200,
+      "text": "I can explain the incident from the alerts I watched."
+    },
+    {
+      "type": "line",
+      "track": "mic",
+      "silenceMs": 400,
+      "text": "I contained the host and I wrote the timeline."
+    },
+    {
+      "type": "mic",
+      "hot": false
+    },
+    {
+      "type": "line",
+      "track": "tab",
+      "silenceMs": 1600,
+      "text": "What is the difference between a risk, a threat and a vulnerability?",
+      "chunks": [
+        "A risk is the chance a threat exploits a vulnerability, and I separate those three words before I answer."
+      ]
+    },
+    {
+      "type": "line",
+      "track": "tab",
+      "silenceMs": 1600,
+      "text": "Can you tell me about the incident response plan?",
+      "chunks": [
+        "That is not on my resume, so I will not invent it.",
+        "An incident response plan is the sequence I follow to detect, contain, and recover, and I keep each step on the record."
+      ]
+    }
+  ]
+}

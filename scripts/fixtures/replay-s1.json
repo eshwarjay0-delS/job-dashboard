@@ -1,0 +1,21 @@
+{
+  "id": "replay-s1",
+  "video": "XQC_t7uplBo",
+  "window": "0:00-5:44",
+  "note": "Tab audio is the interviewer. Mic audio is the candidate. Times are seconds from the start of the video.",
+  "events": [
+    { "t": 8, "track": "tab", "role": "smalltalk", "text": "How did your day go?" },
+    { "t": 14, "track": "mic", "role": "candidate", "text": "I am doing well, thank you." },
+    { "t": 22, "track": "tab", "role": "question", "id": "q1", "text": "Ashish, can you tell me about yourself?" },
+    { "t": 48, "track": "mic", "role": "candidate", "text": "I have been learning security operations and I watch the alert queue." },
+    { "t": 70, "track": "tab", "role": "smalltalk", "text": "Nice to meet you." },
+    { "t": 89, "track": "tab", "role": "question", "id": "q2", "text": "Why did you choose cybersecurity as your career?" },
+    { "t": 120, "track": "mic", "role": "candidate", "text": "I chose it because I like the investigative work and I stayed with it." },
+    { "t": 158, "track": "tab", "role": "question", "id": "q3", "text": "What are the roles and responsibilities of a security analyst?" },
+    { "t": 185, "track": "mic", "role": "candidate", "text": "I triage the alerts and I escalate what I cannot close." },
+    { "t": 204, "track": "tab", "role": "question", "id": "q4", "text": "What reports do you prepare as SOC L1?" },
+    { "t": 220, "track": "mic", "role": "candidate", "text": "I write the daily alert report and I send the escalation summary." },
+    { "t": 235, "track": "tab", "role": "question", "id": "q5", "text": "What do you know about routing?" },
+    { "t": 270, "track": "mic", "role": "candidate", "text": "I know a router forwards packets and I have read the routing table." }
+  ]
+}

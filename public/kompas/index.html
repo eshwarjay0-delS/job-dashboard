@@ -477,16 +477,6 @@
     </div>
   </div>
   <div class="overlay" id="overlay">
-    <aside id="tabPreview" class="tab-preview hidden" hidden>
-      <div class="tab-preview-stage">
-        <video id="tabPreviewVideo" muted playsinline autoplay></video>
-        <div class="tab-preview-actions">
-          <button type="button" id="tabPreviewFull" class="tab-preview-action">Fullscreen</button>
-          <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
-          <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
-        </div>
-      </div>
-    </aside>
     <header class="bar bar-top">
       <div class="bar-left">
         <button class="icon-btn" id="exitCopilot" title="Back to sessions (saves the transcript)">←</button>
@@ -499,6 +489,7 @@
         <button class="icon-btn src-btn on" id="micBtn" title="Microphone (you) — on">🎙️<span class="lvl"><i id="micLvl"></i></span></button>
         <select id="micPick" aria-label="Microphone" title="Choose the microphone"></select>
         <button class="icon-btn src-btn on" id="sysBtn" title="Computer audio (interviewer) — on">🔊<span class="lvl"><i id="sysLvl"></i></span></button>
+        <button type="button" class="icon-btn" id="tabPreviewToggle" title="Show or hide the shared tab" hidden>Tab</button>
         <div class="more-wrap">
           <button class="icon-btn more-btn" id="moreBtn" title="More tools" aria-haspopup="menu" aria-expanded="false">⋯</button>
           <div class="more-menu hidden" id="moreMenu" role="menu">
@@ -599,6 +590,16 @@
           <ul id="answer"><li>Press Start — both your mic and the call audio are on by default.</li></ul>
         </div>
       </div>
+      <aside id="tabPreview" class="tab-preview is-collapsed" hidden>
+        <div class="tab-preview-stage">
+          <video id="tabPreviewVideo" muted playsinline autoplay></video>
+          <div class="tab-preview-actions">
+            <button type="button" id="tabPreviewFull" class="tab-preview-action">Fullscreen</button>
+            <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
+            <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
+          </div>
+        </div>
+      </aside>
     </main>
     <div class="drawer hidden" id="drawer">
       <div class="drawer-head">Live transcript <span class="muted small">You = your mic · Them = call audio</span></div>
