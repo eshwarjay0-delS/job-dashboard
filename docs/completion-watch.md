@@ -1,3 +1,24 @@
+## 20 November 2026 03:07 UTC — PR #465 landed after the previous production check
+
+### Latest production alias
+
+- Current master: `5af72c125649b1306dd804704963edc40d1d3215`, direct child of `4f5030938b6b13b7996fb215e35b8aebad2230b2`.
+- Vercel deployment `dpl_FusdJPpFqFu6ZwMGTgg3pLomCAH9`: READY, production, exact SHA `5af72c125649b1306dd804704963edc40d1d3215`, `aliasError: null`.
+- Independent alias lookup maps `job-dashboard-fawn.vercel.app` to this deployment; the deployment also lists `marketfit-app.vercel.app`.
+- This supersedes the earlier 4f503/dpl_GJV snapshot in the section below. PR #458 (Gmail Retry-After), PR #460 (Kompas consistency) and PR #462 (JD-only grounding) remain ancestors of this current production build.
+
+### New Kompas approval-provenance gap — PR #465
+
+PR [#465](https://github.com/eshwarjay0-delS/job-dashboard/pull/465) merged at 02:59:48 UTC as `5af72c` and is live. It changes tab-audio Auto arming after re-share, first-person-shaped candidate-line classification, pending-question counting, persona chip preference and Question labeling.
+
+A targeted accessible prior-context search found no direct owner-authored approval for those exact choices. The 2 Nov “Fix it” message followed a general caption/question regression but did not specify these behaviors. GitHub records `cursor[bot]` as merger, there are no PR reviews/comments, and the PR body says “No [ship] on this commit” while the merge commit begins `[ship]`. The approved Windows Live Captions requirement is not blanket approval for every classifier or suppression heuristic.
+
+**Status: deployed, approval unresolved.** Do not extend or further promote these behaviors. Do not automatically revert without direct owner rejection; if rejected, prepare a narrow rollback of only #465 while preserving approved live-question, answer-quality, skip-login and Caption Capture paths. Full CI `44664644365` was still IN_PROGRESS at the last check; Plan/REA `44664644178`, Kompas baseline `44664644232` and Windows build `44664644041` passed. No authenticated Windows/mobile listen-through is claimed. Evidence: `docs/research/kompas-tab-audio-auto-approval-audit-2026-11-20.md`.
+
+### Resume PR #466 now needs a current-master rebase after its parent
+
+PR [#466](https://github.com/eshwarjay0-delS/job-dashboard/pull/466) remains DRAFT, stacked on PR #464's branch at `184c240`, whose base was master `4f503`. Master has since advanced to `5af72c` through #465. PR #465 changed only Kompas app/tests/journal, not the resume source/test files carried by #466, so the resume patch remains source-disjoint; nevertheless, after #464 merges, retarget/rebase #466 onto current master `5af72c` before full CI, Kompas baseline and production preview. Do not merge the child before the parent or reuse predecessor-head checks.
+
 ## 20 November 2026 02:58 UTC — current-master release reconciliation and confirmed-skill continuation
 
 ### Canonical production
