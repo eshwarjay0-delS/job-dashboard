@@ -1,3 +1,9 @@
+## 2026-11-20 — S1 P0: preview, auto once, speaker split (visible: tab panel and question header)
+
+The shared-tab preview is off until the Tab button on the status line is pressed. Open, it is a 168px panel at the bottom-right and does not cover AI Answer, Start/Stop, or More. Tab audio keeps recording either way. Candidate lines are tagged You. Interviewer lines are tagged Interviewer. Auto fires once per real question, 1.5 seconds after it ends, and skips "How did your day go?" and the other small talk. The card header is one Question line. The "New constraint" keyword line is gone. Pull request 477's video-only preview and transcript copy stay. Skip-login was not edited.
+
+**Checked offline by scripts/kompas-s1-replay-gate.mjs, Chrome boxes at 1280x800 and 1280x720, clarifiers 47/47 and 20/20, baseline, tsc, eslint (0 errors), and build. Not a second live listen. Production check is once after the ship deploy.**
+
 ## 2026-11-20 — Parity scope: tab preview, transcript copy, chat draft (no live listen, no ship)
 
 The shared-tab panel shows the video track only, so call audio stays on the capture stream. Copy on the live transcript writes plain lines, and a typed chat line is added once when it is not already the last You line. Desktop Tauri/WASAPI is a docs spike only. Answer relevance, realism, length, tone, speed, and the clarifier were left on pull request 467.

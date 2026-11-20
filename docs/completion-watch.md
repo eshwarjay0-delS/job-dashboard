@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 20 November 2026 — S1 P0 fixes, ready to ship with PR 477 content
+
+Live S1 on master 25b6046c: the tab preview covered AI Answer, Start/Stop, and More; Auto missed q1, q3, and q5, false-fired on small talk, and showed a keyword stub; every speaker was THEM. The fix keeps pull request 477's video-only preview, transcript copy, and typed-chat line. The panel is off by default and 168px at the bottom-right. Candidate turns are You. Auto fires once per question 1-5 at end_s plus 1.5 seconds. No New constraint line. Header is one Question line. Long answers in the offline gate are 120-180 words from the eshwarjay05 Houston resume. Skip-login was not edited.
+
+Local evidence: S1 replay gate pass, Chrome boxes at 1280x800 and 1280x720 with no overlap, clarifier fixtures 47/47, adversarial 20/20, baseline contract 15 checks and baseline gate 92/92, tsc pass, eslint 0 errors (264 existing warnings), npm run build pass. Not a second live listen. Next: squash-merge with a [ship] message as eshwarjay0@gmail.com, then check production once. Close pull request 477 as superseded. Do not delete branches. Do not merge held PRs 214, 202, 204, 197, 196, 324, or 473.
+
 ## Standing rules — upgrade pull requests
 
 Each upgrade pull request touches at least 3 of these areas: answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop. Each area it touches adds a deeper test than the previous round, and the body lists that under "new this round".
