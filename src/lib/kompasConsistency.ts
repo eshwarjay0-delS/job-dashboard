@@ -471,9 +471,26 @@ function isBehavioralAsk(question: string): boolean {
   return visibleLengthBand(question).type === "story" || /\b(?:tell me about a time|give me an example|describe a time)\b/i.test(question)
 }
 
-function isTechnicalAsk(question: string): boolean {
+function isDirectAsk(question: string): boolean {
   const type = visibleLengthBand(question).type
-  return ["howto", "definition", "definition-application", "comparison", "follow-up", "design-first", "design-later"].includes(type)
+  const q = String(question || "").replace(/\s+/g, " ").trim()
+  if (type === "yes-no" || type === "definition" || type === "definition-application") return true
+  if (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q)) return true
+  if (/^(?:what is|what are|what's|define)\b/i.test(q)) return true
+  return /\bhave you (?:worked|used|done)\b/i.test(q) && q.split(/\s+/).length <= 12
+}
+
+function isTechnicalAsk(question: string): boolean {
+  if (isDirectAsk(question)) return false
+  const type = visibleLengthBand(question).type
+  return ["howto", "comparison", "follow-up", "design-first", "design-later", "experience"].includes(type)
+}
+
+function trimWords(text: string, max: number): string {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean)
+  if (words.length <= max) return words.join(" ")
+  const cut = words.slice(0, max).join(" ")
+  return /[.!?]$/.test(cut) ? cut : `${cut}.`
 }
 
 function resumeFacts(resume: string): string[] {
@@ -506,6 +523,7 @@ export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ce
 /** Long technical and concept answers floor at 120. Stories floor at 150. */
 export function answerRoute(question: string): AnswerRoute {
   const band = visibleLengthBand(question)
+  if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
   if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
   if (isTechnicalAsk(question)) {
     const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
@@ -520,6 +538,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   let body = dropCandidateOnly(text, resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
+  if (route.route === "short") return trimWords(body, 60)
   if (route.route === "story") {
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
     body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
@@ -555,7 +574,7 @@ const EXTEND_MODEL = "openai/gpt-oss-20b"
 export async function extendFromModel(question: string, text: string, resume: string, jd = "", generate?: (prompt: string) => Promise<string>): Promise<string> {
   const route = answerRoute(question)
   const current = String(text || "").trim()
-  if (answerWordCount(current) >= route.floor || !generate) return current
+  if (route.route === "short" || answerWordCount(current) >= route.floor || !generate) return current
   const facts = resumeFacts(resume).slice(0, 12).join("\n")
   let extra = ""
   try {

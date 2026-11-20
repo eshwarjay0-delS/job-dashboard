@@ -2,7 +2,7 @@
 
 Technical answers open on the point, grow from resume facts when they are under the floor, and can close with Example. A tool that is only in the job description is a hands-on bridge, not a stub. A employer that appears only in the candidate's transcript is left out. No ship marker.
 
-**Checked on kompas-answer-shape. Replay median after the floor: short 96, long 130, story 153. Not a live listen-through.**
+**Checked on kompas-answer-shape. Replay median: short 40, long 129.5, story 153. Short answers are capped at 60. Not a live listen-through.**
 
 ## 2026-11-20 — Replay fixtures and the 47 clarifier cases (no live listen)
 

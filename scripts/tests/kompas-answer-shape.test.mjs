@@ -69,16 +69,16 @@ test("a candidate's employer from the transcript never enters the answer", () =>
 test("the model extends only when resume facts still miss the floor", async () => {
   let calls = 0
   const resume = "I tracked incidents at McKesson."
-  const held = await extendFromModel("What is routing?", "word ".repeat(160), resume, "", async () => { calls++; return "extra" })
+  const held = await extendFromModel("How would you investigate a phishing email?", "word ".repeat(160), resume, "", async () => { calls++; return "extra" })
   assert.equal(calls, 0)
   assert.ok(held.startsWith("word"))
-  const grown = await extendFromModel("What is routing?", "Routing sends a packet to the next hop.", resume, "", async () => {
+  const grown = await extendFromModel("How would you investigate a phishing email?", "I start with the message.", resume, "", async () => {
     calls++
     return "I tracked incidents at McKesson and kept each ticket moving until it closed."
   })
   assert.equal(calls, 1)
   assert.match(grown, /McKesson/)
-  const blocked = await extendFromModel("What is routing?", "Routing sends a packet to the next hop.", resume, "", async () => "I deployed NotATool across Northern Trust.")
+  const blocked = await extendFromModel("How would you investigate a phishing email?", "I start with the message.", resume, "", async () => "I deployed NotATool across Northern Trust.")
   assert.doesNotMatch(blocked, /NotATool|Northern Trust/)
 })
 
@@ -97,6 +97,8 @@ test("gold replay median is measured after the floor binds", () => {
   const shorts = median(buckets.short)
   const longs = median(buckets.long)
   const stories = median(buckets.story)
+  assert.ok(shorts <= 60, `short median ${shorts}`)
+  assert.ok(buckets.short.every((n) => n <= 60))
   assert.ok(longs >= 120, `long median ${longs}`)
   assert.ok(stories >= 150, `story median ${stories}`)
   console.log(`replay median short ${shorts} long ${longs} story ${stories}`)

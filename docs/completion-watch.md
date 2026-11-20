@@ -2,7 +2,7 @@
 
 ## 20 November 2026 — Answer shape, not shipped
 
-Short answers are extended from resume facts up to the floor. JD-only tools use the hands-on bridge. Candidate-only employers are dropped. Replay median after the floor: short 96, long 130, story 153. No ship marker.
+Short answers are extended from resume facts up to the floor. JD-only tools use the hands-on bridge. Candidate-only employers are dropped. Replay median: short 40, long 129.5, story 153. Short answers cap at 60 with no floor extension. No ship marker.
 
 ## 20 November 2026 — Replay fixtures and clarifier 47, not shipped
 
