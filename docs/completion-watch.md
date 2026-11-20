@@ -717,3 +717,16 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 20 November 2026 — confirmed-skill parser correction
+
+Continue: exact-head CI for the current-master resume-alignment PR #472.\n
+- Static review found `My skills are missing AWS`, `My experience is missing Splunk`, and `My background is missing Okta` were accepted by the confirmation parser as positive candidate evidence.
+- Source commit `3c2411762e49512ca00d881e4abaefffbe640e42` now rejects `is/are missing` and bare `missing` negatives; test commit `6aae62afc97d5d674c45fadbdfb9cf5baf514610` covers those forms and verifies `Confirmed skills: AWS, missing GCP` retains only AWS. Positive contrast `AWS, but not GCP` remains.
+- Documentation commits: resume `4b5c01524e2fd3adc62289b1504c39fe7c5fbc89`, research `81b22cdee37d0118a83edb84d375c24be136fdd7`, Plan & Vision `f6806cb2f5edd4fd81f008fe51516d76791b176`, REA `36f2aab31120ff2ec1e0cd73244ce913fdf01e09`.
+- Source-derived JavaScript regex sanity checks passed. No repository-local Node test/build was run; exact-head GitHub Actions full CI, WhatsApp recovery, Kompas baseline and Plan/REA are pending. Earlier pre-watch-update runs are not reused.
+- PR #472 remains DRAFT; Safe Merge Gate review and owner-authenticated resume/JD/exported-DOCX acceptance are still required. No live resume/JD, model call, DOCX export, WhatsApp send, production data write or deployment occurred.
+- Production is unchanged: alias `job-dashboard-fawn.vercel.app` is READY at older SHA `5af72c125649b1306dd804704963edc40d1d3215`; project reports `live=false` and latest production deployment canceled. Protected preview is blocked by the reported Vercel Hobby usage limit/HTTP 402, reset reported for 1 Dec 2026.
+
+Next: verify all required exact-head workflows; if any fail, fix only the focused parser/test/docs change. Let Safe Merge Gate review. Do not claim a live 95–100% resume/JD match without owner-authorized output and DOCX inspection.
