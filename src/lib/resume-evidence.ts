@@ -36,7 +36,10 @@ export function confirmedCandidateStatements(statements: readonly string[]): str
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
     if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
-    if (/^i\s+(?:have|possess)\s+(?:no|not|never)\b/i.test(line)) return []
+    // Reject negative assertions before treating a "my ..." sentence as positive evidence.
+    // Positive contrast remains safe only up to its explicit exception (e.g. AWS, but not GCP).
+    const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|don't|doesn't|didn't|cannot|can't))\b/i
+    if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\b/i.test(line)) return []
     const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
     const hasException = /\b(?:except|excluding|but|however|not|never|without)\b/i.test(line)
     // Never truncate a blanket statement with an exception into a false "all skills" confirmation.
@@ -96,7 +99,7 @@ const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
   },
   {
     skill: /\b(?:okta|sailpoint|forgerock|pingfederate|ping identity|active directory|entra id|iam|pam|sso|mfa)\b/i,
-    context: /\b(?:identity|access|authentication|authorization|directory|provisioning|privilege|administrator|user|sso|mfa|iam|security|account review)\b/i,
+    context: /\b(?:identity|access|authentication|authorization|directory|provisioning|privilege|administrator|sso|mfa|iam|account review|account access|access review|user account|user provisioning)\b/i,
   },
   {
     skill: /\b(?:aws|amazon web services|azure|gcp|google cloud|kubernetes|docker|terraform|cloudformation|ansible)\b/i,
@@ -116,7 +119,7 @@ const CONFIRMED_SKILL_CONTEXTS: { skill: RegExp; context: RegExp }[] = [
   },
   {
     skill: /\b(?:python|java|javascript|typescript|golang|rust|c\+\+|c#|ruby|bash|powershell)\b/i,
-    context: /\b(?:software|application|script|automation|development|integration|api|pipeline|test|code|service|data|etl|database|tooling)\b/i,
+    context: /\b(?:software|application|script|automation|development|integration|api|pipeline|test|code|etl|database|tooling|scripting|programming)\b/i,
   },
   {
     skill: /\b(?:nist|iso\s*27001|sox|pci\s*dss|soc\s*2|cobit|fedramp|hipaa)\b/i,
