@@ -1,3 +1,64 @@
+## 20 November 2026 03:07 UTC — PR #465 landed after the previous production check
+
+### Latest production alias
+
+- Current master: `5af72c125649b1306dd804704963edc40d1d3215`, direct child of `4f5030938b6b13b7996fb215e35b8aebad2230b2`.
+- Vercel deployment `dpl_FusdJPpFqFu6ZwMGTgg3pLomCAH9`: READY, production, exact SHA `5af72c125649b1306dd804704963edc40d1d3215`, `aliasError: null`.
+- Independent alias lookup maps `job-dashboard-fawn.vercel.app` to this deployment; the deployment also lists `marketfit-app.vercel.app`.
+- This supersedes the earlier 4f503/dpl_GJV snapshot in the section below. PR #458 (Gmail Retry-After), PR #460 (Kompas consistency) and PR #462 (JD-only grounding) remain ancestors of this current production build.
+
+### New Kompas approval-provenance gap — PR #465
+
+PR [#465](https://github.com/eshwarjay0-delS/job-dashboard/pull/465) merged at 02:59:48 UTC as `5af72c` and is live. It changes tab-audio Auto arming after re-share, first-person-shaped candidate-line classification, pending-question counting, persona chip preference and Question labeling.
+
+A targeted accessible prior-context search found no direct owner-authored approval for those exact choices. The 2 Nov “Fix it” message followed a general caption/question regression but did not specify these behaviors. GitHub records `cursor[bot]` as merger, there are no PR reviews/comments, and the PR body says “No [ship] on this commit” while the merge commit begins `[ship]`. The approved Windows Live Captions requirement is not blanket approval for every classifier or suppression heuristic.
+
+**Status: deployed, approval unresolved.** Do not extend or further promote these behaviors. Do not automatically revert without direct owner rejection; if rejected, prepare a narrow rollback of only #465 while preserving approved live-question, answer-quality, skip-login and Caption Capture paths. Full CI `44664644365` was still IN_PROGRESS at the last check; Plan/REA `44664644178`, Kompas baseline `44664644232` and Windows build `44664644041` passed. No authenticated Windows/mobile listen-through is claimed. Evidence: `docs/research/kompas-tab-audio-auto-approval-audit-2026-11-20.md`.
+
+### Resume PR #466 now needs a current-master rebase after its parent
+
+PR [#466](https://github.com/eshwarjay0-delS/job-dashboard/pull/466) remains DRAFT, stacked on PR #464's branch at `184c240`, whose base was master `4f503`. Master has since advanced to `5af72c` through #465. PR #465 changed only Kompas app/tests/journal, not the resume source/test files carried by #466, so the resume patch remains source-disjoint; nevertheless, after #464 merges, retarget/rebase #466 onto current master `5af72c` before full CI, Kompas baseline and production preview. Do not merge the child before the parent or reuse predecessor-head checks.
+
+## 20 November 2026 02:58 UTC — current-master release reconciliation and confirmed-skill continuation
+
+### Canonical production
+
+- Canonical master: `4f5030938b6b13b7996fb215e35b8aebad2230b2`.
+- Vercel deployment `dpl_GJVQo9GXA4PyNhLiP3mH2csztkPC`: READY, target production, exact SHA `4f5030938b6b13b7996fb215e35b8aebad2230b2`.
+- Independent alias lookup: `job-dashboard-fawn.vercel.app` points to that deployment. The deployment metadata also lists `marketfit-app.vercel.app`.
+- PR #458's Gmail Retry-After fix (merge `e035b4131ea34a62ba31e51dca198d77b3d0057e`) is now included in the deployed descendant; compare reports 3 commits ahead / 0 behind.
+- PR #460's Kompas consistency pass (merge `be2e12d7019808d36906d62d0b0f2ab6f2bcff3c`) is also included; compare reports 1 commit ahead / 0 behind. The earlier #460 deployment `dpl_2ZtjR8LdyJqZJabkFvDhk9K7aws8` was READY, and the current alias is on the later descendant.
+- Do not repeat the old #458 “merged but not deployed” or #460 “in progress” status; those were superseded by this exact descendant/alias check.
+
+### WhatsApp P0 — still blocked, not forgotten
+
+The latest owner correction remains exact: only a user-explicitly selected, same-account Files/Library resume may be used as offline fallback, with label **Original resume — NOT TAILORED**. No automatic closest match, no silent substitution, and no fresh uploaded original sent when no explicit library selection exists; return a text explanation and preserve the conversation.
+
+Current master source search still finds the fallback reading `session.resumePath` and checking `chosenResumeMatchesProfile(text, files?.email)` without explicit library-selection provenance. This is a source-level defect, not proof of the 17 Oct incident root cause or delivery.
+
+- Parent PR #450 remains DRAFT / dirty with no exact-head Actions; its R2 lease/ETag-CAS architecture is not separately approved and must not be merged or written to production.
+- Child PR #453 remains DRAFT / dirty; its targeted recovery and Plan/REA checks passed, but full CI and Kompas baseline are absent on the stacked base.
+- Exact 17 Oct 17:28 Chicago delivery evidence is still missing: actual WhatsApp media bytes, generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID and signed delivered/read receipt.
+- Last recorded development blocker: Vercel sandbox creation returned HTTP 402 for the Hobby snapshot-storage limit; the scheduled container has no repository checkout, GitHub DNS resolution failed, and the installed Next.js 16.3.8 route-handler guide under `node_modules/next/dist/docs` is unavailable. Unblock with legitimate snapshot capacity or an approved runnable environment containing the repository and installed Next.js docs. Do not bypass preview protection or write R2/send messages.
+
+### Resume / JD / confirmed-experience alignment — source continuation
+
+- Owner approval is anchored to [#319 comment 6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) and [#423 comment 6902823074](https://github.com/eshwarjay0-delS/job-dashboard/pull/423#issuecomment-6902823074): explicitly confirmed skills may map into relevant existing project context across roles; accept positive assertions or labelled `Confirmed skills:` / `Confirmed experience:`; JD-only wording is never evidence.
+- New branch `fix/resume-confirmed-skill-alignment-after-audit-20261120-0250z` is based on PR #464's approval-provenance head `184c240385e945f24bc9c9966b851caffc251c6d`. The original PR #431 branch was not modified. A GitHub compare confirmed the copied source/test files were unchanged on master between #431's base `d03f188` and current master `4f503093`, so no intervening source edits were overwritten.
+- Source commits: `da65055db95b47a80550e5179f53e4e0600b283b`, `4e796a449fdfd6acdaa9299211d1c6930a29ef94`, `34aedef059ef7ee0857b12036dce346460df1e54`, `7ccfc7238dede57bee446d6aca3fbf0fc71a3d9e`. Documentation commits: `895c26adf2bfa29082a9e6b15f506a0ddfddc320`, `22d6326fb91374406a4dad5ed2a736ef41a42532`, Plan `cabb525debd7a67c73c357c0a716072d1fa67d84`, Journal `f1fbaf3aca6440427714cda311971779d6a13bb3`, REA `d5b6b54b91d7a8dd2827775bbfd82c1ff27a8bc2`.
+- At PR #466 head 439e84b9096e81ace06624180592ffa3f721ae3f, Plan/REA schema 44664597961 passed and WhatsApp recovery 44664597917 is in progress. Full CI and Kompas baseline did not trigger because their pull_request branch filters require master (CI also allows main); this PR is deliberately stacked on #464 to preserve shared docs. The following docs update advances the head, so these runs are predecessor-head evidence. After #464 merges, retarget #466 to master and rerun all four exact-head gates. The predecessor #431 green checks are not reused. No local npm/test/build run is claimed.
+- Live acceptance remains blocked pending an owner-authorized baseline resume, exact JD, explicit skill confirmations and exported-DOCX inspection. No resume/JD was processed, no model call or DOCX export occurred, and no 95–100% or 98% live match is claimed.
+
+### Gmail / Poke, crawler and Kompas follow-through
+
+- Gmail Retry-After is deployed as noted above. Poke-inspired multi-account/mobile acceptance remains open: two authorized inboxes, collision handling, selected-From, reconnect and narrow-phone navigation. Keep proactive worker, scheduler, notifications and automatic sending disabled. Do not alter `LIMIT 4` or remove it until direct owner wording resolves the cap.
+- Contract crawling remains manual/on-demand. No daily cron, no live crawl, eTeam remains excluded, and Robert Half remains manual-only. PR #451 is DRAFT/dirty and protected preview is still gated.
+- PR #460's core consistency pass is deployed. PR #461 full CI and baseline failed; PR #463 full CI failed the mic-only no-new-speech press contract. Neither is merged. PR #462's JD-only evidence filter is aligned with the approved source boundary, but the capture heuristics (candidate-speech suppression, 30-second repeat suppression, dropping pre-Start lines and new line-status labels) remain **proposed, not owner-approved**, per the accessible-context audit in PR #464. Do not extend or revert those live behaviors without a direct owner decision.
+- PR #455 phone-native shell has exact-head full CI, Kompas baseline, cross-device and Windows checks green, but remains DRAFT / dirty and still needs Safe Merge Gate, legitimate protected preview and real iOS/Android acceptance. The separate Kompas Continuous Voice Delivery task is disabled; this resume slice does not duplicate voice/caption work.
+- PR #464 approval-provenance documentation is DRAFT. Its exact-head Plan/REA, Kompas baseline and full CI passed; shared-file overlap with #450/#451/#452/#455/#461 still requires Safe Merge Gate sequencing.
+
+Continue: keep PR #466 DRAFT on #464; after #464 is merged, retarget #466 to master and run full CI + WhatsApp recovery + Kompas baseline + Plan/REA on the exact final head, and let MFit Safe Merge Gate sequence the shared docs. Keep the WhatsApp fallback guard blocked until a legitimate runnable environment with installed Next.js docs is available; preserve all live, missing-evidence and owner-acceptance gates above.
+
 # MFit Completion Watch
 
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
