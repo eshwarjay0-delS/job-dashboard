@@ -2,7 +2,7 @@
 
 ## 20 November 2026 — Parakeet S5 upgrade, not shipped
 
-Screen analyze uses the shared tab, one frame, no new permission prompt. The answer card keeps the full body. AI Answer does not say no new question. The honesty gate uses the resume the answer already loaded. The Fortinet Houston summary is only the default, because that docx is not in the repo. McKesson stays out of that fixture. No ship marker. Do not merge. Not a live listen.
+Screen analyze uses the shared tab, one frame, no new permission prompt. The answer card keeps the full body. AI Answer does not say no new question. The honesty gate uses the resume the answer already loaded. The Fortinet Houston summary is only the default, because that docx is not in the repo. McKesson stays out of that fixture. The default file is read from the repo path so the cross-domain loader can evaluate the answer service. No ship marker. Do not merge. Not a live listen.
 
 ## 20 November 2026 — S1 P0 fixes, ready to ship with PR 477 content
 
