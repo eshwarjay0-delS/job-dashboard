@@ -213,3 +213,10 @@ The unattended worker remains disabled. The tick route now fails closed with HTT
 The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggregate. It requires the same scheduler flag and CRON_SECRET, uses private/no-store caching, and returns rules grouped by owner and receiving inbox. Identical sender addresses in two connected inboxes or two owners are never silently merged. The endpoint is not called by the current tick implementation; it remains a private compatibility surface for a future approved worker.
 
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
+
+
+## Owner clarification — 20 November 2026
+
+The owner confirmed in [PR #452 comment 7033546581](https://github.com/eshwarjay0-delS/job-dashboard/pull/452#issuecomment-7033546581) that four connected Gmail accounts is the maximum. Keep the existing server-side `LIMIT 4`; PR #440's no-cap migration remains unapproved. This direct 20 November instruction supersedes the earlier 13 November note that the 3–4 range was only a target. The same owner comment reiterates that the mobile menu must expand in normal document flow below the sticky header, and that the proactive Poke worker, notifications and sending remain disabled.
+
+The cap does not replace account isolation: each inbox retains its own identity, selected-From address, reconnect state and thread identity. Two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain open; no live Gmail API or outbound email test is implied.
