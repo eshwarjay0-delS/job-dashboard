@@ -1,3 +1,9 @@
+## 2026-11-20 — Parakeet parity prep (no live listen, no ship)
+
+Unsupported sentences are dropped. The honest hands-on bridge stays, and "I maintained the CMDB." stays with it. Technical answers are first-person prose of 100–140 words. The first sentence is on screen immediately, and a silent stream retries at 1 second. Stories stay 120–180. The session logs were not here yet. No ship marker. Pull request 467 is unchanged.
+
+**Checked offline. Not a live listen-through. No visible change until a live Kompas answer starts.**
+
 ## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
 
 The streamed first sentence is a real answer, not a label. Length Long is one 120–180 word call. A question ending in "right?" waits until 1.4 seconds, so it does not fire early. The 20 adversarial clarifier cases pass, and the original 47 still pass. "I maintained the CMDB." stays. No ship marker.

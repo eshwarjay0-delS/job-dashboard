@@ -1,4 +1,4 @@
-// A silent answer must retry once after 8 seconds, then say so.
+// A silent answer must retry once before one second has passed, then say so.
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
@@ -12,11 +12,14 @@ const end = app.indexOf("async function generateAnswerRequest")
 const ctx = vm.createContext({})
 vm.runInContext(app.slice(start, end), ctx)
 
-test("no first token within 8 seconds retries once, then shows a status", () => {
-  assert.equal(ctx.firstTokenDecision(1000, false, false), "wait")
-  assert.equal(ctx.firstTokenDecision(8000, false, false), "retry")
-  assert.equal(ctx.firstTokenDecision(8000, true, false), "keep")
-  assert.equal(ctx.firstTokenDecision(9000, false, true), "status")
+test("no first token within 1 second retries once, then shows a status", () => {
+  assert.equal(ctx.firstTokenDecision(999, false, false), "wait")
+  assert.equal(ctx.firstTokenDecision(1000, false, false), "retry")
+  assert.equal(ctx.firstTokenDecision(1000, true, false), "keep")
+  assert.equal(ctx.firstTokenDecision(1000, false, true), "status")
+  assert.match(app, /firstTokenTimer = setTimeout\([\s\S]*?\}, 1000\)/)
+  assert.match(app, /__kompasFirstWordDeadline = Date\.now\(\) \+ 900/)
+  assert.match(app, /spokenOpen\(question\)/)
   assert.match(app, /No words yet\. Retrying once\./)
   assert.match(app, /Still no words\. Press AI Answer to try again\./)
   assert.match(app, /firstTokenRetry: true/)

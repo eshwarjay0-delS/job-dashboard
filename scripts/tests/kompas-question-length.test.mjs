@@ -84,7 +84,7 @@ test("measured mocks: done, used, and how-do-you are not the short yes/no band",
   const clarifier = dissectQuestion("Do you use Splunk?")
   assert.equal(clarifier.modes.engineer.maxWords, 40)
   const svc = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
-  assert.match(svc, /cardControls\.length === "long"\) plan\.words = 150/)
+  assert.match(svc, /cardControls\.length === "long"\) plan\.words = answerRoute\(question\)\.route === "story" \? 150 : 120/)
 })
 
 test("a design draft keeps one named checkpoint and does not fill a second mode with padding", () => {

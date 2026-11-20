@@ -2232,7 +2232,7 @@ async function maybeLoadSilero(stream) {
     if (!mod.attachSilero) return null;
     return await mod.attachSilero(stream, {
       onSpeechStart() {
-        try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {}
+        try { window.__kompasFirstWordDeadline = Date.now() + 900; } catch {}
         window.__kompasVadEndedAt = 0;
       },
       onSpeechEnd(audio) {
@@ -2705,7 +2705,7 @@ function vadStep(cap, rms) {
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;
   meter(cap.who, rms, step.speaking);
-  if (step.speaking && !cap.wasSpeaking && cap.who === "Them") { try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {} }
+  if (step.speaking && !cap.wasSpeaking && cap.who === "Them") { try { window.__kompasFirstWordDeadline = Date.now() + 900; } catch {} }
   cap.wasSpeaking = !!step.speaking;
   if (step.action === "end" && cap.who === "Them") {
     const mic = captures.find(c => c.who === "You");
@@ -5139,9 +5139,19 @@ async function generateAnswer(question, card, opts = {}) {
   }
 }
 function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
+function spokenOpen(question) {
+  const q = String(question || "").replace(/\s+/g, " ").trim();
+  if (!q) return "";
+  const tool = q.match(/\bhow (?:does|do)\s+([A-Za-z][\w.+-]{2,})\s+work\b/i);
+  if (tool) return "I would explain how " + tool[1] + " works from the closest work I have done.";
+  if (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) && q.split(/\s+/).length <= 14) return "";
+  if (/^(?:what is|what are|what's|define)\b/i.test(q)) return "";
+  if (/\b(?:tell me about a time|give me an example|describe a time|how|why|walk me|design|compare|difference|investigate|explain)\b/i.test(q)) return "I would start with the closest work I have done.";
+  return "";
+}
 function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
   if (hasToken) return "keep";
-  if (Number(elapsedMs) < 8000) return "wait";
+  if (Number(elapsedMs) < 1000) return "wait";
   return alreadyRetried ? "status" : "retry";
 }
 async function generateAnswerRequest(question, card, opts = {}) {
@@ -5287,7 +5297,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
     firstTokenTimer = setTimeout(() => {
       if (first || card.req !== ctl) return;
-      const decision = firstTokenDecision(8000, !!first, !!opts.firstTokenRetry);
+      const decision = firstTokenDecision(1000, !!first, !!opts.firstTokenRetry);
       if (decision === "retry") {
         status("No words yet. Retrying once.", "live");
         try { ctl.abort(); } catch {}
@@ -5305,7 +5315,14 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (cards[idx] === card) renderCard();
         status("Still no words. Press AI Answer to try again.", "live");
       }
-    }, 8000);
+    }, 1000);
+    const lead = spokenOpen(question);
+    if (lead && !keepOld) {
+      text = lead + " ";
+      first = performance.now() - t0 || 1;
+      show(text);
+      clearTimeout(firstTokenTimer);
+    }
     const paintTitle = (title, fromDerived) => {
       if (!title || isPlaceholderTitle(title) || card.req !== ctl) return false;
       if (fromDerived) {
@@ -5350,7 +5367,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (applied.title) paintTitle(applied.title, false);
       } else if (ev.type === "card") {
         if (applied.card) paintLayout(applied.card);
-      } else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; if (!card.cardLayout) show(text); }
+      } else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } const incoming = ev.text || ""; if (text && incoming && (incoming.trim() === text.trim() || incoming.startsWith(text.trim()))) text = incoming; else text += incoming; if (!card.cardLayout) show(text); }
       else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = ev.text; card.cardLayout = null; show(text); }
       else if (ev.type === "wait") { if (card.req === ctl) status(ev.ms ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.round(ev.ms / 1000)) + "s.") : "Still working.", "live"); }
       else if (ev.type === "done") {

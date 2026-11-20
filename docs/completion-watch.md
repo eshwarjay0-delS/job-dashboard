@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet parity prep, not shipped
+
+Unsupported sentences drop. The honest gap bridge and the CMDB sentence stay. Technical answers are 100–140 first-person words. The first word is painted immediately and a silent stream retries at 1 second. Session logs are not in yet. No ship marker. Pull request 467 stays ready and unmerged.
+
 ## 20 November 2026 — Review blockers, not shipped
 
 Streamed thesis is a spoken sentence. Long is 120–180 in one call. A trailing right? does not fire before 1.4 seconds. Adversarial clarifier 20/20 and the original 47/47. The CMDB sentence is kept. No ship marker.

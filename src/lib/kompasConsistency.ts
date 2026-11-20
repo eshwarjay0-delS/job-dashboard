@@ -528,9 +528,49 @@ export function howTool(question: string): string {
 export function technicalThesis(question: string): string {
   const tool = howTool(question)
   if (tool) return `I would explain how ${tool} works from the closest work I have done.`
-  const bare = String(question || "").replace(/\?+$/, "").replace(/\s+/g, " ").trim()
-  if (!bare) return ""
-  return `I would answer this directly: ${bare.charAt(0).toLowerCase()}${bare.slice(1)}.`
+  if (!String(question || "").trim()) return ""
+  return "I would start with the closest work I have done."
+}
+
+const SUPPORT_STOP = new Set("i ive id i'd i’ve the this that these those example".split(" "))
+
+/** Drop a sentence that names a tool, employer, or number the resume, question, and JD do not contain. */
+export function dropUnsupportedSentences(text: string, resume: string, question = "", jd = ""): string {
+  const bag = `${resume}\n${question}\n${jd}`.toLowerCase()
+  return sentenceList(text).filter((sentence) => {
+    if (/less direct hands-on with/i.test(sentence)) return true
+    const names = (sentence.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []).map((name) => name.replace(/\.+$/g, ""))
+    if (names.some((name) => {
+      const token = name.toLowerCase()
+      return !SUPPORT_STOP.has(token) && !bag.includes(token)
+    })) return false
+    const numbers = sentence.match(/\b\d[\d,]*(?:\.\d+)?%?\b/g) || []
+    return !numbers.some((n) => !bag.includes(n) && !bag.includes(n.replace(/[,%]/g, "")))
+  }).join(" ")
+}
+
+function toFirstPerson(fact: string): string {
+  let clean = String(fact || "").replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "")
+  if (!clean) return ""
+  if (/^I\b/.test(clean)) return `${clean}.`
+  const third = /^(assists|tracks|closes|builds|configures|creates|maintains|implements|supports|monitors|provides|automates|develops)\b/i
+  if (third.test(clean)) clean = clean.replace(third, (word) => `I ${word.toLowerCase().replace(/s$/, "")}`)
+  else clean = `I ${clean.charAt(0).toLowerCase()}${clean.slice(1)}`
+  return `${clean}.`
+}
+
+function fitCeiling(text: string, ceiling: number): string {
+  if (answerWordCount(text) <= ceiling) return text
+  const parts = sentenceList(text)
+  if (parts.length <= 1) return trimWords(text, ceiling)
+  const last = parts[parts.length - 1]
+  const kept = [parts[0]]
+  for (const sentence of parts.slice(1, -1)) {
+    if (answerWordCount([...kept, sentence, last].join(" ")) > ceiling) break
+    kept.push(sentence)
+  }
+  const joined = [...kept, last].join(" ")
+  return answerWordCount(joined) <= ceiling ? joined : trimWords(parts[0], ceiling)
 }
 
 export function jdGapBridge(question: string, resume: string, jd = ""): string {
@@ -588,8 +628,8 @@ function extendFromResume(text: string, question: string, resume: string, floor:
   let out = String(text || "").trim()
   for (const line of resumeFacts(resume)) {
     if (answerWordCount(out) >= floor) break
-    const fact = /[.!?]$/.test(line) ? line : `${line}.`
-    if (out.includes(fact)) continue
+    const fact = toFirstPerson(line)
+    if (!fact || out.includes(fact)) continue
     const next = `${out} ${fact}`.trim()
     if (answerWordCount(next) > ceiling) continue
     out = next
@@ -598,11 +638,10 @@ function extendFromResume(text: string, question: string, resume: string, floor:
     for (const line of resumeFacts(resume)) {
       if (answerWordCount(out) >= floor) break
       const room = ceiling - answerWordCount(out)
-      const need = floor - answerWordCount(out)
       const words = line.split(/\s+/).filter(Boolean)
       const take = Math.min(words.length, room)
-      if (take < need || take < 4) continue
-      out = `${out} ${words.slice(0, need).join(" ")}.`.trim()
+      if (take < 4) continue
+      out = `${out} ${toFirstPerson(words.slice(0, take).join(" "))}`.trim()
     }
   }
   return out
@@ -610,15 +649,12 @@ function extendFromResume(text: string, question: string, resume: string, floor:
 
 export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ceiling: number }
 
-/** Long technical and concept answers floor at 120. Stories floor at 150. */
+/** Technical answers stay between 100 and 140 words. Stories floor at 150. */
 export function answerRoute(question: string): AnswerRoute {
   const band = visibleLengthBand(question)
   if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
   if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
-  if (isTechnicalAsk(question)) {
-    const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
-    return { route: "long", floor: Math.min(ceiling, 120), ceiling: Math.max(ceiling, 120) }
-  }
+  if (isTechnicalAsk(question)) return { route: "long", floor: 100, ceiling: 140 }
   return { route: "short", floor: band.floor, ceiling: band.ceiling }
 }
 
@@ -639,26 +675,18 @@ function focusOnAskedTool(question: string, text: string, previous = ""): string
 
 export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = "", previous = ""): string {
   const route = answerRoute(question)
-  let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
+  let body = dropUnsupportedSentences(dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript), resume, question, jd)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
   if (route.route === "short") return trimWords(body, 60)
   if (route.route === "long") {
     const thesis = technicalThesis(question)
-    const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
-    const fact = resumeFacts(resume)[0] || ""
-    const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
-    const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
-    const tie = tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 3).join(" ")
+    const fact = resumeFacts(resume).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || resumeFacts(resume)[0] || ""
+    const tie = fact ? toFirstPerson(fact) : ""
     const tool = howTool(question)
     const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
-    body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
-    const opener = thesis.slice(0, 24)
-    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
-    if (ties.length > 1) {
-      const last = ties[ties.length - 1]
-      body = sentenceList(body).filter((sentence) => sentence === last || sentence.startsWith(opener) || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
-    }
+    body = [thesis, how, gap, tie].filter(Boolean).join(" ")
   }
   if (route.route === "story") {
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
@@ -668,13 +696,11 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
     }
   }
-  if (!/\bExample:/.test(body)) {
+  body = body.replace(/(?:^|\s)Example:\s*/g, " ").replace(/\bHow it works:\s*/gi, " ").replace(/\s+/g, " ").trim()
+  if (!/\bI\b/.test(body)) {
     const fact = resumeFacts(resume)[0]
-    if (fact) {
-      const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
-      const next = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`.trim()
-      if (answerWordCount(next) <= route.ceiling) body = next
-    }
+    const line = fact ? toFirstPerson(fact) : ""
+    if (line && answerWordCount(`${body} ${line}`) <= route.ceiling) body = `${body} ${line}`.trim()
   }
   const bridge = jdGapBridge(question, resume, jd)
   if (bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
@@ -689,12 +715,9 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (route.route === "long") {
     const parts = sentenceList(body)
     const opener = technicalThesis(question).slice(0, 24)
-    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
-    const tie = ties[ties.length - 1]
-    const rest = parts.filter((sentence) => !ties.includes(sentence))
-    const lead = rest.filter((sentence) => sentence.startsWith(opener))
-    const middle = rest.filter((sentence) => !sentence.startsWith(opener))
-    body = [...lead, ...middle, tie].filter(Boolean).join(" ")
+    const lead = parts.filter((sentence) => sentence.startsWith(opener))
+    const rest = parts.filter((sentence) => !sentence.startsWith(opener))
+    body = fitCeiling([...lead, ...rest].join(" "), route.ceiling)
   }
   return body.trim()
 }
