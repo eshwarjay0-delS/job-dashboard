@@ -738,7 +738,9 @@ function setPersonaChip(s) {
   const chip = $("personaChip"); if (!chip) return;
   if (s && !String(s.resume || "").trim()) { chip.textContent = "No resume on this device"; chip.classList.remove("hidden"); chip.title = "Answers use the job description only."; return; }
   const p = s && s.prep && s.prep.persona;
-  const label = (s && s.role) || (p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "");
+  let label = String((s && s.role) || "").trim();
+  if ((!label || /servicenow developer/i.test(label)) && /\b(?:soc|security|cyber)\b/i.test(String(s && s.jd || ""))) label = "Security operations";
+  if (!label) label = p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "";
   chip.textContent = label; chip.classList.toggle("hidden", !label);
   chip.title = p && p.voice ? "Voice: " + p.voice : "";
 }
@@ -3905,6 +3907,7 @@ function isGatedQuestion(text) {
   let raw = String(text || "").replace(/\s+/g, " ").trim().replace(/^(?:Question:\s*)+/i, "").replace(/^[-•*]\s+/, "");
   const words = raw.split(/\s+/).filter(Boolean);
   if (words.length < 4) return false;
+  if (/^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there)\b/i.test(raw)) return false;
   if (/^(?:i(?:'m| am)?|my |we )\b/i.test(raw) && !/\b(?:can you|could you|tell me|what do you|how do you|why do you)\b/i.test(raw)) return false;
   return /\?\s*$/.test(raw) || /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do) you|why (?:did|do|would) you|can you|could you|explain|describe)\b/i.test(raw);
 }
@@ -3912,6 +3915,7 @@ function utteranceWho(text) { return isGatedQuestion(text) ? "Them" : "You"; }
 function oneQuestionLine(text) {
   let q = String(text || "").replace(/\s+/g, " ").trim();
   while (/^Question:\s*/i.test(q)) q = q.replace(/^Question:\s*/i, "");
+  if (/^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there)\b/i.test(q)) return "";
   q = q.split(/\s+/).filter(Boolean).slice(0, 20).join(" ");
   return q ? "Question: " + q : "";
 }

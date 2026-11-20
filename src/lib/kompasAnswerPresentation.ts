@@ -47,7 +47,7 @@ export function withoutInventedNumbers(sentence: string, source: string): string
 }
 
 const CONFIRM_STUB = /^I would want to confirm that\.?$/i
-const PRODUCT_NAMES = "SentinelOne|QRadar|Splunk|Qualys|CrowdStrike|Terraform|CyberArk|ServiceNow|Dragos|Tenable|Nessus|Rapid7|Okta|SailPoint|Mimikatz|BloodHound|Cobalt Strike|Kubernetes|Wireshark|Burp Suite|Palo Alto|Fortinet|Datadog|PagerDuty"
+const PRODUCT_NAMES = "SentinelOne|QRadar|Splunk|Qualys|CrowdStrike|Terraform|CyberArk|ServiceNow|Dragos|Tenable|Nessus|Rapid7|Okta|SailPoint|Mimikatz|BloodHound|Cobalt Strike|Kubernetes|Wireshark|Burp Suite|Palo Alto|Fortinet|Datadog|PagerDuty|BMC Remedy|Remedy|Jira|Salesforce|Freshdesk"
 
 /** A product the resume and the question do not name. */
 const USED_IT = /\b(?:i(?:'ve| have)|i used|i ran|i deployed|i configured|in my experience|when i used)\b/i
@@ -183,6 +183,9 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
     for (const chunk of chunks) {
       let s = peelDisplayArtifact(chunk)
       if (!s || DICTIONARY.test(s) || genericThirdPerson(s) || META_LINE.test(s) || CONFIRM_STUB.test(s)) continue
+      if (answerWordCount(s) <= 5 && !/\d|-/.test(s) && !/\b(?:is|are|was|were)\b/i.test(s)) continue
+      if (/\bi once\b/i.test(s) && /\bfalse positive\b/i.test(s) && !source.toLowerCase().includes("false positive")) continue
+      if (source.trim() && ungroundedProducts(s, source).length) continue
       if (source.trim() && ungroundedProducts(s, allowed).length) continue
       s = withoutInventedNumbers(s, allowed).replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()
       if (answerWordCount(s) < 3) continue

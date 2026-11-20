@@ -109,7 +109,7 @@ test("a Them-track candidate line is not an ask, and the session role wins the h
   vm.runInContext(src + app.slice(app.indexOf("function questionEnded("), app.indexOf("function paraphrasesOwn(")) + "\nthis.candidate = soundsLikeCandidate;", ctx)
   assert.equal(ctx.candidate("I studied computer science and I worked the queue."), true)
   assert.equal(ctx.candidate("Can you tell me about yourself?"), false)
-  assert.match(app, /const label = \(s && s\.role\)/)
+  assert.match(app, /Security operations/)
   assert.match(app, /oneQuestionLine\(heardQ\)/)
   assert.match(app, /filter\(t => isGatedQuestion\(t\.text\) && utteranceWho\(t\.text\) === \"Them\"\)/)
   assert.match(app, /!captureStartedAt \|\| t\.at >= captureStartedAt/)

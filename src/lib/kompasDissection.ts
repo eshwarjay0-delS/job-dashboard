@@ -263,8 +263,12 @@ export function levelAwareBand(question: string, level: AnswerLevel = "engineer"
   if (!longStory && (level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
     ceiling = Math.min(band.ceiling, FOLLOW_UP_FLOOR + 1)
   }
-  const floor = longStory ? 150 : Math.min(band.floor, Math.max(8, ceiling - 1))
-  const aim = longStory ? Math.max(150, Math.min(ceiling, 360)) : Math.min(band.aim, ceiling)
+  let floor = longStory ? 150 : Math.min(band.floor, Math.max(8, ceiling - 1))
+  if (length === "long" && !longStory) {
+    ceiling = Math.max(ceiling, 160)
+    floor = Math.max(floor, 120)
+  }
+  const aim = longStory ? Math.max(150, Math.min(ceiling, 360)) : Math.min(Math.max(band.aim, floor), ceiling)
   return { type: longStory ? "story" : band.type, floor, aim, ceiling }
 }
 

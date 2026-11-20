@@ -225,6 +225,16 @@ export function speakableLines(question: string, resume: string): string[] {
   return out
 }
 
+/** When the model stubs, speak the nearest resume line instead of a refusal. */
+export function bridgeFromResume(question: string, resume: string): string {
+  const hit = speakableLines(question, resume)[0]
+  if (hit) return hit
+  const line = resumeLines(resume)[0]
+  if (!line) return ""
+  const spoken = /^I\b/.test(line) ? line : `I ${line.charAt(0).toLowerCase()}${line.slice(1)}`
+  return /[.!?]$/.test(spoken) ? spoken : `${spoken}.`
+}
+
 export type DisplayGate = {
   text: string
   ok: boolean
@@ -248,9 +258,10 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
   const reasons: string[] = []
   let text = presentSpokenAnswer(question, raw, source)
   if (CONFIRM_STUB.test(raw)) reasons.push("stub")
-  if (CONFIRM_STUB.test(text) || !text.trim()) {
-    text = raw.trim() ? HONEST_LINE : ""
-    if (raw.trim()) reasons.push("honest")
+  if (CONFIRM_STUB.test(text) || !text.trim() || /not on my resume/i.test(text)) {
+    const bridge = bridgeFromResume(question, source)
+    text = bridge || (raw.trim() ? HONEST_LINE : "")
+    if (raw.trim()) reasons.push(bridge ? "bridge" : "honest")
   }
   if (CANNED_ASIDE.test(text) || /\bFirst,\s*-/.test(text) || /\*\*(?:Claim|Context|Action|Result)\*\*/.test(text) || /\bIn general, teams\b/i.test(text)) {
     text = presentSpokenAnswer(question, text, source) || HONEST_LINE
