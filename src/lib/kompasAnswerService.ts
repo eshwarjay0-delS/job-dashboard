@@ -27,7 +27,7 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { visibleLengthBand } from "@/lib/kompasDissection"
-import { ungroundedProducts } from "@/lib/kompasAnswerPresentation"
+import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
@@ -354,6 +354,7 @@ type AnswerJob = {
   unpinned?: string
   sourceText: string
   jd?: string
+  resume?: string
   sessionMemory?: SessionMemory
   sourceDocs: SourceDoc[]
   // Speed r6: the retrieved passages (for the per-sentence source check) and an optional Lens sourced opener.
@@ -411,7 +412,10 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const stripped = grounded.presentation.replace(/\s*That (?:part|detail) is not in the sources\.?/gi, "").trim()
     const profiled = groundToProfile(job.question, stripped || settled.text, job.sourceText, job.sessionMemory || emptyMemory(""))
     const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "" })
-    if (gated.text.trim()) return { text: gated.text, providerError: false }
+    if (gated.text.trim()) {
+      const kept = gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" ").trim()
+      return { text: kept || HONEST_LINE, providerError: false }
+    }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }
 }
@@ -1324,6 +1328,7 @@ ${INTERVIEW}`
     unpinned: unpin.unpinned,
     sourceText,
     jd: jdSrc,
+    resume: resumeSrc,
     sessionMemory,
     sourceDocs: groundingDocs,
     passages: sourceRetrieval.passages,

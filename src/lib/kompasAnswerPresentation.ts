@@ -50,6 +50,20 @@ const CONFIRM_STUB = /^I would want to confirm that\.?$/i
 const PRODUCT_NAMES = "SentinelOne|QRadar|Splunk|Qualys|CrowdStrike|Terraform|CyberArk|ServiceNow|Dragos|Tenable|Nessus|Rapid7|Okta|SailPoint|Mimikatz|BloodHound|Cobalt Strike|Kubernetes|Wireshark|Burp Suite|Palo Alto|Fortinet|Datadog|PagerDuty"
 
 /** A product the resume and the question do not name. */
+const USED_IT = /\b(?:i(?:'ve| have)|i used|i ran|i deployed|i configured|in my experience|when i used)\b/i
+
+/** A tool named only in the job description is not experience. "I would" stays. */
+export function jdOnlyExperience(sentence: string, resume: string, jd: string): boolean {
+  if (/\bi would\b/i.test(sentence) || !USED_IT.test(sentence)) return false
+  const names = String(sentence || "").match(new RegExp(`\\b(?:${PRODUCT_NAMES})\\b`, "gi")) || []
+  const resumeBag = String(resume || "").toLowerCase()
+  const jdBag = String(jd || "").toLowerCase()
+  return names.some((name) => {
+    const token = name.toLowerCase()
+    return jdBag.includes(token) && !resumeBag.includes(token)
+  })
+}
+
 export function ungroundedProducts(sentence: string, source: string): string[] {
   const bag = String(source || "").toLowerCase()
   const found = String(sentence || "").match(new RegExp(`\\b(?:${PRODUCT_NAMES})\\b`, "gi")) || []
