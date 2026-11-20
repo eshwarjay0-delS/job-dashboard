@@ -151,6 +151,14 @@ jobs:
       - name: Verify Gmail Retry-After, Overview and selected-sender/account isolation
         run: node --experimental-strip-types --test scripts/tests/gmail-retry-after.test.mjs scripts/tests/mail-overview.test.mjs scripts/tests/gmail-send-account-isolation.test.mjs
 
+      - name: Kompas S1 replay gate
+        run: |
+          if ! command -v google-chrome && ! command -v google-chrome-stable && ! command -v chromium && ! command -v chromium-browser; then
+            sudo apt-get update -y
+            sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+          fi
+          node --experimental-strip-types --test scripts/tests/kompas-s1-replay-gate.test.mjs
+
       - name: Build (Webpack; retry only known intermittent Google-font URL bug)
         run: |
           # Next 16 occasionally receives a valid Google Fonts /l/font?kit URL

@@ -1,5 +1,25 @@
 # MFit Completion Watch
 
+## 20 November 2026 — S1 P0 fixes, ready to ship with PR 477 content
+
+Live S1 on master 25b6046c: the tab preview covered AI Answer, Start/Stop, and More; Auto missed q1, q3, and q5, false-fired on small talk, and showed a keyword stub; every speaker was THEM. The fix keeps pull request 477's video-only preview, transcript copy, and typed-chat line. The panel is off by default and 168px at the bottom-right. Candidate turns are You. Auto fires once per question 1-5 at end_s plus 1.5 seconds. No New constraint line. Header is one Question line. Long answers in the offline gate are 120-180 words from the eshwarjay05 Houston resume. Skip-login was not edited.
+
+Local evidence: S1 replay gate pass, Chrome boxes at 1280x800 and 1280x720 with no overlap, clarifier fixtures 47/47, adversarial 20/20, baseline contract 15 checks and baseline gate 92/92, tsc pass, eslint 0 errors (264 existing warnings), npm run build pass. Not a second live listen. Next: squash-merge with a [ship] message as eshwarjay0@gmail.com, then check production once. Close pull request 477 as superseded. Do not delete branches. Do not merge held PRs 214, 202, 204, 197, 196, 324, or 473.
+
+## Standing rules — upgrade pull requests
+
+Each upgrade pull request touches at least 3 of these areas: answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop. Each area it touches adds a deeper test than the previous round, and the body lists that under "new this round".
+
+The parity upgrade pull request adds only fixes that pull request 467 and master do not already have, and only when a forwarded Parakeet session log shows the gap. The claim filter, the gap bridge, the length band, and first-person lines are already on 467, so they are not repeated here.
+
+## 20 November 2026 — Parity scope, new gaps only, not shipped
+
+The in-session tab preview shows video tracks only. Call audio stays on the background capture stream. The live transcript copies as plain You / Interviewer lines, and a typed chat line is included once. A Tauri/WASAPI note is docs only. Relevance, realism, length, human tone, speed, and the clarifier stay on pull request 467 and are not repeated. No ship marker.
+
+## 20 November 2026 — Parity prep removed, not shipped
+
+The prep that redid the claim filter, the gap bridge, length, and first-person prose was taken off pull request 477. No product change remains until a forwarded session log. No ship marker.
+
 ## 20 November 2026 — Review blockers, not shipped
 
 Streamed thesis is a spoken sentence. Long is 120–180 in one call. A trailing right? does not fire before 1.4 seconds. Adversarial clarifier 20/20 and the original 47/47. The CMDB sentence is kept. No ship marker.
