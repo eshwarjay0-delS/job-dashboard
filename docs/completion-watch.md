@@ -1,5 +1,35 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Review blockers, not shipped
+
+Streamed thesis is a spoken sentence. Long is 120–180 in one call. A trailing right? does not fire before 1.4 seconds. Adversarial clarifier 20/20 and the original 47/47. The CMDB sentence is kept. No ship marker.
+
+## 20 November 2026 — Thesis first, not shipped
+
+A technical answer is a thesis, how it works, one Example, and one resume line. The thesis streams first. Candidate-only tools and practices are dropped. How-does-this-tool stays on that tool. No ship marker.
+
+## 20 November 2026 — Answer shape, not shipped
+
+Short answers are extended from resume facts up to the floor. JD-only tools use the hands-on bridge. Candidate-only employers are dropped. Replay median: short 40, long 129.5, story 153. Short answers cap at 60 with no floor extension. No ship marker.
+
+## 20 November 2026 — Replay fixtures and clarifier 47, not shipped
+
+Replay: 52/52 interviewer turns fire at end_s, 0 false fires on 50 candidate turns, 52/52 headers are one Question: line. Clarifier fixtures 47/47. No ship marker.
+
+## 20 November 2026 — Clarifier silence, not shipped
+
+The aside is empty for a You turn or chit-chat. Clarifiers are silent at need 2 or below, and a kept clarifier must map to two different resume lines. Epoch mismatch, including a missing epoch, is dropped. In-repo fixtures 14/14. The attached 47-file run was not on disk. No ship marker.
+
+## 20 November 2026 — Story shape and gold eval, not shipped
+
+Story answers are repaired by reordering existing sentences. A model rewrite is requested only when that repair still misses the shape. `npm run eval:gold` is offline. Baseline with no key: length fit 5.00, claim faithfulness 4.70, model rubric skipped. No ship marker.
+
+## 20 November 2026 — CDN speech models, not shipped
+
+The same pull request now loads Silero v5 and onnxruntime-web 1.22.0 from jsDelivr, and smart-turn v3.2 from Hugging Face revision f766f81, when a session starts. The weights are not in /public. A CDN failure stays on the lexical 700 ms gate and shows no error. No ship marker.
+
+Continue: the 08:00 CT routine ships this pull request once if CI is green.
+
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
 
 The resume baseline on live 1c6c1622 (Length=Long, Senior SOC Analyst, Architect + Developer) is now in the same consistency pull request. Length was ignored because the live request hardcoded balanced. A reports answer was replaced by a shorter ServiceNow sentence. SOC answers closed on ITIL. The incident card was the six-word confirm stub. Typed questions still showed "Context shows up with the next answer." The session length is now what the request sends. A late replace keeps a longer on-topic stream. Off-topic platform sentences are dropped. The confirm stub is not served, shown, or returned by the fast path. The right panel paints Say this or nothing. No ship marker. Do not merge. Do not poll production.

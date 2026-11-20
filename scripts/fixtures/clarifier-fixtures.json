@@ -1,0 +1,682 @@
+{
+ "version": 1,
+ "profile": "eshwarjay05 (Houston) only",
+ "jd": "Senior SOC Analyst - First National Bank (Splunk ES, CrowdStrike Falcon, Microsoft Defender, Qualys, ServiceNow, NIST CSF)",
+ "schema": "must_mention: every regex must match the clarifier text (case-insensitive); must_not: no regex may match clarifier+Say this text; '.+' means the whole panel must be empty",
+ "global_must_not": [
+  "\\bgreat question\\b",
+  "as an AI",
+  "\\bcould you (?:please )?clarify\\b",
+  "\\bcan you elaborate\\b",
+  "^what do you mean\\??$",
+  "Burp|Fabrikam|Saint Louis|jayeshwar44|eshwarjay06",
+  "\\bJira\\b",
+  "BMC",
+  "Salesforce"
+ ],
+ "fixtures": [
+  {
+   "category": "ambiguous_scope",
+   "question": "Did you design it alone?",
+   "prior_turns": [
+    "Them: Tell me about the SD-WAN cutover you supported.",
+    "You: I handled the change records and the CMDB updates for the sites."
+   ],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "clarify",
+   "must_mention": [
+    "SD-WAN|overall",
+    "failover|piece|part"
+   ],
+   "must_not": [],
+   "note": "Eshwar's canonical example: clarifier must carry the referent"
+  },
+  {
+   "category": "ambiguous_scope",
+   "question": "Did you build the SIEM integration yourself?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "whole|end-to-end|overall",
+    "piece|part|side"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "ambiguous_scope",
+   "question": "How big was the environment?",
+   "prior_turns": [
+    "Them: Tell me about the Discovery rollout."
+   ],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "clarify",
+   "must_mention": [
+    "CI|server|device|asset|user"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "ambiguous_scope",
+   "question": "Were you responsible for the whole program?",
+   "prior_turns": [
+    "Them: Walk me through the GRC work at Molina."
+   ],
+   "resume_snippet": "Client: Molina Health Care - Long Beach, CA  Dec 2022 - Jul 2023  Role: ServiceNow Developer/Administrator\n- Configuration of service portals and configuration and support of GRC and Security Operations-related processes.\n- Created dashboards, reports, and operational analytics to track compliance status and SLA adherence.",
+   "expect": "clarify",
+   "must_mention": [
+    "GRC|program",
+    "part|piece|which"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "ambiguous_scope",
+   "question": "Did you own the onboarding workflow?",
+   "prior_turns": [
+    "Them: You mentioned KYC at McKesson."
+   ],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "clarify",
+   "must_mention": [
+    "design|build|support|run|end to end"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "overloaded_term",
+   "question": "How do you handle incidents?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "security",
+    "IT|service|ticket"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "overloaded_term",
+   "question": "Tell me about your experience with change.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "change management|change request|process"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "overloaded_term",
+   "question": "How do you manage access?",
+   "prior_turns": [],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "clarify",
+   "must_mention": [
+    "review|role|provision"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "overloaded_term",
+   "question": "What's your experience with discovery?",
+   "prior_turns": [],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "clarify",
+   "must_mention": [
+    "ServiceNow Discovery|asset|CMDB"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "overloaded_term",
+   "question": "What do you do with vulnerabilities?",
+   "prior_turns": [],
+   "resume_snippet": "Client: Qualcomm, Bangalore, India  Sept 2015 - Aug 2018\n- Configured machine learning and predictive intelligence to search for potential vulnerabilities (VR) using keywords descriptive by SecOps implementations.\n- Resolving typical User access and role issues by checking the active directory and users' table.",
+   "expect": "clarify",
+   "must_mention": [
+    "scan|remediat|track|find"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "multi_part",
+   "question": "Tell me about a phishing incident you handled, what tools you used, and what you would do differently?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "start|first"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "multi_part",
+   "question": "How do you triage alerts, how do you escalate them, and how do you close them out?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "triage|start|first"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "multi_part",
+   "question": "What's your experience with Splunk, CrowdStrike, and Qualys?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "Splunk|CrowdStrike|Qualys|which"
+   ],
+   "must_not": [
+    "failover",
+    "I (?:used|worked with|configured) (?:Splunk|CrowdStrike|Qualys)"
+   ],
+   "note": "none of the three are on the resume; Say this must not claim them"
+  },
+  {
+   "category": "multi_part",
+   "question": "How did you set up the CMDB and how did you keep it accurate?",
+   "prior_turns": [],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": "two tightly coupled parts: answer both, no clarifier"
+  },
+  {
+   "category": "hypothetical",
+   "question": "What would you do if CrowdStrike flagged ransomware on a domain controller at 2 AM?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": "scenario fully specified"
+  },
+  {
+   "category": "hypothetical",
+   "question": "What would you do if a user reported a suspicious email?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "click|open|attachment|link|just reported"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "hypothetical",
+   "question": "Say you join and the SOC has no playbooks. Where do you start?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "hypothetical",
+   "question": "If you had to cut alert volume, how would you do it?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "false positive|noise|which|source|tool"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "numbers_ask",
+   "question": "How many tickets did you handle a day?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "me|personally|myself",
+    "team|queue"
+   ],
+   "must_not": [
+    "failover",
+    "\\b\\d{2,}\\b tickets"
+   ],
+   "note": "no number on resume: never invent one"
+  },
+  {
+   "category": "numbers_ask",
+   "question": "What was your MTTR?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "clarify",
+   "must_mention": [
+    "P1|priority|severity|which|security|platform"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "numbers_ask",
+   "question": "How large was the CMDB?",
+   "prior_turns": [],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "clarify",
+   "must_mention": [
+    "CI|class|record"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "numbers_ask",
+   "question": "What was your SLA adherence?",
+   "prior_turns": [
+    "Them: Tell me about Molina."
+   ],
+   "resume_snippet": "Client: Molina Health Care - Long Beach, CA  Dec 2022 - Jul 2023  Role: ServiceNow Developer/Administrator\n- Configuration of service portals and configuration and support of GRC and Security Operations-related processes.\n- Created dashboards, reports, and operational analytics to track compliance status and SLA adherence.",
+   "expect": "clarify",
+   "must_mention": [
+    "team|which|priority|queue"
+   ],
+   "must_not": [
+    "failover",
+    "\\d+ ?%"
+   ],
+   "note": ""
+  },
+  {
+   "category": "numbers_ask",
+   "question": "How many years of Splunk do you have?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover",
+    "years of Splunk",
+    "I (?:used|have used) Splunk"
+   ],
+   "note": "clear ask; Say this must bridge honestly, not invent"
+  },
+  {
+   "category": "behavioral_no_timeframe",
+   "question": "Tell me about a time you disagreed with a stakeholder.",
+   "prior_turns": [],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover",
+    "Jira",
+    "BMC",
+    "mistake"
+   ],
+   "note": "answer with the most recent resume-backed example"
+  },
+  {
+   "category": "behavioral_no_timeframe",
+   "question": "Tell me about a time you made a mistake.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover",
+    "Jira",
+    "BMC"
+   ],
+   "note": ""
+  },
+  {
+   "category": "behavioral_no_timeframe",
+   "question": "Give me an example of working under pressure.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "behavioral_no_timeframe",
+   "question": "Describe a time you improved a process.",
+   "prior_turns": [],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "behavioral_no_timeframe",
+   "question": "Tell me about a time you led a team.",
+   "prior_turns": [],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "clarify",
+   "must_mention": [
+    "formal|people|technical|lead"
+   ],
+   "must_not": [
+    "failover",
+    "team of (?:five|twelve|nine)"
+   ],
+   "note": ""
+  },
+  {
+   "category": "already_clear",
+   "question": "What is the difference between an IDS and an IPS?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "already_clear",
+   "question": "Explain the five functions of the NIST CSF.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "already_clear",
+   "question": "How do you write a business rule in ServiceNow?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "already_clear",
+   "question": "Why do you want to move from ServiceNow development into a SOC role?",
+   "prior_turns": [],
+   "resume_snippet": "Client: Qualcomm, Bangalore, India  Sept 2015 - Aug 2018\n- Configured machine learning and predictive intelligence to search for potential vulnerabilities (VR) using keywords descriptive by SecOps implementations.\n- Resolving typical User access and role issues by checking the active directory and users' table.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "already_clear",
+   "question": "Walk me through how you configured role-based access controls at McKesson.",
+   "prior_turns": [],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "chitchat",
+   "question": "Hi, can you hear me okay?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": "nothing at all on screen"
+  },
+  {
+   "category": "chitchat",
+   "question": "Thanks for joining today.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "chitchat",
+   "question": "How's your day going so far?",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "chitchat",
+   "question": "Sorry, my camera froze, give me one second.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "chitchat",
+   "question": "Great, let's get started.",
+   "prior_turns": [],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "candidate_speech",
+   "question": "So did I design it alone? Mostly, yes, with the network team.",
+   "prior_turns": [
+    "Them: Did you design the SD-WAN alone?"
+   ],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": "candidate echo; must never trigger"
+  },
+  {
+   "category": "candidate_speech",
+   "question": "What I would do differently is set up the alerts earlier.",
+   "prior_turns": [
+    "Them: What would you do differently?"
+   ],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "candidate_speech",
+   "question": "The question is really which part of the program, right?",
+   "prior_turns": [
+    "Them: Were you responsible for the whole program?"
+   ],
+   "resume_snippet": "Client: Molina Health Care - Long Beach, CA  Dec 2022 - Jul 2023  Role: ServiceNow Developer/Administrator\n- Configuration of service portals and configuration and support of GRC and Security Operations-related processes.\n- Created dashboards, reports, and operational analytics to track compliance status and SLA adherence.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "candidate_speech",
+   "question": "How many tickets? Around forty a week on my queue.",
+   "prior_turns": [
+    "Them: How many tickets did you handle?"
+   ],
+   "resume_snippet": "- Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).\n- Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    ".+"
+   ],
+   "note": ""
+  },
+  {
+   "category": "followup_reference",
+   "question": "How long did that take?",
+   "prior_turns": [
+    "Them: Tell me about the KYC workflow at McKesson.",
+    "You: I built the verification, risk assessment and approval steps."
+   ],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "clarify",
+   "must_mention": [
+    "KYC|workflow|build",
+    "rollout|live|whole|build"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "followup_reference",
+   "question": "Who signed off on it?",
+   "prior_turns": [
+    "Them: You mentioned role-based access controls.",
+    "You: Yes, with segregation of duties for the finance teams."
+   ],
+   "resume_snippet": "Client: Mckesson - TX  Sept 2023 - Present  Role: Senior ServiceNow Developer\n- Assists with ServiceNow platform incident resolution.\n- Implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.\n- Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+   "expect": "clarify",
+   "must_mention": [
+    "access|role|design|change"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "followup_reference",
+   "question": "Did it work?",
+   "prior_turns": [
+    "Them: Tell me about the vulnerability search at Qualcomm.",
+    "You: We used predictive intelligence to flag likely vulnerabilities from ticket keywords."
+   ],
+   "resume_snippet": "Client: Qualcomm, Bangalore, India  Sept 2015 - Aug 2018\n- Configured machine learning and predictive intelligence to search for potential vulnerabilities (VR) using keywords descriptive by SecOps implementations.\n- Resolving typical User access and role issues by checking the active directory and users' table.",
+   "expect": "clarify",
+   "must_mention": [
+    "vulnerab|flag|predict",
+    "accura|catch|adopt|result"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  },
+  {
+   "category": "followup_reference",
+   "question": "Why did you choose that?",
+   "prior_turns": [
+    "Them: How did you simplify those workflows?",
+    "You: I redesigned the complex workflows into simpler forms with the workflow editor."
+   ],
+   "resume_snippet": "- Configuration Management: setting up Configuration Management from scratch defining the CI classes and their relationships.\n- Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.\n- Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+   "expect": "none",
+   "must_mention": [],
+   "must_not": [
+    "failover"
+   ],
+   "note": "referent is unambiguous: answer"
+  },
+  {
+   "category": "followup_reference",
+   "question": "Can you go deeper on that?",
+   "prior_turns": [
+    "Them: How did you track incidents at Molina?",
+    "You: Two things: SLA monitoring and compliance dashboards."
+   ],
+   "resume_snippet": "Client: Molina Health Care - Long Beach, CA  Dec 2022 - Jul 2023  Role: ServiceNow Developer/Administrator\n- Configuration of service portals and configuration and support of GRC and Security Operations-related processes.\n- Created dashboards, reports, and operational analytics to track compliance status and SLA adherence.",
+   "expect": "clarify",
+   "must_mention": [
+    "SLA",
+    "dashboard"
+   ],
+   "must_not": [
+    "failover"
+   ],
+   "note": ""
+  }
+ ]
+}

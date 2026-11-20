@@ -8,6 +8,7 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { normalizeAskText } from "./kompasAskText.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
+export type { AnswerLevel }
 import { repairDictation } from "./kompasDictation.ts"
 import { dropUngroundedLogistics, ungroundedLogisticsSentences } from "./kompasLogisticsPhrases.ts"
 
@@ -249,6 +250,24 @@ export function visibleLengthBand(question: string, shape?: AnswerShape): Visibl
     case "design-later": return { type: kind, floor: 70, aim: 100, ceiling: 160 }
     default: return { type: kind, floor: 12, aim: 24, ceiling: 45 }
   }
+}
+
+const FOLLOW_UP_FLOOR = 50
+
+/** #460 bands stay for a normal answer. A long story may pass the old 300-word cap. The floor stays under that level's ceiling. */
+export function levelAwareBand(question: string, level: AnswerLevel = "engineer", length: "short" | "balanced" | "long" = "balanced"): VisibleLength {
+  const band = visibleLengthBand(question)
+  const kind = lengthKind(question, dissectQuestion(question).shape)
+  const levelCeiling = QUESTION_LENGTH[kind][level].ceiling
+  const longStory = length === "long" && (kind === "star" || /\btell me about a time\b/i.test(question))
+  if (length === "long") return { type: longStory ? "story" : band.type, floor: 120, aim: 150, ceiling: 180 }
+  let ceiling = Math.min(band.ceiling, level === "engineer" ? band.ceiling : Math.max(levelCeiling, FOLLOW_UP_FLOOR + 1))
+  if ((level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
+    ceiling = Math.min(band.ceiling, FOLLOW_UP_FLOOR + 1)
+  }
+  const floor = Math.min(band.floor, Math.max(8, ceiling - 1))
+  const aim = Math.min(Math.max(band.aim, floor), ceiling)
+  return { type: band.type, floor, aim, ceiling }
 }
 
 function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand {

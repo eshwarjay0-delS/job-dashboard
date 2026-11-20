@@ -586,6 +586,10 @@ function finishWizard() {
   LS.set("sessions", sessions);
   clearWizardDraft();              // the setup became a session; the next new session starts clean
   launchCopilot(s);
+  show("copilot");
+  if ($("connectPanel")) $("connectPanel").classList.add("hidden");
+  sessionReadyUntil = Date.now() + 30000;
+  void start();
 }
 
 /* ------------------------------- copilot (live, v2) ------------------------------------------
@@ -634,7 +638,15 @@ function saveLive(withLog) {
 }
 async function restoreLive(s) {
   const snap = await DossierDB.get(liveKey(s.id));
-  if (current !== s || !snap || !Array.isArray(snap.cards) || !snap.cards.length) return;
+  if (current !== s) return;
+  if (!snap || !Array.isArray(snap.cards) || !snap.cards.length) {
+    if (Array.isArray(s.keptAnswers) && s.keptAnswers.length) {
+      cards = s.keptAnswers.map(c => ({ ...c }));
+      idx = Math.max(0, cards.length - 1);
+      renderCard();
+    }
+    return;
+  }
   if (Array.isArray(snap.log) && snap.log.length >= sessionLog.length) sessionLog = snap.log;
   const restoredEpoch = Number(snap.epoch) || 0;
   sessionRunEpoch = restoredEpoch + 1;
@@ -653,6 +665,7 @@ async function pauseRun() {
   if (!s.runAt && !sessionLog.some(e => e.t === "line" || (e.t === "answer" && !e.noQuestion))) return;   // opened and left with nothing heard or answered (a depth step or a copy is not a run): the card stays as it was
   try { localStorage.setItem("perfact.log." + s.id, JSON.stringify(sessionLog)); } catch {}
   s.runAt = s.runAt || (sessionLog[0] && sessionLog[0].at) || Date.now(); s.pausedAt = Date.now(); s.endedAt = null; s.endedBy = null;
+  try { s.keptAnswers = cards.filter(c => c && c.question && c.answer).slice(-12).map(c => ({ question: c.question, answer: c.answer, spoken: c.spoken || "" })); } catch {}
   saveSession(s, true);
   await saveLive(true);
 }
@@ -723,8 +736,11 @@ function personaLabel(seniority, role) {       // "Senior" + "Senior Cybersecuri
 }
 function setPersonaChip(s) {
   const chip = $("personaChip"); if (!chip) return;
+  if (s && !String(s.resume || "").trim()) { chip.textContent = "No resume on this device"; chip.classList.remove("hidden"); chip.title = "Answers use the job description only."; return; }
   const p = s && s.prep && s.prep.persona;
-  const label = (s && s.role) || (p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "");
+  let label = String((s && s.role) || "").trim();
+  if ((!label || /servicenow developer/i.test(label)) && /\b(?:soc|security|cyber)\b/i.test(String(s && s.jd || ""))) label = "Security operations";
+  if (!label) label = p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "";
   chip.textContent = label; chip.classList.toggle("hidden", !label);
   chip.title = p && p.voice ? "Voice: " + p.voice : "";
 }
@@ -770,6 +786,7 @@ function noteLiveQuestion(q) {
   if (liveAskKey && key !== liveAskKey) { sessionRunEpoch++; book.epoch = sessionRunEpoch; }
   liveAskKey = key;
   book.epoch = sessionRunEpoch;
+  try { window.__kompasAskEpoch = sessionRunEpoch; } catch {}
 }
 async function readAnswerStream(res) {
   const txt = await res.text(); let text = "", meta = {};
@@ -1178,7 +1195,7 @@ function presentAnswer(question, answer, source) {
     seenLine.add(key);
     ordered.push(s);
   }
-  if (!ordered.length) return /I would want to confirm that/i.test(raw) ? "That is not on my resume, so I will not invent it." : "";
+  if (!ordered.length) return /I would want to confirm that/i.test(raw) ? "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work." : "";
   if (intro) return ordered.join(" ");
   const q = String(asked || "");
   const band = (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /^(?:what is|what does|what's|define)\b/i.test(q))
@@ -1293,7 +1310,7 @@ function renderCard() {
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
   const heardQ = cleanHeardQuestion(draft || c.question);
-  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ) || /^Question:/i.test(heardQ)) ? heardQ : "Question: " + heardQ;
+  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : oneQuestionLine(heardQ);
   $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
@@ -2001,6 +2018,7 @@ async function start() {
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
   captureStartedAt = Date.now();
+  void import("./vad-loader.mjs").then((m) => m.prepareSession && m.prepareSession()).catch(() => {});
   try { window.kompasDesktop?.setInterview?.(true); } catch {}
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
   document.querySelector(".rec").classList.add("live");
@@ -2039,6 +2057,7 @@ async function stop(say = true) {
   $("startBtn").disabled = false;
   if (say && transcriptionFailedEpoch !== transcriptionEpoch) status("Stopped — finished processing captured speech.");
   await saveRunTranscript();
+  void import("./vad-loader.mjs").then((m) => m.releaseModels && m.releaseModels()).catch(() => {});
 }
 function reportSources() {
   if (!running) return;
@@ -2127,9 +2146,14 @@ async function startMic() {
 // Kompas; not a copy of any competitor's client.
 const SYS_AUDIO_CONSTRAINTS = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
 const THEM_SILENCE_MS = 1400;
+const QUESTION_PAUSE_MS = 700;
+function androidTabAudio() {
+  return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
+}
 function sysShareConstraints(desktop) {
   // Desktop loopback is requested as audio: true so the native handler keeps serving the output mix.
-  if (desktop) return { video: true, audio: true };
+  // Android Chrome only shares tab audio together with a video track. Opt-in: the speaker button.
+  if (desktop || androidTabAudio()) return { video: true, audio: true };
   return {
     video: { displaySurface: "browser", width: { max: 1920 }, height: { max: 1080 }, frameRate: { max: 15 } },
     audio: { ...SYS_AUDIO_CONSTRAINTS },
@@ -2167,10 +2191,12 @@ async function applyRawAudioConstraints(stream) {
   }
 }
 function showTabPreview(owner) {
-  // Audio stays on the capture stream. No thumbnail and no share-picker chrome.
-  const tracks = owner && owner.getVideoTracks ? owner.getVideoTracks() : [];
-  for (const track of tracks) { try { track.enabled = false; } catch {} }
-  hideTabPreview();
+  const box = $("tabPreview");
+  const video = $("tabPreviewVideo");
+  if (!box || !video || !owner) return;
+  try { video.srcObject = owner; video.muted = true; const play = video.play(); if (play && play.catch) play.catch(() => {}); } catch {}
+  box.hidden = false;
+  box.classList.remove("hidden");
 }
 function hideTabPreview() {
   const box = $("tabPreview");
@@ -2189,6 +2215,7 @@ async function changeSharedTab() {
   syncSrc();
   await startSys();
 }
+$("tabPreviewFull")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); const video = $("tabPreviewVideo"); try { video && video.requestFullscreen && video.requestFullscreen(); } catch {} });
 $("tabPreviewChange")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void changeSharedTab(); });
 $("tabPreviewStop")?.addEventListener("click", (e) => {
   e.preventDefault(); e.stopPropagation();
@@ -2198,6 +2225,30 @@ $("tabPreviewStop")?.addEventListener("click", (e) => {
   reportSources();
 });
 
+async function maybeLoadSilero(stream) {
+  if (!stream || window.KOMPAS_VAD === "off") return null;
+  try {
+    const mod = await import("./vad-loader.mjs");
+    if (!mod.attachSilero) return null;
+    return await mod.attachSilero(stream, {
+      onSpeechStart() {
+        try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {}
+        window.__kompasVadEndedAt = 0;
+      },
+      onSpeechEnd(audio) {
+        window.__kompasLastSpeech = audio;
+        window.__kompasVadEndedAt = Date.now();
+        const cap = captures.find(c => c.who === "Them");
+        const mic = captures.find(c => c.who === "You");
+        const overlap = !!(mic && (mic.voiced || (cap && cap.segStart && mic.lastVoice >= cap.segStart)));
+        if (cap) cap.forceYou = overlap;
+        if (overlap || !cap) return;
+        endSegment(cap, true, true, true);
+        scheduleAuto();
+      },
+    });
+  } catch { return null; }
+}
 async function startSys() {
   const generation = sourceGeneration.Them;
   if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
@@ -2225,7 +2276,9 @@ async function startSys() {
       srcOn.sys = false;
       return;
     }
-    await attachSource(new MediaStream(audio), "Them", disp, generation);
+    const themStream = new MediaStream(audio);
+    await attachSource(themStream, "Them", disp, generation);
+    void maybeLoadSilero(themStream);
     if (generation === sourceGeneration.Them && running && srcOn.sys && captures.some(c => c.who === "Them")) {
       showTabPreview(disp);
       sysRecoveries = 0;
@@ -2454,7 +2507,7 @@ function endSegment(cap, keep, restart = true, force = false, includeTail = fals
   const flush = () => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(takeTail().concat(chunks), { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt, forceYou: !!cap.forceYou }).then(settle, settle); else settle();
   };
   rec.onstop = () => {
     // Chrome on Android often delivers the last dataavailable after onstop.
@@ -2652,6 +2705,13 @@ function vadStep(cap, rms) {
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;
   meter(cap.who, rms, step.speaking);
+  if (step.speaking && !cap.wasSpeaking && cap.who === "Them") { try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {} }
+  cap.wasSpeaking = !!step.speaking;
+  if (step.action === "end" && cap.who === "Them") {
+    const mic = captures.find(c => c.who === "You");
+    cap.forceYou = !!(mic && (mic.voiced || (cap.segStart && mic.lastVoice >= cap.segStart)));
+    if (window.__kompasSileroLive && cap.lastVoice && now - cap.lastVoice < THEM_SILENCE_MS) return;
+  }
   if (step.action === "end") return endSegment(cap, true, true, step.scream || step.speechMs >= 60);
   if (step.action === "rescue") return endSegment(cap, true, true, true);
   if (step.action === "drop") return endSegment(cap, false);
@@ -2788,7 +2848,7 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean, false, opt.spokenAt); }
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(opt.forceYou ? "You" : who, clean, false, opt.spokenAt); }
     else if (running) showCaption(who, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
@@ -2943,7 +3003,9 @@ const AUTO_QUIET_MS = 2200;
 function pendingHeard() { return transcript.filter(t => t.seq > answeredSeq); }
 function updatePending() {
   const who = typeof liveInterviewer === "function" ? liveInterviewer() : "Them";
-  const n = pendingHeard().filter(t => t.who === who && questionEnded(t.text)).length, b = $("pendCount"); if (!b) return;
+  const asks = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+  const n = asks.length, b = $("pendCount"); if (!b) return;
+  if (asks[0] && Date.now() - Number(asks[0].at || 0) > 90000) status("A question has been waiting 90 seconds.", "live");
   b.textContent = n; b.classList.toggle("hidden", !n);
   $("answerBtn").title = n ? `Answer everything heard since the last answer — ${n} line${n > 1 ? "s" : ""} (Ctrl+Enter)` : "Answer the latest question again (Ctrl+Enter)";
 }
@@ -3872,6 +3934,27 @@ function candidateSide(turn) {
   if (turn.who === "You" && captures.some(c => c.who === "Them")) return true;
   return paraphrasesOwn(turn.text);
 }
+function splitUtterances(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return [];
+  return raw.split(/\s*(?:\.{2,}|…)\s+|(?<=[.?!])\s+|\s+(?=(?:what|how|why|when|where|who|can you|could you|tell me|do you|did you|have you)\b)/i).map(s => s.trim()).filter(Boolean);
+}
+function isGatedQuestion(text) {
+  let raw = String(text || "").replace(/\s+/g, " ").trim().replace(/^(?:Question:\s*)+/i, "").replace(/^[-•*]\s+/, "");
+  const words = raw.split(/\s+/).filter(Boolean);
+  if (words.length < 4) return false;
+  if (/^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there)\b/i.test(raw)) return false;
+  if (/^(?:i(?:'m| am)?|my |we )\b/i.test(raw) && !/\b(?:can you|could you|tell me|what do you|how do you|why do you)\b/i.test(raw)) return false;
+  return /\?\s*$/.test(raw) || /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do) you|why (?:did|do|would) you|can you|could you|explain|describe)\b/i.test(raw);
+}
+function utteranceWho(text) { return isGatedQuestion(text) ? "Them" : "You"; }
+function oneQuestionLine(text) {
+  let q = String(text || "").replace(/\s+/g, " ").trim();
+  while (/^Question:\s*/i.test(q)) q = q.replace(/^Question:\s*/i, "");
+  if (/^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there)\b/i.test(q)) return "";
+  q = q.split(/\s+/).filter(Boolean).slice(0, 20).join(" ");
+  return q ? "Question: " + q : "";
+}
 function soundsLikeCandidate(text) {
   const raw = String(text || "").replace(/\s+/g, " ").trim();
   if (!raw || questionEnded(raw)) return false;
@@ -3881,19 +3964,50 @@ function liveInterviewer() {
   if (captures.some(c => c.who === "Them") || pendingHeard().some(t => t.who === "Them")) return "Them";
   return questionSource();
 }
-const armsAuto = () => pendingHeard().some(t => t.who === liveInterviewer() && (!captureStartedAt || t.at >= captureStartedAt) && !candidateSide(t) && questionEnded(t.text) && !duplicateAsk(t.text));
+const armsAuto = () => pendingHeard().some(t => utteranceWho(t.text) === "Them" && isGatedQuestion(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
+function themQuietNow() {
+  if (window.__kompasSileroLive) return window.__kompasVadEndedAt ? Date.now() - window.__kompasVadEndedAt : 0;
+  const themCap = captures.find(c => c.who === "Them");
+  return themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
+}
+function scheduleUnsure() {
+  const lines = pendingHeard().filter(t => t.who === "Them" && (!captureStartedAt || t.at >= captureStartedAt));
+  const tail = lines.length ? lines[lines.length - 1].text : "";
+  if (!tail) return;
+  autoTimer = setTimeout(() => { void resolveUnsure(tail); }, /right\?\s*$/i.test(tail) ? 1400 : QUESTION_PAUSE_MS);
+}
+async function resolveUnsure(tail) {
+  if (!autoOn || armsAuto()) return;
+  const cap = captures.find(c => c.who === "Them");
+  if ((cap && cap.forceYou) || captures.some(c => c.who === "You" && c.voiced)) return;
+  const quiet = themQuietNow();
+  if (quiet < QUESTION_PAUSE_MS) { autoTimer = setTimeout(() => { void resolveUnsure(tail); }, QUESTION_PAUSE_MS - quiet); return; }
+  let decision = "wait";
+  try {
+    const mod = await import("./vad-loader.mjs");
+    decision = await mod.runSmartTurnOrLexical({ text: tail, pauseMs: quiet, smartTurnFlag: window.KOMPAS_SMART_TURN, audio: window.__kompasLastSpeech });
+  } catch { decision = "wait"; }
+  if (decision !== "fire" || !autoOn) return;
+  status("Question detected", "live");
+  noteAsked(tail);
+  void confirmAutoAndAnswer(tail);
+}
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
-  if (!autoOn || !armsAuto()) return;
-  const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+  if (!autoOn) return;
+  if (!armsAuto()) { scheduleUnsure(); return; }
+  const gated = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+  const tail = gated.length ? gated[gated.length - 1].text : "";
   const wait = autoWaitMs(tail);
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
-    const themCap = captures.find(c => c.who === "Them");
-    const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
-    const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+    const themQuietMs = themQuietNow();
+    const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+    const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
+    if (/right\?\s*$/i.test(tail) && (themQuietMs || 0) < 1400) { autoTimer = setTimeout(fire, 1400 - (themQuietMs || 0)); return; }
+    if ((themQuietMs || 0) < QUESTION_PAUSE_MS) { autoTimer = setTimeout(fire, QUESTION_PAUSE_MS - (themQuietMs || 0)); return; }
     const confirmed = confirmAutoQuestion(tail).ok;
     const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });
     if (!decision.fire) {
@@ -4213,6 +4327,9 @@ function dedupeCaptionTokens(text) {
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
+  const pieces = lookedAgain ? [text] : splitUtterances(text);
+  if (pieces.length > 1) { for (const piece of pieces) onTranscript(utteranceWho(piece), piece, true, spokenAt); return; }
+  who = utteranceWho(text);
   if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
   if (captureStartedAt && !startedAt) startClock();
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
@@ -4230,7 +4347,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   if (!stitched.part) return;
   text = stitched.part;
   const heardAt = Date.now();
-  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text) });
+  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text), source: who === "You" ? "mic" : "computer" });
   try { if (window.KompasAnswerAside && typeof window.KompasAnswerAside.hear === "function") window.KompasAnswerAside.hear(who, text, who === "You" ? "mic" : "computer"); } catch (e) {}
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
@@ -5137,7 +5254,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const show = (t) => {
     if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
     let spoken = sayAloud(t).trim();
-    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "That is not on my resume, so I will not invent it.";
+    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work.";
     if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
@@ -6679,6 +6796,20 @@ $("copyBtn").onclick = async () => {
   const c = cards[idx]; if (!c) return;
   try { await navigator.clipboard.writeText(`${c.question}\n\n${plainAnswer(c.answer)}`); status("Copied.", "live"); }
   catch { status("The browser blocked clipboard access.", "err"); }
+};
+$("resumeReplaceBtn").onclick = () => { const input = $("resumeReplaceFile"); if (input) input.click(); };
+$("resumeReplaceFile").onchange = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file || !current) return;
+  try {
+    const text = await extractText(file);
+    if (!text || text.length < 40) { status("That file had no resume text.", "err"); return; }
+    current.resume = text.slice(0, 60000);
+    saveSession(current);
+    setPersonaChip(current);
+    status("Resume replaced for this session.", "live");
+  } catch (err) { status(String(err && err.message || "Could not read that resume."), "err"); }
 };
 $("exportBtn").onclick = () => {
   const s = current || {};

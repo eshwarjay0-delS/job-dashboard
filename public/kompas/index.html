@@ -481,6 +481,7 @@
       <div class="tab-preview-stage">
         <video id="tabPreviewVideo" muted playsinline autoplay></video>
         <div class="tab-preview-actions">
+          <button type="button" id="tabPreviewFull" class="tab-preview-action">Fullscreen</button>
           <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
           <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
         </div>
@@ -535,6 +536,8 @@
               </div>
             </div>
             <button class="mi" role="menuitem" id="collapseBtn"><span class="mi-ico">—</span>Minimise panel</button>
+            <button class="mi" role="menuitem" id="resumeReplaceBtn"><span class="mi-ico">↻</span>Replace resume</button>
+            <input id="resumeReplaceFile" type="file" accept=".txt,.md,.pdf,.docx,text/plain" hidden>
             <button class="mi" role="menuitem" id="exportBtn"><span class="mi-ico">⇩</span>Export answers</button>
             <button class="mi" role="menuitem" id="getTranscriptBtn"><span class="mi-ico">⤓</span>Download transcript</button>
             <button class="mi mi-danger" role="menuitem" id="clearBtn"><span class="mi-ico">⌫</span>Clear answers</button>

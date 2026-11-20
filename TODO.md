@@ -1,6 +1,47 @@
+## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
+
+The streamed first sentence is a real answer, not a label. Length Long is one 120–180 word call. A question ending in "right?" waits until 1.4 seconds, so it does not fire early. The 20 adversarial clarifier cases pass, and the original 47 still pass. "I maintained the CMDB." stays. No ship marker.
+
+**Checked offline. Not a live listen-through.**
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.
+## 2026-11-20 — Thesis first, and no candidate-only practice (no live listen)
+
+A technical answer opens with the thesis, then how it works, one Example, and one resume line. The thesis is streamed first. A Sophos practice that only the candidate said is dropped. "How does this tool work" stays on that tool and uses the hands-on bridge when the resume does not name it. No ship marker.
+
+**Checked on kompas-answer-shape. Not a live listen-through.**
+
+## 2026-11-20 — Answer shape, JD bridge, and no video-candidate facts (no live listen)
+
+Technical answers open on the point, grow from resume facts when they are under the floor, and can close with Example. A tool that is only in the job description is a hands-on bridge, not a stub. A employer that appears only in the candidate's transcript is left out. No ship marker.
+
+**Checked on kompas-answer-shape. Replay median: short 40, long 129.5, story 153. Short answers are capped at 60. Not a live listen-through.**
+
+## 2026-11-20 — Replay fixtures and the 47 clarifier cases (no live listen)
+
+The two caption videos are a replay test: 52 interviewer turns fire once at end_s, 50 candidate turns fire 0 times, and each header is one Question: line. The official clarifier fixtures score 47/47. No ship marker.
+
+**Checked by the fixture runners. Not a live listen-through.**
+
+## 2026-11-20 — Clarifier stays quiet unless two resume lines differ (visible on the right panel)
+
+The right panel is empty when the last turn is the candidate or chit-chat. A clarifier is shown only at need 3 or 4, and only when the two options hit different resume lines. Say-this lines are first person. A tool that is only in the job description is bridged, not claimed. The epoch is sent with the aside request, and a missing or mismatched epoch is dropped. No ship marker.
+
+**Checked on kompas-clarifier-fixtures, 14/14. The 47-file bundle was not on disk.**
+
+## 2026-11-20 — Story shape and gold eval (no visible screen)
+
+A behavioral story is reordered from its own sentences: direct first line, first-person actions in at least half the sentences, and a resume result at the end with no invented number. The model rewrite runs only when that repair still misses. `npm run eval:gold` scores the gold set offline and caches by answer hash. It is not part of a live answer. No ship marker.
+
+**Checked on kompas-story-shape and the gold script. Not a live listen-through.** Length fit 5.00 and faithfulness 4.70 with no OpenRouter key, so the 1–5 model rubric was skipped.
+
+## 2026-11-20 — CDN speech models, no Vercel transfer (no visible screen until a live listen)
+
+A session start loads Silero v5 and the onnxruntime wasm from jsDelivr, and smart-turn v3.2 from a pinned Hugging Face revision. The weights are not in /public. KOMPAS_VAD is on unless set to off. Smart-turn runs only when the wording is unsure. If the CDN fails, the 700 ms pause gate continues and no error is shown. No ship marker. No UI was restyled.
+
+**Checked on kompas-turn-models. Not a live listen-through.**
 
 ## 2026-11-20 — Capture ignores the candidate, and a JD-only tool is not experience (visible: Question header and the line status)
 

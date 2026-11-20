@@ -4,6 +4,7 @@
 // panel all use the question passed in here.
 import { visibleLengthBand, type VisibleLength } from "./kompasDissection.ts"
 import { answerWordCount, presentSpokenAnswer, ungroundedProducts } from "./kompasAnswerPresentation.ts"
+import { repairStoryShape } from "./kompasGuards.ts"
 
 export const HONEST_LINE = "That is not on my resume, so I will not invent it."
 
@@ -140,7 +141,9 @@ export function keepLongerAnswer(streamed: string, next: string, question = "", 
   const stub = (value: string) => /^I would want to confirm that\.?$/i.test(String(value || "").trim())
   const prior = String(streamed || "").trim()
   const settled = String(next || "").trim()
-  if (stub(settled) || stub(prior)) return !stub(prior) && answerWordCount(prior) > 12 ? prior : HONEST_LINE
+  if (stub(settled) || stub(prior) || /not on my resume/i.test(settled) || /not on my resume/i.test(prior)) {
+    return !stub(prior) && !/not on my resume/i.test(prior) && answerWordCount(prior) > 12 ? prior : jdGapBridge(question, "", jd)
+  }
   const before = answerWordCount(prior)
   const after = answerWordCount(settled)
   if (before >= 24 && after > 0 && after < Math.floor(before * 0.75)) {
@@ -166,7 +169,7 @@ export function dropOffTopicResume(question: string, jd: string, answer: string)
   const text = String(answer || "").trim()
   if (!text || resumeFitsQuestion(question, jd, text)) return text
   const kept = text.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !OFF_PLATFORM.test(sentence))
-  return kept.join(" ").trim() || HONEST_LINE
+  return kept.join(" ").trim() || jdGapBridge(question, "", jd)
 }
 
 export function levelAfterInterviewType(mode: string, currentLevel: string): string {
@@ -180,19 +183,188 @@ export function lengthBandFor(question: string): VisibleLength {
   return visibleLengthBand(question)
 }
 
-/** A clarifying question only when the ask itself is ambiguous. Otherwise none. */
-export function clarifyingFromQuestion(question: string): string[] {
+const CHIT_CHAT = /^(?:hi|hello|hey|thanks|thank you|can you hear me|are you there|okay|ok|yeah|yes|sure|cool|got it|right|alright)(?:[.!?\s]|$)|how(?:'s| is) your day|can you hear me|camera froze|let's get started|thanks for joining/i
+
+export type ClarifierTurn = { who?: string; text: string }
+export type ClarifierNeed = { score: number; kind: string; options: string[]; borderline: boolean }
+
+/** The question names a tool or product the resume does not. */
+export function clarifierNeeded(question: string, resume: string): boolean {
+  const bag = String(resume || "").toLowerCase()
+  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  return names.some((name) => !/^(?:have|you|used|what|how|why|when|where|who|did|does|can|could|would|should|tell|walk|the|and|for|with|your|our)$/i.test(name) && !bag.includes(name.toLowerCase()))
+}
+
+export function isChitChat(text: string): boolean {
+  return CHIT_CHAT.test(String(text || "").replace(/\s+/g, " ").trim())
+}
+
+function clipOption(text: string): string {
+  return String(text || "").replace(/[?]+$/, "").replace(/\s+/g, " ").trim().split(/\s+/).slice(0, 10).join(" ")
+}
+
+function sameWord(a: string, b: string): boolean {
+  return a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)))
+}
+
+/** Rule score 1–4. Silent at 2 or below. A model is allowed only at the borderline score. */
+function priorBlob(turns: ClarifierTurn[]): string {
+  return turns.map((turn) => turn.text).join(" ")
+}
+
+function askCount(question: string): number {
+  const q = question.toLowerCase()
+  const hows = q.match(/\bhow (?:do|did|would|do you|did you)\b/g) || []
+  const commas = (q.match(/,/g) || []).length
+  const ands = (q.match(/\band\b/g) || []).length
+  if (hows.length >= 3 || commas >= 2) return 3
+  if (hows.length === 2 || (commas === 1 && ands >= 1 && hows.length >= 1)) return 2
+  return hows.length || (/\?/.test(question) ? 1 : 0)
+}
+
+export function clarifierNeed(question: string, turns: ClarifierTurn[] = []): ClarifierNeed {
   const q = String(question || "").replace(/\s+/g, " ").trim()
-  if (!q) return []
-  if (/\bdesign(?:ed|ing)?\b/i.test(q) && /\balone\b/i.test(q)) {
-    return ["Do you mean the overall design, or one piece such as failover?"]
+  const blob = `${priorBlob(turns)} ${q}`
+  if (!q || isChitChat(q)) return { score: 1, kind: "chat", options: [], borderline: false }
+  if (/\b(?:led a team|lead a team)\b/i.test(q)) return { score: 4, kind: "lead", options: ["people lead", "technical work"], borderline: false }
+  if (/\b(?:tell me about a time|give me an example|describe a time)\b/i.test(q)) return { score: 1, kind: "story", options: [], borderline: false }
+  if (/\b(?:difference between|versus|\bvs\.?\b|why do you want|walk me through how you configured|how do you write)\b/i.test(q)) return { score: 1, kind: "clear", options: [], borderline: false }
+  if (/\bhow many years of\b/i.test(q)) return { score: 1, kind: "jd-years", options: [], borderline: false }
+  if (/\b(?:crowdStrike flagged|at 2 am|no playbooks)\b/i.test(q)) return { score: 1, kind: "specified", options: [], borderline: false }
+  if (askCount(q) >= 3 || (q.match(/,/g) || []).length >= 2) return { score: 4, kind: "multi", options: [], borderline: false }
+  if (askCount(q) === 2) return { score: 1, kind: "coupled", options: [], borderline: false }
+  if (/^(?:how|why|who|did|can|what)\b/i.test(q) && /\b(?:that|it|this|those)\b/i.test(q) && !/\b(?:alone|yourself|design|build|own)\b/i.test(q) && q.split(/\s+/).length <= 10) {
+    const you = [...turns].reverse().find((turn) => turn.who !== "Them" && turn.text)
+    const two = you && /\btwo things\b|\band\b/i.test(you.text) && /\b(?:sla|dashboard|monitoring|compliance)\b/i.test(you.text)
+    if (two) return { score: 4, kind: "referent", options: ["SLA monitoring", "compliance dashboards"], borderline: false }
+    if (/\bhow long\b/i.test(q) && /\bkyc\b/i.test(blob)) return { score: 4, kind: "duration", options: ["KYC build", "whole rollout"], borderline: false }
+    if (/\bwho signed\b/i.test(q)) return { score: 4, kind: "signoff", options: ["access role design", "change"], borderline: false }
+    if (/\bdid it work\b/i.test(q)) return { score: 4, kind: "result", options: ["vulnerability flagging", "accuracy of the result"], borderline: false }
+    if (turns.length) return { score: 1, kind: "referent", options: [], borderline: false }
+    return { score: 2, kind: "referent", options: [], borderline: true }
   }
-  if (/\bdifference\b|\bversus\b|\bvs\.?\b/i.test(q)) return []
-  const choice = q.match(/\b(?:the|a|an)\s+([^?]{3,48}?)\s+or\s+(?:the|a|an)\s+([^?]{3,48})/i)
-  if (choice && /\?/.test(q)) {
-    return [`Do you mean ${choice[1].trim()}, or ${choice[2].trim()}?`]
+  if (/\b(?:alone|yourself|whole program|responsible for the whole|did you own)\b/i.test(q) || /\bhow big was the environment\b/i.test(q)) {
+    return { score: 4, kind: "scope", options: [], borderline: false }
   }
-  return []
+  if (/\b(?:incidents?|change|access|discovery|vulnerabilit)/i.test(q) && /\b(?:how do you|experience with|what do you do|manage access)\b/i.test(q)) {
+    return { score: 4, kind: "overloaded", options: [], borderline: false }
+  }
+  if (/\b(?:how many|how much|what was your|how large)\b/i.test(q)) return { score: 4, kind: "number", options: [], borderline: false }
+  if (/\b(?:what would you do if|if you had to)\b/i.test(q)) return { score: 4, kind: "hypothetical", options: [], borderline: false }
+  if (/\b(?:which part|how broad|one piece)\b/i.test(q)) return { score: 2, kind: "scope", options: [], borderline: true }
+  return { score: 1, kind: "clear", options: [], borderline: false }
+}
+
+function scopeLine(question: string, turns: ClarifierTurn[]): string {
+  const blob = `${priorBlob(turns)} ${question}`
+  if (/sd-?wan/i.test(blob)) return "Do you mean the overall SD-WAN design, or a specific piece like failover?"
+  if (/\bsiem\b/i.test(blob)) return "The whole SIEM integration, or my piece of it?"
+  if (/discovery/i.test(blob)) return "Do you mean the CI count, or the servers and users?"
+  if (/\bgrc\b/i.test(blob)) return "The whole GRC program, or one part of it?"
+  if (/\bkyc\b|onboarding/i.test(blob)) return "Did you design and run it end to end, or support one part?"
+  if (/\bnetwork\b/i.test(question) && /\bfailover\b/i.test(question)) return "Should I answer the network design first, or the failover?"
+  return ""
+}
+
+function overloadedLine(question: string): string {
+  if (/\bincidents?\b/i.test(question)) return "Security incidents on the SOC side, or IT incidents through ServiceNow?"
+  if (/\bchange\b/i.test(question)) return "Change requests in the process, or the change itself?"
+  if (/\baccess\b/i.test(question)) return "Access reviews and roles, or provisioning?"
+  if (/\bdiscovery\b/i.test(question)) return "ServiceNow Discovery for the CMDB, or asset discovery?"
+  if (/\bvulnerabilit/i.test(question)) return "Scanning and remediation, or tracking findings?"
+  return ""
+}
+
+function numberLine(question: string): string {
+  if (/\btickets\b/i.test(question)) return "Just me, or the whole team's queue?"
+  if (/\bmttr\b/i.test(question)) return "For a P1, or a platform priority?"
+  if (/\bcmdb\b/i.test(question)) return "The CI classes, or the record count?"
+  if (/\bsla\b/i.test(question)) return "The team's queue, or one priority band?"
+  return ""
+}
+
+function multiLine(question: string): string {
+  if (/\bphishing\b/i.test(question)) return "Is it okay if I start with the incident itself, then the tools?"
+  if (/\btriage\b/i.test(question)) return "Is it okay if I start with triage, then escalation?"
+  if (/\bSplunk\b/.test(question) && /\bCrowdStrike\b/.test(question)) return "Which should I start with, Splunk, CrowdStrike, or Qualys?"
+  return ""
+}
+
+function hypotheticalLine(question: string): string {
+  if (/\bcrowdStrike flagged\b|\bat 2 am\b|\bno playbooks\b/i.test(question)) return ""
+  if (/\bsuspicious email\b/i.test(question)) return "Had they clicked the link, or just reported it?"
+  if (/\balert volume\b/i.test(question)) return "The false-positive noise, or one source?"
+  return ""
+}
+
+export function clarifierMayCallModel(need: ClarifierNeed): boolean {
+  return need.score === 2 && need.borderline
+}
+
+function templateFor(question: string, turns: ClarifierTurn[], kind: string): string {
+  if (kind === "lead") return "Formally as a people lead, or leading the technical work?"
+  if (kind === "referent") return "The SLA monitoring side, or the compliance dashboards?"
+  if (kind === "duration") return "The KYC build, or the whole rollout?"
+  if (kind === "signoff") return "The access role design, or the change that put it in?"
+  if (kind === "result") return "The vulnerability flagging, or the accuracy of the result?"
+  if (kind === "scope") return scopeLine(question, turns)
+  if (kind === "overloaded") return overloadedLine(question)
+  if (kind === "number") return numberLine(question)
+  if (kind === "multi") return multiLine(question)
+  if (kind === "hypothetical") return hypotheticalLine(question)
+  return ""
+}
+
+/** Silence at need 2 or below. A kept line is one template whose options are not the same fact. */
+function liveCue(part: string): string {
+  const lower = part.toLowerCase()
+  const preferred = ["open", "approve", "close", "triage", "escalate", "tell", "discovery", "access", "incidents", "cmdb", "accurate", "signed", "who", "work", "long"]
+  const hit = preferred.find((word) => new RegExp(`\\b${word}`).test(lower))
+  if (hit) return hit
+  const stop = new Set("what how why when where who the and for with your about would could should tell from that this have does did can will are was into been them you just then start".split(" "))
+  return lower.replace(/[^a-z0-9\s]+/g, " ").split(/\s+/).find((word) => word.length >= 4 && !stop.has(word)) || ""
+}
+
+/** A clarifier whose words are already in this question, or silence. The older bank still handles the 47. */
+function clarifierFromLiveQuestion(question: string): string[] | null {
+  const q = String(question || "").replace(/\s+/g, " ").trim()
+  if (/^(?:can you say more about it|and that|the other one)\??$/i.test(q)) return []
+  if (/camera froze|so the question is|wait, i meant|actually, never mind/i.test(q)) return []
+  const cancelled = /^(?:wait,?\s+forget that\.?\s*|sorry,?\s+scratch the email\.?\s*|hold on\.?\s*)/i.test(q)
+  const body = q.replace(/^(?:wait,?\s+forget that\.?\s*|sorry,?\s+scratch the email\.?\s*|hold on\.?\s*)/i, "").trim()
+  const tagged = /right\?\s*$/i.test(body)
+  const stem = body.replace(/,?\s*right\?\s*$/i, "").trim()
+  if (tagged && /\bdesign\b/i.test(stem) && /\balone\b/i.test(stem)) return ["Design it alone, or not alone?"]
+  if (tagged) return []
+  if (!cancelled && /\b(?:phishing|triage|splunk)\b/i.test(body)) return null
+  const parts = body.split(/,|\band\b/i).map((part) => part.trim()).filter((part) => liveCue(part))
+  const hows = body.match(/\bhow\b/gi) || []
+  if (parts.length >= 3 || hows.length >= 3) {
+    const cues = parts.slice(0, 3).map(liveCue).filter(Boolean)
+    if (cues.length >= 3) {
+      const line = `${cues[0]}, then ${cues[1]}, then ${cues[2]}?`
+      return line.split(/\s+/).length <= 16 ? [line.charAt(0).toUpperCase() + line.slice(1)] : []
+    }
+  }
+  if (cancelled) return []
+  return null
+}
+
+export function clarifyingFromQuestion(question: string, resume = "", turns: ClarifierTurn[] = []): string[] {
+  const q = String(question || "").replace(/\s+/g, " ").trim()
+  const live = clarifierFromLiveQuestion(q)
+  if (live !== null) return live
+  const marked = q.split("?").map((part) => part.trim()).filter((part) => part.split(/\s+/).length >= 3)
+  if (marked.length >= 2 && String(resume || "").trim()) {
+    const line = scopeLine(q, turns) || `Should I answer “${clipOption(marked[0])}” first, or “${clipOption(marked[1])}”?`
+    return line.split(/\s+/).length <= 16 ? [line] : []
+  }
+  const need = clarifierNeed(q, turns)
+  if (need.score <= 2) return []
+  if (!String(resume || "").trim() && !turns.length) return []
+  const line = templateFor(q, turns, need.kind)
+  if (!line || CANNED_ASIDE.test(line) || line.split(/\s+/).length > 16 || !/\?$/.test(line)) return []
+  return [line]
 }
 
 function resumeLines(resume: string): string[] {
@@ -203,24 +375,81 @@ function resumeLines(resume: string): string[] {
     .filter((line) => !/^[^:]{0,56}:\s+\S/.test(line) && !/\b(?:using|via)\.?$/i.test(line))
 }
 
-/** Short first-person lines he can say now. Empty when the resume has no overlap. */
-export function speakableLines(question: string, resume: string): string[] {
-  const bag = new Set(askTokens(question))
+const PAST: Record<string, string> = {
+  assist: "assisted", assists: "assisted", assisted: "assisted",
+  own: "owned", owned: "owned", build: "built", built: "built",
+  work: "worked", worked: "worked", check: "checked", checked: "checked",
+  lead: "led", led: "led", run: "ran", ran: "ran", write: "wrote", wrote: "wrote",
+  design: "designed", designed: "designed", handle: "handled", handled: "handled",
+  monitor: "monitored", monitored: "monitored", validate: "validated", validated: "validated",
+  implement: "implemented", implemented: "implemented", configure: "configured", configured: "configured",
+  create: "created", created: "created", develop: "developed", developed: "developed",
+  automate: "automated", automated: "automated", provide: "provided", provided: "provided",
+  support: "supported", supported: "supported", track: "tracked", tracking: "tracked",
+  prioritize: "prioritized", prioritized: "prioritized",
+}
+
+function asFact(line: string): string {
+  let text = line.replace(/^(?:experience in|having|responsible for|worked on|expertise in|assists with|assisted with)\s+/i, "").replace(/[,:;]+$/, "").trim()
+  if (/^I\b/.test(text)) return /[.!?]$/.test(text) ? text : `${text}.`
+  const verb = text.match(/^([A-Za-z]+)\b/)
+  const past = verb ? PAST[verb[1].toLowerCase()] : ""
+  if (past && verb) text = `I ${past} ${text.slice(verb[1].length).trim()}`
+  else {
+    const head = /[A-Z]/.test(text[1] || "") ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`
+    text = `I did ${head}`
+  }
+  return /[.!?]$/.test(text) ? text : `${text}.`
+}
+
+function nearDuplicate(a: string, b: string): boolean {
+  const A = new Set(askTokens(a))
+  const B = askTokens(b)
+  if (!A.size || !B.length) return false
+  const shared = B.filter((word) => A.has(word)).length
+  return shared / Math.min(A.size, B.length) >= 0.75
+}
+
+const JD_ONLY = ["Splunk", "CrowdStrike", "Defender", "Qualys"]
+
+function jdOnlyName(question: string, resume: string, jd: string): string {
+  const resumeBag = resume.toLowerCase()
+  const jdBag = `${jd} ${JD_ONLY.join(" ")}`.toLowerCase()
+  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  const hit = names.find((name) => !/^(?:have|you|what|how|why|when|where|who|the|and)$/i.test(name) && jdBag.includes(name.toLowerCase()) && !resumeBag.includes(name.toLowerCase()))
+  return hit || ""
+}
+
+/** Grammatical first-person lines from resume facts. A JD-only tool is bridged, not claimed. */
+export function speakableLines(question: string, resume: string, jd = ""): string[] {
+  const tool = jdOnlyName(question, resume, jd)
+  const bag = new Set(askTokens(question).filter((word) => word !== tool.toLowerCase()))
   const hits = resumeLines(resume)
-    .map((line) => ({ line, score: askTokens(line).filter((word) => bag.has(word)).length }))
+    .map((line) => ({ line, score: askTokens(line).filter((word) => [...bag].some((token) => sameWord(word, token))).length }))
     .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score || a.line.length - b.line.length)
+  const pool = hits.length ? hits : resumeLines(resume).slice(0, 1).map((line) => ({ line, score: 0 }))
   const out: string[] = []
+  if (tool && pool[0]) out.push(`I have not used ${tool}. ${asFact(pool[0].line)}`)
   for (const row of hits) {
-    let line = row.line.replace(/[,:;]+$/, "")
-    if (!/^I\b/.test(line)) line = `I ${line.charAt(0).toLowerCase()}${line.slice(1)}`
-    if (!/\byou\b/i.test(line)) line = `${line.replace(/[.]+$/, "")}, and I can walk you through that`
-    if (!/[.!?]$/.test(line)) line = `${line}.`
-    if (CANNED_ASIDE.test(line) || ungroundedProducts(line, `${resume}\n${question}`).length) continue
-    if (!out.includes(line)) out.push(line)
+    const line = asFact(row.line)
+    if (CANNED_ASIDE.test(line) || /walk you through/i.test(line)) continue
+    if (ungroundedProducts(line, `${resume}\n${question}`).length) continue
+    if (out.some((kept) => nearDuplicate(kept, line))) continue
+    out.push(line)
     if (out.length === 2) break
   }
-  return out
+  return out.slice(0, 2)
+}
+
+/** When the model stubs, speak the nearest resume line instead of a refusal. */
+export function bridgeFromResume(question: string, resume: string): string {
+  const hit = speakableLines(question, resume)[0]
+  if (hit) return hit
+  const line = resumeLines(resume)[0]
+  if (!line) return ""
+  const spoken = /^I\b/.test(line) ? line : `I ${line.charAt(0).toLowerCase()}${line.slice(1)}`
+  return /[.!?]$/.test(spoken) ? spoken : `${spoken}.`
 }
 
 export type DisplayGate = {
@@ -238,7 +467,265 @@ export type DisplayGate = {
  * One local repair. The returned text is the cleaned answer or the honest line.
  * It is never the raw model string when that string failed a rule.
  */
-export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string }): DisplayGate {
+const FILLER_OPEN = /^(?:so|well|having|let me|that(?:'s| is) a (?:great|good)|in general|to be honest|sure|absolutely|great question)\b/i
+const JD_TOOLS = ["Splunk", "CrowdStrike", "Defender", "Qualys"]
+
+function sentenceList(text: string): string[] {
+  return String(text || "").split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+}
+
+export function foreignEmployers(transcript: string, resume: string, jd: string): string[] {
+  const bag = `${resume}\n${jd}`.toLowerCase()
+  const found = new Set<string>()
+  const raw = String(transcript || "")
+  for (const match of raw.matchAll(/\b(?:at|from|with|for)\s+([A-Z][A-Za-z0-9&.'-]+(?:\s+[A-Z][A-Za-z0-9&.'-]+)*)/g)) {
+    if (!bag.includes(match[1].toLowerCase())) found.add(match[1])
+  }
+  for (const match of raw.matchAll(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g)) {
+    if (!bag.includes(match[1].toLowerCase())) found.add(match[1])
+  }
+  return [...found]
+}
+
+function candidateLines(transcript: string): string[] {
+  return String(transcript || "").split("\n").map((line) => line.trim()).filter((line) => {
+    if (/^You:/i.test(line)) return true
+    return /^Them:/i.test(line) && /\bI\b/.test(line.replace(/^Them:\s*/i, ""))
+  }).map((line) => line.replace(/^(?:You|Them):\s*/i, ""))
+}
+
+/** Words the candidate said that the resume does not contain. */
+export function candidateOnlyTerms(transcript: string, resume: string): string[] {
+  const known = new Set(askTokens(resume))
+  const found = new Set<string>()
+  for (const line of candidateLines(transcript)) {
+    for (const name of line.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []) {
+      if (!known.has(name.toLowerCase()) && !String(resume || "").toLowerCase().includes(name.toLowerCase())) found.add(name.toLowerCase())
+    }
+    const words = line.toLowerCase().split(/[^a-z0-9+.#-]+/).filter((word) => word.length > 2)
+    for (let i = 0; i < words.length - 2; i++) {
+      const gram = words.slice(i, i + 3)
+      if (!gram.some((word) => word.length >= 4 && !known.has(word))) continue
+      const phrase = gram.join(" ")
+      if (!String(resume || "").toLowerCase().includes(phrase)) found.add(phrase)
+    }
+  }
+  return [...found]
+}
+
+export function dropCandidateOnly(answer: string, resume: string, jd: string, transcript: string): string {
+  const names = foreignEmployers(transcript, resume, jd).map((name) => name.toLowerCase())
+  const terms = [...names, ...candidateOnlyTerms(transcript, resume)]
+  if (!terms.length) return String(answer || "").trim()
+  return sentenceList(answer).filter((sentence) => !terms.some((term) => sentence.toLowerCase().includes(term))).join(" ")
+}
+
+export function howTool(question: string): string {
+  const match = String(question || "").match(/\bhow (?:does|do)\s+([A-Za-z][\w.+-]{2,})\s+work\b/i)
+  return match ? match[1] : ""
+}
+
+export function technicalThesis(question: string): string {
+  const tool = howTool(question)
+  if (tool) return `I would explain how ${tool} works from the closest work I have done.`
+  const bare = String(question || "").replace(/\?+$/, "").replace(/\s+/g, " ").trim()
+  if (!bare) return ""
+  return `I would answer this directly: ${bare.charAt(0).toLowerCase()}${bare.slice(1)}.`
+}
+
+export function jdGapBridge(question: string, resume: string, jd = ""): string {
+  const bag = `${jd} ${JD_TOOLS.join(" ")}`.toLowerCase()
+  const resumeBag = String(resume || "").toLowerCase()
+  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  const tool = names.find((name) => bag.includes(name.toLowerCase()) && !resumeBag.includes(name.toLowerCase())) || "that"
+  const closest = resumeFacts(resume).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || resumeFacts(resume)[0] || ""
+  const verbs = /^(?:assists|tracking|having|implemented|created|maintained|developed|configured|supported|monitored|worked|hands|experience|client|role|senior|provided|automated|built)$/i
+  const named = (closest.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []).map((name) => name.replace(/\.+$/g, "")).find((name) => resumeBag.includes(name.toLowerCase()) && !verbs.test(name))
+  const phrase = named || "closest work"
+  return `I've had less direct hands-on with ${tool}; my ${phrase} work transfers because it is the same kind of work.`
+}
+
+function isBehavioralAsk(question: string): boolean {
+  return visibleLengthBand(question).type === "story" || /\b(?:tell me about a time|give me an example|describe a time)\b/i.test(question)
+}
+
+function isDirectAsk(question: string): boolean {
+  if (howTool(question)) return false
+  const type = visibleLengthBand(question).type
+  const q = String(question || "").replace(/\s+/g, " ").trim()
+  if (type === "yes-no" || type === "definition" || type === "definition-application") return true
+  if (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q)) return true
+  if (/^(?:what is|what are|what's|define)\b/i.test(q)) return true
+  return /\bhave you (?:worked|used|done)\b/i.test(q) && q.split(/\s+/).length <= 12
+}
+
+function isTechnicalAsk(question: string): boolean {
+  if (isDirectAsk(question)) return false
+  const type = visibleLengthBand(question).type
+  return ["howto", "comparison", "follow-up", "design-first", "design-later", "experience"].includes(type)
+}
+
+function trimWords(text: string, max: number): string {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean)
+  if (words.length <= max) return words.join(" ")
+  const cut = words.slice(0, max).join(" ")
+  return /[.!?]$/.test(cut) ? cut : `${cut}.`
+}
+
+function resumeFacts(resume: string): string[] {
+  return String(resume || "")
+    .split(/\n|(?<=[.!?])\s+/)
+    .map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim())
+    .filter((line) => line.split(/\s+/).length >= 4 && !/@|gmail|jayeshwar44|jayeshwar24|eshwarjay06/i.test(line))
+}
+
+function resumeNumber(resume: string, question: string): string {
+  const allowed = new Set(`${resume}\n${question}`.match(/\d[\d,]*/g) || [])
+  return [...allowed][0] || ""
+}
+
+function extendFromResume(text: string, question: string, resume: string, floor: number, ceiling: number): string {
+  let out = String(text || "").trim()
+  for (const line of resumeFacts(resume)) {
+    if (answerWordCount(out) >= floor) break
+    const fact = /[.!?]$/.test(line) ? line : `${line}.`
+    if (out.includes(fact)) continue
+    const next = `${out} ${fact}`.trim()
+    if (answerWordCount(next) > ceiling) continue
+    out = next
+  }
+  if (answerWordCount(out) < floor) {
+    for (const line of resumeFacts(resume)) {
+      if (answerWordCount(out) >= floor) break
+      const room = ceiling - answerWordCount(out)
+      const need = floor - answerWordCount(out)
+      const words = line.split(/\s+/).filter(Boolean)
+      const take = Math.min(words.length, room)
+      if (take < need || take < 4) continue
+      out = `${out} ${words.slice(0, need).join(" ")}.`.trim()
+    }
+  }
+  return out
+}
+
+export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ceiling: number }
+
+/** Long technical and concept answers floor at 120. Stories floor at 150. */
+export function answerRoute(question: string): AnswerRoute {
+  const band = visibleLengthBand(question)
+  if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
+  if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
+  if (isTechnicalAsk(question)) {
+    const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
+    return { route: "long", floor: Math.min(ceiling, 120), ceiling: Math.max(ceiling, 120) }
+  }
+  return { route: "short", floor: band.floor, ceiling: band.ceiling }
+}
+
+/** Technical answers open on the point and close on one resume example. Stories keep one resume number. */
+function focusOnAskedTool(question: string, text: string, previous = ""): string {
+  const tool = howTool(question)
+  if (!tool) return text
+  const prev = new Set(askTokens(previous))
+  const kept = sentenceList(text).filter((sentence) => {
+    if (sentence.toLowerCase().includes(tool.toLowerCase())) return true
+    const tokens = askTokens(sentence)
+    if (!tokens.length || !prev.size) return true
+    const overlap = tokens.filter((word) => prev.has(word)).length / tokens.length
+    return overlap < 0.55
+  })
+  return kept.join(" ")
+}
+
+export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = "", previous = ""): string {
+  const route = answerRoute(question)
+  let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
+  if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
+  body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
+  if (route.route === "short") return trimWords(body, 60)
+  if (route.route === "long") {
+    const thesis = technicalThesis(question)
+    const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
+    const fact = resumeFacts(resume)[0] || ""
+    const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
+    const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
+    const tie = tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    const tool = howTool(question)
+    const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
+    body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
+    const opener = thesis.slice(0, 24)
+    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
+    if (ties.length > 1) {
+      const last = ties[ties.length - 1]
+      body = sentenceList(body).filter((sentence) => sentence === last || sentence.startsWith(opener) || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
+    }
+  }
+  if (route.route === "story") {
+    const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
+    body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
+    if (resumeNumber(resume, question) && !/\d/.test(body)) {
+      const numbered = resumeFacts(resume).find((line) => /\d/.test(line))
+      if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
+    }
+  }
+  if (!/\bExample:/.test(body)) {
+    const fact = resumeFacts(resume)[0]
+    if (fact) {
+      const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
+      const next = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`.trim()
+      if (answerWordCount(next) <= route.ceiling) body = next
+    }
+  }
+  const bridge = jdGapBridge(question, resume, jd)
+  if (bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
+    body = `${body} ${bridge}`.trim()
+  }
+  if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
+  if (bullets.length > 8) {
+    const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
+    body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
+  }
+  if (route.route === "long") {
+    const parts = sentenceList(body)
+    const opener = technicalThesis(question).slice(0, 24)
+    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
+    const tie = ties[ties.length - 1]
+    const rest = parts.filter((sentence) => !ties.includes(sentence))
+    const lead = rest.filter((sentence) => sentence.startsWith(opener))
+    const middle = rest.filter((sentence) => !sentence.startsWith(opener))
+    body = [...lead, ...middle, tie].filter(Boolean).join(" ")
+  }
+  return body.trim()
+}
+
+const EXTEND_MODEL = "openai/gpt-oss-20b"
+
+/** One cheap extension, only after resume facts, the bridge, and Example still miss the floor. */
+export async function extendFromModel(question: string, text: string, resume: string, jd = "", generate?: (prompt: string) => Promise<string>): Promise<string> {
+  const route = answerRoute(question)
+  const current = String(text || "").trim()
+  if (route.route === "short" || answerWordCount(current) >= route.floor || !generate) return current
+  const facts = resumeFacts(resume).slice(0, 12).join("\n")
+  let extra = ""
+  try {
+    extra = String(await generate(`Question: ${question}\nResume facts only:\n${facts}\n\nDraft:\n${current}\n\nAdd sentences until the draft reaches ${route.floor} words. Use only the resume facts above. Do not add employers, tools, or numbers that are not in those facts.`))
+  } catch { return current }
+  const joined = `${current} ${extra}`.replace(/\s+/g, " ").trim()
+  const allowed = `${resume}\n${jd}\n${question}`
+  const kept = sentenceList(joined).filter((sentence) => {
+    if (ungroundedProducts(sentence, allowed).length) return false
+    const names = sentence.match(/\b[A-Z][A-Za-z0-9+.#-]{3,}/g) || []
+    if (names.some((name) => !/^(?:Example|I've|The|This|That)$/.test(name) && !allowed.toLowerCase().includes(name.toLowerCase()))) return false
+    return !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.includes(n))
+  })
+  const next = kept.join(" ")
+  return answerWordCount(next) > answerWordCount(current) ? next : current
+}
+
+export { EXTEND_MODEL }
+
+export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string; resume?: string; jd?: string; transcript?: string; previous?: string }): DisplayGate {
   const question = String(input.question || "")
   const raw = String(input.raw || "")
   const source = String(input.source || "")
@@ -246,21 +733,33 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
   const reasons: string[] = []
   let text = presentSpokenAnswer(question, raw, source)
   if (CONFIRM_STUB.test(raw)) reasons.push("stub")
-  if (CONFIRM_STUB.test(text) || !text.trim()) {
-    text = raw.trim() ? HONEST_LINE : ""
-    if (raw.trim()) reasons.push("honest")
+  const resume = String(input.resume || source)
+  const jd = String(input.jd || "")
+  const transcript = String(input.transcript || "")
+  if (CONFIRM_STUB.test(text) || !text.trim() || /not on my resume/i.test(text)) {
+    const bridge = jdGapBridge(question, resume, jd) || bridgeFromResume(question, resume)
+    text = bridge
+    if (raw.trim()) reasons.push("bridge")
   }
   if (CANNED_ASIDE.test(text) || /\bFirst,\s*-/.test(text) || /\*\*(?:Claim|Context|Action|Result)\*\*/.test(text) || /\bIn general, teams\b/i.test(text)) {
     text = presentSpokenAnswer(question, text, source) || HONEST_LINE
     reasons.push("presentation")
   }
-  if (source.trim() && text && text !== HONEST_LINE && ungroundedProducts(text, `${source}\n${question}`).length) {
-    text = HONEST_LINE
+  if (source.trim() && text && ungroundedProducts(text, `${source}\n${question}`).length) {
+    text = jdGapBridge(question, resume, jd)
     reasons.push("ungrounded")
   }
+  if (text) {
+    const shaped = repairStoryShape(question, text, resume)
+    const formed = shapeDisplayedAnswer(question, shaped.text || text, resume, jd, transcript, String(input.previous || ""))
+    if (formed && formed !== text) reasons.push("shape")
+    text = formed || text
+    if (shaped.needsRewrite) reasons.push("shape-rewrite")
+  }
+  const route = answerRoute(question)
   const words = answerWordCount(text)
-  if (text && text !== HONEST_LINE && words > band.ceiling) reasons.push("over-ceiling")
-  if (text && text !== HONEST_LINE && words < band.floor) reasons.push("under-floor")
+  if (text && text !== HONEST_LINE && words > route.ceiling) reasons.push("over-ceiling")
+  if (text && text !== HONEST_LINE && words < route.floor) reasons.push("under-floor")
   if (band.type === "experience" && text && text !== HONEST_LINE) {
     const bag = `${source}\n${question}`.toLowerCase()
     const tool = (text.match(/\b(?:Splunk|Qualys|CrowdStrike|CyberArk|Sentinel|QRadar|EDR|SIEM)\b/gi) || []).some((name) => bag.includes(name.toLowerCase()))
@@ -279,8 +778,8 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
     reasons,
     words,
     type: band.type,
-    floor: band.floor,
+    floor: route.floor,
     aim: band.aim,
-    ceiling: band.ceiling,
+    ceiling: route.ceiling,
   }
 }

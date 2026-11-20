@@ -186,7 +186,8 @@ export function blendSpoken(input: string): string {
     if (namedCheckpoint(parts[i])) continue
     if (/\b(?:i(?:'m| am) )?happy to go deeper\b/i.test(parts[i])) parts.splice(i, 1)
   }
-  if (parts.length && !namedCheckpoint(parts[parts.length - 1]) && /^(?:on a separate note|another thing|switching topics|in a different area|in conclusion|to summarize|to sum up|in summary|as you can see|at the end of the day)\b/i.test(parts[parts.length - 1])) parts.pop()
+  if (parts.length && !namedCheckpoint(parts[parts.length - 1]) && /^(?:on a separate note|another thing|switching topics|in a different area|in conclusion|to summarize|to sum up|in summary|as you can see|at the end of the day|that's it|yeah, pretty much|pretty much)\b/i.test(parts[parts.length - 1])) parts.pop()
+  if (parts.length && /\bfor me, .{0,40} is not just a\b/i.test(parts[parts.length - 1])) parts.pop()
   if (parts.length >= 3 && !parts.some((p) => /\[breath\]/i.test(p))) {
     parts[0] = parts[0].replace(/([.!?])$/, "$1 [breath]")
   }

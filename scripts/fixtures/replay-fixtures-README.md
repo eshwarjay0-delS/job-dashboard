@@ -1,0 +1,4 @@
+# replay-fixtures.json
+Array of {video, start_s, end_s, speaker, text, q_id} plus end_s_approx:true (end_s = next turn start; one zero-duration turn at XQC_t7uplBo 5:44). Interviewer turns also have is_question; mixed caption turns have split:true.
+Video 1 (XQC_t7uplBo) is every turn from 0:00 through the EDR answer (13:36–13:56); q_id 1–10 mark the fixed questions. Video 2 (eUlD63RbCnc) is every turn from 0:00 through the XSS answer (q_id "v2-1"…"v2-10" = comparisons #27–#36).
+Caveats: q_id 6 text is truncated to "can you tell me about" (firewall is implied; the "protect the network" wording is a follow-up at 6:20). Seven video-2 turns were split by judgment (cuts mid-caption at 0:06, 2:01, 3:49, 6:23, 6:37, 8:39, 10:06); the 0:00–0:09 breakfast chit-chat speaker assignment is the most ambiguous (treated T000 as candidate). Text is raw ASR (sock, locks, dayto-day, cross-sight).

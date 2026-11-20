@@ -25,8 +25,8 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
-import { visibleLengthBand } from "@/lib/kompasDissection"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
+import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
@@ -40,7 +40,7 @@ import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudien
 import { notebookCausalGuidance, notebookCausalFlags } from "@/lib/kompasNotebookCausal"
 import { desktopCraft, desktopResponsePolicy, desktopDelivery, webPivotLine } from "@/lib/kompasDesktopResponse"
 import {
-  applyGuards, questionFigures, verifyAnswer,
+  applyGuards, dropUnknownToolSentences, questionFigures, repairStoryShape, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
 
@@ -400,6 +400,12 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
   })
 }
 
+async function finishSpoken(job: AnswerJob, text: string): Promise<{ text: string; providerError: boolean }> {
+  const settled = spokenAfterModel(job, text)
+  if (settled.providerError || !settled.text.trim() || !job.orKey) return settled
+  return settled
+}
+
 function spokenAfterModel(job: AnswerJob, text: string): { text: string; providerError: boolean } {
   if (isProviderErrorAnswer(text)) return { text: "", providerError: true }
   if (job.plan.kind === "code") return { text, providerError: false }
@@ -411,10 +417,10 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
     const stripped = grounded.presentation.replace(/\s*That (?:part|detail) is not in the sources\.?/gi, "").trim()
     const profiled = groundToProfile(job.question, stripped || settled.text, job.sourceText, job.sessionMemory || emptyMemory(""))
-    const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "" })
+    const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) {
-      const kept = gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" ").trim()
-      return { text: kept || HONEST_LINE, providerError: false }
+      const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
+      return { text: kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE, providerError: false }
     }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }
@@ -441,10 +447,13 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   // Source grounding (29 Oct 2026): a named employer, tool or figure the candidate's own sources do not back is a core
   // item. Empty with no sources, so a sourceless turn repairs exactly as before.
   const sourceCheck = repairLoopSourceChecks(job.question, text, job.sourceDocs)
-  const short = job.controls?.length === "long" && text.trim().split(/\s+/).filter(Boolean).length < visibleLengthBand(job.question).floor
+  const longFloor = job.controls?.length === "long" ? levelAwareBand(job.question, job.level === "architect" || job.level === "director" ? job.level : "engineer", "long").floor : visibleLengthBand(job.question).floor
+  const short = job.controls?.length === "long" && text.trim().split(/\s+/).filter(Boolean).length < longFloor
     ? [`the answer is under the long floor; add the missing steps from the job description and do not invent a personal history`]
     : []
-  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck, ...short], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...short, ...parts, ...tangents] }
+  const shape = repairStoryShape(job.question, text, `${job.resume || ""}\n${job.sourceText || ""}`)
+  const shapeMiss = shape.needsRewrite ? ["story shape: first sentence answers, first-person actions are at least half the sentences, and the last line is a resume result with no invented number"] : []
+  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck, ...short, ...shapeMiss], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...short, ...shapeMiss, ...parts, ...tangents] }
 }
 
 // r4 (item 24): the source lines the repair may draw on; empty (old prompt) with no experience sources or on any error.
@@ -461,6 +470,8 @@ function repairSourceBlock(job: AnswerJob): string {
 // the original twice with the full list, so a partial fix from attempt one was thrown away). The abort signal is the
 // request signal, not the 55s lane signal, so a settle-time repair does not inherit a spent lane budget.
 async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number; repair: RepairOutcome }> {
+  const shaped = repairStoryShape(job.question, guardedText, `${job.resume || ""}\n${job.sourceText || ""}`)
+  guardedText = shaped.text || guardedText
   return runRepairLoop(guardedText, {
     checks: (text) => repairChecks(job, text),
     hasKey: Boolean(job.orKey),
@@ -566,6 +577,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
+        if (answerRoute(job.question).route === "long") {
+          const thesis = technicalThesis(job.question)
+          if (thesis) show(thesis + " ")
+        }
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
         if (job.orKey) {
@@ -671,7 +686,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           } catch { /* the guarded answer stands */ }
         }
         finalText = correctVerifiedPresentationErrors(finalText)
-        const settled = spokenAfterModel(job, finalText)
+        const settled = await finishSpoken(job, finalText)
         if (settled.providerError || !settled.text.trim()) {
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
@@ -780,7 +795,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     } catch { /* the guarded answer stands */ }
   }
   out = correctVerifiedPresentationErrors(out)
-  const settled = spokenAfterModel(job, out)
+  const settled = await finishSpoken(job, out)
   if (settled.providerError || !settled.text.trim()) {
     const failure = answerFailure(lastErr || "openrouter 502 blocked")
     return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })
@@ -1064,7 +1079,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const band = spokenCut.modes[spokenLevel] || modeBand(spokenShape, spokenLevel)
     const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
     plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
-    if (cardControls.length === "long") plan.words = Math.min(300, Math.round(plan.words * 1.5))
+    if (cardControls.length === "long") plan.words = 150
     else if (cardControls.length === "short") plan.words = Math.max(16, Math.round(plan.words * 0.65))
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
