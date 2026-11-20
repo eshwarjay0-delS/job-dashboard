@@ -721,7 +721,8 @@ Continue: verify all required exact-head checks on the latest #381 branch head, 
 
 ## 20 November 2026 — confirmed-skill parser correction
 
-Continue: exact-head CI for the current-master resume-alignment PR #472.\n
+Continue: exact-head CI for the current-master resume-alignment PR #472.
+
 - Static review found `My skills are missing AWS`, `My experience is missing Splunk`, and `My background is missing Okta` were accepted by the confirmation parser as positive candidate evidence.
 - Source commit `3c2411762e49512ca00d881e4abaefffbe640e42` now rejects `is/are missing` and bare `missing` negatives; test commit `6aae62afc97d5d674c45fadbdfb9cf5baf514610` covers those forms and verifies `Confirmed skills: AWS, missing GCP` retains only AWS. Positive contrast `AWS, but not GCP` remains.
 - Documentation commits: resume `4b5c01524e2fd3adc62289b1504c39fe7c5fbc89`, research `81b22cdee37d0118a83edb84d375c24be136fdd7`, Plan & Vision `f6806cb2f5edd4fd81f008fe51516d76791b176`, REA `36f2aab31120ff2ec1e0cd73244ce913fdf01e09`.
