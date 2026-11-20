@@ -1,3 +1,7 @@
+### Plan/REA schema failure corrected
+
+Initial exact-head Plan/REA run `44731786821` failed because the REA entry treated the branch name as a source file path. I corrected it to the actual research-note path and added the missing Resume/Research/Test references to Plan & Vision. On corrected pre-watch-update head `f84a0a242201794f8fa57f830c77be84eb82cf4a`, Plan/REA `44732005021` and Kompas baseline `44732004928` passed; full CI `44732004932` and WhatsApp recovery `44732005028` were still running. The Completion Watch update itself will advance the head, so recheck all exact-head gates afterward. No test result from the failed or predecessor head is reused.
+
 ## 20 November 2026 — Resume confirmed-skill restack PR #472
 
 Continue: exact-head remote validation of the current-master resume alignment slice. Draft PR [#472](https://github.com/eshwarjay0-delS/job-dashboard/pull/472) starts from master `2da44026c0ab58ab2966b9371992efaf93427de4`, carries PR #466 source/test work, and adds Safe Merge Gate regressions for negative candidate statements and overly broad IAM/Python project context. The original PR #466 branch remains preserved.
