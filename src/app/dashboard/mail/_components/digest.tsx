@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react"
 import type { Mail, Interview } from "@/app/dashboard/_suite/sample"
 import type { NotifyRule } from "@/app/api/gmail/notify-rules/route"
+import { interviewThreadKey } from "@/lib/interview-mail-link"
+import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "@/lib/mail-digest"
 
 export type DigestRadar = {
   threadId: string; account: string; to: string; subject: string
@@ -14,7 +16,7 @@ export type DigestRadar = {
 // them; unmute to bring them back.
 export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen }: {
   needs: Mail[]; theirs: Mail[]; mails: Mail[]
-  radar: DigestRadar[]; interviews: Interview[]; onOpen: (id: string) => void
+  radar: DigestRadar[]; interviews: Interview[]; onOpen: (id: string, account: string) => void
 }) {
   const [rules, setRules] = useState<NotifyRule[]>([])
   const [saving, setSaving] = useState("")
@@ -24,16 +26,15 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
       .then(j => { if (on && j?.ok) setRules(j.rules || []) }).catch(() => {})
     return () => { on = false }
   }, [])
-  const muted = new Set(rules.filter(r => r.mode === "never").map(r => r.email.toLowerCase()))
-  const isMuted = (m: Mail) => muted.has((m.fromEmail || "").toLowerCase())
+  const isMuted = (m: Mail) => isDigestSenderMuted(rules, m)
 
   async function toggleMute(m: Mail) {
-    const email = (m.fromEmail || "").toLowerCase()
-    if (!email || saving) return
-    setSaving(email)
-    const next = isMuted(m)
-      ? rules.filter(r => !(r.email.toLowerCase() === email && r.mode === "never"))
-      : [...rules.filter(r => r.email.toLowerCase() !== email), { account: (m.account || "").toLowerCase(), email, mode: "never" as const }]
+    const email = (m.fromEmail || "").trim().toLowerCase()
+    const account = (m.account || "").trim().toLowerCase()
+    const key = notifyRuleKey(account, email)
+    if (!email || !account || !key || saving) return
+    setSaving(key)
+    const next = toggleDigestSenderMute(rules, account, email)
     try {
       const r = await fetch("/api/gmail/notify-rules", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rules: next }) })
       const j = await r.json()
@@ -47,7 +48,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
   const topNeeds = [...needs].filter(m => !isMuted(m)).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3)
   const mutedNeeds = needs.filter(isMuted)
   const waitingLong = theirs
-    .map(m => ({ m, days: radar.find(r => r.threadId === m.id)?.daysWaiting ?? 0 }))
+    .map(m => ({ m, days: waitingDaysForDigestMail(radar, m) }))
     .filter(x => x.days >= 7 && !isMuted(x.m))
     .sort((a, b) => b.days - a.days)
     .slice(0, 3)
@@ -85,14 +86,14 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
           <div className="mf-digest-col">
             <h3>Needs your reply</h3>
             {topNeeds.map(m => (
-              <div key={m.id} className="mf-digest-row">
-                <button className="mf-digest-item" onClick={() => onOpen(m.id)}>
+              <div key={interviewThreadKey(m.account, m.id)} className="mf-digest-row">
+                <button className="mf-digest-item" onClick={() => onOpen(m.id, m.account)}>
                   <span className="mf-digest-from">{m.from || m.fromEmail}</span>
                   <span className="mf-digest-subj">{m.subject}</span>
                   <span className="mf-digest-meta">{ago(m.ts)}{m.role ? ` · ${m.role}` : ""}</span>
                 </button>
                 <button className="mf-digest-mute" title={`Mute ${m.fromEmail} — never nudge me about them`} aria-label={`Mute ${m.fromEmail}`}
-                  disabled={saving === (m.fromEmail || "").toLowerCase()} onClick={() => toggleMute(m)}>🔕</button>
+                  disabled={saving === notifyRuleKey(m.account || "", m.fromEmail || "")} onClick={() => toggleMute(m)}>🔕</button>
               </div>
             ))}
           </div>
@@ -101,7 +102,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
           <div className="mf-digest-col">
             <h3>Waiting on them</h3>
             {waitingLong.map(({ m, days }) => (
-              <button key={m.id} className="mf-digest-item" onClick={() => onOpen(m.id)}>
+              <button key={interviewThreadKey(m.account, m.id)} className="mf-digest-item" onClick={() => onOpen(m.id, m.account)}>
                 <span className="mf-digest-from">{m.from || m.fromEmail}</span>
                 <span className="mf-digest-subj">{m.subject}</span>
                 <span className="mf-digest-meta">{days}d waiting{m.role ? ` · ${m.role}` : ""}</span>
@@ -113,7 +114,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
           <div className="mf-digest-col">
             <h3>New today</h3>
             {newToday.slice(0, 3).map(m => (
-              <button key={m.id} className="mf-digest-item" onClick={() => onOpen(m.id)}>
+              <button key={interviewThreadKey(m.account, m.id)} className="mf-digest-item" onClick={() => onOpen(m.id, m.account)}>
                 <span className="mf-digest-from">{m.from || m.fromEmail}</span>
                 <span className="mf-digest-subj">{m.subject}</span>
                 <span className="mf-digest-meta">{ago(m.ts)}</span>
@@ -143,7 +144,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
         <p className="mf-digest-muted">
           🔕 {mutedNeeds.length} muted {mutedNeeds.length === 1 ? "sender" : "senders"} hidden from nudges
           {mutedNeeds.slice(0, 3).map(m => (
-            <button key={m.id} className="mf-digest-unmute" onClick={() => toggleMute(m)}
+            <button key={interviewThreadKey(m.account, m.id)} className="mf-digest-unmute" onClick={() => toggleMute(m)}
               title={`Unmute ${m.fromEmail}`}>{m.from || m.fromEmail} ✕</button>
           ))}
         </p>
