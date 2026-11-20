@@ -1195,7 +1195,7 @@ function presentAnswer(question, answer, source) {
     seenLine.add(key);
     ordered.push(s);
   }
-  if (!ordered.length) return /I would want to confirm that/i.test(raw) ? "That is not on my resume, so I will not invent it." : "";
+  if (!ordered.length) return /I would want to confirm that/i.test(raw) ? "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work." : "";
   if (intro) return ordered.join(" ");
   const q = String(asked || "");
   const band = (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /^(?:what is|what does|what's|define)\b/i.test(q))
@@ -5254,7 +5254,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const show = (t) => {
     if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
     let spoken = sayAloud(t).trim();
-    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "That is not on my resume, so I will not invent it.";
+    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work.";
     if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;

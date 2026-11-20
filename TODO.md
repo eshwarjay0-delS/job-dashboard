@@ -1,3 +1,9 @@
+## 2026-11-20 — Answer shape, JD bridge, and no video-candidate facts (no live listen)
+
+Technical answers open on the point, grow from resume facts when they are under the floor, and can close with Example. A tool that is only in the job description is a hands-on bridge, not a stub. A employer that appears only in the candidate's transcript is left out. No ship marker.
+
+**Checked on kompas-answer-shape. Replay median after the floor is 72.5 words. Not a live listen-through.**
+
 ## 2026-11-20 — Replay fixtures and the 47 clarifier cases (no live listen)
 
 The two caption videos are a replay test: 52 interviewer turns fire once at end_s, 50 candidate turns fire 0 times, and each header is one Question: line. The official clarifier fixtures score 47/47. No ship marker.

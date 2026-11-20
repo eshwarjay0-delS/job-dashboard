@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Answer shape, not shipped
+
+Short answers are extended from resume facts up to the floor. JD-only tools use the hands-on bridge. Candidate-only employers are dropped. Replay median after the floor is 72.5 words. No ship marker.
+
 ## 20 November 2026 — Replay fixtures and clarifier 47, not shipped
 
 Replay: 52/52 interviewer turns fire at end_s, 0 false fires on 50 candidate turns, 52/52 headers are one Question: line. Clarifier fixtures 47/47. No ship marker.

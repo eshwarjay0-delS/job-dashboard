@@ -6,7 +6,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { lengthPlan } from "../../src/lib/kompasAnswer.ts"
 import { visibleLengthBand } from "../../src/lib/kompasDissection.ts"
-import { dropOffTopicResume, HONEST_LINE, keepLongerAnswer, resumeFitsQuestion } from "../../src/lib/kompasConsistency.ts"
+import { dropOffTopicResume, keepLongerAnswer, resumeFitsQuestion } from "../../src/lib/kompasConsistency.ts"
 
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
 const aside = readFileSync(new URL("../../public/kompas/answer-aside.js", import.meta.url), "utf8")
@@ -51,8 +51,9 @@ test("a late replace does not shrink a longer on-topic answer, and the stub neve
   assert.ok(ITIL.split(/\s+/).length < 25)
   for (let fold = 0; fold < 20; fold++) {
     assert.equal(keepLongerAnswer(STREAMED, ITIL, QUESTIONS.reports, JD), STREAMED)
-    assert.equal(keepLongerAnswer("I would want to confirm that.", "", QUESTIONS.incident, JD), HONEST_LINE)
-    assert.equal(dropOffTopicResume(QUESTIONS.reports, JD, ITIL), HONEST_LINE)
+    assert.match(keepLongerAnswer("I would want to confirm that.", "", QUESTIONS.incident, JD), /less direct hands-on/)
+    assert.match(dropOffTopicResume(QUESTIONS.reports, JD, ITIL), /less direct hands-on/)
+    assert.doesNotMatch(keepLongerAnswer("I would want to confirm that.", "", QUESTIONS.incident, JD), /not on my resume|would want to confirm/)
     const mixed = `${SOC} I also configured ITIL reports in ServiceNow.`
     const cleaned = dropOffTopicResume(QUESTIONS.reports, JD, mixed)
     assert.match(cleaned, /CrowdStrike/)
@@ -84,5 +85,5 @@ test("typed questions paint Say this or nothing, and a cached stub is not served
   assert.match(aside, /else if \(stemNow\) \{ current = null; paintLocal\(\); \}/)
   assert.doesNotMatch(aside, /Context shows up with the next answer/)
   assert.match(app, /I would want to confirm that/)
-  assert.match(app, /That is not on my resume, so I will not invent it/)
+  assert.match(app, /less direct hands-on with that/)
 })

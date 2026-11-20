@@ -141,7 +141,9 @@ export function keepLongerAnswer(streamed: string, next: string, question = "", 
   const stub = (value: string) => /^I would want to confirm that\.?$/i.test(String(value || "").trim())
   const prior = String(streamed || "").trim()
   const settled = String(next || "").trim()
-  if (stub(settled) || stub(prior)) return !stub(prior) && answerWordCount(prior) > 12 ? prior : HONEST_LINE
+  if (stub(settled) || stub(prior) || /not on my resume/i.test(settled) || /not on my resume/i.test(prior)) {
+    return !stub(prior) && !/not on my resume/i.test(prior) && answerWordCount(prior) > 12 ? prior : jdGapBridge(question, "", jd)
+  }
   const before = answerWordCount(prior)
   const after = answerWordCount(settled)
   if (before >= 24 && after > 0 && after < Math.floor(before * 0.75)) {
@@ -167,7 +169,7 @@ export function dropOffTopicResume(question: string, jd: string, answer: string)
   const text = String(answer || "").trim()
   if (!text || resumeFitsQuestion(question, jd, text)) return text
   const kept = text.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !OFF_PLATFORM.test(sentence))
-  return kept.join(" ").trim() || HONEST_LINE
+  return kept.join(" ").trim() || jdGapBridge(question, "", jd)
 }
 
 export function levelAfterInterviewType(mode: string, currentLevel: string): string {
@@ -429,7 +431,110 @@ export type DisplayGate = {
  * One local repair. The returned text is the cleaned answer or the honest line.
  * It is never the raw model string when that string failed a rule.
  */
-export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string }): DisplayGate {
+const FILLER_OPEN = /^(?:so|well|having|let me|that(?:'s| is) a (?:great|good)|in general|to be honest|sure|absolutely|great question)\b/i
+const JD_TOOLS = ["Splunk", "CrowdStrike", "Defender", "Qualys"]
+
+function sentenceList(text: string): string[] {
+  return String(text || "").split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+}
+
+export function foreignEmployers(transcript: string, resume: string, jd: string): string[] {
+  const bag = `${resume}\n${jd}`.toLowerCase()
+  const found = new Set<string>()
+  const raw = String(transcript || "")
+  for (const match of raw.matchAll(/\b(?:at|from|with|for)\s+([A-Z][A-Za-z0-9&.'-]+(?:\s+[A-Z][A-Za-z0-9&.'-]+)*)/g)) {
+    if (!bag.includes(match[1].toLowerCase())) found.add(match[1])
+  }
+  for (const match of raw.matchAll(/\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/g)) {
+    if (!bag.includes(match[1].toLowerCase())) found.add(match[1])
+  }
+  return [...found]
+}
+
+export function dropCandidateOnly(answer: string, resume: string, jd: string, transcript: string): string {
+  const names = foreignEmployers(transcript, resume, jd)
+  if (!names.length) return String(answer || "").trim()
+  return sentenceList(answer).filter((sentence) => !names.some((name) => sentence.toLowerCase().includes(name.toLowerCase()))).join(" ")
+}
+
+export function jdGapBridge(question: string, resume: string, jd = ""): string {
+  const bag = `${jd} ${JD_TOOLS.join(" ")}`.toLowerCase()
+  const resumeBag = String(resume || "").toLowerCase()
+  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  const tool = names.find((name) => bag.includes(name.toLowerCase()) && !resumeBag.includes(name.toLowerCase())) || "that"
+  const closest = resumeFacts(resume).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || resumeFacts(resume)[0] || "closest work"
+  const fact = closest.replace(/^[-•*\s]+/, "").replace(/\s+/g, " ").trim()
+  return `I've had less direct hands-on with ${tool}; my ${fact} transfers because it is the same kind of work.`
+}
+
+function isBehavioralAsk(question: string): boolean {
+  return visibleLengthBand(question).type === "story" || /\b(?:tell me about a time|give me an example|describe a time)\b/i.test(question)
+}
+
+function isTechnicalAsk(question: string): boolean {
+  const type = visibleLengthBand(question).type
+  return ["howto", "definition", "definition-application", "comparison", "follow-up", "design-first", "design-later"].includes(type)
+}
+
+function resumeFacts(resume: string): string[] {
+  return String(resume || "")
+    .split(/\n|(?<=[.!?])\s+/)
+    .map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim())
+    .filter((line) => line.split(/\s+/).length >= 4 && !/@|gmail|jayeshwar44|jayeshwar24|eshwarjay06/i.test(line))
+}
+
+function resumeNumber(resume: string, question: string): string {
+  const allowed = new Set(`${resume}\n${question}`.match(/\d[\d,]*/g) || [])
+  return [...allowed][0] || ""
+}
+
+function extendFromResume(text: string, question: string, resume: string, floor: number, ceiling: number): string {
+  let out = String(text || "").trim()
+  for (const line of resumeFacts(resume)) {
+    if (answerWordCount(out) >= floor) break
+    const fact = /[.!?]$/.test(line) ? line : `${line}.`
+    if (out.toLowerCase().includes(fact.slice(0, 24).toLowerCase())) continue
+    const next = `${out} ${fact}`.trim()
+    if (answerWordCount(next) > ceiling) continue
+    out = next
+  }
+  return out
+}
+
+/** Technical answers open on the point and may close on one resume example. Behavioral answers keep one resume number. */
+export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = ""): string {
+  const band = visibleLengthBand(question)
+  let body = dropCandidateOnly(text, resume, jd, transcript)
+  if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
+  const sentences = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence))
+  body = sentences.join(" ")
+  if (isBehavioralAsk(question)) {
+    const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
+    body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
+    if (resumeNumber(resume, question) && !/\d/.test(body)) {
+      const numbered = resumeFacts(resume).find((line) => /\d/.test(line))
+      if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
+    }
+  } else if (isTechnicalAsk(question)) {
+    if (body && !/^Example:/.test(body) && answerWordCount(`${body} Example:`) < band.ceiling) {
+      const fact = resumeFacts(resume).find((line) => askTokens(line).some((word) => new Set(askTokens(question)).has(word))) || resumeFacts(resume)[0]
+      if (fact) {
+        const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
+        if (answerWordCount(`${body} ${example}`) <= band.ceiling) body = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`
+      }
+    }
+    const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
+    if (bullets.length > 8) {
+      const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
+      body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
+    }
+  }
+  const floor = isTechnicalAsk(question) && band.ceiling >= 120 ? Math.min(band.ceiling, Math.max(band.floor, 120)) : band.floor
+  if (answerWordCount(body) < floor) body = extendFromResume(body, question, resume, floor, band.ceiling)
+  return body.trim()
+}
+
+export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string; resume?: string; jd?: string; transcript?: string }): DisplayGate {
   const question = String(input.question || "")
   const raw = String(input.raw || "")
   const source = String(input.source || "")
@@ -437,25 +542,27 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
   const reasons: string[] = []
   let text = presentSpokenAnswer(question, raw, source)
   if (CONFIRM_STUB.test(raw)) reasons.push("stub")
+  const resume = String(input.resume || source)
+  const jd = String(input.jd || "")
+  const transcript = String(input.transcript || "")
   if (CONFIRM_STUB.test(text) || !text.trim() || /not on my resume/i.test(text)) {
-    const bridge = bridgeFromResume(question, source)
-    text = bridge || (raw.trim() ? HONEST_LINE : "")
-    if (raw.trim()) reasons.push(bridge ? "bridge" : "honest")
+    const bridge = jdGapBridge(question, resume, jd) || bridgeFromResume(question, resume)
+    text = bridge
+    if (raw.trim()) reasons.push("bridge")
   }
   if (CANNED_ASIDE.test(text) || /\bFirst,\s*-/.test(text) || /\*\*(?:Claim|Context|Action|Result)\*\*/.test(text) || /\bIn general, teams\b/i.test(text)) {
     text = presentSpokenAnswer(question, text, source) || HONEST_LINE
     reasons.push("presentation")
   }
-  if (source.trim() && text && text !== HONEST_LINE && ungroundedProducts(text, `${source}\n${question}`).length) {
-    text = HONEST_LINE
+  if (source.trim() && text && ungroundedProducts(text, `${source}\n${question}`).length) {
+    text = jdGapBridge(question, resume, jd)
     reasons.push("ungrounded")
   }
-  if (text && text !== HONEST_LINE) {
-    const shaped = repairStoryShape(question, text, source)
-    if (shaped.text && shaped.text !== text) {
-      text = shaped.text
-      reasons.push("shape")
-    }
+  if (text) {
+    const shaped = repairStoryShape(question, text, resume)
+    const formed = shapeDisplayedAnswer(question, shaped.text || text, resume, jd, transcript)
+    if (formed && formed !== text) reasons.push("shape")
+    text = formed || text
     if (shaped.needsRewrite) reasons.push("shape-rewrite")
   }
   const words = answerWordCount(text)
