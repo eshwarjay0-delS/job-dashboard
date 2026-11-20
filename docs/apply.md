@@ -199,3 +199,11 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+## 20 November 2026 — crawler abort diagnostics current-master restack
+
+The approved diagnostic-only collector correction is being restacked additively onto current master `13542c5e1127ed7c1ccf59e4faa034d0af021fc1` with a two-parent fast-forward merge commit after the prior safe branch conflicted in shared Plan/REA files when PR #467 advanced master. The original #470 and #471 branches remain untouched.
+
+The source preserves 600 ms pacing and the 25,000 ms default timeout, attributes local timeout versus upstream abort with the portal host, and keeps malformed URL parsing inside cleanup/pacing. No retry/backoff, adapter, permission, freshness, classifier, schedule, storage or application behavior is changed.
+
+Contract crawling remains manual/on-demand only. No daily cron, live crawl, portal request, production-row mutation or application submission is authorized by this diagnostic fix. The follow-up docs commit advanced the branch from `11f412c22ba87dbae7a7d4d2903bac0a234ed42a` to current head `1249feeafa1aaf91dcc080e79bc44abff2d2041e`. The earlier crawler/Plan-REA/baseline passes and in-progress full CI belong to the predecessor head and are not reused. Full CI, crawler regression, Plan/REA schema and Kompas baseline must all complete SUCCESS on `1249feeafa1aaf91dcc080e79bc44abff2d2041e`. No Vercel preview deployment exists for this SHA. Protected preview and release remain separate gates.
