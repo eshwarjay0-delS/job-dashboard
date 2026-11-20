@@ -10,7 +10,7 @@ const PERMANENT = [/\bpermanent\b/i, /\bdirect hire\b/i, /\bdirect placement\b/i
 
 export function classifyWorkType(engagement?: string, title?: string): WorkType {
   const s = `${engagement ?? ""} ${title ?? ""}`
-  if (contractTypes(s).length > 0) return "contract"
+  if (contractTypes(title || "", engagement || "").length > 0) return "contract"
   if (PERMANENT.some(re => re.test(s))) return "permanent"
   return "unknown"
 }
