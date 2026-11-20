@@ -162,11 +162,23 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  vm.runInContext(section('function frameHeardQuestion(', '$("screenBtn")'),s);
  const first=s.aiAnswer(false);await s.aiAnswer(false);assert.equal(calls,1);assert.equal(s.aiBusy,true);done();await first;assert.equal(s.aiBusy,false);
 });
-test('stalled answers stop spinning and keep a visible retry path',async()=>{
- let timeout,aborted=false;
- const ctl={abort:()=>aborted=true};const card={req:ctl,answer:['…']};
- const s=env({setTimeout:fn=>{timeout=fn;return 1;},clearTimeout:()=>{},generateAnswerRequest:()=>new Promise(()=>{}),answerCtl:ctl,cards:[card],idx:0,renderCard:()=>{}});
+test('failed answer request stops spinning and keeps a visible retry path',async()=>{
+ let aborted=false,rendered=0;
+ const ctl={abort:()=>{aborted=true;}};
+ const card={req:ctl,answer:['…'],streaming:true};
+ const s=env({
+  answerCtl:ctl,cards:[card],idx:0,
+  generateAnswerRequest:async()=>{throw new Error('request timed out');},
+  renderCard:()=>{rendered++;},
+ });
  vm.runInContext(section('async function generateAnswer(', 'async function generateAnswerRequest('),s);
- const answer=s.generateAnswer('Explain OAuth',card);timeout();await answer;
- assert.equal(aborted,true);assert.equal(card.streaming,false);assert.match(card.answer[0],/retry/);assert.equal(s.answerCtl,null);
+ // Exhaust the bounded automatic retries so this verifies the user-visible manual retry path.
+ await s.generateAnswer('Explain OAuth',card,{retries:2});
+ assert.equal(aborted,true);
+ assert.equal(card.streaming,false);
+ assert.equal(card.answer.length,1);
+ assert.equal(card.answer[0],'…');
+ assert.equal(rendered,1);
+ assert.match(s.errors.at(-1),/Press AI Answer to try again/);
+ assert.equal(s.answerCtl,null);
 });
