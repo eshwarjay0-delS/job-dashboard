@@ -1,3 +1,9 @@
+## 2026-11-20 — Parakeet session 3 hedges, then answers the wrong voice (no UI)
+
+Owner log on PR #473. Long, Auto, same public video, frozen video clock. Check Point was hedged toward FortiGate and then padded with unsupported platforms. Auto also answered an ad and fired twice. The manual key answered the candidate. "Stealth" was heard as "sales" and rewritten into a different topic at about 190 words. The follow-up kept "I agree." Not the 10-question gate. Resume lines were not re-checked. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
 ## 2026-11-20 — Parakeet session 2 misses spoken questions (no UI)
 
 Owner video log on PR #473. Five asks from a public mock interview, background tab, seeks. Two hard fails: a fragment answered as only the physical layer, and traceroute never fired. The answers that appeared are generic, not marked as invented claims. Not the 10-question gate. No product code. Skip-login was not edited.

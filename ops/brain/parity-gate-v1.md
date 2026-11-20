@@ -44,6 +44,8 @@ Question 4 is not a pure mechanism. The earlier session note treated Parakeet's 
 
 Session 2 is a different spoken video, not these 10 questions. On that log, two of five asks are already hard fails: one fired on a fragment, one never fired. Detail is in `ops/brain/parakeet-session-2.md`. A background tab and manual seeks do not count as the spoken half of this gate. A partial question and a missed question still fail it.
 
+Session 3 is the same video with Long and Auto on. It is still not these 10 questions. Detail is in `ops/brain/parakeet-session-3.md`. An ad, a duplicate, the candidate's own line, and a mis-heard word rewritten into a different topic are hard fails. A hedge that then adds "various platforms" is still an unsupported claim. A follow-up that keeps the previous wrong stance fails with it.
+
 ## Where the code is
 
 No code in this note. The checks land in the same places as `ops/brain/parakeet-session-1.md`: `repairStoryShape` (`src/lib/kompasGuards.ts`), `gateDisplayedAnswer` and `jdGapBridge` (`src/lib/kompasConsistency.ts`), the FIGURES line in `answerForVerifiedUser` (`src/lib/kompasAnswerService.ts`), `unsupportedClaims` (`src/lib/kompasSourceRetrieval.ts`). The "right?" fire is `lexicalTurn` in `public/kompas/vad-loader.mjs` and `scheduleAuto` in `public/kompas/app.js`. The label opener is `technicalThesis` in `src/lib/kompasConsistency.ts`.

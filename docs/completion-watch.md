@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet session 3, Long and Auto
+
+Owner log on draft PR #473. A hedge, then an ad, a duplicate, the candidate's line, and a mis-hear rewritten into another topic. Not the 10-question gate. No runtime edit. No ship marker.
+
 ## 20 November 2026 — Parakeet session 2, spoken misses
 
 Owner video log on draft PR #473. Two of five asks are hard fails: a fragment, and a question that never fired. Not the 10-question gate. No runtime edit. No ship marker.
