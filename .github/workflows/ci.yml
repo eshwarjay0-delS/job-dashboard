@@ -78,6 +78,9 @@ jobs:
       - name: Verify desktop Screen Answer UI and capture path
         run: node --check public/kompas/app.js && node --test scripts/tests/kompas-desktop-screen-action.test.mjs scripts/tests/kompas-screen-response.test.mjs scripts/tests/kompas-screen-review.test.mjs
 
+      - name: Verify Parakeet S5 screen, press, and honesty gate
+        run: node scripts/kompas-s5-gate.mjs
+
       - name: Verify secure web-to-desktop interview transfer and long instructions
         run: node --test scripts/tests/kompas-desktop-ticket.test.mjs
 

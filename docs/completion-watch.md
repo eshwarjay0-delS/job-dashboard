@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet S5 upgrade, not shipped
+
+Screen analyze uses the shared tab, one frame, no new permission prompt. The answer card keeps the full body. AI Answer does not say no new question. The honesty gate uses the resume the answer already loaded. The Fortinet Houston summary is only the default, because that docx is not in the repo. McKesson stays out of that fixture. The default file is read from the repo path so the cross-domain loader can evaluate the answer service. No ship marker. Do not merge. Not a live listen.
+
 ## 20 November 2026 — S1 P0 fixes, ready to ship with PR 477 content
 
 Live S1 on master 25b6046c: the tab preview covered AI Answer, Start/Stop, and More; Auto missed q1, q3, and q5, false-fired on small talk, and showed a keyword stub; every speaker was THEM. The fix keeps pull request 477's video-only preview, transcript copy, and typed-chat line. The panel is off by default and 168px at the bottom-right. Candidate turns are You. Auto fires once per question 1-5 at end_s plus 1.5 seconds. No New constraint line. Header is one Question line. Long answers in the offline gate are 120-180 words from the eshwarjay05 Houston resume. Skip-login was not edited.

@@ -1,0 +1,8 @@
+eshwarjay05@gmail.com
+Fortinet AWS Cloud Networking Engineer with 9+ years designing, deploying and migrating secure network infrastructures across multi-region AWS environments.
+Lead end-to-end FortiGate-VM deployments, active/active and active/passive HA clusters integrated with AWS Gateway Load Balancer and Transit Gateway.
+Cisco FTD to Fortinet migrations across six AWS regions.
+FortiManager and FortiAnalyzer supported those FortiGate-VM deployments.
+NERC CIP applied to the network change and the zero-downtime cutovers.
+The wider cutover beyond the FortiGate-VM clusters was a team effort.
+Those FortiGate-VM deployments and the Cisco FTD to Fortinet migrations across six AWS regions were the part I can speak to.
