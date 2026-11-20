@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import vm from "node:vm"
 import { levelAwareBand, QUESTION_LENGTH } from "../../src/lib/kompasDissection.ts"
 import { draftClarify } from "../../src/lib/kompasBrain.ts"
+import { clarifyingFromQuestion, speakableLines } from "../../src/lib/kompasConsistency.ts"
 
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
 const GOLD = [["a", 125, 90, 180], ["b", 152, 70, 160], ["c", 77, 75, 125], ["h", 68, 25, 80]]
@@ -23,6 +24,11 @@ test("long stories pass 300, floors stay under the ceiling, gold lengths hold", 
     }
     assert.equal(draftClarify("Did you design it alone?"), "Do you mean the overall design, or one piece such as failover?")
     assert.equal(draftClarify("What is routing?"), "")
+    const two = clarifyingFromQuestion("Did you design the network alone? What about failover?")
+    assert.ok(two.length >= 1 && two.length <= 2)
+    const said = speakableLines("incident resolution and fraud investigation", "Assists with ServiceNow platform incident resolution and fraud investigation workflows for audit documentation.")
+    assert.ok(said.length <= 2)
+    assert.equal(speakableLines("routing tables", "Senior ServiceNow Developer with Flow Designer.").length, 0)
   }
   assert.match(app, /Start timed out\. No audio received\./)
   assert.match(app, /if \(running \|\| starting\) return/)

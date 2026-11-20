@@ -723,6 +723,7 @@ function personaLabel(seniority, role) {       // "Senior" + "Senior Cybersecuri
 }
 function setPersonaChip(s) {
   const chip = $("personaChip"); if (!chip) return;
+  if (s && !String(s.resume || "").trim()) { chip.textContent = "No resume on this device"; chip.classList.remove("hidden"); chip.title = "Answers use the job description only."; return; }
   const p = s && s.prep && s.prep.persona;
   const label = (s && s.role) || (p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "");
   chip.textContent = label; chip.classList.toggle("hidden", !label);
@@ -770,6 +771,7 @@ function noteLiveQuestion(q) {
   if (liveAskKey && key !== liveAskKey) { sessionRunEpoch++; book.epoch = sessionRunEpoch; }
   liveAskKey = key;
   book.epoch = sessionRunEpoch;
+  try { window.__kompasAskEpoch = sessionRunEpoch; } catch {}
 }
 async function readAnswerStream(res) {
   const txt = await res.text(); let text = "", meta = {};
@@ -2167,10 +2169,12 @@ async function applyRawAudioConstraints(stream) {
   }
 }
 function showTabPreview(owner) {
-  // Audio stays on the capture stream. No thumbnail and no share-picker chrome.
-  const tracks = owner && owner.getVideoTracks ? owner.getVideoTracks() : [];
-  for (const track of tracks) { try { track.enabled = false; } catch {} }
-  hideTabPreview();
+  const box = $("tabPreview");
+  const video = $("tabPreviewVideo");
+  if (!box || !video || !owner) return;
+  try { video.srcObject = owner; video.muted = true; const play = video.play(); if (play && play.catch) play.catch(() => {}); } catch {}
+  box.hidden = false;
+  box.classList.remove("hidden");
 }
 function hideTabPreview() {
   const box = $("tabPreview");
@@ -2189,6 +2193,7 @@ async function changeSharedTab() {
   syncSrc();
   await startSys();
 }
+$("tabPreviewFull")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); const video = $("tabPreviewVideo"); try { video && video.requestFullscreen && video.requestFullscreen(); } catch {} });
 $("tabPreviewChange")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void changeSharedTab(); });
 $("tabPreviewStop")?.addEventListener("click", (e) => {
   e.preventDefault(); e.stopPropagation();
@@ -2943,7 +2948,9 @@ const AUTO_QUIET_MS = 2200;
 function pendingHeard() { return transcript.filter(t => t.seq > answeredSeq); }
 function updatePending() {
   const who = typeof liveInterviewer === "function" ? liveInterviewer() : "Them";
-  const n = pendingHeard().filter(t => t.who === who && questionEnded(t.text)).length, b = $("pendCount"); if (!b) return;
+  const asks = pendingHeard().filter(t => t.who === who && questionEnded(t.text));
+  const n = asks.length, b = $("pendCount"); if (!b) return;
+  if (asks[0] && Date.now() - Number(asks[0].at || 0) > 90000) status("A question has been waiting 90 seconds.", "live");
   b.textContent = n; b.classList.toggle("hidden", !n);
   $("answerBtn").title = n ? `Answer everything heard since the last answer — ${n} line${n > 1 ? "s" : ""} (Ctrl+Enter)` : "Answer the latest question again (Ctrl+Enter)";
 }
@@ -4230,7 +4237,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   if (!stitched.part) return;
   text = stitched.part;
   const heardAt = Date.now();
-  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text) });
+  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text), source: who === "You" ? "mic" : "computer" });
   try { if (window.KompasAnswerAside && typeof window.KompasAnswerAside.hear === "function") window.KompasAnswerAside.hear(who, text, who === "You" ? "mic" : "computer"); } catch (e) {}
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");

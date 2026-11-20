@@ -180,19 +180,21 @@ export function lengthBandFor(question: string): VisibleLength {
   return visibleLengthBand(question)
 }
 
-/** A clarifying question only when the ask itself is ambiguous. Otherwise none. */
+/** Up to two questions taken from this ask. None when it is already clear. Not the seed bank. */
 export function clarifyingFromQuestion(question: string): string[] {
   const q = String(question || "").replace(/\s+/g, " ").trim()
   if (!q) return []
+  const out: string[] = []
   if (/\bdesign(?:ed|ing)?\b/i.test(q) && /\balone\b/i.test(q)) {
-    return ["Do you mean the overall design, or one piece such as failover?"]
+    out.push("Do you mean the overall design, or one piece such as failover?")
   }
-  if (/\bdifference\b|\bversus\b|\bvs\.?\b/i.test(q)) return []
-  const choice = q.match(/\b(?:the|a|an)\s+([^?]{3,48}?)\s+or\s+(?:the|a|an)\s+([^?]{3,48})/i)
-  if (choice && /\?/.test(q)) {
-    return [`Do you mean ${choice[1].trim()}, or ${choice[2].trim()}?`]
+  if (!/\bdifference\b|\bversus\b|\bvs\.?\b/i.test(q)) {
+    const choice = q.match(/\b(?:the|a|an)\s+([^?]{3,40}?)\s+or\s+(?:the|a|an)\s+([^?]{3,40})/i)
+    if (choice && /\?/.test(q)) out.push(`Do you mean ${choice[1].trim()}, or ${choice[2].trim()}?`)
   }
-  return []
+  const parts = q.split(/\?\s+/).map((part) => part.trim()).filter((part) => part.split(/\s+/).length >= 4)
+  if (out.length < 2 && parts.length >= 2) out.push(`Should I answer “${parts[0].replace(/\?$/, "").slice(0, 60)}” first?`)
+  return out.filter((line) => line && !CANNED_ASIDE.test(line)).slice(0, 2)
 }
 
 function resumeLines(resume: string): string[] {
