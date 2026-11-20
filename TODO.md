@@ -1,3 +1,7 @@
+## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
+
+Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.
+
 ## 2026-11-20 — Capture ignores the candidate, and a JD-only tool is not experience (visible: Question header and the line status)
 
 Auto skips the candidate's own speech and a repeat of the same question inside 30 seconds. A line from before Start is dropped. Each real question card starts with Question:. Each heard line shows Listening, Question detected, or Answering. A tool that is only in the job description is not spoken as something he has done. Skip-login was not edited.
