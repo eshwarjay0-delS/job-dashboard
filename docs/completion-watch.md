@@ -36,7 +36,7 @@ Current master source search still finds the fallback reading `session.resumePat
 - PR #455 phone-native shell has exact-head full CI, Kompas baseline, cross-device and Windows checks green, but remains DRAFT / dirty and still needs Safe Merge Gate, legitimate protected preview and real iOS/Android acceptance. The separate Kompas Continuous Voice Delivery task is disabled; this resume slice does not duplicate voice/caption work.
 - PR #464 approval-provenance documentation is DRAFT. Its exact-head Plan/REA, Kompas baseline and full CI passed; shared-file overlap with #450/#451/#452/#455/#461 still requires Safe Merge Gate sequencing.
 
-Continue: open the confirmed-skill branch as a draft PR stacked on #464, run all four exact-head source gates, and let MFit Safe Merge Gate sequence the shared docs. Keep the WhatsApp fallback guard blocked until a legitimate runnable environment with installed Next.js docs is available; preserve all live, missing-evidence and owner-acceptance gates above.
+Continue: continue PR #466 (draft, stacked on #464) at its final exact head, run full CI + WhatsApp recovery + Kompas baseline + Plan/REA, and let MFit Safe Merge Gate sequence the shared docs. Keep the WhatsApp fallback guard blocked until a legitimate runnable environment with installed Next.js docs is available; preserve all live, missing-evidence and owner-acceptance gates above.
 
 # MFit Completion Watch
 
