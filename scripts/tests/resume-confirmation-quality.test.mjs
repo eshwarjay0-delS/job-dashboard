@@ -379,3 +379,23 @@ test('generic user/security wording alone cannot transfer IAM, and data/service 
   ])
   assert.deepEqual(guarded.blockedTerms, ['Okta', 'Python'])
 })
+
+
+test('missing-skill statements are never confirmations, and mixed lists keep only the positive terms', () => {
+  const negatives = [
+    'My skills are missing AWS',
+    'My experience is missing Splunk',
+    'My background is missing Okta',
+    'Confirmed skills: missing Azure',
+  ]
+  for (const statement of negatives) assert.deepEqual(confirmedCandidateStatements([statement]), [], statement)
+
+  assert.deepEqual(
+    confirmedCandidateStatements(['Confirmed skills: AWS, missing GCP']),
+    ['Confirmed skills: AWS,'],
+  )
+  assert.deepEqual(
+    confirmedCandidateStatements(['My experience includes AWS, but not GCP']),
+    ['My experience includes AWS,'],
+  )
+})
