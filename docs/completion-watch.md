@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Chat, screen, transcript, UI parity, not shipped
+
+Thirty checks each. First run chat 25/30; the other four areas were 30/30. Rerun 30/30 in all five. Export says Interviewer and stays in time order. No Playwright in this environment. No live listen. No ship marker.
+
 ## 20 November 2026 — 30-fold Parakeet parity, not shipped
 
 `parakeet-40.md` is not in the repo. The bar is the Houston gold answers and the offline rubric. First run: relevance 3/30, length 0/30, clarifier 24/30, usage 30/30. Rerun: 30/30, 30/30, 30/30, 30/30. First-word budget is 1.4s. No live listen. No ship marker.

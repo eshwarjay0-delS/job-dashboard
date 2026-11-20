@@ -2190,10 +2190,18 @@ async function applyRawAudioConstraints(stream) {
     try { await track.applyConstraints(SYS_AUDIO_CONSTRAINTS); } catch {}
   }
 }
+function screenShareStep(state, action) {
+  if (action === "pick" || action === "restart") return { phase: "picking", preview: false };
+  if (action === "live") return { phase: "live", preview: true };
+  if (action === "stop") return { phase: "stopped", preview: false };
+  return state || { phase: "idle", preview: false };
+}
+let sharePhase = { phase: "idle", preview: false };
 function showTabPreview(owner) {
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
   if (!box || !video || !owner) return;
+  sharePhase = screenShareStep(sharePhase, "live");
   try { video.srcObject = owner; video.muted = true; const play = video.play(); if (play && play.catch) play.catch(() => {}); } catch {}
   box.hidden = false;
   box.classList.remove("hidden");
@@ -2201,6 +2209,7 @@ function showTabPreview(owner) {
 function hideTabPreview() {
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
+  sharePhase = screenShareStep(sharePhase, "stop");
   if (video) {
     try { video.pause(); } catch {}
     try { video.srcObject = null; } catch {}
@@ -2209,6 +2218,7 @@ function hideTabPreview() {
 }
 async function changeSharedTab() {
   if (!running) return;
+  sharePhase = screenShareStep(sharePhase, "restart");
   srcOn.sys = true;
   await stopSource("Them");
   srcOn.sys = true;
@@ -6823,13 +6833,43 @@ $("exportBtn").onclick = () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out.join("\n")], { type: "text/markdown" }));
   a.download = `kompas-session-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.md`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 };
+function speakerName(who) {
+  const raw = String(who || "");
+  if (/^you\b/i.test(raw)) return "You";
+  if (/^them\b|^interviewer\b/i.test(raw)) return "Interviewer";
+  return raw || "Interviewer";
+}
+function chatExchange(history, typed) {
+  const text = String(typed || "").replace(/\s+/g, " ").trim();
+  const lines = Array.isArray(history) ? history.slice() : [];
+  if (!text) return { lines, followUp: false, streamed: [] };
+  const prior = [...lines].reverse().find((row) => row && row.role === "interviewer" && row.text);
+  const rest = text.replace(/^(?:and|why|how|what about|go deeper)(?:\s+on)?\b/i, " ");
+  const hasSubject = rest.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).some((word) => word.length >= 4 && !/^(?:that|this|those|them|then|what|your|with)$/.test(word));
+  const follow = !!prior && text.split(/\s+/).length <= 8 && /^(?:and\b|why\b|how\b|what about\b|go deeper\b)/i.test(text) && !hasSubject;
+  const content = follow ? `${String(prior.text).replace(/[?.!\s]+$/, "")} — ${text}` : text;
+  const words = content.split(/\s+/).filter(Boolean);
+  const streamed = words.map((_, index) => words.slice(0, index + 1).join(" "));
+  lines.push({ role: "you", text: content });
+  return { lines, followUp: follow, streamed };
+}
+function orderedTranscript(log) {
+  const rows = (Array.isArray(log) ? log : []).slice().sort((a, b) => (Number(a && a.at) || 0) - (Number(b && b.at) || 0));
+  const out = [];
+  for (const row of rows) {
+    const prev = out[out.length - 1];
+    if (prev && prev.t === row.t && prev.who === row.who && prev.text === row.text) continue;
+    out.push(row);
+  }
+  return out;
+}
 function transcriptText(s, log) {
-  s = s || {}; const sessionLog = log || [];
+  s = s || {}; const sessionLog = orderedTranscript(log || []);
   const tm = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const out = ["Kompas Timeline Export", `Session: ${s.role || "Untitled role"}${s.company ? " @ " + s.company : ""}`, `Build: ${BUILD}`, `Exported: ${new Date().toLocaleString()}`, ""];
   if (!sessionLog.length) out.push("(Nothing heard or answered yet in this session.)", "");
   for (const e of sessionLog) {
-    if (e.t === "line") { out.push(`[${tm(e.at)}] ${e.who === "Them" ? "Them (interviewer)" : e.who}`, e.text, ""); continue; }
+    if (e.t === "line") { out.push(`[${tm(e.at)}] ${speakerName(e.who)}`, e.text, ""); continue; }
     const head = `[${tm(e.at)}] AI${e.depth ? " — " + e.depth : ""}${e.regen ? " (regenerated)" : ""}${e.typed ? " (typed question)" : ""}`;
     if (e.noQuestion) { out.push(head, "No question detected in what was heard.", ""); continue; }
     if (e.busy) { out.push(head, `Answer-lane rate limit — retried automatically after ${Math.ceil((e.retryAfterMs || 0) / 1000)}s.`, ""); continue; }
@@ -6849,9 +6889,12 @@ function downloadText(name, text) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" })); a.download = name;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
+function copyableTranscript(s, log) { return transcriptText(s, log); }
 function getTranscript() {
   const s = current || {};
-  downloadText(transcriptName(s), transcriptText(s, sessionLog));
+  const text = copyableTranscript(s, sessionLog);
+  try { if (navigator.clipboard && navigator.clipboard.writeText) void navigator.clipboard.writeText(text); } catch {}
+  downloadText(transcriptName(s), text);
   const nL = sessionLog.filter(e => e.t === "line").length, nA = sessionLog.filter(e => e.t === "answer" && !e.noQuestion).length;
   status(`Transcript saved to Downloads — ${nL} line${nL === 1 ? "" : "s"} heard, ${nA} answer${nA === 1 ? "" : "s"}.`, "live");
 }

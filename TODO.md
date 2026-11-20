@@ -1,3 +1,9 @@
+## 2026-11-20 — Chat, screen, transcript, and UI 30-fold (no live listen, no ship)
+
+Thirty checks each for chat send/stream/follow-up, in-page tab preview, You vs Interviewer labels, ordered copyable transcript, and the lightweight controls. First surface run: chat 25/30, screen 30/30, transcription 30/30, transcript 30/30, UI 30/30. Rerun: 30/30 in each. A full question that starts with How is not a follow-up. The export says Interviewer, sorts by time, and drops a repeated line. Playwright is not installed here, so this was not a browser click-through. The first-word budget stays 1.4s and has no visible UI until a live session. No ship marker.
+
+**Checked by scripts/tests/kompas-30fold-surfaces.test.mjs. Not a live listen-through.**
+
 ## 2026-11-20 — 30-fold Parakeet parity (no live listen, no ship)
 
 Offline scores for 30 relevance, 30 length, 30 clarifier, and 30 usage cases. `parakeet-40.md` is not in the repo. The bar is `scripts/fixtures/brain-gold-answers.md` plus the gold rubric in `scripts/eval-gold.mjs`. Houston resume only. A case passes when Kompas is at least as high as that bar on relevance, realism, length fit, and clarifier fit, and not lower on grounding. First measured run: relevance 3/30, length 0/30, clarifier 24/30, usage 30/30. After the fixes: 30/30 in each area. The first-word budget is 1.4s. That change has no visible UI until a live session. Skip-login was not edited. No ship marker.
