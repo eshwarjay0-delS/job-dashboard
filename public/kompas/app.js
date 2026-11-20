@@ -3838,7 +3838,7 @@ function clearAuthLocalState() {
   } catch {}
 }
 
-const armsAuto = () => pendingHeard().some(t => t.who === "Them" && questionEnded(t.text) && !paraphrasesOwn(t.text));
+const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && questionEnded(t.text) && !paraphrasesOwn(t.text));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
