@@ -43,6 +43,9 @@ import {
   applyGuards, dropUnknownToolSentences, questionFigures, repairStoryShape, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
+import { applyHonestyGate } from "@/lib/kompasHonestyGate"
+import { SCREEN_FALLBACK_UNAVAILABLE, SCREEN_FALLBACK_UNREADABLE, correctTerraform, screenReadPrompt } from "@/lib/kompasS5Screen"
+import { screenImage } from "@/lib/kompasScreen"
 
 
 // POST /api/kompas/answer — MarketFit's native session answer engine (2026-10-14).
@@ -408,7 +411,7 @@ async function finishSpoken(job: AnswerJob, text: string): Promise<{ text: strin
 
 function spokenAfterModel(job: AnswerJob, text: string): { text: string; providerError: boolean } {
   if (isProviderErrorAnswer(text)) return { text: "", providerError: true }
-  if (job.plan.kind === "code") return { text, providerError: false }
+  if (job.plan.kind === "code") return { text: correctTerraform(text, job.question), providerError: false }
   const level = job.level === "architect" || job.level === "director" ? job.level : "engineer"
   const settled = settleSpokenAnswer(job.question, text, level, job.sourceText, job.previousAnswer, job.plan.words)
   if (settled.providerError || !settled.text.trim()) return { text: settled.text, providerError: true }
@@ -420,7 +423,9 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) {
       const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
-      return { text: kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE, providerError: false }
+      const base = kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE
+      const honest = applyHonestyGate({ question: job.question, answer: base, resume: job.resume || "" })
+      return { text: correctTerraform(honest.text, job.question), providerError: false }
     }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }
@@ -855,6 +860,74 @@ function routeDecisionResponse(stream: boolean, lane: JevRoute): Response | Next
   return NextResponse.json({ noQuestion: true, skipped, route: lane }, { headers: NO_STORE })
 }
 
+function screenEventStream(line: string): Response {
+  const body = `data: ${JSON.stringify({ type: "delta", text: line })}\n\ndata: ${JSON.stringify({ type: "done", text: line })}\n\n`
+  return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+}
+
+function resumeOnBody(body: Record<string, unknown>): string {
+  const prep = body.prep && typeof body.prep === "object" ? body.prep as Record<string, unknown> : {}
+  const direct = typeof body.resume === "string" ? body.resume : ""
+  const nested = typeof prep.resume === "string" ? prep.resume : ""
+  return (direct || nested).slice(0, 20000)
+}
+
+/** One streaming read of a shared-tab frame. No second extraction hop. */
+async function answerScreenFrame(request: NextRequest, body: Record<string, unknown>): Promise<Response> {
+  const image = screenImage(body.screenImage)
+  if (!image) return screenEventStream(SCREEN_FALLBACK_UNREADABLE)
+  const key = (await keysFor("kompas:screen", () => resolveKeys({}))).openrouter
+  if (!key) return screenEventStream(SCREEN_FALLBACK_UNAVAILABLE)
+  const model = process.env.OPENROUTER_MODEL_SCREEN || "google/gemini-2.5-flash"
+  const resume = resumeOnBody(body)
+  const asked = str(body.question, 2000)
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (o: Record<string, unknown>) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(o)}\n\n`)) } catch { /* client gone */ }
+      }
+      let raw = ""
+      try {
+        const res = await fetch(OR_URL, {
+          method: "POST",
+          signal: AbortSignal.any([request.signal, AbortSignal.timeout(25000)]),
+          headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
+          body: JSON.stringify({
+            model, temperature: 0.2, max_tokens: 900, stream: true,
+            messages: [
+              { role: "system", content: screenReadPrompt() },
+              { role: "user", content: [
+                { type: "text", text: asked || "Read the frame and answer what it shows." },
+                { type: "image_url", image_url: { url: image } },
+              ] },
+            ],
+          }),
+        })
+        if (!res.ok || !res.body) {
+          send({ type: "delta", text: SCREEN_FALLBACK_UNAVAILABLE })
+          send({ type: "done", text: SCREEN_FALLBACK_UNAVAILABLE })
+          return
+        }
+        await pumpSSE(res.body, (j) => {
+          const d = j.choices?.[0]?.delta?.content
+          if (typeof d === "string" && d) { raw += d; send({ type: "delta", text: d }) }
+        })
+        const honest = applyHonestyGate({ question: asked || raw, answer: raw, resume })
+        const fixed = correctTerraform(honest.text, raw)
+        if (fixed && fixed !== raw) send({ type: "replace", text: fixed })
+        send({ type: "done", text: fixed || raw })
+      } catch {
+        if (!raw) send({ type: "delta", text: SCREEN_FALLBACK_UNAVAILABLE })
+        send({ type: "done", text: raw || SCREEN_FALLBACK_UNAVAILABLE })
+      } finally {
+        try { controller.close() } catch { /* already closed */ }
+      }
+    },
+  })
+  return new Response(stream, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+}
+
 /** Internal entry point: callers must verify the channel identity before invoking. */
 export async function answerForVerifiedUser(request: NextRequest, user: { id: string }) {
   const startedAt = Date.now()
@@ -930,6 +1003,10 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     }
     body = { ...body, derived: outcome.derived, pinned: outcome.derivedBy === "code", derivedBy: outcome.derivedBy || "model" }
+  }
+
+  if (typeof body.screenImage === "string" && body.screenImage.startsWith("data:image/")) {
+    return answerScreenFrame(request, body)
   }
 
   const heardAll = str(body.question, 4000)
@@ -1354,6 +1431,8 @@ ${INTERVIEW}`
   }
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"
+  const pressAngle = str(body.angle, 240)
+  if (pressAngle) job.userText += `\n\nDIFFERENT ANGLE: ${pressAngle}\nAnswer from this angle. Do not repeat the previous opening.`
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
 }

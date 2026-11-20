@@ -63,20 +63,24 @@ test("one press answers one question when 100 questions are queued", async () =>
   assert.equal(s.cards.filter(c => /item\d+zzzz/.test(c.question || "")).length, 1);
 });
 
-test("with nothing new queued, a manual press shows Listening and a second press answers anyway", async () => {
+test("with nothing new queued, a manual press answers the latest question from another angle", async () => {
   const { s, asked } = session([]);
-  s.transcript = [{ seq: 1, who: "Them", text: SHOWN }];
+  s.transcript = [{ seq: 1, who: "Them", text: SHOWN, at: 1_000 }];
   s.answeredSeq = 1;
   s.heardSeq = 1;
   await s.aiAnswer(false);
-  assert.equal(asked.length, 0, "silence does not regenerate the last topic");
-  assert.match(String((s.statuses || []).map(x => x.m).join(" ")), /Listening, no new question yet/);
-  assert.ok(s.answerAnywayHeld && s.answerAnywayHeld.silenceReask);
-  await s.aiAnswer(false);
-  assert.equal(asked.length, 1);
-  assert.equal(asked[0].q, SHOWN);
+  assert.equal(asked.length, 1, "an already-answered ask is regenerated");
+  assert.match(asked[0].q, /log aggregator/);
   assert.equal(asked[0].opts.reask, true);
+  assert.ok(asked[0].opts.angle);
+  assert.doesNotMatch(String((s.statuses || []).map(x => x.m).join(" ")), /no new question/i);
   assert.equal(s.cards[0].answer, OLD_A);
+  const page = s.cards[s.cards.length - 1];
+  page.answer = "I would start with the relay and say why it exists in one clear sentence.";
+  page.streaming = false;
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 2);
+  assert.notEqual(asked[1].opts.angle, asked[0].opts.angle);
 });
 
 test("after many questions are received the click handler is still one function", () => {

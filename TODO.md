@@ -1,3 +1,9 @@
+## 2026-11-20 — Parakeet S5 screen, latest question, honesty gate (no live listen, no ship)
+
+Screen analyze is the Screen button and Ctrl+Shift+Enter. It grabs one frame of the tab already shared and does not open a new share prompt or the tab preview. The full job text stays on the card. A Terraform Gateway Load Balancer bug is corrected to gateway and GENEVE in a short block. If the frame or the model is missing, the card shows one sentence. AI Answer and Ctrl+Enter answer the latest interviewer question, including about two seconds of speech after it, and they do not say "no new question". If that question was already answered, the next press uses a different angle. After the model writes, a server check rewrites an incident, employer, tool, or number that is not in the Houston eshwarjay05 resume. It does not use the Saint Louis or jayeshwar44 profile. "You led that yourself, right?" gets scope, not yes. A cutover-went-wrong question does not invent an outage. This is invisible until a live session: the button is on the Kompas bar, and the honesty rewrite happens on the server.
+
+**Checked offline on kompas-s5-gate, 10 folds. Not a live listen and not a timed vision call.**
+
 ## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
 
 The streamed first sentence is a real answer, not a label. Length Long is one 120–180 word call. A question ending in "right?" waits until 1.4 seconds, so it does not fire early. The 20 adversarial clarifier cases pass, and the original 47 still pass. "I maintained the CMDB." stays. No ship marker.

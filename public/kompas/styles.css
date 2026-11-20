@@ -1008,6 +1008,8 @@ html .view-dash .dash-head p{font-size:var(--text-size)}
 #view-copilot.wrapping{opacity:0;transform:translateY(18px) scale(.985);pointer-events:none}
 #view-dashboard.arriving{animation:sessionArrive .55s var(--ease) both}
 @keyframes sessionArrive{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#question.screen-full{white-space:pre-wrap;display:block;max-height:none}
+#answer li.screen-body{white-space:pre-wrap;font-weight:500;margin:0 0 8px}
 html .q,html .q span,html .q b,html #question,
 html #answer,html #answer li,html #answer li.passage,
 html .cap-text,html .drawer-body,html .statusline,

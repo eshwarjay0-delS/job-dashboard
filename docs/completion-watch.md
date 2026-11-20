@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet S5 upgrade, not shipped
+
+Screen analyze uses the shared tab, one frame, no new permission prompt. The answer card keeps the full body. AI Answer does not say no new question. The honesty gate uses the Houston eshwarjay05 resume only. Offline gate 10 folds. No ship marker. Do not merge. Not a live listen.
+
 ## 20 November 2026 — Review blockers, not shipped
 
 Streamed thesis is a spoken sentence. Long is 120–180 in one call. A trailing right? does not fire before 1.4 seconds. Adversarial clarifier 20/20 and the original 47/47. The CMDB sentence is kept. No ship marker.

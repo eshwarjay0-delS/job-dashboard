@@ -1299,6 +1299,17 @@ function cleanHeardQuestion(text) {
   const kept = raw.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).filter((part) => !chatter.test(part.replace(/^(?:you|them):\s*/i, "").replace(/[.?!]+$/g, "").trim()));
   return kept.length ? kept.join(" ") : raw;
 }
+function absorbScreen(card, text) {
+  const raw = String(text || "");
+  const mark = raw.indexOf("---SCREEN---");
+  if (!card || mark < 0) return raw;
+  const answer = raw.slice(0, mark).trim();
+  const rest = raw.slice(mark + "---SCREEN---".length);
+  const codeAt = rest.indexOf("---CODE---");
+  const body = (codeAt >= 0 ? rest.slice(0, codeAt) : rest).replace(/^\s+/, "").trim();
+  if (body) { card.screenFull = true; card.screenBody = body; }
+  return answer || raw;
+}
 function renderCard() {
   const c = cards[idx]; if (!c) return;
   // Where you are in the book, and ends that look like ends (owner, 27 Oct 2026: Prev/Next "aren't working" at the first
@@ -1311,12 +1322,25 @@ function renderCard() {
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
   const heardQ = cleanHeardQuestion(draft || c.question);
   const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : oneQuestionLine(heardQ);
-  $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
+  const qEl = $("question");
+  if (c.screenFull && c.screenBody) {
+    if (qEl && qEl.classList) qEl.classList.add("screen-full");
+    if (qEl) qEl.textContent = c.screenBody;
+  } else {
+    if (qEl && qEl.classList) qEl.classList.remove("screen-full");
+    if (qEl) qEl.textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
+  }
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
   const lines = answerLines(shownAnswer, qLabel);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
+  if (c.screenBody && ul.append) {
+    const body = document.createElement("li");
+    body.className = "screen-body";
+    body.textContent = c.screenBody;
+    ul.append(body);
+  }
   if (c.pivot && !hasAnchorFields(c) && !lines.length) {
     const li = document.createElement("li");
     li.className = "pivot";
@@ -5012,6 +5036,8 @@ function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
   return {
     stream: true, client: BUILD, liveModel: typeof liveModel === "function" ? (liveModel() || undefined) : undefined, consolidated: !!opts.consolidated,
     ...(inline ? { derive: true } : {}),
+    ...(opts && opts.angle ? { angle: String(opts.angle).slice(0, 240) } : {}),
+    ...(opts && opts.screenImage ? { screenImage: opts.screenImage } : {}),
     ...fields,
     memory: typeof sessionMemoryPayload === "function" ? sessionMemoryPayload() : undefined,
     ...(rest || {}),
@@ -5350,8 +5376,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (applied.title) paintTitle(applied.title, false);
       } else if (ev.type === "card") {
         if (applied.card) paintLayout(applied.card);
-      } else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; if (!card.cardLayout) show(text); }
-      else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = ev.text; card.cardLayout = null; show(text); }
+      }       else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; text = absorbScreen(card, text); if (!card.cardLayout) show(text); }
+      else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = absorbScreen(card, ev.text); card.cardLayout = null; show(text); }
       else if (ev.type === "wait") { if (card.req === ctl) status(ev.ms ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.round(ev.ms / 1000)) + "s.") : "Still working.", "live"); }
       else if (ev.type === "done") {
         meta = { ...meta, ...ev };
@@ -5837,6 +5863,35 @@ function noteLateContext(who, text) {
   showPressed(late.card, folded.question);
   void generateAnswer(late.card.heard || folded.question, late.card, { consolidated: true, derived: folded.question, pinned: true, lateFold: true });
 }
+const PRESS_TAIL_MS = 2000;
+const ANSWER_ANGLES = ["the tradeoff you would not drop", "what you would check in the first minute", "your piece versus the team's piece", "the constraint that made it this way", "what you would do differently on a second pass"];
+let answerAnglePass = 0;
+function manualAnswerTarget(opts) {
+  opts = opts || {};
+  const clean = (s) => String(s || "").replace(/\s+/g, " ").trim();
+  const norm = (s) => clean(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const same = (a, b) => { const A = norm(a), B = norm(b); return !!(A && B && (A === B || A.includes(B) || B.includes(A))); };
+  const ask = (s) => { const t = clean(s); if (!t) return false; if (/^(?:i(?:'m| am|'ll| will|'ve|'d)?\b)/i.test(t) && !/[?]/.test(t)) return false; return /[?]|\b(?:tell me|walk me|describe|explain|what|why|how|when|where|which|who|can you|could you|would you|do you|did you)\b/i.test(t); };
+  const src = (opts.recent && opts.recent.length) ? opts.recent : (opts.pending || []);
+  const rows = Array.from(src).map((line, index) => {
+    const text = clean(line && line.text);
+    const at = Number(line && line.at);
+    return { who: String((line && line.who) || ""), text, at: Number.isFinite(at) ? at : NaN, index, stamped: Number.isFinite(at) };
+  }).filter((line) => line.text);
+  const them = rows.filter((line) => /^(?:them|interviewer(?:\s*\d+)?)$/i.test(line.who));
+  const asks = them.filter((line) => ask(line.text));
+  const last = asks.length ? asks[asks.length - 1] : null;
+  if (!last) return { question: "", regenerate: false, angle: "" };
+  const tail = them.filter((line) => {
+    if (line.index <= last.index || ask(line.text)) return false;
+    if (last.stamped && line.stamped) return line.at >= last.at && line.at - last.at <= PRESS_TAIL_MS;
+    return line.index === last.index + 1 && line.text.split(/\s+/).length <= 12;
+  });
+  const question = clean([last.text].concat(tail.map((line) => line.text)).join(" "));
+  const regenerate = !!(opts.alreadyAnswered && (same(question, opts.lastQuestion || "") || same(last.text, opts.lastQuestion || "")));
+  const pass = Math.abs(Math.trunc(Number(opts.pass) || 0));
+  return { question, regenerate, angle: regenerate ? ANSWER_ANGLES[pass % ANSWER_ANGLES.length] : "" };
+}
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -5891,7 +5946,7 @@ async function aiAnswer(fromAuto, options = {}) {
     const typedText = box ? box.value.trim() : "";
     // Answer anyway (slice 2): a press right after "Nothing question-like" or
     // "Listening, no new question yet" answers those same lines / re-asks.
-    let anyway = false, silenceAnyway = false, liveResolved = "";
+    let anyway = false, silenceAnyway = false, liveResolved = "", pressAngle = "";
     try {
       const held = answerAnywayHeld;
       let back = null;
@@ -5916,13 +5971,29 @@ async function aiAnswer(fromAuto, options = {}) {
           questionSource: questionSource(),
         });
         if (decision.listening) {
-          answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
-          status("Listening, no new question yet — press AI Answer again to answer anyway.", "live");
-          logDecision("listening-no-new-question", questionSource(), lastQ || "");
-          return;
-        }
-        if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
+          const target = typeof manualAnswerTarget === "function" ? manualAnswerTarget({
+            pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
+            lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
+            pass: answerAnglePass,
+          }) : { question: "", regenerate: false, angle: "" };
+          if (target.question) {
+            liveResolved = target.question;
+            if (target.regenerate) { pressAngle = target.angle; answerAnglePass++; }
+          } else {
+            answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
+            status("Still listening.", "live");
+            logDecision("still-listening", questionSource(), lastQ || "");
+            return;
+          }
+        } else if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
       } catch {}
+    }
+    if (!fromAuto && !typedText && !anyway && liveResolved && !pending.length) {
+      const curHold = cards[idx];
+      const page = curHold && typeof hasAnswer === "function" && hasAnswer(curHold) ? addCard(liveResolved, ["…"]) : (curHold || addCard(liveResolved, ["…"]));
+      page.heard = liveResolved; page.formed = liveResolved;
+      showPressed(page, liveResolved);
+      return await generateAnswer(liveResolved, page, { reask: true, pinned: true, derived: liveResolved, angle: pressAngle || undefined, consolidated: true });
     }
     if (!fromAuto && !typedText && !anyway && typeof KompasLatestAsk === "object" && KompasLatestAsk) {
       const latest = KompasLatestAsk.selectLatestQueuedAsk(pending);
@@ -5989,7 +6060,7 @@ async function aiAnswer(fromAuto, options = {}) {
         card.heard = heard; card.earlier = earlier; card.formed = heard;
         card.formSeq = (used[0] || parts[0] || pending[0] || {}).seq;
         showPressed(card, shown);
-        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true });
+        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true, angle: pressAngle || undefined, reask: !!pressAngle });
       }
       const isRepress = !liveResolved && !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
@@ -6154,7 +6225,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
     // the old heard text alone is what showed "No question yet".
     if (c && c.restored && c.cacheEpoch != null && c.liveEpoch != null && c.cacheEpoch !== c.liveEpoch) {
-      status("No new question yet.", "live");
+      status("Still listening.", "live");
       return;
     }
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
@@ -6173,6 +6244,7 @@ async function aiAnswer(fromAuto, options = {}) {
   } finally { aiBusy = false; }
 }
 $("screenBtn").onclick = analyseScreen;
+if ($("screenAnalyzeBtn")) $("screenAnalyzeBtn").onclick = analyzeSharedTab;
 // One visible desktop action for captured questions. It uses the same verified
 // capture → region review → grounded answer path as the existing menu/shortcut.
 if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseScreen;
@@ -6338,7 +6410,7 @@ function routeScreenFrame(text, audioQuestion, kind) {
       : "The screen shows a diagram. Explain the diagram and answer the ask.";
   const parts = [brief, "On screen:\n" + screen];
   if (audio) parts.push("Audio question:\n" + audio + "\nAddress the audio question using the screen as context.");
-  const display = screen.replace(/\s+/g, " ").trim().slice(0, 180) || audio || "On screen";
+  const display = screen.trim() || audio || "On screen";
   return { kind: frameKind, display, answerQuestion: parts.join("\n\n"), generate: true, combinedAudio: !!audio };
 }
 async function answerScreenPieces(card, pieces, audio) {
@@ -6355,6 +6427,8 @@ async function answerScreenPieces(card, pieces, audio) {
   card.question = first.display;
   card.screenTask = true;
   card.frameKind = first.kind;
+  card.screenFull = true;
+  card.screenBody = (pieces.length ? pieces.join("\n\n") : first.display);
   await generateAnswer(first.display, card, { pinned: true, derived: first.answerQuestion, source: "screen", frameKind: first.kind });
   for (const routed of routedAll.slice(1)) {
     if ((current && current.id) !== session || !cards.includes(card)) return;
@@ -6429,6 +6503,67 @@ async function analyseScreen() {
   finally { if (screenOwnsAnswer) aiBusy = false; }
   card.streaming = false; card.meta = ((performance.now() - t0) / 1000).toFixed(1) + "s · vision";
   if (cards[idx] === card) renderCard();
+}
+async function grabSharedFrame() {
+  const track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
+  if (!track) return { error: "Share the meeting tab first. Screen analyze uses that share and will not ask again." };
+  const video = document.createElement("video");
+  video.muted = true; video.playsInline = true;
+  try {
+    video.srcObject = new MediaStream([track]);
+    await video.play();
+    if (video.readyState < 2) await new Promise((r) => { video.onloadeddata = r; setTimeout(r, 700); });
+    if (track.readyState !== "live" || !video.videoWidth || !video.videoHeight) return { error: "That frame was blank. Share the tab that has the question." };
+    const k = Math.min(1, 1280 / video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(video.videoWidth * k));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * k));
+    const context = canvas.getContext("2d");
+    if (!context) return { error: "That frame could not be read. Share the tab that has the question." };
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let flat = pixels.length > 0;
+    if (flat) {
+      const r0 = pixels[0], g0 = pixels[1], b0 = pixels[2];
+      const step = 4 * Math.max(1, Math.floor(pixels.length / 4 / 2048));
+      for (let i = 0; i < pixels.length; i += step) {
+        if (Math.abs(pixels[i] - r0) > 12 || Math.abs(pixels[i + 1] - g0) > 12 || Math.abs(pixels[i + 2] - b0) > 12) { flat = false; break; }
+      }
+    }
+    if (flat) return { error: "That frame was blank. Share the tab that has the question." };
+    return { image: canvas.toDataURL("image/jpeg", 0.72) };
+  } catch (e) {
+    return { error: "That frame could not be read. Share the tab that has the question." };
+  } finally {
+    video.onloadeddata = null; try { video.pause(); } catch {} video.srcObject = null;
+  }
+}
+async function analyzeSharedTab() {
+  if (aiBusy) { status("Still working on the last answer.", "live"); return; }
+  const shot = await grabSharedFrame();
+  if (!shot || !shot.image) {
+    const line = (shot && shot.error) || "Share the meeting tab first. Screen analyze uses that share and will not ask again.";
+    status(line, "live");
+    const card = addCard("Screen", [line]);
+    card.screenTask = true;
+    card.streaming = false;
+    if (cards[idx] === card) renderCard();
+    return;
+  }
+  aiBusy = true; aiBusySince = Date.now();
+  const card = addCard("Reading the shared tab…", ["…"]);
+  card.streaming = true; card.screenTask = true; card.screenFull = true;
+  if (cards[idx] === card) renderCard();
+  try {
+    await generateAnswer("Read the shared tab and answer what it shows. Keep the full body visible.", card, { pinned: true, derived: "Read the shared tab and answer what it shows.", source: "screen", screenImage: shot.image, consolidated: true });
+  } catch (e) {
+    const line = "Screen reading is unavailable right now. Type the question and press AI Answer.";
+    card.answer = [line];
+    status(line, "err");
+  } finally {
+    aiBusy = false; card.streaming = false;
+    if (cards[idx] === card) renderCard();
+  }
 }
 // The review dialog normally arrives with the page. A stale cached page can
 // reach the review step without it, which used to fail the whole capture.
@@ -6899,7 +7034,8 @@ $("getTranscriptBtn").onclick = getTranscript;
 document.addEventListener("keydown", (e) => {
   if ($("view-copilot").classList.contains("hidden")) return;
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement && document.activeElement.tagName) || "");
-  if (e.ctrlKey && e.key === "Enter") {
+  if (e.ctrlKey && e.shiftKey && e.key === "Enter") { e.preventDefault(); void analyzeSharedTab(); return; }
+  if (e.ctrlKey && e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     if (document.activeElement === $("manualInput") && $("manualInput").value.trim()) sendManual();   // your typed question wins
     else $("answerBtn").click();
