@@ -85,3 +85,18 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+
+## Confirmed-skill mapping across existing roles — 20 November 2026
+
+The owner-approved correction in [PR #319 comment 6817645128](https://github.com/eshwarjay0-delS/job-dashboard/pull/319#issuecomment-6817645128) permits an explicitly confirmed skill to be mapped into relevant existing project bullets across roles, including earlier roles, even when the original bullet does not name the tool. [PR #423 comment 6902823074](https://github.com/eshwarjay0-delS/job-dashboard/pull/423#issuecomment-6902823074) clarifies that a positive candidate assertion or a clearly labelled `Confirmed skills:` / `Confirmed experience:` statement may confirm it; first-person grammar is not the only accepted syntax.
+
+A confirmation supports the named skill only. It does not create an employer, project, action, outcome, date, title, location, contact, metric, credential or unrelated project fact. The JD describes the target; it is never evidence that the candidate performed the work. Unconfirmed terms remain gaps or are disclosed as job-post terms, never written as personal experience. Profile libraries stay account-separated.
+
+## WhatsApp fallback correction — 19 November 2026
+
+The latest owner correction requires the exact label **Original resume — NOT TAILORED**. An offline fallback may use only a user-explicitly selected, same-account Files/Library resume. Do not auto-select a closest match, silently substitute another file, or send a fresh uploaded original when no explicit library selection exists. In that case, explain in text and preserve the conversation.
+
+## Quality and acceptance
+
+The 98% figure is a target, not a claim of live resume/JD match. Unit tests and keyword counts do not replace an owner-authorized baseline resume, exact JD, explicit confirmations, an exported-DOCX inspection and measured output coverage. The expanded automatic Gemini correction/re-export/recheck loop remains proposed, not approved; do not run it without direct owner approval.
