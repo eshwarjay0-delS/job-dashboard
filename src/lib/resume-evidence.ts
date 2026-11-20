@@ -38,13 +38,13 @@ export function confirmedCandidateStatements(statements: readonly string[]): str
     if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
     // Reject negative assertions before treating a "my ..." sentence as positive evidence.
     // Positive contrast remains safe only up to its explicit exception (e.g. AWS, but not GCP).
-    const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|don't|doesn't|didn't|cannot|can't))\b/i
+    const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:is|are)\s+missing|missing|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\s+missing|missing|don't|doesn't|didn't|cannot|can't))\b/i
     if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\b/i.test(line)) return []
     const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
-    const hasException = /\b(?:except|excluding|but|however|not|never|without)\b/i.test(line)
+    const hasException = /\b(?:except|excluding|but|however|not|never|without|missing)\b/i.test(line)
     // Never truncate a blanket statement with an exception into a false "all skills" confirmation.
     if (hasBlanketConfirmation && hasException) return []
-    const positive = line.split(/\b(?:except|excluding|but|however|not|never|without)\b/i)[0].trim()
+    const positive = line.split(/\b(?:except|excluding|but|however|not|never|without|missing)\b/i)[0].trim()
     return positive ? [positive] : []
   })
 }
