@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Kompas 10-fold delivery, not shipped
+
+Jay asked for 100/100 delivered answers on https://marketfit-app.vercel.app/dashboard/kompas, Length Long 120–180, no invented claims, honest bridges, and stable resume facts. The page calls POST /api/answer. The shell sends that to POST /api/kompas/answer. Screen analyze puts screenImage on that call. Clarifiers are POST /api/kompas/aside. Before, on production 3a1b0bb7, 99/100 delivered, 35/100 in band, 7 invented claims, 16 gap bridges missed. One call returned OPENROUTER_UNAVAILABLE with an empty body. The answer route does not create an account session. The live script sends one id, s-kompas-10fold-houston, and does not POST account-sessions. Create and Start reuse an open matching interview. A failed lane now returns the cached Houston answer. Not merged. Not a second live listen yet.
+
 ## 20 November 2026 — Parakeet S5 upgrade, not shipped
 
 Screen analyze uses the shared tab, one frame, no new permission prompt. The answer card keeps the full body. AI Answer does not say no new question. The honesty gate uses the resume the answer already loaded. The Fortinet Houston summary is only the default, because that docx is not in the repo. McKesson stays out of that fixture. The default file is read from the repo path so the cross-domain loader can evaluate the answer service. No ship marker. Do not merge. Not a live listen.

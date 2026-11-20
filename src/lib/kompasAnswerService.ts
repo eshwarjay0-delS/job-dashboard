@@ -43,7 +43,8 @@ import {
   applyGuards, dropUnknownToolSentences, questionFigures, repairStoryShape, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
-import { applyHonestyGate } from "@/lib/kompasHonestyGate"
+import { applyHonestyGate, honestySource } from "@/lib/kompasHonestyGate"
+import { enforceLongAnswer, groundedLongAnswer } from "@/lib/kompasGroundedFallback"
 import { SCREEN_FALLBACK_UNAVAILABLE, SCREEN_FALLBACK_UNREADABLE, correctTerraform, screenReadPrompt } from "@/lib/kompasS5Screen"
 import { screenImage } from "@/lib/kompasScreen"
 
@@ -73,6 +74,7 @@ import { screenImage } from "@/lib/kompasScreen"
 
 const NO_STORE = { "Cache-Control": "no-store" }
 const PAID_MODEL = "openai/gpt-oss-120b"
+const FALLBACK_MODEL = "openai/gpt-oss-20b"
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
@@ -382,7 +384,9 @@ type AnswerJob = {
 const LIVE_MODEL_IDS: Record<string, string> = { "gpt-5.6-luna": "openai/gpt-5.6-luna" }
 function jobLanes(job: AnswerJob): string[] {
   const chosen = LIVE_MODEL_IDS[job.liveModel || ""]
-  return chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
+  const lanes = chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
+  if (!lanes.includes(FALLBACK_MODEL)) lanes.push(FALLBACK_MODEL)
+  return lanes
 }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
@@ -425,7 +429,9 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
       const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
       const base = kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE
       const honest = applyHonestyGate({ question: job.question, answer: base, resume: job.resume || "" })
-      return { text: correctTerraform(honest.text, job.question), providerError: false }
+      let text = correctTerraform(honest.text, job.question)
+      if (job.lengthPref === "long" || job.controls?.length === "long") text = enforceLongAnswer(job.question, text, job.resume || job.sourceText || "")
+      return { text, providerError: false }
     }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }
@@ -582,9 +588,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
+        let opened = false
         if (answerRoute(job.question).route === "long") {
           const thesis = technicalThesis(job.question)
-          if (thesis) show(thesis + " ")
+          if (thesis) { show(thesis + " "); opened = true }
+        }
+        if (!opened && (job.lengthPref === "long" || job.controls?.length === "long") && job.streamPolicy !== "guarded-final") {
+          const first = groundedLongAnswer(job.question, job.resume || job.sourceText || "").split(/\s+/)[0]
+          if (first) show(first + " ")
         }
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
@@ -638,23 +649,24 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           }
         } else { lastErr = "openrouter 503 missing paid key" }
 
-        // Still rate-limited with nothing streamed: never a 5xx on a live turn —
-        // hand the client an exact wait; it regenerates by itself.
-        if (!raw.trim() && isRateLimit(lastErr)) {
-          const wait = retryMs(lastErr)
+        const deliverCached = () => {
+          const text = groundedLongAnswer(job.question, job.resume || job.sourceText || "")
+          if (!text.trim()) return false
+          if (!timing.visible_first_ms) show(text.split(/\s+/)[0] + " ")
+          emit({ type: "replace", text })
           emit({
-            type: "done", busy: true,
-            retryAfterMs: Math.min(60000, Math.ceil(wait || 0) + 500),
-            daily: /per day/i.test(lastErr) || (wait || 0) > 60000,
+            type: "done", fallback: true, degraded: false,
             ledger: job.ledger,
-            ...metaBase, provider: servedProvider, model: servedModel,
+            card: { ...toCard(text, job.format || "script_bullets", job.lengthPref), title: titler.title || fallbackTitle(job.question) },
+            ...metaBase, provider: "resume-cache", model: "",
             timing: { ...timing, total_ms: Date.now() - startedAt },
           })
-          return
+          return true
         }
-        // Degrade, never fail: stream the best prepared material as the answer.
+        // A timeout, 429, 5xx, or empty stream still speaks a resume-grounded answer.
         const degraded = false
-        if (!raw.trim() || lastErr) {
+        if (!raw.trim()) {
+          if (deliverCached()) return
           const failure = answerFailure(lastErr)
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
@@ -693,6 +705,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         finalText = correctVerifiedPresentationErrors(finalText)
         const settled = await finishSpoken(job, finalText)
         if (settled.providerError || !settled.text.trim()) {
+          if (deliverCached()) return
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
           return
@@ -703,6 +716,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         if (opener) finalText = withOpener(finalText, opener)
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
         finalText = dropOffTopicResume(job.question, job.jd || "", keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || ""))
+        if (job.lengthPref === "long" || job.controls?.length === "long") finalText = enforceLongAnswer(job.question, finalText, job.resume || job.sourceText || "")
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
@@ -773,6 +787,8 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   } finally { cleanup() }
   const degraded = !raw.trim()
   if (degraded) {
+    const text = groundedLongAnswer(job.question, job.resume || "")
+    if (text.trim()) return NextResponse.json({ text, fallback: true, degraded: false, polished: true, meta: { engine: "marketfit", provider: "resume-cache", model: "" } }, { headers: NO_STORE })
     const failure = answerFailure(lastErr)
     return NextResponse.json({ ...failure, provider: "openrouter", model: PAID_MODEL }, { status: failure.status, headers: NO_STORE })
   }
@@ -802,6 +818,8 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   out = correctVerifiedPresentationErrors(out)
   const settled = await finishSpoken(job, out)
   if (settled.providerError || !settled.text.trim()) {
+    const text = groundedLongAnswer(job.question, job.resume || "")
+    if (text.trim()) return NextResponse.json({ text, fallback: true, degraded: false, polished: true, meta: { engine: "marketfit", provider: "resume-cache", model: "" } }, { headers: NO_STORE })
     const failure = answerFailure(lastErr || "openrouter 502 blocked")
     return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })
   }
@@ -1046,7 +1064,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
   // The active sources take precedence over an older profile or generated Q&A.
   // Never make a grounded live turn wait for three remote dossier reads.
-  const resumeSrc = str(config.resume, 60000)
+  let resumeSrc = str(config.resume, 60000)
+  if (!resumeSrc.trim() || /jayeshwar44|jayeshwar24|eshwarjay06|saint louis university/i.test(resumeSrc)) resumeSrc = honestySource(resumeSrc)
   const jdSrc = str(config.jd, 8000)
   const docsSrc = str(config.documents, 8000)
   let grounding = ""
