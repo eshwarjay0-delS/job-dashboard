@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, extendFromModel, EXTEND_MODEL, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, extendFromModel, EXTEND_MODEL, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -422,7 +422,7 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
     const stripped = grounded.presentation.replace(/\s*That (?:part|detail) is not in the sources\.?/gi, "").trim()
     const profiled = groundToProfile(job.question, stripped || settled.text, job.sourceText, job.sessionMemory || emptyMemory(""))
-    const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "" })
+    const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) {
       const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
       return { text: kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE, providerError: false }
@@ -582,6 +582,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
+        if (answerRoute(job.question).route === "long") {
+          const thesis = technicalThesis(job.question)
+          if (thesis) show(thesis + " ")
+        }
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
         if (job.orKey) {

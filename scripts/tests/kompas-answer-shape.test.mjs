@@ -32,7 +32,7 @@ test("a short technical answer is extended and closes on a resume example", () =
     source: RESUME,
   })
   assert.ok(gated.words >= 120, `words ${gated.words}`)
-  assert.match(gated.text, /^I /)
+  assert.match(gated.text, /comes down to one point/)
   assert.doesNotMatch(gated.text, /^Having\b|great question/i)
   if (gated.ceiling >= 120) assert.match(gated.text, /Example:/)
   const bullets = gated.text.split("\n").filter((line) => /^\s*[-•]/.test(line))
@@ -51,6 +51,54 @@ test("a JD-only tool is a hands-on bridge, not a stub", () => {
   assert.match(bridged.text, /transfers because/)
   assert.doesNotMatch(bridged.text, /not on my resume|would want to confirm/)
   assert.match(jdGapBridge("How do you use Splunk?", RESUME, "Splunk ES"), /less direct hands-on with Splunk/)
+})
+
+test("the thesis sentence is streamed before the model", () => {
+  const service = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
+  const at = service.indexOf("technicalThesis(job.question)")
+  const model = service.indexOf("streamOpenRouter(job.orKey as string")
+  assert.ok(at > 0 && model > at)
+})
+
+test("a technical answer is thesis, how it works, one example, and one resume line", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How would you investigate a phishing email?",
+    raw: "I start with the message the employee forwarded and I do not click the link.",
+    resume: RESUME,
+    source: RESUME,
+  })
+  const sentences = gated.text.split(/(?<=[.!?])\s+/)
+  assert.match(sentences[0], /comes down to one point|phishing/i)
+  assert.match(gated.text, /Example:/)
+  const ties = sentences.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+  assert.equal(ties.length, 1)
+  assert.match(gated.text, new RegExp(ties[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"))
+})
+
+test("how a missing tool works stays on that tool and adds the gap bridge", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How does Splunk work?",
+    raw: "EDR watches the host and I isolate the machine. A SIEM searches the mail.",
+    previous: "EDR watches the host and I isolate the machine.",
+    resume: RESUME,
+    jd: "Splunk ES",
+    source: RESUME,
+  })
+  assert.match(gated.text, /Splunk/)
+  assert.match(gated.text, /less direct hands-on with Splunk/)
+  assert.doesNotMatch(gated.text, /isolate the machine/)
+})
+
+test("a candidate's Sophos practice does not enter the answer", () => {
+  const gated = gateDisplayedAnswer({
+    question: "How do you handle endpoint tools?",
+    raw: "I keep a personal Sophos practice at home. I assist with ServiceNow incident resolution at McKesson.",
+    resume: RESUME,
+    source: RESUME,
+    transcript: "You: I keep a personal Sophos practice at home.",
+  })
+  assert.doesNotMatch(gated.text, /Sophos|personal Sophos practice/i)
+  assert.match(gated.text, /ServiceNow|McKesson/)
 })
 
 test("a candidate's employer from the transcript never enters the answer", () => {

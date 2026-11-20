@@ -451,10 +451,50 @@ export function foreignEmployers(transcript: string, resume: string, jd: string)
   return [...found]
 }
 
+function candidateLines(transcript: string): string[] {
+  return String(transcript || "").split("\n").map((line) => line.trim()).filter((line) => {
+    if (/^You:/i.test(line)) return true
+    return /^Them:/i.test(line) && /\bI\b/.test(line.replace(/^Them:\s*/i, ""))
+  }).map((line) => line.replace(/^(?:You|Them):\s*/i, ""))
+}
+
+/** Words the candidate said that the resume does not contain. */
+export function candidateOnlyTerms(transcript: string, resume: string): string[] {
+  const known = new Set(askTokens(resume))
+  const found = new Set<string>()
+  for (const line of candidateLines(transcript)) {
+    for (const name of line.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []) {
+      if (!known.has(name.toLowerCase()) && !String(resume || "").toLowerCase().includes(name.toLowerCase())) found.add(name.toLowerCase())
+    }
+    const words = line.toLowerCase().split(/[^a-z0-9+.#-]+/).filter((word) => word.length > 2)
+    for (let i = 0; i < words.length - 2; i++) {
+      const gram = words.slice(i, i + 3)
+      if (!gram.some((word) => word.length >= 4 && !known.has(word))) continue
+      const phrase = gram.join(" ")
+      if (!String(resume || "").toLowerCase().includes(phrase)) found.add(phrase)
+    }
+  }
+  return [...found]
+}
+
 export function dropCandidateOnly(answer: string, resume: string, jd: string, transcript: string): string {
-  const names = foreignEmployers(transcript, resume, jd)
-  if (!names.length) return String(answer || "").trim()
-  return sentenceList(answer).filter((sentence) => !names.some((name) => sentence.toLowerCase().includes(name.toLowerCase()))).join(" ")
+  const names = foreignEmployers(transcript, resume, jd).map((name) => name.toLowerCase())
+  const terms = [...names, ...candidateOnlyTerms(transcript, resume)]
+  if (!terms.length) return String(answer || "").trim()
+  return sentenceList(answer).filter((sentence) => !terms.some((term) => sentence.toLowerCase().includes(term))).join(" ")
+}
+
+export function howTool(question: string): string {
+  const match = String(question || "").match(/\bhow (?:does|do)\s+([A-Za-z][\w.+-]{2,})\s+work\b/i)
+  return match ? match[1] : ""
+}
+
+export function technicalThesis(question: string): string {
+  const tool = howTool(question)
+  if (tool) return `${tool} is what this question is about.`
+  const bare = String(question || "").replace(/\?+$/, "").replace(/\s+/g, " ").trim()
+  if (!bare) return ""
+  return `${bare.charAt(0).toUpperCase()}${bare.slice(1)} comes down to one point.`
 }
 
 export function jdGapBridge(question: string, resume: string, jd = ""): string {
@@ -472,6 +512,7 @@ function isBehavioralAsk(question: string): boolean {
 }
 
 function isDirectAsk(question: string): boolean {
+  if (howTool(question)) return false
   const type = visibleLengthBand(question).type
   const q = String(question || "").replace(/\s+/g, " ").trim()
   if (type === "yes-no" || type === "definition" || type === "definition-application") return true
@@ -515,6 +556,17 @@ function extendFromResume(text: string, question: string, resume: string, floor:
     if (answerWordCount(next) > ceiling) continue
     out = next
   }
+  if (answerWordCount(out) < floor) {
+    for (const line of resumeFacts(resume)) {
+      if (answerWordCount(out) >= floor) break
+      const room = ceiling - answerWordCount(out)
+      const need = floor - answerWordCount(out)
+      const words = line.split(/\s+/).filter(Boolean)
+      const take = Math.min(words.length, room)
+      if (take < need || take < 4) continue
+      out = `${out} ${words.slice(0, need).join(" ")}.`.trim()
+    }
+  }
   return out
 }
 
@@ -533,12 +585,42 @@ export function answerRoute(question: string): AnswerRoute {
 }
 
 /** Technical answers open on the point and close on one resume example. Stories keep one resume number. */
-export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = ""): string {
+function focusOnAskedTool(question: string, text: string, previous = ""): string {
+  const tool = howTool(question)
+  if (!tool) return text
+  const prev = new Set(askTokens(previous))
+  const kept = sentenceList(text).filter((sentence) => {
+    if (sentence.toLowerCase().includes(tool.toLowerCase())) return true
+    const tokens = askTokens(sentence)
+    if (!tokens.length || !prev.size) return true
+    const overlap = tokens.filter((word) => prev.has(word)).length / tokens.length
+    return overlap < 0.55
+  })
+  return kept.join(" ")
+}
+
+export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = "", previous = ""): string {
   const route = answerRoute(question)
-  let body = dropCandidateOnly(text, resume, jd, transcript)
+  let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
   if (route.route === "short") return trimWords(body, 60)
+  if (route.route === "long") {
+    const thesis = technicalThesis(question)
+    const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
+    const fact = resumeFacts(resume)[0] || ""
+    const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
+    const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
+    const tie = tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    const tool = howTool(question)
+    const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
+    body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
+    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+    if (ties.length > 1) {
+      const last = ties[ties.length - 1]
+      body = sentenceList(body).filter((sentence) => sentence === last || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
+    }
+  }
   if (route.route === "story") {
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
     body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
@@ -564,6 +646,13 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
     body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
+  }
+  if (route.route === "long") {
+    const parts = sentenceList(body)
+    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
+    const tie = ties[ties.length - 1]
+    const rest = parts.filter((sentence) => !ties.includes(sentence))
+    body = [...rest, tie].filter(Boolean).join(" ")
   }
   return body.trim()
 }
@@ -594,7 +683,7 @@ export async function extendFromModel(question: string, text: string, resume: st
 
 export { EXTEND_MODEL }
 
-export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string; resume?: string; jd?: string; transcript?: string }): DisplayGate {
+export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string; resume?: string; jd?: string; transcript?: string; previous?: string }): DisplayGate {
   const question = String(input.question || "")
   const raw = String(input.raw || "")
   const source = String(input.source || "")
@@ -620,7 +709,7 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
   }
   if (text) {
     const shaped = repairStoryShape(question, text, resume)
-    const formed = shapeDisplayedAnswer(question, shaped.text || text, resume, jd, transcript)
+    const formed = shapeDisplayedAnswer(question, shaped.text || text, resume, jd, transcript, String(input.previous || ""))
     if (formed && formed !== text) reasons.push("shape")
     text = formed || text
     if (shaped.needsRewrite) reasons.push("shape-rewrite")

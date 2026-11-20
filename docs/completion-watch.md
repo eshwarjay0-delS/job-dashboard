@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Thesis first, not shipped
+
+A technical answer is a thesis, how it works, one Example, and one resume line. The thesis streams first. Candidate-only tools and practices are dropped. How-does-this-tool stays on that tool. No ship marker.
+
 ## 20 November 2026 — Answer shape, not shipped
 
 Short answers are extended from resume facts up to the floor. JD-only tools use the hands-on bridge. Candidate-only employers are dropped. Replay median: short 40, long 129.5, story 153. Short answers cap at 60 with no floor extension. No ship marker.

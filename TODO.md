@@ -1,3 +1,9 @@
+## 2026-11-20 — Thesis first, and no candidate-only practice (no live listen)
+
+A technical answer opens with the thesis, then how it works, one Example, and one resume line. The thesis is streamed first. A Sophos practice that only the candidate said is dropped. "How does this tool work" stays on that tool and uses the hands-on bridge when the resume does not name it. No ship marker.
+
+**Checked on kompas-answer-shape. Not a live listen-through.**
+
 ## 2026-11-20 — Answer shape, JD bridge, and no video-candidate facts (no live listen)
 
 Technical answers open on the point, grow from resume facts when they are under the floor, and can close with Example. A tool that is only in the job description is a hands-on bridge, not a stub. A employer that appears only in the candidate's transcript is left out. No ship marker.
