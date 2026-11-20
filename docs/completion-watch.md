@@ -1,3 +1,17 @@
+## 20 November 2026 13:40 UTC — Poke-inspired Gmail/mobile current-master restack
+
+- **Continue: validate PR [#474](https://github.com/eshwarjay0-delS/job-dashboard/pull/474)**, the approved account-scoped digest and normal-flow mobile navigation slice. It is a DRAFT current-master restack based on `2da44026c0ab58ab2966b9371992efaf93427de4`; older PR #424 is preserved and not overwritten.
+- The latest direct owner correction is [PR #452 comment 7033546581](https://github.com/eshwarjay0-delS/job-dashboard/pull/452#issuecomment-7033546581): four connected Gmail accounts maximum, mobile navigation expands below the sticky header in normal flow and pushes content down, and the Poke proactive worker, scheduler, notifications and sending remain disabled. The restack preserves the server RPC `LIMIT 4`; PR #440's no-cap migration remains unapproved.
+- Source/test work in #474: account+sender mute keys; account+provider-thread digest/radar/React identity; receiving-inbox selection on open; user+account+thread reply drafts; no-scrim/no-overlay/no-dimming/no-inert mobile navigation; dashboard-shell and account-isolation tests registered in prebuild and full CI. The account regression checks the server migration's `LIMIT 4` while ensuring the client does not truncate server-authorized accounts.
+- Source commits: `468fd9fa` dashboard shell CSS; `68b16ce4` sidebar; `6ecd7bc4` digest UI; `714cc103` mail page; `2e090c4b` digest helper; `0c3c293f` reply drafts; `bb64b656` dashboard-shell tests; `4fdbac07` prebuild test registration; `afef5dc6` digest/account tests; `15d66720` regex correction; `29ec7e07` package script; `0c957588` CI registration. Plan Journal, Plan & Vision, Gmail docs and research handoff were updated in this branch.
+- Exact-final-head GitHub Actions have not yet completed; no predecessor PR #424 check is reused. Local `git ls-remote` failed because this runtime could not resolve `github.com`, so no local test/build pass is claimed.
+- Vercel project `job-dashboard` reports `live=false`. Both canonical production aliases remain READY on `dpl_FusdJPpFqFu6ZwMGTgg3pLomCAH9`, SHA `5af72c125649b1306dd804704963edc40d1d3215`, which is behind master. The owner-controlled protected-preview credential is unavailable; no preview or production deployment was attempted and no SSO/protection/billing control was bypassed.
+- Acceptance remains open: two authorized inboxes with colliding sender/thread IDs, independent sender mute, correct inbox selection, selected-From preservation, reconnect only the affected inbox, and a narrow-phone no-cover check. No Gmail API/OAuth request, inbox read/mutation, email/WhatsApp send, worker enablement, scheduler change or device test occurred.
+
+Continue: run exact-head full CI, Plan/REA, Kompas baseline and any applicable recovery gate on the final #474 head, then let MFit Safe Merge Gate review. Keep the PR DRAFT until legitimate protected preview and two-inbox/selected-From/reconnect/narrow-phone acceptance are complete. Keep the Poke worker, scheduler, notifications and sending disabled.
+
+---
+
 # MFit Completion Watch
 
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
