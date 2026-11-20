@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Story shape and gold eval, not shipped
+
+Story answers are repaired by reordering existing sentences. A model rewrite is requested only when that repair still misses the shape. `npm run eval:gold` is offline. Baseline with no key: length fit 5.00, claim faithfulness 4.70, model rubric skipped. No ship marker.
+
 ## 20 November 2026 — CDN speech models, not shipped
 
 The same pull request now loads Silero v5 and onnxruntime-web 1.22.0 from jsDelivr, and smart-turn v3.2 from Hugging Face revision f766f81, when a session starts. The weights are not in /public. A CDN failure stays on the lexical 700 ms gate and shows no error. No ship marker.

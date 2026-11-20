@@ -40,7 +40,7 @@ import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudien
 import { notebookCausalGuidance, notebookCausalFlags } from "@/lib/kompasNotebookCausal"
 import { desktopCraft, desktopResponsePolicy, desktopDelivery, webPivotLine } from "@/lib/kompasDesktopResponse"
 import {
-  applyGuards, dropUnknownToolSentences, questionFigures, verifyAnswer,
+  applyGuards, dropUnknownToolSentences, questionFigures, repairStoryShape, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
 
@@ -445,7 +445,9 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   const short = job.controls?.length === "long" && text.trim().split(/\s+/).filter(Boolean).length < longFloor
     ? [`the answer is under the long floor; add the missing steps from the job description and do not invent a personal history`]
     : []
-  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck, ...short], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...short, ...parts, ...tangents] }
+  const shape = repairStoryShape(job.question, text, `${job.resume || ""}\n${job.sourceText || ""}`)
+  const shapeMiss = shape.needsRewrite ? ["story shape: first sentence answers, first-person actions are at least half the sentences, and the last line is a resume result with no invented number"] : []
+  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck, ...short, ...shapeMiss], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...short, ...shapeMiss, ...parts, ...tangents] }
 }
 
 // r4 (item 24): the source lines the repair may draw on; empty (old prompt) with no experience sources or on any error.
@@ -462,6 +464,8 @@ function repairSourceBlock(job: AnswerJob): string {
 // the original twice with the full list, so a partial fix from attempt one was thrown away). The abort signal is the
 // request signal, not the 55s lane signal, so a settle-time repair does not inherit a spent lane budget.
 async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number; repair: RepairOutcome }> {
+  const shaped = repairStoryShape(job.question, guardedText, `${job.resume || ""}\n${job.sourceText || ""}`)
+  guardedText = shaped.text || guardedText
   return runRepairLoop(guardedText, {
     checks: (text) => repairChecks(job, text),
     hasKey: Boolean(job.orKey),

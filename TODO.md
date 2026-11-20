@@ -1,3 +1,9 @@
+## 2026-11-20 — Story shape and gold eval (no visible screen)
+
+A behavioral story is reordered from its own sentences: direct first line, first-person actions in at least half the sentences, and a resume result at the end with no invented number. The model rewrite runs only when that repair still misses. `npm run eval:gold` scores the gold set offline and caches by answer hash. It is not part of a live answer. No ship marker.
+
+**Checked on kompas-story-shape and the gold script. Not a live listen-through.** Length fit 5.00 and faithfulness 4.70 with no OpenRouter key, so the 1–5 model rubric was skipped.
+
 ## 2026-11-20 — CDN speech models, no Vercel transfer (no visible screen until a live listen)
 
 A session start loads Silero v5 and the onnxruntime wasm from jsDelivr, and smart-turn v3.2 from a pinned Hugging Face revision. The weights are not in /public. KOMPAS_VAD is on unless set to off. Smart-turn runs only when the wording is unsure. If the CDN fails, the 700 ms pause gate continues and no error is shown. No ship marker. No UI was restyled.

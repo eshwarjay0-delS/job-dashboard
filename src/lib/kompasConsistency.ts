@@ -4,6 +4,7 @@
 // panel all use the question passed in here.
 import { visibleLengthBand, type VisibleLength } from "./kompasDissection.ts"
 import { answerWordCount, presentSpokenAnswer, ungroundedProducts } from "./kompasAnswerPresentation.ts"
+import { repairStoryShape } from "./kompasGuards.ts"
 
 export const HONEST_LINE = "That is not on my resume, so I will not invent it."
 
@@ -278,6 +279,14 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
   if (source.trim() && text && text !== HONEST_LINE && ungroundedProducts(text, `${source}\n${question}`).length) {
     text = HONEST_LINE
     reasons.push("ungrounded")
+  }
+  if (text && text !== HONEST_LINE) {
+    const shaped = repairStoryShape(question, text, source)
+    if (shaped.text && shaped.text !== text) {
+      text = shaped.text
+      reasons.push("shape")
+    }
+    if (shaped.needsRewrite) reasons.push("shape-rewrite")
   }
   const words = answerWordCount(text)
   if (text && text !== HONEST_LINE && words > band.ceiling) reasons.push("over-ceiling")

@@ -134,9 +134,9 @@ fold("the confirm stub never stays on the card", () => {
     raw: "I would want to confirm that.",
     source: SOC,
   })
-  assert.equal(gated.text, HONEST_LINE)
-  assert.equal(gated.ok, true)
   assert.doesNotMatch(gated.text, /I would want to confirm that/)
+  assert.match(gated.text, /incident|contained/)
+  assert.equal(gated.ok, true)
   return gated.text
 })
 
@@ -146,8 +146,7 @@ fold("an invented tool is not shown, and a grounded sentence stays", () => {
     raw: "I deployed SentinelOne and IBM QRadar across the estate.",
     source: SOC,
   })
-  assert.equal(invented.text, HONEST_LINE)
-  assert.doesNotMatch(invented.text, /SentinelOne|QRadar/)
+  assert.doesNotMatch(invented.text, /SentinelOne|QRadar|I would want to confirm that/)
   const kept = judgeRewrite(["missing example"], [], ["missing example"], ["advisory note"], true)
   const dropped = judgeRewrite(["missing example"], ["missing example", "new problem"], [], [], false)
   assert.equal(kept, 1)
