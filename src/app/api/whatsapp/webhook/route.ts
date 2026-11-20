@@ -49,6 +49,7 @@ import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, chosenResumeMatchesProfile, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable } from "@/lib/whatsapp-resume-acceptance"
 import { confirmedCandidateStatements } from "@/lib/resume-evidence"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { resolveRecoveryResumeContext } from "@/lib/whatsapp-resume-recovery-path"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
@@ -781,8 +782,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 // Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
 type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
 
-async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
+async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false, resumeRootOverride?: string) {
   const startedAt = Date.now()
+  const userResumeDir = resumeRootOverride || (files ? files.userDir : path.join(INBOX_DIR, digits(from)))
   if (!session.jd || !session.resumePath) return quiet ? undefined : sendText(from, HELP)
   console.info("[whatsapp] run source", { via: files ? "library" : "upload", name: session.resumeName ?? null, rel: files?.rel ?? null, ageMin: session.resumeAt ? Math.round((Date.now() - session.resumeAt) / 60000) : null })
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
@@ -941,7 +943,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     result = await tailorWithin({
       jd: session.jd,
       keys,
-      userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
+      userResumeDir,
       givenPath: session.resumePath,
       mode: "full",
       // The constructed-JD plan runs inside this one call, including the extra pass. Leave a short
@@ -993,7 +995,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       try {
         const fresh = await tailorWithin({
           jd: session.jd, keys,
-          userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
+          userResumeDir,
           givenPath: session.resumePath,
           mode: "full", noCache: true, maxMs: remaining,
           sections: { summary: true, skills: true, experience: true },
@@ -1304,6 +1306,21 @@ async function recoverResumeJobsInner(request: NextRequest, startedAt: number, p
         continue
       }
     }
+    // A durable fallback can live in the library even when the original job was
+    // an upload (and therefore had no Files context). Resolve against this
+    // account's current roots before calling the tailor; never trust a stale
+    // serialized userDir or an arbitrary path from the recovery record.
+    const recoveryContext = resolveRecoveryResumeContext({
+      resumePath,
+      userId: job.userId,
+      userResumesRoot: USER_RESUMES_DIR,
+      inboxRoot: path.join(INBOX_DIR, digits(job.from)),
+      files: job.files,
+    })
+    if (!recoveryContext.ok) {
+      await deferResumeRecovery(job.id, "source_outside_account")
+      continue
+    }
     // Bootstrap and queue enumeration consume the SAME 300-second function budget.
     // Leave time for quality checks, Meta upload, state writes and a final count log.
     const budget = recoveryTailorBudget(startedAt)
@@ -1316,7 +1333,7 @@ async function recoverResumeJobsInner(request: NextRequest, startedAt: number, p
     await progress("running", { stage: "attempt_started", bootstrapped, due: jobs.length, attempted })
     try {
       await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath,
-        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, budget, job.files, true)
+        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, budget, recoveryContext.files, true, recoveryContext.userResumeDir)
       const state = await readResumeRecovery(job.id)
       if (state?.deliveryState === "accepted" || state?.deliveryState === "sent" ||
           state?.deliveryState === "delivered" || state?.deliveryState === "read") accepted++

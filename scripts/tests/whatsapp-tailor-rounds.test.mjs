@@ -43,7 +43,7 @@ function load(file, mocks = {}, extra = '') {
     process, console, Buffer, URL, Promise, queueMicrotask,
     setTimeout: setTimeoutFn,
     clearTimeout: id => { timers.delete(id) },
-    require: id => id in mocks ? mocks[id] : require(id),
+    require: id => id in mocks ? mocks[id] : id === '@/lib/whatsapp-resume-recovery-path' ? load('src/lib/whatsapp-resume-recovery-path.ts') : require(id),
   })
   return testModule.exports
 }
