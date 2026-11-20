@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parity gate v1, not run
+
+Owner comment on draft PR #473. The ship bar is 10 typed-then-spoken questions on the Houston Fortinet resume. Not run. No runtime edit. No ship marker. Do not treat another listen as this gate.
+
 ## 20 November 2026 — Parakeet session 1, notes only
 
 Owner log on draft PR #473. Three timed Parakeet finishes are about 1.2 s, 1.51 s, and 1.53 s. Four answers are marked as bluffs: invented incident, quantity upgrade, flat yes, leading yes. The Fortinet resume is not in this checkout, so those labels were not re-checked. No runtime edit. No ship marker. Do not live-test PR #467 from this note.

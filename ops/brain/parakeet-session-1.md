@@ -34,7 +34,7 @@ The earlier brief said Parakeet takes about 7 seconds and lifts the candidate's 
 - A one-token fragment became "Yes" plus a test he did not record.
 - A leading "right?" became sole ownership and "zero unplanned downtime."
 
-Q4 is the pattern to keep. A how-it-works question stayed on the mechanism and made no personal claim. Q3 kept the numbers that were in the question (21 and six) and did not invent a new count. Those numbers are the scenario, not a result.
+Q3 kept 21 and six as the scenario. The parity gate says those numbers must not be claimed as work he has done. Q4 stayed on the mechanism. The gate now wants that question to add one "I" line from the resume. The gate is `ops/brain/parity-gate-v1.md`.
 
 ## Where Chief changes code
 
@@ -46,4 +46,4 @@ No code in this note.
 - Fragment as yes: `jdGapBridge` in `src/lib/kompasConsistency.ts`.
 - Extra product features on a tool he does name: `unsupportedClaims` in `src/lib/kompasSourceRetrieval.ts`.
 
-The decision stands, with this added: do not live-test #467 until those four honesty misses are blocked. Length and the thesis still block the test too.
+The first live run is the 10-question gate, typed and then spoken, on both tools. It is not a ship until the pass bar in `ops/brain/parity-gate-v1.md`: 0 hard fails, bridges 3/3, first words at or under 1.0 s on 8 of 10, Long inside 120–180 on 9 of 10.

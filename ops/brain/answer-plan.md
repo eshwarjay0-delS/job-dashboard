@@ -27,7 +27,7 @@ These four outrank tone. They are the misses in the WWT / Fortinet log. The resu
 3. "How much" with no number on the resume does not become "a significant amount" or a new work product such as reusable modules. The FIGURES line in `answerForVerifiedUser` (`src/lib/kompasAnswerService.ts`) plus `questionFigures` in `src/lib/kompasGuards.ts`.
 4. One token on the resume is not a yes. Same gap-bridge fold as item 6 below. `jdGapBridge` in `src/lib/kompasConsistency.ts`.
 
-A "how does it work" question can stay on the mechanism, with no personal story. Parakeet did that on the load-balancer question. `TECHNICAL_ANSWER_BOUNDARY` in `src/lib/kompasAnswer.ts` already says so. Do not add a diagram. He cannot say a diagram out loud.
+The parity gate (v1) wants the load-balancer question to be the concept plus one "I" line from the resume, not a mechanism with no personal line. `TECHNICAL_ANSWER_BOUNDARY` in `src/lib/kompasAnswer.ts` still blocks an unasked career pitch. Do not add a diagram. The ship bar is `ops/brain/parity-gate-v1.md`.
 
 ## Ranked folds
 

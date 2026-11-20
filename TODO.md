@@ -1,3 +1,9 @@
+## 2026-11-20 — Parity gate v1 is the ship bar (no UI)
+
+Owner comment on PR #473. Ten fixed Fortinet questions, typed then spoken, Parakeet and Kompas. Pass needs 0 hard fails, honest bridges on questions 8–10, first words at or under 1.0 s on 8 of 10, and Long inside 120–180 on 9 of 10. The gate was not run. The Fortinet resume is still not in this checkout. No product code. Skip-login was not edited.
+
+**Nothing visible.**
+
 ## 2026-11-20 — Parakeet session 1 is honesty, not speed (no UI)
 
 Owner log on PR #473: ten typed Parakeet answers for a WWT / Fortinet JD. Three timed finishes are about 1.2 s, 1.5 s, and 1.5 s. Technical answers sit around 120–144 words. The logged misses are an invented cutover, a quantity upgrade, a flat yes on a one-token tool, and agreeing with "you led that, right?". This checkout has no Fortinet resume, so those in-resume labels were not re-checked. No product code. Skip-login was not edited.
