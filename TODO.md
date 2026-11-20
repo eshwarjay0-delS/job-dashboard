@@ -1,12 +1,12 @@
+## 2026-11-20 — Parity upgrade keeps only new, evidence-backed fixes (no live listen, no ship)
+
+Pull request 477 no longer repeats the claim filter, the gap bridge, the length band, or the first-person lines that pull request 467 already has. Nothing new is added until a forwarded Parakeet session log shows a gap. Upgrade pull requests still have to cover at least 3 areas and list "new this round" once that evidence is in.
+
+**No product change in this commit. Not a live listen-through.**
+
 ## 2026-11-20 — Upgrade PRs diversify and deepen (standing rule)
 
-Every upgrade pull request touches at least 3 areas (answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop). Each of those areas gets a deeper test than the last round, and the PR body lists "new this round".
-
-## 2026-11-20 — Parakeet parity prep (no live listen, no ship)
-
-Unsupported sentences are dropped. The honest hands-on bridge stays, and "I maintained the CMDB." stays with it. Technical answers are first-person prose of 100–140 words. The first sentence is on screen immediately, and a silent stream retries at 1 second. Stories stay 120–180. The session logs were not here yet. No ship marker. Pull request 467 is unchanged.
-
-**Checked offline. Not a live listen-through. No visible change until a live Kompas answer starts.**
+Every upgrade pull request touches at least 3 areas (answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop). Each of those areas gets a deeper test than the last round, and the PR body lists "new this round". The four edges added earlier were removed because they were not backed by a forwarded session log.
 
 ## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
 

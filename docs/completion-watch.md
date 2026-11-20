@@ -1,12 +1,14 @@
 # MFit Completion Watch
 
-## Standing rule — every upgrade PR diversifies and deepens
+## Standing rules — upgrade pull requests
 
-Each upgrade pull request touches at least 3 of these areas: answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop. Each area it touches adds a deeper test than the previous round: a new failure mode or a harder edge case. The PR body lists that under "new this round".
+Each upgrade pull request touches at least 3 of these areas: answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop. Each area it touches adds a deeper test than the previous round, and the body lists that under "new this round".
 
-## 20 November 2026 — Parakeet parity prep, not shipped
+The parity upgrade pull request adds only fixes that pull request 467 and master do not already have, and only when a forwarded Parakeet session log shows the gap. The claim filter, the gap bridge, the length band, and first-person lines are already on 467, so they are not repeated here.
 
-Unsupported sentences drop. The honest gap bridge and the CMDB sentence stay. Technical answers are 100–140 first-person words. The first word is painted immediately and a silent stream retries at 1 second. Session logs are not in yet. No ship marker. Pull request 467 stays ready and unmerged.
+## 20 November 2026 — Parity prep removed, not shipped
+
+The prep that redid the claim filter, the gap bridge, length, and first-person prose was taken off pull request 477. No product change remains until a forwarded session log. No ship marker.
 
 ## 20 November 2026 — Review blockers, not shipped
 

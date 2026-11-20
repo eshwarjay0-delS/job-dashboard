@@ -260,8 +260,7 @@ export function levelAwareBand(question: string, level: AnswerLevel = "engineer"
   const kind = lengthKind(question, dissectQuestion(question).shape)
   const levelCeiling = QUESTION_LENGTH[kind][level].ceiling
   const longStory = length === "long" && (kind === "star" || /\btell me about a time\b/i.test(question))
-  if (length === "long" && longStory) return { type: "story", floor: 120, aim: 150, ceiling: 180 }
-  if (length === "long") return { type: band.type, floor: 100, aim: 120, ceiling: 140 }
+  if (length === "long") return { type: longStory ? "story" : band.type, floor: 120, aim: 150, ceiling: 180 }
   let ceiling = Math.min(band.ceiling, level === "engineer" ? band.ceiling : Math.max(levelCeiling, FOLLOW_UP_FLOOR + 1))
   if ((level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
     ceiling = Math.min(band.ceiling, FOLLOW_UP_FLOOR + 1)

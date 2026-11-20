@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { answerRoute, dropUnsupportedSentences, extendFromModel, gateDisplayedAnswer, jdGapBridge } from "../../src/lib/kompasConsistency.ts"
+import { answerRoute, extendFromModel, gateDisplayedAnswer, jdGapBridge } from "../../src/lib/kompasConsistency.ts"
 import { dropUnknownToolSentences } from "../../src/lib/kompasGuards.ts"
 import { goldWordCount, loadGold } from "../../scripts/eval-gold.mjs"
 
@@ -32,11 +32,11 @@ test("a short technical answer is extended and closes on a resume example", () =
     resume: RESUME,
     source: RESUME,
   })
-  assert.ok(gated.words >= 100 && gated.words <= 140, `words ${gated.words}`)
-  assert.match(gated.text, /^I would start with the closest work I have done/)
-  assert.doesNotMatch(gated.text, /comes down to one point|what this question is about|I would answer this directly|Example:/)
+  assert.ok(gated.words >= 120, `words ${gated.words}`)
+  assert.match(gated.text, /I would answer this directly/)
+  assert.doesNotMatch(gated.text, /comes down to one point|what this question is about/)
   assert.doesNotMatch(gated.text, /^Having\b|great question/i)
-  assert.match(gated.text, /\bI\b/)
+  if (gated.ceiling >= 120) assert.match(gated.text, /Example:/)
   const bullets = gated.text.split("\n").filter((line) => /^\s*[-•]/.test(line))
   assert.ok(bullets.length <= 8)
 })
@@ -59,10 +59,6 @@ test("a JD-only tool is a hands-on bridge, not a stub", () => {
   const kept = dropUnknownToolSentences(`I maintained the CMDB. ${bridge}`, RESUME)
   assert.match(kept, /I maintained the CMDB/)
   assert.match(kept, /Splunk/)
-  const grounded = dropUnsupportedSentences(`I reduced the queue by 40% at Fabrikam. I maintained the CMDB. ${bridge}`, RESUME, "How do you use Splunk?", "Splunk ES")
-  assert.doesNotMatch(grounded, /Fabrikam|40%/)
-  assert.match(grounded, /I maintained the CMDB/)
-  assert.match(grounded, /less direct hands-on with Splunk/)
 })
 
 test("the thesis sentence is streamed before the model", () => {
@@ -80,10 +76,11 @@ test("a technical answer is thesis, how it works, one example, and one resume li
     source: RESUME,
   })
   const sentences = gated.text.split(/(?<=[.!?])\s+/)
-  assert.match(sentences[0], /^I would start with the closest work I have done/)
-  assert.doesNotMatch(gated.text, /Example:|How it works:/)
-  assert.match(gated.text, /\bI (?:assist|closed|built|configured|created|maintained|implemented|supported|monitored)\b/i)
-  assert.match(sentences.at(-1), /^I\b/)
+  assert.match(sentences[0], /I would answer this directly|phishing/i)
+  assert.match(gated.text, /Example:/)
+  const ties = sentences.filter((sentence) => /^I did\b/.test(sentence))
+  assert.equal(ties.length, 1)
+  assert.match(gated.text, new RegExp(ties[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"))
 })
 
 test("how a missing tool works stays on that tool and adds the gap bridge", () => {
@@ -158,7 +155,7 @@ test("gold replay median is measured after the floor binds", () => {
   const stories = median(buckets.story)
   assert.ok(shorts <= 60, `short median ${shorts}`)
   assert.ok(buckets.short.every((n) => n <= 60))
-  assert.ok(longs >= 100 && longs <= 140, `long median ${longs}`)
+  assert.ok(longs >= 120, `long median ${longs}`)
   assert.ok(stories >= 150, `story median ${stories}`)
   console.log(`replay median short ${shorts} long ${longs} story ${stories}`)
 })
