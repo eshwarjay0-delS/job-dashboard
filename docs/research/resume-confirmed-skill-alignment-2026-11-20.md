@@ -6,7 +6,7 @@ Accessible owner-authored context on 17 October 2026 confirms that a user may su
 
 - Owner approval references carried in PR #466: PR #319 comment 6817645128 and PR #423 comment 6902823074.
 - Original review/continuation: PR #466, which remains preserved as a draft on a stacked base.
-- Current-master restack: branch fix/resume-confirmed-skill-current-master-restack-20261120-1142z, starting from master 2da44026c0ab58ab2966b9371992efaf93427de4.
+- Current-master restack: draft PR #472, branch fix/resume-confirmed-skill-current-master-restack-20261120-1142z, base master 2da44026c0ab58ab2966b9371992efaf93427de4; code/test tree commit 58cb83ef7822b74a50ab6f1a76d847da806d21a5. The original PR #466 remains preserved.
 
 ## Corrections carried into the restack
 
