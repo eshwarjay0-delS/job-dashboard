@@ -1,6 +1,6 @@
 # Answer plan — next folds
 
-Read on 20 Nov 2026. Live tree is master. PR #467 (`f5df791c`, still open) is the incoming answer path and is called out where it already moves a fold. Baseline is Parakeet: about 7 seconds, and it misfires by speaking claims the candidate just said. Kompas is about 1 second. Keep that speed.
+Read on 20 Nov 2026. Live tree is master. PR #467 (`f5df791c`, still open) is the incoming answer path and is called out where it already moves a fold. Session 1 measured Parakeet at about 1.2–1.5 seconds on the three timed questions, inside or near 120–180 words on the technical ones. The miss in that log is invented experience, not speed. Detail is in `ops/brain/parakeet-session-1.md`. Keep Kompas on one call.
 
 Target for Length = Long: 120–180 spoken words, first person, a stake and a bit of curiosity, a story that lands, and an honest gap ("I've had less hands-on with X; my Y transfers because..."). No new employer, tool, story, or number. Houston resume only (`eshwarjay05`).
 
@@ -18,13 +18,24 @@ Length is three different numbers:
 
 #467 adds `levelAwareBand` (long non-story floor 120, long story floor 150 and ceiling up to 360), `answerRoute` (technical floor 120, story floor 150), `technicalThesis`, `jdGapBridge`, `shapeDisplayedAnswer`, and `extendFromModel` (a second call to `openai/gpt-oss-20b` when the floor is missed). Those are the folds below that #467 started and did not finish.
 
+## What session 1 moves up the list
+
+These four outrank tone. They are the misses in the WWT / Fortinet log. The resume lines named there are the owner's annotations. This checkout has no Fortinet resume text, so they were not re-checked.
+
+1. A "tell me about a time" with no incident on the resume must stay hypothetical. `repairStoryShape` in `src/lib/kompasGuards.ts` and `shapeDisplayedAnswer` in `src/lib/kompasConsistency.ts`. Do not open with "I once."
+2. A trailing "right?" that asserts ownership does not get an unqualified yes. New check next to `gateDisplayedAnswer` in `src/lib/kompasConsistency.ts`. Hedge unless the resume states that scope.
+3. "How much" with no number on the resume does not become "a significant amount" or a new work product such as reusable modules. The FIGURES line in `answerForVerifiedUser` (`src/lib/kompasAnswerService.ts`) plus `questionFigures` in `src/lib/kompasGuards.ts`.
+4. One token on the resume is not a yes. Same gap-bridge fold as item 6 below. `jdGapBridge` in `src/lib/kompasConsistency.ts`.
+
+A "how does it work" question can stay on the mechanism, with no personal story. Parakeet did that on the load-balancer question. `TECHNICAL_ANSWER_BOUNDARY` in `src/lib/kompasAnswer.ts` already says so. Do not add a diagram. He cannot say a diagram out loud.
+
 ## Ranked folds
 
 Score is impact divided by cost. Impact is how much it moves relevance, realism, the 120–180 band, or human tone. Cost is how much code and how much regression. Highest first.
 
 1. **Score 5. One Long band, 120–180.** `levelAwareBand` and `visibleLengthBand` in `src/lib/kompasDissection.ts`, `answerRoute` in `src/lib/kompasConsistency.ts`, and the `plan.words` assignment in `answerForVerifiedUser`. Long floor 120, ceiling 180, aim near 150, for every question type the user marked Long. Delete the `* 1.5` cap at 300 and the story ceiling of 360. Short and balanced stay on `visibleLengthBand`.
 2. **Score 5. Do not speak the canned thesis.** `technicalThesis` in `src/lib/kompasConsistency.ts` and the `show(thesis)` call in `streamAnswer` (`src/lib/kompasAnswerService.ts`). "Splunk is what this question is about" and "…comes down to one point" are not the answer, and they are streamed first, so he starts talking before the real sentence exists. Sentence one should be the model's first spoken sentence after the guards, still first person.
-3. **Score 4. Stay on one model call.** `finishSpoken` and `extendFromModel` in `src/lib/kompasAnswerService.ts` and `src/lib/kompasConsistency.ts`. A second call spends the 1-second advantage against Parakeet. Set `maxTokens` from the 180 ceiling in the first call. If the draft is still short, stop. Do not pad.
+3. **Score 4. Stay on one model call.** `finishSpoken` and `extendFromModel` in `src/lib/kompasAnswerService.ts` and `src/lib/kompasConsistency.ts`. The three timed Parakeet answers finished in about 1.2–1.5 seconds. A second call makes Kompas the slower one. Set `maxTokens` from the 180 ceiling in the first call. If the draft is still short, stop. Do not pad.
 4. **Score 4. First person, including the instruction.** `NARRATIVE_LINE` in `src/lib/kompasConsistency.ts`, and the line in `shapeDisplayedAnswer` that writes ``I did ${resumeLine}``. Change "what he did" to "what I did." Do not prefix "I did" onto a raw bullet ("Tracking of Incidents…", "Hands-on experience…"). That is the same defect `speakableLines` / `asFact` was meant to stop on the side panel.
 5. **Score 3. Interviewer "I" is not the candidate.** `candidateLines` in `src/lib/kompasConsistency.ts`. Today any `Them:` line that contains "I" is treated as candidate speech, so "what I want to hear is…" strips answer sentences. Only `You:` lines are candidate speech.
 6. **Score 2.5. A gap bridge that can be said.** `jdGapBridge` in `src/lib/kompasConsistency.ts` and `dropUnknownToolSentences` in `src/lib/kompasGuards.ts`. The bridge is currently `I've had less direct hands-on with ${tool}; my ${entire bullet} transfers because it is the same kind of work.` Name the closest resume tool in a short noun phrase, not the whole bullet. Then let that one sentence name the missing tool. `dropUnknownToolSentences` currently deletes any sentence that names a tool the resume lacks, which deletes the honest bridge. Allow the bridge sentence. Keep dropping a sentence that uses the missing tool as if he ran it.

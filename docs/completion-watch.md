@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Parakeet session 1, notes only
+
+Owner log on draft PR #473. Three timed Parakeet finishes are about 1.2 s, 1.51 s, and 1.53 s. Four answers are marked as bluffs: invented incident, quantity upgrade, flat yes, leading yes. The Fortinet resume is not in this checkout, so those labels were not re-checked. No runtime edit. No ship marker. Do not live-test PR #467 from this note.
+
 ## 20 November 2026 — Brain ops notes, not a product change
 
 PR #467 was still open, draft, and conflicting at head `f5df791c` when these notes were written. Do not merge it from this record. Do not add a ship marker. The notes are on `cursor/kompas-brain-ops`: answer folds, a 20-case clarifier file (13/20 against that head; the old 47 still pass), research, and five pre-live risks. No Kompas runtime file was edited. No live listen.
