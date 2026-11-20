@@ -2866,8 +2866,8 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    const micHot = !!(opt.forceYou || (captures.some(c => c.who === "You" && (c.voiced || c.forceYou))));
-    const heardWho = labelLiveSpeaker(clean, opt.forceYou ? "You" : who, micHot);
+    const micHot = !!(opt.forceYou || (typeof captures !== "undefined" && captures.some(c => c.who === "You" && (c.voiced || c.forceYou))));
+    const heardWho = typeof labelLiveSpeaker === "function" ? labelLiveSpeaker(clean, opt.forceYou ? "You" : who, micHot) : (opt.forceYou ? "You" : who);
     if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(heardWho, clean, false, opt.spokenAt); }
     else if (running) showCaption(heardWho, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
