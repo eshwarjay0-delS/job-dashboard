@@ -1,3 +1,9 @@
+## 2026-11-20 — Brain notes only: answer folds, 20 clarifier cases, PR #467 risks (no UI)
+
+Docs under `ops/brain/`. No product code, no clarifier change, no merge, no deploy. PR #467 was still an open draft at `f5df791c` (conflicting). Its 47 clarifier cases pass offline. Twenty new adversarial cases, scored on that head, pass 13 and fail 7. The fails are a CMDB size ask that invents "CI classes", multi-part asks with no clarifier or a dropped third part, and "Did you design it alone, right?" pulling in SD-WAN and failover. Cheap checks on that head: the streamed thesis is "Splunk is what this question is about.", the gap bridge is not speakable and the tool filter drops it, long-story `levelAwareBand` aims at 360 words, and a question ending in "right?" does not auto-fire. Skip-login was not edited.
+
+**Nothing visible.** Not a live listen-through.
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.

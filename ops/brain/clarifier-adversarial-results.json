@@ -1,0 +1,156 @@
+{
+ "head": "f5df791c",
+ "by": {
+  "vague_referent": {
+   "pass": 3,
+   "total": 3
+  },
+  "trailing_right": {
+   "pass": 4,
+   "total": 5
+  },
+  "interruption": {
+   "pass": 2,
+   "total": 4
+  },
+  "multi_part": {
+   "pass": 0,
+   "total": 4
+  },
+  "candidate_speech": {
+   "pass": 2,
+   "total": 2
+  },
+  "already_clear": {
+   "pass": 1,
+   "total": 1
+  },
+  "chitchat": {
+   "pass": 1,
+   "total": 1
+  }
+ },
+ "pass": 13,
+ "total": 20,
+ "fails": [
+  {
+   "i": 7,
+   "cat": "interruption",
+   "q": "Sorry, scratch the email. How large was the CMDB?",
+   "expect": "none",
+   "why": [
+    "clarified when it should stay silent",
+    "clarifier has /CI classes/",
+    "clarifier has /record count/",
+    "not from live question: classes, record, count"
+   ],
+   "qs": [
+    "The CI classes, or the record count?"
+   ],
+   "say": [
+    "I did experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+    "I did maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.",
+    "Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+    "I did experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items."
+   ]
+  },
+  {
+   "i": 8,
+   "cat": "multi_part",
+   "q": "How do you open a change, how do you approve it, and how do you close it?",
+   "expect": "clarify",
+   "why": [
+    "no clarifier"
+   ],
+   "qs": [],
+   "say": [
+    "I did hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+    "Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+    "I did hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc."
+   ]
+  },
+  {
+   "i": 9,
+   "cat": "multi_part",
+   "q": "What about discovery, and access, and incidents?",
+   "expect": "clarify",
+   "why": [
+    "no clarifier"
+   ],
+   "qs": [],
+   "say": [
+    "I tracked of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).",
+    "I did hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc.",
+    "Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).",
+    "I tracked of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs)."
+   ]
+  },
+  {
+   "i": 10,
+   "cat": "multi_part",
+   "q": "How did you set up the CMDB, how did you keep it accurate, and who used it?",
+   "expect": "clarify",
+   "why": [
+    "no clarifier"
+   ],
+   "qs": [],
+   "say": [
+    "I did experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+    "I did maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps.",
+    "Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+    "I did experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items."
+   ]
+  },
+  {
+   "i": 11,
+   "cat": "interruption",
+   "q": "Hold on. How do you triage alerts, how do you escalate them, and who do you tell?",
+   "expect": "clarify",
+   "why": [
+    "missing /tell/",
+    "not from live question: escalation"
+   ],
+   "qs": [
+    "Is it okay if I start with triage, then escalation?"
+   ],
+   "say": [
+    "Tracking of Incidents from creation to closure, with timely communication to business. Monitoring service level agreements (SLAs) and operation level agreements (OLAs).",
+    "Hands-on experience technical implementation of Incident, Problem, Change Management and Service Catalog and configuring GRC software like the RSA Archer, MetricStream, etc."
+   ]
+  },
+  {
+   "i": 16,
+   "cat": "multi_part",
+   "q": "How does that work, how long did it take, and who signed off?",
+   "expect": "clarify",
+   "why": [
+    "no clarifier"
+   ],
+   "qs": [],
+   "say": [
+    "I developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
+    "I implemented role-based access controls, approval workflows, and segregation of duties controls supporting financial regulatory and operational compliance requirements.",
+    "Assists with ServiceNow platform incident resolution.",
+    "I developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes."
+   ]
+  },
+  {
+   "i": 18,
+   "cat": "trailing_right",
+   "q": "Did you design it alone, right?",
+   "expect": "clarify",
+   "why": [
+    "clarifier has /failover/",
+    "clarifier has /SD-WAN/",
+    "not from live question: sd-wan, failover"
+   ],
+   "qs": [
+    "Do you mean the overall SD-WAN design, or a specific piece like failover?"
+   ],
+   "say": [
+    "Experience with ServiceNow Discovery tool Service Watch to Discover and import CMDB items.",
+    "Maintained the integration of database and CMDB through the MID Server, Schedule jobs, Import Sets, and Transform maps."
+   ]
+  }
+ ]
+}
