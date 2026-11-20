@@ -28,7 +28,8 @@ test("the bottom row keeps Chat, the typed question, and Level", () => {
   assert.equal(ask.querySelector("#liveStar"), null)
   assert.match(css, /\.card-prefs,#liveFormat,#liveLength,#liveTone,#liveStar\{display:none !important\}/)
   assert.match(css, /html\.kd \.card-prefs,html\.kd #liveFormat,html\.kd #liveLength,html\.kd #liveTone,html\.kd #liveStar\{display:none !important\}/)
-  assert.match(app, /return \{ format: "full_script", length: "balanced", tone: "simple", star: false \}/)
+  assert.match(app, /function readLiveAnswerControls\(\)/)
+  assert.match(app, /current && current\.length/)
 })
 
 test("format follows the length band", () => {

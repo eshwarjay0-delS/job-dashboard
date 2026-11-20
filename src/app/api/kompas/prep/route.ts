@@ -46,7 +46,22 @@ export async function POST(request: NextRequest) {
     config.instructions ? `Instructions:\n${str(config.instructions, 1000)}` : "",
   ].filter(Boolean).join("\n\n")
   if (!facts) return NextResponse.json({ error: "Nothing to prepare from." }, { status: 400, headers: NO_STORE })
+  // No resume on this device. Do not ask a model to invent a biography.
+  if (!str(config.resume, 60000)) {
+    return NextResponse.json({
+      v: 2,
+      identity: "",
+      persona: { role: str(config.role, 120) },
+      projects: [],
+      questions: [],
+      noResume: true,
+    }, { headers: NO_STORE })
+  }
 
+  const longIntro = str(config.length, 20).toLowerCase() === "long"
+  const identitySpec = longIntro
+    ? "A spoken introduction of about 120 words for the role in the job description. Open with who they are for that role, then what they do, why, and one result whose number is already in the resume. Not one sentence. Do not start with Having. Do not drag in a platform the job description does not ask about."
+    : "2-3 sentence spoken identity: who they are, the total years exactly as the resume states them, the industries and employers across the whole career, current focus"
   try {
     const keys = resolveKeys({})
     const { text } = await callLLM({
@@ -56,7 +71,7 @@ export async function POST(request: NextRequest) {
       timeoutMs: 50_000,
       system: `You build an interview prep pack for a candidate, from their resume and the job description. Return ONLY valid JSON, no markdown fences, no commentary. Shape:
 {
-  "identity": "2-3 sentence spoken identity: who they are, the total years exactly as the resume states them, the industries and employers across the whole career, current focus",
+  "identity": ${JSON.stringify(identitySpec)},
   "persona": { "role": "their current title" },
   "projects": [ { "id": "p1", "name": "short name", "employer": "the employer exactly as the ROLES line writes it", "role": "their title there", "impact": "one-line outcome in the resume's own words" } ],
   "questions": [ { "q": "the question", "answer": ["bullet 1", "bullet 2"], "tier": 0-4, "group": "core", "projectId": "p1 or empty" } ]

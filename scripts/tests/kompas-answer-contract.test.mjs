@@ -87,7 +87,7 @@ test("format: Script + bullets is the default", () => {
 
 test("empty resume: three states", () => {
   assert.equal(resumeState({ resume: "Citi, Splunk", personal: true }), "grounded")
-  assert.equal(resumeState({ dossier: "prior session facts", personal: true }), "grounded")
+  assert.equal(resumeState({ dossier: "prior session facts", personal: true }), "personal-no-resume")
   assert.equal(resumeState({ personal: false }), "knowledge")
   assert.equal(resumeState({ personal: true }), "personal-no-resume")
   assert.equal(resumeStatePrompt("grounded"), "")

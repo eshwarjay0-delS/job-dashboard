@@ -76,14 +76,13 @@ test("a remembered open state comes back, and a new question clears the old cont
   assert.equal(panel.hidden, false)
   document.getElementById("question").textContent = sample.question
   window.KompasAnswerAside.accept(sample)
-  assert.equal(panel.querySelector("h3").textContent, "Context")
-  assert.equal(panel.querySelectorAll(".aside-leads li").length, 1)
+  assert.equal(panel.querySelector("h3").textContent, "Say this")
   assert.equal(panel.querySelectorAll(".aside-questions li").length, 2)
-  assert.equal(panel.querySelectorAll("h3")[1].textContent, "Clarifying questions")
+  assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster for this line/)
   document.getElementById("question").textContent = "Why did the flow stall?"
   await new Promise((r) => setTimeout(r, 0))
-  assert.match(panel.textContent, /next answer/)
-  assert.equal(panel.querySelector(".aside-leads"), null)
+  assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster|Context shows up with the next answer/)
+  if (panel.textContent.trim()) assert.match(panel.textContent, /Say this|don't have a resume/)
 })
 
 test("section 2 toggles by hand and follows a new transcript line without a fetch", async () => {

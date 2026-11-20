@@ -18,10 +18,15 @@ export interface RepairOutcome {
  * Keep a rewrite when it fixes at least one core item (structure or a named term) and breaks no core item that
  * was fine before. With no core items, the same rule runs on the advisory items. Returns how many were fixed.
  */
-export function judgeRewrite(coreBefore: string[], coreAfter: string[], allBefore: string[], allAfter: string[]): number {
+export function judgeRewrite(coreBefore: string[], coreAfter: string[], allBefore: string[], allAfter: string[], grounded = false): number {
   const before = coreBefore.length ? coreBefore : allBefore
   const after = coreBefore.length ? coreAfter : allAfter
-  if (!after.every((item) => before.includes(item))) return 0
+  const introduced = after.filter((item) => !before.includes(item))
+  const fixed = before.filter((item) => !after.includes(item)).length
+  // A grounded rewrite that closes a real gap stays. A new advisory note is not
+  // a reason to throw that rewrite away. An ungrounded new problem still loses.
+  if (introduced.length && !grounded) return 0
+  if (grounded && fixed > 0) return fixed
   return Math.max(0, before.length - after.length)
 }
 
@@ -54,6 +59,8 @@ export interface RepairLoopDeps {
   checks: (text: string) => RepairChecks
   rewrite: (best: string, missing: string[], attempt: number) => Promise<string>
   guard?: (text: string) => string
+  /** True when the rewrite's sentences stay inside the resume and the question. */
+  grounded?: (text: string) => boolean
   isProviderError?: (text: string) => boolean
   hasKey?: boolean
   // Speed r6: when true, the model is called only for a real gap (repairNeedsModel); advisory-only items are reported
@@ -89,7 +96,8 @@ export async function runRepairLoop(original: string, deps: RepairLoopDeps): Pro
       const guarded = deps.guard ? deps.guard(rewrite) : rewrite
       if (!guarded.trim()) continue
       const after = deps.checks(guarded)
-      if (judgeRewrite(best.core, after.core, best.all, after.all) > 0) best = { text: guarded, core: after.core, all: after.all }
+      const grounded = deps.grounded?.(guarded) === true
+      if (judgeRewrite(best.core, after.core, best.all, after.all, grounded) > 0) best = { text: guarded, core: after.core, all: after.all }
     } catch { failed = true; break }
   }
   const fixed = missing.length - best.all.length

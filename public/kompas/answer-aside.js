@@ -76,7 +76,6 @@
     panel.id = "answerAside";
     panel.setAttribute("aria-label", "Answer context");
     panel.hidden = true;
-    panel.appendChild(el("p", "aside-empty", "Context shows up with the next answer."));
     host.appendChild(panel);
 
     btn.addEventListener("click", function () { setOpen(!panel.classList.contains("is-open")); });
@@ -143,8 +142,8 @@
     list.textContent = "";
     var lines = mode === "boosters" ? (aside.boosters || []) : (aside.questions || []);
     lines.forEach(function (line) { addLi(list, line, whyFor(current, line)); });
-    if (!lines.length) list.appendChild(el("li", "", mode === "boosters" ? "No booster for this line." : "No question for this line."));
-    if (title) title.textContent = mode === "boosters" ? "Booster statements" : "Clarifying questions";
+    if (!lines.length) return;
+    if (title) title.textContent = mode === "boosters" ? "Say this" : "Say this";
     var qBtn = document.getElementById("asideModeQuestions");
     var bBtn = document.getElementById("asideModeBoosters");
     var autoBtn = document.getElementById("asideModeAuto");
@@ -193,16 +192,14 @@
     bar.appendChild(label);
     bar.appendChild(next);
     panel.appendChild(bar);
+    var leads = (aside.context && aside.context.leads) || [];
+    if (leads.length) {
+      var leadList = el("ul", "aside-leads");
+      leads.forEach(function (line) { addLi(leadList, line, whyFor(aside, line)); });
+      panel.appendChild(leadList);
+    }
+    if (!pageResume() && aside.question) panel.appendChild(el("p", "aside-empty", "No resume is stored on this device. I will use the job description only."));
     if (aside.partial) panel.appendChild(el("p", "aside-live", aside.partial));
-    var breakdown = aside.breakdown || {};
-    ["Claim", "Context", "Result"].forEach(function (name) {
-      var line = breakdown[name.toLowerCase()];
-      if (!line) return;
-      var section = el("section", "aside-break");
-      section.appendChild(el("h3", "", name));
-      section.appendChild(el("p", "aside-breakdown", line));
-      panel.appendChild(section);
-    });
     if (aside.summary) {
       var sum = el("p", "aside-summary", aside.summary);
       var sumWhy = whyFor(aside, aside.summary);
@@ -215,20 +212,12 @@
       if (nowWhy) now.title = nowWhy;
       panel.appendChild(now);
     }
-    var context = el("section");
-    context.appendChild(el("h3", "", "Context"));
-    var leads = el("ul", "aside-leads");
-    (aside.context.leads || []).forEach(function (line) { addLi(leads, line, whyFor(aside, line)); });
-    context.appendChild(leads);
-    context.appendChild(el("div", "aside-kicker", "Touch points"));
-    var touches = el("ul", "aside-touches");
-    (aside.context.touchPoints || []).forEach(function (line) { addLi(touches, line, whyFor(aside, line)); });
-    context.appendChild(touches);
+    var sayLines = (aside.questions || []).concat(aside.boosters || []).concat(aside.sayNow ? [aside.sayNow] : []).filter(Boolean);
     var back = el("section");
     var head = el("div", "aside-switch");
-    head.appendChild(el("h3", "", "Clarifying questions"));
+    head.appendChild(el("h3", "", "Say this"));
     head.lastChild.id = "asideModeTitle";
-    var qBtn = el("button", "aside-mode", "Clarifying questions");
+    var qBtn = el("button", "aside-mode", "Say this");
     qBtn.id = "asideModeQuestions";
     qBtn.type = "button";
     var bBtn = el("button", "aside-mode", "Booster statements");
@@ -247,8 +236,7 @@
     var qs = el("ul", "aside-questions");
     qs.id = "asideModeList";
     back.appendChild(qs);
-    panel.appendChild(context);
-    panel.appendChild(back);
+    if (sayLines.length) panel.appendChild(back);
     paintMode(aside);
   }
 
@@ -256,7 +244,6 @@
     var panel = document.getElementById("answerAside");
     if (!panel) return;
     panel.textContent = "";
-    panel.appendChild(el("p", "aside-empty", "Context shows up with the next answer."));
   }
 
   function onQuestion() {
@@ -267,7 +254,7 @@
     manual = null;
     var hit = lookup(stemNow);
     if (hit) render(hit);
-    else if (stemNow) { current = null; renderWaiting(); }
+    else if (stemNow) { current = null; paintLocal(); }
   }
 
   var brain = { claims: [], topics: [], threads: [], questions: [], answers: [], prewarm: "", log: [], last: "", lastShown: "" };
@@ -474,16 +461,16 @@
       mode: /\?$/.test(last) ? "questions" : "boosters",
       breakdown: { claim: lines[0] || "", context: lines[1] || "", result: lines[2] || "" },
       context: { leads: lines.slice(0, 3), touchPoints: lines.slice(0, 4).map(function (line) { return line.split(/\s+/).slice(0, 8).join(" "); }) },
-      questions: ["What part of this do you want first?", "Want me to keep this short and stop for you?"],
-      boosters: lines.slice(0, 2),
+      questions: /\bdesign/i.test(question) && /\balone\b/i.test(question) ? ["Do you mean the overall design, or one piece such as failover?"] : [],
+      boosters: lines.slice(0, 2).map(function (line) { return /\byou\b/i.test(line) ? line : line.replace(/[.]+$/, "") + ", and I can walk you through that."; }),
       summary: "",
-      sayNow: "",
+      sayNow: lines[0] ? (/\byou\b/i.test(lines[0]) ? lines[0] : lines[0].replace(/[.]+$/, "") + ", and I can walk you through that.") : "",
     };
   }
   function paintLocal() {
     var aside = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
     if (!aside.partial && !aside.breakdown.claim && !aside.question) return;
-    if (!aside.breakdown.claim && aside.question) aside.breakdown.claim = aside.question;
+    if (!pageResume() && aside.question) aside.sayNow = aside.sayNow || "I don't have a resume on this device, so I won't invent a story. I can answer from the job description.";
     acceptFresh(aside);
   }
   function acceptFresh(aside) {

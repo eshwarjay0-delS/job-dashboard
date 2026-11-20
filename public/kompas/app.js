@@ -548,7 +548,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "formatSeg", "starSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); const key = { lengthSeg: "length", toneSeg: "tone", formatSeg: "format", starSeg: "star", modeSeg: "mode" }[id]; draft[key] = key === "star" ? b.dataset.v === "on" : b.dataset.v;
   // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
-  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "engineer", technical: "engineer", coding: "architect", final: "director" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
+  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); $("interviewerSelect").value = levelAfterInterviewType(b.dataset.v, $("interviewerSelect").value); } saveWizardDraft(); }; });
 // The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
 // call saveWizardDraft from their own handlers (clicks, not input events).
 ["input", "change"].forEach(ev => document.querySelectorAll(".wiz-pane").forEach(p => p.addEventListener(ev, saveWizardDraft)));
@@ -630,13 +630,17 @@ function saveLive(withLog) {
   let plain; try { plain = JSON.parse(JSON.stringify(cards, (k, v) => (CARD_TRANSIENT.has(k) || typeof v === "function" ? undefined : v))); } catch { plain = cards.map(c => ({ question: c.question, answer: c.answer })); }
   cards.forEach((c, i) => { if (c.streaming && plain[i]) plain[i].meta = "Stopped before this answer finished. Press AI Answer to run it again."; });   // a half-written answer is not shown later as a finished one
   liveSavedAt = Date.now();
-  return DossierDB.put(liveKey(s.id), { at: liveSavedAt, cards: plain, idx, transcript: transcriptForSave(transcript), ...(withLog ? { log: sessionLog.slice() } : {}) });
+  return DossierDB.put(liveKey(s.id), { at: liveSavedAt, epoch: sessionRunEpoch, cards: plain, idx, transcript: transcriptForSave(transcript), ...(withLog ? { log: sessionLog.slice() } : {}) });
 }
 async function restoreLive(s) {
   const snap = await DossierDB.get(liveKey(s.id));
   if (current !== s || !snap || !Array.isArray(snap.cards) || !snap.cards.length) return;
   if (Array.isArray(snap.log) && snap.log.length >= sessionLog.length) sessionLog = snap.log;
-  cards = snap.cards; idx = Math.max(0, Math.min(cards.length - 1, Number(snap.idx) || 0));
+  const restoredEpoch = Number(snap.epoch) || 0;
+  sessionRunEpoch = restoredEpoch + 1;
+  book.epoch = sessionRunEpoch;
+  liveAskKey = "";
+  cards = snap.cards.map(c => ({ ...c, restored: true, cacheEpoch: restoredEpoch, anchorEpoch: restoredEpoch, liveEpoch: sessionRunEpoch, loadedAnchor: true })); idx = Math.max(0, Math.min(cards.length - 1, Number(snap.idx) || 0));
   transcript = Array.isArray(snap.transcript) ? snap.transcript : [];
   heardSeq = answeredSeq = transcript.reduce((n, t) => Math.max(n, Number(t.seq) || 0), heardSeq);   // what came back is already dealt with: only what is heard from now on is pending
   updatePending(); renderDrawer(); renderCard();
@@ -706,6 +710,7 @@ function launchCopilot(s, opts = {}) {
   renderDrawer();
   renderCard();
   show("copilot");
+  if (!s.resume) status("No resume is stored on this device. Answers use the job description only and will not invent a work history.", "live");
   beat(true);
   // Continue: the answers and what was heard come back first, and the transcript goes on as the same run. The prep step follows,
   // so it fills the restored screen and is not overwritten by it.
@@ -732,27 +737,39 @@ function twinSession(s, test) { const k = factorsKey(s); return (LS.get("session
 // introduction plus the prep bank's core questions — are answered in the background, one at a time, paused while you
 // are live or an answer is running, and stored per session. At answer time a strict match at the same depth is served
 // in ~1 ms ("⚡ book"); anything else goes to the live engine.
-let book = { sid: null, items: [] };
+let book = { sid: null, items: [], epoch: 1, session: "" };
+let sessionRunEpoch = 1;
+let liveAskKey = "";
 const BOOK_MAX = 10;
 const bookWords = (t) => new Set((String(t).toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) || []).filter(w => !FSTOP.has(w) && !/^(what|when|where|which|with|have|your|about|would|could|should|tell|explain|describe|please|there|their|this|that|some|give|walk)$/.test(w)).map(w => w.slice(0, 5)));
+const ASK_STOP = new Set("the and you your how did what when where which with have about would could should tell explain describe please that this from for are was were has does into a an to of me my we our do is it on in at or".split(" "));
+function askTokens(t) { return String(t || "").toLowerCase().replace(/[^a-z0-9+#.\s-]+/g, " ").split(/\s+/).filter(w => w.length > 2 && !ASK_STOP.has(w)); }
+function sameAsk(a, b) {
+  const A = askTokens(a), B = askTokens(b);
+  if (!A.length || A.length !== B.length) return false;
+  for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) return false;
+  const nums = (t) => (String(t).match(/\d[\d/.,]*/g) || []).join("|");
+  return nums(a) === nums(b);
+}
 function bookMatch(q, depthKey) {
   if (personalLogistics(q)) return null;                             // never a cached answer for personal logistics
-  const A = bookWords(q); if (!A.size) return null;
-  // a plain intro only — "introduce yourself AND explain why X / a typical day / your education" needs a live answer (self-play)
-  const intro = /\b(introduce|introduction|about yourself|walk me through your (background|resume|career))\b/i.test(q)
-    && q.split(/\s+/).length <= 14 && !/\b(and|then|also|plus|starting with)\b[^?]*\b(why|explain|describe|walk|typical|education|fit|what|how|clients|activities|experience with)\b/i.test(q);
-  const nums = (t) => (String(t).match(/\d[\d/.,]*/g) || []).join("|");
-  let best = null, bestScore = 0;
+  if (!askTokens(q).length) return null;
   for (const it of book.items) {
     if (it.depthKey !== depthKey) continue;
-    if (intro && it.intro) return it;
-    const B = bookWords(it.q); let n = 0; for (const w of A) if (B.has(w)) n++;
-    if (A.size - n > 1) continue;                                    // more than one key word of theirs isn't in the book question: a different question
-    if (nums(q) && nums(q) !== nums(it.q)) continue;                 // different numbers: a different question
-    const sc = n / Math.max(A.size, B.size);
-    if (n >= 2 && sc > bestScore) { bestScore = sc; best = it; }
+    if (!sameAsk(q, it.q)) continue;                                 // keyword overlap is not the same question
+    if (it.epoch != null && book.epoch != null && it.epoch !== book.epoch) continue;
+    if (it.session && book.session && it.session !== book.session) continue;
+    if (/^I would want to confirm that\.?$/i.test(String(it.text || "").trim())) continue;
+    return it;
   }
-  return bestScore >= 0.75 ? best : null;
+  return null;
+}
+function noteLiveQuestion(q) {
+  const key = askTokens(q).join(" ");
+  if (!key) return;
+  if (liveAskKey && key !== liveAskKey) { sessionRunEpoch++; book.epoch = sessionRunEpoch; }
+  liveAskKey = key;
+  book.epoch = sessionRunEpoch;
 }
 async function readAnswerStream(res) {
   const txt = await res.text(); let text = "", meta = {};
@@ -769,7 +786,7 @@ async function buildBook(s) {
     const theirs = twin && await DossierDB.get(twin.id + ":book:personal-evidence-v2");
     if (theirs && theirs.items && theirs.items.length) { saved = { ...theirs }; await DossierDB.put(key, saved); }
   }
-  book = { sid: s.id, items: (saved && saved.items) || [] };
+  book = { sid: s.id, items: (saved && saved.items) || [], epoch: sessionRunEpoch, session: s.id };
   const qs = ["Tell me about yourself."].concat(((s.prep && s.prep.questions) || []).map(q => q.q).filter(Boolean)).filter((q) => !personalLogistics(q)).slice(0, BOOK_MAX);
   const depthKey = `${s.interviewer || "engineer"}|${s.mode || "technical"}|${s.length || ""}`;
   for (const q of qs) {
@@ -782,7 +799,7 @@ async function buildBook(s) {
         body: JSON.stringify({ stream: true, client: BUILD, question: q, transcript: "", config: liveConfig(), prep: { ...slimPrep(), questions: [] }, retrieved: retrieve(q, 4), ledger: null }) });
       const { text, meta } = await readAnswerStream(res);
       if (meta.busy || meta.degraded || !text.trim() || /qwen-backup/.test((meta.timing && meta.timing.lane) || "")) { await new Promise(r => setTimeout(r, Math.max(20000, meta.retryAfterMs || 0))); continue; }   // only full-quality answers go in the book
-      book.items.push({ q, text, depthKey, intro: /about yourself/i.test(q), at: Date.now() });
+      book.items.push({ q, text, depthKey, intro: /about yourself/i.test(q), at: Date.now(), epoch: sessionRunEpoch, session: s.id });
       await DossierDB.put(key, { v: 1, items: book.items });
     } catch {}
     await new Promise(r => setTimeout(r, 20000));                    // pacing: Groq's per-minute budget stays free for you
@@ -972,9 +989,10 @@ function speakerFirst(s) {
 }
 function seedIdentity(s) {
   window.__speakerName = speakerFirst(s);
-  let id = s.prep && s.prep.identity;
+  let id = s.resume && s.prep && s.prep.identity;
+  if (id && String(s.length || "").toLowerCase() === "long" && String(id).trim().split(/\s+/).length < 90) id = "";
   if (id && window.KompasCorrect && window.KompasCorrect.asSpeaker) id = window.KompasCorrect.asSpeaker(id, window.__speakerName);
-  const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter(Boolean) : ["Press Start — answers appear here."] };
+  const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter(Boolean) : [s.resume ? "Press Start — answers appear here." : "No resume is stored on this device. I will use the job description only, and I will not invent a work history."] };
   const ph = cards.findIndex(c => /^(Preparing…|Ready)$/.test(c.question));
   if (ph >= 0) cards[ph] = intro;
   else if (!cards.some(c => c.question === "Your introduction")) { cards.unshift(intro); idx++; }
@@ -1136,7 +1154,7 @@ function presentAnswer(question, answer, source) {
   const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(raw);
   const meta = /\b(?:that (?:part|detail) is not in the sources|not in the (?:sources|resume)|no evidence for|sources or evidence)\b/i;
   const dictionary = /,\s+or\s+[“"'][^”"']{1,90}[”"'],?\s+is\b/i;
-  const third = (s) => /\bin general,\s+teams\b|\bteams (?:start|see|design|build|run)\b/i.test(s) || (!/\b(?:I|we|my|our)\b/.test(s) && /\b(?:next|finally) they\b|\bthey (?:build|run)\b/i.test(s));
+  const third = (s) => /\bin general,\s+teams\b|\blets teams\b|\bthis approach lets\b|\bteams focus\b|\bteams (?:start|see|design|build|run)\b/i.test(s) || (!/\b(?:I|we|my|our)\b/.test(s) && (/\b(?:next|finally) they\b|\bthey (?:build|run)\b|\byou\b/i.test(s)));
   const pieces = [];
   for (const line of raw.split("\n")) {
     const t = line.trim();
@@ -1144,28 +1162,28 @@ function presentAnswer(question, answer, source) {
     for (const chunk of peelDisplayArtifact(t).split(/(?<=[.!?])\s+|\s+-\s+(?=I\b)/)) {
       let s = peelDisplayArtifact(chunk);
       if (!s || dictionary.test(s) || third(s) || meta.test(s)) continue;
-      s = s.replace(/\d[\d,.]*/g, (n) => allowed.includes(n.replace(/[.,]+$/, "")) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+      s = s.replace(/\d[\d,.]*/g, (n, i, all) => (/[A-Za-z-]/.test(String(all).charAt(i - 1)) || allowed.includes(n.replace(/[.,]+$/, ""))) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
       if (s.split(/\s+/).filter(Boolean).length < 3) continue;
       if (/^[a-z]/.test(s)) s = s.charAt(0).toUpperCase() + s.slice(1);
       pieces.push(s);
     }
   }
-  let seenFirst = false;
   const ordered = [];
-  for (let s of (intro ? pieces.map((bit) => bit.replace(/^(?:first|then|finally|the result)\b[:,]?\s+/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase())) : pieces)) {
-    if (/^first\b/i.test(s)) {
-      if (seenFirst) s = s.replace(/^first\b[:,]?\s+/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase());
-      else seenFirst = true;
-    }
-    if (s && s.split(/\s+/).filter(Boolean).length >= 3 && !meta.test(s) && !third(s)) ordered.push(s);
+  const seenLine = new Set();
+  for (let s of pieces.map((bit) => bit.replace(/^(?:first|then|next|finally)\b[:,]?\s+/i, "").replace(/^the result\s*:\s*/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase()))) {
+    if (/^I would want to confirm that\.?$/i.test(s)) continue;
+    const key = s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    if (!s || seenLine.has(key) || s.split(/\s+/).filter(Boolean).length < 3 || meta.test(s) || third(s)) continue;
+    seenLine.add(key);
+    ordered.push(s);
   }
-  if (!ordered.length) return "";
+  if (!ordered.length) return /I would want to confirm that/i.test(raw) ? "That is not on my resume, so I will not invent it." : "";
   if (intro) return ordered.join(" ");
   const q = String(asked || "");
   const band = (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /^(?:what is|what does|what's|define)\b/i.test(q))
     ? "sentences"
     : (/\b(?:tell me about yourself|introduce yourself|tell me about a time|walk me through|go deeper|how do you)\b/i.test(q) ? "script_bullets" : "script");
-  const lines = band === "sentences" ? ordered.slice(0, 2) : ordered;
+  const lines = ordered;
   if (band !== "script_bullets" || lines.length < 2) return lines.join(" ");
   return [lines[0], ...lines.slice(1).map((s) => "- " + s)].join("\n");
 }
@@ -1610,6 +1628,12 @@ function showCodingLevels(sel, mode) {
   void mode;
 }
 // A session saved on a level that is no longer offered opens on the nearest one kept, never on a blank list.
+function levelAfterInterviewType(mode, currentLevel) {
+  const level = currentLevel || "engineer";
+  if (mode === "coding") return "architect";
+  if (mode === "final") return "director";
+  return level;
+}
 function keptLevel(v, mode) {
   const near = { hr: "engineer", technical_hr: "engineer", analyst: "engineer", developer: "architect", peer: "engineer", supervisor: "director", lead: "director" };
   return ladderFor(mode).includes(v) ? v : near[v] || "engineer";
@@ -1639,6 +1663,7 @@ function stashShown(card) {
   }
 }
 function showCachedLevel(card) {
+  if (card && card.restored && card.cacheEpoch != null && card.liveEpoch != null && card.cacheEpoch !== card.liveEpoch) return false;
   const hit = card && card.byDepth && card.byDepth[levelKey()];
   if (!hit || !hit.answer) return false;
   card.answer = hit.answer;
@@ -1769,7 +1794,7 @@ $("startBtn").onclick = () => {
     if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) { void start(); return; }
     offerFreshSignIn(false); return;
   }
-  running ? wrapSession() : start();
+  running ? stop(true) : start();
 };
 
 function providerLeak(text) {
@@ -2855,7 +2880,7 @@ function showCaption(who, text, isInterim) {
 // unchanged: this is only how the drawer shows it.
 const DRAWER_FILLER = /^(?:and|so|but|or|um+|uh+|er|erm|okay|ok|yeah|yes|right|hmm+|like)[.,!?]*$/i;
 function utteranceTag(text) {
-  return /(?:^|\s)(?:what|how|why|when|where|who|which|tell me|describe|walk me|design|talk about|proud of|your role|contribut|project that you)\b|\?/i.test(String(text || "")) ? "Question detected" : "No question";
+  return questionEnded(text) ? "Question detected" : "No question";
 }
 function stitchUtterance(previous, next) {
   const cur = String(next || "").replace(/\s+/g, " ").trim();
@@ -3686,10 +3711,32 @@ function interruptionFlush(opts) {
   return { flush: true, pivot: pivotConstraint(question), resolve: true, question, reason: "interrupt" };
 }
 
+function questionEnded(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return false;
+  const filler = raw.replace(/\b(?:okay|ok|yeah|yes|um+|uh+|right|alright|so|and|well|like)\b/gi, " ").replace(/\s+/g, " ").trim();
+  if (!filler || filler.split(/\s+/).filter(Boolean).length < 4) return false;
+  const ownStory = /^(?:i(?:'m| am)|my first|my |it(?:'s| is) been|i have|i was|i work|he(?:'s| is)|she(?:'s| is))\b/i.test(filler);
+  const asks = /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do)|why (?:did|do|would) you|can you|could you|do you know|explain|describe|define)\b/i;
+  if (ownStory && !asks.test(filler)) return false;
+  if (/\?\s*$/.test(raw) && /\b(?:what|how|why|when|where|who|which|can|could|would|do|did|have|are|is|tell|walk|explain|describe)\b/i.test(raw)) return true;
+  return asks.test(filler);
+}
+function paraphrasesOwn(text) {
+  const own = (typeof transcript !== "undefined" && transcript || []).filter(t => t && t.who === "You").slice(-4);
+  const A = askTokens(text);
+  if (A.length < 4) return false;
+  return own.some(t => {
+    const B = new Set(askTokens(t.text));
+    let n = 0;
+    for (const w of A) if (B.has(w)) n++;
+    return n / A.length >= 0.7;
+  });
+}
 function confirmAutoQuestion(text) {
   const stutter = resolveStutterRephrase(text);
   const t = String((stutter.text || text || "")).replace(/\s+/g, " ").trim();
-  if (!t || AUTO_CONFIRM_NOISE.test(t)) return { ok: false, reason: "noise" };
+  if (!t || AUTO_CONFIRM_NOISE.test(t) || !questionEnded(t)) return { ok: false, reason: "noise" };
   if (/^(?:that'?s (?:really )?cool|that must feel|i'?m sure that must)\b/i.test(t) && !(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "confirmation" };
   if (!(typeof Q_CUE === "function" ? Q_CUE(t) : Q_CUE.test(t))) return { ok: false, reason: "no-cue" };
   if (stutter.incomplete || !isQuestionComplete(t)) return { ok: false, reason: "unfinished" };
@@ -3716,6 +3763,9 @@ async function confirmAutoAndAnswer(tail) {
     if (!res.ok) return;
     const data = await res.json();
     if (!data || data.noQuestion || !data.derived) return;
+    if (!questionEnded(data.derived)) return;
+    if (paraphrasesOwn(data.derived)) return;
+    if (cards.some(c => sameAsk(data.derived, c.question || ""))) return;
     if (!autoOn || !armsAuto()) return;
     await aiAnswer(true);
   } catch { /* conservative: no auto answer when confirm fails */ }
@@ -3788,7 +3838,7 @@ function clearAuthLocalState() {
   } catch {}
 }
 
-const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && questionEnded(t.text) && !paraphrasesOwn(t.text));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
@@ -4664,8 +4714,12 @@ function sessionAnswerControls(s) {
   };
 }
 function readLiveAnswerControls() {
-  // Format, tone, length and STAR are not chosen from the row or from old saved prefs.
-  return { format: "full_script", length: "balanced", tone: "simple", star: false };
+  // The live length menu is hidden. The session's Long / Short choice is what was asked for.
+  const saved = (typeof current !== "undefined" && current && current.length) || "";
+  const selected = (typeof $ === "function" && $("liveLength") && $("liveLength").value) || "";
+  const raw = String(saved || selected || "balanced").toLowerCase();
+  const length = /^(?:short|brief|concise)$/.test(raw) ? "short" : /^(?:long|detailed|deep)$/.test(raw) ? "long" : "balanced";
+  return { format: "full_script", length, tone: "simple", star: false };
 }
 function syncLiveAnswerControls(s) {
   const k = sessionAnswerControls(s || current || {});
@@ -4809,6 +4863,8 @@ function anchorFacts() {
 }
 function paintFromAnchors(card) {
   if (desktopResponses() || !card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
+  if (card.loadedAnchor) return false;   // a stored anchor is a previous question until this session writes a new one
+  if (card.anchorEpoch != null && card.liveEpoch != null && card.anchorEpoch !== card.liveEpoch) return false;
   if (personalLogistics(card.anchorQ || "") || personalLogistics(card.question || "")) return false;   // never a cached answer for personal logistics
   const level = askingLevel();
   const plan = window.KompasDiamond.plan(level, card.anchors, window.__peerOf);
@@ -4862,6 +4918,9 @@ function fillAnchor(card, anchor) {
       const shaped = window.KompasLevels.fromProse(criticise(card, anchor, text), anchor);
       if (!shaped) return;
       card.anchors = card.anchors || {};
+      card.loadedAnchor = false;
+      card.anchorEpoch = sessionRunEpoch;
+      card.liveEpoch = sessionRunEpoch;
       card.anchors[anchor] = shaped;
       const facts = anchorFacts();
       if (cards[idx] === card) paintFromAnchors(card);
@@ -4922,6 +4981,7 @@ function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
 }
 async function generateAnswerRequest(question, card, opts = {}) {
   question = cleanHeardQuestion(String(question || "").trim()); if (!question) return;
+  noteLiveQuestion(question);
   card = card || addCard(question, ["…"]);
   if (opts && opts.consolidated && !opts.lateFold && !opts.reask && !opts.regen) armLateContext(card, String(card.question || question || ""));
   if (cleanHeardQuestion(card.question) === question) { card.question = question; if (!card.anchorQ || cleanHeardQuestion(card.anchorQ) === question) card.anchorQ = question; }
@@ -4991,6 +5051,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const pack = await Promise.race([window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id), new Promise((r) => setTimeout(() => r(null), 15000))]);   // anchors are an enhancement: never let their load hang the answer
       if (pack && pack.anchors) {
         card.anchors = card.anchors || {};
+        card.loadedAnchor = true;
+        card.anchorEpoch = pack.epoch != null ? pack.epoch : null;
+        card.liveEpoch = sessionRunEpoch;
         for (const k of ["engineer", "director"]) if (pack.anchors[k] && !(card.anchors[k] && card.anchors[k].prose)) card.anchors[k] = pack.anchors[k];
       }
     } catch {}
@@ -5025,7 +5088,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
   let renderQueued = false;
   const show = (t) => {
     if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
-    const spoken = sayAloud(t).trim();
+    let spoken = sayAloud(t).trim();
+    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "That is not on my resume, so I will not invent it.";
     if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
@@ -5042,7 +5106,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const tries = (opts.retries || 0) + 1;
     const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
     if (cards[idx] === card) renderCard();
-    if (code !== "AUTH") status(retry ? "Still working." : "The answer did not finish.", "live");
+    const cooling = /429|RATE|rate limit/i.test(String(code || "")) || retryAfterMs >= 8000;
+    if (code !== "AUTH") status(retry ? (cooling ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.ceil(retryAfterMs / 1000)) + "s.") : "Still working.") : "The answer did not finish.", "live");
     logAnswer({ failed: code || "provider_unavailable", retrying: retry });
     sessionReadyUntil = 0;
     if (retry) setTimeout(() => {
@@ -5122,7 +5187,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (applied.card) paintLayout(applied.card);
       } else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; if (!card.cardLayout) show(text); }
       else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = ev.text; card.cardLayout = null; show(text); }
-      else if (ev.type === "wait") { if (card.req === ctl) status("Still working.", "live"); }
+      else if (ev.type === "wait") { if (card.req === ctl) status(ev.ms ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.round(ev.ms / 1000)) + "s.") : "Still working.", "live"); }
       else if (ev.type === "done") {
         meta = { ...meta, ...ev };
         if (applied.kind === "done-card" && applied.card) paintLayout(applied.card);
@@ -5891,14 +5956,6 @@ async function aiAnswer(fromAuto, options = {}) {
       if (spans.length > 1) {
         const who = heardOnly ? (questionSource() === "You" ? "You" : "Them") : "You";
         let list = spans;
-        if (heardOnly || fromAuto) {
-          const shown = String((cur && cur.question) || "").toLowerCase();
-          const hit = !fromAuto && spans.find(s => {
-            const q = String(s || "").toLowerCase();
-            return q && shown && (shown.includes(q.slice(0, 48)) || q.includes(shown.slice(0, 48)));
-          });
-          list = [hit || spans[spans.length - 1]];
-        }
         for (const span of list) {
           const shown = heardOnly ? span : (withoutLogistics(span) || span);   // a typed compound shows only its non-logistics part
           const spanHeard = who + ": " + span;
@@ -5930,6 +5987,10 @@ async function aiAnswer(fromAuto, options = {}) {
     // for this card plus its earlier context, and answers that — the press
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
     // the old heard text alone is what showed "No question yet".
+    if (c && c.restored && c.cacheEpoch != null && c.liveEpoch != null && c.cacheEpoch !== c.liveEpoch) {
+      status("No new question yet.", "live");
+      return;
+    }
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
       // A finished page stays as it is; asking it again opens the next page. A page with no answer yet is asked again in place.
       const page = hasAnswer(c) ? addCard(c.question, ["…"]) : c;

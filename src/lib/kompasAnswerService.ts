@@ -24,7 +24,10 @@ import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestio
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
-import { CONFIRM_LINE, routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
+import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
+import { dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { visibleLengthBand } from "@/lib/kompasDissection"
+import { ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, firstSentence, splitTitle, TITLE_INSTRUCTION, type AnswerControls, enforceResumeState, resumeState, resumeStatePrompt, tailWindow, toCard, unpinStale, wantsInlineDerive, type AnswerFormat, type ResumeState } from "@/lib/kompasAnswerContract"
@@ -350,6 +353,7 @@ type AnswerJob = {
   transcriptClipped?: boolean
   unpinned?: string
   sourceText: string
+  jd?: string
   sessionMemory?: SessionMemory
   sourceDocs: SourceDoc[]
   // Speed r6: the retrieved passages (for the per-sentence source check) and an optional Lens sourced opener.
@@ -406,7 +410,8 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const grounded = groundSpokenAnswer(settled.text, job.passages || [], job.sourceDocs, job.question)
     const stripped = grounded.presentation.replace(/\s*That (?:part|detail) is not in the sources\.?/gi, "").trim()
     const profiled = groundToProfile(job.question, stripped || settled.text, job.sourceText, job.sessionMemory || emptyMemory(""))
-    if (profiled.trim()) return { text: profiled, providerError: false }
+    const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "" })
+    if (gated.text.trim()) return { text: gated.text, providerError: false }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }
 }
@@ -432,7 +437,10 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   // Source grounding (29 Oct 2026): a named employer, tool or figure the candidate's own sources do not back is a core
   // item. Empty with no sources, so a sourceless turn repairs exactly as before.
   const sourceCheck = repairLoopSourceChecks(job.question, text, job.sourceDocs)
-  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...parts, ...tangents] }
+  const short = job.controls?.length === "long" && text.trim().split(/\s+/).filter(Boolean).length < visibleLengthBand(job.question).floor
+    ? [`the answer is under the long floor; add the missing steps from the job description and do not invent a personal history`]
+    : []
+  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck, ...short], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...short, ...parts, ...tangents] }
 }
 
 // r4 (item 24): the source lines the repair may draw on; empty (old prompt) with no experience sources or on any error.
@@ -454,6 +462,7 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
     hasKey: Boolean(job.orKey),
     isProviderError: isProviderErrorAnswer,
     guard: (text) => applyGuards(text, job.guardFacts, job.allowed, job.askedFigures).text,
+    grounded: (text) => ungroundedProducts(text, `${job.sourceText || ""}\n${job.question}`).length === 0,
     // Speed r6: a blocking model call only for a real gap; an unasked-tangent note alone is reported as "advisory".
     gateAdvisory: process.env.KOMPAS_REPAIR_GATE !== "0",
     rewrite: async (best, missing) => {
@@ -669,6 +678,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // the user's own experience sources, so it adds no claim the guards have not already accepted.
         if (opener) finalText = withOpener(finalText, opener)
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
+        finalText = dropOffTopicResume(job.question, job.jd || "", keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || ""))
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
@@ -773,6 +783,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }
   out = settled.text
   if (job.resumeState && job.resumeState !== "grounded") out = enforceResumeState(out, job.resumeState).text
+  out = dropOffTopicResume(job.question, job.jd || "", out)
   repair = settleRepair(job, repair, out)
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
@@ -806,11 +817,11 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
 function routeDecisionResponse(stream: boolean, lane: JevRoute): Response | NextResponse {
   if (lane.action === "confirm") {
     if (stream) {
-      const body = `data: ${JSON.stringify({ type: "meta", route: lane })}\n\ndata: ${JSON.stringify({ type: "replace", text: CONFIRM_LINE })}\n\ndata: ${JSON.stringify({ type: "done", route: lane, text: CONFIRM_LINE })}\n\n`
+      const body = `data: ${JSON.stringify({ type: "meta", route: lane })}\n\ndata: ${JSON.stringify({ type: "replace", text: HONEST_LINE })}\n\ndata: ${JSON.stringify({ type: "done", route: lane, text: HONEST_LINE })}\n\n`
       return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
     }
     return NextResponse.json({
-      text: CONFIRM_LINE,
+      text: HONEST_LINE,
       polished: false,
       degraded: false,
       route: lane,
@@ -971,6 +982,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // prose is written under; the level controls register and depth.
   const level = answerLevel(config.level, interviewer)
   const prep = (body.prep && typeof body.prep === "object" ? body.prep : {}) as Record<string, unknown>
+  if (!resumeSrc) { prep.identity = ""; prep.projects = ""; }
   // The 90 s window is kept from its newest end; the old head-first 4,000-character clip dropped the newest speech.
   const transcriptWindow = tailWindow(body.transcript)
   const transcript = transcriptWindow.text
@@ -1014,6 +1026,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     length: str(config.length, 20) || undefined,
     register,
   })
+  if (cardControls.length === "long") {
+    const band = visibleLengthBand(question)
+    if (plan.words < band.aim) {
+      plan.words = band.aim
+      plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+      plan.maxTokens = Math.min(4000, Math.max(1400, Math.round(plan.words * 2.6) + 900))
+    }
+  }
   const desktopPolicy = config.responseCalibration === "three-level-v1" ? desktopResponsePolicy(level, question) : null
   const desktopWire = desktopPolicy ? desktopDelivery(desktopPolicy, level, question) : null // lens r4: OFF unless KOMPAS_DESKTOP_LENS=on
   const webPivot = desktopWire ? "" : webPivotLine(question, level) // Lens 3D/4D on web: "" unless KOMPAS_DESKTOP_LENS=on
@@ -1136,7 +1156,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     question,
     questionClass: focus.intent,
     retrieval: sourceRetrieval,
-    confirmSurface: true,
+    confirmSurface: false,
     outOfLane: false,
     audience: level,
   })
@@ -1198,10 +1218,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     CODE_ASK_Q.test(question) ? "" : tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
     `LATEST ACTUAL QUESTION INTENT: ${rediscovered.intent}. Answer mode: ${rediscovered.answerMode}. The old perfACT tier is merely a shape hint: ${why} (tier ${tier}).`,
     storyMode || ["scenario","technical-process"].includes(rediscovered.intent) ? `DEEP QUESTION RULE: ${rule}` : "",
+    (storyMode || /\b(?:tell me about|walk me through|how (?:do|would) you|prioriti[sz]e|incident)\b/i.test(question)) ? `NARRATIVE: ${NARRATIVE_LINE}` : "",
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape && !CODE_ASK_Q.test(question) ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     level === "director" && !CODE_ASK_Q.test(question) ? DIRECTOR_OPENING : "",
-    CODE_ASK_Q.test(question) ? `LENGTH CEILING: the fenced code block sits outside the spoken-word budget; any prose after it stays within ${plan.words} spoken words and the answer finishes when all asked parts are answered.` : `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
+    CODE_ASK_Q.test(question) ? `LENGTH CEILING: the fenced code block sits outside the spoken-word budget; any prose after it stays within ${plan.words} spoken words and the answer finishes when all asked parts are answered.` : cardControls.length === "long"
+      ? `LENGTH: Long. Land near ${visibleLengthBand(question).aim} spoken words and do not stop before ${visibleLengthBand(question).floor}. One sentence is not a long answer. An introduction uses that opener length.`
+      : `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
+    `ROLE FIRST: Answer this question for the role in the job description. Use a resume fact only when it is evidence for this question. Do not drag an unrelated platform from the resume into the answer. Do not invent an employer, a deployment, or a metric.`,
     depthGuidance,
     storyMode && tier !== 0 && routedProject
       ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
@@ -1219,7 +1243,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     priorBibleContext ? `${priorBibleContext}` : "",
     bibleTimeoutNote ? bibleTimeoutNote : "",
     resumeFacts ? `${resumeFacts}` : "",
-    tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
+    tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}${resumeSrc ? "" : "\nNO RESUME: use these tools when they answer the question. Do not invent an employer, a project, or a personal incident."}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     sourceBlock,
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
@@ -1299,6 +1323,7 @@ ${INTERVIEW}`
     transcriptClipped: transcriptWindow.clipped,
     unpinned: unpin.unpinned,
     sourceText,
+    jd: jdSrc,
     sessionMemory,
     sourceDocs: groundingDocs,
     passages: sourceRetrieval.passages,

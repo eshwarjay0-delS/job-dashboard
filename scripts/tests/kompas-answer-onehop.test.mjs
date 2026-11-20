@@ -101,7 +101,7 @@ test("stored format and simple/off prefs do not force the next card", () => {
     $: (id) => els[id] || null,
     saveSession: () => {},
   });
-  assert.equal(JSON.stringify(s.readLiveAnswerControls()), JSON.stringify({ format: "full_script", length: "balanced", tone: "simple", star: false }));
+  assert.equal(JSON.stringify(s.readLiveAnswerControls()), JSON.stringify({ format: "full_script", length: "long", tone: "simple", star: false }));
 });
 
 test("stream: title first, then a partial card (opening line), then done.card (script + 2–4 bullets)", () => {
