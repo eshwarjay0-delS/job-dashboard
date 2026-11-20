@@ -679,3 +679,7 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+## 20 November 2026 — crawler abort diagnostics safe restack — source/test ported; validation pending
+
+PR #470 is non-mergeable against current master after PR #464 advanced the shared Plan/REA files. Its source and test additions were compared with current master and ported onto safe branch `fix/crawler-abort-diagnostics-safe-restack-20261120-1136z` from exact master `2da44026c0ab58ab2966b9371992efaf93427de4`, preserving current-master files and the original contributor branch. The original #470 exact-head Full CI, crawler, Plan/REA and Kompas baseline checks all succeeded; they are predecessor evidence only. The safe branch must rerun all four on its exact final head. It remains draft pending Safe Merge Gate review and the legitimate protected preview path, which is unavailable due the Vercel Hobby usage-limit/HTTP 402 until 1 Dec 2026. No manual crawl, portal request, production row mutation or release was performed.
