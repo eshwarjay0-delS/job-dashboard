@@ -49,17 +49,16 @@ export type JevRouteRow = {
 /**
  * First match wins. Out of lane stops before confidence matters.
  * Experience-story is the class whose existing evidence gate is passage coverage.
- * High and a total miss both clear the call: the miss still generates.
- * Mid confirms only when the caller already has a place to show the confirm line.
- * Without that surface, mid goes, so this table does not invent a new card.
+ * High, mid, low, and a total miss all generate. Mid must not return the
+ * "I would want to confirm that" stub: answer from the resume, or the display
+ * gate says the resume does not cover it. Out of lane is still the stop.
  * No scored sources ("none") does not fail a gate that was never measured.
  * Evidence that is too weak to answer at all is the out-of-lane row: personal
  * logistics never becomes a generation, at any class and any band.
  */
 export const JEV_ROUTE_TABLE: readonly JevRouteRow[] = [
   { outOfLane: true, questionClass: "*", confidence: "*", action: "stop", reason: "out-of-lane" },
-  { questionClass: "experience-story", confidence: "mid", confirmSurface: true, action: "confirm", reason: "confirm" },
-  { questionClass: "experience-story", confidence: "mid", confirmSurface: false, action: "go", reason: "clear" },
+  { questionClass: "experience-story", confidence: "mid", action: "go", reason: "clear" },
   { questionClass: "experience-story", confidence: "low", action: "go", reason: "clear" },
   { questionClass: "experience-story", confidence: "high", action: "go", reason: "clear" },
   { questionClass: "experience-story", confidence: "none", action: "go", reason: "clear" },

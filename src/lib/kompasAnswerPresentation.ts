@@ -1,4 +1,4 @@
-import { dissectQuestion, formatForBand, lengthKind } from "./kompasDissection.ts"
+import { dissectQuestion, formatForBand, lengthKind, visibleLengthBand } from "./kompasDissection.ts"
 import { cleanHeardQuestion } from "./kompasLongContext.ts"
 
 /**
@@ -35,11 +35,25 @@ export function answerIsComplex(question: string, text: string): boolean {
 /** Drop a figure the resume and the question do not already contain. */
 export function withoutInventedNumbers(sentence: string, source: string): string {
   return String(sentence || "")
-    .replace(/\d[\d,.]*/g, (n) => (source.includes(n.replace(/[.,]+$/, "")) ? n : ""))
+    .replace(/\d[\d,.]*/g, (n, index, all) => {
+      const prev = String(all).charAt(Math.max(0, index - 1))
+      if (/[A-Za-z-]/.test(prev)) return n
+      return source.includes(n.replace(/[.,]+$/, "")) ? n : ""
+    })
     .replace(/\bby percent\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([,.!?])/g, "$1")
     .trim()
+}
+
+const CONFIRM_STUB = /^I would want to confirm that\.?$/i
+const PRODUCT_NAMES = "SentinelOne|QRadar|Splunk|Qualys|CrowdStrike|Terraform|CyberArk|ServiceNow|Dragos|Tenable|Nessus|Rapid7|Okta|SailPoint|Mimikatz|BloodHound|Cobalt Strike|Kubernetes|Wireshark|Burp Suite|Palo Alto|Fortinet|Datadog|PagerDuty"
+
+/** A product the resume and the question do not name. */
+export function ungroundedProducts(sentence: string, source: string): string[] {
+  const bag = String(source || "").toLowerCase()
+  const found = String(sentence || "").match(new RegExp(`\\b(?:${PRODUCT_NAMES})\\b`, "gi")) || []
+  return [...new Set(found.filter((name) => !bag.includes(name.toLowerCase())))]
 }
 
 const HEADER = /^\*\*(?:Claim|Context|Action|Result|Close|What I did)\*\*$/
@@ -70,26 +84,53 @@ export function peelDisplayArtifact(sentence: string): string {
 }
 
 function genericThirdPerson(sentence: string): boolean {
-  if (/\bin general,\s+teams\b/i.test(sentence) || /\bteams (?:start|see|design|build|run)\b/i.test(sentence)) return true
+  if (/\bin general,\s+teams\b|\blets teams\b|\bthis approach lets\b|\bteams focus\b/i.test(sentence)) return true
+  if (/\bteams (?:start|see|design|build|run)\b/i.test(sentence)) return true
   if (/\b(?:I|we|my|our)\b/.test(sentence)) return false
+  if (/\byou\b/i.test(sentence)) return true
   return GENERIC_THIRD.test(sentence)
 }
 
-function ordinalStart(sentence: string): boolean {
-  return /^first\b/i.test(sentence)
+/** Connector prefixes are not part of the sentence he says. */
+function stripConnector(line: string): string {
+  const rest = String(line || "")
+    .replace(/^(?:first|then|next|finally)\b[:,]?\s+/i, "")
+    .replace(/^the result\s*:\s*/i, "")
+    .trim()
+  return rest.replace(/^([a-z])/, (letter) => letter.toUpperCase())
 }
 
-/** At most one leading First. Later ones were the repeated signpost. */
-function oneLeadingFirst(lines: string[]): string[] {
-  let seen = false
+function dropRepeated(lines: string[]): string[] {
+  const seen = new Set<string>()
   const out: string[] = []
   for (const line of lines) {
-    if (!ordinalStart(line)) { out.push(line); continue }
-    if (!seen) { seen = true; out.push(line); continue }
-    const rest = line.replace(/^first\b[:,]?\s+/i, "").trim()
-    if (rest) out.push(rest.replace(/^([a-z])/, (letter) => letter.toUpperCase()))
+    const key = line.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push(line)
   }
   return out
+}
+
+/** Direct answer, then the work in the order he did it, then a result sentence. */
+function arrangeSpoken(lines: string[]): string[] {
+  const direct: string[] = []
+  const steps: string[] = []
+  const results: string[] = []
+  lines.forEach((line, index) => {
+    if (index > 0 && /^(?:as a result|the result)\b/i.test(line)) results.push(line)
+    else if (index === 0) direct.push(line)
+    else steps.push(line)
+  })
+  return [...direct, ...steps, ...results]
+}
+
+function trimToCeiling(question: string, lines: string[]): string[] {
+  const ceiling = visibleLengthBand(question).ceiling
+  const kept = [...lines]
+  const words = () => kept.join(" ").split(/\s+/).filter(Boolean).length
+  while (kept.length > 1 && words() > ceiling) kept.pop()
+  return kept
 }
 
 const INTRO_ASK = /^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i
@@ -127,19 +168,20 @@ export function presentSpokenAnswer(question: string, text: string, source = "")
     const chunks = peelDisplayArtifact(t).split(/(?<=[.!?])\s+|\s+-\s+(?=I\b)/)
     for (const chunk of chunks) {
       let s = peelDisplayArtifact(chunk)
-      if (!s || DICTIONARY.test(s) || genericThirdPerson(s) || META_LINE.test(s)) continue
+      if (!s || DICTIONARY.test(s) || genericThirdPerson(s) || META_LINE.test(s) || CONFIRM_STUB.test(s)) continue
+      if (source.trim() && ungroundedProducts(s, allowed).length) continue
       s = withoutInventedNumbers(s, allowed).replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()
       if (answerWordCount(s) < 3) continue
       if (/^[a-z]/.test(s)) s = s.charAt(0).toUpperCase() + s.slice(1)
       pieces.push(s)
     }
   }
-  const ordered = oneLeadingFirst(intro ? pieces.map((s) => s.replace(/^(?:first|then|finally|the result)\b[:,]?\s+/i, "").replace(/^([a-z])/, (letter) => letter.toUpperCase())) : pieces)
-    .filter((s) => answerWordCount(s) >= 3 && !META_LINE.test(s) && !genericThirdPerson(s))
-  if (!ordered.length) return ""
-  if (intro) return ordered.join(" ")
+  const spoken = arrangeSpoken(dropRepeated((intro ? pieces.map((s) => stripConnector(s)) : pieces.map((s) => stripConnector(s)))
+    .filter((s) => answerWordCount(s) >= 3 && !META_LINE.test(s) && !genericThirdPerson(s) && !CONFIRM_STUB.test(s))))
+  if (!spoken.length) return ""
+  if (intro) return spoken.join(" ")
   const band = formatForBand(lengthKind(asked, dissectQuestion(asked).shape), asked)
-  const lines = band === "sentences" ? ordered.slice(0, 2) : ordered
+  const lines = trimToCeiling(asked, spoken)
   if (band !== "script_bullets" || lines.length < 2) return lines.join(" ")
   return [lines[0], ...lines.slice(1).map((s) => `- ${s}`)].join("\n")
 }

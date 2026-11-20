@@ -223,6 +223,34 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
   }
 }
 
+export type VisibleLength = { type: string; floor: number; aim: number; ceiling: number }
+
+/**
+ * What the candidate actually sees. Floors sit under ceilings at every level.
+ * The prompt table stays the generation hint; this band is the display gate.
+ * Openers ~120, follow-ups ~70, comparisons ~100, short definitions ~35,
+ * definitions that also ask for application 85–110, and "have you done" ~85.
+ */
+export function visibleLengthBand(question: string, shape?: AnswerShape): VisibleLength {
+  const asked = String(question || "")
+  const kind = lengthKind(asked, shape || dissectQuestion(asked).shape)
+  const applied = kind === "definition" && (askedParts(asked) >= 2 || /\b(?:how (?:would|do) you use|when would you|in (?:your|practice)|apply it|for example)\b/i.test(asked))
+  if (applied) return { type: "definition-application", floor: 85, aim: 98, ceiling: 110 }
+  switch (kind) {
+    case "opener": return { type: "opener", floor: 90, aim: 120, ceiling: 150 }
+    case "follow-up": return { type: "follow-up", floor: 50, aim: 70, ceiling: 95 }
+    case "compare": return { type: "comparison", floor: 75, aim: 100, ceiling: 125 }
+    case "definition": return { type: "definition", floor: 22, aim: 35, ceiling: 50 }
+    case "done":
+    case "used": return { type: "experience", floor: 70, aim: 85, ceiling: 120 }
+    case "star": return { type: "story", floor: 90, aim: 120, ceiling: 180 }
+    case "howto":
+    case "design-first":
+    case "design-later": return { type: kind, floor: 70, aim: 100, ceiling: 160 }
+    default: return { type: kind, floor: 12, aim: 24, ceiling: 45 }
+  }
+}
+
 function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand {
   const row = QUESTION_LENGTH[kind][level]
   const safe = Number.isFinite(scale) && scale > 0 ? scale : 1

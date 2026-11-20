@@ -135,7 +135,8 @@ export function toCard(text: string, format: AnswerFormat, length?: string): Ans
 export type ResumeState = "grounded" | "knowledge" | "personal-no-resume"
 
 export function resumeState(o: { resume?: string; documents?: string; dossier?: string; personal: boolean }): ResumeState {
-  if ((o.resume || "").trim() || (o.documents || "").trim() || (o.dossier || "").trim()) return "grounded"
+  // A dossier or a job description is not a resume. A fresh browser stores no resume.
+  if ((o.resume || "").trim()) return "grounded"
   return o.personal ? "personal-no-resume" : "knowledge"
 }
 
@@ -153,6 +154,10 @@ const CAREER_CLAIM = new RegExp([
   String.raw`\bin my (?:last|previous|current|old|first) (?:role|job|team|company|position)\b`,
   String.raw`\b(?:my|our) (?:team|manager|teammate|lead|company|employer|director|ciso|org)\b`,
   String.raw`\b(?:I|we) (?:led|built|ran|managed|owned|worked|handled|implemented|deployed|migrated|caught|found|fixed|rolled out|shipped|cut|reduced|trialed|trialled|piloted|inherited|discovered|noticed|pushed back|escalated|convinced|had a|once had)\b`,
+  String.raw`\bI(?:'m| am) an? (?:senior|junior|lead|staff|principal)\b`,
+  String.raw`\bmy first (?:engineering|project|job|role|time)\b`,
+  String.raw`\bextensive experience\b`,
+  String.raw`\bautomated test framework\b`,
   String.raw`\b(?:one time|once),?\s+(?:I|we|a teammate|my)\b`,
 ].join("|"), "i")
 const HYPOTHETICAL = /\b(?:hypothetical(?:ly)?|don't have my resume|resume (?:isn't|is not) loaded)\b/i

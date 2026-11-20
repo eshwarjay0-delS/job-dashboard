@@ -79,7 +79,7 @@ test("a remembered open state comes back, and a new question clears the old cont
   assert.equal(panel.querySelector("h3").textContent, "Context")
   assert.equal(panel.querySelectorAll(".aside-leads li").length, 1)
   assert.equal(panel.querySelectorAll(".aside-questions li").length, 2)
-  assert.equal(panel.querySelectorAll("h3")[1].textContent, "Clarifying questions")
+  assert.equal(panel.querySelectorAll("h3")[1].textContent, "Say this")
   document.getElementById("question").textContent = "Why did the flow stall?"
   await new Promise((r) => setTimeout(r, 0))
   assert.match(panel.textContent, /next answer/)

@@ -1,7 +1,7 @@
 // Context panel for the live answer (owner, 12 Nov 2026, 8:32 PM CT).
 // Deterministic. Built from the resume already on the answer request.
 // No second model call, no poll. The spoken answer is untouched.
-import { clarifySeedLine } from "./kompasClarifyBank.ts"
+import { clarifyingFromQuestion, speakableLines } from "./kompasConsistency.ts"
 import { validateStatement } from "./kompasGloss.ts"
 import { lookupTerm } from "./kompasLexicon.ts"
 import { extractClaims, longStatementCue, screenSuggestion } from "./kompasSessionMind.ts"
@@ -196,80 +196,6 @@ function buildTouches(lines: string[]): string[] {
   return out
 }
 
-type Kind = "design" | "story" | "compare" | "definition" | "follow" | "work"
-
-function kindOf(question: string): Kind {
-  const q = question.trim()
-  if (/^(?:why|how come)\b|\bhow did you verify\b|\bwhat happened next\b|\bcan you expand\b|\bgo deeper\b/i.test(q) || q.split(/\s+/).length <= 4) return "follow"
-  if (/\b(?:design|how would you (?:build|design|architect))\b/i.test(q)) return "design"
-  if (/\b(?:tell me about a time|describe a (?:time|situation)|walk me through a time|a time you|incident you)\b/i.test(q)) return "story"
-  if (/\b(?:difference|versus|vs\.?|compare|compared to)\b/i.test(q)) return "compare"
-  if (/^(?:what is|what does|define|explain what)\b/i.test(q)) return "definition"
-  return "work"
-}
-
-function groundedTopic(question: string, resume: string): string {
-  const bag = resume.toLowerCase()
-  const kept = wordsOf(question).filter((w) => bag.includes(w)).slice(0, 3)
-  return kept.join(" ")
-}
-
-function buildQuestions(question: string, transcript: string, resume: string): string[] {
-  if (PERSONAL_LINE.test(question) && !/\b(?:compensation controls?|experience)\b/i.test(question)) {
-    return [
-      "Should I leave that and talk about the work?",
-      "Is there a technical part you want next?",
-      "Want me to pick up the last work question?",
-    ]
-  }
-  const topic = groundedTopic(question, resume)
-  const onTopic = topic ? `Want me to stay on ${topic}, or go one step deeper?` : "Want me to go one step deeper?"
-  const prior = /\bThem:\s*.{12,}/i.test(transcript) && !new RegExp(question.slice(0, 24).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(transcript.slice(0, Math.max(0, transcript.length - question.length)))
-  const connect = prior ? "Should I stay with the last question, or move to this one?" : ""
-  const kind = kindOf(question)
-  const bank: Record<Kind, string[]> = {
-    design: [
-      "What constraint should I treat as fixed here?",
-      "Is the part that matters the first break, or what happens after?",
-      onTopic,
-    ],
-    story: [
-      "Want the decision, or what changed after?",
-      "Should I stop at the moment, or the part that followed?",
-      "Where should I cut this if it runs long?",
-    ],
-    compare: [
-      "Which of the two sides matters more here?",
-      "Should I stop at the difference, or say when I would pick one?",
-      "Want me to keep this to those two, and nothing beside them?",
-    ],
-    definition: [
-      "Want me to stay on the definition?",
-      "Should I tie it back to the work, or leave it as the idea?",
-      "Is one sentence enough, or do you want the edge case?",
-    ],
-    follow: [
-      connect || "Should I stay on the last point, or open this one?",
-      "Want the check I used, or the result?",
-      "Where should I stop?",
-    ],
-    work: [
-      "What part of this do you want first?",
-      onTopic,
-      connect || "Want me to keep this short and stop for you?",
-    ],
-  }
-  const out: string[] = []
-  for (const q of bank[kind]) {
-    const line = q.replace(/\s+/g, " ").trim()
-    if (!line || out.includes(line)) continue
-    out.push(line.endsWith("?") ? line : `${line}?`)
-    if (out.length === 3) break
-  }
-  while (out.length < 2) out.push("Where should I stop if this runs long?")
-  return out.slice(0, 3)
-}
-
 function foreignTokens(line: string, resume: string): string[] {
   const corpus = resume.toLowerCase()
   const bad: string[] = []
@@ -286,17 +212,6 @@ function foreignTokens(line: string, resume: string): string[] {
 
 function lineOk(line: string, resume: string): boolean {
   return !!line && foreignTokens(line, resume).length === 0
-}
-
-function fill(lines: string[], fallback: string[], resume: string, min: number, max: number): string[] {
-  const out: string[] = []
-  for (const line of [...lines, ...fallback]) {
-    const t = clip(line, 220)
-    if (!lineOk(t, resume) || out.includes(t)) continue
-    out.push(t)
-    if (out.length === max) break
-  }
-  return out.slice(0, Math.max(min, Math.min(max, out.length)))
 }
 
 const WRAP = /\b(?:any questions|to wrap up|that covers|does that make sense|moving on|that's all|in summary|we'll stop|last thing)\b/i
@@ -428,19 +343,9 @@ export function answerAside(input: { question?: string; transcript?: string; res
   const breakdown = buildBreakdown(spoken)
   const leads = buildLeads(spoken)
   const touches = buildTouches(spoken)
-  const curious = ["Why do you think that's happening?"]
-  if (/control owners/i.test(`${transcript}\n${resume}`)) curious.push("Are there a lot of control owners there?")
-  const seededQuestion = clarifySeedLine(question, "clarifying_question")
-  const questions = fill([...curious, ...buildQuestions(question, transcript, resume)], [
-    "What part of this do you want first?",
-    "Want me to keep this short and stop for you?",
-    "Where should I stop if this runs long?",
-  ], resume, 2, 3)
-  if (seededQuestion && !questions.includes(seededQuestion)) {
-    if (questions.length >= 3) questions[2] = seededQuestion
-    else questions.push(seededQuestion)
-  }
-  const boosters = buildBoosters(transcript, spoken).filter((line) => {
+  const questions = clarifyingFromQuestion(question).filter((line) => lineOk(line, resume || line))
+  const saidNow = speakableLines(question, resume).filter((line) => lineOk(line, resume))
+  const boosters = [...saidNow, ...buildBoosters(transcript, spoken)].filter((line) => {
     if (!line || FILLER.test(line)) return false
     return !/handoff|bottleneck/i.test(line) || /handoff|bottleneck/i.test(transcript)
   }).slice(0, 3)
@@ -466,8 +371,8 @@ export function answerAside(input: { question?: string; transcript?: string; res
     return out
   }
   const nudgeKept = input.nudge ? keepLine(input.nudge, transcript, said, why, resume) : null
-  const say = nudgeKept || (cue.sayNow ? keepLine(cue.sayNow, transcript, said, why, resume) : null)
-  if (input.clarify) questions.unshift(input.clarify)
+  const say = nudgeKept || (saidNow[0] ? { line: saidNow[0], why } : null) || (cue.sayNow ? keepLine(cue.sayNow, transcript, said, why, resume) : null)
+  if (input.clarify && !questions.includes(input.clarify)) questions.unshift(input.clarify)
   const summary = cue.summary ? keepLine(cue.summary, transcript, said, why, resume) : null
   if (summary) trace.push(summary)
   if (say) trace.push(say)
@@ -479,10 +384,7 @@ export function answerAside(input: { question?: string; transcript?: string; res
       leads: take(leads, 0, []).filter((line) => !FILLER.test(line)).slice(0, 3),
       touchPoints: take(touches, 0, []).filter((line) => !FILLER.test(line)).slice(0, 4),
     },
-    questions: take(questions.length >= 2 ? questions.slice(0, 3) : [
-      "What part of this do you want first?",
-      "Want me to keep this short and stop for you?",
-    ], 2, ["What part of this do you want first?", "Want me to keep this short and stop for you?"]).slice(0, 3),
+    questions: take(questions, 0, []).slice(0, 2),
     boosters: take(boosters, 0, []).filter((line) => !FILLER.test(line)).slice(0, 3),
     summary: summary?.line && !FILLER.test(summary.line) ? summary.line : "",
     sayNow: say?.line && !FILLER.test(say.line) ? say.line : "",

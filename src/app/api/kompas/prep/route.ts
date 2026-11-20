@@ -46,6 +46,17 @@ export async function POST(request: NextRequest) {
     config.instructions ? `Instructions:\n${str(config.instructions, 1000)}` : "",
   ].filter(Boolean).join("\n\n")
   if (!facts) return NextResponse.json({ error: "Nothing to prepare from." }, { status: 400, headers: NO_STORE })
+  // No resume on this device. Do not ask a model to invent a biography.
+  if (!str(config.resume, 60000)) {
+    return NextResponse.json({
+      v: 2,
+      identity: "",
+      persona: { role: str(config.role, 120) },
+      projects: [],
+      questions: [],
+      noResume: true,
+    }, { headers: NO_STORE })
+  }
 
   try {
     const keys = resolveKeys({})

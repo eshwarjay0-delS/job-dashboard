@@ -25,7 +25,6 @@ const DOCS = sourceDocs({ resume: S.resume, jd: S.jd, dossier: S.dossier, savedQ
 
 function expectAction(questionClass, confidence, confirmSurface, outOfLane) {
   if (outOfLane) return "stop"
-  if (questionClass === "experience-story" && confidence === "mid" && confirmSurface) return "confirm"
   return "go"
 }
 
@@ -33,7 +32,7 @@ test("the confirm line is the spoken blank the product already uses", () => {
   assert.equal(CONFIRM_LINE, "I would want to confirm that")
   assert.equal(CONFIRM_LINE, SPOKEN_BLANK.replace(/^"|"$/g, ""))
   assert.equal(JEV_ROUTE_TABLE.some((row) => row.action === "go"), true)
-  assert.equal(JEV_ROUTE_TABLE.some((row) => row.action === "confirm"), true)
+  assert.equal(JEV_ROUTE_TABLE.some((row) => row.action === "confirm"), false)
   assert.equal(JEV_ROUTE_TABLE.some((row) => row.action === "stop"), true)
 })
 
@@ -117,7 +116,7 @@ test("depth is the existing questionDepth read, and audience defaults to the eng
   assert.equal(deep.audience, "architect")
 })
 
-test("sample sources: a covered story goes, a lexical miss still goes, a split story confirms", () => {
+test("sample sources: a covered story goes, a lexical miss still goes, a split story answers", () => {
   const covered = retrievePassages("Tell me about a time you handled a leaked API key.", DOCS)
   const coveredLane = routeAnswer({
     question: "Tell me about a time you handled a leaked API key.",
@@ -150,9 +149,10 @@ test("sample sources: a covered story goes, a lexical miss still goes, a split s
   })
   assert.equal(splitLane.questionClass, "experience-story")
   assert.equal(splitLane.confidence, "mid")
-  assert.equal(splitLane.action, "confirm")
+  assert.equal(splitLane.action, "go")
+  assert.equal(splitLane.callModel, true)
   const noCard = routeAnswer({ question: splitQ, questionClass: "experience-story", retrieval: split, confirmSurface: false })
-  assert.equal(noCard.action, "go", "without a confirm surface the partial story still generates")
+  assert.equal(noCard.action, "go", "a partial story generates from the resume instead of the confirm stub")
 
   const intro = routeAnswer({
     question: "Tell me about yourself.",
@@ -265,11 +265,10 @@ test("the answer route spends a generation call only on go", async () => {
     question: "Tell me about a time you handled a leaked API key and your work on Kubernetes admission controllers.",
     config: { resume, level: "director" },
   })
-  assert.equal(split.text, CONFIRM_LINE)
-  assert.equal(split.route.action, "confirm")
-  assert.equal(split.route.audience, "director")
-  assert.equal(split.meta.provider, "code")
-  assert.equal(seen.modelCalls, 0)
+  assert.notEqual(split.text, CONFIRM_LINE)
+  assert.equal(split.route && split.route.action, undefined)
+  assert.doesNotMatch(String(split.text || ""), /I would want to confirm that/)
+  assert.ok(seen.modelCalls >= 1, "a mid-confidence story reaches the generator")
 
   seen.modelCalls = 0
   const streamed = await postStream({
@@ -277,9 +276,9 @@ test("the answer route spends a generation call only on go", async () => {
     config: { resume, level: "engineer" },
   })
   assert.match(streamed.type, /event-stream/)
-  assert.match(streamed.text, /I would want to confirm that/)
+  assert.doesNotMatch(streamed.text, /I would want to confirm that/)
   assert.doesNotMatch(streamed.text, /noQuestion/)
-  assert.equal(seen.modelCalls, 0)
+  assert.ok(seen.modelCalls >= 1)
 
   seen.modelCalls = 0
   const covered = await postJson({

@@ -64,7 +64,7 @@ test('the live page says a problem before the session and does not leave a failu
   assert.match(page, /Answering: /)
   assert.match(page, /pinned: true/)
   assert.match(page, /async function wrapSession/)
-  assert.match(page, /running \? wrapSession\(\) : start\(\)/)
+  assert.match(page, /running \? stop\(true\) : start\(\)/)
   assert.match(page, /textSizeN/)
 })
 

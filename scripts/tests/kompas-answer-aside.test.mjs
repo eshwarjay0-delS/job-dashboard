@@ -37,22 +37,25 @@ const ASKS = [
   "",
 ]
 
+const CANNED = /what part of this do you want first|want me to keep this short|where should I stop if this runs long|why do you think that's happening|want me to take that in one pass/i
+
 function shape(aside) {
   assert.ok(aside.context, "context")
   assert.ok(aside.context.leads.length <= 3, `leads ${aside.context.leads.length}`)
   assert.ok(aside.context.touchPoints.length <= 4, `touches ${aside.context.touchPoints.length}`)
-  assert.ok(aside.questions.length >= 2 && aside.questions.length <= 3, `questions ${aside.questions.length}`)
+  assert.ok(aside.questions.length <= 2, `questions ${aside.questions.length}`)
   assert.ok(aside.boosters.length <= 3, `boosters ${aside.boosters.length}`)
   assert.ok(aside.breakdown && typeof aside.breakdown.claim === "string")
   assert.ok(aside.mode === "questions" || aside.mode === "boosters")
   for (const q of aside.questions) assert.match(q, /\?$/)
   const blob = [...aside.context.leads, ...aside.context.touchPoints, ...aside.questions, ...aside.boosters, aside.breakdown.claim, aside.breakdown.context, aside.breakdown.result, aside.summary, aside.sayNow].join("\n")
+  assert.doesNotMatch(blob, CANNED)
   assert.doesNotMatch(blob, /\bHaving\b/)
   assert.doesNotMatch(blob, /the reason that mattered|the pressure on it was|I'd stay with|the part I'd stay with|sat on that seat|so the way (?:we|I) approached it/i)
   assert.doesNotMatch(blob, /@|gmail|555-0100|visa|salary|houston|saint louis|jayeshwar44|eshwarjay06|fabrikam|burp|splunk|twelve|nine|cigna/i)
 }
 
-test("every answer includes context and 2–3 questions", () => {
+test("the right panel does not pad with canned clarifying questions", () => {
   for (const question of ASKS) {
     shape(answerAside({ question, resume: HOUSTON, transcript: "Them: earlier they asked about the catalog.\nYou: sure." }))
     shape(answerAside({ question, resume: "", transcript: "" }))
@@ -86,24 +89,24 @@ test("names and numbers absent from the profile stay out", () => {
   shape(aside)
 })
 
-test("a new question refreshes the questions, and the transcript can change a follow-up", () => {
+test("a new question changes the speakable line, and an ambiguous design ask is the only clarifying question", () => {
   const a = answerAside({ question: "How would you design the service catalog rollout?", resume: HOUSTON })
   const b = answerAside({ question: "Tell me about a time you owned a catalog change.", resume: HOUSTON })
-  assert.notDeepEqual(a.questions, b.questions)
-  const why = answerAside({ question: "Why?", resume: HOUSTON, transcript: "" })
-  const whyHeard = answerAside({
-    question: "Why?",
-    resume: HOUSTON,
-    transcript: "Them: How would you design the service catalog rollout?\nYou: I would start with the catalog.",
-  })
-  assert.notDeepEqual(why.questions, whyHeard.questions)
-  assert.match(whyHeard.questions.join(" "), /last question/i)
+  assert.equal(a.questions.length, 0)
+  assert.equal(b.questions.length, 0)
+  assert.match(`${a.sayNow} ${b.sayNow}`, /catalog/i)
+  assert.doesNotMatch(`${a.sayNow} ${b.sayNow}`, CANNED)
+  const alone = answerAside({ question: "Did you design it alone?", resume: HOUSTON })
+  assert.match(alone.questions.join(" "), /overall design|failover/i)
+  assert.doesNotMatch(alone.questions.join(" "), CANNED)
 })
 
 test("logistics is not coached in the panel", () => {
   const aside = answerAside({ question: "What is your visa status and expected salary?", resume: HOUSTON })
   shape(aside)
-  assert.match(aside.questions.join(" "), /work/i)
+  assert.equal(aside.questions.length, 0)
+  const spoken = [...aside.context.leads, ...aside.boosters, aside.sayNow].join("\n")
+  assert.doesNotMatch(spoken, /visa|salary/i)
 })
 
 test("section 2 follows the live line: statements boost, questions and wrap-ups ask back", () => {
@@ -115,8 +118,8 @@ test("section 2 follows the live line: statements boost, questions and wrap-ups 
   assert.equal(asideModeFromTranscript(wrap), "questions")
   const aside = answerAside({ question: "How would you design the catalog?", resume: HOUSTON, transcript: explaining })
   assert.equal(aside.mode, "boosters")
-  assert.match(aside.questions.join(" "), /Why do you think that's happening/)
-  assert.match(aside.questions.join(" "), /control owners/i)
+  assert.equal(aside.questions.length, 0)
+  assert.doesNotMatch(aside.questions.join(" "), /Why do you think that's happening|control owners/i)
   const quiet = answerAside({ question: "How would you design the catalog?", resume: HOUSTON, transcript: "" })
   assert.doesNotMatch(quiet.questions.join(" "), /control owners/i)
   assert.doesNotMatch(quiet.boosters.join(" "), /handoff|bottleneck/i)

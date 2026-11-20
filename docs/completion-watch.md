@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Kompas consistency pass, not merged
+
+Owner Eshwar asked for consistency on the live question: relevance, length, and a right panel that helps. Skip-login stays on. The value off-confirmed-by-eshwar remains the only off switch. Admin routes stay locked. Branch fix/google-only-login-production-auth-20261113 was not merged or revived.
+
+Live production was 1c6c1622. origin/master was a6f6867e. The Kompas engine files were identical between them. The work is on a pull request with no ship marker, so the Hobby plan does not build it. Do not merge from this note. Do not poll production.
+
+Local 20-fold on the SOC fixtures was identical every time: story 127 words, EDR versus SIEM 108, Qualys 101, phishing 90, ransomware containment 102. That is a deterministic gate, not a live model call and not a Windows click-through.
+
+Continue: exact-head CI on the pull request. After a later reviewed ship, check the Kompas page once.
+
 ## 19 November 2026 23:35 UTC — Gmail merge reconciled; WhatsApp execution blocker recorded
 
 - **Continue: unblock the legitimate protected-preview path for merged Gmail Retry-After PR #458.** The MFit Safe Merge Gate completed its 23:16 UTC run at 23:27 UTC and merged PR [#458](https://github.com/eshwarjay0-delS/job-dashboard/pull/458) through GitHub's normal squash path. Exact reviewed head: `287efe2b93848fc37c0c9c52ebff5a70b3449ed8`; merge commit/current master: `e035b4131ea34a62ba31e51dca198d77b3d0057e`.
