@@ -1,3 +1,4 @@
+import { levelAwareBand, type AnswerLevel } from "./kompasDissection.ts"
 import { resumeRoles, type ResumeRole, type ResumeRoles } from "../../src/lib/kompasResume.ts"
 import { CTX, STRUCTURAL, figureContextKeys, figureMentions, hasContext, mentionAt, mentionSupported } from "./kompasFigureContext.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
@@ -543,4 +544,35 @@ export async function verifyAnswer(
     const prefix = l.match(/^\s*[-•*]\s*/)?.[0] || ""
     return prefix + out[k++]
   }).join("\n"), fixed }
+}
+
+const TOOL_STOP = new Set("i the a an and but for with from this that when where what how why who you your our not".split(" "))
+
+/** Capitalized tools named in the resume text. */
+export function resumeToolLexicon(resume: string): Set<string> {
+  const out = new Set<string>()
+  for (const match of String(resume || "").matchAll(/\b[A-Z][A-Za-z0-9+.#-]{1,}/g)) out.add(match[0].toLowerCase())
+  return out
+}
+
+/** A capitalized tool in the sentence that the resume never names. */
+export function sentenceUsesUnknownTool(sentence: string, resume: string): boolean {
+  const lex = resumeToolLexicon(resume)
+  const bag = String(resume || "").toLowerCase()
+  const names = String(sentence || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  return names.some((name) => {
+    const token = name.toLowerCase()
+    if (TOOL_STOP.has(token)) return false
+    return !lex.has(token) && !bag.includes(token)
+  })
+}
+
+export function dropUnknownToolSentences(text: string, resume: string): string {
+  return String(text || "").split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !sentenceUsesUnknownTool(sentence, resume)).join(" ")
+}
+
+export function meetsLengthFloor(question: string, text: string, level: AnswerLevel = "engineer", length: "short" | "balanced" | "long" = "balanced"): boolean {
+  const band = levelAwareBand(question, level, length)
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean).length
+  return words >= band.floor && words <= band.ceiling
 }

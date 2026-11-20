@@ -1,3 +1,9 @@
+## 2026-11-20 — Speech end, question pause, and resume tools (no visible screen until a live listen)
+
+A Them segment that overlaps the mic is treated as the candidate and does not fire. Speech start records a two-second first-word deadline. Auto waits 700 ms and a trailing "right?" stays open. Silero and the smart-turn model load only on demand and do nothing if the file is missing or the kill switch is off. A sentence that names a tool the resume does not have is dropped. A clarifier shows only when that evidence is missing. No ship marker. No UI was restyled.
+
+**Checked on kompas-turn-models. Not a live listen-through.**
+
 ## 2026-11-20 — Capture ignores the candidate, and a JD-only tool is not experience (visible: Question header and the line status)
 
 Auto skips the candidate's own speech and a repeat of the same question inside 30 seconds. A line from before Start is dropped. Each real question card starts with Question:. Each heard line shows Listening, Question detected, or Answering. A tool that is only in the job description is not spoken as something he has done. Skip-login was not edited.

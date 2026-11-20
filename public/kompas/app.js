@@ -2144,6 +2144,7 @@ async function startMic() {
 // Kompas; not a copy of any competitor's client.
 const SYS_AUDIO_CONSTRAINTS = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
 const THEM_SILENCE_MS = 1400;
+const QUESTION_PAUSE_MS = 700;
 function androidTabAudio() {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
 }
@@ -2222,6 +2223,13 @@ $("tabPreviewStop")?.addEventListener("click", (e) => {
   reportSources();
 });
 
+async function maybeLoadSilero(stream) {
+  if (!stream || window.KOMPAS_VAD === "off") return null;
+  try {
+    const mod = await import("./vad-loader.js");
+    return mod.attachSilero ? mod.attachSilero(stream) : null;
+  } catch { return null; }
+}
 async function startSys() {
   const generation = sourceGeneration.Them;
   if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
@@ -2249,7 +2257,9 @@ async function startSys() {
       srcOn.sys = false;
       return;
     }
-    await attachSource(new MediaStream(audio), "Them", disp, generation);
+    const themStream = new MediaStream(audio);
+    await attachSource(themStream, "Them", disp, generation);
+    void maybeLoadSilero(themStream);
     if (generation === sourceGeneration.Them && running && srcOn.sys && captures.some(c => c.who === "Them")) {
       showTabPreview(disp);
       sysRecoveries = 0;
@@ -2478,7 +2488,7 @@ function endSegment(cap, keep, restart = true, force = false, includeTail = fals
   const flush = () => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(takeTail().concat(chunks), { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt, forceYou: !!cap.forceYou }).then(settle, settle); else settle();
   };
   rec.onstop = () => {
     // Chrome on Android often delivers the last dataavailable after onstop.
@@ -2676,6 +2686,12 @@ function vadStep(cap, rms) {
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;
   meter(cap.who, rms, step.speaking);
+  if (step.speaking && !cap.wasSpeaking && cap.who === "Them") { try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {} }
+  cap.wasSpeaking = !!step.speaking;
+  if (step.action === "end" && cap.who === "Them") {
+    const mic = captures.find(c => c.who === "You");
+    cap.forceYou = !!(mic && (mic.voiced || (cap.segStart && mic.lastVoice >= cap.segStart)));
+  }
   if (step.action === "end") return endSegment(cap, true, true, step.scream || step.speechMs >= 60);
   if (step.action === "rescue") return endSegment(cap, true, true, true);
   if (step.action === "drop") return endSegment(cap, false);
@@ -2812,7 +2828,7 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean, false, opt.spokenAt); }
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(opt.forceYou ? "You" : who, clean, false, opt.spokenAt); }
     else if (running) showCaption(who, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
@@ -3943,6 +3959,8 @@ function scheduleAuto() {
     const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
     const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
     const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
+    if (/right\?\s*$/i.test(tail)) return;
+    if ((themQuietMs || 0) < QUESTION_PAUSE_MS) { autoTimer = setTimeout(fire, QUESTION_PAUSE_MS - (themQuietMs || 0)); return; }
     const confirmed = confirmAutoQuestion(tail).ok;
     const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });
     if (!decision.fire) {

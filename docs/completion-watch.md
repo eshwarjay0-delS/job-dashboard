@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 20 November 2026 — Speech end and resume tools, not shipped
+
+The same pull request now drops a Them segment when the mic is active, waits 700 ms before Auto, and leaves a trailing "right?" open. Speech start records a two-second first-word deadline. The Silero and smart-turn loaders are lazy and fail closed. A tool the resume does not name loses its sentence. No ship marker.
+
+Continue: the 08:00 CT routine ships this pull request once if CI is green.
+
 ## 20 November 2026 — Kompas run 2 on the same pull request, not merged
 
 The resume baseline on live 1c6c1622 (Length=Long, Senior SOC Analyst, Architect + Developer) is now in the same consistency pull request. Length was ignored because the live request hardcoded balanced. A reports answer was replaced by a shorter ServiceNow sentence. SOC answers closed on ITIL. The incident card was the six-word confirm stub. Typed questions still showed "Context shows up with the next answer." The session length is now what the request sends. A late replace keeps a longer on-topic stream. Off-topic platform sentences are dropped. The confirm stub is not served, shown, or returned by the fast path. The right panel paints Say this or nothing. No ship marker. Do not merge. Do not poll production.

@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -40,7 +40,7 @@ import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudien
 import { notebookCausalGuidance, notebookCausalFlags } from "@/lib/kompasNotebookCausal"
 import { desktopCraft, desktopResponsePolicy, desktopDelivery, webPivotLine } from "@/lib/kompasDesktopResponse"
 import {
-  applyGuards, questionFigures, verifyAnswer,
+  applyGuards, dropUnknownToolSentences, questionFigures, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
 
@@ -413,8 +413,8 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
     const profiled = groundToProfile(job.question, stripped || settled.text, job.sourceText, job.sessionMemory || emptyMemory(""))
     const gated = gateDisplayedAnswer({ question: job.question, raw: profiled || settled.text, source: job.sourceText || "" })
     if (gated.text.trim()) {
-      const kept = gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" ").trim()
-      return { text: kept || HONEST_LINE, providerError: false }
+      const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
+      return { text: kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE, providerError: false }
     }
   } catch { /* the settled answer stands */ }
   return { text: settled.text, providerError: false }

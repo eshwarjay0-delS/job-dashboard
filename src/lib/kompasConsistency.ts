@@ -180,8 +180,15 @@ export function lengthBandFor(question: string): VisibleLength {
   return visibleLengthBand(question)
 }
 
+/** The question names a tool or product the resume does not. */
+export function clarifierNeeded(question: string, resume: string): boolean {
+  const bag = String(resume || "").toLowerCase()
+  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
+  return names.some((name) => !/^(?:have|you|used|what|how|why|when|where|who|did|does|can|could|would|should|tell|walk|the|and|for|with|your|our)$/i.test(name) && !bag.includes(name.toLowerCase()))
+}
+
 /** Up to two questions taken from this ask. None when it is already clear. Not the seed bank. */
-export function clarifyingFromQuestion(question: string): string[] {
+export function clarifyingFromQuestion(question: string, resume = ""): string[] {
   const q = String(question || "").replace(/\s+/g, " ").trim()
   if (!q) return []
   const out: string[] = []
@@ -194,6 +201,7 @@ export function clarifyingFromQuestion(question: string): string[] {
   }
   const parts = q.split(/\?\s+/).map((part) => part.trim()).filter((part) => part.split(/\s+/).length >= 4)
   if (out.length < 2 && parts.length >= 2) out.push(`Should I answer “${parts[0].replace(/\?$/, "").slice(0, 60)}” first?`)
+  if (resume && !clarifierNeeded(question, resume) && !/\balone\b|\bor\b/i.test(q)) return []
   return out.filter((line) => line && !CANNED_ASIDE.test(line)).slice(0, 2)
 }
 
