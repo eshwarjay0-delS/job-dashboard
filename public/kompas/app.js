@@ -1013,7 +1013,8 @@ function sessionRecap(list) {
     return q + " — " + first;
   }).join("\n");
 }
-async function leaveLive() {
+async function leaveLive(confirmed) {
+  if (confirmed !== true && typeof window.confirm === "function" && !window.confirm("Leave this session? Your answers stay saved.")) return;
   if (leaving) return; leaving = true;                                     // a second click while the run is being stored does nothing
   try {
     if (follow.on) setFollow(false);                                       // Follow along holds its own microphone: it goes off with the box
@@ -1037,7 +1038,7 @@ async function wrapSession() {
   view?.classList.add("wrapping");
   status("Session wrapped up.", "live");
   await new Promise((r) => setTimeout(r, 680));
-  try { await leaveLive(); }
+  try { await leaveLive(true); }
   finally {
     wrapping = false;
     view?.classList.remove("wrapping");
@@ -1239,6 +1240,7 @@ function answerForCard(card) {
 function writeAnswer(card, qid, text) {
   if (!card || !qid || card.qid !== qid) return false;
   card.answer = text;
+  card.spoken = typeof text === "string" ? text : (Array.isArray(text) ? text.join("\n") : "");
   card.answerFor = qid;
   return true;
 }
@@ -1414,7 +1416,7 @@ function status(msg, tone) { const s = $("status"); s.textContent = msg; s.class
 /* ---- clock (mm:ss) ---- */
 let clockTimer = null, startedAt = 0;
 function fmtClock(ms) { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ":" : "") + String(m).padStart(2, "0") + ":" + String(x).padStart(2, "0"); }
-function startClock() { startedAt = Date.now(); const tick = () => { $("clock").textContent = fmtClock(Date.now() - startedAt); }; tick(); clockTimer = setInterval(tick, 250); }
+function startClock() { if (clockTimer) return; startedAt = Date.now(); const tick = () => { $("clock").textContent = fmtClock(Date.now() - startedAt); }; tick(); clockTimer = setInterval(tick, 250); }
 function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
 
 /* ---- sources (both ON by default), theme, drawer ---- */
@@ -1987,8 +1989,11 @@ function boostedLoopbackStream(ctx, sourceNode) {
     return dest.stream;
   } catch { return null; }
 }
+let starting = false;
 async function start() {
+  if (running || starting) return;
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
+  starting = true;
   sessionReadyUntil = 0;
   void currentOutputKey().then(key => { if (key) outputDeviceKey = key; });
   const generation = sourceGeneration.You;
@@ -2004,10 +2009,14 @@ async function start() {
   const opening = [];
   if (srcOn.sys) opening.push(startSys());
   if (srcOn.mic) opening.push(startMic());
-  await Promise.allSettled(opening);
-  if (!running || generation !== sourceGeneration.You) return;
-  if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
-  startClock();
+  const opened = await Promise.race([
+    Promise.allSettled(opening),
+    new Promise((resolve) => setTimeout(() => resolve("timeout"), 8000)),
+  ]);
+  if (opened === "timeout") { status("Start timed out. No audio received.", "err"); starting = false; await stop(false); return; }
+  if (!running || generation !== sourceGeneration.You) { starting = false; return; }
+  if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); starting = false; await stop(false); return; }
+  starting = false;
   markRun();
   reportSources();
   // Phone mic-only sessions: say so plainly — the mic hears both sides,
@@ -3725,6 +3734,7 @@ function questionEnded(text) {
   const ownStory = /^(?:i(?:'m| am)|my first|my |it(?:'s| is) been|i have|i was|i work|he(?:'s| is)|she(?:'s| is))\b/i.test(filler);
   const asks = /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do)|why (?:did|do|would) you|can you|could you|do you know|explain|describe|define)\b/i;
   if (ownStory && !asks.test(filler)) return false;
+  if (/\b(?:and|or|but|if|when|because|the|a|an|to|of|for|with)\s*$/i.test(raw) && !/\?\s*$/.test(raw)) return false;
   if (/\?\s*$/.test(raw) && /\b(?:what|how|why|when|where|who|which|can|could|would|do|did|have|are|is|tell|walk|explain|describe)\b/i.test(raw)) return true;
   return asks.test(filler);
 }
@@ -4194,6 +4204,7 @@ function dedupeCaptionTokens(text) {
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
   if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
+  if (captureStartedAt && !startedAt) startClock();
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
@@ -5750,6 +5761,11 @@ async function aiAnswer(fromAuto, options = {}) {
     let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
+    const onIntro = cards[idx] && /^(Your introduction)$/.test(cards[idx].question);
+    if (!typedText && !pending.length && !pendingHeard().length && !onIntro) {
+      status("No question yet. Nothing was heard.", "live");
+      return;
+    }
     // Answer anyway (slice 2): a press right after "Nothing question-like" or
     // "Listening, no new question yet" answers those same lines / re-asks.
     let anyway = false, silenceAnyway = false, liveResolved = "";
