@@ -1,33 +1,31 @@
 /**
  * Post-generation honesty gate (Parakeet S5).
- * Claims of an incident, employer, tool, or personal number that are not in
- * the Houston eshwarjay05 resume are rewritten into an honest bridge.
- * The Saint Louis / jayeshwar44 profile is never the source.
- * A leading "..., right?" question is answered with scope, not an automatic yes.
- * A "what went wrong" question uses a resume fact or an honest frame, never an invented outage.
+ * The source file is the eshwarjay05 platform resume. Bridges may use only
+ * lines from that file. ServiceNow is a tool in that resume, not a role the
+ * speaker led. A leading "right?" answer scopes the real migration and
+ * failover lines and says which part was the team's, without a new name.
+ * A "went wrong" answer uses failover testing during those migrations.
  */
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
-export const HOUSTON_RESUME = [
-  "Eshwar Janjirala | eshwarjay05@gmail.com | Houston",
-  "Having 10+ years of experience in Sr. ServiceNow Development and Administration.",
-  "Client: Mckesson - TX Sept 2023 - Present Role: Senior ServiceNow Developer",
-  "Assists with ServiceNow platform incident resolution.",
-  "Takes ownership of complex business requirements and works them to completion.",
-  "Tracking of Incidents from creation to closure, with timely communication to business.",
-  "Developed KYC (Know Your Customer) workflows to automate customer verification, compliance reviews, risk assessments, and approval processes.",
-  "Implemented role-based access controls, approval workflows, and segregation of duties controls.",
-  "Implemented fraud investigation workflows for case tracking, evidence management, escalation handling, regulatory reporting, and audit documentation.",
-  "Client: Molina Health Care – Long Beach, CA Dec 2022 - Jul 2023 Role: ServiceNow Developer/Administrator",
-  "Client: Valero Energy, Texas Nov 2018 to Oct 2022 Role: ServiceNow Developer/Analyst",
-  "Client: Qualcomm, Bangalore, India Sept 2015 - Aug 2018 Role: ServiceNow Developer/Admin",
-  "Education: B.Tech, Computer Science — JNTUH, India, Jun 2011 – May 2015",
-  "ServiceNow, ITSM, ITOM, CMDB, Discovery, Change Management, Active Directory, Flow Designer, IntegrationHub, JavaScript, REST, SOAP.",
-].join("\n")
+export const HOUSTON_RESUME_PATH = join(dirname(fileURLToPath(import.meta.url)), "kompas-houston-resume.txt")
+export const HOUSTON_RESUME = readFileSync(HOUSTON_RESUME_PATH, "utf8")
+
+const LINE = {
+  migrate: "Migrated apps using Terraform, Ansible, CloudFormation; standardized VPC, subnets, NAT, TGW.",
+  provision: "Provisioned cloud infrastructure via Terraform and CloudFormation, integrating with ServiceNow Change Management and enforcing policy-as-code with OPA and AWS Config Rules.",
+  regions: "Proven ability to design HA/DR solutions, optimize cloud cost/performance, and manage multi-region deployments.",
+  failover: "Performed SQL Server administration tasks including failover clustering, mirroring, version upgrades, patching in high-availability (HA) environments.",
+  firewall: "Secured infrastructure by auditing firewall policies, ensuring compliance and integrity across segmented environments.",
+  teams: "Collaborated with security and application teams to embed change control via ServiceNow and audit evidence into deployment pipelines.",
+} as const
 
 const SAINT_LOUIS = /jayeshwar44|jayeshwar24|eshwarjay06|saint louis university/i
 const LEADING_RIGHT = /,\s*right\??\s*$/i
 const YES_LEAD = /^\s*(?:yes\b|yeah\b|yep\b|i personally led|i led that myself|i did lead|i led it myself)\b/i
-const INCIDENT = /\b(?:outage|sev-?1|sev\s*1|went down|data loss|hours of downtime|cutover (?:failed|went wrong)|lost the vpc)\b/i
+const INCIDENT = /\b(?:sev-?1|sev\s*1|went down|data loss|hours of downtime|lost the vpc|(?:we|i) had (?:an? )?outage|the cutover failed)\b/i
 const WENT_WRONG = /\b(?:went wrong|what went wrong|a time .{0,40}failed|cutover|outage|incident you led)\b/i
 
 const DENY_TOOLS = ["Dragos", "Qualys", "Splunk", "CrowdStrike", "Burp", "CyberArk", "Industrial Defender", "Sentinel", "Wiz", "Zscaler", "Fortify", "Snyk", "OSCP"]
@@ -58,11 +56,13 @@ function personalNumber(sentence: string): string[] {
 }
 
 const POOL = [
-  "At McKesson I assist with ServiceNow platform incident resolution, and I track an incident from creation to closure so the business hears the status before they hear a guess.",
-  "I took ownership of complex requirements and worked them to completion, including KYC workflows, role-based access, and the fraud investigation case flow.",
-  "The wider change sat with the team. I owned the ServiceNow piece, and other people owned the business call and the systems outside that platform.",
-  "Before McKesson I did the same kind of ServiceNow work at Molina Health Care, Valero Energy, and Qualcomm.",
-  "I have 10+ years on ServiceNow administration and development, and that is the experience I will speak from.",
+  LINE.migrate,
+  LINE.provision,
+  LINE.regions,
+  LINE.failover,
+  LINE.firewall,
+  LINE.teams,
+  "The automation was the part I can speak to. The wider cutover was a team effort, and I will not invent a name for that team.",
 ]
 
 function fitSpoken(core: string): string {
@@ -83,15 +83,24 @@ function fitSpoken(core: string): string {
 }
 
 export function scopeAnswer(): string {
-  return fitSpoken("I led the ServiceNow workflow work at McKesson; the wider effort was the team's. I owned the KYC workflows, the role-based access controls, and the fraud investigation case flow, and I worked those requirements to completion. I did not personally lead every migration or every cutover. Other people owned the business decision and the systems outside ServiceNow. So the accurate answer is that I led my piece, and the team led the rest.")
+  return fitSpoken("I did not take that migration on alone. I migrated apps using Terraform, Ansible, and CloudFormation, and I standardized VPC, subnets, NAT, and TGW. I provisioned that infrastructure with Terraform and CloudFormation, and the resume also shows multi-region deployments. The failover work I can point to is failover clustering, mirroring, version upgrades, and patching in high-availability environments, plus auditing firewall policies. I collaborated with security and application teams. Those teams owned the cutover decisions outside the automation. ServiceNow on this resume is only the change-management tool. I will not add a name the resume does not show.")
 }
 
 export function wentWrongAnswer(): string {
-  return fitSpoken("The resume does not show a cutover that went wrong, so I will not invent an outage. What I have done is assist with ServiceNow platform incident resolution at McKesson. When a platform issue comes in, I track it from creation to closure and keep the business updated, and I watch the ticket so it does not sit. The closest miss I can speak to is a workflow that needed another pass: the catalog step was right and the approval path was wrong. I owned the ServiceNow workflow, the team owned the business decision, and we closed it by fixing the approval and the evidence on the ticket. I would treat a cutover the same way: name what failed, keep the old path up until the new one is proven, and write the incident down instead of narrating a story that is not mine.")
+  return fitSpoken("The resume does not name an outage, so I will not invent one. The grounded situation is the failover testing and validation during those migration cutovers. I migrated apps using Terraform, Ansible, and CloudFormation. The resume shows failover clustering, mirroring, version upgrades, and patching in high-availability environments, and it shows firewall policies being audited. If a cutover went wrong, I would say the failover check failed before the new path was trusted, keep the old path up, and write down what the test showed. I collaborated with security and application teams. The call on the wider cutover was a team effort. I will not name an outage or an employer that is not in the resume.")
 }
 
 export function designBridge(): string {
-  return fitSpoken("A Gateway Load Balancer inspection VPC sits on the path you want to inspect. The load balancer type is gateway, not network, and the appliances behind it speak GENEVE on port 6081, not HTTP. Consumer VPCs send traffic through a GWLB endpoint, the inspection VPC sees the original packet, and the packet goes back the same way after the appliance decides. I have not run that design as a personal outage story. At McKesson I assist with ServiceNow platform incident resolution and I track those tickets from creation to closure. If I were putting this in, I would set the target type to gateway and the protocol to GENEVE, and I would not say I personally led a cutover the resume does not show.")
+  return fitSpoken("I have not run that design as a personal story, so I will not invent one. The infrastructure work on the resume is Terraform and CloudFormation, including multi-region deployments, plus failover clustering and firewall policy audits. I collaborated with security and application teams. The wider cutover was a team effort. I will not name an employer the resume does not show.")
+}
+
+export function bridgeTemplates(): string[] {
+  return [scopeAnswer(), wentWrongAnswer(), designBridge(), ...POOL, gapBridge()]
+}
+
+function gapBridge(tool?: string): string {
+  const toolLine = tool ? `I have not used ${tool}. ` : ""
+  return `${toolLine}That detail is not on my resume, so I will not invent it. ${LINE.migrate}`
 }
 
 function employerHits(sentence: string, source: string): string[] {
@@ -104,7 +113,7 @@ function employerHits(sentence: string, source: string): string[] {
     if (!sourceHas(source, name)) hits.push(name)
   }
   if (/\bSaint Louis University\b/i.test(sentence) && !sourceHas(source, "Saint Louis University")) hits.push("Saint Louis University")
-  for (const name of ["Cigna", "Citi"]) {
+  for (const name of ["Cigna", "Citi", "McKesson", "Mckesson", "Molina", "Valero"]) {
     if (new RegExp(`\\b${name}\\b`, "i").test(sentence) && !sourceHas(source, name)) hits.push(name)
   }
   return hits
@@ -120,7 +129,7 @@ function numberHits(sentence: string, source: string, question: string): string[
 }
 
 function claimsIncident(answer: string, source: string): boolean {
-  if (/\b(?:i will not invent|the resume does not show|i have not run)\b/i.test(answer)) return false
+  if (/\b(?:i will not invent|the resume does not (?:show|name)|i have not run|will not name an outage)\b/i.test(answer)) return false
   return INCIDENT.test(answer) && !INCIDENT.test(source)
 }
 
@@ -158,13 +167,9 @@ export function applyHonestyGate(input: { question: string; answer: string; resu
     if (tools.length) reasons.push(`tool:${tools[0]}`)
     if (numbers.length) reasons.push(`number:${numbers[0]}`)
     if (incident) reasons.push("incident")
-    if (WENT_WRONG.test(question) || incident) return "The resume does not show that outage, so I will not invent it. I assist with ServiceNow platform incident resolution at McKesson."
+    if (WENT_WRONG.test(question) || incident) return wentWrongAnswer()
     if (LEADING_RIGHT.test(question)) return scopeAnswer()
-    const tool = tools[0]
-    const bridge = tool
-      ? `I have not used ${tool}. I assist with ServiceNow platform incident resolution at McKesson.`
-      : "That detail is not on my resume, so I will not invent it. I assist with ServiceNow platform incident resolution at McKesson."
-    return bridge
+    return gapBridge(tools[0])
   })
   if (!changed) return { text: answer, rewritten: false, reasons: [] }
   const text = kept.join(" ").replace(/\s+/g, " ").trim()

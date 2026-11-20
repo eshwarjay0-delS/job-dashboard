@@ -1,0 +1,151 @@
+2967890 -156210 JAY ESHWAR
+Senior Cloud DevOps CICD Engineer
+Ph: ( 646 ) 8 2 0 - 3671
+E mail: eshwarjay05 @gmail.com
+JAY ESHWAR
+Senior Cloud DevOps CICD Engineer
+Ph: ( 646 ) 8 2 0 - 3671
+E mail: eshwarjay05 @gmail.com
+P ROFESSIONAL SUMMARY
+Senior Cloud/DevOps Engineer with over 1 1 years of IT experience and 10 + years of proven expertise in designing and automating secure, scalable cloud infrastructure, optimizing CI/CD pipelines, and driving operational efficiency across AWS, Azure, and GCP environments.
+Expertise in containerization and orchestration with Docker, Kubernetes, Helm, OpenShift, and EKS/AKS/GKE.
+E xperience in enterprise security operations, network detection & response (NDR), telemetry engineering, observability architecture, and cloud-native monitoring solutions.
+Strong expertise supporting Corelight, Zeek, Suricata, SIEM integrations, telemetry pipelines, and enterprise-scale monitoring platforms using Grafana, Prometheus, InfluxDB, and Telegraf.
+Experienced building automation frameworks, metrics collectors, dashboards, and operational health monitoring solutions supporting SOC, Incident Response, and Network Engineering teams across distributed enterprise environments.
+Security-focused, implementing Zero Trust, RBAC, and PAM solutions (CyberArk, Okta, Azure AD).
+Strong understanding of networking & security protocols: TCP/IP, DNS, SSL/TLS, VPN, HTTP/S, SAML, OAuth2.
+Integrated SAST/DAST/SCA tools like SonarQube, Checkmarx, Burp Suite, Snyk, Veracode into pipelines.
+Experience with data platforms and databases: PostgreSQL, MySQL, MongoDB, Cassandra, Redis.
+Supported compliance with NIST, HIPAA, PCI-DSS, GDPR, SOC2, and ISO 27001 frameworks.
+Proven ability to design HA/DR solutions, optimize cloud cost/performance, and manage multi-region deployments.
+Developed risk dashboards and custom analytics with Splunk, KQL (Sentinel), and Tableau/Power BI.
+Conducted penetration testing & vulnerability assessments, delivering secure code reviews.
+Adept at mentoring junior engineers and leading cross-functional teams to deliver large-scale cloud projects.
+Recognized for excellent communication, stakeholder collaboration, and technical documentation.
+Engineered CI/CD pipelines across Jenkins, GitHub Actions, and AWS CodePipeline, embedding SonarQube, Snyk, and Fortify scans for DevSecOps compliance.
+Provisioned cloud infrastructure via Terraform and CloudFormation, integrating with ServiceNow Change Management and enforcing policy-as-code with OPA and AWS Config Rules.
+Deployed microservices on Amazon EKS with Helm/Kustomize, applying PodSecurityPolicies, RBAC, and OPA Gatekeeper to enforce multi-tenant isolation.
+Built serverless event-driven workflows on AWS Lambda and EventBridge, linking to DynamoDB Streams and Step Functions, reducing latency and manual overhead.
+Integrated observability stacks (Prometheus, Grafana, Datadog) with distributed tracing (OpenTelemetry) and AWS X-Ray for real-time SLO/SLA enforcement.
+Automated account onboarding with Python + Boto3 scripts, Ansible playbooks, and Secrets Manager rotation policies, eliminating manual IAM drift.
+Optimized storage & compute by enforcing S3 Object Locking, Cross-Region Replication, EBS lifecycle policies, and EC2 Spot Fleet orchestration for cost control.
+Developed REST & GraphQL APIs in Java Spring Boot, applying JWT/OAuth2 authorization and RDS Proxy + Redis caching for scalable backend throughput.
+Implemented GitOps workflows using ArgoCD and GitLab CI/CD, embedding policy validation hooks to ensure secure deployments at scale.
+TECHNICAL SKILLS
+Cloud Environments
+Amazon Web Services, Azure, Google Cloud (GCP) , Confluent Cloud, Kafka
+Operating Systems
+Red Hat Linux , CentOS 6 & 7, Ubuntu12.x, 13.x, 14.x, Windows 98 , Vista,
+Windows Server 2003, 2008, 2012, VMware ESX and Mac OS .
+Web/ Application Servers
+Apache Tomcat, WebLogic, JBoss 5.x/6.x/7.x, Web Sphere Administration , IIS and Nginix .
+Databases
+MySQL, NoSQL, MongoDB, Dynamo DB, Cassandra , PostgreSQL, RDS , Elastic ache, Azure Data lake, Data factory.
+Version Control Tools
+Subversion, TFS, GIT, GIT HUB, SVN, Bitbucket .
+Configuration Management
+Ansible, Chef, Puppet, Atlassian.
+CICD Tools
+Cloud Bees Jenkins/Hudson, Team City, Maven, SonarQube, Nexus Artifactory .
+Container Tools
+Kubernetes, Docker, OpenShif , Zeek Script Tuning, Suricata Rule Management, Cloud-Native Monitoring, Docker, Kubernetes, Infrastructure Observability, Metrics Correlation, SLI/SLO Engineering, Security Analytics, MITRE ATT&CK, Operational Monitoring
+Monitoring Tools
+Splunk, Nagios, Cloud Watch, ELK, Grafana, Prometheus, Datadog, Kibana
+Scripting Languages
+Ruby, Python, Golang, groovy, Unix Shell scripting, Node JS, XML, HTML , JAVA, JEE,
+JavaScript, Angular JS, Power Shell, JSON, YAML, AWS Lambda, React.
+Bug Tracking & Testing tools
+JIRA, J Unit, J Meter Test Flight, Test Rail, Selenium.
+Network Security
+TCP/IP, NFS, DNS, VPN, DHCP, WAN, HTTP, LAN, FTP/TFTP, VMware
+nexus switch, IP Networking, F5 load balancer , Network Traffic Analysis, Packet Broker Integration, SPAN/TAP Monitoring, Sensor Health Monitoring, Data Pipeline Validation, Threat Detection, Incident Response Support, SOC Operations.
+Observability Engineering
+Network Detection & Response (NDR), Corelight, Zeek, Suricata, Endace, cPacket, Packet Capture Analysis, Network Telemetry Engineering, Security Observability, Grafana, Prometheus, InfluxDB, Telegraf, Loki, Elasticsearch, Kafka, SIEM Integration, Splunk, Microsoft Sentinel, Log Ingestion Pipelines, Telemetry Pipelines, Metrics Collection, Prometheus Exporters, Python Automation, REST API Integrations, Dashboard Engineering, Alert Tuning, Detection Engineering, AI-Assisted Engineering, GitHub Copilot, Microsoft 365 Copilot
+PROFESSIONAL EXPERIENCE
+Senior AWS DevOps CICD Engineer
+Client: Paypal, Boston, MA Feb 2021 – Till date
+Responsibilities:
+Administered Linux servers ( Red Hat, Apache, MySQL, WebLogic ) for enterprise workloads across Development and Production environments.
+Automated multi-host deployments by maintaining Ansible inventories for dynamic configuration generation .
+Integrated Corelight and Zeek telemetry into SIEM platforms including Splunk and Microsoft Sentinel to improve threat detection visibility and SOC operational awareness.
+Built custom Grafana dashboards providing real-time visibility into NDR sensor uptime, ingest freshness, detection pipeline performance, and operational risk metrics.
+Developed Python automation scripts and REST API integrations to collect operational health metrics, validate telemetry integrity, and automate platform reporting workflows.
+Designed and implemented enterprise observability stacks using Grafana, Prometheus, InfluxDB, and Telegraf to monitor sensor health, data ingestion, packet throughput, and telemetry pipeline availability.
+Led enterprise NDR monitoring and observability initiatives supporting Corelight, Zeek, and telemetry pipelines across distributed cloud and on-premise security environments.
+Integrated pipelines with ServiceNow (auto-CAB) and Jira (release notes, audit evidence)
+Deployed and operated AWS services using AWS Console and CLI , working with VPC , EC2 , S3 , EBS , IAM , ELB , EKS , ECS , CloudWatch , and CloudFormation to manage cloud resources efficiently.
+Operated AWS services : VPC, EC2, S3, EBS, IAM, ELB, EKS, ECS, CloudWatch, CloudFormation via Console & CLI.
+Migrated apps using Terraform, Ansible, CloudFormation ; standardized VPC, subnets, NAT, TGW .
+Built EKS clusters with RBAC, pod security standards, network policies, IRSA, volume encryption .
+Developed API Gateway + Lambda frontends and container backends with throttling, canaries, WAF .
+Centralized observability using Prometheus, Grafana, CloudWatch, X-Ray .
+Automated KMS/Secrets Manager rotation ; eliminated static creds with IRSA, SSM Parameter Store .
+Implemented multi-AZ RDS, DynamoDB global tables, cross-region S3 replication .
+Adopted GitHub Actions for Snyk/Trivy scans, ECR builds .
+Tuned Glue/Step Functions/Lambda ETL pipelines .
+Cut costs via EC2/EKS right-sizing, gp3 volumes, S3 Intelligent-Tiering .
+Authored Golden Baselines with Packer, SSM ; automated patch compliance.
+Integrated AWS Config, Security Hub with Jira .
+Authored runbooks, SLOs ; led incident simulations, PIRs .
+Streamlined ETL workflows with AWS Glue, Lambda, Athena , improving data pipeline performance and reliability .
+Hardened environments by implementing IAM policies, KMS encryption, VPC security groups , and compliance-driven access controls .
+Executed application migrations from on-prem to AWS , leveraging Ansible + Infrastructure as Code (IaC) to modernize workloads with repeatability and scalability .
+Configured serverless applications with API Gateway, DynamoDB, AWS Lambda , and automated promotions with CodePipeline .
+Senior Azure /AWS DevOps Engineer
+Client: Verizon Jan 20 19 – J an 2021
+Responsibilities:
+Deployed and managed containerized applications on Azure AKS and AWS EKS , using Kubernetes clusters for scaling, rolling updates, and service discovery automation .
+Built resilient AWS foundations ( VPC, subnets, routing, IGW/NAT, SG/NACL ) as Terraform modules ; implemented tagging/audit standards .
+Established SLIs/SLOs for NDR platform reliability, sensor uptime, ingest latency, and telemetry pipeline availability supporting enterprise observability objectives.
+Configured Telegraf pipelines for metrics collection, parsing, tagging, enrichment, and forwarding into enterprise monitoring and analytics platforms.
+Collaborated with SOC and Incident Response teams to investigate NDR alerts, triage suspicious activity, and improve threat correlation workflows.
+Supported tuning and optimization of Zeek scripts, Suricata detection rules, and Corelight detection packs to improve detection efficacy and reduce operational alert noise.
+Monitored and supported enterprise NDR sensor operations including packet throughput analysis, drop-rate monitoring, traffic visibility validation, and telemetry pipeline troubleshooting.
+Enforced IAM least privilege , KMS encryption , Secrets Manager rotation ; onboarded apps to IRSA to eliminate long-lived credentials.
+Optimized costs using EC2 Spot, S3 lifecycle policies, EBS gp3 volumes, resource reclamation ; reported savings to stakeholders.
+Developed Python/Boto3 automation tooling for account bootstrap, drift detection, inventory management ; integrated outputs with Slack, Jira .
+Collaborated with security and application teams to embed change control via ServiceNow and audit evidence into deployment pipelines .
+AWS DevOps Engineer
+Client: TD Bank , Sacramento CA Mar 201 7 – Jan 20 19
+Responsibilities:
+Designed and deployed resilient AWS infrastructures ( EC2, VPC, EKS, S3, CloudFormation ) using both Console and CLI , ensuring secure, fault-tolerant, multi-region environments .
+Automated environment provisioning with Terraform, Ansible, CloudFormation templates , reducing deployment time and minimizing manual errors across Production, QA, and Dev accounts.
+Built and scaled containerized microservices on Amazon EKS with auto-scaling, self-healing, rolling upgrades , ensuring high availability .
+Leveraged Docker and Kubernetes-based exporters for scalable monitoring and deployment of telemetry collection services across distributed infrastructure environments.
+Integrated observability telemetry into time-series databases including InfluxDB and Prometheus supporting historical analytics and performance trending.
+Developed custom Prometheus exporters and API-based collectors to ingest operational metrics from Corelight appliances, packet brokers, and telemetry systems.
+Maintained runbooks, architecture diagrams, operational documentation, and troubleshooting guides supporting NDR operations and monitoring best practices.
+Collaborated with Network Engineering teams to resolve visibility gaps, ingestion delays, and packet capture inconsistencies impacting enterprise detection coverage.
+Automated repetitive operational tasks including sensor status validation, telemetry integrity checks, alert verification, and system health reporting using Python scripting.
+Developed operational monitoring dashboards and alerting workflows using Grafana and Prometheus to improve visibility into telemetry health and system degradation events.
+Supported advanced troubleshooting of packet broker integrations, SPAN/TAP feeds, network visibility paths, and traffic collection infrastructure across enterprise security environments.
+Executed migration strategies : lift-and-shift, re-platforming, re-architecting based on application/business requirements in Azure .
+Applied security measures for ELK Stack , including RBAC, SSL/TLS encryption to protect sensitive log data.
+Managed code artifacts using GitHub, Nexus ; automated builds with Gradle, Maven in AWS .
+Leveraged Ansible Tower to deploy playbooks and integrate with GitHub for code storage in AWS .
+AWS DevOps/Cloud Engineer
+Client: Qualcomm, Bangalore IN June 201 5 – Feb 201 7
+Responsibilities:
+Employed AWS CloudFront (Content Delivery Network) to deliver content from AWS edge locations , drastically improving user experience and latency .
+Applied Amazon S3 data store, versioning, lifecycle policies, AMIs to back up mission-critical production servers , ensuring durability and availability .
+Implemented a Continuous Delivery pipeline using Docker, Jenkins, GitHub ; installed and configured Jenkins to support multiple Java builds , with Jenkins plugins to automate continuous builds and publish Docker images to Nexus/JFrog Repository .
+Migrated on-prem environments to AWS Cloud using VM Import/Export, AWS DMS, Storage Gateway , reducing downtime and hardware maintenance complexity.
+Designed scalable AWS infrastructure ( EC2, Auto Scaling, IAM, RDS, DynamoDB, S3 ) to support enterprise applications with high performance and reliability .
+Implemented CI/CD pipelines in Jenkins integrated with Terraform , enabling full-stack deployments into Dev, QA, and Production environments.
+Automated AWS resource creation with Python (Boto3) and PowerShell scripts , streamlining provisioning of Lambda, VPC, S3 .
+Managed cloud data migration with VM Import/Export, AWS DMS, Storage Gateway , reducing on-prem dependencies and downtime .
+Developed monitoring automation with CloudWatch alerts, Python scripts, log cleanup processes for proactive system health management.
+Configured GitHub and CodeCommit repositories with Jenkins integration for CI/CD workflows, version control, secure promotions .
+Customized Jenkins pipelines with Groovy DSL , enabling multi-stage builds, Slack notifications, conditional execution logic .
+Orchestrated deployments on Docker and Kubernetes (EKS/OpenShift) , enabling consistent containerized application delivery across environments.
+Authored Ansible Playbooks (YAML) for EC2 provisioning, service configuration, patching .
+Supported Agile release cycles , collaborating with DevOps, QA, and Product teams to deliver faster and more reliable deployments.
+Administered Linux servers ( Red Hat, Apache, MySQL, WebLogic ) for enterprise workloads across Development and Production environments.
+Automated multi-host deployments by maintaining Ansible inventories for dynamic configuration generation .
+Performed SQL Server administration tasks including failover clustering, mirroring, version upgrades, patching in high-availability (HA) environments .
+Resolved complex system performance issues related to file systems, memory utilization, swap, and network bottlenecks .
+Secured infrastructure by auditing firewall policies , ensuring compliance and integrity across segmented environments .
+Managed core network services ( TCP/IP, DNS, SMTP, NFS ) to ensure stable inter-system communication .
+Partnered with application teams to replicate production-like test environments , enabling accurate performance testing and capacity planning .
+EDUCATION
+BACHELOR’S IN COMPUTER SCIENCE JNTUH, INDIA AUG 20 1 1 - MAY 201 5

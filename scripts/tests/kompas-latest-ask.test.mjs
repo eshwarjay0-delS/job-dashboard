@@ -71,13 +71,15 @@ test("the page and the desktop shell load this build, not the 12 Nov cache", () 
   assert.doesNotMatch(html, /app\.js\?v=20261112-output/)
 })
 
-test("desktop rows use the full width and the share preview stays hidden", () => {
+test("desktop rows use the full width and the in-session tab preview is video only", () => {
   assert.match(css, /justify-content:space-evenly !important/)
   assert.match(css, /width:100% !important/)
   assert.doesNotMatch(css, /right:200px !important/)
   assert.match(panel, /#tabPreview,html\.kd \.tab-preview/)
-  assert.match(css, /#tabPreview\{display:none !important/)
-  assert.match(app, /track\.enabled = false/)
+  assert.doesNotMatch(css, /#tabPreview\{display:none !important/)
+  assert.match(css, /#tabPreview:not\(\.hidden\):not\(\[hidden\]\)\{display:block/)
+  assert.match(app, /previewVideoTracks/)
+  assert.match(app, /new MediaStream\(tracks\)/)
 })
 
 test("spoken answers, the clarify popup, memory, grounding, opacity, and the bottom row stay", () => {

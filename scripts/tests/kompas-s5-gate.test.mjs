@@ -4,7 +4,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { manualAnswerTarget, ANSWER_ANGLES } from "../../src/lib/kompasS5Press.ts"
 import { classifyScreenText, screenCardBody, correctTerraform, screenFirstWordOk, SCREEN_FIRST_WORD_MS, SCREEN_FALLBACK_UNAVAILABLE, GWLB_FIX } from "../../src/lib/kompasS5Screen.ts"
-import { applyHonestyGate, honestySource, HOUSTON_RESUME, scopeAnswer, wentWrongAnswer } from "../../src/lib/kompasHonestyGate.ts"
+import { applyHonestyGate, honestySource, HOUSTON_RESUME, scopeAnswer, wentWrongAnswer, bridgeTemplates } from "../../src/lib/kompasHonestyGate.ts"
 
 const fx = JSON.parse(readFileSync(new URL("../fixtures/kompas-s5.json", import.meta.url), "utf8"))
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
@@ -89,6 +89,32 @@ function runOnce() {
   assert.match(GWLB_FIX, /gateway/)
   return notes.join("|")
 }
+
+const NOUN_STOP = new Set("the and for with you your that this those these when where what which who how then from into over after before during not did was were are have has had will would can could should must may its our but all any one two new old keep write show also only plus team part call test path role tool name".split(" "))
+
+function properNouns(text) {
+  const found = new Set()
+  for (const match of String(text || "").matchAll(/\b[A-Z][A-Za-z0-9+#-]{1,}\b/g)) {
+    const word = match[0]
+    if (word.length < 2 || NOUN_STOP.has(word.toLowerCase())) continue
+    found.add(word)
+  }
+  return [...found]
+}
+
+test("bridge templates use only nouns from the Houston resume file", () => {
+  const source = HOUSTON_RESUME.toLowerCase()
+  assert.equal(source.includes("mckesson"), false)
+  assert.equal(source.includes("eshwarjay05"), true)
+  const missing = []
+  for (const template of bridgeTemplates()) {
+    assert.doesNotMatch(template, /McKesson|I led the ServiceNow/i)
+    for (const noun of properNouns(template)) {
+      if (!source.includes(noun.toLowerCase())) missing.push(noun)
+    }
+  }
+  assert.deepEqual([...new Set(missing)], [])
+})
 
 test("S5 fixtures, 10 folds, same result each time", () => {
   assert.ok(fx.screen.length >= 10)

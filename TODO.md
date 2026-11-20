@@ -1,8 +1,30 @@
 ## 2026-11-20 — Parakeet S5 screen, latest question, honesty gate (no live listen, no ship)
 
-Screen analyze is the Screen button and Ctrl+Shift+Enter. It grabs one frame of the tab already shared and does not open a new share prompt or the tab preview. The full job text stays on the card. A Terraform Gateway Load Balancer bug is corrected to gateway and GENEVE in a short block. If the frame or the model is missing, the card shows one sentence. AI Answer and Ctrl+Enter answer the latest interviewer question, including about two seconds of speech after it, and they do not say "no new question". If that question was already answered, the next press uses a different angle. After the model writes, a server check rewrites an incident, employer, tool, or number that is not in the Houston eshwarjay05 resume. It does not use the Saint Louis or jayeshwar44 profile. "You led that yourself, right?" gets scope, not yes. A cutover-went-wrong question does not invent an outage. This is invisible until a live session: the button is on the Kompas bar, and the honesty rewrite happens on the server.
+Screen analyze is the Screen button and Ctrl+Shift+Enter. It grabs one frame of the tab already shared and does not open a new share prompt or the tab preview. The full job text stays on the card. A Terraform Gateway Load Balancer bug is corrected to gateway and GENEVE in a short block. If the frame or the model is missing, the card shows one sentence. AI Answer and Ctrl+Enter answer the latest interviewer question, including about two seconds of speech after it, and they do not say "no new question". If that question was already answered, the next press uses a different angle. The honesty rewrite uses only lines from the eshwarjay05 platform resume (Terraform, CloudFormation, failover clustering, multi-region work). It does not name McKesson and it does not say the person led the ServiceNow work. This is invisible until a live session.
 
-**Checked offline on kompas-s5-gate, 10 folds. Not a live listen and not a timed vision call.**
+**Checked offline. Not a live listen and not a timed vision call.**
+
+## 2026-11-20 — S1 P0: preview, auto once, speaker split (visible: tab panel and question header)
+
+The shared-tab preview is off until the Tab button on the status line is pressed. Open, it is a 168px panel at the bottom-right and does not cover AI Answer, Start/Stop, or More. Tab audio keeps recording either way. Candidate lines are tagged You. Interviewer lines are tagged Interviewer. Auto fires once per real question, 1.5 seconds after it ends, and skips "How did your day go?" and the other small talk. The card header is one Question line. The "New constraint" keyword line is gone. Pull request 477's video-only preview and transcript copy stay. Skip-login was not edited.
+
+**Checked offline by scripts/kompas-s1-replay-gate.mjs, Chrome boxes at 1280x800 and 1280x720, clarifiers 47/47 and 20/20, baseline, tsc, eslint (0 errors), and build. Not a second live listen. Production check is once after the ship deploy.**
+
+## 2026-11-20 — Parity scope: tab preview, transcript copy, chat draft (no live listen, no ship)
+
+The shared-tab panel shows the video track only, so call audio stays on the capture stream. Copy on the live transcript writes plain lines, and a typed chat line is added once when it is not already the last You line. Desktop Tauri/WASAPI is a docs spike only. Answer relevance, realism, length, tone, speed, and the clarifier were left on pull request 467.
+
+**Visible when a session is sharing a tab or the transcript drawer is open. Not a live listen-through.**
+
+## 2026-11-20 — Parity upgrade keeps only new, evidence-backed fixes (no live listen, no ship)
+
+Pull request 477 no longer repeats the claim filter, the gap bridge, the length band, or the first-person lines that pull request 467 already has. Nothing new is added until a forwarded Parakeet session log shows a gap. Upgrade pull requests still have to cover at least 3 areas and list "new this round" once that evidence is in.
+
+**No product change in this commit. Not a live listen-through.**
+
+## 2026-11-20 — Upgrade PRs diversify and deepen (standing rule)
+
+Every upgrade pull request touches at least 3 areas (answers, clarifier, speed/endpointing, transcript, chat, UI friction, desktop). Each of those areas gets a deeper test than the last round, and the PR body lists "new this round". The four edges added earlier were removed because they were not backed by a forwarded session log.
 
 ## 2026-11-20 — Review blockers on the queued Kompas branch (no live listen, no ship)
 
