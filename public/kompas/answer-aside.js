@@ -192,6 +192,12 @@
     bar.appendChild(label);
     bar.appendChild(next);
     panel.appendChild(bar);
+    var leads = (aside.context && aside.context.leads) || [];
+    if (leads.length) {
+      var leadList = el("ul", "aside-leads");
+      leads.forEach(function (line) { addLi(leadList, line, whyFor(aside, line)); });
+      panel.appendChild(leadList);
+    }
     if (!pageResume() && aside.question) panel.appendChild(el("p", "aside-empty", "No resume is stored on this device. I will use the job description only."));
     if (aside.partial) panel.appendChild(el("p", "aside-live", aside.partial));
     if (aside.summary) {
