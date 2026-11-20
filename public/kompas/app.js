@@ -2018,6 +2018,7 @@ async function start() {
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
   captureStartedAt = Date.now();
+  void import("./vad-loader.mjs").then((m) => m.prepareSession && m.prepareSession()).catch(() => {});
   try { window.kompasDesktop?.setInterview?.(true); } catch {}
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
   document.querySelector(".rec").classList.add("live");
@@ -2056,6 +2057,7 @@ async function stop(say = true) {
   $("startBtn").disabled = false;
   if (say && transcriptionFailedEpoch !== transcriptionEpoch) status("Stopped — finished processing captured speech.");
   await saveRunTranscript();
+  void import("./vad-loader.mjs").then((m) => m.releaseModels && m.releaseModels()).catch(() => {});
 }
 function reportSources() {
   if (!running) return;
@@ -2226,8 +2228,25 @@ $("tabPreviewStop")?.addEventListener("click", (e) => {
 async function maybeLoadSilero(stream) {
   if (!stream || window.KOMPAS_VAD === "off") return null;
   try {
-    const mod = await import("./vad-loader.js");
-    return mod.attachSilero ? mod.attachSilero(stream) : null;
+    const mod = await import("./vad-loader.mjs");
+    if (!mod.attachSilero) return null;
+    return await mod.attachSilero(stream, {
+      onSpeechStart() {
+        try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {}
+        window.__kompasVadEndedAt = 0;
+      },
+      onSpeechEnd(audio) {
+        window.__kompasLastSpeech = audio;
+        window.__kompasVadEndedAt = Date.now();
+        const cap = captures.find(c => c.who === "Them");
+        const mic = captures.find(c => c.who === "You");
+        const overlap = !!(mic && (mic.voiced || (cap && cap.segStart && mic.lastVoice >= cap.segStart)));
+        if (cap) cap.forceYou = overlap;
+        if (overlap || !cap) return;
+        endSegment(cap, true, true, true);
+        scheduleAuto();
+      },
+    });
   } catch { return null; }
 }
 async function startSys() {
@@ -2691,6 +2710,7 @@ function vadStep(cap, rms) {
   if (step.action === "end" && cap.who === "Them") {
     const mic = captures.find(c => c.who === "You");
     cap.forceYou = !!(mic && (mic.voiced || (cap.segStart && mic.lastVoice >= cap.segStart)));
+    if (window.__kompasSileroLive && cap.lastVoice && now - cap.lastVoice < THEM_SILENCE_MS) return;
   }
   if (step.action === "end") return endSegment(cap, true, true, step.scream || step.speechMs >= 60);
   if (step.action === "rescue") return endSegment(cap, true, true, true);
@@ -3945,18 +3965,45 @@ function liveInterviewer() {
   return questionSource();
 }
 const armsAuto = () => pendingHeard().some(t => utteranceWho(t.text) === "Them" && isGatedQuestion(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
+function themQuietNow() {
+  if (window.__kompasSileroLive) return window.__kompasVadEndedAt ? Date.now() - window.__kompasVadEndedAt : 0;
+  const themCap = captures.find(c => c.who === "Them");
+  return themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
+}
+function scheduleUnsure() {
+  const lines = pendingHeard().filter(t => t.who === "Them" && (!captureStartedAt || t.at >= captureStartedAt));
+  const tail = lines.length ? lines[lines.length - 1].text : "";
+  if (!tail || /right\?\s*$/i.test(tail)) return;
+  autoTimer = setTimeout(() => { void resolveUnsure(tail); }, QUESTION_PAUSE_MS);
+}
+async function resolveUnsure(tail) {
+  if (!autoOn || armsAuto()) return;
+  const cap = captures.find(c => c.who === "Them");
+  if ((cap && cap.forceYou) || captures.some(c => c.who === "You" && c.voiced)) return;
+  const quiet = themQuietNow();
+  if (quiet < QUESTION_PAUSE_MS) { autoTimer = setTimeout(() => { void resolveUnsure(tail); }, QUESTION_PAUSE_MS - quiet); return; }
+  let decision = "wait";
+  try {
+    const mod = await import("./vad-loader.mjs");
+    decision = await mod.runSmartTurnOrLexical({ text: tail, pauseMs: quiet, smartTurnFlag: window.KOMPAS_SMART_TURN, audio: window.__kompasLastSpeech });
+  } catch { decision = "wait"; }
+  if (decision !== "fire" || !autoOn) return;
+  status("Question detected", "live");
+  noteAsked(tail);
+  void confirmAutoAndAnswer(tail);
+}
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
-  if (!autoOn || !armsAuto()) return;
+  if (!autoOn) return;
+  if (!armsAuto()) { scheduleUnsure(); return; }
   const gated = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
   const tail = gated.length ? gated[gated.length - 1].text : "";
   const wait = autoWaitMs(tail);
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
-    const themCap = captures.find(c => c.who === "Them");
-    const themQuietMs = themCap ? (performance.now() - (themCap.lastVoice || 0)) : (questionSource() === "You" ? AUTO_THEM_SILENCE_MS : 0);
+    const themQuietMs = themQuietNow();
     const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
     const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
     if (/right\?\s*$/i.test(tail)) return;

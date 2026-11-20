@@ -1,8 +1,8 @@
 # MFit Completion Watch
 
-## 20 November 2026 — Speech end and resume tools, not shipped
+## 20 November 2026 — CDN speech models, not shipped
 
-The same pull request now drops a Them segment when the mic is active, waits 700 ms before Auto, and leaves a trailing "right?" open. Speech start records a two-second first-word deadline. The Silero and smart-turn loaders are lazy and fail closed. A tool the resume does not name loses its sentence. No ship marker.
+The same pull request now loads Silero v5 and onnxruntime-web 1.22.0 from jsDelivr, and smart-turn v3.2 from Hugging Face revision f766f81, when a session starts. The weights are not in /public. A CDN failure stays on the lexical 700 ms gate and shows no error. No ship marker.
 
 Continue: the 08:00 CT routine ships this pull request once if CI is green.
 

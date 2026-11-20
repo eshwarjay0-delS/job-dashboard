@@ -1,6 +1,6 @@
-## 2026-11-20 — Speech end, question pause, and resume tools (no visible screen until a live listen)
+## 2026-11-20 — CDN speech models, no Vercel transfer (no visible screen until a live listen)
 
-A Them segment that overlaps the mic is treated as the candidate and does not fire. Speech start records a two-second first-word deadline. Auto waits 700 ms and a trailing "right?" stays open. Silero and the smart-turn model load only on demand and do nothing if the file is missing or the kill switch is off. A sentence that names a tool the resume does not have is dropped. A clarifier shows only when that evidence is missing. No ship marker. No UI was restyled.
+A session start loads Silero v5 and the onnxruntime wasm from jsDelivr, and smart-turn v3.2 from a pinned Hugging Face revision. The weights are not in /public. KOMPAS_VAD is on unless set to off. Smart-turn runs only when the wording is unsure. If the CDN fails, the 700 ms pause gate continues and no error is shown. No ship marker. No UI was restyled.
 
 **Checked on kompas-turn-models. Not a live listen-through.**
 
