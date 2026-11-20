@@ -20,6 +20,6 @@ The owner correction remains authoritative: crawling is manual/on-demand only; n
 - No new retry, adapter, schedule, crawler permission, data mutation or application behavior is introduced.
 
 ## Validation and release boundary
-Exact-head full CI, crawler freshness/collector regression, Plan/REA schema and Kompas baseline must run on the updated branch head; predecessor results are not reused. Prior PR results are not reused. No local test execution, live crawl, portal request, production-row mutation, protected preview, production deployment or alias change is claimed.
+Updated exact head `11f412c22ba87dbae7a7d4d2903bac0a234ed42a`: crawler freshness `44803397381`, Plan/REA schema `44803397376`, and Kompas baseline `44803397380` completed SUCCESS; full CI `44803397370` is still in progress. The prior #470/#471 runs were not reused. No exact-head Vercel preview deployment exists. No local test execution, live crawl, portal request, production-row mutation, protected preview, production deployment or alias change is claimed.
 
 Keep the replacement PR draft until the exact-head checks pass and any legitimate protected preview/release requirement is satisfied. Do not bypass Vercel protection/quota, change billing, add a ship marker, restore a cron or run a crawl.

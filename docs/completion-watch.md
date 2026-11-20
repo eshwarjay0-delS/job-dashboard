@@ -6,7 +6,7 @@ PR #479's safe branch was four commits behind current master after documentation
 
 The new branch preserves the 600 ms pacing and 25,000 ms default timeout, distinguishes local timeout from upstream AbortError with portal attribution, and keeps malformed URL parsing inside timer/pacing cleanup. It adds two deterministic regression tests. No retry/backoff, adapter, permission, freshness, classifier, schedule, storage or application behavior changes.
 
-All checks must run on the new exact head: full CI, crawler freshness/collector regression, Plan/REA schema and Kompas baseline. The prior #470/#471 results are predecessor evidence only. Keep the replacement PR draft until protected preview/release requirements are legitimately satisfied. No manual crawl, portal request, production-row mutation, cron restoration, ship marker or deployment.
+On exact head `11f412c22ba87dbae7a7d4d2903bac0a234ed42a`, crawler freshness `44803397381`, Plan/REA `44803397376`, and Kompas baseline `44803397380` passed; full CI `44803397370` remains in progress. The predecessor #470/#471 results were not reused. No Vercel preview deployment exists for this SHA. Keep the PR draft until full CI succeeds and the protected preview/release requirement is legitimately satisfied. No manual crawl, portal request, production-row mutation, cron restoration, ship marker or deployment.
 
 
 ## 20 November 2026 18:53 UTC — S5 production release reconciled; priority backlog carried forward
