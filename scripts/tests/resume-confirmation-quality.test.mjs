@@ -329,3 +329,53 @@ test('writer prompt treats the JD as target context, never as candidate evidence
   assert.doesNotMatch(prompt, /Do not refuse a term because the source omitted it/)
   assert.doesNotMatch(prompt, /spread the JD's tools across EVERY role below/)
 })
+
+test('negative My experience, My skills and My background statements are never confirmations', () => {
+  const negatives = [
+    'My background lacks AWS',
+    "My skills don't include Splunk",
+    'My experience includes no Okta',
+    'My skills do not include Terraform',
+    'Confirmed skills: no Azure',
+    'Confirmed experience: without Python',
+  ]
+  for (const statement of negatives) assert.deepEqual(confirmedCandidateStatements([statement]), [], statement)
+  const positives = [
+    'My experience includes AWS, but not GCP',
+    'My skills include Splunk, but not Sentinel',
+    'Confirmed skills: Azure, but not AWS',
+  ]
+  for (const statement of positives) {
+    const accepted = confirmedCandidateStatements([statement])
+    assert.equal(accepted.length, 1, statement)
+    assert.match(accepted[0], /AWS|Splunk|Azure/)
+    assert.doesNotMatch(accepted[0], /GCP|Sentinel/)
+  }
+})
+
+test('generic user/security wording alone cannot transfer IAM, and data/service alone cannot transfer Python', () => {
+  const roles = [
+    { bullets: [{ idx: 40, text: 'Handled user support, general security and data service tickets.' }] },
+    { bullets: [{ idx: 41, text: 'Provisioned identities, access groups and MFA for application accounts.' }] },
+    { bullets: [{ idx: 42, text: 'Provided data service support and routine ticket coordination.' }] },
+    { bullets: [{ idx: 43, text: 'Automated API integrations and ETL scripts for recurring data workflows.' }] },
+  ]
+  const edits = [
+    { idx: 40, text: 'Handled user support, general security and data service tickets using Okta.' },
+    { idx: 41, text: 'Provisioned identities, access groups and MFA for application accounts using Okta.' },
+    { idx: 42, text: 'Provided data service support and routine ticket coordination using Python.' },
+    { idx: 43, text: 'Automated API integrations and ETL scripts for recurring data workflows using Python.' },
+  ]
+  const cover = (text, terms) => new Set(terms.filter(term => text.toLowerCase().includes(term.toLowerCase())))
+  const guarded = restoreUnsupportedRoleEdits(
+    edits, roles, ['Okta', 'Python'], cover, new Set(['Okta', 'Python']),
+  )
+  assert.equal(guarded.reverted, 2)
+  assert.deepEqual(guarded.edits, [
+    roles[0].bullets[0],
+    edits[1],
+    roles[2].bullets[0],
+    edits[3],
+  ])
+  assert.deepEqual(guarded.blockedTerms, ['Okta', 'Python'])
+})
