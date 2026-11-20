@@ -4,22 +4,34 @@ import type { Fetcher, PortalAdapter, RawJob } from "./types"
 export const CRAWL_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (MarketFit job aggregator; contact via site)"
 
 /** One request at a time, `gapMs` apart, 25 s each, with the aggregator's own user agent. */
-export function politeFetcher(gapMs = 600): Fetcher {
+export function politeFetcher(gapMs = 600, requestTimeoutMs = 25_000): Fetcher {
   let last = 0
   return async (url, init = {}) => {
     const wait = last + gapMs - Date.now()
     if (wait > 0) await new Promise(r => setTimeout(r, wait))
     const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 25000)
+    let host = "unknown host"
+    const t = setTimeout(() => ctrl.abort(), requestTimeoutMs)
     try {
+      // Keep parsing inside the cleanup boundary: malformed adapter URLs must
+      // still advance the pacing clock in finally.
+      host = new URL(url).host
       const res = await fetch(url, {
         method: init.method || "GET",
         headers: { "User-Agent": CRAWL_UA, Accept: init.accept || "text/html", ...(init.body ? { "Content-Type": "application/json" } : {}), ...init.headers },
         ...(init.body ? { body: init.body } : {}),
         signal: ctrl.signal,
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status} from ${new URL(url).host}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${host}`)
       return await res.text()
+    } catch (error) {
+      if (ctrl.signal.aborted) {
+        throw new Error(`Request to ${host} timed out after ${requestTimeoutMs} ms`, { cause: error })
+      }
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error(`Request to ${host} was aborted before the local timeout`, { cause: error })
+      }
+      throw error
     } finally {
       clearTimeout(t)
       last = Date.now()

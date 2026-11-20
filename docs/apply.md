@@ -199,3 +199,11 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+## 20 November 2026 — collector abort diagnostics, current-master restack
+
+The approved diagnostic-only collector change is restacked on master `db13450a` in branch `fix/crawler-abort-diagnostics-restack-20261120-0925z`. The existing 600 ms pacing and 25,000 ms default timeout remain. A local AbortController timeout now identifies the portal host and configured timeout; an upstream AbortError is reported separately; malformed URLs remain inside the cleanup boundary so the timer is cleared and the pacing timestamp advances in `finally`.
+
+The change does not add retries, backoff, adapters, source permissions, freshness rules, classifiers, schedules, database writes or application submissions. Contract crawling remains manual/on-demand only, with no daily cron. Robert Half remains manual-only; eTeam remains excluded until a compliant official feed is verified.
+
+Source commit: `5dcb4e8aaf21f4f2a69cae8df7150784f9e28294`. Regression commit: `0aea6fb77e21f17f9c1dce2078a2c2ed30f8c8e5`. Exact-head CI is pending; prior PR #451 green checks are historical evidence only and are not reused for this restack. No live crawl or portal request was made.
