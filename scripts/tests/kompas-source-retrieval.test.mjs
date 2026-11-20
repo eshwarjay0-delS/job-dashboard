@@ -108,7 +108,7 @@ test("wired into the live path: passages block in the context, source check as a
   const svc = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
   assert.match(svc, /sourcePassagesPrompt\(sourceRetrieval\)/)
   assert.match(svc, /const sourceCheck = repairLoopSourceChecks\(job\.question, text, job\.sourceDocs\)/)
-  assert.match(svc, /core: \[\.\.\.structure, \.\.\.named, \.\.\.voiceEcho, \.\.\.sourceCheck\]/)
+  assert.match(svc, /core: \[\.\.\.structure, \.\.\.named, \.\.\.voiceEcho, \.\.\.sourceCheck, \.\.\.short\]/)
 })
 
 test("200-fold find: interview chatter and one shared generic word do not count as 'in your sources'", () => {

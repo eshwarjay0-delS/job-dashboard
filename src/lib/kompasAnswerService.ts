@@ -1243,7 +1243,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     priorBibleContext ? `${priorBibleContext}` : "",
     bibleTimeoutNote ? bibleTimeoutNote : "",
     resumeFacts ? `${resumeFacts}` : "",
-    tier !== 0 && jdSrc && !["closing-question","acknowledgement","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}${resumeSrc ? "" : "\nNO RESUME: use these tools when they answer the question. Do not invent an employer, a project, or a personal incident."}` : "",
+    tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}${resumeSrc ? "" : "\nNO RESUME: use these tools when they answer the question. Do not invent an employer, a project, or a personal incident."}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     sourceBlock,
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
