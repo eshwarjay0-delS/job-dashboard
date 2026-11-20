@@ -1299,6 +1299,17 @@ function cleanHeardQuestion(text) {
   const kept = raw.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).filter((part) => !chatter.test(part.replace(/^(?:you|them):\s*/i, "").replace(/[.?!]+$/g, "").trim()));
   return kept.length ? kept.join(" ") : raw;
 }
+function absorbScreen(card, text) {
+  const raw = String(text || "");
+  const mark = raw.indexOf("---SCREEN---");
+  if (!card || mark < 0) return raw;
+  const answer = raw.slice(0, mark).trim();
+  const rest = raw.slice(mark + "---SCREEN---".length);
+  const codeAt = rest.indexOf("---CODE---");
+  const body = (codeAt >= 0 ? rest.slice(0, codeAt) : rest).replace(/^\s+/, "").trim();
+  if (body) { card.screenFull = true; card.screenBody = body; }
+  return answer || raw;
+}
 function renderCard() {
   const c = cards[idx]; if (!c) return;
   // Where you are in the book, and ends that look like ends (owner, 27 Oct 2026: Prev/Next "aren't working" at the first
@@ -1309,21 +1320,29 @@ function renderCard() {
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
-  const heardQ = cleanHeardQuestion(draft || c.question);
-  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : oneQuestionLine(heardQ);
-  $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
+  const heardQ = interviewerOnly(cleanHeardQuestion(draft || c.question));
+  const lined = oneQuestionLine(heardQ);
+  const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : String(lined || "").replace(/^(?:Question:\s*)+/, "");
+  const qEl = $("question");
+  if (c.screenFull && c.screenBody) {
+    if (qEl && qEl.classList) qEl.classList.add("screen-full");
+    if (qEl) qEl.textContent = c.screenBody;
+  } else {
+    if (qEl && qEl.classList) qEl.classList.remove("screen-full");
+    if (qEl) qEl.textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
+  }
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
   const ul = $("answer"), keep = ul.scrollTop;
   const lines = answerLines(shownAnswer, qLabel);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
-  if (c.pivot && !hasAnchorFields(c) && !lines.length) {
-    const li = document.createElement("li");
-    li.className = "pivot";
-    li.style.fontWeight = "600";
-    li.textContent = c.pivot;
-    ul.append(li);
-  } else if (hasAnchorFields(c)) {
+  if (c.screenBody && ul.append) {
+    const body = document.createElement("li");
+    body.className = "screen-body";
+    body.textContent = c.screenBody;
+    ul.append(body);
+  }
+  if (hasAnchorFields(c)) {
     const row = (label, value) => {
       if (!value) return;
       const li = document.createElement("li");
@@ -1356,7 +1375,8 @@ function renderCard() {
       }
     }
   } else /* bullets fallback */ if (false) {}
-  if (!hasAnchorFields(c) && !(c.pivot && !lines.length)) {
+  const answerWords = String(typeof shownAnswer === "string" ? shownAnswer : "").trim().split(/\s+/).filter(Boolean);
+  if (!hasAnchorFields(c) && !(c.pivot && answerWords.length < 20)) {
   lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
     if (kind === "code") {
@@ -1428,7 +1448,7 @@ function plainAnswer(answer) {
   }).filter(Boolean).join("\n").trim();
 }
 
-function status(msg, tone) { const s = $("status"); s.textContent = msg; s.className = "statusline" + (tone ? " " + tone : ""); }
+function status(msg, tone) { const s = $("status"); const text = $("statusText"); if (text) text.textContent = msg; else if (s) s.textContent = msg; if (s) s.className = "statusline" + (tone ? " " + tone : ""); }
 
 /* ---- clock (mm:ss) ---- */
 let clockTimer = null, startedAt = 0;
@@ -2190,22 +2210,56 @@ async function applyRawAudioConstraints(stream) {
     try { await track.applyConstraints(SYS_AUDIO_CONSTRAINTS); } catch {}
   }
 }
+function previewVideoTracks(tracks) {
+  return (Array.isArray(tracks) ? tracks : []).filter((track) => track && track.kind === "video" && track.readyState !== "ended");
+}
+let tabPreviewOpen = false;
+let tabPreviewOwner = null;
 function showTabPreview(owner) {
+  owner = owner || tabPreviewOwner;
+  if (owner) tabPreviewOwner = owner;
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
+  const toggle = $("tabPreviewToggle");
   if (!box || !video || !owner) return;
-  try { video.srcObject = owner; video.muted = true; const play = video.play(); if (play && play.catch) play.catch(() => {}); } catch {}
+  const tracks = previewVideoTracks(owner.getVideoTracks ? owner.getVideoTracks() : []);
+  if (toggle) toggle.hidden = false;
+  // The panel starts collapsed. Tab audio stays on the capture stream either way.
+  if (!tabPreviewOpen || !tracks.length) {
+    box.hidden = true;
+    box.classList.add("hidden");
+    try { video.pause(); } catch {}
+    try { video.srcObject = null; } catch {}
+    if (toggle) toggle.setAttribute("aria-expanded", "false");
+    return;
+  }
+  try {
+    video.srcObject = new MediaStream(tracks);
+    video.muted = true;
+    const play = video.play();
+    if (play && play.catch) play.catch(() => {});
+  } catch {}
   box.hidden = false;
   box.classList.remove("hidden");
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
 }
 function hideTabPreview() {
+  tabPreviewOpen = false;
+  tabPreviewOwner = null;
   const box = $("tabPreview");
   const video = $("tabPreviewVideo");
+  const toggle = $("tabPreviewToggle");
   if (video) {
     try { video.pause(); } catch {}
     try { video.srcObject = null; } catch {}
   }
   if (box) { box.hidden = true; box.classList.add("hidden"); }
+  if (toggle) { toggle.hidden = true; toggle.setAttribute("aria-expanded", "false"); }
+}
+function toggleTabPreview() {
+  if (!tabPreviewOwner) return;
+  tabPreviewOpen = !tabPreviewOpen;
+  showTabPreview(tabPreviewOwner);
 }
 async function changeSharedTab() {
   if (!running) return;
@@ -2215,6 +2269,8 @@ async function changeSharedTab() {
   syncSrc();
   await startSys();
 }
+$("tabPreviewToggle")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); toggleTabPreview(); });
+$("tabPreviewCollapse")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); tabPreviewOpen = false; if (tabPreviewOwner) showTabPreview(tabPreviewOwner); });
 $("tabPreviewFull")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); const video = $("tabPreviewVideo"); try { video && video.requestFullscreen && video.requestFullscreen(); } catch {} });
 $("tabPreviewChange")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void changeSharedTab(); });
 $("tabPreviewStop")?.addEventListener("click", (e) => {
@@ -2929,12 +2985,10 @@ function answerAnywayLines(held, o) {
 // a tucked-away box back (never while an answer is still being written on that page); your own speech never moves it.
 function showCaption(who, text, isInterim) {
   const el = $("caption"); if (!el) return;
-  // The candidate's mic is not the interviewer question. With call audio on, it never sits under the question.
-  if (who === "You" && typeof captures !== "undefined" && captures.some(c => c && c.who === "Them" && !c.stopped)) return;
   if (who === "Them") noteThem(text);
   else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
-  $("capWho").textContent = who === "You" ? "You" : "Them";
+  $("capWho").textContent = who === "You" ? "You" : "Interviewer";
   const captionText = $("capText");
   captionText.textContent = text;
   // Present only the latest three wrapped lines. The transcript retains the
@@ -2987,6 +3041,7 @@ function appendDrawer(who, text, at) {
     const d = document.createElement("div"); d.className = "tl " + side; d.dataset.at = String(when);
     d.innerHTML = "<b></b><span></span><i class=\"qtag\"></i>";
     const clock = new Date(when).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    d.dataset.role = side === "you" ? "Candidate" : "Interviewer";
     d.querySelector("b").textContent = (side === "you" ? "You" : "Interviewer") + " · " + clock;
     d.querySelector("span").textContent = words;
     d.querySelector(".qtag").textContent = lineStatus(words);
@@ -2996,6 +3051,16 @@ function appendDrawer(who, text, at) {
   body.scrollTop = body.scrollHeight;
 }
 function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text, t.at)); }
+function cleanTranscriptText(lines, typed) {
+  const rows = (Array.isArray(lines) ? lines : []).map((line) => {
+    const who = line && line.who === "You" ? "You" : "Interviewer";
+    const text = String(line && line.text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return text ? who + ": " + text : "";
+  }).filter(Boolean);
+  const draft = String(typed || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (draft && rows[rows.length - 1] !== "You: " + draft) rows.push("You (typed): " + draft);
+  return rows.join("\n");
+}
 // Nothing is answered phrase-by-phrase. Everything heard piles up; AI Answer (or Auto, once the
 // speaker goes quiet) merges it, derives ONE big question from all of it, and answers that in full.
 let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer = null;
@@ -3836,18 +3901,21 @@ function shouldAutoAnswer(opts) {
 }
 
 async function confirmAutoAndAnswer(tail) {
-  // Conservative: a failed or empty derive confirm must not auto-fire.
+  if (isTabSmallTalk(tail) || isCandidateTabTurn(tail)) return;
+  const local = isRealInterviewerQuestion(tail) || confirmAutoQuestion(tail).ok;
+  if (!local) return;
   try {
     const res = await fetch("/api/kompas/answer", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: String(tail || "").slice(0, 2000), transcript: typeof recentContext === "function" ? recentContext() : "" }) });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data || data.noQuestion || !data.derived) return;
-    if (!questionEnded(data.derived)) return;
-    if (paraphrasesOwn(data.derived)) return;
-    if (cards.some(c => sameAsk(data.derived, c.question || ""))) return;
-    if (!autoOn || !armsAuto()) return;
-    await aiAnswer(true);
-  } catch { /* conservative: no auto answer when confirm fails */ }
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.derived && !data.noQuestion && questionEnded(data.derived) && !paraphrasesOwn(data.derived)) {
+        if (cards.some(c => sameAsk(data.derived, c.question || ""))) return;
+      }
+    }
+  } catch { /* a real interviewer question still answers when derive is down */ }
+  if (cards.some(c => sameAsk(tail, c.question || ""))) return;
+  if (!autoOn || !armsAuto()) return;
+  await aiAnswer(true);
 }
 let streamingSttReady = false;
 const streamingSttSessions = new Map();
@@ -3947,7 +4015,79 @@ function isGatedQuestion(text) {
   if (/^(?:i(?:'m| am)?|my |we )\b/i.test(raw) && !/\b(?:can you|could you|tell me|what do you|how do you|why do you)\b/i.test(raw)) return false;
   return /\?\s*$/.test(raw) || /\b(?:tell me|walk me through|how (?:do|would|did) you|what (?:is|are|do) you|why (?:did|do|would) you|can you|could you|explain|describe)\b/i.test(raw);
 }
-function utteranceWho(text) { return isGatedQuestion(text) ? "Them" : "You"; }
+let lastTabRole = "";
+let interviewerAskText = "";
+let interviewerAskEndedAt = 0;
+function isTabSmallTalk(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return false;
+  if (/^small talk\b/i.test(t)) return true;
+  return /how did (?:your|they|the) day go|how did they go|how(?:'s| is) (?:your|the) day|are you okay|took enough rest|shall we get started|let'?s get started|how are you\b|nice to meet you|can you hear me/i.test(t)
+    && !/\b(?:tell me about yourself|why did you|security analyst|roles and responsibilities|what sort of reports|about routing)\b/i.test(t);
+}
+function isCandidateTabTurn(text) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (!s || /\?/.test(s)) return false;
+  if (/^(?:it went|i(?:'m| am)\b|i [a-z]|my \b|we(?:'re| are)\b|during my|as an |as a )/i.test(s)) return true;
+  if (/\b(?:i would|i'd |i will|i'm going to|i typically|my approach|i usually|i tend to)\b/i.test(s)) return true;
+  return false;
+}
+function isRealInterviewerQuestion(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t || isTabSmallTalk(t) || isCandidateTabTurn(t)) return false;
+  return isGatedQuestion(t);
+}
+function tabTurnRole(text, prev) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  const prior = prev == null ? lastTabRole : prev;
+  if (!t || isTabSmallTalk(t)) return "Them";
+  if (isCandidateTabTurn(t)) return "You";
+  if (isRealInterviewerQuestion(t)) return "Them";
+  if (prior === "You" && /\bfollow-?ups?\b/i.test(t)) return "Them";
+  if (prior === "Them") return "You";
+  if (prior === "You") return "You";
+  return "Them";
+}
+function utteranceWho(text) { return tabTurnRole(text); }
+function speakerLabel(who) { return who === "You" ? "You" : "Interviewer"; }
+function questionHeader(text) {
+  let q = String(text || "").replace(/\s+/g, " ").trim();
+  q = q.replace(/^(?:(?:You|Candidate|Them|Interviewer):\s*)+/gi, "");
+  while (/^Question:\s*/i.test(q)) q = q.replace(/^Question:\s*/i, "");
+  if (!q || isTabSmallTalk(q) || isCandidateTabTurn(q)) return "";
+  return "Question: " + q;
+}
+function interviewerOnly(text) {
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (!raw) return "";
+  const parts = raw.split(/(?<=[.?!])\s+/);
+  const kept = parts.filter((part) => part && tabTurnRole(part, "Them") !== "You");
+  const body = (kept.length ? kept.join(" ") : raw).replace(/^(?:Question:\s*)+/i, "").trim();
+  return isCandidateTabTurn(body) ? "" : body;
+}
+function normAskKey(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+function replayMixedTab(turns) {
+  lastTabRole = "";
+  const lines = [];
+  const fires = [];
+  const seen = new Set();
+  for (const turn of turns || []) {
+    const text = String(turn.text || "").replace(/\s+/g, " ").trim();
+    const role = tabTurnRole(text);
+    lastTabRole = role;
+    const tag = speakerLabel(role);
+    lines.push({ role, tag, text, start: Number(turn.start), end: Number(turn.end), qId: String(turn.qId || "") });
+    if (role !== "Them" || isTabSmallTalk(text) || !isRealInterviewerQuestion(text)) continue;
+    const key = normAskKey(text);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const end = Number(turn.end);
+    fires.push({ qId: String(turn.qId || ""), at: end + 1.5, end, text, header: questionHeader(text) });
+  }
+  return { lines, fires };
+}
 function oneQuestionLine(text) {
   let q = String(text || "").replace(/\s+/g, " ").trim();
   while (/^Question:\s*/i.test(q)) q = q.replace(/^Question:\s*/i, "");
@@ -3964,7 +4104,7 @@ function liveInterviewer() {
   if (captures.some(c => c.who === "Them") || pendingHeard().some(t => t.who === "Them")) return "Them";
   return questionSource();
 }
-const armsAuto = () => pendingHeard().some(t => utteranceWho(t.text) === "Them" && isGatedQuestion(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
+const armsAuto = () => pendingHeard().some(t => utteranceWho(t.text) === "Them" && isGatedQuestion(t.text) && !isTabSmallTalk(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
 function themQuietNow() {
   if (window.__kompasSileroLive) return window.__kompasVadEndedAt ? Date.now() - window.__kompasVadEndedAt : 0;
   const themCap = captures.find(c => c.who === "Them");
@@ -3997,18 +4137,21 @@ function scheduleAuto() {
   noteTurnGate();
   if (!autoOn) return;
   if (!armsAuto()) { scheduleUnsure(); return; }
-  const gated = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+  const gated = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them").filter(t => !isTabSmallTalk(t.text));
   const tail = gated.length ? gated[gated.length - 1].text : "";
   const wait = autoWaitMs(tail);
+  const askWait = interviewerAskEndedAt ? Math.min(wait, 1500) : wait;
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
-    if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
-    const themQuietMs = themQuietNow();
-    const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
+    const sinceAsk = interviewerAskEndedAt ? Date.now() - interviewerAskEndedAt : 0;
+    const askDue = !!(interviewerAskText && sinceAsk >= 1500);
+    if ((captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) && !askDue) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
+    const themQuietMs = askDue ? Math.max(sinceAsk, 1500) : themQuietNow();
+    const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them").filter(t => !isTabSmallTalk(t.text));
     const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
     if (/right\?\s*$/i.test(tail) && (themQuietMs || 0) < 1400) { autoTimer = setTimeout(fire, 1400 - (themQuietMs || 0)); return; }
     if ((themQuietMs || 0) < QUESTION_PAUSE_MS) { autoTimer = setTimeout(fire, QUESTION_PAUSE_MS - (themQuietMs || 0)); return; }
-    const confirmed = confirmAutoQuestion(tail).ok;
+    const confirmed = confirmAutoQuestion(tail).ok || isRealInterviewerQuestion(tail);
     const decision = shouldAutoAnswer({ autoOn: true, cue: armsAuto(), themQuietMs, confirmed, text: tail });
     if (!decision.fire) {
       const gate = intentToComplete({ text: tail, themQuietMs });
@@ -4021,7 +4164,7 @@ function scheduleAuto() {
     status("Question detected", "live");
     noteAsked(tail);
     void confirmAutoAndAnswer(tail);
-  }, wait);
+  }, askWait);
 }
 // Turn gate (slice 2): each new heard line from the question source gets answer / wait / no answer needed, logged with
 // its reason. It only labels; it never stops an answer. "No answer needed" says so and points to AI Answer, which
@@ -4330,6 +4473,8 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   const pieces = lookedAgain ? [text] : splitUtterances(text);
   if (pieces.length > 1) { for (const piece of pieces) onTranscript(utteranceWho(piece), piece, true, spokenAt); return; }
   who = utteranceWho(text);
+  lastTabRole = who;
+  if (who === "Them" && isRealInterviewerQuestion(text)) { interviewerAskText = text; interviewerAskEndedAt = Date.now(); }
   if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
   if (captureStartedAt && !startedAt) startClock();
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
@@ -4383,7 +4528,7 @@ function applyInterruptionFlush(ev) {
   page.askedAt = Date.now();
   page.question = ev.question || page.question;
   renderCard();
-  status("New constraint: " + pivot, "live");
+  if (ev.question && !isTabSmallTalk(ev.question)) status("Question detected", "live");
   if (ev.resolve && ev.question && isQuestionComplete(ev.question)) {
     if (typeof autoOn !== "undefined" && autoOn) void confirmAutoAndAnswer(ev.question);
   }
@@ -5012,6 +5157,8 @@ function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
   return {
     stream: true, client: BUILD, liveModel: typeof liveModel === "function" ? (liveModel() || undefined) : undefined, consolidated: !!opts.consolidated,
     ...(inline ? { derive: true } : {}),
+    ...(opts && opts.angle ? { angle: String(opts.angle).slice(0, 240) } : {}),
+    ...(opts && opts.screenImage ? { screenImage: opts.screenImage } : {}),
     ...fields,
     memory: typeof sessionMemoryPayload === "function" ? sessionMemoryPayload() : undefined,
     ...(rest || {}),
@@ -5350,8 +5497,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (applied.title) paintTitle(applied.title, false);
       } else if (ev.type === "card") {
         if (applied.card) paintLayout(applied.card);
-      } else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; if (!card.cardLayout) show(text); }
-      else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = ev.text; card.cardLayout = null; show(text); }
+      }       else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; text = absorbScreen(card, text); if (!card.cardLayout) show(text); }
+      else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = absorbScreen(card, ev.text); card.cardLayout = null; show(text); }
       else if (ev.type === "wait") { if (card.req === ctl) status(ev.ms ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.round(ev.ms / 1000)) + "s.") : "Still working.", "live"); }
       else if (ev.type === "done") {
         meta = { ...meta, ...ev };
@@ -5837,6 +5984,35 @@ function noteLateContext(who, text) {
   showPressed(late.card, folded.question);
   void generateAnswer(late.card.heard || folded.question, late.card, { consolidated: true, derived: folded.question, pinned: true, lateFold: true });
 }
+const PRESS_TAIL_MS = 2000;
+const ANSWER_ANGLES = ["the tradeoff you would not drop", "what you would check in the first minute", "your piece versus the team's piece", "the constraint that made it this way", "what you would do differently on a second pass"];
+let answerAnglePass = 0;
+function manualAnswerTarget(opts) {
+  opts = opts || {};
+  const clean = (s) => String(s || "").replace(/\s+/g, " ").trim();
+  const norm = (s) => clean(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const same = (a, b) => { const A = norm(a), B = norm(b); return !!(A && B && (A === B || A.includes(B) || B.includes(A))); };
+  const ask = (s) => { const t = clean(s); if (!t) return false; if (/^(?:i(?:'m| am|'ll| will|'ve|'d)?\b)/i.test(t) && !/[?]/.test(t)) return false; return /[?]|\b(?:tell me|walk me|describe|explain|what|why|how|when|where|which|who|can you|could you|would you|do you|did you)\b/i.test(t); };
+  const src = (opts.recent && opts.recent.length) ? opts.recent : (opts.pending || []);
+  const rows = Array.from(src).map((line, index) => {
+    const text = clean(line && line.text);
+    const at = Number(line && line.at);
+    return { who: String((line && line.who) || ""), text, at: Number.isFinite(at) ? at : NaN, index, stamped: Number.isFinite(at) };
+  }).filter((line) => line.text);
+  const them = rows.filter((line) => /^(?:them|interviewer(?:\s*\d+)?)$/i.test(line.who));
+  const asks = them.filter((line) => ask(line.text));
+  const last = asks.length ? asks[asks.length - 1] : null;
+  if (!last) return { question: "", regenerate: false, angle: "" };
+  const tail = them.filter((line) => {
+    if (line.index <= last.index || ask(line.text)) return false;
+    if (last.stamped && line.stamped) return line.at >= last.at && line.at - last.at <= PRESS_TAIL_MS;
+    return line.index === last.index + 1 && line.text.split(/\s+/).length <= 12;
+  });
+  const question = clean([last.text].concat(tail.map((line) => line.text)).join(" "));
+  const regenerate = !!(opts.alreadyAnswered && (same(question, opts.lastQuestion || "") || same(last.text, opts.lastQuestion || "")));
+  const pass = Math.abs(Math.trunc(Number(opts.pass) || 0));
+  return { question, regenerate, angle: regenerate ? ANSWER_ANGLES[pass % ANSWER_ANGLES.length] : "" };
+}
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -5891,7 +6067,7 @@ async function aiAnswer(fromAuto, options = {}) {
     const typedText = box ? box.value.trim() : "";
     // Answer anyway (slice 2): a press right after "Nothing question-like" or
     // "Listening, no new question yet" answers those same lines / re-asks.
-    let anyway = false, silenceAnyway = false, liveResolved = "";
+    let anyway = false, silenceAnyway = false, liveResolved = "", pressAngle = "";
     try {
       const held = answerAnywayHeld;
       let back = null;
@@ -5916,13 +6092,29 @@ async function aiAnswer(fromAuto, options = {}) {
           questionSource: questionSource(),
         });
         if (decision.listening) {
-          answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
-          status("Listening, no new question yet — press AI Answer again to answer anyway.", "live");
-          logDecision("listening-no-new-question", questionSource(), lastQ || "");
-          return;
-        }
-        if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
+          const target = typeof manualAnswerTarget === "function" ? manualAnswerTarget({
+            pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
+            lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
+            pass: answerAnglePass,
+          }) : { question: "", regenerate: false, angle: "" };
+          if (target.question) {
+            liveResolved = target.question;
+            if (target.regenerate) { pressAngle = target.angle; answerAnglePass++; }
+          } else {
+            answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
+            status("Still listening.", "live");
+            logDecision("still-listening", questionSource(), lastQ || "");
+            return;
+          }
+        } else if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
       } catch {}
+    }
+    if (!fromAuto && !typedText && !anyway && liveResolved && !pending.length) {
+      const curHold = cards[idx];
+      const page = curHold && typeof hasAnswer === "function" && hasAnswer(curHold) ? addCard(liveResolved, ["…"]) : (curHold || addCard(liveResolved, ["…"]));
+      page.heard = liveResolved; page.formed = liveResolved;
+      showPressed(page, liveResolved);
+      return await generateAnswer(liveResolved, page, { reask: true, pinned: true, derived: liveResolved, angle: pressAngle || undefined, consolidated: true });
     }
     if (!fromAuto && !typedText && !anyway && typeof KompasLatestAsk === "object" && KompasLatestAsk) {
       const latest = KompasLatestAsk.selectLatestQueuedAsk(pending);
@@ -5989,7 +6181,7 @@ async function aiAnswer(fromAuto, options = {}) {
         card.heard = heard; card.earlier = earlier; card.formed = heard;
         card.formSeq = (used[0] || parts[0] || pending[0] || {}).seq;
         showPressed(card, shown);
-        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true });
+        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: card.question, pinned: true, angle: pressAngle || undefined, reask: !!pressAngle });
       }
       const isRepress = !liveResolved && !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
@@ -6154,7 +6346,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
     // the old heard text alone is what showed "No question yet".
     if (c && c.restored && c.cacheEpoch != null && c.liveEpoch != null && c.cacheEpoch !== c.liveEpoch) {
-      status("No new question yet.", "live");
+      status("Still listening.", "live");
       return;
     }
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
@@ -6173,6 +6365,7 @@ async function aiAnswer(fromAuto, options = {}) {
   } finally { aiBusy = false; }
 }
 $("screenBtn").onclick = analyseScreen;
+if ($("screenAnalyzeBtn")) $("screenAnalyzeBtn").onclick = analyzeSharedTab;
 // One visible desktop action for captured questions. It uses the same verified
 // capture → region review → grounded answer path as the existing menu/shortcut.
 if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseScreen;
@@ -6338,7 +6531,7 @@ function routeScreenFrame(text, audioQuestion, kind) {
       : "The screen shows a diagram. Explain the diagram and answer the ask.";
   const parts = [brief, "On screen:\n" + screen];
   if (audio) parts.push("Audio question:\n" + audio + "\nAddress the audio question using the screen as context.");
-  const display = screen.replace(/\s+/g, " ").trim().slice(0, 180) || audio || "On screen";
+  const display = screen.trim() || audio || "On screen";
   return { kind: frameKind, display, answerQuestion: parts.join("\n\n"), generate: true, combinedAudio: !!audio };
 }
 async function answerScreenPieces(card, pieces, audio) {
@@ -6355,6 +6548,8 @@ async function answerScreenPieces(card, pieces, audio) {
   card.question = first.display;
   card.screenTask = true;
   card.frameKind = first.kind;
+  card.screenFull = true;
+  card.screenBody = (pieces.length ? pieces.join("\n\n") : first.display);
   await generateAnswer(first.display, card, { pinned: true, derived: first.answerQuestion, source: "screen", frameKind: first.kind });
   for (const routed of routedAll.slice(1)) {
     if ((current && current.id) !== session || !cards.includes(card)) return;
@@ -6429,6 +6624,67 @@ async function analyseScreen() {
   finally { if (screenOwnsAnswer) aiBusy = false; }
   card.streaming = false; card.meta = ((performance.now() - t0) / 1000).toFixed(1) + "s · vision";
   if (cards[idx] === card) renderCard();
+}
+async function grabSharedFrame() {
+  const track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
+  if (!track) return { error: "Share the meeting tab first. Screen analyze uses that share and will not ask again." };
+  const video = document.createElement("video");
+  video.muted = true; video.playsInline = true;
+  try {
+    video.srcObject = new MediaStream([track]);
+    await video.play();
+    if (video.readyState < 2) await new Promise((r) => { video.onloadeddata = r; setTimeout(r, 700); });
+    if (track.readyState !== "live" || !video.videoWidth || !video.videoHeight) return { error: "That frame was blank. Share the tab that has the question." };
+    const k = Math.min(1, 1280 / video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(video.videoWidth * k));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * k));
+    const context = canvas.getContext("2d");
+    if (!context) return { error: "That frame could not be read. Share the tab that has the question." };
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let flat = pixels.length > 0;
+    if (flat) {
+      const r0 = pixels[0], g0 = pixels[1], b0 = pixels[2];
+      const step = 4 * Math.max(1, Math.floor(pixels.length / 4 / 2048));
+      for (let i = 0; i < pixels.length; i += step) {
+        if (Math.abs(pixels[i] - r0) > 12 || Math.abs(pixels[i + 1] - g0) > 12 || Math.abs(pixels[i + 2] - b0) > 12) { flat = false; break; }
+      }
+    }
+    if (flat) return { error: "That frame was blank. Share the tab that has the question." };
+    return { image: canvas.toDataURL("image/jpeg", 0.72) };
+  } catch (e) {
+    return { error: "That frame could not be read. Share the tab that has the question." };
+  } finally {
+    video.onloadeddata = null; try { video.pause(); } catch {} video.srcObject = null;
+  }
+}
+async function analyzeSharedTab() {
+  if (aiBusy) { status("Still working on the last answer.", "live"); return; }
+  const shot = await grabSharedFrame();
+  if (!shot || !shot.image) {
+    const line = (shot && shot.error) || "Share the meeting tab first. Screen analyze uses that share and will not ask again.";
+    status(line, "live");
+    const card = addCard("Screen", [line]);
+    card.screenTask = true;
+    card.streaming = false;
+    if (cards[idx] === card) renderCard();
+    return;
+  }
+  aiBusy = true; aiBusySince = Date.now();
+  const card = addCard("Reading the shared tab…", ["…"]);
+  card.streaming = true; card.screenTask = true; card.screenFull = true;
+  if (cards[idx] === card) renderCard();
+  try {
+    await generateAnswer("Read the shared tab and answer what it shows. Keep the full body visible.", card, { pinned: true, derived: "Read the shared tab and answer what it shows.", source: "screen", screenImage: shot.image, consolidated: true });
+  } catch (e) {
+    const line = "Screen reading is unavailable right now. Type the question and press AI Answer.";
+    card.answer = [line];
+    status(line, "err");
+  } finally {
+    aiBusy = false; card.streaming = false;
+    if (cards[idx] === card) renderCard();
+  }
 }
 // The review dialog normally arrives with the page. A stale cached page can
 // reach the review step without it, which used to fail the whole capture.
@@ -6797,6 +7053,14 @@ $("copyBtn").onclick = async () => {
   try { await navigator.clipboard.writeText(`${c.question}\n\n${plainAnswer(c.answer)}`); status("Copied.", "live"); }
   catch { status("The browser blocked clipboard access.", "err"); }
 };
+$("copyTranscriptBtn").onclick = async () => {
+  logAction("copy-transcript");
+  const typed = $("manualInput") && $("manualInput").value;
+  const text = cleanTranscriptText(transcript, typed);
+  if (!text) { status("Nothing to copy yet.", "live"); return; }
+  try { await navigator.clipboard.writeText(text); status("Transcript copied.", "live"); }
+  catch { status("The browser blocked clipboard access.", "err"); }
+};
 $("resumeReplaceBtn").onclick = () => { const input = $("resumeReplaceFile"); if (input) input.click(); };
 $("resumeReplaceFile").onchange = async (e) => {
   const file = e.target.files && e.target.files[0];
@@ -6899,7 +7163,8 @@ $("getTranscriptBtn").onclick = getTranscript;
 document.addEventListener("keydown", (e) => {
   if ($("view-copilot").classList.contains("hidden")) return;
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement && document.activeElement.tagName) || "");
-  if (e.ctrlKey && e.key === "Enter") {
+  if (e.ctrlKey && e.shiftKey && e.key === "Enter") { e.preventDefault(); void analyzeSharedTab(); return; }
+  if (e.ctrlKey && e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     if (document.activeElement === $("manualInput") && $("manualInput").value.trim()) sendManual();   // your typed question wins
     else $("answerBtn").click();

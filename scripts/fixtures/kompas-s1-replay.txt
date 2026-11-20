@@ -1,0 +1,14 @@
+0-1|I||How did your day go?
+1-9|C||it went well... night shift
+9-19|I/C||small talk: Are you okay / Took enough rest / Shall we get started
+19-23|I|1|Ashish, can you tell me about yourself, please?
+23-76|C||I'm Ashish... engineering 2023
+76-90|I|2|...why did you choose cybersecurity as your career?
+90-151|C||during my engineering...
+151-159|I|3|...roles and responsibilities of a security analyst?
+159-200|C||as an L1 it is identifying, analyzing and triaging
+200-205|I|4|what sort of reports do you prepare as SOC L1?
+205-230|C||As a SOC L1 I basically monitor all the alerts
+230-235|I|5|what you know about routing?
+235-274|C||a router is a device...
+274-344|I/C||routing follow-ups (goal of routing, routing tables)

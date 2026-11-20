@@ -202,7 +202,7 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 
 ## 20 November 2026 — crawler abort diagnostics current-master restack
 
-The approved diagnostic-only collector correction is being restacked additively from current master `25b6046c0e3a80f48d020f8220d33f60b54df10c` after the prior safe branch conflicted in shared Plan/REA files when PR #467 advanced master. The original #470 and #471 branches remain untouched.
+The approved diagnostic-only collector correction is being restacked additively onto current master `13542c5e1127ed7c1ccf59e4faa034d0af021fc1` with a two-parent fast-forward merge commit after the prior safe branch conflicted in shared Plan/REA files when PR #467 advanced master. The original #470 and #471 branches remain untouched.
 
 The source preserves 600 ms pacing and the 25,000 ms default timeout, attributes local timeout versus upstream abort with the portal host, and keeps malformed URL parsing inside cleanup/pacing. No retry/backoff, adapter, permission, freshness, classifier, schedule, storage or application behavior is changed.
 

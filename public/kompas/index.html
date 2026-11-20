@@ -481,6 +481,7 @@
       <div class="tab-preview-stage">
         <video id="tabPreviewVideo" muted playsinline autoplay></video>
         <div class="tab-preview-actions">
+          <button type="button" id="tabPreviewCollapse" class="tab-preview-action">Hide</button>
           <button type="button" id="tabPreviewFull" class="tab-preview-action">Fullscreen</button>
           <button type="button" id="tabPreviewChange" class="tab-preview-action">Change tab</button>
           <button type="button" id="tabPreviewStop" class="tab-preview-action">Stop tab audio</button>
@@ -549,6 +550,7 @@
     <div class="bar bar-actions">
       <button class="pill primary big" id="startBtn">Start</button>
       <button class="pill action big" id="answerBtn" title="Answer everything heard as one question (Ctrl+Enter)"><span class="star">★</span> AI Answer <span class="pend hidden" id="pendCount">0</span></button>
+      <button class="pill action" id="screenAnalyzeBtn" type="button" title="Read one frame of the shared tab (Ctrl+Shift+Enter)">▣ Screen</button>
       <button class="pill action hidden" id="screenCaptureAnswerBtn" type="button" title="Caption Capture: read a selected Windows Live Captions window and answer with session context (Ctrl+Shift+S)">▣ Caption Capture</button>
       <button class="pill action toggle" id="autoBtn" aria-pressed="false" title="Auto-answer is OFF: keeps gathering what's said — press AI Answer to turn all of it into one question and answer it"><span class="sw" aria-hidden="true"><i></i></span> Auto <b id="autoState">OFF</b></button>
       <span class="follow" id="follow"><button class="pill action toggle follow-btn" id="followBtn" aria-pressed="false" title="Follow along: highlights the answer as you speak it and keeps your place in view (F)">▶ Follow along</button></span>
@@ -591,7 +593,7 @@
     <div class="tip hidden" id="phoneTip"><span><b>Phone mic hears both sides:</b> put the call on speaker and keep the phone near you — phones have no separate call-audio capture.</span><button class="icon-btn" id="phoneTipClose" title="Got it">✕</button></div>
     <main class="content">
       <div class="card" id="card">
-        <div class="q"><span class="q-ico">💬</span><span class="q-body"><b>Question:</b> <span id="question">Waiting for the interview to start…</span><span class="caption hidden" id="caption"><span class="cap-who" id="capWho">Them</span><span class="cap-text" id="capText"></span></span></span></div>
+        <div class="q"><span class="q-ico">💬</span><span class="q-body"><b>Question:</b> <span id="question">Waiting for the interview to start…</span><span class="caption hidden" id="caption"><span class="cap-who" id="capWho">Interviewer</span><span class="cap-text" id="capText"></span></span></span></div>
         <div class="a">
           <div class="a-head"><span class="star">★</span> Answer <span class="follow-heard" id="followHeard" hidden></span>
             <span class="a-tools"><button type="button" class="mini" id="textMinus" title="Smaller text">−</button><span class="type-n" id="textSizeN">16</span><button type="button" class="mini" id="textPlus" title="Larger text">+</button><button class="mini" id="copyBtn" title="Copy answer">Copy</button></span>
@@ -601,7 +603,7 @@
       </div>
     </main>
     <div class="drawer hidden" id="drawer">
-      <div class="drawer-head">Live transcript <span class="muted small">You = your mic · Them = call audio</span></div>
+      <div class="drawer-head">Live transcript <span class="muted small">You = candidate · Interviewer = call audio</span><button type="button" class="mini" id="copyTranscriptBtn" title="Copy the transcript and anything still typed">Copy</button></div>
       <div class="drawer-body" id="drawerBody"><div class="muted small">Nothing heard yet.</div></div>
     </div>
     </div>
@@ -609,7 +611,7 @@
       <input class="manual" id="manualInput" placeholder="Type a question — included with the mic and the call when you press AI Answer" />
       <button class="send" id="sendBtn" title="Answer this question (Enter)" aria-label="Answer"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3.5v5.2a1.8 1.8 0 0 1-1.8 1.8H3.2"/><path d="M6 8.2 3.2 10.5 6 12.8"/></svg></button>
     </div>
-    <div class="statusline" id="status">Ready — press Start to listen to the call.</div>
+    <div class="statusline" id="status"><span id="statusText">Ready — press Start to listen to the call.</span><button type="button" id="tabPreviewToggle" class="tab-preview-toggle" hidden aria-expanded="false">Tab</button></div>
   </div>
 </section>
 

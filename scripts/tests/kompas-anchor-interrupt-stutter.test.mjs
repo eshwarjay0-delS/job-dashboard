@@ -82,5 +82,5 @@ test('interruption flush clears the card, pivots in <=5 words, and resolves a co
   assert.ok(pivotConstraint('well actually, what if the user is a VP and refuses MFA?').split(/\s+/).length <= 5)
   const app = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
   assert.match(app, /applyInterruptionFlush\(/)
-  assert.match(app, /New constraint:/)
+  assert.doesNotMatch(app, /New constraint:/)
 })
