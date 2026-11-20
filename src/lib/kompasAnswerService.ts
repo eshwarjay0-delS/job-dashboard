@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, extendFromModel, EXTEND_MODEL, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -400,6 +400,17 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
   })
 }
 
+async function finishSpoken(job: AnswerJob, text: string): Promise<{ text: string; providerError: boolean }> {
+  const settled = spokenAfterModel(job, text)
+  if (settled.providerError || !settled.text.trim() || !job.orKey) return settled
+  if (settled.text.trim().split(/\s+/).length >= answerRoute(job.question).floor) return settled
+  const more = await extendFromModel(job.question, settled.text, job.resume || "", job.jd || "", async (prompt) => {
+    const out = await fetchOpenRouter(job.orKey || "", EXTEND_MODEL, "Use only the resume facts. Add no new employer, tool, or number.", prompt, 500, AbortSignal.timeout(20000))
+    return out.text
+  })
+  return { text: more, providerError: false }
+}
+
 function spokenAfterModel(job: AnswerJob, text: string): { text: string; providerError: boolean } {
   if (isProviderErrorAnswer(text)) return { text: "", providerError: true }
   if (job.plan.kind === "code") return { text, providerError: false }
@@ -676,7 +687,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           } catch { /* the guarded answer stands */ }
         }
         finalText = correctVerifiedPresentationErrors(finalText)
-        const settled = spokenAfterModel(job, finalText)
+        const settled = await finishSpoken(job, finalText)
         if (settled.providerError || !settled.text.trim()) {
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
@@ -785,7 +796,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     } catch { /* the guarded answer stands */ }
   }
   out = correctVerifiedPresentationErrors(out)
-  const settled = spokenAfterModel(job, out)
+  const settled = await finishSpoken(job, out)
   if (settled.providerError || !settled.text.trim()) {
     const failure = answerFailure(lastErr || "openrouter 502 blocked")
     return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })

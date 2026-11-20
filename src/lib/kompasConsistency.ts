@@ -493,7 +493,7 @@ function extendFromResume(text: string, question: string, resume: string, floor:
   for (const line of resumeFacts(resume)) {
     if (answerWordCount(out) >= floor) break
     const fact = /[.!?]$/.test(line) ? line : `${line}.`
-    if (out.toLowerCase().includes(fact.slice(0, 24).toLowerCase())) continue
+    if (out.includes(fact)) continue
     const next = `${out} ${fact}`.trim()
     if (answerWordCount(next) > ceiling) continue
     out = next
@@ -501,38 +501,79 @@ function extendFromResume(text: string, question: string, resume: string, floor:
   return out
 }
 
-/** Technical answers open on the point and may close on one resume example. Behavioral answers keep one resume number. */
-export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = ""): string {
+export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ceiling: number }
+
+/** Long technical and concept answers floor at 120. Stories floor at 150. */
+export function answerRoute(question: string): AnswerRoute {
   const band = visibleLengthBand(question)
+  if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
+  if (isTechnicalAsk(question)) {
+    const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
+    return { route: "long", floor: Math.min(ceiling, 120), ceiling: Math.max(ceiling, 120) }
+  }
+  return { route: "short", floor: band.floor, ceiling: band.ceiling }
+}
+
+/** Technical answers open on the point and close on one resume example. Stories keep one resume number. */
+export function shapeDisplayedAnswer(question: string, text: string, resume: string, jd = "", transcript = ""): string {
+  const route = answerRoute(question)
   let body = dropCandidateOnly(text, resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
-  const sentences = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence))
-  body = sentences.join(" ")
-  if (isBehavioralAsk(question)) {
+  body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
+  if (route.route === "story") {
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
     body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
     if (resumeNumber(resume, question) && !/\d/.test(body)) {
       const numbered = resumeFacts(resume).find((line) => /\d/.test(line))
       if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
     }
-  } else if (isTechnicalAsk(question)) {
-    if (body && !/^Example:/.test(body) && answerWordCount(`${body} Example:`) < band.ceiling) {
-      const fact = resumeFacts(resume).find((line) => askTokens(line).some((word) => new Set(askTokens(question)).has(word))) || resumeFacts(resume)[0]
-      if (fact) {
-        const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
-        if (answerWordCount(`${body} ${example}`) <= band.ceiling) body = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`
-      }
-    }
-    const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
-    if (bullets.length > 8) {
-      const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
-      body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
+  }
+  if (route.route !== "short" && !/\bExample:/.test(body)) {
+    const fact = resumeFacts(resume)[0]
+    if (fact) {
+      const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
+      const next = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`.trim()
+      if (answerWordCount(next) <= route.ceiling) body = next
     }
   }
-  const floor = isTechnicalAsk(question) && band.ceiling >= 120 ? Math.min(band.ceiling, Math.max(band.floor, 120)) : band.floor
-  if (answerWordCount(body) < floor) body = extendFromResume(body, question, resume, floor, band.ceiling)
+  const bridge = jdGapBridge(question, resume, jd)
+  if (route.route !== "short" && bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
+    body = `${body} ${bridge}`.trim()
+  }
+  if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
+  if (bullets.length > 8) {
+    const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
+    body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
+  }
   return body.trim()
 }
+
+const EXTEND_MODEL = "openai/gpt-oss-20b"
+
+/** One cheap extension, only after resume facts, the bridge, and Example still miss the floor. */
+export async function extendFromModel(question: string, text: string, resume: string, jd = "", generate?: (prompt: string) => Promise<string>): Promise<string> {
+  const route = answerRoute(question)
+  const current = String(text || "").trim()
+  if (answerWordCount(current) >= route.floor || !generate) return current
+  const facts = resumeFacts(resume).slice(0, 12).join("\n")
+  let extra = ""
+  try {
+    extra = String(await generate(`Question: ${question}\nResume facts only:\n${facts}\n\nDraft:\n${current}\n\nAdd sentences until the draft reaches ${route.floor} words. Use only the resume facts above. Do not add employers, tools, or numbers that are not in those facts.`))
+  } catch { return current }
+  const joined = `${current} ${extra}`.replace(/\s+/g, " ").trim()
+  const allowed = `${resume}\n${jd}\n${question}`
+  const kept = sentenceList(joined).filter((sentence) => {
+    if (ungroundedProducts(sentence, allowed).length) return false
+    const names = sentence.match(/\b[A-Z][A-Za-z0-9+.#-]{3,}/g) || []
+    if (names.some((name) => !/^(?:Example|I've|The|This|That)$/.test(name) && !allowed.toLowerCase().includes(name.toLowerCase()))) return false
+    return !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.includes(n))
+  })
+  const next = kept.join(" ")
+  return answerWordCount(next) > answerWordCount(current) ? next : current
+}
+
+export { EXTEND_MODEL }
 
 export function gateDisplayedAnswer(input: { question: string; raw: string; source?: string; resume?: string; jd?: string; transcript?: string }): DisplayGate {
   const question = String(input.question || "")
@@ -565,9 +606,10 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
     text = formed || text
     if (shaped.needsRewrite) reasons.push("shape-rewrite")
   }
+  const route = answerRoute(question)
   const words = answerWordCount(text)
-  if (text && text !== HONEST_LINE && words > band.ceiling) reasons.push("over-ceiling")
-  if (text && text !== HONEST_LINE && words < band.floor) reasons.push("under-floor")
+  if (text && text !== HONEST_LINE && words > route.ceiling) reasons.push("over-ceiling")
+  if (text && text !== HONEST_LINE && words < route.floor) reasons.push("under-floor")
   if (band.type === "experience" && text && text !== HONEST_LINE) {
     const bag = `${source}\n${question}`.toLowerCase()
     const tool = (text.match(/\b(?:Splunk|Qualys|CrowdStrike|CyberArk|Sentinel|QRadar|EDR|SIEM)\b/gi) || []).some((name) => bag.includes(name.toLowerCase()))
@@ -586,8 +628,8 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
     reasons,
     words,
     type: band.type,
-    floor: band.floor,
+    floor: route.floor,
     aim: band.aim,
-    ceiling: band.ceiling,
+    ceiling: route.ceiling,
   }
 }

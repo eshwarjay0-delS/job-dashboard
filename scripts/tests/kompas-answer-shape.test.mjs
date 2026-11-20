@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { gateDisplayedAnswer, jdGapBridge } from "../../src/lib/kompasConsistency.ts"
+import { answerRoute, extendFromModel, gateDisplayedAnswer, jdGapBridge } from "../../src/lib/kompasConsistency.ts"
 import { goldWordCount, loadGold } from "../../scripts/eval-gold.mjs"
 
 const gold = loadGold(readFileSync(new URL("../fixtures/brain-gold-answers.md", import.meta.url), "utf8"))
@@ -12,6 +12,10 @@ const RESUME = [
   "Built fraud investigation workflows for evidence, escalation, and audit documentation.",
   "Configured role-based access controls and segregation of duties for finance teams.",
   "Created dashboards for SLA adherence and compliance status across the business applications.",
+  "Maintained the CMDB classes and their relationships so discovery imports stayed accurate.",
+  "Implemented change workflows with approvals, so each request had an owner and a due date.",
+  "Supported GRC and security operations processes, including evidence for audit reviews.",
+  "Monitored the open incidents each morning and sent the status to the business owners.",
 ].join(" ")
 
 function median(nums) {
@@ -27,7 +31,7 @@ test("a short technical answer is extended and closes on a resume example", () =
     resume: RESUME,
     source: RESUME,
   })
-  assert.ok(gated.words >= Math.min(gated.ceiling, 120) || gated.words >= gated.floor)
+  assert.ok(gated.words >= 120, `words ${gated.words}`)
   assert.match(gated.text, /^I /)
   assert.doesNotMatch(gated.text, /^Having\b|great question/i)
   if (gated.ceiling >= 120) assert.match(gated.text, /Example:/)
@@ -62,15 +66,38 @@ test("a candidate's employer from the transcript never enters the answer", () =>
   assert.match(gated.text, /ServiceNow|McKesson|12/)
 })
 
+test("the model extends only when resume facts still miss the floor", async () => {
+  let calls = 0
+  const resume = "I tracked incidents at McKesson."
+  const held = await extendFromModel("What is routing?", "word ".repeat(160), resume, "", async () => { calls++; return "extra" })
+  assert.equal(calls, 0)
+  assert.ok(held.startsWith("word"))
+  const grown = await extendFromModel("What is routing?", "Routing sends a packet to the next hop.", resume, "", async () => {
+    calls++
+    return "I tracked incidents at McKesson and kept each ticket moving until it closed."
+  })
+  assert.equal(calls, 1)
+  assert.match(grown, /McKesson/)
+  const blocked = await extendFromModel("What is routing?", "Routing sends a packet to the next hop.", resume, "", async () => "I deployed NotATool across Northern Trust.")
+  assert.doesNotMatch(blocked, /NotATool|Northern Trust/)
+})
+
 test("gold replay median is measured after the floor binds", () => {
-  const counts = gold.items.map((item) => gateDisplayedAnswer({
-    question: item.question,
-    raw: item.answer.split(/\s+/).slice(0, 40).join(" "),
-    resume: gold.resume,
-    jd: gold.jd,
-    source: gold.resume,
-  }).words)
-  const mid = median(counts)
-  assert.ok(mid >= 40, `median ${mid}`)
-  console.log(`replay median words ${mid}`)
+  const buckets = { short: [], long: [], story: [] }
+  for (const item of gold.items) {
+    const gated = gateDisplayedAnswer({
+      question: item.question,
+      raw: item.answer.split(/\s+/).slice(0, 40).join(" "),
+      resume: gold.resume,
+      jd: gold.jd,
+      source: gold.resume,
+    })
+    buckets[answerRoute(item.question).route].push(gated.words)
+  }
+  const shorts = median(buckets.short)
+  const longs = median(buckets.long)
+  const stories = median(buckets.story)
+  assert.ok(longs >= 120, `long median ${longs}`)
+  assert.ok(stories >= 150, `story median ${stories}`)
+  console.log(`replay median short ${shorts} long ${longs} story ${stories}`)
 })
