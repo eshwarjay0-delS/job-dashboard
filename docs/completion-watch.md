@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 20 November 2026 — 30-fold Parakeet parity, not shipped
+
+`parakeet-40.md` is not in the repo. The bar is the Houston gold answers and the offline rubric. First run: relevance 3/30, length 0/30, clarifier 24/30, usage 30/30. Rerun: 30/30, 30/30, 30/30, 30/30. First-word budget is 1.4s. No live listen. No ship marker.
+
 ## 20 November 2026 — Thesis first, not shipped
 
 A technical answer is a thesis, how it works, one Example, and one resume line. The thesis streams first. Candidate-only tools and practices are dropped. How-does-this-tool stays on that tool. No ship marker.

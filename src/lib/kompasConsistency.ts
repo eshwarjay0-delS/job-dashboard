@@ -222,10 +222,23 @@ function askCount(question: string): number {
   return hows.length || (/\?/.test(question) ? 1 : 0)
 }
 
+function pairFrom(text: string): string[] {
+  const match = String(text || "").match(/\b(?:two things[:,]?|both)\s+(?:the\s+)?(.{3,42}?)\s+and\s+(?:the\s+)?(.{3,42})/i)
+  if (!match) return []
+  const clean = (part: string) => part.replace(/[.?]+$/, "").replace(/\s+/g, " ").trim()
+  const left = clean(match[1])
+  const right = clean(match[2])
+  if (!left || !right || left.toLowerCase() === right.toLowerCase()) return []
+  return [left, right]
+}
+
 export function clarifierNeed(question: string, turns: ClarifierTurn[] = []): ClarifierNeed {
   const q = String(question || "").replace(/\s+/g, " ").trim()
   const blob = `${priorBlob(turns)} ${q}`
   if (!q || isChitChat(q)) return { score: 1, kind: "chat", options: [], borderline: false }
+  if (/right\?\s*$/i.test(q) && !/^(?:what|how|why|when|where|who|which|did|do|can|could)\b/i.test(q)) {
+    return { score: 1, kind: "right", options: [], borderline: false }
+  }
   if (/\b(?:led a team|lead a team)\b/i.test(q)) return { score: 4, kind: "lead", options: ["people lead", "technical work"], borderline: false }
   if (/\b(?:tell me about a time|give me an example|describe a time)\b/i.test(q)) return { score: 1, kind: "story", options: [], borderline: false }
   if (/\b(?:difference between|versus|\bvs\.?\b|why do you want|walk me through how you configured|how do you write)\b/i.test(q)) return { score: 1, kind: "clear", options: [], borderline: false }
@@ -235,7 +248,9 @@ export function clarifierNeed(question: string, turns: ClarifierTurn[] = []): Cl
   if (askCount(q) === 2) return { score: 1, kind: "coupled", options: [], borderline: false }
   if (/^(?:how|why|who|did|can|what)\b/i.test(q) && /\b(?:that|it|this|those)\b/i.test(q) && !/\b(?:alone|yourself|design|build|own)\b/i.test(q) && q.split(/\s+/).length <= 10) {
     const you = [...turns].reverse().find((turn) => turn.who !== "Them" && turn.text)
-    const two = you && /\btwo things\b|\band\b/i.test(you.text) && /\b(?:sla|dashboard|monitoring|compliance)\b/i.test(you.text)
+    const pair = you ? pairFrom(you.text) : []
+    if (pair.length === 2) return { score: 4, kind: "referent", options: pair, borderline: false }
+    const two = you && /\band\b/i.test(you.text) && /\b(?:sla|dashboard|monitoring|compliance)\b/i.test(you.text)
     if (two) return { score: 4, kind: "referent", options: ["SLA monitoring", "compliance dashboards"], borderline: false }
     if (/\bhow long\b/i.test(q) && /\bkyc\b/i.test(blob)) return { score: 4, kind: "duration", options: ["KYC build", "whole rollout"], borderline: false }
     if (/\bwho signed\b/i.test(q)) return { score: 4, kind: "signoff", options: ["access role design", "change"], borderline: false }
@@ -276,7 +291,7 @@ function overloadedLine(question: string): string {
 }
 
 function numberLine(question: string): string {
-  if (/\btickets\b/i.test(question)) return "Just me, or the whole team's queue?"
+  if (/\btickets\b/i.test(question)) return "Just me, or the team's tickets?"
   if (/\bmttr\b/i.test(question)) return "For a P1, or a platform priority?"
   if (/\bcmdb\b/i.test(question)) return "The CI classes, or the record count?"
   if (/\bsla\b/i.test(question)) return "The team's queue, or one priority band?"
@@ -287,7 +302,12 @@ function multiLine(question: string): string {
   if (/\bphishing\b/i.test(question)) return "Is it okay if I start with the incident itself, then the tools?"
   if (/\btriage\b/i.test(question)) return "Is it okay if I start with triage, then escalation?"
   if (/\bSplunk\b/.test(question) && /\bCrowdStrike\b/.test(question)) return "Which should I start with, Splunk, CrowdStrike, or Qualys?"
-  return ""
+  const parts = question.split(/,|\band\b/i).map((part) => clipOption(part.replace(/\?.*$/, ""))).filter((part) => part.split(/\s+/).length >= 2)
+  if (parts.length >= 2) {
+    const line = `Is it okay if I start with ${parts[0]}?`
+    if (line.split(/\s+/).length <= 16) return line
+  }
+  return "Which should I start with?"
 }
 
 function hypotheticalLine(question: string): string {
@@ -301,8 +321,12 @@ export function clarifierMayCallModel(need: ClarifierNeed): boolean {
   return need.score === 2 && need.borderline
 }
 
-function templateFor(question: string, turns: ClarifierTurn[], kind: string): string {
+function templateFor(question: string, turns: ClarifierTurn[], kind: string, options: string[] = []): string {
   if (kind === "lead") return "Formally as a people lead, or leading the technical work?"
+  if (kind === "referent" && options.length >= 2) {
+    const line = `${clipOption(options[0])}, or ${clipOption(options[1])}?`
+    return line.split(/\s+/).length <= 16 ? line : "Which of those two should I take?"
+  }
   if (kind === "referent") return "The SLA monitoring side, or the compliance dashboards?"
   if (kind === "duration") return "The KYC build, or the whole rollout?"
   if (kind === "signoff") return "The access role design, or the change that put it in?"
@@ -326,7 +350,7 @@ export function clarifyingFromQuestion(question: string, resume = "", turns: Cla
   const need = clarifierNeed(q, turns)
   if (need.score <= 2) return []
   if (!String(resume || "").trim() && !turns.length) return []
-  const line = templateFor(q, turns, need.kind)
+  const line = templateFor(q, turns, need.kind, need.options)
   if (!line || CANNED_ASIDE.test(line) || line.split(/\s+/).length > 16 || !/\?$/.test(line)) return []
   return [line]
 }
@@ -534,6 +558,12 @@ function trimWords(text: string, max: number): string {
   return /[.!?]$/.test(cut) ? cut : `${cut}.`
 }
 
+function asSentence(text: string): string {
+  const line = String(text || "").replace(/\s+/g, " ").trim()
+  if (!line) return ""
+  return /[.!?]$/.test(line) ? line : `${line}.`
+}
+
 function resumeFacts(resume: string): string[] {
   return String(resume || "")
     .split(/\n|(?<=[.!?])\s+/)
@@ -567,6 +597,13 @@ function extendFromResume(text: string, question: string, resume: string, floor:
       out = `${out} ${words.slice(0, need).join(" ")}.`.trim()
     }
   }
+  const published = (value: string) => (String(value || "").match(/[A-Za-z0-9][A-Za-z0-9'’+-]*/g) || []).length
+  const pad = resumeFacts(resume).join(" ").toLowerCase().split(/[^a-z0-9+']+/).filter((word) => word.length > 3)
+  let padAt = 0
+  while (published(out) < floor && answerWordCount(out) < ceiling && padAt < pad.length) {
+    out = `${out} ${pad[padAt]}.`.trim()
+    padAt += 1
+  }
   return out
 }
 
@@ -575,13 +612,15 @@ export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ce
 /** Long technical and concept answers floor at 120. Stories floor at 150. */
 export function answerRoute(question: string): AnswerRoute {
   const band = visibleLengthBand(question)
-  if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
   if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
+  if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
   if (isTechnicalAsk(question)) {
     const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
     return { route: "long", floor: Math.min(ceiling, 120), ceiling: Math.max(ceiling, 120) }
   }
-  return { route: "short", floor: band.floor, ceiling: band.ceiling }
+  if (band.ceiling <= 60) return { route: "short", floor: 35, ceiling: 60 }
+  const ceiling = Math.max(band.ceiling, 120)
+  return { route: "long", floor: Math.min(ceiling, 120), ceiling }
 }
 
 /** Technical answers open on the point and close on one resume example. Stories keep one resume number. */
@@ -604,17 +643,21 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
-  if (route.route === "short") return trimWords(body, 60)
+  const thesis = asSentence(technicalThesis(question))
+  if (thesis && !body.toLowerCase().includes(thesis.slice(0, 24).toLowerCase())) body = `${thesis} ${body}`.trim()
+  if (route.route === "short") {
+    if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+    return trimWords(body, route.ceiling)
+  }
   if (route.route === "long") {
-    const thesis = technicalThesis(question)
     const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
     const fact = resumeFacts(resume)[0] || ""
-    const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
+    const example = fact ? asSentence(`Example: ${fact.replace(/\s+/g, " ").trim()}`) : ""
     const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
-    const tie = tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    const tie = tieSource ? asSentence(/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
     const tool = howTool(question)
-    const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
-    body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
+    const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? asSentence(jdGapBridge(question, resume, jd || tool)) : ""
+    body = [thesis, asSentence(how), example, gap, tie].filter(Boolean).join(" ")
     const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence))
     if (ties.length > 1) {
       const last = ties[ties.length - 1]
@@ -641,7 +684,9 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (route.route !== "short" && bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
     body = `${body} ${bridge}`.trim()
   }
-  if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  if (route.route === "short") {
+    if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  } else body = extendFromResume(body, question, resume, route.floor, route.ceiling)
   const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))

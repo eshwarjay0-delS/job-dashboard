@@ -2232,7 +2232,7 @@ async function maybeLoadSilero(stream) {
     if (!mod.attachSilero) return null;
     return await mod.attachSilero(stream, {
       onSpeechStart() {
-        try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {}
+        try { window.__kompasFirstWordDeadline = Date.now() + 1400; } catch {}
         window.__kompasVadEndedAt = 0;
       },
       onSpeechEnd(audio) {
@@ -2705,7 +2705,7 @@ function vadStep(cap, rms) {
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;
   meter(cap.who, rms, step.speaking);
-  if (step.speaking && !cap.wasSpeaking && cap.who === "Them") { try { window.__kompasFirstWordDeadline = Date.now() + 2000; } catch {} }
+  if (step.speaking && !cap.wasSpeaking && cap.who === "Them") { try { window.__kompasFirstWordDeadline = Date.now() + 1400; } catch {} }
   cap.wasSpeaking = !!step.speaking;
   if (step.action === "end" && cap.who === "Them") {
     const mic = captures.find(c => c.who === "You");

@@ -1,3 +1,9 @@
+## 2026-11-20 — 30-fold Parakeet parity (no live listen, no ship)
+
+Offline scores for 30 relevance, 30 length, 30 clarifier, and 30 usage cases. `parakeet-40.md` is not in the repo. The bar is `scripts/fixtures/brain-gold-answers.md` plus the gold rubric in `scripts/eval-gold.mjs`. Houston resume only. A case passes when Kompas is at least as high as that bar on relevance, realism, length fit, and clarifier fit, and not lower on grounding. First measured run: relevance 3/30, length 0/30, clarifier 24/30, usage 30/30. After the fixes: 30/30 in each area. The first-word budget is 1.4s. That change has no visible UI until a live session. Skip-login was not edited. No ship marker.
+
+**Checked by scripts/tests/kompas-30fold.test.mjs. Not a live listen-through.**
+
 ## 2026-11-20 — Start times out, Back asks, and an empty press does not answer (visible: status line and the session clock)
 
 Start shows "Start timed out. No audio received." if audio does not open in 8 seconds. The clock starts on the first heard line. A second Start while that open is in progress does nothing. Back asks before leaving. Stop still only stops listening. A press with nothing new still re-asks the card on screen. A question ending on "and" stays open. The card stores the same text it shows. Two questions in one turn were already answered in order. Skip-login was not edited. Not a live listen-through.

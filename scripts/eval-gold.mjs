@@ -72,9 +72,9 @@ export function claimFaithfulness(answer, resume, jd, question) {
     const later = sentence.replace(/^\W*\S+\s+/, " ")
     const names = [...(later.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []), ...(sentence.match(/\b[A-Z]{2,}\b/g) || [])]
     for (const name of names) {
-      const token = name.toLowerCase()
-      if (CLAIM_STOP.has(token)) continue
-      if (!bag.includes(token)) misses.push(name)
+      const token = name.replace(/\.+$/g, "").toLowerCase()
+      if (!token || CLAIM_STOP.has(token)) continue
+      if (!bag.includes(token)) misses.push(token)
     }
   }
   const unique = [...new Set(misses)]
