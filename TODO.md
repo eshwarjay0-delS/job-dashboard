@@ -1,3 +1,9 @@
+## 2026-11-20 — Capture ignores the candidate, and a JD-only tool is not experience (visible: Question header and the line status)
+
+Auto skips the candidate's own speech and a repeat of the same question inside 30 seconds. A line from before Start is dropped. Each real question card starts with Question:. Each heard line shows Listening, Question detected, or Answering. A tool that is only in the job description is not spoken as something he has done. Skip-login was not edited.
+
+**Checked on the capture tests. Not a live listen-through.**
+
 ## 2026-11-20 — Long answers stay long, and a SOC question does not close on ServiceNow (visible on the left card and the Say this panel)
 
 The live request now sends the session's Length. Long asks for the word band, including the auto introduction, and one sentence is not treated as finished. A later settle does not replace a longer on-topic stream with a shorter one, and it does not put "I would want to confirm that" on the card. A SOC question drops ServiceNow or ITIL sentences that do not answer it. A typed question paints Say this, or leaves the right panel empty. The placeholder "Context shows up with the next answer" is gone. Skip-login was not edited. This is not on production until a later ship.

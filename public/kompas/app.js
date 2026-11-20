@@ -1290,7 +1290,8 @@ function renderCard() {
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
-  const qLabel = cleanHeardQuestion(draft || c.question);
+  const heardQ = cleanHeardQuestion(draft || c.question);
+  const qLabel = questionEnded(heardQ) && !/^Question:/i.test(heardQ) ? "Question: " + heardQ : heardQ;
   $("question").textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
@@ -1994,6 +1995,7 @@ async function start() {
   primeAudio();                       // inside the click, so the browser lets audio run
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
+  captureStartedAt = Date.now();
   try { window.kompasDesktop?.setInterview?.(true); } catch {}
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
   document.querySelector(".rec").classList.add("live");
@@ -2882,6 +2884,10 @@ const DRAWER_FILLER = /^(?:and|so|but|or|um+|uh+|er|erm|okay|ok|yeah|yes|right|h
 function utteranceTag(text) {
   return questionEnded(text) ? "Question detected" : "No question";
 }
+function lineStatus(text) {
+  if (typeof answerCtl !== "undefined" && answerCtl) return "Answering";
+  return questionEnded(text) ? "Question detected" : "Listening";
+}
 function stitchUtterance(previous, next) {
   const cur = String(next || "").replace(/\s+/g, " ").trim();
   const prev = String(previous || "").replace(/\s+/g, " ").trim();
@@ -2903,7 +2909,7 @@ function appendDrawer(who, text, at) {
   const first = body.firstElementChild; if (first && first.classList.contains("muted")) body.innerHTML = "";
   const words = String(text || "").replace(/\s+/g, " ").trim(); if (!words) return;
   const side = who === "You" ? "you" : "them", when = Number(at) || Date.now(), last = body.lastElementChild;
-  const tagOf = (node, line) => { const tag = node.querySelector(".qtag"); if (tag) tag.textContent = utteranceTag(line); };
+  const tagOf = (node, line) => { const tag = node.querySelector(".qtag"); if (tag) tag.textContent = lineStatus(line); };
   if (last && last.classList.contains("tl") && last.classList.contains(side) && DRAWER_FILLER.test(words) && when >= Number(last.dataset.at || 0)) {
     const span = last.querySelector("span"); span.textContent = span.textContent + " " + words;
     last.dataset.at = String(when);
@@ -2914,7 +2920,7 @@ function appendDrawer(who, text, at) {
     const clock = new Date(when).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     d.querySelector("b").textContent = (side === "you" ? "You" : "Interviewer") + " · " + clock;
     d.querySelector("span").textContent = words;
-    d.querySelector(".qtag").textContent = utteranceTag(words);
+    d.querySelector(".qtag").textContent = lineStatus(words);
     const later = [...body.querySelectorAll(".tl")].find(row => Number(row.dataset.at || 0) > when);
     if (later) body.insertBefore(d, later); else body.append(d);
   }
@@ -3838,7 +3844,24 @@ function clearAuthLocalState() {
   } catch {}
 }
 
-const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && questionEnded(t.text) && !paraphrasesOwn(t.text));
+let captureStartedAt = 0;
+const recentAsks = [];
+function duplicateAsk(text) {
+  const now = Date.now();
+  return recentAsks.some(row => now - row.at < 30000 && sameAsk(row.text, text));
+}
+function noteAsked(text) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return;
+  recentAsks.push({ text: clean, at: Date.now() });
+  if (recentAsks.length > 12) recentAsks.shift();
+}
+function candidateSide(turn) {
+  if (!turn) return false;
+  if (turn.who === "You" && captures.some(c => c.who === "Them")) return true;
+  return paraphrasesOwn(turn.text);
+}
+const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && captureStartedAt && t.at >= captureStartedAt && !candidateSide(t) && questionEnded(t.text) && !duplicateAsk(t.text));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   noteTurnGate();
@@ -3861,6 +3884,8 @@ function scheduleAuto() {
       if (waitMore) autoTimer = setTimeout(fire, waitMore);
       return;
     }
+    status("Question detected", "live");
+    noteAsked(tail);
     void confirmAutoAndAnswer(tail);
   }, wait);
 }
@@ -4168,6 +4193,7 @@ function dedupeCaptionTokens(text) {
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
+  if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
   if (who === "You" && isMicGarbage(text)) { logDecision("drop-mic-garbage", who, text); logEvent({ t: "mic-garbage", who, text }); return; }
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
@@ -5678,6 +5704,7 @@ async function aiAnswer(fromAuto, options = {}) {
     else { status("Still working on the last answer — one moment.", "live"); return; }
   }
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
+  status("Answering", "live");
   try {
     const sessionEpoch = transcriptionEpoch;
     // Deliberate Windows caption screenshot is frozen already. Do NOT wait for

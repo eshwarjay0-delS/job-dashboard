@@ -69,7 +69,8 @@ test("auto does not answer filler, candidate speech, own words, or a duplicate",
   assert.equal(ctx.ended(candidate), false)
   assert.equal(ctx.ended(ask), true)
   assert.equal(ctx.own("Can you explain routing tables where routers consult the path?"), true)
-  assert.match(app, /t\.who === questionSource\(\) && questionEnded\(t\.text\) && !paraphrasesOwn/)
+  assert.match(app, /candidateSide\(t\)/)
+  assert.match(app, /duplicateAsk\(t\.text\)/)
 })
 
 test("Architect + Developer stays on the live level when the interview type is Technical", () => {
