@@ -634,7 +634,15 @@ function saveLive(withLog) {
 }
 async function restoreLive(s) {
   const snap = await DossierDB.get(liveKey(s.id));
-  if (current !== s || !snap || !Array.isArray(snap.cards) || !snap.cards.length) return;
+  if (current !== s) return;
+  if (!snap || !Array.isArray(snap.cards) || !snap.cards.length) {
+    if (Array.isArray(s.keptAnswers) && s.keptAnswers.length) {
+      cards = s.keptAnswers.map(c => ({ ...c }));
+      idx = Math.max(0, cards.length - 1);
+      renderCard();
+    }
+    return;
+  }
   if (Array.isArray(snap.log) && snap.log.length >= sessionLog.length) sessionLog = snap.log;
   const restoredEpoch = Number(snap.epoch) || 0;
   sessionRunEpoch = restoredEpoch + 1;
@@ -653,6 +661,7 @@ async function pauseRun() {
   if (!s.runAt && !sessionLog.some(e => e.t === "line" || (e.t === "answer" && !e.noQuestion))) return;   // opened and left with nothing heard or answered (a depth step or a copy is not a run): the card stays as it was
   try { localStorage.setItem("perfact.log." + s.id, JSON.stringify(sessionLog)); } catch {}
   s.runAt = s.runAt || (sessionLog[0] && sessionLog[0].at) || Date.now(); s.pausedAt = Date.now(); s.endedAt = null; s.endedBy = null;
+  try { s.keptAnswers = cards.filter(c => c && c.question && c.answer).slice(-12).map(c => ({ question: c.question, answer: c.answer, spoken: c.spoken || "" })); } catch {}
   saveSession(s, true);
   await saveLive(true);
 }
@@ -2129,9 +2138,13 @@ async function startMic() {
 // Kompas; not a copy of any competitor's client.
 const SYS_AUDIO_CONSTRAINTS = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
 const THEM_SILENCE_MS = 1400;
+function androidTabAudio() {
+  return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
+}
 function sysShareConstraints(desktop) {
   // Desktop loopback is requested as audio: true so the native handler keeps serving the output mix.
-  if (desktop) return { video: true, audio: true };
+  // Android Chrome only shares tab audio together with a video track. Opt-in: the speaker button.
+  if (desktop || androidTabAudio()) return { video: true, audio: true };
   return {
     video: { displaySurface: "browser", width: { max: 1920 }, height: { max: 1080 }, frameRate: { max: 15 } },
     audio: { ...SYS_AUDIO_CONSTRAINTS },
@@ -6686,6 +6699,20 @@ $("copyBtn").onclick = async () => {
   const c = cards[idx]; if (!c) return;
   try { await navigator.clipboard.writeText(`${c.question}\n\n${plainAnswer(c.answer)}`); status("Copied.", "live"); }
   catch { status("The browser blocked clipboard access.", "err"); }
+};
+$("resumeReplaceBtn").onclick = () => { const input = $("resumeReplaceFile"); if (input) input.click(); };
+$("resumeReplaceFile").onchange = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file || !current) return;
+  try {
+    const text = await extractText(file);
+    if (!text || text.length < 40) { status("That file had no resume text.", "err"); return; }
+    current.resume = text.slice(0, 60000);
+    saveSession(current);
+    setPersonaChip(current);
+    status("Resume replaced for this session.", "live");
+  } catch (err) { status(String(err && err.message || "Could not read that resume."), "err"); }
 };
 $("exportBtn").onclick = () => {
   const s = current || {};
