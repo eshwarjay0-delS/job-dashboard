@@ -26,7 +26,7 @@ import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasReleva
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
-import { visibleLengthBand } from "@/lib/kompasDissection"
+import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
@@ -1065,6 +1065,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
     plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
     if (cardControls.length === "long") plan.words = Math.min(300, Math.round(plan.words * 1.5))
+    if (cardControls.length === "long" && levelAwareBand(question, spokenLevel, "long").type === "story") plan.words = levelAwareBand(question, spokenLevel, "long").aim
     else if (cardControls.length === "short") plan.words = Math.max(16, Math.round(plan.words * 0.65))
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))

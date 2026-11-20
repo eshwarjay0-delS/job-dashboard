@@ -114,8 +114,9 @@ export function draftBooster(text: string, resume = ""): string {
 }
 
 export function draftClarify(text: string): string {
-  const topic = topicOf(text)
-  return topic ? `Want me to stay on ${topic}?` : "Want me to take that in one pass?"
+  const asked = String(text || "").replace(/\s+/g, " ").trim()
+  if (/\bdesign\b/i.test(asked) && /\balone\b/i.test(asked)) return "Do you mean the overall design, or one piece such as failover?"
+  return ""
 }
 
 export function draftShortAnswer(text: string, resume: string): string {

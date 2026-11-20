@@ -209,8 +209,8 @@ export function lengthKind(question: string, shape: AnswerShape): LengthKind {
     case "intro":
     case "value": return "opener"
     case "personal-experience": return "star"
-    case "scenario": return "design-first"
-    case "technical-deep-dive": return "design-later"
+    case "scenario": return "follow-up"
+    case "technical-deep-dive": return "follow-up"
     case "logistics":
     case "acknowledgement":
     case "closing": return "yes-no"
@@ -249,6 +249,23 @@ export function visibleLengthBand(question: string, shape?: AnswerShape): Visibl
     case "design-later": return { type: kind, floor: 70, aim: 100, ceiling: 160 }
     default: return { type: kind, floor: 12, aim: 24, ceiling: 45 }
   }
+}
+
+const FOLLOW_UP_FLOOR = 50
+
+/** #460 bands stay for a normal answer. A long story may pass the old 300-word cap. The floor stays under that level's ceiling. */
+export function levelAwareBand(question: string, level: AnswerLevel = "engineer", length: "short" | "balanced" | "long" = "balanced"): VisibleLength {
+  const band = visibleLengthBand(question)
+  const kind = lengthKind(question, dissectQuestion(question).shape)
+  const levelCeiling = QUESTION_LENGTH[kind][level].ceiling
+  const longStory = length === "long" && (kind === "star" || /\btell me about a time\b/i.test(question))
+  let ceiling = longStory ? Math.max(band.ceiling, 360) : Math.min(band.ceiling, level === "engineer" ? band.ceiling : Math.max(levelCeiling, FOLLOW_UP_FLOOR + 1))
+  if (!longStory && (level === "director" || level === "architect") && ceiling <= FOLLOW_UP_FLOOR && band.ceiling > FOLLOW_UP_FLOOR) {
+    ceiling = Math.min(band.ceiling, FOLLOW_UP_FLOOR + 1)
+  }
+  const floor = Math.min(band.floor, Math.max(8, ceiling - 1))
+  const aim = longStory ? Math.min(ceiling, 360) : Math.min(band.aim, ceiling)
+  return { type: longStory ? "story" : band.type, floor, aim, ceiling }
 }
 
 function bandFor(kind: LengthKind, level: AnswerLevel, scale: number): ModeBand {
