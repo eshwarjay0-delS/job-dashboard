@@ -22,7 +22,8 @@ test("1 failsafe. mic-only keeps the mic as the voice that opens questions, labe
   assert.equal(api.askSource([]).source, "You");
   assert.equal(api.askSource(null).source, "You");
   assert.ok(body("function questionSource()").includes('catch { return captures.some(c => c.who === "Them") ? "Them" : "You"; }'));
-  assert.ok(src.includes("const armsAuto = () => pendingHeard().some(t => t.who === questionSource() &&"));   // typed text never goes through this
+  assert.ok(src.includes("function liveInterviewer()"));
+  assert.ok(src.includes("return questionSource();"));
 });
 
 test("2. the 1.5 s bleed window is judged by when the words were said", () => {

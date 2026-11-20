@@ -101,3 +101,16 @@ test("an empty right panel does not draw Claim, Touch points, or a booster chip"
   await new Promise((r) => setTimeout(r, 0))
   assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster|next answer/)
 })
+
+test("a Them-track candidate line is not an ask, and the session role wins the header", () => {
+  const start = app.indexOf("function soundsLikeCandidate(")
+  const src = app.slice(start, app.indexOf("function liveInterviewer("))
+  const ctx = vm.createContext({})
+  vm.runInContext(src + app.slice(app.indexOf("function questionEnded("), app.indexOf("function paraphrasesOwn(")) + "\nthis.candidate = soundsLikeCandidate;", ctx)
+  assert.equal(ctx.candidate("I studied computer science and I worked the queue."), true)
+  assert.equal(ctx.candidate("Can you tell me about yourself?"), false)
+  assert.match(app, /const label = \(s && s\.role\)/)
+  assert.match(app, /Question: \" \+ heardQ/)
+  assert.match(app, /filter\(t => t\.who === who && questionEnded\(t\.text\)\)/)
+  assert.match(app, /!captureStartedAt \|\| t\.at >= captureStartedAt/)
+})
