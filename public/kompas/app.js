@@ -5141,7 +5141,7 @@ async function generateAnswer(question, card, opts = {}) {
 function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
 function spokenOpen(question) {
   const q = String(question || "").replace(/\s+/g, " ").trim();
-  if (!q) return "";
+  if (!q || /right\?\s*$/i.test(q)) return "";
   const tool = q.match(/\bhow (?:does|do)\s+([A-Za-z][\w.+-]{2,})\s+work\b/i);
   if (tool) return "I would explain how " + tool[1] + " works from the closest work I have done.";
   if (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) && q.split(/\s+/).length <= 14) return "";

@@ -335,10 +335,10 @@ function clarifierFromLiveQuestion(question: string): string[] | null {
   const tagged = /right\?\s*$/i.test(body)
   const stem = body.replace(/,?\s*right\?\s*$/i, "").trim()
   if (tagged && /\bdesign\b/i.test(stem) && /\balone\b/i.test(stem)) return ["Design it alone, or not alone?"]
-  if (tagged) return []
-  if (!cancelled && /\b(?:phishing|triage|splunk)\b/i.test(body)) return null
-  const parts = body.split(/,|\band\b/i).map((part) => part.trim()).filter((part) => liveCue(part))
-  const hows = body.match(/\bhow\b/gi) || []
+  const ask = tagged ? stem : body
+  if (!tagged && !cancelled && /\b(?:phishing|triage|splunk)\b/i.test(body)) return null
+  const parts = ask.split(/,|\band\b/i).map((part) => part.trim()).filter((part) => liveCue(part))
+  const hows = ask.match(/\bhow\b/gi) || []
   if (parts.length >= 3 || hows.length >= 3) {
     const cues = parts.slice(0, 3).map(liveCue).filter(Boolean)
     if (cues.length >= 3) {
@@ -346,7 +346,7 @@ function clarifierFromLiveQuestion(question: string): string[] | null {
       return line.split(/\s+/).length <= 16 ? [line.charAt(0).toUpperCase() + line.slice(1)] : []
     }
   }
-  if (cancelled) return []
+  if (tagged || cancelled) return []
   return null
 }
 
@@ -537,9 +537,17 @@ const SUPPORT_STOP = new Set("i ive id i'd i’ve the this that these those exam
 /** Drop a sentence that names a tool, employer, or number the resume, question, and JD do not contain. */
 export function dropUnsupportedSentences(text: string, resume: string, question = "", jd = ""): string {
   const bag = `${resume}\n${question}\n${jd}`.toLowerCase()
+  const jdBag = String(jd || "").toLowerCase()
+  const resumeBag = String(resume || "").toLowerCase()
   return sentenceList(text).filter((sentence) => {
-    if (/less direct hands-on with/i.test(sentence)) return true
+    if (/less direct hands-on with/i.test(sentence) || /I would explain how/i.test(sentence)) return true
     const names = (sentence.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []).map((name) => name.replace(/\.+$/g, ""))
+    const claimsJdTool = /\b(?:deployed|used|maintained|built|configured|implemented|ran|owned)\b/i.test(sentence)
+      && names.some((name) => {
+        const token = name.toLowerCase()
+        return jdBag.includes(token) && !resumeBag.includes(token)
+      })
+    if (claimsJdTool) return false
     if (names.some((name) => {
       const token = name.toLowerCase()
       return !SUPPORT_STOP.has(token) && !bag.includes(token)
