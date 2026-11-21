@@ -34,3 +34,19 @@ Canonical master at this review is `e035b4131ea34a62ba31e51dca198d77b3d0057e`. I
 Vercel sandbox creation was refused with HTTP 402 `payment_required`: the Hobby plan snapshot-storage usage limit is exceeded. No sandbox was created. The current container has no repository checkout, and the installed Next.js 16.3.8 route-handler guide under `node_modules/next/dist/docs` is unavailable. The helper blob reviewed for the no-email behavior is `8b7781b8b2aa9dedf67641e68e083d5b3d73632b`. No code or tests were changed. The exact unblocking requirement is an owner-controlled release of Vercel snapshot capacity or an approved local/cloud development environment with this repository and its installed Next.js package. Do not change billing, delete snapshots, bypass access controls or use the unapproved R2 architecture.
 
 PR #450 current head `05c19ec2012479d1c78e7a5ad7b8e77ee1f24e58` has no exact-head Actions runs. Child PR #453 head `b71006e5037d5247e24485f620b0556843fa1624` has WhatsApp recovery 44505879487 and Plan/REA 44505879476 SUCCESS, but no full CI or Kompas baseline on the stacked base. Keep both DRAFT. Once the environment is available, read the installed route-handler guide and implement only the explicit-selection provenance guard with synthetic regressions for explicit same-account selection, automatic closest-match rejection, uploaded-original rejection, wrong-account rejection, text-only hold and the exact NOT TAILORED label. Require full CI, recovery, Kompas baseline, Plan/REA, legitimate protected preview and Safe Merge Gate review. No real send or historical replay.
+
+
+## 21 November 2026 — previous sandbox handoff and current quota blocker
+
+The 20 Nov continuation did create a persistent Vercel Sandbox and a local branch named `fix/whatsapp-explicit-library-fallback-20261120`. It cloned current master into `/tmp/mfit-clean`, completed `npm ci`, confirmed the installed Next.js 16.3.8 package and read the installed route-handler guides required by AGENTS.md. The worktree contained an uncommitted attempt to add explicit-library-selection helpers, route gating and regression tests. This is **not a published change**: no commit, push or PR is recorded in the accessible session command history.
+
+Partial command evidence from that stopped session:
+- `npm ci`: exit 0.
+- `npm run lint`: exit 0.
+- `npm run typecheck`: exit 0.
+- `npm run check`: exit 2; its output is no longer retrievable.
+- `npm run lint && npm run test:hardening && npm run test:kompas-baseline`: terminated with exit 143 after the session ran beyond its time budget; no complete hardening/baseline result is recorded.
+
+The persistent sandbox snapshot remains listed, but `get_named_sandbox(resume=true)` now returns HTTP 402 `payment_required`: Vercel Hobby Sandbox usage limit exceeded, reset at **2026-12-01T00:00:00Z**. The stopped session's file/log endpoints return HTTP 410 `sandbox_stopped`. The current container has no repository checkout, cannot resolve GitHub DNS, and has no Vercel CLI fallback. Do not change billing, delete snapshots or bypass the quota. The exact unblock is the quota reset or an owner-provided approved local/cloud environment containing the canonical repository and installed Next.js 16.3.8.
+
+When access returns, recover or recreate the narrow selection-provenance change on current master; do not assume the old uncommitted branch is available. Keep the 19 Nov owner correction, the 17 Oct delivery evidence boundary, and the unapproved R2 CAS/lease/fencing exclusion unchanged.
