@@ -68,7 +68,7 @@ function load(file, mocks = {}, extra = '') {
   return testModule.exports
 }
 
-test('fold 5: a run that cannot send a file says so instead of stopping', async () => {
+test('fold 5: without a selected library resume, failure is explained without sending an original', async () => {
   const said = []
   const docs = []
   let runs = 0
@@ -134,22 +134,20 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   file = null
   await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
-  assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
-  assert.match(docs[0].caption, /updated Word file could not be opened/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs.length, 0, 'no original is sent without an explicit same-account Files/Library selection')
+  assert.match(said.at(-1), /I did not send a file/)
+  assert.match(said.at(-1), /resume already chosen for this job could not be opened either/)
+  assert.match(said.at(-1), /saved for another try/)
+  assert.doesNotMatch(said.at(-1), /candidate2/)
 
   docs.length = 0
   file = Buffer.from('candidate2@example.test')
   samePerson = false
   await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /identity\/contact\/date verification/)
-  assert.match(docs[0].caption, /closest matching resume/)
+  assert.equal(docs.length, 0, 'identity mismatch cannot send an unselected original')
+  assert.match(said.at(-1), /rewritten file was not sent/)
+  assert.doesNotMatch(said.join('\n'), /candidate2/)
 
   file = Buffer.from('candidate1@example.test')
   samePerson = true
