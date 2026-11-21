@@ -216,6 +216,8 @@ test("Houston and Saint Louis emails are not treated as the same profile", () =>
   assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com"), true)
   assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
   assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "   "), false)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
@@ -247,6 +249,18 @@ rejects("incomplete cached report rejected even with legacy deliverable status",
 rejects("unverified JD claims are rejected independently of score", {
   unverified_added_keywords: ["Unverified Product"],
 }, "unverified_jd_terms")
+
+test("unverified JD terms are a hard WhatsApp hold even when only a cached blocker remains", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  for (const draft of [
+    make({ unverified_added_keywords: ["Unverified Product"] }),
+    make({ unverified_added_keywords: [], quality_blockers: ["unverified_jd_terms"] }),
+  ]) {
+    assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+    assert.equal(gate.whatsappRewriteUsable(draft), false)
+    assert.equal(gate.deliveredWithShortfall(draft), false)
+  }
+})
 rejects("missing role rewrite is rejected independently of score", {
   quality_blockers: ["roles_unrewritten"],
 }, "roles_unrewritten")
