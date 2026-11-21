@@ -3,7 +3,7 @@ import path from "node:path"
 import type { NextRequest } from "next/server"
 import { AUTH_EGRESS_BLOCKED, AUTH_UNAVAILABLE, userFromAuthClient } from "./kompasAuthSession"
 import { createClient, createClientFromRequest } from "./supabase/server"
-import { disabledOwnerUser, isAuthDisabled } from "./authDisabled"
+import { disabledOwnerUser, hasSupabaseAuthMaterial, isAuthDisabled } from "./authDisabled"
 
 export async function authenticatedUserId(request?: NextRequest): Promise<string | null> {
   return (await authenticatedUser(request))?.id ?? null
@@ -32,8 +32,15 @@ export async function authenticatedUser(request?: NextRequest): Promise<{ id: st
   const authOff = typeof isAuthDisabled === "function" && isAuthDisabled()
   const owner = () => typeof disabledOwnerUser === "function"
     ? disabledOwnerUser()
-    : { id: "disabled-owner", email: "eshwarjay0@gmail.com" }
+    : { id: "67f02d95-f7fe-4058-9b0d-9363221e7c61", email: "eshwarjay05@gmail.com" }
   try {
+    if (request && authOff && typeof hasSupabaseAuthMaterial === "function") {
+      let cookies: { name: string }[] = []
+      try { cookies = request.cookies?.getAll?.() || [] } catch { cookies = [] }
+      if (!hasSupabaseAuthMaterial({ cookies, authorization: request.headers.get("authorization") })) {
+        return { ...owner(), synthetic: true as const }
+      }
+    }
     if (request) {
       const authorization = request.headers.get("authorization")
       // An explicitly supplied invalid credential must never fall back to cookies.
@@ -58,6 +65,19 @@ export async function authenticatedUser(request?: NextRequest): Promise<{ id: st
     }
     return authOff ? { ...owner(), synthetic: true as const } : null
   } catch { return authOff ? { ...owner(), synthetic: true as const } : null }
+}
+
+/** Kompas answer, bridge, and typed chat. Skip-login with no cookie and no token is the Houston owner. Admin stays on authenticatedUser plus a real session. */
+export async function kompasCaller(request?: NextRequest): Promise<{ id: string; email: string | null; synthetic?: true } | null> {
+  const user = await authenticatedUser(request)
+  if (user?.id) return user
+  if (typeof isAuthDisabled === "function" && isAuthDisabled()) {
+    const found = typeof disabledOwnerUser === "function"
+      ? disabledOwnerUser()
+      : { id: "67f02d95-f7fe-4058-9b0d-9363221e7c61", email: "eshwarjay05@gmail.com" }
+    return { id: found.id, email: found.email, synthetic: true as const }
+  }
+  return null
 }
 
 export function signInRequired() {

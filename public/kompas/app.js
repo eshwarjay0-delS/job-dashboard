@@ -5340,10 +5340,7 @@ function answerFinishPlan(state) {
   const code = String(state && state.code || "");
   const hasText = !!(state && state.hasText);
   const pass = Number(state && state.pass) || 0;
-  const aborted = !!(state && state.aborted) || code === "ABORT" || code === "STALL" || /empty/i.test(code);
-  if (/AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code)) {
-    return { action: "stop", fallback: false, status: "The answer did not finish.", text: "Sign in again, then press AI Answer." };
-  }
+  const aborted = !!(state && state.aborted) || code === "ABORT" || code === "STALL" || /empty|AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED|signed_out|UNAVAILABLE/i.test(code);
   if (hasText && !aborted) return { action: "keep", fallback: false, status: "Answered.", text: "" };
   if (pass < 1) return { action: "retry", fallback: false, waitMs: 400, status: "Retrying…", text: "" };
   if (pass < 2) return { action: "retry", fallback: true, waitMs: 400, status: "Trying a faster model…", text: "" };
@@ -5678,9 +5675,13 @@ async function generateAnswerRequest(question, card, opts = {}) {
     healAuthSilently();
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   } catch (e) {
-    if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — wait silently if renewal fails
+    if (isAuthError(e)) {
+      if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) {
+        recoverAnswer("ABORT", 400);
+        return;
+      }
       if (await recoverLiveAuth()) { recoverAnswer("", 800); return; }
-      recoverAnswer("AUTH"); waitForAuthSilently({ question, card, opts: { ...opts, derived: derivedQ || opts.derived, derivedBy } }); return;
+      recoverAnswer("ABORT", 400); return;
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;

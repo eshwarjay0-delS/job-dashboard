@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { authenticatedUser } from "@/lib/authBoundary"
+import { kompasCaller } from "@/lib/authBoundary"
 import { answerAside } from "@/lib/kompasAnswerAside"
 
 export const runtime = "nodejs"
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 
 /** Resume-backed clarify panel. No answer model call. */
 export async function POST(request: NextRequest) {
-  const user = await authenticatedUser(request)
+  const user = await kompasCaller(request)
   if (!user) return NextResponse.json({ error: "Sign in again to use this." }, {
     status: 401, headers: { "Cache-Control": "no-store" },
   })
