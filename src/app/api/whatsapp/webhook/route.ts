@@ -897,6 +897,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       return false
     }
   }
+  try {
   if (!hasAnyKey(keys)) {
     const fallbackSent = await sendClosest("No AI provider is configured, so no tailored rewrite was produced.")
     if (fallbackSent) return
@@ -906,7 +907,6 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       : "I did not send a file. Tailoring is unavailable; MarketFit will retry automatically.")
     return
   }
-  try {
   // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
   // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
   const cur = await loadSession(from)
@@ -917,9 +917,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (files && !quiet) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
   await saveSession(from, cur)
 
+  const fallbackNotice = files?.explicitlySelected
+    ? "If it cannot be completed, I may send only the exact Files resume you named, unchanged, if I can re-verify it; it will be labeled NOT TAILORED."
+    : "If it cannot be completed, I will explain the hold and retry; I will not send an unselected original."
   if (!quiet) await sendText(from, files
-    ? `Updating ${files.said}. I will send a finished tailored Word file only if it passes the checks. If it cannot be completed, I may send only this exact Files resume unchanged if I can re-verify it; it will be labeled NOT TAILORED.`
-    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. I will send a finished tailored Word file only if it passes the checks. If it cannot be completed, I will explain the hold and retry; I will not send an unselected original.`)
+    ? `Updating ${files.said}. I will send a finished tailored Word file only if it passes the checks. ${fallbackNotice}`
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. I will send a finished tailored Word file only if it passes the checks. ${fallbackNotice}`)
 
   // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
   // 240s budget in silence and then fail. At 60s, if the run is still going,
@@ -930,7 +933,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // function stays alive under after() up to maxDuration.
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, "Still working on your resume — the rewrite has been running for a minute. A tailored Word file is sent only after it passes the checks; an unchanged fallback is possible only for the exact Files resume you explicitly selected and only if I can re-verify it. Otherwise I will explain the hold.").catch(() => {})
+      sendText(from, `Still working on your resume — the rewrite has been running for a minute. A tailored Word file is sent only after it passes the checks. ${files?.explicitlySelected ? "An unchanged fallback is possible only for the exact Files resume you named and only if I can re-verify it; it will be labeled NOT TAILORED." : "No exact Files resume was explicitly selected, so no unchanged original fallback will be sent."}`).catch(() => {})
     }, 60_000)
   }
 
@@ -1076,7 +1079,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!file) {
     failureCode = "file_missing"
     if (await sendClosest("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.")
     return;
   }
 
@@ -1084,9 +1087,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
-    // The already-chosen resume is unchanged and is the file that goes out.
-    if (await sendClosest("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
-    await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
+    // Only a separately verified explicit Files selection may be sent unchanged.
+    if (await sendClosest("The updated file failed identity/contact/date verification, so it was not sent.")) return
+    await sayOutcome("I did not send a file. The update failed identity/contact/date verification. Your resume and job description are saved for automatic recovery.")
     return;
   }
   const meta = await metaPromise
@@ -1693,12 +1696,6 @@ function unplacedTermsLine(terms: string[] | undefined, reason: string | undefin
   const why = reason === "skills_locked" ? "you asked me not to edit your skills" : "your resume has no skills section"
   const shown = list.slice(0, 10).join(", ") + (list.length > 10 ? ` and ${list.length - 10} more` : "")
   return `Not added to the file because ${why}: ${shown}. Add any you can speak to.`
-}
-
-function chosenLabel(files: FromFiles | undefined, resumeName?: string): string {
-  if (files?.said) return files.said.split(". I chose")[0]
-  if (resumeName) return `*${resumeName}*`
-  return "the resume already chosen for this job"
 }
 
 function unfinishedRewriteWhy(result: TailorResult): string {
