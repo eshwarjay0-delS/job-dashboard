@@ -50,23 +50,24 @@ test("answer weight defaults to normal, cycles bold then semi, and the answer pa
   assert.doesNotMatch(css, /font-weight:var\(--answer-weight, 560\)/)
 })
 
-test("bridge lines follow the live dialogue and never use gap language", () => {
-  const turns = [
-    { who: "Them", text: "How do you use Splunk in the SOC?" },
-    { who: "You", text: "I start from the notable." },
-    { who: "Them", text: "And how would you triage this alert?" },
-  ]
-  const lines = bridge.bridgeLines({ turns, question: "And how would you triage this alert?" })
-  assert.ok(lines.length >= 1 && lines.length <= 2)
-  const blob = lines.join(" ")
-  assert.match(blob, /triage|alert/i)
-  assert.match(blob, /splunk|notable/i)
-  assert.match(blob, /\bI(?:'d| would)\b/)
-  assert.doesNotMatch(blob, BANNED)
-  assert.doesNotMatch(blob, /\?/)
-  const alone = bridge.bridgeLines({ turns: [], question: "How would you design the service catalog rollout?" })
-  assert.equal(alone.length, 2)
-  assert.match(alone.join(" "), /catalog|design/i)
-  assert.doesNotMatch(alone.join(" "), BANNED)
-  assert.deepEqual(bridge.bridgeLines({ turns: [{ who: "Them", text: "Thanks for joining." }], question: "Thanks for joining." }), [])
+test("bridge lines are not a local template, and the junk sentence cannot be produced", () => {
+  const junk = "So on heard zero vulnerability, given what you said about pmand more.listeningyou pmilisteningyou, I'd weigh exposure first."
+  const src = read("public/kompas/bridge-lines.js")
+  assert.doesNotMatch(src, /So on \$\{topic\}/)
+  assert.doesNotMatch(src, /function considerations/)
+  assert.deepEqual(bridge.bridgeLines({
+    turns: [
+      { who: "Them", text: "heard zero vulnerability" },
+      { who: "You", text: "pmand more.listeningyou pmilisteningyou" },
+    ],
+    question: "heard zero vulnerability",
+  }), [])
+  assert.equal(bridge.acceptLine(junk), "")
+  const cleaned = bridge.cleanTurns([
+    { who: "Them", text: "INTERVIEWER tell me about the principle of least privilege" },
+    { who: "You", text: "pmand more.listeningyou" },
+  ])
+  assert.ok(cleaned.some((turn) => /least privilege/i.test(turn.text)))
+  assert.ok(cleaned.every((turn) => !/listeningyou|pmand/i.test(turn.text)))
+  assert.doesNotMatch(cleaned.map((turn) => turn.text).join(" "), BANNED)
 })

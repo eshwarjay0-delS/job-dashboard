@@ -4,7 +4,7 @@
 .aside-toggle{
   position:absolute;
   right:16px;
-  top:16px;
+  top:148px;
   z-index:70;
   width:36px;
   height:36px;
@@ -153,5 +153,5 @@ html.kd #view-copilot #copyBtn{
     max-height:none;
     border-radius:12px;
   }
-  .aside-toggle{right:8px;top:56px}
+  .aside-toggle{right:8px;top:148px}
 }

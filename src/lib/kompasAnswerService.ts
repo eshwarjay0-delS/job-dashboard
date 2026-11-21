@@ -87,7 +87,7 @@ const LIVE_ROUTING = { allow_fallbacks: true, sort: "latency" }
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
-const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 2048)
+const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 4096)
 // A model on a long rate-limit block is skipped by later requests on this
 // warm instance instead of re-hitting the wall (perfACT's groqBlockedUntil).
 const blockedUntil = new Map<string, number>()
@@ -628,13 +628,19 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               const tail = titler.flush()
               if (tail) onDelta(tail)
               if (cutShort(usage.finish, raw, job.plan.words)) {
-                // Cut off at the ceiling a few words in: clear the card and ask again rather than serve a fragment.
+                // The ceiling cut the sentence. Keep the words already on screen and ask the same model to finish them.
+                const stub = raw.trim().slice(-800)
+                try {
+                  await streamOpenRouter(job.orKey as string, model, "Finish the spoken answer. Continue from the last sentence. Do not repeat earlier sentences.", stub, Math.max(800, Math.floor(job.plan.maxTokens / 2)), onDelta, signal)
+                } catch { /* the partial already streamed stays */ }
+                if (raw.trim()) {
+                  servedModel = model
+                  lastErr = ""
+                  recordLane(model, true, usage, began)
+                  return "ok"
+                }
                 recordLane(model, false, usage, began, 502)
                 lastErr = "openrouter 502 answer cut short at the token ceiling"
-                raw = ""
-                titler = createTitleSplitter(); onScreen = ""; partialSent = false
-                emit({ type: "replace", text: "" })
-                gate = newGate(false)
                 return "cut"
               }
               servedModel = model
@@ -1506,4 +1512,46 @@ function answerFailure(message: string) {
     : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
     : "The paid provider could not complete this answer. Your question is preserved."
   return { status: blocked ? 503 : status, code, error, quiet: true }
+}
+
+const BRIDGE_JUNK = /given what you said|what you said about|i'?d weigh exposure first|heard zero vulnerability|\binterviewer\b|listeningyou|pmand|pmokay/i
+
+function cleanBridgeTurns(turns: Array<{ who?: string; text?: string }>) {
+  return turns.slice(-4).map((turn) => String(turn?.text || "")
+    .replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "")
+    .replace(/\b(?:listeningyou|listening|pmand|pmokay|pmi)\b/gi, " ")
+    .replace(/\s+/g, " ").trim())
+    .filter((text) => text.split(/\s+/).length >= 3 && !BRIDGE_JUNK.test(text))
+}
+
+function keepBridgeLine(raw: string): string {
+  const line = String(raw || "").replace(/^["'\s]+|["'\s]+$/g, "").split("\n").map((s) => s.trim()).filter(Boolean)[0] || ""
+  if (!line || /^none$/i.test(line) || BRIDGE_JUNK.test(line)) return ""
+  if (/\b([a-z]{3,})\s+\1\b/i.test(line)) return ""
+  return line.replace(/\s+/g, " ").trim()
+}
+
+/** One speakable sentence from the cleaned turns. Empty when every model is unreachable. */
+export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string }, signal?: AbortSignal): Promise<string[]> {
+  const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
+  const question = String(input?.question || "").replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "").replace(/\s+/g, " ").trim()
+  if (!turns.length && question.split(/\s+/).length < 4) return []
+  const keys = await keysFor("kompas:answer", () => resolveKeys({})).catch(() => resolveKeys({}))
+  const system = "Write one natural sentence the candidate can say aloud. No speaker labels. No quotes from the transcript. No 'what you said'. Reply with the sentence only, or NONE."
+  const user = `TURNS:\n${turns.join("\n")}\n\nQUESTION:\n${question}`
+  const ac = signal || AbortSignal.timeout(12000)
+  let text = ""
+  if (keys.openrouter) {
+    for (const model of ANSWER_MODELS) {
+      try {
+        const got = await fetchOpenRouter(keys.openrouter, model, system, user, 160, ac)
+        text = keepBridgeLine(got.text)
+        if (text) break
+      } catch { /* the next allowed model */ }
+    }
+  }
+  if (!text && keys.groq) {
+    try { text = keepBridgeLine(await cheapGroqAnswer(keys.groq, system, user, ac)) } catch { text = "" }
+  }
+  return text ? [text] : []
 }

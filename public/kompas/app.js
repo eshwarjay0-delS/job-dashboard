@@ -3940,8 +3940,29 @@ function shouldAutoAnswer(opts) {
   return { fire: true, reason: "ready" };
 }
 
+let detectedQueue = [];
+function noteDetectedQuestion(text) {
+  const before = detectedQueue.length;
+  const plan = queueAnswerPlan({ busy: aiBusy, inflight: !!answerCtl, queue: detectedQueue, cards: cards.map(c => c.question) }, text);
+  detectedQueue = plan.queue;
+  if (!plan.start && plan.queue.length > before) status("Next question is queued.", "live");
+  return plan;
+}
+function pumpDetectedQueue() {
+  if (aiBusy || answerCtl || !detectedQueue.length) return;
+  const next = detectedQueue.shift();
+  const page = addCard(next, ["…"]);
+  showPressed(page, next);
+  aiBusy = true; aiBusySince = Date.now();
+  status("Answering", "live");
+  void generateAnswer(next, page, { pinned: true, derived: next, queued: true }).finally(() => {
+    aiBusy = false;
+    pumpDetectedQueue();
+  });
+}
 async function confirmAutoAndAnswer(tail) {
   if (isTabSmallTalk(tail) || isCandidateTabTurn(tail)) return;
+  if (aiBusy || answerCtl) { noteDetectedQuestion(tail); return; }
   const local = isRealInterviewerQuestion(tail) || confirmAutoQuestion(tail).ok;
   if (!local) return;
   try {
@@ -4559,12 +4580,12 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   if (!flushing) scheduleAuto();
 }
 function applyInterruptionFlush(ev) {
+  const queuedAsk = String(ev && (ev.question || ev.pivot) || "").trim();
+  if ((answerCtl || aiBusy) && queuedAsk) { noteDetectedQuestion(queuedAsk); return; }
   const cur = cards[idx];
   if (cur) {
     cur.flushed = true;
     cur.streaming = false;
-    if (answerCtl && typeof answerCtl.abort === "function") { try { answerCtl.abort(); } catch {} }
-    answerCtl = null;
   }
   const pivot = ev.pivot || pivotConstraint(ev.question || "");
   const page = addCard(ev.question || pivot, []);
@@ -5322,9 +5343,9 @@ async function generateAnswer(question, card, opts = {}) {
     card.streaming = false;
     const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
     if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
-    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
+    card.meta = partial ? "" : "Answer interrupted. Retry available.";
     if (cards[idx] === card) renderCard();
-    status(error && error.message || "The answer did not finish. Press AI Answer to try again.", "err");
+    status(partial ? "Answered." : (error && error.message || "Press AI Answer to try again."), partial ? "live" : "err");
   } finally {
     clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
@@ -5339,12 +5360,25 @@ function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
 function answerFinishPlan(state) {
   const code = String(state && state.code || "");
   const hasText = !!(state && state.hasText);
+  const shown = String(state && state.text || "").trim();
+  const complete = /[.!?]["')\]]*$/.test(shown);
   const pass = Number(state && state.pass) || 0;
   const aborted = !!(state && state.aborted) || code === "ABORT" || code === "STALL" || /empty|AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED|signed_out|UNAVAILABLE/i.test(code);
-  if (hasText && !aborted) return { action: "keep", fallback: false, status: "Answered.", text: "" };
+  if (hasText && (complete || pass >= 2)) return { action: "keep", fallback: false, status: "Answered.", text: "" };
+  if (hasText) return { action: "continue", fallback: pass >= 1, waitMs: 400, status: "Finishing the sentence…", text: "" };
   if (pass < 1) return { action: "retry", fallback: false, waitMs: 400, status: "Retrying…", text: "" };
   if (pass < 2) return { action: "retry", fallback: true, waitMs: 400, status: "Trying a faster model…", text: "" };
-  return { action: "stop", fallback: false, status: "The answer did not finish.", text: "I didn't get a full answer through. Press AI Answer and I'll take it again." };
+  return { action: "stop", fallback: false, status: "Press AI Answer to try again.", text: "I didn't get a full answer through. Press AI Answer and I'll take it again." };
+}
+function queueAnswerPlan(state, question) {
+  const q = String(question || "").replace(/\s+/g, " ").trim();
+  const queue = Array.isArray(state && state.queue) ? state.queue.slice() : [];
+  const have = Array.isArray(state && state.cards) ? state.cards : [];
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const same = (a, b) => { const A = norm(a), B = norm(b); return !!(A && B && (A === B || (A.length > 12 && B.length > 12 && (A.includes(B) || B.includes(A))))); };
+  if (!q || have.some((c) => same(c, q)) || queue.some((item) => same(item, q))) return { queue, start: false };
+  if (state && (state.busy || state.inflight)) return { queue: queue.concat([q]), start: false };
+  return { queue, start: true, question: q };
 }
 function labelFromHeard(cardQuestion, heard) {
   const q = String(cardQuestion || "").replace(/\s+/g, " ").trim();
@@ -5479,10 +5513,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
     card.meta = partial || keepOld ? (card.meta || prevMeta || "") : "";
     const hasText = (typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…")
       || (Array.isArray(card.answer) && card.answer.join(" ").trim().length > 8 && !/^(…|Preparing…)/.test(String(card.answer[0] || "").trim()));
-    const plan = answerFinishPlan({ code, hasText, pass: Number(opts.answerPass) || 0, aborted: code === "ABORT" || code === "STALL" || /empty/i.test(code) });
-    if (plan.action === "retry") {
+    const shown = typeof card.answer === "string" ? card.answer : (Array.isArray(card.answer) ? card.answer.join(" ") : "");
+    const plan = answerFinishPlan({ code, hasText, text: shown, pass: Number(opts.answerPass) || 0, aborted: code === "ABORT" || code === "STALL" || /empty/i.test(code) });
+    if (plan.action === "retry" || plan.action === "continue") {
       card.streaming = true;
-      if (!hasText) card.answer = ["Answering…"];
+      if (plan.action === "retry" && !hasText) card.answer = ["Answering…"];
       if (cards[idx] === card) renderCard();
       status(plan.status, "live");
       logAnswer({ failed: code || "provider_unavailable", retrying: true });
@@ -6084,7 +6119,11 @@ function manualAnswerTarget(opts) {
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
-    else { status("Still working on the last answer — one moment.", "live"); return; }
+    else {
+      if (fromAuto && options && options.queuedQuestion) noteDetectedQuestion(options.queuedQuestion);
+      status("Still working on the last answer — one moment.", "live");
+      return;
+    }
   }
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   status("Answering", "live");
@@ -6435,7 +6474,7 @@ async function aiAnswer(fromAuto, options = {}) {
     setChat(true);
   } catch (error) {
     status(error.message || "Could not prepare an answer. Please retry.", "err");
-  } finally { aiBusy = false; }
+  } finally { aiBusy = false; pumpDetectedQueue(); }
 }
 $("screenBtn").onclick = analyseScreen;
 if ($("screenAnalyzeBtn")) $("screenAnalyzeBtn").onclick = analyzeSharedTab;

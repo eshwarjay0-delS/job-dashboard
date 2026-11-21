@@ -79,8 +79,8 @@ test("a remembered open state comes back, and a new question clears the old cont
   document.getElementById("question").textContent = sample.question
   window.KompasAnswerAside.accept(sample)
   assert.equal(panel.querySelector("h3").textContent, "Say this")
-  assert.equal(panel.querySelectorAll(".aside-questions li").length, 2)
-  assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster for this line/)
+  assert.equal(panel.querySelectorAll(".aside-questions li").length, 0)
+  assert.doesNotMatch(panel.textContent, /given what you said|I'd weigh exposure|Claim|Touch points|No booster for this line/)
   document.getElementById("question").textContent = "Why did the flow stall?"
   await new Promise((r) => setTimeout(r, 0))
   assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster|Context shows up with the next answer/)
@@ -98,17 +98,14 @@ test("section 2 toggles by hand and follows a new transcript line without a fetc
   }
   document.getElementById("question").textContent = aside.question
   window.KompasAnswerAside.accept(aside)
-  const list = document.getElementById("asideModeList")
-  assert.match(list.textContent, /catalog|design/i)
-  assert.doesNotMatch(list.textContent, /Why do you think|resume|not on|won't lie|can't claim/i)
+  assert.equal(document.getElementById("asideModeList"), null)
+  assert.doesNotMatch(document.getElementById("answerAside").textContent, /given what you said|I'd weigh|Why do you think|resume|not on|won't lie|can't claim/i)
   document.getElementById("drawerBody").textContent = "Them: So the owners are spread across the teams and the handoff is where it stalls."
   await new Promise((r) => setTimeout(r, 0))
-  const afterStatement = document.getElementById("asideModeList")
-  assert.match(afterStatement.textContent, /handoff|owners|teams/i)
+  assert.doesNotMatch(document.getElementById("answerAside").textContent, /given what you said|I'd weigh/)
   document.getElementById("capText").textContent = "Have you worked with the catalog before?"
   await new Promise((r) => setTimeout(r, 0))
-  const afterAsk = document.getElementById("asideModeList")
-  assert.match(afterAsk.textContent, /catalog/i)
+  assert.doesNotMatch(document.getElementById("answerAside").textContent, /given what you said|I'd weigh/)
   let fetched = 0
   window.fetch = () => { fetched++; return Promise.resolve({ clone() { return this }, headers: { get: () => "" }, json: async () => ({}) }) }
   document.getElementById("drawerBody").textContent = "Them: Let me explain the handoff again."

@@ -1,3 +1,9 @@
+## 2026-11-21 — Queue the next question, drop the Say this template, finish a cut sentence
+
+A detected question no longer cancels the answer already on screen. It waits in a queue, the current answer is shown, then the next one starts. Say this no longer builds a sentence from raw transcript tokens. If the model is unreachable the panel stays empty. A stream that stops mid-sentence keeps the words and continues, and the footer does not say the answer did not finish once words are on screen. The Say toggle is below Next. The OpenRouter 403 fallback is in the same ship. One desktop build follows because the page script changed.
+
+**Checked by scripts/tests/kompas-answer-finish.test.mjs, kompas-overlay-ship.test.mjs, and kompas-answer-model-fallback.test.mjs. Five production questions come after the ship.**
+
 ## 2026-11-21 — OpenRouter 403 tries the next model (no new window; server only)
 
 A `{question}` POST returned 403 because openai/gpt-oss-120b was blocked by the OpenRouter data policy or guardrail. The answer now starts on meta-llama/llama-3.3-70b-instruct, then gpt-oss-120b, then gemini-2.5-flash, then Groq. The HTTP status is never 403. No client change, so the installed exe does not need a new build. The page it loads gets this from the server.

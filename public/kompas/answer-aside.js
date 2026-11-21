@@ -188,10 +188,11 @@
     return turns;
   }
 
-  function paintBridges() {
+  var bridgeTimer = 0;
+  var bridgeCtl = null;
+  function paintBridgeShell() {
     var panel = document.getElementById("answerAside");
-    if (!panel || !globalThis.KompasBridgeLines) return;
-    var lines = KompasBridgeLines.bridgeLines({ turns: currentTurns(), question: questionText() });
+    if (!panel) return;
     panel.textContent = "";
     var head = el("div", "aside-head");
     head.appendChild(el("h3", "", "Say this"));
@@ -202,12 +203,39 @@
     close.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setOpen(false); });
     head.appendChild(close);
     panel.appendChild(head);
-    if (!lines.length) return;
+  }
+  function paintBridgeLines(lines) {
+    paintBridgeShell();
+    var panel = document.getElementById("answerAside");
+    var kept = (lines || []).map(function (line) {
+      return globalThis.KompasBridgeLines && KompasBridgeLines.acceptLine ? KompasBridgeLines.acceptLine(line) : "";
+    }).filter(Boolean);
+    if (!panel || !kept.length) return;
     if (!readOpen() && !bridgeDismissed) setOpen(true);
     var list = el("ul", "aside-questions");
     list.id = "asideModeList";
-    lines.forEach(function (line) { addLi(list, line, ""); });
+    kept.forEach(function (line) { addLi(list, line, ""); });
     panel.appendChild(list);
+  }
+  function paintBridges() {
+    var panel = document.getElementById("answerAside");
+    if (!panel) return;
+    paintBridgeShell();
+    clearTimeout(bridgeTimer);
+    bridgeTimer = setTimeout(function () {
+      if (typeof fetch !== "function") return;
+      if (bridgeCtl) { try { bridgeCtl.abort(); } catch (e) {} }
+      bridgeCtl = new AbortController();
+      var turns = globalThis.KompasBridgeLines && KompasBridgeLines.cleanTurns ? KompasBridgeLines.cleanTurns(currentTurns()) : [];
+      fetch("/api/kompas/bridge", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        signal: bridgeCtl.signal,
+        body: JSON.stringify({ turns: turns, question: questionText() }),
+      }).then(function (res) { return res && res.ok ? res.json() : { lines: [] }; })
+        .then(function (data) { paintBridgeLines(data && data.lines); })
+        .catch(function () { paintBridgeShell(); });
+    }, 1500);
   }
 
   function render(aside) {
