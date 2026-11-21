@@ -27,3 +27,12 @@ test("permanent work remains distinct and explicit contract evidence wins", () =
   assert.equal(classifyWorkType("Direct Hire"), "permanent")
   assert.equal(classifyWorkType("Full-time Contract"), "contract")
 })
+
+
+test("explicit negations remain unknown instead of becoming contract or permanent work", () => {
+  for (const value of ["No C2H", "Not contract", "Without C2C", "1099 not accepted", "Not permanent"]) {
+    assert.equal(classifyWorkType(value), "unknown", value)
+  }
+  assert.equal(classifyWorkType("Right To Hire"), "unknown")
+  assert.equal(classifyWorkType("Contract To Perm"), "contract")
+})
