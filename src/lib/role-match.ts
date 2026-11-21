@@ -249,7 +249,9 @@ export function splitTailInstruction(text: string): { jd: string; hint: string }
   const lines = String(text || "").replace(/\r/g, "").split("\n")
   while (lines.length && !lines[lines.length - 1].trim()) lines.pop()
   const last = (lines[lines.length - 1] || "").trim()
-  if (lines.length < 3 || last.length > 70) return { jd: String(text || "").trim(), hint: "" }
+  // A one-line JD followed by a named resume is two lines, not three. Accept it only when the JD line has an existing job-post signature.
+  const twoLineJobPost = lines.length === 2 && (lines[0].match(JD_SIGNS) || []).length > 0
+  if ((lines.length < 3 && !twoLineJobPost) || last.length > 70) return { jd: String(text || "").trim(), hint: "" }
   const m = last.match(/^(?:please\s+)?(?:use|start (?:with|from)|pick|choose|select|with|based on)\s+(?:the\s+|my\s+)?(.{3,50}?)\s+(?:resume|cv)[.!]?$/i)
   const hint = m ? hintIn(m[1]) : ""
   return hint ? { jd: lines.slice(0, -1).join("\n").trim(), hint } : { jd: String(text || "").trim(), hint: "" }
