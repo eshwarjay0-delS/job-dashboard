@@ -187,6 +187,17 @@ test('an automatic library pick is never sent unchanged when tailoring fails', a
   assert.match(said.join('\n'), /use \[resume name\]/)
 })
 
+test('an explicitly named Files item outside the authenticated account root is not sent', async () => {
+  const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
+  const files = { ...filesFor(HOUSTON_PATH), userDir: '/data/user-resumes/00000000-0000-4000-8000-000000000002' }
+  await generate('15550101', {
+    jdId: 'easm-foreign-root', jd: 'EASM cybersecurity engineer',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer', explicitLibrarySelection: true,
+  }, TEST_USER_ID, 60_000, files)
+  assert.equal(docs.length, 0)
+  assert.match(said.join('\\n'), /could not be verified for this account/)
+})
+
 test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
   const finished = {
     ...low,
