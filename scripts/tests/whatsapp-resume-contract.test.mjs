@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { splitTailInstruction } from '../../src/lib/role-match.ts'
 
 const webhook = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
 const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
@@ -151,4 +152,11 @@ test('legacy recovery uses stable JD identity and refuses a duplicate persisted 
   assert.match(webhook, /const jdId = "legacy-" \+ jobKeyOf\(last\.jd\)/)
   assert.doesNotMatch(webhook, /const jdId = "legacy-" \+ last\.at/)
   assert.match(queue, /existing\.from === from && existing\.userId === userId && existing\.jd === jd/)
+})
+
+test('two-line job post plus named resume is covered by the WhatsApp recovery gate', () => {
+  const jd = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
+  assert.deepEqual(splitTailInstruction(`${jd}\\nuse the SOC resume`), { jd, hint: 'SOC' })
+  const shortChat = 'Please use the SOC resume\\nuse the SOC resume'
+  assert.deepEqual(splitTailInstruction(shortChat), { jd: shortChat, hint: '' }, 'short chat must not be mistaken for a job post')
 })
