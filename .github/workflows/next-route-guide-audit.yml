@@ -1,0 +1,41 @@
+name: Temporary installed Next.js route guide audit
+
+on:
+  push:
+    branches: [audit/next-16.3.8-route-docs-20261120]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-installed-guide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact audit branch
+        uses: actions/checkout@v4
+      - name: Install the repository-pinned dependencies
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Print the installed Next.js version and route-handler guide
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -p "require('./node_modules/next/package.json').version"
+          echo "=== ROUTE DOC CANDIDATES ==="
+          find node_modules/next/dist/docs -type f -iname '*route*' -print | sort
+          echo "=== RELEVANT GUIDE CONTENT ==="
+          mapfile -t guides < <(find node_modules/next/dist/docs -type f -iname '*route*' -print | sort)
+          found=0
+          for file in "${guides[@]}"; do
+            if grep -Eqi 'route handler|route handlers|request and response' "$file"; then
+              found=1
+              echo "=== BEGIN $file ==="
+              cat "$file"
+              echo "=== END $file ==="
+            fi
+          done
+          test "$found" -eq 1
