@@ -68,7 +68,7 @@ function load(file, mocks = {}, extra = '') {
   return testModule.exports
 }
 
-test('fold 5: a run that cannot send a file says so instead of stopping', async () => {
+test('fold 5: a fresh upload never sends its original as a fallback when the rewrite cannot be delivered', async () => {
   const said = []
   const docs = []
   let runs = 0
@@ -134,29 +134,28 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   file = null
   await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
-  assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
-  assert.match(docs[0].caption, /updated Word file could not be opened/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs.length, 0, 'a fresh upload is not sent unchanged when the tailored file is missing')
+  assert.match(said.at(-1), /updated Word file could not be opened/)
+  assert.match(said.at(-1), /fresh upload/)
+  assert.match(said.at(-1), /I will not send the uploaded original as a fallback/)
 
-  docs.length = 0
   file = Buffer.from('candidate2@example.test')
   samePerson = false
   await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /identity\/contact\/date verification/)
-  assert.match(docs[0].caption, /closest matching resume/)
+  assert.equal(docs.length, 0, 'an identity mismatch does not send either the rewritten file or the uploaded original')
+  assert.match(said.at(-1), /identity\/contact\/date verification/)
+  assert.match(said.at(-1), /fresh upload/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /candidate2/)
 
   file = Buffer.from('candidate1@example.test')
   samePerson = true
   sendError = new Error('WA sendDoc 500: no')
   await generate('15550101', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 3)
+  assert.equal(docs.length, 0, 'a rejected tailored upload does not trigger an unchanged original send')
   assert.match(said.at(-1), /WhatsApp refused it/)
+  assert.match(said.at(-1), /fresh upload/)
   assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
 
   hang = true
