@@ -72,3 +72,18 @@ test('tracking rules bind sender and receiving inbox, reject query syntax',()=>{
  assert.equal(trackedBy([rule],'two@example.com','sender@example.com'),false)
  assert.equal(validTracked({...rule,email:'{from:any}@example.com'}),false)
 })
+test('generic Apply fallback cannot override explicit negative contract evidence', () => {
+ for (const value of [
+  'Not contract',
+  'No contract',
+  'Not a contract',
+  'Without any contract',
+  'Contract not required',
+  'Contract role is not offered',
+ ]) assert.deepEqual(contractTypes(value, 'contract'), [], value)
+
+ // Negating C2H is not the same as negating generic contract work.
+ assert.deepEqual(contractTypes('No contract-to-hire', 'contract'), ['Contract'])
+ // Independent positive evidence remains usable beside a negative contract phrase.
+ assert.deepEqual(contractTypes('No contract, but C2C is accepted', 'contract'), ['C2C'])
+})
