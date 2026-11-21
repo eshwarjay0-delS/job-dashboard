@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { kompasCaller, takeAuthBlock } from "@/lib/authBoundary"
+import { authenticatedUser, takeAuthBlock } from "@/lib/authBoundary"
 import { rejectIfSyntheticOwnerLimited } from "@/lib/syntheticOwnerGuards"
 import { answerForVerifiedUser } from "@/lib/kompasAnswerService"
 
@@ -10,7 +10,7 @@ export const maxDuration = 60
 // The Kompas page calls /api/answer. The shell rewrites that in the browser.
 // A client that misses the rewrite was getting the site 404. This route is the same engine.
 export async function POST(request: NextRequest) {
-  const user = await kompasCaller(request)
+  const user = await authenticatedUser(request)
   if (!user) {
     const block = takeAuthBlock(request)
     if (block) {

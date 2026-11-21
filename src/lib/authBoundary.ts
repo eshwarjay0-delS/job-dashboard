@@ -67,19 +67,6 @@ export async function authenticatedUser(request?: NextRequest): Promise<{ id: st
   } catch { return authOff ? { ...owner(), synthetic: true as const } : null }
 }
 
-/** Kompas answer, bridge, and typed chat. Skip-login with no cookie and no token is the Houston owner. Admin stays on authenticatedUser plus a real session. */
-export async function kompasCaller(request?: NextRequest): Promise<{ id: string; email: string | null; synthetic?: true } | null> {
-  const user = await authenticatedUser(request)
-  if (user?.id) return user
-  if (typeof isAuthDisabled === "function" && isAuthDisabled()) {
-    const found = typeof disabledOwnerUser === "function"
-      ? disabledOwnerUser()
-      : { id: "67f02d95-f7fe-4058-9b0d-9363221e7c61", email: "eshwarjay05@gmail.com" }
-    return { id: found.id, email: found.email, synthetic: true as const }
-  }
-  return null
-}
-
 export function signInRequired() {
   return Response.json({ error: "Sign in to access your own resume files.", code: "AUTH_REQUIRED" }, {
     status: 401, headers: { "Cache-Control": "no-store" },
