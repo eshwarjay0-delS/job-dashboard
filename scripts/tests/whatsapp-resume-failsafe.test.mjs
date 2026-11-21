@@ -1,5 +1,5 @@
-// WhatsApp must always deliver a resume file for the profile already chosen.
-// Nov 6, 2026: the EASM run refused a 30.8% rewrite and sent no file.
+// WhatsApp may send an unchanged Files fallback only after the user explicitly named that same-account resume.
+// Fresh uploads and automatic library picks stay text-only when a rewrite is held.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -170,7 +170,8 @@ test('unverified JD-only terms are held; only the explicitly selected same-accou
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
-  assert.match(docs[0].caption, /^\\*[^\\n]+\\*\\nOriginal resume — NOT TAILORED/)
+  assert.ok(docs[0].caption.startsWith("*"))
+  assert.ok(docs[0].caption.includes("\nOriginal resume — NOT TAILORED"))
   assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
 })
 
@@ -182,8 +183,8 @@ test('an automatic library pick is never sent unchanged when tailoring fails', a
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer', explicitLibrarySelection: false,
   }, TEST_USER_ID, 60_000, files)
   assert.equal(docs.length, 0)
-  assert.match(said.join('\\n'), /selected automatically, not explicitly/)
-  assert.match(said.join('\\n'), /use \\[resume name\\]/)
+  assert.match(said.join('\n'), /selected automatically, not explicitly/)
+  assert.match(said.join('\n'), /use \[resume name\]/)
 })
 
 test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
