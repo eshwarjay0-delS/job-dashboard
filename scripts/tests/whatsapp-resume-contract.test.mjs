@@ -156,7 +156,7 @@ test('legacy recovery uses stable JD identity and refuses a duplicate persisted 
 
 test('two-line job post plus named resume is covered by the WhatsApp recovery gate', () => {
   const jd = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
-  assert.deepEqual(splitTailInstruction(`${jd}\\nuse the SOC resume`), { jd, hint: 'SOC' })
-  const shortChat = 'Please use the SOC resume\\nuse the SOC resume'
+  assert.deepEqual(splitTailInstruction(`${jd}\nuse the SOC resume`), { jd, hint: 'SOC' })
+  const shortChat = 'Please use the SOC resume\nuse the SOC resume'
   assert.deepEqual(splitTailInstruction(shortChat), { jd: shortChat, hint: '' }, 'short chat must not be mistaken for a job post')
 })
