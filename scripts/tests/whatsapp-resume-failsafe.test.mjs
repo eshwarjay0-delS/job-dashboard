@@ -31,10 +31,11 @@ const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/GRC/easm.docx`
 const SAINT_LOUIS_PATH = `${TEST_USER_ROOT}/candidate2@example.test/GRC/grc.docx`
 const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
 
-function harness(runTailor, readPathOverride, hasKeys = true) {
+function harness(runTailor, readPathOverride, hasKeys = true, readRecoveryOverride) {
   const docs = []
   const said = []
   const entries = new Map()
+  const recoveryJobs = new Map()
   const storage = {
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
@@ -80,16 +81,16 @@ function harness(runTailor, readPathOverride, hasKeys = true) {
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
-      enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
-      patchResumeRecovery: async () => {},
+      enqueueResumeRecovery: async input => { const job = { ...input, status: 'pending' }; recoveryJobs.set(job.id, job); return job },
+      patchResumeRecovery: async (id, patch) => { const job = recoveryJobs.get(id); if (job) recoveryJobs.set(id, { ...job, ...patch }) },
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
       markResumeDocumentAccepted: async () => true,
       recordResumeDeliveryStatus: async () => {},
-      readResumeRecovery: async () => ({ status: 'pending' }),
+      readResumeRecovery: async id => readRecoveryOverride ? readRecoveryOverride(id, recoveryJobs) : recoveryJobs.get(id) ?? null,
     },
   }
-  const { generate } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate };')
+  const { generate, qualityStop } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, qualityStop };')
   const filesFor = (path, explicitlySelected = true, overrides = {}) => ({
     userDir: TEST_USER_ROOT,
     email: 'candidate1@example.test',
@@ -100,7 +101,7 @@ function harness(runTailor, readPathOverride, hasKeys = true) {
     explicitlySelected,
     ...overrides,
   })
-  return { generate, docs, said, filesFor }
+  return { generate, qualityStop, docs, said, filesFor, recoveryJobs }
 }
 
 const low = {
@@ -314,6 +315,26 @@ test('fallback rejects a mismatched Library root and a byte mismatch', async () 
 })
 
 
+test('unsupported JD-only terms are explained before the ordinary coverage hold', async () => {
+  const { generate, qualityStop, docs, said, filesFor } = harness(async () => unsupported)
+  await generate('15550101', {
+    jdId: 'unsupported-text-only', jd: 'EASM cybersecurity engineer with SupplierNinja',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH, false))
+  assert.equal(docs.length, 0)
+  assert.match(said.at(-1), /job-post terms/)
+  assert.match(said.at(-1), /supplierninja/)
+  assert.match(qualityStop(unsupported), /not in your resume/)
+})
+test('explicit fallback requires the durable recovery record, not only in-memory selection', async () => {
+  const { generate, docs, said } = harness(async () => { throw new Error('provider down') }, undefined, true, async () => null)
+  await generate('15550101', {
+    jdId: 'no-durable-fallback', jd: 'EASM role',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 0)
+  assert.match(said.at(-1), /exact Files resume you selected could not be verified/)
+})
 test('provider unavailability sends only an explicitly selected same-account Files resume', async () => {
   const { generate, docs } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
   await generate('15550101', {
