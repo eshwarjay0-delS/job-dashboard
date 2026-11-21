@@ -154,6 +154,8 @@ jobs:
       - name: Verify Gmail Retry-After, Overview and selected-sender/account isolation
         run: node --experimental-strip-types --test scripts/tests/gmail-retry-after.test.mjs scripts/tests/mail-overview.test.mjs scripts/tests/gmail-send-account-isolation.test.mjs
 
+      - name: Verify inclusive contract-board match-any-term search
+        run: node --experimental-strip-types --test scripts/tests/contract-search.test.mjs
       - name: Kompas S1 replay gate
         run: |
           if ! command -v google-chrome && ! command -v google-chrome-stable && ! command -v chromium && ! command -v chromium-browser; then
