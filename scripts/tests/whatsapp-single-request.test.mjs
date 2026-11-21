@@ -112,22 +112,21 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   failNext = true
   await generate('123', session, 'user')
   assert.equal(runs, 3)
-  assert.equal(deliveries, 3, 'a failed rewrite still delivers the chosen resume')
-  assert.match(docs.at(-1).caption, /closest matching resume/)
-  assert.match(docs.at(-1).caption, /stopped before it finished/)
-  assert.equal(docs.at(-1).body, 'candidate5@example.test')
-  assert.doesNotMatch(docs.at(-1).caption, /No incomplete file was delivered/)
+  assert.equal(deliveries, 2, 'a failed rewrite on an upload sends no unchanged original')
+  assert.match(said.at(-1), /stopped before it finished/)
+  assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /candidate5@example.test/)
   assert.doesNotMatch(said.at(-1) || '', /provider timeout/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'a failed rewrite also releases its claim')
   await generate('123', session, 'user')
   assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
-  assert.equal(deliveries, 4)
+  assert.equal(deliveries, 3)
   unchangedNext = true
   await generate('123', session, 'user')
   assert.equal(runs, 5)
-  assert.equal(deliveries, 5, 'an unchanged rewrite delivers the chosen resume and does not call it tailored')
-  assert.match(docs.at(-1).caption, /The rewrite produced no changes/)
-  assert.match(docs.at(-1).caption, /was not rewritten/)
+  assert.equal(deliveries, 3, 'an unchanged rewrite sends no unselected original')
+  assert.match(said.at(-1), /The rewrite produced no changes/)
+  assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'unchanged rewrite releases its claim')
   const saved = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(saved.resumePath, undefined)
@@ -203,7 +202,7 @@ test('a below-floor rewrite still delivers the Word file and names what is missi
 test('a reply to a hold re-runs with the reply experience as evidence, and a still-below-floor redo still delivers', async () => {
   const entries = new Map()
   const said = []
-  let deliveries = 0, captured = null, heldNext = false
+  let deliveries = 0, captured = null, heldNext = false, failNext = false
   const docs = []
   const { createHash } = require('node:crypto')
   const blob = {
@@ -217,7 +216,7 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
     'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('candidate5@example.test'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
-    '@/lib/tailor': { runTailor: async opts => { captured = opts; if (heldNext) return { token: 'redo-held', edits: { extras: [] }, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
+    '@/lib/tailor': { runTailor: async opts => { captured = opts; if (failNext) { failNext = false; throw new Error('provider down') } if (heldNext) return { token: 'redo-held', edits: { extras: [] }, score: 40, coverage: 40, supported_coverage: 40, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'needs_review', matched: 4, total: 10, missing: ['splunk'] }, ats: { score: 100, passed: true, checks: [], issues: [] } }; return { token: 'redo', edits: { extras: [] }, score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] }, ats: { score: 100, passed: true, checks: [], issues: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message); return 'wamid.hold2' }, sendDocument: async (_to, _body, _name, caption) => { deliveries++; docs.push(caption); return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
@@ -256,6 +255,12 @@ test('a reply to a hold re-runs with the reply experience as evidence, and a sti
   assert.equal(deliveries, 2, 'a still-below-floor redo still delivers the rewritten file')
   assert.ok(docs.some(text => text.includes('Still missing: splunk') && text.includes('40%')), 'the redo names the shortfall on the file')
   assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
+  const beforeFailedRefine = deliveries
+  failNext = true
+  await refine('123', 'wamid.hold1', 'shorten the bullets', 'user')
+  assert.equal(deliveries, beforeFailedRefine, 'a failed swipe-reply does not resend its session/version baseline')
+  assert.match(said.at(-1), /did not send another file/)
+  assert.match(said.at(-1), /previous version remains unchanged/)
 })
 
 test('a partial hold names the unfinished sections and invites a reply-redo; other holds do not', async () => {
