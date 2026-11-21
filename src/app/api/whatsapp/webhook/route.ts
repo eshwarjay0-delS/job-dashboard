@@ -903,9 +903,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (files && !quiet) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
   await saveSession(from, cur)
 
+  const fallbackPromise = files?.explicitSelection === true && session.explicitLibrarySelection === true
+    ? "If the rewrite cannot finish, the same Files resume you explicitly selected may be sent, labelled “Original resume — NOT TAILORED”."
+    : "If the rewrite cannot finish, I will explain and keep your request saved; I will not send an uploaded or automatically selected original as a fallback."
   if (!quiet) await sendText(from, files
-    ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
-    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`)
+    ? `Updating ${files.said}. I will send a Word file only if the rewrite finishes safely. ${fallbackPromise}`
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. I will send a Word file only if the rewrite finishes safely. ${fallbackPromise}`)
 
   // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
   // 240s budget in silence and then fail. At 60s, if the run is still going,
@@ -916,7 +919,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // function stays alive under after() up to maxDuration.
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get a Word file here: the updated resume if the rewrite finishes, or the resume already chosen for this job if it does not.").catch(() => {})
+      sendText(from, `Still working on your resume — the rewrite has been running for a minute and is still going. ${fallbackPromise}`).catch(() => {})
     }, 60_000)
   }
 
