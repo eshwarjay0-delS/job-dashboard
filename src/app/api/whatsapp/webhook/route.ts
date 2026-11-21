@@ -784,7 +784,9 @@ type FromFiles = { userDir: string; email: string; said: string; depth: number; 
 /** A fallback is permitted only for the exact same-account Library item the user named. */
 function explicitLibraryFallbackPathMatches(files: FromFiles | undefined, session: Session, userId: string): boolean {
   if (!files?.explicitlySelected || !files.userDir || !files.email?.trim() || !files.rel || !files.abs || !session.resumePath) return false
-  const expectedRoot = path.resolve(USER_RESUMES_DIR, userId)
+  const expectedRootRaw = filesOf(userId)
+  if (!expectedRootRaw) return false // no verified account-owned resume directory
+  const expectedRoot = path.resolve(expectedRootRaw)
   const userRoot = path.resolve(files.userDir)
   const selectedPath = path.resolve(files.abs)
   const sessionPath = path.resolve(session.resumePath)
@@ -860,10 +862,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // still send the already-chosen resume if the run throws before a file goes out.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
   const sendClosest = async (why: string): Promise<boolean> => {
-    if (finished || sending || !explicitLibraryFallbackPathMatches(files, session, userId)) return false
+    if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd || !files) return false
+    if (!resumePath || !jd || !files || !explicitLibraryFallbackPathMatches(files, session, userId)) return false
+    // Require the explicit-selection proof to survive in the durable job; retries
+    // cannot send from an in-memory or stale selection alone.
+    const durable = await readResumeRecovery(job).catch(() => null)
+    if (!durable || durable.status !== "pending" || durable.id !== job || durable.from !== from ||
+        durable.userId !== userId || durable.jd !== jd || typeof durable.resumePath !== "string" ||
+        path.resolve(durable.resumePath) !== path.resolve(resumePath) ||
+        !durable.files?.explicitlySelected || durable.files.abs !== files.abs ||
+        durable.files.rel !== files.rel || durable.files.userDir !== files.userDir ||
+        durable.files.email?.trim().toLowerCase() !== files.email.trim().toLowerCase()) return false
     const source = await readPath(resumePath).catch(() => null)
     const selected = await readPath(files.abs).catch(() => null)
     if (!source || !selected || !Buffer.from(source).equals(Buffer.from(selected))) return false
@@ -1685,12 +1696,7 @@ async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
 }
 
 // Same switch as src/lib/jd-terms-gate.ts, kept local so the route's test harnesses need no new module mocks.
-function jdTermsGateOn(): boolean {
-  const v = String(process.env.JD_TERMS_ALWAYS_ON_SKILLS ?? "").trim().toLowerCase()
-  return !(v === "0" || v === "false" || v === "off" || v === "no")
-}
-
-function unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
+remove terms gatefunction unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
   const list = (terms || []).filter(Boolean)
   if (!list.length || !reason) return ""
   const why = reason === "skills_locked" ? "you asked me not to edit your skills" : "your resume has no skills section"
@@ -1708,10 +1714,11 @@ function unfinishedRewriteWhy(result: TailorResult): string {
 function qualityStop(result: TailorResult): string {
   const reasons = whatsappResumeRejectionReasons(result)
   const invented = (result.unverified_added_keywords || []).filter(Boolean).slice(0, 6)
-  // Gate on, this refusal is gone: a job-post term in a bullet is sent back and moved to the skills line in runTailor.
-  // Gate off (JD_TERMS_ALWAYS_ON_SKILLS=0) restores it.
-  if (invented.length && !jdTermsGateOn()) {
-    return `I did not send a file. The draft added ${invented.join(", ")} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  // The helper hard-holds unsupported JD-only additions even when the detail list is empty.
+  // Explain this before the ordinary coverage shortfall so the reason is not hidden.
+  if (invented.length || reasons.includes("unverified_jd_terms")) {
+    const terms = invented.length ? invented.join(", ") : "unverified job-post terms"
+    return `I did not send a file. The draft added ${terms} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   if (reasons.includes("jd_coverage_below_floor")) {
     const pct = Number.isFinite(result.coverage) ? `${result.coverage}%` : "under 95%"
