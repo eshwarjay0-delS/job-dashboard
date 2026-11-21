@@ -21,6 +21,11 @@ The manual/on-demand cadence, removal of daily cron, and Robert Half manual-only
 
 PR #376 head 6f566197d763b6137c8608c2db3cd670a2278c5b passed full CI 43494635050, crawler regression 43494635586, Kompas baseline 43494635138, and Plan/REA schema 43494635014. No protected preview, live portal crawl, external API request, application submission, or production-row mutation occurred.
 
+### 21 November implementation boundary
+
+A current-master source check found that src/lib/contract-jobs.ts still promoted contract-to-permanent to C2H, and Pyramid's portal parser promoted right-to-hire to Contract to Hire. Those are precisely the semantics the owner correction leaves unapproved. The new branch fix/apply-contract-negation-c2h-boundaries-20261121 removes those C2H promotions, leaves an explicit Contract To Perm phrase at most as generic Contract, leaves Right To Hire unknown, and adds negative-evidence guards/tests. This patch does not expand positive W2/C2C/1099 mapping. Exact-head CI and release acceptance remain pending.
+
+
 ## Separate Kompas rollback release status
 
 PR #373 restored the approved pre-#372 answer path and merged as 026c72968e45314ff0a99f701942c966e79f0a1e. Its exact PR-head full CI, Kompas baseline, cross-device, Plan/REA and Windows packaging checks passed. The runtime rollback code is already deployed in READY production deployment dpl_Gpo7bWY56cZDoTyjUJ6f1D5ducAb at ancestor SHA 024177889d092f30aaeada20fab649aa41c9d1f4. GitHub compare 024177..026c729 shows only documentation/Plan/REA files differ; the redundant deployment request for 026c729 was canceled by the Ignored Build Step, so only the exact merge SHA's documentation is not live. A preview attempt from PR #374 was also canceled by the same ignore gate. The project Git configuration enables deployments only on master; the protected preview workflow still requires the private KOMPAS_VERCEL_API_TOKEN. Do not change the ignore rule, bypass the token, or promote a preview.

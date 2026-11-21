@@ -102,7 +102,7 @@ test('Pyramid: the board\'s own GraphQL query with its fixed app header, 100 a p
   assert.ok(!jobs.some(j => /Clerk|Electrical Engineer/.test(j.title)), 'not technology work')
   const curam = jobs.find(j => j.title === 'Curam batch Developer')
   assert.deepEqual({ location: curam.location, engagement: curam.engagement, payRange: curam.payRange, postedAt: curam.postedAt }, { location: 'Raleigh, NC (Remote)', engagement: 'Contract', payRange: '$80 - $90 per hour', postedAt: '2026-08-18' })
-  assert.equal(kindOf('This is a Fulltime opportunity located in Dallas'), 'Full Time'); assert.equal(kindOf('12+ months Contract to hire role'), 'Contract to Hire')
+  assert.equal(kindOf('This is a Fulltime opportunity located in Dallas'), 'Full Time'); assert.equal(kindOf('12+ months Contract to hire role'), 'Contract to Hire'); assert.equal(kindOf('Right to Hire'), undefined); assert.equal(kindOf('Contract to Perm'), 'Contract')
   const asked = []
   await collectJobs(pyramid, serve([[/production-api\.sprockets\.ai\/graphql/, 'pyramid-p1.json']], asked))
   assert.equal(asked.length, 12, 'never more than 12 pages')

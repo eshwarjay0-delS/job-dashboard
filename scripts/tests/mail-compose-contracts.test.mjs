@@ -31,6 +31,30 @@ test('contract filters distinguish payroll from contractual employment and rejec
  for(const url of ['javascript:alert(1)','http://example.com','https://user:pass@example.com','#'])assert.equal(applicationUrl(url),null)
  assert.equal(applicationUrl('https://example.com/job/1'),'https://example.com/job/1')
 })
+test('explicit negations never become positive contract evidence', () => {
+ for (const value of [
+  'No C2H',
+  'Not C2H',
+  'Without C2C',
+  'No 1099',
+  'Without 1099',
+  '1099 not accepted',
+  'No temporary role',
+  'Temporary is not offered',
+  'Not a contract',
+  'Contract not required',
+  'No W2 contract',
+ ]) assert.deepEqual(contractTypes(value), [], value)
+ assert.deepEqual(contractTypes('No C2H or 1099'), [])
+ assert.deepEqual(contractTypes('No C2H, but 1099 is accepted'), ['1099'])
+ assert.deepEqual(contractTypes('No contract, but C2C is accepted'), ['C2C'])
+})
+
+test('Right To Hire and Contract To Perm are not promoted to C2H', () => {
+ assert.deepEqual(contractTypes('Right To Hire'), [])
+ assert.deepEqual(contractTypes('Contract To Perm'), ['Contract'])
+ assert.deepEqual(contractTypes('Contract To Permanent'), ['Contract'])
+})
 test('clearance roles are excluded while explicit no-clearance wording survives',()=>{
  assert.equal(requiresSecurityClearance('Active TS/SCI clearance required.'),true)
  assert.equal(requiresSecurityClearance('Must be able to obtain and maintain a DoD security clearance.'),true)
@@ -47,4 +71,19 @@ test('tracking rules bind sender and receiving inbox, reject query syntax',()=>{
  assert.ok(validTracked(rule));assert.ok(trackedBy([rule],'ONE@example.com','sender@example.com'))
  assert.equal(trackedBy([rule],'two@example.com','sender@example.com'),false)
  assert.equal(validTracked({...rule,email:'{from:any}@example.com'}),false)
+})
+test('generic Apply fallback cannot override explicit negative contract evidence', () => {
+ for (const value of [
+  'Not contract',
+  'No contract',
+  'Not a contract',
+  'Without any contract',
+  'Contract not required',
+  'Contract role is not offered',
+ ]) assert.deepEqual(contractTypes(value, 'contract'), [], value)
+
+ // Negating C2H is not the same as negating generic contract work.
+ assert.deepEqual(contractTypes('No contract-to-hire', 'contract'), ['Contract'])
+ // Independent positive evidence remains usable beside a negative contract phrase.
+ assert.deepEqual(contractTypes('No contract, but C2C is accepted', 'contract'), ['C2C'])
 })

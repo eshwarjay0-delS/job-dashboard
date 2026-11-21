@@ -99,3 +99,11 @@ PR #284 restacks the CI/manual-directory follow-up from master `864cb9e`. Previo
 ## 12–14 November 2026 — owner correction and schedule audit
 
 The owner correction on 12 Nov 2026 is authoritative: the contract crawler is manual/on-demand only; do not restore a daily schedule; Robert Half remains manual-only. A 14 Nov source audit of canonical master `926bf3e2b0cc3dc2b51846e1e5e0a1499862df3c` confirmed that `vercel.json` already excludes `/api/crawl/run`. The remaining mismatch was stale route comments and product/research/Plan/REA text, not an active cron. Draft PR #381 adds a regression guard and corrects those comments and records; it does not change `vercel.json` or the deployed schedule. The separate Gmail crawler schedule and admin-only manual trigger are preserved. No crawl, external request or production-row mutation was performed. The proposed classifier changes in PR #376 remain unapproved and are not part of this fix.
+
+## 21 November 2026 — classifier approval boundary and explicit-negation guard
+
+The latest accessible owner correction (14 Nov 2026) says Right To Hire / Contract To Perm → C2H semantics are proposed/unapproved, and explicit negations require negative tests. Current master still had two promotions: contract-to-permanent → C2H in src/lib/contract-jobs.ts, and right-to-hire → Contract to Hire in the Pyramid adapter. The correction branch removes these promotions and adds a shared negative-evidence normalizer before contract/permanent classification.
+
+Synthetic cases cover No C2H, Not contract, Without C2C, 1099 not accepted, No W2 contract, Temporary is not offered, and mixed positive/negative statements. Contract To Perm remains generic Contract only because it contains an explicit contract token; it is not C2H. Right To Hire alone remains unknown. Existing positive W2/C2C/1099 behavior is unchanged and is not newly asserted as owner-approved.
+
+This is source/test work only. No live crawl, external portal request, production-row mutation/reclassification, application submission or production deployment occurred. The contract crawler remains manual/on-demand only, Robert Half manual-only, eTeam pending/excluded.
