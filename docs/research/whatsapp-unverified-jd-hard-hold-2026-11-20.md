@@ -71,3 +71,12 @@ Source commits: `b14815d014299fe33a904afa013e8f8f5eea8faa`; test commit `c7b8e51
 3. After approval and merge, make one authorized production release, verify READY exact SHA and both canonical aliases, then smoke the webhook without outbound sends. Authenticated real-device and WhatsApp delivery remain separate acceptance.
 4. Keep PR #450's R2 ETag-CAS/lease/fencing architecture and uploaded-original-after-timeout behavior unapproved.
 5. Do not deploy or claim the 17 October file was delivered until the exact source, output DOCX, and signed provider receipt are available.
+
+
+## 21 November — exact-head regression correction
+
+The full CI run for PR #493 head `154ef6616dd592df7696bdf48e96cea52b20229b` failed at the inherited `WhatsApp refine` source-contract test in `scripts/tests/resume-guards.test.mjs` (run `44932154691`, job `136930917446`). Lint, type-check, the earlier Kompas/desktop/relevance/resume suites and migration closure all passed in that job; the identity-guard test was the single failure and later steps were skipped.
+
+The test still expected the previous behavior: `sendBaseline(...)` and a caption saying the original resume was sent after identity/contact/date verification failed. The PR #493 route correctly refuses the rewritten file, leaves the version already held by the user unchanged, and only permits an unchanged file through `sendClosest` when the durable recovery record proves the exact same-account Files selection (`files.explicitlySelected`, verified path/account/email and byte equality). That permitted file is labelled exactly **Original resume — NOT TAILORED**. The source-contract test was updated on stacked branch `test/whatsapp-refine-no-baseline-after-identity-mismatch-20261121`; no runtime code changed.
+
+The stacked branch still needs full exact-head CI, WhatsApp recovery, Kompas baseline and Plan/REA checks. It is not merged or deployed. No real WhatsApp/Meta send, R2 write, generated DOCX or historical 17 October replay occurred. The 17 October 17:28 Chicago delivery remains unverified.
