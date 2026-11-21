@@ -1,15 +1,40 @@
 export type ContractType = 'W2' | 'C2C' | '1099' | 'C2H' | 'Temporary' | 'Contract'
+
+/**
+ * Remove only explicit negative employment statements before classifying evidence.
+ * A negated term must not turn into a positive contract/permanent signal.
+ */
+const NEGATED_EMPLOYMENT_TERM = String.raw`(?:contract[ -]to[ -](?:hire|permanent)|temp[ -]to[ -]hire|direct[ -](?:hire|placement)|right[ -]to[ -]hire|corp[ -]to[ -]corp|c2c|c2h|1099|w[ -]?2(?:\s+contract)?|temporary|contract(?:or|ing)?|permanent|full[ -]?time)`
+const NEGATED_PREFIX = new RegExp(String.raw`\b(?:no|not|without)\s+(?:(?:a|an|any)\s+)?${NEGATED_EMPLOYMENT_TERM}(?:\s*(?:,|and|or|\/|&)\s*${NEGATED_EMPLOYMENT_TERM})*`, "gi")
+const NEGATED_SUFFIX = new RegExp(String.raw`\b${NEGATED_EMPLOYMENT_TERM}(?:\s+(?:role|position|work|engagement))?\s+(?:(?:is|are|was|were)\s+)?(?:not|never)\s+(?:required|accepted|offered|available|permitted|allowed|provided|considered)\b`, "gi")
+const NEGATED_REQUIREMENT = new RegExp(String.raw`\b(?:not|never)\s+(?:required|accepted|offered|available|permitted|allowed|provided|considered)\s+(?:for|as|on)\s+${NEGATED_EMPLOYMENT_TERM}\b`, "gi")
+
+export function positiveEmploymentEvidenceText(value: string): string {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[‐‑‒–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(NEGATED_PREFIX, " ")
+    .replace(NEGATED_SUFFIX, " ")
+    .replace(NEGATED_REQUIREMENT, " ")
+}
+
 /** Employment evidence, not guesses from company names or ordinary W2 payroll. */
-export function contractTypes(text:string, employmentType=''):ContractType[]{
- const t=text.toLowerCase(),out:ContractType[]=[]
- if(/\b(?:c2c|corp[ -]to[ -]corp)\b/.test(t)&&!/\b(?:no|not|without)\s+(?:c2c|corp[ -]to[ -]corp)\b/.test(t))out.push('C2C')
- if(/\b1099\b/.test(t)&&!/\b(?:no|not)\s+1099\b/.test(t))out.push('1099')
- if(/\bc2h\b|contract[ -]to[ -]hire|contract[ -]to[ -]permanent/.test(t))out.push('C2H')
- if(/\btemporary\b|\btemp[ -]to[ -]hire\b/.test(t)||/temporary/i.test(employmentType))out.push('Temporary')
- const contract=/\bcontract(?:or|ing)?\b/.test(t)||/contract/i.test(employmentType)||out.length>0
- if(contract&&/\bw[ -]?2\b/.test(t))out.unshift('W2')
- if(contract&&!out.length)out.push('Contract')
- return out
+export function contractTypes(text: string, employmentType = ""): ContractType[] {
+  const t = positiveEmploymentEvidenceText(text)
+  const employment = positiveEmploymentEvidenceText(employmentType)
+  const out: ContractType[] = []
+
+  if (/\b(?:c2c|corp[ -]to[ -]corp)\b/.test(t)) out.push("C2C")
+  if (/\b1099\b/.test(t)) out.push("1099")
+  // Right To Hire and Contract To Perm/Contract To Permanent are not C2H.
+  if (/\bc2h\b|contract[ -]to[ -]hire/.test(t)) out.push("C2H")
+  if (/\btemporary\b|\btemp[ -]to[ -]hire\b/.test(t) || /\btemporary\b/.test(employment)) out.push("Temporary")
+
+  const contract = /\bcontract(?:or|ing)?\b/.test(t) || /\bcontract(?:or|ing)?\b/.test(employment) || out.length > 0
+  if (contract && /\bw[ -]?2\b/.test(t)) out.unshift("W2")
+  if (contract && !out.length) out.push("Contract")
+  return out
 }
 export function applicationUrl(value:string):string|null{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null}catch{return null}}
 
