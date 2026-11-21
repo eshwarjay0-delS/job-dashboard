@@ -1453,7 +1453,7 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   // after that time is already gone is what left the chat on "I'll send a file" with nothing after it.
   const budget = TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began)
   if (budget < 20_000) return sendText(from, "I did not send a file. Choosing the resume used the time I have. Send the job once more and I will start again.")
-  const explicitSelection = !!prefer.hint
+  const explicitSelection = !!prefer.hint?.trim()
   return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name,
     explicitLibrarySelection: explicitSelection }, userId, budget,
     { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path,
@@ -1691,12 +1691,6 @@ function resumeGapReport(result: TailorResult): string {
 async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
   const [a, b] = await Promise.all([docxIdentityText(source), docxIdentityText(file)])
   return sameResumeIdentity(a, b)
-}
-
-// Same switch as src/lib/jd-terms-gate.ts, kept local so the route's test harnesses need no new module mocks.
-function jdTermsGateOn(): boolean {
-  const v = String(process.env.JD_TERMS_ALWAYS_ON_SKILLS ?? "").trim().toLowerCase()
-  return !(v === "0" || v === "false" || v === "off" || v === "no")
 }
 
 function unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
