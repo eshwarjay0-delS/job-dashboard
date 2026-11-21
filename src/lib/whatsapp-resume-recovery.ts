@@ -20,6 +20,8 @@ export type ResumeRecoveryJob = {
   files?: {
     userDir: string; email: string; said: string; depth: number
     rel: string; abs: string; redo?: boolean
+    /** True only when the user named this exact Files/Library resume; absent legacy values fail closed. */
+    explicitlySelected?: boolean
   }
   status: "pending" | "sending" | "delivered" | "uncertain"
   createdAt: number
