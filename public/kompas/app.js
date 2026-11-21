@@ -6120,7 +6120,8 @@ async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
     else {
-      if (fromAuto && options && options.queuedQuestion) noteDetectedQuestion(options.queuedQuestion);
+      const waiting = (options && options.queuedQuestion) || (!fromAuto && $("manualInput") && $("manualInput").value.trim()) || "";
+      if (waiting) noteDetectedQuestion(waiting);
       status("Still working on the last answer — one moment.", "live");
       return;
     }

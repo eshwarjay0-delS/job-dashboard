@@ -76,8 +76,10 @@ const NO_STORE = { "Cache-Control": "no-store" }
 // account data policy or a guardrail has no allowed provider for that model.
 // Llama 3.3 70B has a zero-retention Groq endpoint, which this key can use.
 // A 403 tries the next model. The caller never sees that status.
-const PAID_MODEL = "meta-llama/llama-3.3-70b-instruct"
-const SECOND_MODEL = "openai/gpt-oss-120b"
+// Known-good primary from 01ceb1dc (13 Nov): openai/gpt-oss-120b. A 403 from
+// the account data policy tries the next allowed model, then direct Groq.
+const PAID_MODEL = "openai/gpt-oss-120b"
+const SECOND_MODEL = "meta-llama/llama-3.3-70b-instruct"
 const CHEAP_MODEL = "google/gemini-2.5-flash"
 const ANSWER_MODELS = [PAID_MODEL, SECOND_MODEL, CHEAP_MODEL]
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
@@ -522,7 +524,7 @@ async function cheapGroqAnswer(key: string, system: string, user: string, signal
     body: JSON.stringify({
       model,
       temperature: 0.3,
-      max_tokens: 500,
+      max_tokens: 1600,
       messages: [
         { role: "system", content: system.slice(0, 6000) },
         { role: "user", content: user.slice(0, 6000) },

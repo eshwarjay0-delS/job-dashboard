@@ -88,8 +88,8 @@ test('a 403 on the first models falls through and the caller gets answer text', 
   const body = await response.json()
   assert.equal(response.status, 200)
   assert.deepEqual(third.models.slice(0, 3), [
-    'meta-llama/llama-3.3-70b-instruct',
     'openai/gpt-oss-120b',
+    'meta-llama/llama-3.3-70b-instruct',
     'google/gemini-2.5-flash',
   ])
   assert.match(JSON.stringify(body), /certificate/)
