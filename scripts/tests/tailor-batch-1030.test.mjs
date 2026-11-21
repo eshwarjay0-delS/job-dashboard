@@ -61,6 +61,13 @@ test("item 2: only the coverage shortfall is excused; anything incomplete or uns
     { quality: { ...short().quality, incomplete: true } }, { coverage: undefined },
   ]) assert.equal(on.acceptableWhatsAppResume(short(bad)), false, JSON.stringify(bad))
 })
+
+test("item 2: unsupported JD-only additions cannot use the shortfall-delivery exception", () => {
+  const result = short({ unverified_added_keywords: ["Kafka"] })
+  assert.ok(on.whatsappResumeRejectionReasons(result).includes("unverified_jd_terms"))
+  assert.equal(on.whatsappRewriteUsable(result), false)
+  assert.equal(on.deliveredWithShortfall(result), false)
+})
 test("item 2: 95% and above is unchanged", () => {
   const met = short({ coverage: 100, quality: resumeQuality({ matched: 13, total: 13, missing: [], partial: false }) })
   assert.equal(on.deliveredWithShortfall(met), false)
