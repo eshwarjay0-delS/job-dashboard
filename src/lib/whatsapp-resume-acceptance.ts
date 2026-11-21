@@ -1,3 +1,4 @@
+import path from "path"
 import type { TailorResult } from "./tailor"
 
 /** Return safe diagnostic codes only. Never log resume text, JD or sender identity.
@@ -137,10 +138,11 @@ export function atsExportUnreadable(ats: AtsLike | null | undefined): boolean {
 }
 
 /** A finished rewrite WhatsApp can send. A file whose writers did not return,
- * that did not change, or whose export has no resume text or contact is not usable:
- * the caller sends the already-chosen resume instead. A role under the 98%
- * evidence target, a missing ATS attachment, or a date/name parse miss on a
- * readable file is a named gap on that finished file, not a missing file.
+ * that did not change, or whose export has no resume text or contact is not usable.
+ * The caller may send an unchanged fallback only after proving a current explicit
+ * same-account Files/Library selection; otherwise it must send a text hold.
+ * A role under the 98% evidence target, a missing ATS attachment, or a date/name
+ * parse miss on a readable file is a named gap on that finished file, not a missing file.
  * Identity, name, dates and contact details are checked on the file bytes. */
 export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false
@@ -172,6 +174,37 @@ export function chosenResumeMatchesProfile(text: string, email?: string): boolea
   if (!want) return false
   const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
   return found.length === 1 && found[0] === want
+}
+
+/** Validate the server-recorded Files/Library selection before it can be sent unchanged.
+ * Repeated copies of the same profile email are fine; a missing or mixed identity is not.
+ * This is deliberately separate from choosing a resume: automatic ranking is not consent
+ * to send an unchanged source file. */
+export function explicitLibraryFallbackAllowed(input: {
+  explicitlySelected?: boolean
+  userDir?: string
+  expectedUserDir?: string
+  abs?: string
+  rel?: string
+  email?: string
+  documentText?: string
+}): boolean {
+  if (input.explicitlySelected !== true) return false
+  const expectedUserDir = String(input.expectedUserDir || "")
+  const userDir = String(input.userDir || "")
+  const abs = String(input.abs || "")
+  const rel = String(input.rel || "").replace(/\\/g, "/")
+  const email = String(input.email || "").trim().toLowerCase()
+  if (!expectedUserDir || !userDir || !abs || !rel || !email) return false
+  const root = path.resolve(expectedUserDir)
+  if (path.resolve(userDir) !== root) return false
+  const absolute = path.resolve(abs)
+  const relative = path.relative(root, absolute)
+  if (!relative || relative === "." || relative.startsWith("..") || path.isAbsolute(relative)) return false
+  if (path.extname(absolute).toLowerCase() !== ".docx") return false
+  const normalized = relative.split(path.sep).join("/")
+  if (normalized !== rel || normalized.split("/")[0]?.toLowerCase() !== email) return false
+  return chosenResumeMatchesProfile(String(input.documentText || ""), email)
 }
 
 /** Plain words for rejection codes, for the message that tells the user why a
