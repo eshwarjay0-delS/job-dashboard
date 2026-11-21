@@ -31,7 +31,7 @@ const HOUSTON_PATH = `${TEST_USER_ROOT}/candidate1@example.test/GRC/easm.docx`
 const SAINT_LOUIS_PATH = `${TEST_USER_ROOT}/candidate2@example.test/GRC/grc.docx`
 const REWRITTEN = HOUSTON + '\nRewrote supplier reviews.'
 
-function harness(runTailor, readPathOverride) {
+function harness(runTailor, readPathOverride, hasKeys = true) {
   const docs = []
   const said = []
   const entries = new Map()
@@ -52,7 +52,7 @@ function harness(runTailor, readPathOverride) {
       writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true,
     },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: '/data/user-resumes' },
-    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
+    '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => hasKeys, resolveKeys: () => ({}), tailorKeys: k => k },
     '@/lib/tailor': { runTailor },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'EASM Cybersecurity Engineer', company: 'Acme', location: '' }) },
     '@/lib/whatsapp': {
@@ -311,4 +311,28 @@ test('fallback rejects a mismatched Library root and a byte mismatch', async () 
   assert.equal(byteMismatch.docs.length, 0)
   assert.equal(reads, 2, 'the source and selected Library bytes are read independently')
   assert.match(byteMismatch.said.join('\n'), /selected Files resume could not be verified/)
+})
+
+
+test('provider unavailability sends only an explicitly selected same-account Files resume', async () => {
+  const { generate, docs } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
+  await generate('15550101', {
+    jdId: 'provider-offline-selected', jd: 'EASM role',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /^Original resume — NOT TAILORED/)
+  assert.match(docs[0].caption, /No AI provider is configured/)
+})
+
+test('provider unavailability without explicit selection remains text-only', async () => {
+  const { generate, docs, said } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
+  await generate('15550101', {
+    jdId: 'provider-offline-unselected', jd: 'EASM role',
+    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH, false))
+  assert.equal(docs.length, 0)
+  assert.match(said.at(-1), /Tailoring is unavailable/)
+  assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
 })
