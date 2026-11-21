@@ -27,7 +27,6 @@ export const WHATSAPP_JOB_POST_FLOOR = 70
 const WHATSAPP_SHORTFALL_REASONS = new Set([
   "jd_coverage_below_floor",
   "supported_coverage_below_floor",
-  "unverified_jd_terms",
   "quality_not_deliverable",
   "role_evidence_gaps",
 ])
@@ -153,23 +152,18 @@ export function whatsappRewriteUsable(result: TailorResult): boolean {
     WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")
 }
 
-/** The usable rewrite is under a coverage floor, or it added job-post terms.
- * The reply names that shortfall. An incomplete draft is not a shortfall delivery.
- * A clean 70–94.9% pass has no rejection reasons, so this stays false for it. */
+/** The usable rewrite is under a coverage floor. Unsupported JD-only additions are a hard hold, never a shortfall delivery. */
 export function deliveredWithShortfall(result: TailorResult): boolean {
   if (!whatsappRewriteUsable(result)) return false
   const reasons = whatsappResumeRejectionReasons(result)
   return reasons.includes("jd_coverage_below_floor")
     || reasons.includes("supported_coverage_below_floor")
-    || reasons.includes("unverified_jd_terms")
 }
 
-/** The already-chosen file may go out only for the profile this run selected.
- * No selected email means the person uploaded that file. Two emails in one file
- * are a mixed profile and are not sent. */
+/** A Files fallback must identify exactly one same-account profile. Missing or blank email fails closed. */
 export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
-  if (!email) return true
-  const want = email.toLowerCase()
+  const want = String(email || "").trim().toLowerCase()
+  if (!want) return false
   const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
   return found.length === 1 && found[0] === want
 }
