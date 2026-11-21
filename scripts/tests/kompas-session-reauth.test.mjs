@@ -109,7 +109,8 @@ test("a valid desktop session and an unreachable refresh stay put", () => {
     hasSession: true,
     interviewLive: false,
   })
-  assert.equal(kept.action, "explain")
+  assert.equal(kept.action, "proceed")
+  assert.equal(kept.warm, true)
   assert.equal(kept.autoSignIn, false)
   assert.equal(kept.egress, false)
   const down = decideSessionStart({

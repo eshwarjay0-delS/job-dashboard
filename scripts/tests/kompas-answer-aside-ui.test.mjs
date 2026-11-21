@@ -6,6 +6,7 @@ import { JSDOM } from "jsdom"
 
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
 const css = readFileSync(new URL("../../public/kompas/answer-aside.css", import.meta.url), "utf8")
+const bridge = readFileSync(new URL("../../public/kompas/bridge-lines.js", import.meta.url), "utf8")
 const js = readFileSync(new URL("../../public/kompas/answer-aside.js", import.meta.url), "utf8")
 
 function page(width, open) {
@@ -25,6 +26,7 @@ function page(width, open) {
   window.innerWidth = width
   window.localStorage.clear()
   if (open) window.localStorage.setItem("kompas-answer-aside-open", "1")
+  window.eval(bridge)
   window.eval(js)
   return { window, document: window.document }
 }
@@ -97,19 +99,16 @@ test("section 2 toggles by hand and follows a new transcript line without a fetc
   document.getElementById("question").textContent = aside.question
   window.KompasAnswerAside.accept(aside)
   const list = document.getElementById("asideModeList")
-  assert.match(list.textContent, /Why do you think/)
-  document.getElementById("asideModeBoosters").click()
-  assert.match(list.textContent, /Yeah, that's true/)
-  assert.doesNotMatch(list.textContent, /Why do you think/)
-  document.getElementById("asideModeAuto").click()
+  assert.match(list.textContent, /catalog|design/i)
+  assert.doesNotMatch(list.textContent, /Why do you think|resume|not on|won't lie|can't claim/i)
   document.getElementById("drawerBody").textContent = "Them: So the owners are spread across the teams and the handoff is where it stalls."
   await new Promise((r) => setTimeout(r, 0))
   const afterStatement = document.getElementById("asideModeList")
-  assert.match(afterStatement.textContent, /Yeah, that's true/)
+  assert.match(afterStatement.textContent, /handoff|owners|teams/i)
   document.getElementById("capText").textContent = "Have you worked with the catalog before?"
   await new Promise((r) => setTimeout(r, 0))
   const afterAsk = document.getElementById("asideModeList")
-  assert.match(afterAsk.textContent, /Why do you think/)
+  assert.match(afterAsk.textContent, /catalog/i)
   let fetched = 0
   window.fetch = () => { fetched++; return Promise.resolve({ clone() { return this }, headers: { get: () => "" }, json: async () => ({}) }) }
   document.getElementById("drawerBody").textContent = "Them: Let me explain the handoff again."

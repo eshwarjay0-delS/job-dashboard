@@ -170,7 +170,38 @@
     render(history[view]);
   }
 
+  function currentTurns() {
+    var turns = [];
+    String(transcriptText() || "").split("\n").forEach(function (line) {
+      var raw = line.trim();
+      if (!raw) return;
+      var who = /^You:/i.test(raw) ? "You" : "Them";
+      var text = raw.replace(/^(?:Them|You):\s*/i, "").trim();
+      if (text) turns.push({ who: who, text: text });
+    });
+    var q = questionText();
+    if (q && !/waiting for the interview/i.test(q) && !turns.some(function (t) { return t.text === q; })) turns.push({ who: "Them", text: q });
+    return turns;
+  }
+
+  function paintBridges() {
+    var panel = document.getElementById("answerAside");
+    if (!panel || !globalThis.KompasBridgeLines) return;
+    var lines = KompasBridgeLines.bridgeLines({ turns: currentTurns(), question: questionText() });
+    panel.textContent = "";
+    if (!lines.length) return;
+    setOpen(true);
+    panel.appendChild(el("h3", "", "Say this"));
+    var list = el("ul", "aside-questions");
+    list.id = "asideModeList";
+    lines.forEach(function (line) { addLi(list, line, ""); });
+    panel.appendChild(list);
+  }
+
   function render(aside) {
+    paintBridges();
+    return;
+    // The old empty state said "No resume is stored on this device." The bridge never says that.
     var panel = document.getElementById("answerAside");
     if (!panel) return;
     current = aside;
@@ -383,7 +414,8 @@
     var step = null;
     try { step = perceive(event.who, event.text); }
     catch (err) { if (brain.lastShown) paintSay(brain.lastShown); return; }
-    if (step && step.shown) { brain.lastShown = step.shown; paintSay(step.shown); }
+    if (step && step.shown) brain.lastShown = step.shown;
+    paintBridges();
     publish("brain.state", { question: brain.prewarm || event.text, topics: brain.topics.slice(), claims: brain.claims.length });
     devTimeline();
     if (!current || manual) return;
@@ -480,7 +512,6 @@
     aside.epoch = window.__kompasAskEpoch;
     if (aside.blocked) { acceptFresh(aside); return; }
     if (!aside.partial && !aside.breakdown.claim && !aside.question) return;
-    if (!pageResume() && aside.question) aside.sayNow = aside.sayNow || "I don't have a resume on this device, so I won't invent a story. I can answer from the job description.";
     acceptFresh(aside);
   }
   function acceptFresh(aside) {
