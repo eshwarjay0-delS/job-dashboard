@@ -1695,8 +1695,8 @@ async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
   return sameResumeIdentity(a, b)
 }
 
-// Same switch as src/lib/jd-terms-gate.ts, kept local so the route's test harnesses need no new module mocks.
-remove terms gatefunction unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
+// Describe JD terms that could not be placed without adding unsupported claims.
+function unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
   const list = (terms || []).filter(Boolean)
   if (!list.length || !reason) return ""
   const why = reason === "skills_locked" ? "you asked me not to edit your skills" : "your resume has no skills section"
