@@ -5681,7 +5681,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
         return;
       }
       if (await recoverLiveAuth()) { recoverAnswer("", 800); return; }
-      recoverAnswer("ABORT", 400); return;
+      recoverAnswer("AUTH"); waitForAuthSilently({ question, card, opts: { ...opts, derived: derivedQ || opts.derived, derivedBy } }); return;
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
