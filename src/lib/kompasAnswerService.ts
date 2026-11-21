@@ -579,11 +579,11 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           })
         } catch { return null }
       }
-      let gate = newGate(true)
+      const gate = newGate(true)
       const opener = gate?.openerText() || ""
       // Card title from the same call (a leading TITLE: line, never spoken) and an early partial card once the
       // first on-screen sentence is complete, so the opening line renders before the bullets finish.
-      let titler = createTitleSplitter()
+      const titler = createTitleSplitter()
       let titleSent = ""
       let onScreen = ""
       let partialSent = false
