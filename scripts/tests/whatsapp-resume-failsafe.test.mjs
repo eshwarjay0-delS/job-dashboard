@@ -147,7 +147,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.match(docs[0].caption, /EASM Cybersecurity Engineer/)
   assert.match(docs[0].caption, /in GRC and IT Risk/)
   assert.match(docs[0].caption, /did not finish cleanly/)
-  assert.match(docs[0].caption, /was not rewritten/)
+  assert.match(docs[0].caption, /No changes were made/)
   assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
   assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
 
