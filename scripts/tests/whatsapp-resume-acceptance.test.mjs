@@ -251,7 +251,6 @@ rejects("unverified JD claims are rejected independently of score", {
 test("unverified JD-only additions are a hard hold, never a shortfall delivery", () => {
   const draft = make({
     unverified_added_keywords: ["unsupported-platform"],
-    quality_blockers: ["unverified_jd_terms"],
     coverage: 70,
     supported_coverage: 100,
   })
