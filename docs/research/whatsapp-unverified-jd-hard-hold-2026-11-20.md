@@ -32,7 +32,7 @@ Branch: `fix/whatsapp-unverified-jd-hard-hold-20261120`.
 
 Code commit: `6ce44b4713553af64fc0efdf657c823f9cd8837c`.
 
-Test commits: `597979a80aec648e16a14dc4782c15b31ee4af9c`, `b941baa31536669679194c30219488aafde815fc`.
+Test commits: `597979a80aec648e16a14dc4782c15b31ee4af9c`, `b941baa31536669679194c30219488aafde815fc`, and final isolated assertion fix `ac37a6147f6c066487a2356f024d127252337d9c`.
 
 The change is deliberately split from PR #450. It does not include R2 ETag-CAS/conditional writes, worker leases/fencing, recovery queue changes, provider callback changes, or uploaded-original-after-timeout behavior. Those remain unapproved and are not copied into this branch.
 
