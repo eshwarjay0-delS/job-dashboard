@@ -261,7 +261,7 @@ test('the Houston and Saint Louis profiles are not mixed when the failsafe sends
 
 
 test('unsupported JD-only additions hard-hold the draft and label only the explicitly selected original', async () => {
-  const { generate, docs } = harness(async () => unsupported)
+  const { generate, docs, filesFor } = harness(async () => unsupported)
   await generate('15550101', {
     jdId: 'easm-unsupported', jd: 'EASM cybersecurity engineer with supplierninja',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
@@ -274,7 +274,7 @@ test('unsupported JD-only additions hard-hold the draft and label only the expli
 })
 
 test('an automatic library match without an explicit file selection is text-only on failure', async () => {
-  const { generate, docs, said } = harness(async () => { throw new Error('provider down') })
+  const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
   await generate('15550101', {
     jdId: 'automatic-only', jd: 'EASM role', resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH, false))
@@ -296,7 +296,7 @@ test('fallback rejects a mismatched Library root and a byte mismatch', async () 
   const rootMismatch = harness(async () => { throw new Error('provider down') })
   await rootMismatch.generate('15550101', {
     jdId: 'wrong-root', jd: 'EASM role', resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH, true, { userDir: '/data/user-resumes/another-account' }))
+  }, TEST_USER_ID, 60_000, rootMismatch.filesFor(HOUSTON_PATH, true, { userDir: '/data/user-resumes/another-account' }))
   assert.equal(rootMismatch.docs.length, 0)
   assert.match(rootMismatch.said.join('\n'), /selected Files resume could not be verified/)
 
@@ -308,7 +308,7 @@ test('fallback rejects a mismatched Library root and a byte mismatch', async () 
   })
   await byteMismatch.generate('15550101', {
     jdId: 'wrong-bytes', jd: 'EASM role', resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+  }, TEST_USER_ID, 60_000, byteMismatch.filesFor(HOUSTON_PATH))
   assert.equal(byteMismatch.docs.length, 0)
   assert.equal(reads, 2, 'the source and selected Library bytes are read independently')
   assert.match(byteMismatch.said.join('\n'), /selected Files resume could not be verified/)
@@ -327,7 +327,7 @@ test('unsupported JD-only terms are explained before the ordinary coverage hold'
   assert.match(qualityStop(unsupported), /not in your resume/)
 })
 test('explicit fallback requires the durable recovery record, not only in-memory selection', async () => {
-  const { generate, docs, said } = harness(async () => { throw new Error('provider down') }, undefined, true, async () => null)
+  const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') }, undefined, true, async () => null)
   await generate('15550101', {
     jdId: 'no-durable-fallback', jd: 'EASM role',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
@@ -336,7 +336,7 @@ test('explicit fallback requires the durable recovery record, not only in-memory
   assert.match(said.at(-1), /exact Files resume you selected could not be verified/)
 })
 test('provider unavailability sends only an explicitly selected same-account Files resume', async () => {
-  const { generate, docs } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
+  const { generate, docs, filesFor } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
   await generate('15550101', {
     jdId: 'provider-offline-selected', jd: 'EASM role',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
@@ -348,7 +348,7 @@ test('provider unavailability sends only an explicitly selected same-account Fil
 })
 
 test('provider unavailability without explicit selection remains text-only', async () => {
-  const { generate, docs, said } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
+  const { generate, docs, said, filesFor } = harness(async () => { throw new Error('tailor must not run without a key') }, undefined, false)
   await generate('15550101', {
     jdId: 'provider-offline-unselected', jd: 'EASM role',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
