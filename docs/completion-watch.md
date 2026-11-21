@@ -762,3 +762,11 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 21 November 2026 — WhatsApp hard-hold test-contract correction
+
+- Parent PR [#486](https://github.com/eshwarjay0-delS/job-dashboard/pull/486) is still DRAFT. Its initial exact-head full CI [44841376214](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44841376214) failed four assertions: no-selection fallback expected a document; two fixtures with unverified JD-only `supplierninja` expected rewritten DOCX; and provider-failure retry expected an uploaded original to be sent without a selected library resume.
+- Corrections are now on the parent branch head `1047e638b15c54eda7aeac1bd6313622c140cb04`: commits `566f83bacba08289e684689d24cc973afbab8201`, `15cf277b2030b7d6bb0ab141512363fb9b65aab1`, `e7fd10dec49b8ceeeac6a4a9697d4d122ed6893e`, and research note `1047e638b15c54eda7aeac1bd6313622c140cb04`. Tests now require no file without explicit selection, and only the selected original when the rewrite is held. No runtime source changed.
+- Exact-head full CI [44906385583](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44906385583) and WhatsApp recovery [44906385557](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44906385557) are IN PROGRESS; Kompas baseline [44906385530](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44906385530) and Plan/REA [44906385612](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/44906385612) are SUCCESS. No merge, deployment or real send.
+- Remaining: route-level durable explicit selection proof and exact label `Original resume — NOT TAILORED`; installed Next.js 16.3.8 route guide and runnable checkout are missing. The 17 Oct 17:28 Chicago output DOCX/R2 object/request correlation/Meta message ID/signed receipt are still unavailable. Do not replay. Safe Merge Gate owns review; #486 is an external-send behavior change and must not auto-promote.
