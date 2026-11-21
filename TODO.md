@@ -1,3 +1,9 @@
+## 2026-11-21 — OpenRouter 403 tries the next model (no new window; server only)
+
+A `{question}` POST returned 403 because openai/gpt-oss-120b was blocked by the OpenRouter data policy or guardrail. The answer now starts on meta-llama/llama-3.3-70b-instruct, then gpt-oss-120b, then gemini-2.5-flash, then Groq. The HTTP status is never 403. No client change, so the installed exe does not need a new build. The page it loads gets this from the server.
+
+**Checked by scripts/tests/kompas-answer-model-fallback.test.mjs. Five production questions come after the ship.**
+
 ## 2026-11-21 — Skip-login answers a desktop request that has no cookie (visible after ship)
 
 AI Answer on the new desktop exe asked to sign in. The answer, bridge, and typed-chat routes now use the Houston owner when skip-login is on and the request has no cookie and no token. The answer card no longer says "Sign in again." Admin stays behind a real session. The installed exe needs the one desktop build from the master push of this ship before its shell matches; the page it loads gets the card copy with this release.

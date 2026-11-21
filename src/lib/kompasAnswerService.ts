@@ -72,8 +72,14 @@ import { screenImage } from "@/lib/kompasScreen"
 // candidate can still say.
 
 const NO_STORE = { "Cache-Control": "no-store" }
-const PAID_MODEL = "openai/gpt-oss-120b"
+// gpt-oss-120b is the old primary. OpenRouter returns 403 for it when the
+// account data policy or a guardrail has no allowed provider for that model.
+// Llama 3.3 70B has a zero-retention Groq endpoint, which this key can use.
+// A 403 tries the next model. The caller never sees that status.
+const PAID_MODEL = "meta-llama/llama-3.3-70b-instruct"
+const SECOND_MODEL = "openai/gpt-oss-120b"
 const CHEAP_MODEL = "google/gemini-2.5-flash"
+const ANSWER_MODELS = [PAID_MODEL, SECOND_MODEL, CHEAP_MODEL]
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
@@ -383,10 +389,10 @@ type AnswerJob = {
 // this list is the default.
 const LIVE_MODEL_IDS: Record<string, string> = { "gpt-5.6-luna": "openai/gpt-5.6-luna" }
 function jobLanes(job: AnswerJob): string[] {
-  if (job.fallbackModel) return [CHEAP_MODEL]
-  const chosen = LIVE_MODEL_IDS[job.liveModel || ""]
-  const primary = chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
-  return primary.includes(CHEAP_MODEL) ? primary : [...primary, CHEAP_MODEL]
+  const order = job.fallbackModel ? [CHEAP_MODEL, PAID_MODEL, SECOND_MODEL] : ANSWER_MODELS
+  const chosen = !job.fallbackModel && LIVE_MODEL_IDS[job.liveModel || ""]
+  const lanes = chosen ? [chosen, ...order] : [...order]
+  return [...new Set(lanes)].slice(0, 3)
 }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
@@ -782,7 +788,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let raw = ""
   let lastErr = ""
   let servedModel = ""
-  const servedProvider = "openrouter"
+  let servedProvider = "openrouter"
   let jsonTitle = ""
   try {
     if (job.orKey) {
@@ -810,6 +816,22 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       if (!raw.trim() && isRateLimit(lastErr)) {
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
+      }
+      if (!raw.trim() && !signal.aborted) {
+        const groqKey = resolveKeys({}).groq
+        if (groqKey) {
+          try {
+            const groqText = await cheapGroqAnswer(groqKey, job.system, job.userText, signal)
+            if (groqText.trim()) {
+              raw = groqText.trim()
+              lastErr = ""
+              servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+              servedProvider = "groq"
+            }
+          } catch (e) {
+            lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+          }
+        }
       }
     } else { lastErr = "openrouter 503 missing paid key" }
   } finally { cleanup() }
@@ -1477,11 +1499,11 @@ ${INTERVIEW}`
 
 function answerFailure(message: string) {
   const status = statusOf(message) || 502
-  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : status === 403 ? "OPENROUTER_FORBIDDEN" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
+  const blocked = status === 403
+  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : blocked ? "OPENROUTER_UNAVAILABLE" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
   const error = status === 401 ? "The paid OpenRouter credential was rejected."
     : status === 402 ? "The OpenRouter account or key has insufficient credits."
-    : status === 403 ? "OpenRouter blocked the request. Check key permissions and account policy."
     : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
     : "The paid provider could not complete this answer. Your question is preserved."
-  return { status, code, error, quiet: true }
+  return { status: blocked ? 503 : status, code, error, quiet: true }
 }
