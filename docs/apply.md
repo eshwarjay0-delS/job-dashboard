@@ -199,3 +199,12 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+## Work-type evidence correction — 21 November 2026
+
+The 14 November owner correction remains authoritative: Right To Hire and Contract To Perm/Contract To Permanent must not be promoted to C2H. The classifier now strips explicit negative employment statements before reading positive evidence, including no, not, without, and common not-required/accepted/offered forms. A negated contract or permanent phrase must not become a positive work-type label.
+
+- Contract To Perm may still be generic Contract because the source literally contains the word contract; it is not C2H.
+- Right To Hire alone remains unknown, not C2H.
+- Existing W2/C2C/1099 positive behavior is not expanded by this patch; the historical approval status remains unchanged.
+- The contract crawler remains manual/on-demand only. No daily cron, live crawl, portal request, database reclassification, or application submission is authorized by this change.
