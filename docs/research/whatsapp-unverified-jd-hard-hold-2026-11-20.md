@@ -4,7 +4,7 @@
 
 This is a narrow source/test continuation of the owner's approved WhatsApp resume reliability work. The latest accessible owner correction on 19 November 2026 at 23:22:42Z requires a fallback to be restricted to an explicitly selected same-account Files/Library resume, labelled exactly **Original resume — NOT TAILORED**. Unsupported JD-only qualifications or experience must never be represented as candidate experience. A fresh upload without explicit library selection must not be silently substituted or sent unchanged.
 
-The historical 27 October closest-matched-library failsafe remains preserved as history; the later 19 November correction narrows its implementation. This slice does not implement the explicit-selection marker or webhook route wiring.
+The historical 27 October closest-matched-library failsafe remains preserved as history; the later 19 November correction narrows its implementation. The review branch now wires that explicit-selection provenance into the webhook and durable recovery input, rather than allowing automatic or uploaded resumes to be substituted.
 
 ## Source finding on master
 
@@ -57,10 +57,17 @@ The 17 October 2026 17:28 Chicago screenshot establishes a hold at that time, no
 
 Still missing: exact output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound message ID, and signed delivered/read receipt. No historical replay or resend was attempted. This negative Library search is scoped to the accessible Library and does not prove that another authorized archive cannot contain the artifact.
 
+## Current source follow-through — 21 November 2026
+
+The existing restack `fix/whatsapp-explicit-library-fallback-20261121` now contains the webhook guard and durable `files.explicitlySelected` provenance. The route sets the marker only when a resume hint was actually matched as “because you asked for it”; automatic picks and uploaded resumes do not qualify. The guard requires a verified account-owned resume directory, relative path containment, the selected path matching the run's resume path, exact bytes between the selected Library file and the run source, and a unique profile email. The unchanged file caption is exactly **Original resume — NOT TAILORED**. A follow-up commit additionally requires the durable recovery record to be pending and to match sender, verified user, JD, resume path, selected-file path, relative path, account directory, email, and explicit marker before sending. Missing/stale recovery provenance fails closed. The unsupported-JD hard-hold explanation now takes precedence over the ordinary coverage message even when the detail list is empty.
+
+
+Source commits: `b14815d014299fe33a904afa013e8f8f5eea8faa`; test commit `c7b8e51d690707a61d6f0000bb764cc5693a25cf`. Existing synthetic cases cover selected fallback, automatic selection, fresh uploads, account/root mismatch, byte mismatch, provider unavailable, unsupported terms, and the new durable-record absence case. The exact branch head is `c7b8e51d690707a61d6f0000bb764cc5693a25cf`; no exact-head Actions run has been triggered yet. This is source implementation, not a merge or release. No local build/test was run because the scheduled runtime lacks the checkout and dependencies.
+
 ## Next steps
 
-1. Require full CI, WhatsApp recovery, Kompas baseline, and Plan/REA schema success on the exact final PR head.
-2. Let MFit Safe Merge Gate sequence the PR with shared Plan/REA work in #479 and #485; preserve all other developers' entries and rebase if needed.
-3. Keep explicit Files/Library selection provenance and webhook wiring as a separate pending route task. AGENTS.md requires the installed Next.js 16.3.8 route-handler guide before that route change; this runtime has neither the installed package tree nor a runnable local checkout.
+1. Open a draft PR for this clean restack and run full CI, WhatsApp recovery, Kompas baseline, and Plan/REA schema on its exact final head.
+2. Let MFit Safe Merge Gate sequence it with #479/#485 and the documentation-only #491; preserve concurrent entries and do not bypass approval.
+3. After approval and merge, make one authorized production release, verify READY exact SHA and both canonical aliases, then smoke the webhook without outbound sends. Authenticated real-device and WhatsApp delivery remain separate acceptance.
 4. Keep PR #450's R2 ETag-CAS/lease/fencing architecture and uploaded-original-after-timeout behavior unapproved.
-5. Do not deploy or claim the 17 October file was delivered until the relevant source, exact output and signed provider receipt are available.
+5. Do not deploy or claim the 17 October file was delivered until the exact source, output DOCX, and signed provider receipt are available.
