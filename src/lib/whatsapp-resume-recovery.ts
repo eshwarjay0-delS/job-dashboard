@@ -20,6 +20,8 @@ export type ResumeRecoveryJob = {
   files?: {
     userDir: string; email: string; said: string; depth: number
     rel: string; abs: string; redo?: boolean
+    /** True only when the user named this same-account Files/Library resume. */
+    explicitSelection?: boolean
   }
   status: "pending" | "sending" | "delivered" | "uncertain"
   createdAt: number
