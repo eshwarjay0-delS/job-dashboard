@@ -20,6 +20,22 @@ export function positiveEmploymentEvidenceText(value: string): string {
 }
 
 /** Employment evidence, not guesses from company names or ordinary W2 payroll. */
+/**
+ * A generic contract-board fallback must not override explicit source text
+ * saying the role is not a contract. Compound terms such as Contract-to-Hire
+ * are deliberately excluded: negating C2H does not negate generic contract work.
+ */
+function explicitlyNegatesGenericContract(value: string): boolean {
+  const raw = String(value || "")
+    .toLowerCase()
+    .replace(/[‐‑‒–—]/g, "-")
+    .replace(/\s+/g, " ")
+  const term = String.raw`contract(?![ -]to[ -](?:hire|permanent))(?:or|ing)?`
+  return new RegExp(String.raw`\b(?:no|not|without)\s+(?:(?:a|an|any)\s+)?${term}\b`).test(raw)
+    || new RegExp(String.raw`\b${term}(?:\s+(?:role|position|work|engagement))?\s+(?:(?:is|are|was|were)\s+)?(?:not|never)\s+(?:required|accepted|offered|available|permitted|allowed|provided|considered)\b`).test(raw)
+    || new RegExp(String.raw`\b(?:not|never)\s+(?:required|accepted|offered|available|permitted|allowed|provided|considered)\s+(?:for|as|on)\s+${term}\b`).test(raw)
+}
+
 export function contractTypes(text: string, employmentType = ""): ContractType[] {
   const t = positiveEmploymentEvidenceText(text)
   const employment = positiveEmploymentEvidenceText(employmentType)
@@ -31,7 +47,8 @@ export function contractTypes(text: string, employmentType = ""): ContractType[]
   if (/\bc2h\b|contract[ -]to[ -]hire/.test(t)) out.push("C2H")
   if (/\btemporary\b|\btemp[ -]to[ -]hire\b/.test(t) || /\btemporary\b/.test(employment)) out.push("Temporary")
 
-  const contract = /\bcontract(?:or|ing)?\b/.test(t) || /\bcontract(?:or|ing)?\b/.test(employment) || out.length > 0
+  const genericFallback = /\bcontract(?:or|ing)?\b/.test(employment) && !explicitlyNegatesGenericContract(text)
+  const contract = /\bcontract(?:or|ing)?\b/.test(t) || genericFallback || out.length > 0
   if (contract && /\bw[ -]?2\b/.test(t)) out.unshift("W2")
   if (contract && !out.length) out.push("Contract")
   return out
