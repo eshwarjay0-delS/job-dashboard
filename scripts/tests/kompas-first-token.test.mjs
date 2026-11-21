@@ -18,7 +18,7 @@ test("no first token within 8 seconds retries once, then shows a status", () => 
   assert.equal(ctx.firstTokenDecision(8000, true, false), "keep")
   assert.equal(ctx.firstTokenDecision(9000, false, true), "status")
   assert.match(app, /No words yet\. Retrying once\./)
-  assert.match(app, /Still no words\. Press AI Answer to try again\./)
+  assert.match(app, /recoverAnswer\("EMPTY", 400\)/)
   assert.match(app, /firstTokenRetry: true/)
 })
 

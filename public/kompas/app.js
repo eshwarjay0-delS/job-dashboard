@@ -1388,7 +1388,10 @@ function renderCard() {
       if (/^(?:Claim|Context|Action|Result|Close|What I did)$/.test(label)) return;
       li.className = "minihead"; inline(li, t); ul.append(li); return;
     }
-    if (kind === "pauseline" && /^(?:…|\.{3})$/.test(String(t || "").trim())) return;
+    if (kind === "pauseline" && /^(?:…|\.{3})$/.test(String(t || "").trim())) {
+      if (c.streaming) { li.className = "pauseline"; li.textContent = "Answering…"; ul.append(li); }
+      return;
+    }
     if (kind === "passage") li.className = "passage";
     else if (kind === "pauseline") li.className = "pauseline";
     inline(li, t);
@@ -4530,6 +4533,10 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   text = stitched.part;
   const heardAt = Date.now();
   transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text), source: who === "You" ? "mic" : "computer" });
+  if (who === "Them" && cards[idx]) {
+    const nextLabel = labelFromHeard(cards[idx].question, text);
+    if (nextLabel && nextLabel !== cards[idx].question) { cards[idx].question = nextLabel; cards[idx].askedAt = cards[idx].askedAt || Date.now(); if (!cards[idx].streaming) renderCard(); }
+  }
   try { if (window.KompasAnswerAside && typeof window.KompasAnswerAside.hear === "function") window.KompasAnswerAside.hear(who, text, who === "You" ? "mic" : "computer"); } catch (e) {}
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
@@ -5196,6 +5203,7 @@ function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
     ...(inline ? { derive: true } : {}),
     ...(opts && opts.angle ? { angle: String(opts.angle).slice(0, 240) } : {}),
     ...(opts && opts.screenImage ? { screenImage: opts.screenImage } : {}),
+    ...(opts && opts.fallbackModel ? { fallbackModel: true } : {}),
     ...fields,
     memory: typeof sessionMemoryPayload === "function" ? sessionMemoryPayload() : undefined,
     ...(rest || {}),
@@ -5328,6 +5336,27 @@ function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
   if (Number(elapsedMs) < 8000) return "wait";
   return alreadyRetried ? "status" : "retry";
 }
+function answerFinishPlan(state) {
+  const code = String(state && state.code || "");
+  const hasText = !!(state && state.hasText);
+  const pass = Number(state && state.pass) || 0;
+  const aborted = !!(state && state.aborted) || code === "ABORT" || code === "STALL" || /empty/i.test(code);
+  if (/AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code)) {
+    return { action: "stop", fallback: false, status: "The answer did not finish.", text: "Sign in again, then press AI Answer." };
+  }
+  if (hasText && !aborted) return { action: "keep", fallback: false, status: "Answered.", text: "" };
+  if (pass < 1) return { action: "retry", fallback: false, waitMs: 400, status: "Retrying…", text: "" };
+  if (pass < 2) return { action: "retry", fallback: true, waitMs: 400, status: "Trying a faster model…", text: "" };
+  return { action: "stop", fallback: false, status: "The answer did not finish.", text: "I didn't get a full answer through. Press AI Answer and I'll take it again." };
+}
+function labelFromHeard(cardQuestion, heard) {
+  const q = String(cardQuestion || "").replace(/\s+/g, " ").trim();
+  const line = String(heard || "").replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "").replace(/\s+/g, " ").trim();
+  const stuck = /^(?:Your introduction|Intro|Preparing…|Ready|No question yet|Deriving…)?$/i.test(q);
+  if (!stuck) return q;
+  if (line.split(/\s+/).filter(Boolean).length < 6) return q;
+  return line;
+}
 async function generateAnswerRequest(question, card, opts = {}) {
   question = cleanHeardQuestion(String(question || "").trim()); if (!question) return;
   noteLiveQuestion(question);
@@ -5451,18 +5480,27 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!partial && prevReal) card.answer = prevAnswer;   // a failed (re)generation never takes the last good answer with it (book rule, 23 Oct)
     else if (!partial && keepOld) card.answer = prevAnswer;
     card.meta = partial || keepOld ? (card.meta || prevMeta || "") : "";
-    const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
-    const tries = (opts.retries || 0) + 1;
-    const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
+    const hasText = (typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…")
+      || (Array.isArray(card.answer) && card.answer.join(" ").trim().length > 8 && !/^(…|Preparing…)/.test(String(card.answer[0] || "").trim()));
+    const plan = answerFinishPlan({ code, hasText, pass: Number(opts.answerPass) || 0, aborted: code === "ABORT" || code === "STALL" || /empty/i.test(code) });
+    if (plan.action === "retry") {
+      card.streaming = true;
+      if (!hasText) card.answer = ["Answering…"];
+      if (cards[idx] === card) renderCard();
+      status(plan.status, "live");
+      logAnswer({ failed: code || "provider_unavailable", retrying: true });
+      setTimeout(() => {
+        if (answerEpoch === epoch && card.req === ctl)
+          generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, derivedBy, answerPass: (Number(opts.answerPass) || 0) + 1, fallbackModel: !!plan.fallback, retries: (opts.retries || 0) + 1 });
+      }, plan.waitMs || 400);
+      return;
+    }
+    card.streaming = false;
+    if (!hasText && plan.text) writeAnswer(card, qid, [plan.text]);
     if (cards[idx] === card) renderCard();
-    const cooling = /429|RATE|rate limit/i.test(String(code || "")) || retryAfterMs >= 8000;
-    if (code !== "AUTH") status(retry ? (cooling ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.ceil(retryAfterMs / 1000)) + "s.") : "Still working.") : "The answer did not finish.", "live");
-    logAnswer({ failed: code || "provider_unavailable", retrying: retry });
+    if (code !== "AUTH") status(plan.status, plan.action === "keep" ? "live" : "err");
+    logAnswer({ failed: code || "provider_unavailable", retrying: false });
     sessionReadyUntil = 0;
-    if (retry) setTimeout(() => {
-      if (answerEpoch === epoch && card.req === ctl)
-        generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, derivedBy, retries: tries, regen: opts.regen || keepOld });
-    }, Math.max(500, retryAfterMs));
   };
   let fetchTimer = null;
   let firstTokenTimer = null;
@@ -5477,18 +5515,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
         try { ctl.abort(); } catch {}
         card.req = null;
         if (answerCtl === ctl) answerCtl = null;
-        generateAnswer(question, card, { ...opts, firstTokenRetry: true });
+        generateAnswer(question, card, { ...opts, firstTokenRetry: true, answerPass: (Number(opts.answerPass) || 0) + 1 });
         return;
       }
-      if (decision === "status") {
-        card.streaming = false;
-        card.req = null;
-        if (answerCtl === ctl) answerCtl = null;
-        const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
-        if (!partial) writeAnswer(card, qid, ["The answer did not start. Press AI Answer to try again."]);
-        if (cards[idx] === card) renderCard();
-        status("Still no words. Press AI Answer to try again.", "live");
-      }
+      if (decision === "status") recoverAnswer("EMPTY", 400);
     }, 8000);
     const paintTitle = (title, fromDerived) => {
       if (!title || isPlaceholderTitle(title) || card.req !== ctl) return false;
@@ -5658,7 +5688,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (e && e.name === "AbortError") {
       if (servedBook) return;
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
-      stallRetry(); return;
+      recoverAnswer("ABORT", 400); return;
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
@@ -6377,7 +6407,12 @@ async function aiAnswer(fromAuto, options = {}) {
     }
     if (fromAuto) return;
     const c = cards[idx];
-    if (c && /^(Your introduction)$/.test(c.question)) return await generateAnswer("Tell me about yourself", c);
+    if (c && /^(Your introduction|Intro)$/i.test(c.question)) {
+      const heard = (typeof transcript !== "undefined" ? transcript : []).filter(t => t && t.who === "Them").slice(-3).map(t => t.text).join(" ");
+      const q = labelFromHeard(c.question, heard);
+      if (q && q !== c.question) { c.question = q; showPressed(c, q); return await generateAnswer(q, c, { pinned: true, derived: q }); }
+      return await generateAnswer("Tell me about yourself", c);
+    }
     // Pressing AI Answer again re-forms the question from everything heard
     // for this card plus its earlier context, and answers that — the press
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving

@@ -73,6 +73,7 @@ import { screenImage } from "@/lib/kompasScreen"
 
 const NO_STORE = { "Cache-Control": "no-store" }
 const PAID_MODEL = "openai/gpt-oss-120b"
+const CHEAP_MODEL = "google/gemini-2.5-flash"
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
@@ -337,6 +338,7 @@ type AnswerJob = {
   orKey: string | undefined
   keys: LlmKeys
   liveModel: string
+  fallbackModel?: boolean
   ledger: ReturnType<typeof normLedger>
   projectId: string | null
   startedAt: number
@@ -381,8 +383,10 @@ type AnswerJob = {
 // this list is the default.
 const LIVE_MODEL_IDS: Record<string, string> = { "gpt-5.6-luna": "openai/gpt-5.6-luna" }
 function jobLanes(job: AnswerJob): string[] {
+  if (job.fallbackModel) return [CHEAP_MODEL]
   const chosen = LIVE_MODEL_IDS[job.liveModel || ""]
-  return chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
+  const primary = chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
+  return primary.includes(CHEAP_MODEL) ? primary : [...primary, CHEAP_MODEL]
 }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
@@ -502,6 +506,27 @@ function settleRepair(job: AnswerJob, repair: RepairOutcome, finalText: string):
   const out = { ...repair, survived: !lost.length, lostAfterSettle: lost }
   console.info(repairLogLine(out, job.question))
   return out
+}
+
+async function cheapGroqAnswer(key: string, system: string, user: string, signal: AbortSignal): Promise<string> {
+  const model = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      temperature: 0.3,
+      max_tokens: 500,
+      messages: [
+        { role: "system", content: system.slice(0, 6000) },
+        { role: "user", content: user.slice(0, 6000) },
+      ],
+    }),
+    signal,
+  })
+  if (!res.ok) throw new Error("groq " + res.status)
+  const data = await res.json().catch(() => ({})) as { choices?: Array<{ message?: { content?: string } }> }
+  return String(data?.choices?.[0]?.message?.content || "")
 }
 
 async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
@@ -637,6 +662,23 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             }
           }
         } else { lastErr = "openrouter 503 missing paid key" }
+
+        if (!raw.trim() && !signal.aborted) {
+          const groqKey = resolveKeys({}).groq
+          if (groqKey) {
+            try {
+              const groqText = await cheapGroqAnswer(groqKey, job.system, job.userText, signal)
+              if (groqText.trim()) {
+                raw = groqText.trim()
+                lastErr = ""
+                servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+                show(raw + " ")
+              }
+            } catch (e) {
+              lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+            }
+          }
+        }
 
         // Still rate-limited with nothing streamed: never a 5xx on a live turn —
         // hand the client an exact wait; it regenerates by itself.
@@ -977,14 +1019,9 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const NO_KEY = () => NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
     if (!(await paidKeyNow())) return NO_KEY()
     if (body.preflight === true) {
-      const paidKey = (await paidKeyNow()) as string
-      try {
-        await fetchOpenRouter(paidKey, PAID_MODEL, "Reply with READY only.", "Check answer service readiness.", 256, AbortSignal.any([request.signal, AbortSignal.timeout(20000)]))
-        return NextResponse.json({ ready: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
-      } catch (e) {
-        const failure = answerFailure(String((e as Error)?.message || e))
-        return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
-      }
+      // Do not call a model here. A readiness round-trip was racing the live
+      // answer and the stream came back empty. The next real answer is the warm-up.
+      return NextResponse.json({ ready: true, warming: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
     }
     const paidKey = (await paidKeyNow()) as string
     const outcome = await deriveQuestion(paidKey, body, request.signal)
@@ -1404,6 +1441,7 @@ ${INTERVIEW}`
     orKey: keys.openrouter || undefined,
     keys,
     liveModel: str(body.liveModel, 120),
+    fallbackModel: body.fallbackModel === true,
     ledger,
     projectId,
     startedAt,

@@ -57,7 +57,7 @@ test("the arrow toggles the panel and remembers it", () => {
   assert.ok(btn)
   assert.equal(btn.getAttribute("aria-expanded"), "false")
   assert.equal(panel.hidden, true)
-  assert.equal(btn.textContent, "›")
+  assert.equal(btn.textContent, "Say")
   assert.equal(answer.closest(".a").contains(panel), false)
   assert.equal(panel.parentElement, document.body)
   assert.equal(document.getElementById("startBtn").textContent, "Start")
@@ -116,11 +116,12 @@ test("section 2 toggles by hand and follows a new transcript line without a fetc
   assert.equal(fetched, 0)
 })
 
-test("the panel is a separate popup, and a narrow screen uses a bottom sheet", () => {
+test("the panel sits on the right with a close button and does not cover the answer", () => {
   assert.match(css, /@media \(max-width:900px\)/)
   const narrow = css.slice(css.indexOf("@media (max-width:900px)"))
-  assert.match(narrow, /bottom:\s*0/)
-  assert.match(narrow, /width:\s*100%/)
+  assert.match(narrow, /right:\s*8px/)
+  assert.match(css, /\.aside-close\{/)
+  assert.match(css, /#overlay\.bridge-open #answer\{margin-right:252px\}/)
   assert.match(css, /\.answer-aside\{[\s\S]*position:\s*absolute/)
   assert.doesNotMatch(css, /position:\s*fixed/)
   assert.doesNotMatch(css, /#startBtn\{display:\s*none|#answerBtn\{display:\s*none|#copyBtn\{display:\s*none/)
