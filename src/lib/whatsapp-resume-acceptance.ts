@@ -12,18 +12,16 @@ export const WHATSAPP_SUPPORTED_FLOOR = 95
  * 95% remains the target and is named in the caption when the file is short of it.
  * A complete draft from 70% through 94.9% is a clean pass when supported coverage
  * is already at 95%, so an honest gap does not block filing.
- * Below 70% is not a clean pass. It is still sent when the rewrite finished,
- * with the missing terms named. A failed or incomplete rewrite sends the
- * already-chosen resume instead. TAILOR_DELIVER_WITH_SHORTFALL=0 or
- * JD_TERMS_ALWAYS_ON_SKILLS=0 restores the strict under-95% clean-pass refusal. */
+ * Below 70% is not a clean pass, but a finished, readable rewrite may still be sent
+ * with missing terms named when it adds no unsupported JD-only claims. Those claims
+ * are a hard hold at every score. A failed or incomplete rewrite may use only a
+ * user-explicitly selected same-account Files/Library fallback; otherwise hold. */
 export const WHATSAPP_JOB_POST_FLOOR = 70
 
-/** Coverage and added job-post terms are labelled on the WhatsApp reply.
- * They do not, by themselves, make a finished Word file unusable.
- * role_evidence_gaps is the same kind of gap: the file was edited and scored,
- * and a role is under the 98% evidence target. Missing terms stay in the caption.
- * roles_unrewritten, a missing part, and a skills-only outage are not in this
- * set. Those are unfinished, and the already-chosen library file is the backup. */
+/** Coverage and role-evidence gaps may be disclosed on a completed readable file.
+ * Unsupported JD-only additions are never a shortfall and never enter this set.
+ * roles_unrewritten, a missing part, and a skills-only outage are unfinished; only
+ * a user-explicitly selected same-account Files/Library item may be sent unchanged. */
 const WHATSAPP_SHORTFALL_REASONS = new Set([
   "jd_coverage_below_floor",
   "supported_coverage_below_floor",
@@ -137,18 +135,18 @@ export function atsExportUnreadable(ats: AtsLike | null | undefined): boolean {
   return failed.has("substantive") || failed.has("contact")
 }
 
-/** A finished rewrite WhatsApp can send. A file whose writers did not return,
- * that did not change, or whose export has no resume text or contact is not usable:
- * the caller sends the already-chosen resume instead. A role under the 98%
- * evidence target, a missing ATS attachment, or a date/name parse miss on a
- * readable file is a named gap on that finished file, not a missing file.
- * Identity, name, dates and contact details are checked on the file bytes. */
+/** A finished rewrite WhatsApp can send. Unsupported JD-only additions are a hard
+ * hold even when cached quality metadata also contains allowlisted shortfall codes.
+ * Failed/incomplete or unreadable files may use only an explicitly selected
+ * same-account Files/Library fallback; without that selection the route holds and explains. */
 export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false
   if (result.unchanged || !result.diff?.length) return false
   if (result.skills_only || result.partial || result.quality?.incomplete) return false
   if (atsExportUnreadable(result.ats)) return false
-  return whatsappResumeRejectionReasons(result).every(reason =>
+  const reasons = whatsappResumeRejectionReasons(result)
+  if (reasons.includes("unverified_jd_terms")) return false
+  return reasons.every(reason =>
     WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")
 }
 
