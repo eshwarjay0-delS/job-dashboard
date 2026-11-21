@@ -41,6 +41,7 @@ function session(typed, cards) {
     logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
     questionSource: () => "Them",
     recentContext: () => "",
+    showPressed: () => {},
     generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts }); },
   };
   s.addCard = (q, answer) => { const card = { question: q, answer }; s.cards.push(card); s.idx = s.cards.length - 1; return card; };

@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { patchKompasVoice } from '../patch-kompas-voice.mjs';
 const source = await readFile(new URL('../../public/kompas/app.js', import.meta.url), 'utf8');
-function section(start, end) { return source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))); }
+function section(start, end) { const a = source.indexOf(start), b = source.indexOf(end, a); assert.ok(a >= 0 && b > a, `source section ${start} must exist`); return source.slice(a, b); }
 function env(extra = {}) {
- const state = { entries: [], errors: [], current: { id: 'one', role: 'Security', voiceVocabulary: ['CyberArk'] }, transcriptionEpoch: 0, transcriptionFailedEpoch: -1, transcriptionOrder: Promise.resolve(), interimOffUntil: 0, running: true, performance, AbortController, setTimeout, clearTimeout, Blob, ...extra };
+ const state = { entries: [], errors: [], current: { id: 'one', role: 'Security', voiceVocabulary: ['CyberArk'] }, transcriptionEpoch: 0, transcriptionFailedEpoch: -1, transcriptionOrder: Promise.resolve(), interimOffUntil: 0, running: true, performance, AbortController, setTimeout, clearTimeout, Blob, currentOutputKey: async () => '', showPressed: () => {}, ...extra };
  state.status = m => state.errors.push(m);
  state.onTranscript = (who, text) => state.entries.push({ who, text });
  state.showCaption = () => {};
@@ -154,6 +154,7 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  // kind of stand-ins as scripts/tests/kompas-typed-question.test.mjs; a session always holds a placeholder card.
  const box={value:''},node={classList:{add(){},remove(){},toggle(){},contains:()=>false}};
  const s=env({aiBusy:false,aiBusySince:0,autoTimer:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],answerAnywayHeld:null,pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],cards:[{question:'Ready',answer:['…']}],idx:0,$:id=>id==='manualInput'?box:node,setChat:()=>{},logEvent:()=>{},logDecision:()=>{},renderCard:()=>{},toTop:()=>{},plainAnswer:a=>String(a),questionSource:()=>'Them',recentContext:()=>'',addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
+  s.addCard=(question,answer)=>{const card={question,answer};s.cards.push(card);s.idx=s.cards.length-1;return card;};
  vm.runInContext(source.slice(source.indexOf('const Q_CUE ='), source.indexOf(';', source.indexOf('const Q_CUE =')) + 1),s);
  vm.runInContext(section('// ── Question intake', '// ── end question intake ──'),s);
  vm.runInContext(section('function heardAsQuestion(', '\n'),s);
@@ -162,11 +163,23 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  vm.runInContext(section('function frameHeardQuestion(', '$("screenBtn")'),s);
  const first=s.aiAnswer(false);await s.aiAnswer(false);assert.equal(calls,1);assert.equal(s.aiBusy,true);done();await first;assert.equal(s.aiBusy,false);
 });
-test('stalled answers stop spinning and keep a visible retry path',async()=>{
- let timeout,aborted=false;
- const ctl={abort:()=>aborted=true};const card={req:ctl,answer:['…']};
- const s=env({setTimeout:fn=>{timeout=fn;return 1;},clearTimeout:()=>{},generateAnswerRequest:()=>new Promise(()=>{}),answerCtl:ctl,cards:[card],idx:0,renderCard:()=>{}});
+test('failed answer request stops spinning and keeps a visible retry path',async()=>{
+ let aborted=false,rendered=0;
+ const ctl={abort:()=>{aborted=true;}};
+ const card={req:ctl,answer:['…'],streaming:true};
+ const s=env({
+  answerCtl:ctl,cards:[card],idx:0,
+  generateAnswerRequest:async()=>{throw new Error('request timed out');},
+  renderCard:()=>{rendered++;},
+ });
  vm.runInContext(section('async function generateAnswer(', 'async function generateAnswerRequest('),s);
- const answer=s.generateAnswer('Explain OAuth',card);timeout();await answer;
- assert.equal(aborted,true);assert.equal(card.streaming,false);assert.match(card.answer[0],/retry/);assert.equal(s.answerCtl,null);
+ // Exhaust the bounded automatic retries so this verifies the user-visible manual retry path.
+ await s.generateAnswer('Explain OAuth',card,{retries:2});
+ assert.equal(aborted,true);
+ assert.equal(card.streaming,false);
+ assert.equal(card.answer.length,1);
+ assert.match(card.answer[0],/question is saved on this card.*Press AI Answer to retry/);
+ assert.equal(rendered,1);
+ assert.match(s.errors.at(-1),/Press AI Answer to try again/);
+ assert.equal(s.answerCtl,null);
 });
