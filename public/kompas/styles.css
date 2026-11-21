@@ -1276,7 +1276,7 @@ html.kd #view-copilot .a{
 html.kd #view-copilot #answer,
 html.kd #view-copilot #answer li{
   color:#15140f !important;
-  font-weight:var(--answer-weight, 560) !important;
+  font-weight:var(--answer-weight, 400) !important;
   text-shadow:0 0 0.8px rgba(21,20,15,var(--answer-shadow, 0));
   background:transparent !important;
 }
@@ -1309,7 +1309,7 @@ html.kd #view-copilot #answer,
 html.kd #view-copilot #answer li{
   opacity:1 !important;
   color:#15140f !important;
-  font-weight:var(--answer-weight, 560) !important;
+  font-weight:var(--answer-weight, 400) !important;
   text-shadow:0 0 0.8px rgba(21,20,15,var(--answer-shadow, 0));
   background:transparent !important;
 }
@@ -1648,3 +1648,8 @@ html.kd #view-copilot #answer{
 .tab-preview-action{appearance:none;border:0;border-radius:6px;background:rgba(20,20,24,.82);color:#f2f2f4;font-size:11px;line-height:1.2;cursor:pointer;padding:3px 6px}
 .tab-preview-action:hover{background:rgba(40,40,48,.92)}
 .overlay.collapsed .tab-preview{display:none}
+/* The desktop title bar sits above the live view and the tab preview.
+   Minimize, close, AI Answer, Start, and More stay clickable. */
+html.kd .kd-bar,html.kd #kdBar{z-index:480 !important;pointer-events:auto !important}
+html.kd #kdHide,html.kd #kdClose,html.kd #moreBtn,#view-copilot #startBtn,#view-copilot #answerBtn,#view-copilot #moreBtn{position:relative;z-index:2;pointer-events:auto !important}
+#answer,#answer li,#answer li.passage,html.kd #view-copilot #answer,html.kd #view-copilot #answer li{font-family:var(--sans) !important;font-weight:var(--answer-weight, 400) !important}

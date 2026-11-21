@@ -57,7 +57,7 @@ test("editing never pollutes the new-session draft cache", () => {
 })
 
 test("cache-bust tag moved with the app.js change", () => {
-  assert.ok(indexHtml.includes("app.js?v=20261119-latest"), "new v tag present")
+  assert.ok(indexHtml.includes("app.js?v=20261121-overlay"), "new v tag present")
   assert.ok(!indexHtml.includes("20261101-auth-lock"), "old v tag gone")
 })
 

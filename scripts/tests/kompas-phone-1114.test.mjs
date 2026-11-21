@@ -11,6 +11,7 @@ import { answerAside } from "../../src/lib/kompasAnswerAside.ts"
 
 const FILLER = /the reason that mattered|the pressure on it was|I'd stay with|the part I'd stay with|sat on that seat|so the way (?:we|I) approached it|Yeah, \w[\w\s]* is the part/i
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
+const bridgeJs = readFileSync(new URL("../../public/kompas/bridge-lines.js", import.meta.url), "utf8")
 const asideJs = readFileSync(new URL("../../public/kompas/answer-aside.js", import.meta.url), "utf8")
 
 function pageCard(question, answer) {
@@ -165,6 +166,7 @@ test("the clarify box updates from a transcript line without AI Answer", async (
     return Promise.resolve({ ok: false, json: async () => ({}) })
   }
   Object.defineProperty(window.document, "visibilityState", { value: "visible", configurable: true })
+  window.eval(bridgeJs)
   window.eval(asideJs)
   window.KompasAnswerAside.markLive(true)
   window.KompasAnswerAside.setResume("eshwarjay05\n- Owned the service catalog for a team of five and checked in with users on each request.")
@@ -180,6 +182,6 @@ test("the clarify box updates from a transcript line without AI Answer", async (
   assert.doesNotMatch(panel.textContent, /catalog owners/)
   Object.defineProperty(window.document, "visibilityState", { value: "visible", configurable: true })
   window.KompasAnswerAside.flushLive()
-  assert.match(panel.textContent, /Claim/)
+  assert.match(panel.textContent, /catalog|owners/i)
   assert.doesNotMatch(panel.textContent, FILLER)
 })

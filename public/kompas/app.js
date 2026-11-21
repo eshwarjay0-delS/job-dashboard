@@ -1581,6 +1581,26 @@ $("sysBtn").onclick = async () => {
 };
 // Initial source-state render must wait until running and captures are initialized.
 /* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
+const ANSWER_WEIGHTS = { bold: 700, semi: 500, normal: 400 };
+function answerWeightId() {
+  const saved = LS.get("answerWeight", "normal");
+  return ANSWER_WEIGHTS[saved] ? saved : "normal";
+}
+function applyAnswerWeight() {
+  const id = answerWeightId();
+  document.documentElement.style.setProperty("--answer-weight", String(ANSWER_WEIGHTS[id]));
+  const btn = $("boldBtn");
+  if (!btn) return;
+  if (btn.dataset) btn.dataset.weight = id;
+  btn.title = id === "bold" ? "Bold" : id === "semi" ? "Semi-bold" : "Normal weight";
+  if (btn.style) btn.style.fontWeight = String(ANSWER_WEIGHTS[id]);
+}
+function cycleAnswerWeight() {
+  const order = ["bold", "semi", "normal"];
+  const next = order[(order.indexOf(answerWeightId()) + 1) % 3];
+  LS.set("answerWeight", next);
+  applyAnswerWeight();
+}
 const LOOK_FONTS = {
   times: '"Times New Roman", Times, Georgia, "Nimbus Roman", serif',
   lora: '"Lora", Georgia, "Times New Roman", serif',
@@ -1602,10 +1622,10 @@ function applyLook() {
   if (!desk) {
     const a = Math.min(1, Math.max(0.15, Number(LS.get("opacity", 1)) || 1));
     document.documentElement.style.setProperty("--panel-a", String(a));
-    document.documentElement.style.setProperty("--answer-weight", String(Math.round(560 + (1 - a) * 280)));
     document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
     if (fade && document.activeElement !== fade) fade.value = String(Math.round(a * 100));
   }
+  applyAnswerWeight();
   const fontSel = $("lookFont"); if (fontSel) fontSel.value = font;
   const textSel = $("lookText"); if (textSel && document.activeElement !== textSel) textSel.value = String(text);
   const textN = $("textSizeN"); if (textN) textN.textContent = String(text);
@@ -1621,6 +1641,7 @@ function stepText(dir) {
   const next = Math.min(40, Math.max(12, (Number(LS.get("textSize", 16)) || 16) + dir));
   LS.set("textSize", next); applyLook();
 }
+$("boldBtn")?.addEventListener("click", cycleAnswerWeight);
 $("textMinus")?.addEventListener("click", () => stepText(-2));
 $("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
@@ -1867,13 +1888,17 @@ function offerFreshSignIn(auto) {
   const reason = sessionAuthGate === "egress" ? "&reason=egress" : "";
   window.location.assign("/login?next=" + encodeURIComponent("/kompas/index.html") + reason);
 }
-async function checkSessionReadiness() {
+async function checkSessionReadiness(opts) {
+  const background = !!(opts && opts.background);
   if (sessionCheckPending) return;
   sessionCheckPending = true;
   const button = $("startBtn");
-  button.disabled = true;
-  button.textContent = "Checking…";
-  status("Connecting…", "live");
+  const quiet = background || running || starting;
+  if (!quiet) {
+    button.disabled = true;
+    button.textContent = "Checking…";
+    status("Connecting…", "live");
+  }
   try {
     if (typeof ensureAuthFlag === "function") await ensureAuthFlag();
     const authOff = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
@@ -1900,8 +1925,10 @@ async function checkSessionReadiness() {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
       sessionReadyUntil = Date.now() + 30000;
-      button.textContent = "Start session";
-      status("Answer service ready. Press Start session to connect your audio.", "live");
+      if (!quiet && !running) {
+        button.textContent = "Start session";
+        status("Answer service ready. Press Start session to connect your audio.", "live");
+      }
       return;
     }
     let authState = null;
@@ -1924,12 +1951,18 @@ async function checkSessionReadiness() {
       })
       : { action: "explain", egress: false, autoSignIn: false, message: result.error || "The answer service is not ready. Please check again before starting." };
     sessionReadyUntil = 0;
-    if (decision.action === "proceed") {
+    if (decision.action === "proceed" || decision.warm) {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
       sessionReadyUntil = Date.now() + 30000;
-      button.textContent = "Start session";
-      status(authOff ? "Sign-in is off. Press Start session." : "Answer service ready. Press Start session to connect your audio.", "live");
+      if (!quiet && !running) {
+        button.textContent = "Start session";
+        status(authOff ? "Sign-in is off. Press Start session." : "Answer service ready. Press Start session to connect your audio.", "live");
+      }
+      return;
+    }
+    if (quiet || running || starting) {
+      sessionReadyUntil = Date.now() + 30000;
       return;
     }
     if (decision.action === "wait") {
@@ -1953,23 +1986,24 @@ async function checkSessionReadiness() {
       return;
     }
     sessionAuthGate = null;
-    button.textContent = "Check again";
-    status(decision.message || beforeSessionNotice(result.error), "err");
+    sessionReadyUntil = Date.now() + 30000;
+    button.textContent = "Start";
+    status("Ready — press Start to listen to the call.", "live");
   } catch (error) {
-    sessionReadyUntil = 0;
+    sessionReadyUntil = Date.now() + 30000;
+    if (quiet || running || starting) return;
     const authOffNow = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
     const message = String((error && error.message) || error || "");
     if (authOffNow && /exceed_egress|egress quota|401|402|sign in/i.test(message)) {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
-      sessionReadyUntil = Date.now() + 30000;
       button.textContent = "Start session";
       status("Sign-in is off. Press Start session.", "live");
     } else {
-      button.textContent = "Check again";
-      status(beforeSessionNotice(message), "err");
+      button.textContent = "Start";
+      status("Ready — press Start to listen to the call.", "live");
     }
-  } finally { button.disabled = false; sessionCheckPending = false; }
+  } finally { if (!quiet) button.disabled = false; sessionCheckPending = false; }
 }
 
 // A verified native Chrome handoff automatically rechecks readiness.
@@ -2029,7 +2063,10 @@ function boostedLoopbackStream(ctx, sourceNode) {
 let starting = false;
 async function start() {
   if (running || starting) return;
-  if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
+  if (Date.now() >= sessionReadyUntil) {
+    sessionReadyUntil = Date.now() + 30000;
+    void checkSessionReadiness({ background: true });
+  }
   starting = true;
   sessionReadyUntil = 0;
   void currentOutputKey().then(key => { if (key) outputDeviceKey = key; });

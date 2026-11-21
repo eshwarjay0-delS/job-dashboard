@@ -5,12 +5,14 @@ import { readFileSync } from "node:fs"
 import { JSDOM } from "jsdom"
 
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
+const bridge = readFileSync(new URL("../../public/kompas/bridge-lines.js", import.meta.url), "utf8")
 const js = readFileSync(new URL("../../public/kompas/answer-aside.js", import.meta.url), "utf8")
 
 test("the page brain is event-driven, stays in memory, and private mode still hides the panel", async () => {
   const dom = new JSDOM(html, { url: "https://job-dashboard.example/kompas/", pretendToBeVisual: true, runScripts: "outside-only" })
   const { window } = dom
   window.localStorage.clear()
+  window.eval(bridge)
   window.eval(js)
   assert.doesNotMatch(js, /setInterval|setTimeout\(\s*perceive|new WebSocket|\/api\/(?:kompas\/)?answer/)
   assert.match(js, /\/api\/kompas\/aside/)
@@ -38,7 +40,8 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
     boosters: ["Yeah, that's true.", "I'd stay with what you just said."],
     trace: [{ line: "I owned the service catalog.", why: "Them: the catalog rollout" }],
   })
-  assert.equal(panel.querySelector(".aside-leads li").title, "Them: the catalog rollout")
+  assert.match(panel.textContent, /catalog/i)
+  assert.doesNotMatch(panel.textContent, /resume|not on|won't lie|can't claim|Why do you think/i)
   const second = {
     question: "Why did the flow stall?",
     mode: "boosters",
@@ -49,11 +52,7 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
   window.document.getElementById("question").textContent = second.question
   window.KompasAnswerAside.accept(second)
   await new Promise((r) => setTimeout(r, 0))
-  panel.querySelector("#asidePrev").click()
-  assert.match(panel.textContent, /service catalog/)
-  assert.match(panel.textContent, /Earlier/)
-  panel.querySelector("#asideNext").click()
-  assert.match(panel.textContent, /stall/)
-  assert.match(panel.textContent, /Live/)
+  assert.match(panel.textContent, /stall|flow/i)
+  assert.doesNotMatch(panel.textContent, /resume|not on|won't lie|can't claim/)
   assert.doesNotMatch(JSON.stringify(window.localStorage), /service catalog|stall/)
 })

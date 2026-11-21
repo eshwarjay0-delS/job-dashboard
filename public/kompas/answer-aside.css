@@ -21,9 +21,11 @@
 .aside-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .answer-aside{
   position:absolute;
-  top:60px;
-  right:16px;
-  z-index:69;
+  top:auto;
+  bottom:72px;
+  left:16px;
+  right:auto;
+  z-index:3;
   width:min(360px, calc(100vw - 32px));
   min-height:0;
   max-height:min(70vh, 640px);
@@ -112,9 +114,11 @@ html.kd.kd-private #view-copilot #answerAside{
 }
 
 html.kd #view-copilot .answer-aside{
-  top:64px;
-  right:12px;
-  width:min(320px, 34vw);
+  top:auto;
+  bottom:96px;
+  left:12px;
+  right:auto;
+  width:min(420px, 46vw);
   max-height:min(68vh, 560px);
   background:#fdfcf9;
 }
