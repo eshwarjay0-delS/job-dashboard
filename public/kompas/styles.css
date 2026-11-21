@@ -1653,3 +1653,65 @@ html.kd #view-copilot #answer{
 html.kd .kd-bar,html.kd #kdBar{z-index:480 !important;pointer-events:auto !important}
 html.kd #kdHide,html.kd #kdClose,html.kd #moreBtn,#view-copilot #startBtn,#view-copilot #answerBtn,#view-copilot #moreBtn{position:relative;z-index:2;pointer-events:auto !important}
 #answer,#answer li,#answer li.passage,html.kd #view-copilot #answer,html.kd #view-copilot #answer li{font-family:var(--sans) !important;font-weight:var(--answer-weight, 400) !important}
+/* The answer pane stays solid paper. The window behind it (a YouTube tab, a meeting) must not show through. */
+html.kd #view-copilot #card,
+html.kd #view-copilot .a,
+html.kd #view-copilot #answer,
+html.kd.desktop-focus #view-copilot #card,
+html.kd.desktop-focus #view-copilot .a,
+html.kd.desktop-focus #view-copilot #answer{
+  background:#fdfcf9 !important;
+  background-color:#fdfcf9 !important;
+  opacity:1 !important;
+}
+html.kd.desktop-focus.theme-dark #view-copilot #card,
+html.kd.desktop-focus.theme-dark #view-copilot .a,
+html.kd.desktop-focus.theme-dark #view-copilot #answer{
+  background:var(--focus-paper,#17212b) !important;
+  background-color:var(--focus-paper,#17212b) !important;
+}
+/* Narrow desktop window: close and minimize stay pinned at the top-right.
+   The session buttons wrap under that bar and do not cover the question. */
+html.kd .kd-right{
+  position:absolute !important;
+  top:0 !important;
+  right:0 !important;
+  left:auto !important;
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  z-index:500 !important;
+  background:#fdfcf9 !important;
+  padding:4px 6px !important;
+}
+html.kd #kdClose,html.kd #kdHide,html.kd #kdMove{
+  display:inline-flex !important;
+  visibility:visible !important;
+  flex:0 0 auto !important;
+}
+html.kd #view-copilot{top:48px !important}
+html.kd #view-copilot .overlay .bar-actions{
+  position:relative !important;
+  top:auto !important;
+  flex-wrap:wrap !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  z-index:5 !important;
+}
+html.kd #follow,html.kd #followBtn,html.kd #prevBtn,html.kd #nextBtn,html.kd #chatBtn{
+  position:static !important;
+  top:auto !important;
+  left:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+}
+html.kd #view-copilot .q,html.kd #view-copilot .a-head{margin-left:0 !important;margin-right:0 !important}
+html.kd .a-tools .mini,html.kd #boldBtn,html.kd #textMinus,html.kd #textPlus{
+  min-height:26px !important;
+  min-width:26px !important;
+  height:26px !important;
+  width:auto !important;
+  font-size:13px !important;
+  padding:0 8px !important;
+}

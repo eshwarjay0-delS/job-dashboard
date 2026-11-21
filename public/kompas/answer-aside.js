@@ -111,8 +111,12 @@
     panel.hidden = !open;
     btn.setAttribute("aria-expanded", open ? "true" : "false");
     btn.setAttribute("aria-label", open ? "Hide context" : "Show context");
-    btn.textContent = open ? "‹" : "›";
+    btn.textContent = open ? "‹" : "Say";
+    btn.title = open ? "Hide Say this" : "Show Say this";
     writeOpen(!!open);
+    bridgeDismissed = !open;
+    var overlay = document.getElementById("overlay");
+    if (overlay) overlay.classList.toggle("bridge-open", !!open);
   }
 
   function lookup(stemNow) {
@@ -189,9 +193,17 @@
     if (!panel || !globalThis.KompasBridgeLines) return;
     var lines = KompasBridgeLines.bridgeLines({ turns: currentTurns(), question: questionText() });
     panel.textContent = "";
+    var head = el("div", "aside-head");
+    head.appendChild(el("h3", "", "Say this"));
+    var close = el("button", "aside-close", "×");
+    close.type = "button";
+    close.id = "asideClose";
+    close.setAttribute("aria-label", "Close Say this");
+    close.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setOpen(false); });
+    head.appendChild(close);
+    panel.appendChild(head);
     if (!lines.length) return;
-    setOpen(true);
-    panel.appendChild(el("h3", "", "Say this"));
+    if (!readOpen() && !bridgeDismissed) setOpen(true);
     var list = el("ul", "aside-questions");
     list.id = "asideModeList";
     lines.forEach(function (line) { addLi(list, line, ""); });
@@ -431,6 +443,7 @@
     noteLive();
   }
 
+  var bridgeDismissed = false;
   var liveOn = false;
   var resumeText = "";
   var liveTimer = 0;

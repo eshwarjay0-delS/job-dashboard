@@ -1,3 +1,9 @@
+## 2026-11-21 — Answer completion, opaque pane, question label, pinned window controls (visible after ship)
+
+An empty or aborted answer retries once, then a faster model, and the pane keeps a sentence instead of going blank. The readiness check no longer calls a model. A heard interviewer line replaces the Intro label. The answer pane is solid paper. Close and minimize stay at the top-right when the window is narrow. Say this has an X at the top-right and a Say toggle to reopen, and it sits to the right of the answer. Five production calls on 53d016c8 returned HTTP 200 in under 400 ms with 1046 bytes and no answer text.
+
+**Checked by scripts/tests/kompas-answer-finish.test.mjs, 20/20 local. Not a live model fold.**
+
 ## 2026-11-21 — Kompas overlay: start, window controls, bridge lines, bold cycle (visible after ship; not a live listen)
 
 A slow or failed answer check no longer blocks Start. The session starts and the preflight warms in the background, with no red "answer service is not ready" banner. Desktop minimize stays minimized, and the title-bar buttons sit above the tab preview so minimize, close, AI Answer, Start, and More can be clicked. The side box shows one or two spoken first-person lines drawn from the last few transcript turns. It does not ask a clarifying question and it does not say the topic is missing from the resume. The B button immediately left of the font-size control cycles bold, semi-bold, and normal, defaults to normal, and is stored in localStorage. The answer pane uses the sans font. Skip-login was not edited. The installed desktop exe still needs a new build for the minimize handler; the page it loads updates with the web ship.

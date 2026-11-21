@@ -208,7 +208,7 @@ function beginChromeSignIn({ interactive = false } = {}) {
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
-const PAGE_BUILD = "kompas-20261121-overlay";
+const PAGE_BUILD = "kompas-20261121-finish";
 const appPathFor = () => (activeSite === "marketfit" ? "/kompas/index.html" : "/index.html") + "?v=" + PAGE_BUILD;
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
@@ -219,7 +219,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "kompas", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
 
-const MIN = { width: 360, height: 280 };
+const MIN = { width: 520, height: 360 };
 const DEFAULT_SIZE = { width: 820, height: 720 };
 const MARK = { width: 184, height: 38 };
 const NUDGE = 20;
