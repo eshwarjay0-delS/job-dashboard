@@ -39,3 +39,9 @@ Branch: fix/apply-contract-negation-c2h-boundaries-20261121
 ## Next
 
 Run exact-head workflows, review the diff for positive-evidence regressions, then let MFit Safe Merge Gate sequence the review. Do not merge or deploy until the exact-head checks and legitimate release gate are satisfied.
+
+## Generic fallback caller regression — 21 November 2026
+
+The Apply contract board calls `contractTypes(j.engagement || '', 'contract')`. Cleaning a negative first argument such as `Not contract` was insufficient because the second argument reintroduced a positive generic label. The helper now suppresses only that generic fallback when the source explicitly negates generic contract work; negating `Contract-to-Hire` alone does not negate generic contract work, and independent positive C2C/1099 evidence is preserved.
+
+Regression coverage mirrors the exact two-argument caller, including negative prefix/suffix forms, the C2H-vs-contract distinction, and mixed negative/positive evidence. This is source-level test coverage, not a live portal reclassification or production acceptance.
