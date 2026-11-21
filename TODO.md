@@ -1,3 +1,9 @@
+## 2026-11-21 — Skip-login answers a desktop request that has no cookie (visible after ship)
+
+AI Answer on the new desktop exe asked to sign in. The answer, bridge, and typed-chat routes now use the Houston owner when skip-login is on and the request has no cookie and no token. The answer card no longer says "Sign in again." Admin stays behind a real session. The installed exe needs the one desktop build from the master push of this ship before its shell matches; the page it loads gets the card copy with this release.
+
+**Checked by scripts/tests/kompas-desktop-skip-login-answer.test.mjs. Not a live model fold until the one production call after the ship.**
+
 ## 2026-11-21 — Answer completion, opaque pane, question label, pinned window controls (visible after ship)
 
 An empty or aborted answer retries once, then a faster model, and the pane keeps a sentence instead of going blank. The readiness check no longer calls a model. A heard interviewer line replaces the Intro label. The answer pane is solid paper. Close and minimize stay at the top-right when the window is narrow. Say this has an X at the top-right and a Say toggle to reopen, and it sits to the right of the answer. Five production calls on 53d016c8 returned HTTP 200 in under 400 ms with 1046 bytes and no answer text.

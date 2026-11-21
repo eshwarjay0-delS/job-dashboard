@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 21 November 2026 — Desktop answer uses the skip-login owner
+
+Pressing AI Answer on the Kompas.exe from c76ecc05 showed "Sign in again, then press AI Answer." Skip-login stays on. A desktop or web request to the answer route, the bridge route, and typed chat, with no cookie and no token, is the Houston owner. The answer card does not say to sign in. Admin routes still need a real session or the admin cookie. The synthetic owner is not an admin. One no-cookie production answer call and one Windows build follow the ship. This is not a live listen.
+
 ## 21 November 2026 — Kompas overlay session, controls, bridge, weight
 
 The live overlay starts even when the answer preflight is slow or fails, and it does not show the blocking "answer service is not ready" banner. Minimize stays minimized in the desktop shell, and the title bar is painted above the tab preview. The side box speaks one or two first-person bridge lines from the last few transcript turns. It does not ask a clarifying question and it does not say the topic is missing from the resume. The B button left of the font size cycles bold, semi-bold, and normal, and defaults to normal sans. Skip-login was not edited. The honesty gates were not weakened. This is not a live listen. The installed Windows exe needs a new desktop build for the minimize handler. The web page the exe loads gets the rest with the ship.

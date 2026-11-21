@@ -58,7 +58,7 @@ const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDi
 // Skip sign-in when the server says authDisabled === true. A local
 // AUTH_DISABLED=false does not force the sign-in card. Only the exact value
 // off-confirmed-by-eshwar does. Default (helpers absent) follows the server.
-let skipSignInFromServer = false;
+let skipSignInFromServer = true;
 let serverSaidAuthDisabled = false;
 let recoveredSignInFrom401 = false;
 function desktopAuthDisabled() {
@@ -208,7 +208,7 @@ function beginChromeSignIn({ interactive = false } = {}) {
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
-const PAGE_BUILD = "kompas-20261121-finish";
+const PAGE_BUILD = "kompas-20261121-owner";
 const appPathFor = () => (activeSite === "marketfit" ? "/kompas/index.html" : "/index.html") + "?v=" + PAGE_BUILD;
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
