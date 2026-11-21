@@ -123,6 +123,8 @@ type Session = {
   awaitingEditCardId?: string
   /** The newest photo or PDF could not be read as text, so the older resume must not be tailored. */
   resumeBlocked?: "image" | "pdf"
+  /** In-memory provenance for a user-named Files selection; the durable copy lives in ResumeRecoveryJob.files. */
+  explicitLibrarySelection?: boolean
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
@@ -778,8 +780,8 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
-// Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
-type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
+// Where a run starts when it starts from the person's Files: account root, profile, picked file and selection provenance.
+type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean; explicitSelection?: boolean }
 
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
@@ -836,27 +838,41 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       if (current?.toldUser) return undefined
       await patchResumeRecovery(job, { toldUser: true }).catch(() => {})
     }
+    const fallbackNotice = files?.explicitSelection === true && session.explicitLibrarySelection === true
+      ? "\n\nThe selected Files/Library resume could not be verified for this account, so no original document was sent."
+      : files
+        ? "\n\nNo document was sent because the Files resume was selected automatically, not explicitly. To choose a backup, resend the job description with `use [resume name]` on the last line."
+        : "\n\nNo document was sent because this request used a fresh upload. I will not send the uploaded original as a fallback. To choose a backup, resend the job description with `use [resume name]` on the last line."
     told = true
-    return sendText(from, text).catch(() => undefined)
+    return sendText(from, text + fallbackNotice).catch(() => undefined)
   }
   let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
-  // Assigned inside the run, after the job text is known. The outer catch can
-  // still send the already-chosen resume if the run throws before a file goes out.
+  // Assigned inside the run, after the job text is known. The outer catch may send only the same-account Files item
+  // the user explicitly named; a fresh upload or automatic library pick is never an unchanged fallback.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
   const sendClosest = async (why: string): Promise<boolean> => {
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd) return false
-    const source = await readPath(resumePath).catch(() => null)
+    if (!resumePath || !jd || !files || files.explicitSelection !== true || session.explicitLibrarySelection !== true || !files.email.trim() || !files.userDir || !files.abs) return false
+    const expectedUserDir = path.resolve(path.join(USER_RESUMES_DIR, userId))
+    const userDir = path.resolve(files.userDir)
+    const abs = path.resolve(files.abs)
+    if (userDir !== expectedUserDir || abs !== path.resolve(resumePath) || !abs.startsWith(userDir + path.sep)) return false
+    const source = await readPath(abs).catch(() => null)
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
-    // Never substitute a resume from the other email. The path was chosen for this run.
-    if (!chosenResumeMatchesProfile(text, files?.email)) return false
+    // The exact path must remain inside this authenticated account's Files root and match its one profile email.
+    if (!chosenResumeMatchesProfile(text, files.email)) return false
     const meta = await metaPromise
     const name = await outputNameFor(source)
-    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
+    const caption = [
+      `*${name}*`,
+      "Original resume — NOT TAILORED",
+      `This is the same Files/Library resume you explicitly selected. The rewrite did not finish cleanly. ${why} No changes were made.`,
+      "Reply to this file to request changes.",
+    ].join("\n")
     await patchResumeRecovery(job, { status: "sending" })
     sending = true
     try {
@@ -1316,7 +1332,8 @@ async function recoverResumeJobsInner(request: NextRequest, startedAt: number, p
     await progress("running", { stage: "attempt_started", bootstrapped, due: jobs.length, attempted })
     try {
       await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath,
-        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, budget, job.files, true)
+        resumeName: job.resumeName, resumeFiled: job.resumeFiled,
+        explicitLibrarySelection: job.files?.explicitSelection === true }, job.userId, budget, job.files, true)
       const state = await readResumeRecovery(job.id)
       if (state?.deliveryState === "accepted" || state?.deliveryState === "sent" ||
           state?.deliveryState === "delivered" || state?.deliveryState === "read") accepted++
@@ -1433,8 +1450,11 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   // after that time is already gone is what left the chat on "I'll send a file" with nothing after it.
   const budget = TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began)
   if (budget < 20_000) return sendText(from, "I did not send a file. Choosing the resume used the time I have. Send the job once more and I will start again.")
-  return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
-    { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
+  const explicitSelection = !!prefer.hint
+  return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name,
+    explicitLibrarySelection: explicitSelection }, userId, budget,
+    { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path,
+      explicitSelection, ...(redo ? { redo } : {}) })
 }
 
 // The resume made for this job before, sent again as it is: the outcome is already known (owner, 13 Oct 2026).
@@ -1684,12 +1704,6 @@ function unplacedTermsLine(terms: string[] | undefined, reason: string | undefin
   return `Not added to the file because ${why}: ${shown}. Add any you can speak to.`
 }
 
-function chosenLabel(files: FromFiles | undefined, resumeName?: string): string {
-  if (files?.said) return files.said.split(". I chose")[0]
-  if (resumeName) return `*${resumeName}*`
-  return "the resume already chosen for this job"
-}
-
 function unfinishedRewriteWhy(result: TailorResult): string {
   if (result.partial || result.quality?.incomplete || result.skills_only) return "The rewrite was marked incomplete."
   if (result.quality_blockers?.includes("roles_unrewritten")) return "Some experience sections were not rewritten."
@@ -1707,10 +1721,9 @@ function closestResumeCaption(name: string, label: string, why: string): string 
 function qualityStop(result: TailorResult): string {
   const reasons = whatsappResumeRejectionReasons(result)
   const invented = (result.unverified_added_keywords || []).filter(Boolean).slice(0, 6)
-  // Gate on, this refusal is gone: a job-post term in a bullet is sent back and moved to the skills line in runTailor.
-  // Gate off (JD_TERMS_ALWAYS_ON_SKILLS=0) restores it.
-  if (invented.length && !jdTermsGateOn()) {
-    return `I did not send a file. The draft added ${invented.join(", ")} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  if (reasons.includes("unverified_jd_terms")) {
+    const terms = invented.length ? `: ${invented.join(", ")}` : ""
+    return `I did not send a file. The draft included job-post terms that are not supported by your resume${terms}, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   if (reasons.includes("jd_coverage_below_floor")) {
     const pct = Number.isFinite(result.coverage) ? `${result.coverage}%` : "under 95%"
