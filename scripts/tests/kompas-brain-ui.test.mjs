@@ -12,6 +12,15 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
   const dom = new JSDOM(html, { url: "https://job-dashboard.example/kompas/", pretendToBeVisual: true, runScripts: "outside-only" })
   const { window } = dom
   window.localStorage.clear()
+  const bridgeCalls = []
+  window.fetch = async (url, options = {}) => {
+    const body = JSON.parse(options.body || "{}")
+    bridgeCalls.push({ url, body })
+    const lines = /catalog/i.test(body.question || "")
+      ? ["I would start with the service catalog and its ownership boundaries."]
+      : ["I would first check where the flow stalled and what changed."]
+    return { ok: true, json: async () => ({ lines })
+  }
   window.eval(bridge)
   window.eval(js)
   assert.doesNotMatch(js, /setInterval|setTimeout\(\s*perceive|new WebSocket|\/api\/(?:kompas\/)?answer/)
@@ -40,6 +49,10 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
     boosters: ["Yeah, that's true.", "I'd stay with what you just said."],
     trace: [{ line: "I owned the service catalog.", why: "Them: the catalog rollout" }],
   })
+  await new Promise((r) => setTimeout(r, 1600))
+  assert.equal(bridgeCalls.length, 1)
+  assert.equal(bridgeCalls[0].url, "/api/kompas/bridge")
+  assert.equal(bridgeCalls[0].body.question, "How would you design the catalog?")
   assert.match(panel.textContent, /catalog/i)
   assert.doesNotMatch(panel.textContent, /resume|not on|won't lie|can't claim|Why do you think/i)
   const second = {
@@ -51,7 +64,9 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
   }
   window.document.getElementById("question").textContent = second.question
   window.KompasAnswerAside.accept(second)
-  await new Promise((r) => setTimeout(r, 0))
+  await new Promise((r) => setTimeout(r, 1600))
+  assert.equal(bridgeCalls.length, 2)
+  assert.equal(bridgeCalls[1].body.question, "Why did the flow stall?")
   assert.match(panel.textContent, /stall|flow/i)
   assert.doesNotMatch(panel.textContent, /resume|not on|won't lie|can't claim/)
   assert.doesNotMatch(JSON.stringify(window.localStorage), /service catalog|stall/)
