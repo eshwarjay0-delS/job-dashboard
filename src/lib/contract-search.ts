@@ -15,7 +15,7 @@ export type ContractSearchFields = {
  * C++, C#, and .NET.
  */
 export function matchesContractSearch(query: string, fields: ContractSearchFields): boolean {
-  const terms = String(query ?? "").trim().toLowerCase().split(/\\s+/).filter(Boolean)
+  const terms = String(query ?? "").trim().toLowerCase().split(/\s+/).filter(Boolean)
   if (!terms.length) return true
 
   const haystack = [
