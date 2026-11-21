@@ -72,8 +72,16 @@ import { screenImage } from "@/lib/kompasScreen"
 // candidate can still say.
 
 const NO_STORE = { "Cache-Control": "no-store" }
+// gpt-oss-120b is the old primary. OpenRouter returns 403 for it when the
+// account data policy or a guardrail has no allowed provider for that model.
+// Llama 3.3 70B has a zero-retention Groq endpoint, which this key can use.
+// A 403 tries the next model. The caller never sees that status.
+// Known-good primary from 01ceb1dc (13 Nov): openai/gpt-oss-120b. A 403 from
+// the account data policy tries the next allowed model, then direct Groq.
 const PAID_MODEL = "openai/gpt-oss-120b"
+const SECOND_MODEL = "meta-llama/llama-3.3-70b-instruct"
 const CHEAP_MODEL = "google/gemini-2.5-flash"
+const ANSWER_MODELS = [PAID_MODEL, SECOND_MODEL, CHEAP_MODEL]
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
@@ -81,7 +89,7 @@ const LIVE_ROUTING = { allow_fallbacks: true, sort: "latency" }
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
-const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 2048)
+const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 4096)
 // A model on a long rate-limit block is skipped by later requests on this
 // warm instance instead of re-hitting the wall (perfACT's groqBlockedUntil).
 const blockedUntil = new Map<string, number>()
@@ -383,10 +391,10 @@ type AnswerJob = {
 // this list is the default.
 const LIVE_MODEL_IDS: Record<string, string> = { "gpt-5.6-luna": "openai/gpt-5.6-luna" }
 function jobLanes(job: AnswerJob): string[] {
-  if (job.fallbackModel) return [CHEAP_MODEL]
-  const chosen = LIVE_MODEL_IDS[job.liveModel || ""]
-  const primary = chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
-  return primary.includes(CHEAP_MODEL) ? primary : [...primary, CHEAP_MODEL]
+  const order = job.fallbackModel ? [CHEAP_MODEL, PAID_MODEL, SECOND_MODEL] : ANSWER_MODELS
+  const chosen = !job.fallbackModel && LIVE_MODEL_IDS[job.liveModel || ""]
+  const lanes = chosen ? [chosen, ...order] : [...order]
+  return [...new Set(lanes)].slice(0, 3)
 }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
@@ -516,7 +524,7 @@ async function cheapGroqAnswer(key: string, system: string, user: string, signal
     body: JSON.stringify({
       model,
       temperature: 0.3,
-      max_tokens: 500,
+      max_tokens: 1600,
       messages: [
         { role: "system", content: system.slice(0, 6000) },
         { role: "user", content: user.slice(0, 6000) },
@@ -571,11 +579,11 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           })
         } catch { return null }
       }
-      let gate = newGate(true)
+      const gate = newGate(true)
       const opener = gate?.openerText() || ""
       // Card title from the same call (a leading TITLE: line, never spoken) and an early partial card once the
       // first on-screen sentence is complete, so the opening line renders before the bullets finish.
-      let titler = createTitleSplitter()
+      const titler = createTitleSplitter()
       let titleSent = ""
       let onScreen = ""
       let partialSent = false
@@ -622,13 +630,19 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               const tail = titler.flush()
               if (tail) onDelta(tail)
               if (cutShort(usage.finish, raw, job.plan.words)) {
-                // Cut off at the ceiling a few words in: clear the card and ask again rather than serve a fragment.
+                // The ceiling cut the sentence. Keep the words already on screen and ask the same model to finish them.
+                const stub = raw.trim().slice(-800)
+                try {
+                  await streamOpenRouter(job.orKey as string, model, "Finish the spoken answer. Continue from the last sentence. Do not repeat earlier sentences.", stub, Math.max(800, Math.floor(job.plan.maxTokens / 2)), onDelta, signal)
+                } catch { /* the partial already streamed stays */ }
+                if (raw.trim()) {
+                  servedModel = model
+                  lastErr = ""
+                  recordLane(model, true, usage, began)
+                  return "ok"
+                }
                 recordLane(model, false, usage, began, 502)
                 lastErr = "openrouter 502 answer cut short at the token ceiling"
-                raw = ""
-                titler = createTitleSplitter(); onScreen = ""; partialSent = false
-                emit({ type: "replace", text: "" })
-                gate = newGate(false)
                 return "cut"
               }
               servedModel = model
@@ -782,7 +796,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let raw = ""
   let lastErr = ""
   let servedModel = ""
-  const servedProvider = "openrouter"
+  let servedProvider = "openrouter"
   let jsonTitle = ""
   try {
     if (job.orKey) {
@@ -810,6 +824,22 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       if (!raw.trim() && isRateLimit(lastErr)) {
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
+      }
+      if (!raw.trim() && !signal.aborted) {
+        const groqKey = resolveKeys({}).groq
+        if (groqKey) {
+          try {
+            const groqText = await cheapGroqAnswer(groqKey, job.system, job.userText, signal)
+            if (groqText.trim()) {
+              raw = groqText.trim()
+              lastErr = ""
+              servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+              servedProvider = "groq"
+            }
+          } catch (e) {
+            lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+          }
+        }
       }
     } else { lastErr = "openrouter 503 missing paid key" }
   } finally { cleanup() }
@@ -1477,11 +1507,53 @@ ${INTERVIEW}`
 
 function answerFailure(message: string) {
   const status = statusOf(message) || 502
-  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : status === 403 ? "OPENROUTER_FORBIDDEN" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
+  const blocked = status === 403
+  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : blocked ? "OPENROUTER_UNAVAILABLE" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
   const error = status === 401 ? "The paid OpenRouter credential was rejected."
     : status === 402 ? "The OpenRouter account or key has insufficient credits."
-    : status === 403 ? "OpenRouter blocked the request. Check key permissions and account policy."
     : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
     : "The paid provider could not complete this answer. Your question is preserved."
-  return { status, code, error, quiet: true }
+  return { status: blocked ? 503 : status, code, error, quiet: true }
+}
+
+const BRIDGE_JUNK = /given what you said|what you said about|i'?d weigh exposure first|heard zero vulnerability|\binterviewer\b|listeningyou|pmand|pmokay/i
+
+function cleanBridgeTurns(turns: Array<{ who?: string; text?: string }>) {
+  return turns.slice(-4).map((turn) => String(turn?.text || "")
+    .replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "")
+    .replace(/\b(?:listeningyou|listening|pmand|pmokay|pmi)\b/gi, " ")
+    .replace(/\s+/g, " ").trim())
+    .filter((text) => text.split(/\s+/).length >= 3 && !BRIDGE_JUNK.test(text))
+}
+
+function keepBridgeLine(raw: string): string {
+  const line = String(raw || "").replace(/^["'\s]+|["'\s]+$/g, "").split("\n").map((s) => s.trim()).filter(Boolean)[0] || ""
+  if (!line || /^none$/i.test(line) || BRIDGE_JUNK.test(line)) return ""
+  if (/\b([a-z]{3,})\s+\1\b/i.test(line)) return ""
+  return line.replace(/\s+/g, " ").trim()
+}
+
+/** One speakable sentence from the cleaned turns. Empty when every model is unreachable. */
+export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string }, signal?: AbortSignal): Promise<string[]> {
+  const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
+  const question = String(input?.question || "").replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "").replace(/\s+/g, " ").trim()
+  if (!turns.length && question.split(/\s+/).length < 4) return []
+  const keys = await keysFor("kompas:answer", () => resolveKeys({})).catch(() => resolveKeys({}))
+  const system = "Write one natural sentence the candidate can say aloud. No speaker labels. No quotes from the transcript. No 'what you said'. Reply with the sentence only, or NONE."
+  const user = `TURNS:\n${turns.join("\n")}\n\nQUESTION:\n${question}`
+  const ac = signal || AbortSignal.timeout(12000)
+  let text = ""
+  if (keys.openrouter) {
+    for (const model of ANSWER_MODELS) {
+      try {
+        const got = await fetchOpenRouter(keys.openrouter, model, system, user, 160, ac)
+        text = keepBridgeLine(got.text)
+        if (text) break
+      } catch { /* the next allowed model */ }
+    }
+  }
+  if (!text && keys.groq) {
+    try { text = keepBridgeLine(await cheapGroqAnswer(keys.groq, system, user, ac)) } catch { text = "" }
+  }
+  return text ? [text] : []
 }

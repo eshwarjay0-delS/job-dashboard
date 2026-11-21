@@ -11,7 +11,7 @@ const aside = readFileSync(new URL("../../public/kompas/answer-aside.js", import
 const start = app.indexOf("function answerFinishPlan")
 const end = app.indexOf("function labelFromHeard")
 const ctx = vm.createContext({})
-vm.runInContext(app.slice(start, end) + "\nthis.plan = answerFinishPlan;", ctx)
+vm.runInContext(app.slice(start, end) + "\nthis.plan = answerFinishPlan;\nthis.queue = queueAnswerPlan;", ctx)
 
 test("an abort or empty answer retries once, then a faster model, and never stops blank", () => {
   for (let i = 0; i < 20; i++) {
@@ -35,6 +35,17 @@ test("an abort or empty answer retries once, then a faster model, and never stop
   assert.equal(configured.action, "stop")
   assert.doesNotMatch(configured.text, /sign in/i)
   assert.doesNotMatch(app, /Sign in again, then press AI Answer/)
+  const kept = ctx.plan({ code: "ABORT", hasText: true, text: "I start with least privilege on Windows systems before Microsoft", pass: 0, aborted: true })
+  assert.equal(kept.action, "continue")
+  assert.doesNotMatch(kept.status, /did not finish/i)
+  const done = ctx.plan({ code: "ABORT", hasText: true, text: "Least privilege means each account gets only the access it needs.", pass: 2, aborted: true })
+  assert.equal(done.action, "keep")
+  assert.equal(done.status, "Answered.")
+  const queued = ctx.queue({ busy: true, inflight: true, queue: [], cards: ["Tell me about least privilege."] }, "How do you rotate keys?")
+  assert.equal(queued.start, false)
+  assert.deepEqual(queued.queue, ["How do you rotate keys?"])
+  const free = ctx.queue({ busy: false, inflight: false, queue: [], cards: [] }, "Tell me about least privilege.")
+  assert.equal(free.start, true)
   assert.match(app, /fallbackModel: !!plan\.fallback/)
   assert.match(app, /function labelFromHeard/)
   assert.match(service, /async function cheapGroqAnswer/)
