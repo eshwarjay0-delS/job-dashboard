@@ -12,10 +12,10 @@ export const WHATSAPP_SUPPORTED_FLOOR = 95
  * 95% remains the target and is named in the caption when the file is short of it.
  * A complete draft from 70% through 94.9% is a clean pass when supported coverage
  * is already at 95%, so an honest gap does not block filing.
- * Below 70% is not a clean pass. A finished, evidence-supported file can still
- * be sent with the missing terms named. A failed or incomplete rewrite is not
- * itself deliverable; the webhook may fall back only after proving an explicitly
- * selected same-account Files/Library source. This helper does not prove selection.
+ * Below 70% has no owner-approved delivery band and is held. A failed or incomplete
+ * rewrite is not itself deliverable; the webhook may fall back only after proving
+ * an explicitly selected same-account Files/Library source. This helper does not
+ * prove selection.
  * TAILOR_DELIVER_WITH_SHORTFALL=0 or JD_TERMS_ALWAYS_ON_SKILLS=0 restores the
  * strict under-95% clean-pass refusal. */
 export const WHATSAPP_JOB_POST_FLOOR = 70
@@ -136,14 +136,13 @@ export function atsExportUnreadable(ats: AtsLike | null | undefined): boolean {
   return failed.has("substantive") || failed.has("contact")
 }
 
-/** A finished rewrite WhatsApp can send. A file whose writers did not return,
- * that did not change, or whose export has no resume text or contact is not usable:
- * the caller sends the already-chosen resume instead. A role under the 98%
- * evidence target, a missing ATS attachment, or a date/name parse miss on a
- * readable file is a named gap on that finished file, not a missing file.
- * Identity, name, dates and contact details are checked on the file bytes. */
+/** A finished rewrite WhatsApp can send only when raw job-post overlap is at least
+ * 70%. Below that there is no approved delivery band. Supported shortfalls above
+ * the raw floor may be named on the completed file; unfinished or unreadable
+ * output still requires the explicitly selected same-account fallback. */
 export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false
+  if (!Number.isFinite(result.coverage) || result.coverage! < WHATSAPP_JOB_POST_FLOOR || result.coverage! > 100) return false
   if (result.unchanged || !result.diff?.length) return false
   if (result.skills_only || result.partial || result.quality?.incomplete) return false
   // A stale/cache result may have an empty detail list but still carry this blocker.
@@ -154,7 +153,7 @@ export function whatsappRewriteUsable(result: TailorResult): boolean {
     WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")
 }
 
-/** A usable rewrite is below a raw or supported coverage floor.
+/** A usable rewrite above the 70% raw floor is below the 95% raw or supported floor.
  * Unverified JD-only additions are a hard hold, never a shortfall delivery.
  * A clean 70–94.9% pass has no rejection reasons, so this stays false for it. */
 export function deliveredWithShortfall(result: TailorResult): boolean {
