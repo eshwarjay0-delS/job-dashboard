@@ -1,5 +1,9 @@
 # MFit Completion Watch
 
+## 21 November 2026 — OpenRouter 403 falls through to the next model
+
+A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
+
 ## 21 November 2026 — Desktop answer uses the skip-login owner
 
 Pressing AI Answer on the Kompas.exe from c76ecc05 showed "Sign in again, then press AI Answer." Skip-login stays on. A desktop or web request to the answer route, the bridge route, and typed chat, with no cookie and no token, is the Houston owner. The answer card does not say to sign in. Admin routes still need a real session or the admin cookie. The synthetic owner is not an admin. One no-cookie production answer call and one Windows build follow the ship. This is not a live listen.
