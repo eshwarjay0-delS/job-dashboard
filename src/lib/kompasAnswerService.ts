@@ -110,6 +110,12 @@ const statusOf = (msg: string): number | undefined => {
   const m = /openrouter (\d{3})/.exec(msg || "")
   return m ? Number(m[1]) : undefined
 }
+// A 502/503/504 from the provider is a brief blip, not a block — the lanes
+// are worth one more try after a short pause, unlike a rate limit.
+function isTransient5xx(msg: string): boolean {
+  const s = statusOf(msg)
+  return s === 502 || s === 503 || s === 504
+}
 const shortModel = (m: string) => m.split("/").pop() || m
 
 // One lane's deadline: the client's own abort (a superseded card) plus a hard
@@ -665,8 +671,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             }
           }
           await attempt("")
-          // Every lane rate-limited: wait exactly what the provider said (≤15s)
+          // Every lane rate-limited or the provider briefly unavailable: wait
           // and retry the lanes once — the client shows a countdown meanwhile.
+          // A 5xx is a brief blip, not a rate limit, so it gets a short fixed
+          // backoff instead of the provider's Retry-After.
           if (!raw.trim() && isRateLimit(lastErr)) {
             const wait = retryMs(lastErr)
             if (wait > 0 && wait <= 15000) {
@@ -674,6 +682,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               await sleep(wait + 300)
               await attempt(":retry")
             }
+          } else if (!raw.trim() && isTransient5xx(lastErr)) {
+            emit({ type: "wait", ms: 2300 })
+            await sleep(2000)
+            await attempt(":retry")
           }
         } else { lastErr = "openrouter 503 missing paid key" }
 
@@ -824,6 +836,9 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       if (!raw.trim() && isRateLimit(lastErr)) {
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
+      } else if (!raw.trim() && isTransient5xx(lastErr)) {
+        await sleep(2000)
+        await attempt()
       }
       if (!raw.trim() && !signal.aborted) {
         const groqKey = resolveKeys({}).groq
