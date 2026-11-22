@@ -34,3 +34,8 @@ PR #493's durable explicit-selection provenance and unsupported-JD hard hold rem
 ## Next
 
 Run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA. Require legitimate protected-preview evidence and Safe Merge review before merge/deploy. Then test authenticated two-step resume selection without sending a real WhatsApp message. Keep the historical 17 Oct delivery unverified until its actual artifacts/receipt are found.
+
+
+## Restack event
+
+Git Data restack commit: `58a975195a54b95bcb18a4efa4132a0cd4163545` (first parent current master `d3a50dfa32a0d8634bb83d6d78501036324a1942`, second parent preserved prior PR head `e843cbb7da053f8788b1a4b54f15dd144a5e3b5c`). This ref update did not create Actions runs at first inspection. The following Contents-API documentation commit is used to request a PR synchronize event; exact workflows will be verified rather than assumed.
