@@ -5,6 +5,7 @@
 import { visibleLengthBand, type VisibleLength } from "./kompasDissection.ts"
 import { answerWordCount, presentSpokenAnswer, ungroundedProducts } from "./kompasAnswerPresentation.ts"
 import { repairStoryShape } from "./kompasGuards.ts"
+import { resumeCertifications } from "./kompasResume.ts"
 
 export const HONEST_LINE = "That is not on my resume, so I will not invent it."
 
@@ -205,6 +206,26 @@ function clipOption(text: string): string {
 
 function sameWord(a: string, b: string): boolean {
   return a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)))
+}
+
+/** Two tokens are relevant to each other when they are the same word or share a
+ * 6+ character stem — so "investigate" matches "investigation", "email" matches
+ * "emails", "security" matches "secure". Exact-token matching missed these and
+ * the relevance gate starved the extension (Round 8 shape test: phishing
+ * question stayed at 28 words because "investigate" never matched
+ * "investigation"). */
+function tokenMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length < 3 || b.length < 3) return false
+  const stem = Math.min(a.length, b.length, 6)
+  return a.slice(0, stem) === b.slice(0, stem)
+}
+
+/** Does a resume fact share a meaningful (stem-matched) token with the question
+ *  or the answer so far? Used by every relevance gate so off-topic facts are
+ *  never appended just to reach the floor. */
+function factRelevant(fact: string, tokens: Set<string>): boolean {
+  return askTokens(fact).some((w) => w.length > 2 && [...tokens].some((t) => tokenMatch(w, t)))
 }
 
 /** Rule score 1–4. Silent at 2 or below. A model is allowed only at the borderline score. */
@@ -631,9 +652,18 @@ function resumeNumber(resume: string, question: string): string {
 }
 
 function extendFromResume(text: string, question: string, resume: string, floor: number, ceiling: number): string {
+  // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts in order — the
+  // summary sentences first — pasting the "Enterprise Security Architect with
+  // 12+ years..." fragment onto 6 of 8 answers. It must use nonSummaryFacts
+  // (no summary, no Education/Certifications) and only facts relevant to the
+  // question or the answer so far. If none is relevant, the answer stays at
+  // the model's length rather than getting an unrelated fact pasted on.
   let out = String(text || "").trim()
-  for (const line of resumeFacts(resume)) {
+  const qTokens = new Set([...askTokens(question), ...askTokens(out)].filter((w) => w.length > 2))
+  const relevant = (line: string) => factRelevant(line, qTokens)
+  for (const line of nonSummaryFacts(resume)) {
     if (answerWordCount(out) >= floor) break
+    if (!relevant(line)) continue
     const fact = /[.!?]$/.test(line) ? line : `${line}.`
     if (out.includes(fact)) continue
     const next = `${out} ${fact}`.trim()
@@ -641,8 +671,9 @@ function extendFromResume(text: string, question: string, resume: string, floor:
     out = next
   }
   if (answerWordCount(out) < floor) {
-    for (const line of resumeFacts(resume)) {
+    for (const line of nonSummaryFacts(resume)) {
       if (answerWordCount(out) >= floor) break
+      if (!relevant(line)) continue
       const room = ceiling - answerWordCount(out)
       const need = floor - answerWordCount(out)
       const words = line.split(/\s+/).filter(Boolean)
@@ -687,6 +718,11 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   const route = answerRoute(question)
   let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
+  // Owner, 22 Nov 2026 (Round 8): Q2 came back with "I'd first define..." twice —
+  // the model still writes hypothetical "I would" even after the grounding prompt
+  // says to answer from experience. A conditional "I would" is not an answer from
+  // his resume; convert it to the direct first-person form.
+  body = body.replace(/\bI'd\b/g, "I").replace(/\bI would\b/gi, "I")
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
   // Owner, 22 Nov 2026: responses are lengthy always. The short route used to only trim
   // (to 60 words), so a definition or direct ask came back stubby even after the floor was
@@ -711,6 +747,25 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
         const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
         if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
       }
+      // Owner, 22 Nov 2026 (Round 8): a certifications question came back as
+      // 8 words naming only CISSP and CCSK, because the extension pools
+      // exclude the Certifications section (rightly, for other questions) and
+      // "certifications" shares no token with the cert lines. For a cert
+      // question, the full list IS the answer — append it directly.
+      if (answerWordCount(shortBody) < route.floor && /certification/i.test(question)) {
+        const certs = resumeCertifications(resume)
+        if (certs.length) {
+          const held = certs.filter((c) => !/pursuing/i.test(c))
+          const pursuing = certs.filter((c) => /pursuing/i.test(c))
+          const certLine = [
+            held.length ? `I hold ${held.join("; ")}` : "",
+            pursuing.length ? `and I am pursuing ${pursuing.join("; ")}` : "",
+          ].filter(Boolean).join(" ")
+          if (certLine && !shortBody.includes(held[0] || certs[0])) {
+            shortBody = `${shortBody} ${/[.!?]$/.test(certLine) ? certLine : `${certLine}.`}`.trim()
+          }
+        }
+      }
       // Owner, 22 Nov 2026 (his minimum bar): never club titles/clients from a
       // different resume than the current session's, and never append off-topic
       // bullets from other clients/roles. So the fallback only appends facts that
@@ -724,8 +779,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
         const qTokens = new Set([...askTokens(question), ...askTokens(shortBody)].filter((w) => w.length > 2))
         for (const fact of facts) {
           if (answerWordCount(shortBody) >= route.floor) break
-          const fTokens = askTokens(fact)
-          if (!fTokens.some((w) => qTokens.has(w))) continue
+          if (!factRelevant(fact, qTokens)) continue
           const clean = fact.replace(/\s+/g, " ").trim()
           // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
           // capitalized word not in the resume, and "Example" is not in the resume.
@@ -750,7 +804,8 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     // with 12+ years..." fragment pasted verbatim, and the other summary sentences
     // followed. Use a question-relevant fact from OUTSIDE the summary section.
     const facts = nonSummaryFacts(resume)
-    const fact = facts.find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || facts.find((line) => line.trim()) || ""
+    const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+    const fact = facts.find((line) => factRelevant(line, qTokens)) || facts.find((line) => line.trim()) || ""
     const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
     const hasFirstPerson = /\bI\b/.test(core)
     const tieSource = facts.find((line) => /\bI\b/.test(line)) || fact
@@ -767,12 +822,19 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
     body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
     if (resumeNumber(resume, question) && !/\d/.test(body)) {
-      const numbered = resumeFacts(resume).find((line) => /\d/.test(line))
+      const numbered = nonSummaryFacts(resume).find((line) => /\d/.test(line))
       if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
     }
   }
   if (!/\bExample:/.test(body)) {
-    const fact = resumeFacts(resume)[0]
+    // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts(resume)[0] — the
+    // generic summary — as the Example on every long/story answer that lacked
+    // one, pasting the "12+ years..." fragment onto 6 of 8 answers. Use a
+    // question-relevant fact from outside the summary section, and skip it
+    // entirely when none is relevant or when the fact is already in the body.
+    const facts = nonSummaryFacts(resume)
+    const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+    const fact = facts.find((line) => factRelevant(line, qTokens) && !body.includes(line.replace(/\s+/g, " ").trim().slice(0, 40))) || ""
     if (fact) {
       const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
       const next = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`.trim()
