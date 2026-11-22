@@ -761,3 +761,36 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 22 November 2026 — current master, exact gates and sandbox blocker
+
+**Canonical release:** master `361e2101db8ae76c59319d879e6d263bb42be8b2` is independently READY in production as `dpl_2eQJQ64iq2ZcyRgfE7CwaipFwgg4`. Both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to that exact deployment; `aliasError=null`. This is the current source release, not full product acceptance.
+
+### Priority backlog status
+
+- **17 Oct WhatsApp resume failure:** still unverified. Current master still allows `unverified_jd_terms`, accepts a missing profile email in `chosenResumeMatchesProfile`, and lacks durable proof that the user explicitly selected the exact same-account Files/Library item. The output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivered/read receipt remain missing. No replay, resend, R2 write or Meta send occurred.
+  - PR [#486](https://github.com/eshwarjay0-delS/job-dashboard/pull/486), narrow unsupported-JD hard hold: DRAFT at `1047e638b15c54eda7aeac1bd6313622c140cb04`; full CI `44906385583`, recovery `44906385557`, baseline `44906385530`, Plan/REA `44906385612` all SUCCESS.
+  - PR [#493](https://github.com/eshwarjay0-delS/job-dashboard/pull/493), durable explicit selection: DRAFT at `1040343cca65fd2a3b1ec0919365db43076ed00a`; full CI `44934971531` FAILED; recovery `44934971606`, baseline `44934971532`, Plan/REA `44934971609` SUCCESS.
+  - PR [#450](https://github.com/eshwarjay0-delS/job-dashboard/pull/450) remains mixed/conflicting with unapproved R2 CAS/lease/fencing; do not merge or mutate R2.
+  - PR [#495](https://github.com/eshwarjay0-delS/job-dashboard/pull/495) has four green exact-head checks but Safe Merge Gate found it stale/diverged and overlapping #493 shared Plan/REA/tests. Preserve and let Safe Merge Gate sequence it.
+- **Resume/JD/confirmed experience:** PR [#472](https://github.com/eshwarjay0-delS/job-dashboard/pull/472) remains DRAFT/non-mergeable at `e4afb4475e291d367d16c06778930fead3ed08ff`; full CI `44740851727`, recovery `44740851656`, baseline `44740851702`, Plan/REA `44740851769` SUCCESS. Protected preview and exported-DOCX acceptance using the authenticated original resume, exact JD and explicit confirmations remain missing. Confirmed skills may map to existing project bullets only; do not invent employers, projects, actions, outcomes, dates, titles, metrics or credentials.
+- **Poke-inspired Gmail/mobile:** PR [#474](https://github.com/eshwarjay0-delS/job-dashboard/pull/474) remains DRAFT/non-mergeable at `56ba9341479854e3e3b8f59dc99814226721209b`; full CI `44746084731`, baseline `44746084686`, Plan/REA `44746084809` SUCCESS. Four accounts maximum. Protected preview, two authorized inboxes with colliding thread IDs, selected-From preservation, per-account reconnect and narrow-phone acceptance remain missing. Keep proactive Poke worker, scheduler, notifications and sending disabled. No Gmail API/OAuth or inbox mutation occurred.
+- **Contract crawler:** PR [#479](https://github.com/eshwarjay0-delS/job-dashboard/pull/479) remains DRAFT/non-mergeable at `e15f7dc5aa563a69c59c6d262ac913b71f171782`; full CI `44805332914`, crawler regression `44805332916`, baseline `44805332732`, Plan/REA `44805332755` SUCCESS. Protected preview and post-release crawl acceptance remain missing. Current collector still has 600 ms pacing and a 25,000 ms abort; 20 active adapters. Manual/on-demand only, no contract-crawler cron. Robert Half remains manual-only; eTeam excluded pending a compliant official feed. Last evidenced crawl remains 10 Nov (20 portals, 6,818 found/upserted, one error); no crawl occurred in this run.
+- **Kompas:** Start behavior (`5b06192`), speech endpoint correction (`58c4475`) and two transient answer retries (`3d668229`) are ancestors of the current READY release. Their real owner browser/Windows/phone acceptance remains open. The 50 authenticated Kompas/ChatGPT same-question pairs and independent human grading remain open.
+
+### New provider-routing approval boundary
+
+PR [#510](https://github.com/eshwarjay0-delS/job-dashboard/pull/510) merged as `361e2101db8ae76c59319d879e6d263bb42be8b2` and is live. Exact-head full CI `44982573100`, baseline `44982573087` and Plan/REA `44982573123` have now completed SUCCESS. The full CI was still running at the time of merge, so this later result resolves that CI gap.
+
+The fallback calls shared `callLLM` provider selection with the Kompas prompt. Actual provider routing is not guaranteed to match the PR description's simplified provider list and can send resume/JD/interview context to additional providers. Safe Merge Gate flagged the change as high-risk and requested an owner keep/revert decision. Do not expand or test this path with personal interview material until the owner decision and provider/data policy are explicit. No model call was made in this run; no secret values were read.
+
+### Exact blocker to continuing WhatsApp implementation
+
+The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot exist, but Vercel refused `get_named_sandbox(resume=true)` with **HTTP 402 payment_required**: Hobby plan Sandbox usage limit exceeded, reset at **2026-12-01T00:00:00.000Z**. The current local container has no Vercel CLI, repository checkout or installed `node_modules`. `AGENTS.md` requires the installed Next.js 16.3.8 route-handler guide under `node_modules/next/dist/docs` before route edits. Do not change billing, delete snapshots, bypass protection or substitute upstream docs for the installed guide.
+
+### Coordination and activity
+
+MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
+
+**Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
