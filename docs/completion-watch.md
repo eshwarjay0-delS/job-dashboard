@@ -1,3 +1,11 @@
+## 22 November 2026 07:44 CST — Kompas stream-wipe correction is live; regression coverage is being added
+
+- **Production release:** alias `job-dashboard-fawn.vercel.app` is independently READY on Vercel deployment `dpl_9MqfGigAAakndxkpvyUy6U8NegKU`, exact SHA `0bac4a46d6ed312a247311357468b9f1397766bb`, target production. The independent alias lookup points to the same deployment.
+- **Stream-wipe correction:** current source now clears the answer only when `raw` is empty. A provider error after text has streamed no longer triggers the empty replacement that previously erased it. The correction is deployed; baseline contract remains 15/15. No post-fix live answer/device test was run in this scheduled audit.
+- **OpenAI-first:** current production source contains OpenAI-first in both stream and JSON paths. Previously recorded five-question live timing on `375340c` was 2.7–4.2s, first-try via `openai / gpt-6-luna`; current production is its descendant. No fresh model call was made.
+- **Regression test:** a focused unit/source-wiring test is being added to the existing CI suite. The local runtime has no canonical checkout or installed dependencies; remote GitHub Actions is the available execution gate. Public HTTP endpoints could not be opened by the web verifier this run, so Vercel metadata is release evidence, not an endpoint smoke test.
+- **Next:** await exact-head CI on PR #523. Then require owner-side Chrome AI Answer on the loaded resume/JD and separate caption capture validation. No native Windows, WhatsApp or personal browser acceptance is claimed.
+
 # MFit Completion Watch
 
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
