@@ -442,7 +442,12 @@ const PAST: Record<string, string> = {
 }
 
 function asFact(line: string): string {
-  let text = line.replace(/^(?:experience in|having|responsible for|worked on|expertise in|assists with|assisted with)\s+/i, "").replace(/[,:;]+$/, "").trim()
+  // Owner, 22 Nov 2026 (Round 14): a resume line can end with a keyword-tag
+  // suffix — ". (Zero Trust) (Zero Trust Security), using Expert-level" — that
+  // rides along when the line is converted to first person and dangles at the
+  // end of an answer. Strip a trailing tag suffix (parenthetical groups
+  // followed by ", using ..." or a bare parenthetical tail) before converting.
+  let text = line.replace(/\s*(?:\([^)]*\)\s*)+,?\s*using\s+[^.!?]*\.?\s*$/i, "").replace(/^(?:experience in|having|responsible for|worked on|expertise in|assists with|assisted with)\s+/i, "").replace(/[,:;]+$/, "").trim()
   if (/^I\b/.test(text)) return /[.!?]$/.test(text) ? text : `${text}.`
   const verb = text.match(/^([A-Za-z]+)\b/)
   const past = verb ? PAST[verb[1].toLowerCase()] : ""
@@ -725,7 +730,11 @@ function resumeNumber(resume: string, question: string): string {
  *  (first-person), never as a raw bullet. */
 function extendStorySameThread(body: string, question: string, resume: string, floor: number, ceiling: number): string {
   let out = String(body || "").trim()
-  const opening = sentenceList(out)[0] || ""
+  // Owner, 22 Nov 2026 (Round 14): the proper-noun set comes from the first
+  // TWO sentences, not just the opening — the project/tool name often appears
+  // in the second sentence ("I integrated the checks into Jenkins..."), and
+  // limiting to sentence 1 left the extension with nothing to match.
+  const opening = sentenceList(out).slice(0, 2).join(" ")
   // Owner, 22 Nov 2026 (Round 13): the shared token must be a CAPITALIZED
   // word in the opening (a proper noun: a client, tool, or product — Fifth
   // Bank, Jenkins, Python, AWS, Venafi). A lowercase process noun
@@ -968,8 +977,12 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       // 9.2") on a Fifth Bank automation story. A numbered fact must be
       // relevant to the question AND go through asFact (first-person), never
       // pasted raw.
+      // Owner, 22 Nov 2026 (Round 14): the digit check was still too loose —
+      // "L2" in the PeopleSoft bullet counted as a number, so the bullet was
+      // appended to a Jenkins story. Require a MEANINGFUL number: a standalone
+      // integer of 2+ digits (a count, not a tier/version label like L2/P1/9.2).
       const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
-      const numbered = nonSummaryFacts(resume).find((line) => /\d/.test(line) && factRelevant(line, qTokens))
+      const numbered = nonSummaryFacts(resume).find((line) => /\b\d{2,}\b/.test(line) && factRelevant(line, qTokens))
       const numberedFact = numbered ? asFact(numbered) : ""
       if (numberedFact) body = `${body} ${numberedFact}`.trim()
     }
@@ -1057,13 +1070,55 @@ function stripRefusalOpen(body: string): string {
   return body
 }
 
+/** Stream-gate drop check: whether a single sentence should be dropped as it
+ *  streams, before the final shaping runs. Drops (a) a refusal/hedge sentence
+ *  ("I haven't led an IAM migration", "I can't substantiate a specific time",
+ *  "I don't have a supported example", "That validation is the closest
+ *  experience..."), (b) a verbatim resume fact (first-person converted or
+ *  not — the model converts "Collaborated..." to "I collaborated..."), and
+ *  (c) a tag-fragment sentence (mostly parenthetical groups, no first person).
+ *  The final gateDisplayedAnswer shaping applies the same rules, but the
+ *  session displays the stream's incremental sentences and the final replace
+ *  does not always overwrite them (Round 14), so the stream must filter too.
+ *  A dropped sentence never halts the gate — the caller returns [] for it. */
+export function dropStreamSentence(sentence: string, resume: string): boolean {
+  const t = String(sentence || "").trim()
+  if (!t) return false
+  // (a) Refusal / hedge — a standalone sentence, or a sentence whose opening
+  // clause is a refusal ("I haven't led an IAM migration, but I have worked
+  // on..."). The clause-strip in stripRefusalOpen handles the embedded case
+  // in final shaping; the stream drops the whole sentence (the work follows
+  // in later sentences).
+  if (/^(?:I (?:can ?not|cannot|can't|haven't|have not|don't|do not)|That (?:validation|work) is the closest|I (?:am|was) not able to)\b/i.test(t)) return true
+  if (/^(?:I (?:haven't|have not|don't|do not) have (?:a|an|any) (?:supported|documented|specific|real) (?:example|time|instance))/i.test(t)) return true
+  // (c) Tag fragment — mostly parenthetical groups, no first-person content.
+  const parenGroups = (t.match(/\([^)]*\)/g) || []).length
+  if (parenGroups >= 2 && !/\b(?:I|we|my|our)\b/i.test(t)) return true
+  // (b) Verbatim resume fact — normalize hyphens (the resume uses U+2011)
+  // and strip a leading "I " before comparing, as in dropVerbatimResumeSentences.
+  const norm = (s: string) => s.replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, "-").replace(/\s+/g, " ").trim().toLowerCase()
+  const n = norm(t)
+  if (n.length < 20) return false
+  const noI = n.replace(/^i\s+(?:have\s+|had\s+)?/, "")
+  const facts = new Set(resumeFacts(resume).map((f) => norm(f)))
+  const resumeNorm = norm(resume || "")
+  if (facts.has(n) || facts.has(n.replace(/[.!?]+$/, ""))) return true
+  if (facts.has(noI) || facts.has(noI.replace(/[.!?]+$/, ""))) return true
+  if (noI.split(/\s+/).length >= 5 && resumeNorm.includes(noI.replace(/[.!?]+$/, ""))) return true
+  return false
+}
+
 /** Drop any sentence after the first that is a verbatim resume fact. A pasted
  *  resume bullet ("Performed integration troubleshooting across Saviynt
  *  connectors...") is never the model's own prose — the model writes in the
  *  first person and paraphrases. The first sentence is kept even if it matches,
  *  in case the model's opening closely follows a resume line. */
 function dropVerbatimResumeSentences(body: string, resume: string): string {
-  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
+  // Owner, 22 Nov 2026 (Round 14): the resume uses a non-breaking hyphen
+  // (U+2011) in "cross‑functional" while the model writes a regular hyphen
+  // ("cross-functional"), so a verbatim comparison missed the paste. Normalize
+  // all hyphen-like characters to a regular hyphen before comparing.
+  const norm = (s: string) => s.replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, "-").replace(/\s+/g, " ").trim().toLowerCase()
   const resumeNorm = norm(resume || "")
   const facts = new Set(resumeFacts(resume).map((f) => norm(f)))
   const sentences = sentenceList(body)
@@ -1083,8 +1138,16 @@ function dropVerbatimResumeSentences(body: string, resume: string): string {
     if ((clean.match(/\([^)]*\)/g) || []).length >= 2 && !/\b(?:I|we|my|our)\b/i.test(clean)) return false
     // Verbatim if the whole sentence is a resume fact, or appears in the
     // resume text as a contiguous chunk (covers tag fragments pasted mid-text).
+    // Owner, 22 Nov 2026 (Round 14): the model converts a bullet to first
+    // person ("Collaborated with cross-functional teams on PeopleSoft security
+    // design..." becomes "I collaborated with..."), so a verbatim check on
+    // the sentence as-is misses it. Strip a leading "I " (and "I have/had")
+    // and compare the remainder against the facts too.
+    const noI = n.replace(/^i\s+(?:have\s+|had\s+)?/, "")
     if (facts.has(n) || facts.has(n.replace(/[.!?]+$/, ""))) return false
+    if (facts.has(noI) || facts.has(noI.replace(/[.!?]+$/, ""))) return false
     if (resumeNorm.includes(n.replace(/[.!?]+$/, "")) && n.split(/\s+/).length >= 5) return false
+    if (resumeNorm.includes(noI.replace(/[.!?]+$/, "")) && noI.split(/\s+/).length >= 5) return false
     return true
   })
   return kept.join(" ")
