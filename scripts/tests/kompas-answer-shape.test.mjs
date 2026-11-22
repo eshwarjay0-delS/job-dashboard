@@ -32,7 +32,13 @@ test("a short technical answer is extended and closes on a resume example", () =
     resume: RESUME,
     source: RESUME,
   })
-  assert.ok(gated.words >= 120, `words ${gated.words}`)
+  // Owner, 22 Nov 2026 (no-clubbing rule): the extension only appends facts
+  // relevant to the question — it must NOT force the 120-word floor by pasting
+  // off-topic resume lines. This fixture has one relevant fact (the fraud
+  // investigation workflows line), so the answer is extended with that and
+  // stays well under 120 rather than clubbing in ServiceNow/CMDB lines.
+  assert.ok(gated.words >= 50, `words ${gated.words}`)
+  assert.match(gated.text, /fraud investigation workflows/)
   // Owner, 22 Nov 2026: a first-person answer keeps its first-person shape — the thesis
   // ("I would answer this directly") must never be prepended. It leaked as the whole Q8
   // answer across three live rounds when the model's first-person body was filtered out.
