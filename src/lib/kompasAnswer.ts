@@ -1449,7 +1449,7 @@ export function differentQuestionLine(question: string, history: unknown): strin
   const prev = spokenKey(String(last.q ?? last.question ?? ""))
   const next = spokenKey(question)
   if (!prev || !next || prev === next) return ""
-  return "DIFFERENT QUESTION: this ask is not the previous one. Do not reuse the previous answer, its opening, or its example."
+  return "DIFFERENT QUESTION: this ask is not the previous one. Do not repeat the previous answer verbatim — but do build on what was already said: if the new question follows from the last answer, pick up its thread (the same project, tools and employer) instead of re-introducing generic context from scratch."
 }
 
 // ---- Per-tier answer rules (perfACT TIER_RULES, pivoted to MarketFit's delivery) ----

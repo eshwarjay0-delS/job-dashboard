@@ -643,7 +643,12 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
                 keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
               }, [{ role: "user", content: job.userText }])
               if (openaiText.trim()) {
-                raw = openaiText.trim()
+                // Owner, 22 Nov 2026 (Round 5): the TITLE: line was reaching the screen —
+                // the JSON path strips it with splitTitle but this stream OpenAI call
+                // assigned the raw text, so 6 of 9 answers opened with "TITLE: ...".
+                const split = splitTitle(openaiText.trim())
+                raw = split.body
+                if (split.title && split.title !== titleSent) { titleSent = split.title; emit({ type: "title", text: titleSent }) }
                 lastErr = ""
                 servedModel = modelFor("openai", "light")
                 servedProvider = "openai"
