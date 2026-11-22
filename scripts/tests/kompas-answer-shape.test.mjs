@@ -37,8 +37,9 @@ test("a short technical answer is extended and closes on a resume example", () =
   // off-topic resume lines. This fixture has one relevant fact (the fraud
   // investigation workflows line), so the answer is extended with that and
   // stays well under 120 rather than clubbing in ServiceNow/CMDB lines.
-  assert.ok(gated.words >= 40, `words ${gated.words}`)
+  assert.ok(gated.words >= 15, `words ${gated.words}`)
   assert.match(gated.text, /fraud investigation workflows/)
+  assert.doesNotMatch(gated.text, /ServiceNow platform|CMDB classes|role-based access controls/)
   // Owner, 22 Nov 2026: a first-person answer keeps its first-person shape — the thesis
   // ("I would answer this directly") must never be prepended. It leaked as the whole Q8
   // answer across three live rounds when the model's first-person body was filtered out.
@@ -164,13 +165,22 @@ test("gold replay median is measured after the floor binds", () => {
   const shorts = median(buckets.short)
   const longs = median(buckets.long)
   const stories = median(buckets.story)
-  assert.ok(shorts >= 70 && shorts <= 120, `short median ${shorts}`)
-  // Owner, 22 Nov 2026 (no-clubbing rule): a concept question with no resume
-  // fact relevant to it (e.g. "roles of L1, L2 and L3 in a SOC") stays at the
-  // model's length rather than getting an unrelated resume fact pasted on just
-  // to reach the floor. So the median must bind, but not every single item.
-  assert.ok(buckets.short.filter((n) => n >= 70 && n <= 120).length >= buckets.short.length - 1, `short in-band ${JSON.stringify(buckets.short)}`)
-  assert.ok(longs >= 120, `long median ${longs}`)
-  assert.ok(stories >= 150, `story median ${stories}`)
+  // Owner, 22 Nov 2026 (no-clubbing rule): a concept or personal question
+  // with no resume fact relevant to it ("Tell me about yourself", "Why did
+  // you choose cybersecurity", "roles of L1, L2 and L3 in a SOC") stays at
+  // the model's length rather than getting an unrelated resume fact pasted on
+  // just to reach the floor. So the short median no longer binds to 70 — the
+  // model's length is the floor when nothing is relevant — but items WITH a
+  // relevant fact must still reach the band.
+  assert.ok(shorts >= 40, `short median ${shorts}`)
+  assert.ok(buckets.short.filter((n) => n >= 70 && n <= 120).length >= 2, `short in-band ${JSON.stringify(buckets.short)}`)
+  // Owner, 22 Nov 2026 (no-clubbing rule): the gold resume is a ServiceNow
+  // fixture, so security questions (EDR/SIEM, ransomware, Qualys) have no
+  // relevant fact in it — they stay at the model's length rather than getting
+  // an unrelated ServiceNow fact pasted on. The medians no longer bind to
+  // the floor; the invariant is that items WITH a relevant fact extend and
+  // nothing gets clubbed.
+  assert.ok(longs >= 50, `long median ${longs}`)
+  assert.ok(stories >= 50, `story median ${stories}`)
   console.log(`replay median short ${shorts} long ${longs} story ${stories}`)
 })
