@@ -16,6 +16,7 @@ import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
+import { hasProfilePartContent, mergeProfileTextFields, resolvePendingDraftPart } from "./tailor-gap-fill"
 import { priceCalls, type PricedCall } from "./llmPrices"
 import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, restoreDroppedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
 import { tailorReview, type TailorReview } from "./resume-changes"
@@ -617,14 +618,12 @@ export async function runTailor(opts: {
       // The draft is a list of parts: the profile, then each group of roles (current role first). workParts hands them to the
       // lanes: a healthy first provider writes them all in one burst, and when it is down they spread over whatever answers.
       type Part = { kind: "profile" | "experience"; roles?: number[] }
-      const wantProfile = sec.skills !== false || sec.summary !== false || (sec.headline ?? sec.summary) !== false
+      const wantProfile = profileSections.skills || profileSections.summary || profileSections.headline
       const parts: Part[] = [...(wantProfile ? [{ kind: "profile" as const }] : []), ...roleGroups.map(g => ({ kind: "experience" as const, roles: g }))]
       // Does a reply change anything this tailor will keep? (An empty one from a free model is offered to another lane.)
       const says = (part: Part, e: Edits): boolean => part.kind === "experience"
         ? (e.bullets || []).some(b => (b.text || "").trim() && b.text.trim() !== (bulletBefore.get(b.idx) || "").trim())
-        : (sec.skills !== false && (e.skills || []).some(k => (k.text || "").trim()))
-          || (sec.summary !== false && !!(e.summary || "").trim())
-          || ((sec.headline ?? sec.summary) !== false && !!`${e.headline?.title || ""}${e.headline?.tagline || ""}`.trim())
+        : hasProfilePartContent(e, profileSections)
       const worked = await workParts<Part, Edits>({
         parts, lanes, out: laneOut, says,
         ask: (part, lane) => {
@@ -677,6 +676,16 @@ export async function runTailor(opts: {
   const deadline = fullDeadline - extraReserve
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
+  const profileSections = {
+    skills: sec.skills !== false,
+    summary: sec.summary !== false,
+    headline: (sec.headline ?? sec.summary) !== false,
+  }
+  const requestedProfileParts = [
+    ...(profileSections.skills ? ["skills"] : []),
+    ...(profileSections.summary ? ["summary"] : []),
+    ...(profileSections.headline ? ["headline"] : []),
+  ].join(", ")
   // A full retarget is ranked on the whole resume AND on how well EACH client role shows the listed JD skills, with a
   // penalty per untouched role: keywords that sit only in the skills section or the current role lose.
   const roleReflect = (p: Pass) => {
@@ -717,7 +726,7 @@ export async function runTailor(opts: {
       // listed in the generated skills section. Only the source establishes evidence.
       const unseen = forcedJdKws.filter(k => !cur.afterKw.has(k))
       // Profile repair is essential: the first pass can omit an entire skill category.
-      if (sec.skills !== false && (unseen.length || cur.partial)) todo.push({ role: -1, skills: unseen, add: 0 })
+      if ((profileSections.skills || profileSections.summary || profileSections.headline) && (unseen.length || cur.partial)) todo.push({ role: -1, skills: unseen, add: 0 })
       for (const i of countedRoles) {
         const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
         const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
@@ -732,10 +741,10 @@ export async function runTailor(opts: {
       const roundDeadline = Math.min(deadline - 2000, Date.now() + Math.max(15000, Math.floor((deadline - Date.now() - 2000) / (FILL_ROUNDS - round))))
       const worked = await workParts<typeof todo[number], Edits>({
         parts: todo, lanes: [...lanes.slice(round % lanes.length), ...lanes.slice(0, round % lanes.length)], out: laneOut,
-        says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
+        says: (t, e) => t.role < 0 ? hasProfilePartContent(e, profileSections) : !!e.bullets?.length,
         ask: (t, lane) => {
           if (t.role < 0) return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
-            preferences: [...allPrefs, `SKILLS REPAIR: preserve every already-covered JD term. Review ALL skill categories against the original evidence below. Incorporate missing exact JD terms and supported equivalent terminology under the correct existing category, without unsupported claims. Missing terms: ${t.skills.join(", ")}. Original evidence: ${text}`].join("\n"),
+            preferences: [...allPrefs, `PROFILE REPAIR: complete only these requested sections: ${requestedProfileParts}. Preserve every already-covered JD term. If skills is requested, incorporate only missing terms supported by the selected resume or explicit candidate statements into the correct existing category: ${t.skills.join(", ") || "none"}. If summary or headline is requested, return those fields using source-backed information only. Do not invent employers, roles, dates, credentials or metrics. Original evidence: ${text}`].join("\n"),
             jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
           const parts = [
             lacking.has(t.role) ? "not tailored yet, so rewrite at least half of its bullets for this JD" : "",
@@ -752,18 +761,16 @@ export async function runTailor(opts: {
       // Accept each successful section independently. One regressing role must not
       // discard improvements in the skills section or another client role.
       cur = await acceptImprovingRepairs(cur, worked.filter(w => w.e), async (current, w) => {
-        const next = await applyEdits({ ...current.edits,
-          skills: w.part.role < 0 ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
+        const profileFields = w.part.role < 0
+          ? mergeProfileTextFields(current.edits, w.e!, profileSections)
+          : current.edits
+        const next = await applyEdits({
+          ...profileFields,
+          skills: w.part.role < 0 && profileSections.skills ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
           bullets: w.part.role >= 0 ? mergeIndexedEdits(current.edits.bullets || [], w.e!.bullets || []) : current.edits.bullets,
         })
         next.via = [current.via, w.via].filter(Boolean).join(" + ")
-        next.partial = current.partial
-        if (current.partial) {
-          const pendingRoles = (current.partial.pendingRoles || []).filter(i => i !== w.part.role)
-          const pendingProfile = !!current.partial.pendingProfile && w.part.role !== -1
-          const failed = pendingRoles.length + Number(pendingProfile)
-          next.partial = failed ? { ...current.partial, failed, pendingRoles, pendingProfile } : undefined
-        }
+        next.partial = resolvePendingDraftPart(current.partial, w.part.role)
         return next
       }, quality)
       if (!cur.partial && supportedShare(cur) >= TARGET_COVERAGE && !countedRoles.some(i => cur.required[i].some(k => !cur.roleKw[i].has(k)))) break
@@ -1017,16 +1024,16 @@ export async function runTailor(opts: {
           if (splitDraft) {
             const view = zonesAfter(base.edits)
             const todo = [
-              ...(sec.skills !== false ? [{ role: -1, skills: freshUnique }] : []),
+              ...((profileSections.skills || profileSections.summary || profileSections.headline) ? [{ role: -1, skills: freshUnique }] : []),
               ...countedRoles.map(i => ({ role: i, skills: freshUnique })),
             ]
             const roundDeadline = Math.min(fullDeadline - 2000, Date.now() + Math.max(15000, fullDeadline - Date.now() - 2000))
             const worked = await workParts<typeof todo[number], Edits>({
               parts: todo, lanes, out: laneOut,
-              says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
+              says: (t, e) => t.role < 0 ? hasProfilePartContent(e, profileSections) : !!e.bullets?.length,
               ask: (t, lane) => {
                 if (t.role < 0) return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
-                  preferences: [...allPrefs, `SKILLS REPAIR (gap keywords): preserve every already-covered JD term. Write these known JD terms into the existing categories: ${t.skills.join(", ")}. Original evidence: ${text}`].join("; "),
+                  preferences: [...allPrefs, `PROFILE REPAIR (gap keywords): complete only these requested sections: ${requestedProfileParts}. Preserve every already-covered JD term. If skills is requested, write only these supported missing JD terms into existing categories: ${t.skills.join(", ")}. If summary or headline is requested, return those fields using source-backed information only. Original evidence: ${text}`].join("; "),
                   jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
                 const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join(" ")
                 return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
@@ -1037,12 +1044,16 @@ export async function runTailor(opts: {
               assembleBy: roundDeadline,
             })
             gapCandidate = await acceptImprovingRepairs(base, worked.filter(w => w.e), async (current, w) => {
-              const next = await applyEdits({ ...current.edits,
-                skills: w.part.role < 0 ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
+              const profileFields = w.part.role < 0
+                ? mergeProfileTextFields(current.edits, w.e!, profileSections)
+                : current.edits
+              const next = await applyEdits({
+                ...profileFields,
+                skills: w.part.role < 0 && profileSections.skills ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
                 bullets: w.part.role >= 0 ? mergeIndexedEdits(current.edits.bullets || [], w.e!.bullets || []) : current.edits.bullets,
               })
               next.via = [current.via, w.via].filter(Boolean).join(" + ")
-              next.partial = current.partial
+              next.partial = resolvePendingDraftPart(current.partial, w.part.role)
               return next
             }, quality)
           } else {

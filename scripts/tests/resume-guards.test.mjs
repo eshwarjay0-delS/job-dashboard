@@ -7,6 +7,7 @@ import JSZip from 'jszip'
 import mammoth from 'mammoth'
 import { checkRoundTrip, docxText, docxIdentityText } from '../../src/lib/resume-round-trip-guard.ts'
 import { buildKeywordReport } from '../../src/lib/resume-keyword-report.ts'
+import { hasProfilePartContent, mergeProfileTextFields, resolvePendingDraftPart } from '../../src/lib/tailor-gap-fill.ts'
 
 const SRC = `Alex Example
 alex.example@example.com | (555) 010-1234 | linkedin.com/in/alex-example
@@ -236,4 +237,74 @@ test('resume identity: email-only mismatch logs category without exposing addres
   assert.match(identity, /if \(emails\(source\) !== emails\(output\)\) \{[\s\S]*?categories: \["email"\][\s\S]*?return false/)
   assert.doesNotMatch(identity, /console\.error\([^\n]*(?:emails\(source\)|emails\(output\)|sourceText|outputText)/)
   assert.equal(checkRoundTrip(SRC, SRC.replace('alex.example@example.com', 'other@example.com')).ok, false)
+})
+
+
+const requestedProfileSections = { skills: true, summary: true, headline: true }
+
+test('profile gap-fill accepts summary-only output when summary is requested', () => {
+  assert.equal(hasProfilePartContent({ summary: 'A source-backed professional summary.' }, requestedProfileSections), true)
+})
+
+test('profile gap-fill accepts headline-only output when headline is requested', () => {
+  assert.equal(hasProfilePartContent({ headline: { title: 'Security Engineer' } }, requestedProfileSections), true)
+})
+
+test('profile gap-fill accepts skills-only output and rejects empty or disabled sections', () => {
+  assert.equal(hasProfilePartContent({ skills: [{ idx: 4, text: 'IAM, SIEM' }] }, requestedProfileSections), true)
+  assert.equal(hasProfilePartContent({ summary: '   ', skills: [] }, requestedProfileSections), false)
+  assert.equal(hasProfilePartContent({ summary: 'A summary' }, { skills: false, summary: false, headline: false }), false)
+})
+
+test('profile repair merges summary and headline instead of silently discarding them', () => {
+  const current = {
+    summary: 'Original summary',
+    headline: { title: 'Security Analyst', tagline: 'Original tagline' },
+    skills: [{ idx: 4, text: 'IAM' }],
+  }
+  const merged = mergeProfileTextFields(current, {
+    summary: 'Updated source-backed summary',
+    headline: { title: '', tagline: 'Application security and risk' },
+  }, requestedProfileSections)
+  assert.deepEqual(merged, {
+    summary: 'Updated source-backed summary',
+    headline: { title: 'Security Analyst', tagline: 'Application security and risk' },
+    skills: [{ idx: 4, text: 'IAM' }],
+  })
+})
+
+test('profile repair does not overwrite disabled summary or headline sections', () => {
+  const current = { summary: 'Keep this summary', headline: { title: 'Keep this title' } }
+  const merged = mergeProfileTextFields(current, {
+    summary: 'Do not apply',
+    headline: { title: 'Do not apply' },
+  }, { skills: false, summary: false, headline: false })
+  assert.deepEqual(merged, current)
+})
+
+test('accepted profile repair clears only the pending profile part', () => {
+  assert.deepEqual(resolvePendingDraftPart({
+    failed: 2, total: 6, pendingRoles: [2], pendingProfile: true,
+  }, -1), {
+    failed: 1, total: 6, pendingRoles: [2], pendingProfile: false,
+  })
+})
+
+test('accepted role repair leaves a pending profile part intact', () => {
+  assert.deepEqual(resolvePendingDraftPart({
+    failed: 2, total: 6, pendingRoles: [2], pendingProfile: true,
+  }, 2), {
+    failed: 1, total: 6, pendingRoles: [], pendingProfile: true,
+  })
+})
+
+test('all profile draft and repair paths share the same acceptance and merge logic', () => {
+  const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
+  assert.equal((tailor.match(/hasProfilePartContent\(e, profileSections\)/g) || []).length, 3)
+  assert.equal((tailor.match(/mergeProfileTextFields\(current\.edits, w\.e!, profileSections\)/g) || []).length, 2)
+  assert.equal((tailor.match(/resolvePendingDraftPart\(current\.partial, w\.part\.role\)/g) || []).length, 2)
+  assert.match(tailor, /if \(\(profileSections\.skills \|\| profileSections\.summary \|\| profileSections\.headline\) && \(unseen\.length \|\| cur\.partial\)\)/)
+  assert.match(tailor, /profileSections\.skills \|\| profileSections\.summary \|\| profileSections\.headline/)
+  assert.match(tailor, /const requestedProfileParts = \[/)
+  assert.equal((tailor.match(/PROFILE REPAIR(?: \(gap keywords\))?: complete only these requested sections: \$\{requestedProfileParts\}/g) || []).length, 2)
 })
