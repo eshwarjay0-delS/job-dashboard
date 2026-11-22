@@ -8,6 +8,7 @@ on:
       - "public/kompas/answer-aside.js"
       - "public/kompas/bridge-lines.js"
       - "public/kompas/index.html"
+      - "docs/research/mfit-release-backlog-audit-2026-11-22.md"
   workflow_dispatch:
 
 permissions:
