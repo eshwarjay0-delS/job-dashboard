@@ -121,24 +121,22 @@ const unsupported = {
   keyword_analysis: { ...low.keyword_analysis, added: ['supplierninja'] },
 }
 
-test('a finished below-floor rewrite sends the updated Word file and names the supported shortfall', async () => {
+test('a finished below-floor rewrite sends only the exact selected original, labeled NOT TAILORED', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
   await generate('15550101', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].body, /candidate1@example.test/)
+  assert.equal(docs[0].body, HOUSTON, 'below-floor output is an unchanged original, not a tailored draft')
+  assert.match(docs[0].caption, /^Original resume — NOT TAILORED/)
+  assert.match(docs[0].caption, /exact Files resume you selected for candidate1@example\.test, sent unchanged/)
+  assert.match(docs[0].caption, /The rewrite did not finish cleanly/)
+  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
   assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.doesNotMatch(docs[0].caption, /supplierninja/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
-  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
-  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
+  assert.doesNotMatch(said.join('\\n'), /I did not send a file/)
+  assert.match(said.join('\\n'), /EASM Cybersecurity Engineer/)
 })
-
 test('a failed or incomplete rewrite may send only the explicitly selected Files resume', async () => {
   let mode = 'throw'
   const { generate, docs, said, filesFor } = harness(async () => {
@@ -168,7 +166,7 @@ test('a failed or incomplete rewrite may send only the explicitly selected Files
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
-test('a finished 30.8% rewrite with a role evidence gap sends the updated file when it adds no unsupported claims', async () => {
+test('a finished 30.8% rewrite with a role evidence gap sends only the selected original, labeled NOT TAILORED', async () => {
   const finished = {
     ...low,
     token: 'easm-scored',
@@ -182,18 +180,14 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file w
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Skills your resume already supports: 30\.8%/)
-  assert.match(docs[0].caption, /ATS parse check: 92%/)
-  assert.match(docs[0].caption, /Risk factor:/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.doesNotMatch(docs[0].caption, /was not rewritten/)
-  assert.doesNotMatch(docs[0].caption, /marked incomplete/)
-  assert.doesNotMatch(docs[0].caption, /closest matching resume/)
-  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+  assert.equal(docs[0].body, HOUSTON, 'low raw coverage must not send the tailored draft')
+  assert.match(docs[0].caption, /^Original resume — NOT TAILORED/)
+  assert.match(docs[0].caption, /exact Files resume you selected for candidate1@example\.test, sent unchanged/)
+  assert.match(docs[0].caption, /The rewrite did not finish cleanly/)
+  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
+  assert.doesNotMatch(docs[0].body, /supplierninja/)
+  assert.doesNotMatch(said.join('\\n'), /I did not send a file/)
 })
-
 test('a slow constructed-JD rewrite sends the rewritten file, not the original', async () => {
   const finished = {
     token: 'iam-rewritten', score: 97, coverage: 97, supported_coverage: 98,
@@ -298,7 +292,7 @@ test('fallback rejects a mismatched Library root and a byte mismatch', async () 
     jdId: 'wrong-root', jd: 'EASM role', resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, rootMismatch.filesFor(HOUSTON_PATH, true, { userDir: '/data/user-resumes/another-account' }))
   assert.equal(rootMismatch.docs.length, 0)
-  assert.match(rootMismatch.said.join('\n'), /selected Files resume could not be verified/)
+  assert.match(rootMismatch.said.join('\n'), /exact Files resume you selected could not be verified for this account/)
 
   let reads = 0
   const byteMismatch = harness(async () => { throw new Error('provider down') }, async p => {
@@ -311,7 +305,7 @@ test('fallback rejects a mismatched Library root and a byte mismatch', async () 
   }, TEST_USER_ID, 60_000, byteMismatch.filesFor(HOUSTON_PATH))
   assert.equal(byteMismatch.docs.length, 0)
   assert.equal(reads, 2, 'the source and selected Library bytes are read independently')
-  assert.match(byteMismatch.said.join('\n'), /selected Files resume could not be verified/)
+  assert.match(byteMismatch.said.join('\n'), /exact Files resume you selected could not be verified for this account/)
 })
 
 
@@ -322,7 +316,7 @@ test('unsupported JD-only terms are explained before the ordinary coverage hold'
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH, false))
   assert.equal(docs.length, 0)
-  assert.match(said.at(-1), /job-post terms/)
+  assert.match(said.at(-1), /from the job post/)
   assert.match(said.at(-1), /supplierninja/)
   assert.match(qualityStop(unsupported), /not in your resume/)
 })
