@@ -240,10 +240,23 @@ const GENERIC_RELEVANCE = new Set([
 ])
 
 /** Does a resume fact share a meaningful (stem-matched, non-generic) token with
- *  the question or the answer so far? Used by every relevance gate so off-topic
- *  facts are never appended just to reach the floor. */
+ *  the question? Used by every relevance gate so off-topic facts are never
+ *  appended just to reach the floor. Owner, 22 Nov 2026 (Round 10): matching
+ *  on the ANSWER alone is too loose — the answer already contains many words,
+ *  so almost any fact matches something in it (the incident-investigation and
+ *  Saviynt EIC bullets were appended to every answer, and the Q6 follow-up
+ *  got Saviynt troubleshooting bullets that shared only "teams"/"functional"/
+ *  "technical" with the answer). A fact must share a content token with the
+ *  QUESTION. If none does, the answer stays at the model's length — a short
+ *  answer beats a pasted off-topic bullet. */
 function factRelevant(fact: string, tokens: Set<string>): boolean {
-  return askTokens(fact).some((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase()) && [...tokens].some((t) => !GENERIC_RELEVANCE.has(t.toLowerCase()) && tokenMatch(w, t)))
+  return factRelevantTo(fact, tokens, tokens)
+}
+
+function factRelevantTo(fact: string, questionTokens: Set<string>, _answerTokens: Set<string>): boolean {
+  const content = (w: string) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())
+  const factTokens = askTokens(fact).filter(content)
+  return factTokens.some((w) => [...questionTokens].some((t) => content(t) && tokenMatch(w, t)))
 }
 
 /** Rule score 1–4. Silent at 2 or below. A model is allowed only at the borderline score. */
@@ -470,9 +483,13 @@ function jdOnlyName(question: string, resume: string, jd: string): string {
 /** Grammatical first-person lines from resume facts. A JD-only tool is bridged, not claimed. */
 export function speakableLines(question: string, resume: string, jd = ""): string[] {
   const tool = jdOnlyName(question, resume, jd)
-  const bag = new Set(askTokens(question).filter((word) => word !== tool.toLowerCase()))
+  // Owner, 22 Nov 2026 (Round 10): the bag used the raw question tokens, so
+  // generic words scored off-topic facts — "project" matched the database-audit
+  // bullet and "part" matched "partner" in the federation bullet, and both were
+  // pasted onto the Q6 follow-up. Generic tokens never count as relevance.
+  const bag = new Set(askTokens(question).filter((word) => word !== tool.toLowerCase() && word.length > 2 && !GENERIC_RELEVANCE.has(word.toLowerCase())))
   const hits = resumeLines(resume)
-    .map((line) => ({ line, score: askTokens(line).filter((word) => [...bag].some((token) => sameWord(word, token))).length }))
+    .map((line) => ({ line, score: askTokens(line).filter((word) => [...bag].some((token) => tokenMatch(word, token))).length }))
     .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score || a.line.length - b.line.length)
   const pool = hits.length ? hits : resumeLines(resume).slice(0, 1).map((line) => ({ line, score: 0 }))
@@ -675,6 +692,13 @@ function nonSummaryFacts(resume: string): string[] {
     // Safety net: a "Header: keyword, keyword, keyword" line is a section dump,
     // not a sentence — never append it as answer prose, wherever it lives.
     if (/:\s*[^.!?]*,/.test(fact)) return false
+    // Owner, 22 Nov 2026 (Round 10): a role/company heading line ("Senior
+    // Security Engineer | Nov 2023 – Present.") is not a sentence and must
+    // never be appended as answer prose. Neither is a bare parenthetical
+    // fragment ("(Governance) (Multifactor Authentication) (Identity)").
+    if (/\|\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(fact)) return false
+    if (/^\s*(?:\([^)]*\)\s*)+,?\s*(?:using|with|for)\b/i.test(fact)) return false
+    if (/^\s*\([^)]*\)(\s*\([^)]*\))+\s*[,.]?$/i.test(fact)) return false
     return true
   })
 }
@@ -692,8 +716,9 @@ function extendFromResume(text: string, question: string, resume: string, floor:
   // question or the answer so far. If none is relevant, the answer stays at
   // the model's length rather than getting an unrelated fact pasted on.
   let out = String(text || "").trim()
-  const qTokens = new Set([...askTokens(question), ...askTokens(out)].filter((w) => w.length > 2))
-  const relevant = (line: string) => factRelevant(line, qTokens)
+  const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+  const answerTokens = new Set(askTokens(out).filter((w) => w.length > 2))
+  const relevant = (line: string) => factRelevantTo(line, questionTokens, answerTokens)
   for (const line of nonSummaryFacts(resume)) {
     if (answerWordCount(out) >= floor) break
     if (!relevant(line)) continue
@@ -769,23 +794,13 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (route.route === "short") {
     let shortBody = trimWords(body, route.ceiling)
     if (answerWordCount(shortBody) < route.floor) {
-      // Prefer question-relevant first-person lines; fall back to resume facts.
-      // Never lead with the generic resume summary (resumeFacts[0], the "12+ years"
-      // fragment) — appending it pasted the same summary onto 4 of 9 answers in
-      // Round 5. The summary is a last resort only, after specific lines.
-      const lines = speakableLines(question, resume, jd)
-      for (const line of lines) {
-        if (answerWordCount(shortBody) >= route.floor) break
-        const clean = line.replace(/\s+/g, " ").trim()
-        const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
-        if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
-      }
-      // Owner, 22 Nov 2026 (Round 8): a certifications question came back as
-      // 8 words naming only CISSP and CCSK, because the extension pools
-      // exclude the Certifications section (rightly, for other questions) and
-      // "certifications" shares no token with the cert lines. For a cert
-      // question, the full list IS the answer — append it directly.
-      if (answerWordCount(shortBody) < route.floor && /certification/i.test(question)) {
+      // Owner, 22 Nov 2026 (Round 10): a certifications question came back
+      // naming only CISSP/CCSK in the session even though the cert-append
+      // exists — because speakableLines ran first and filled the answer to
+      // the floor with other lines, so the cert-append's below-floor check
+      // never fired. For a cert question the full list IS the answer, so it
+      // goes first, before any other extension.
+      if (/certification/i.test(question)) {
         const certs = resumeCertifications(resume)
         if (certs.length) {
           const held = certs.filter((c) => !/pursuing/i.test(c))
@@ -799,6 +814,17 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
           }
         }
       }
+      // Prefer question-relevant first-person lines; fall back to resume facts.
+      // Never lead with the generic resume summary (resumeFacts[0], the "12+ years"
+      // fragment) — appending it pasted the same summary onto 4 of 9 answers in
+      // Round 5. The summary is a last resort only, after specific lines.
+      const lines = speakableLines(question, resume, jd)
+      for (const line of lines) {
+        if (answerWordCount(shortBody) >= route.floor) break
+        const clean = line.replace(/\s+/g, " ").trim()
+        const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
+        if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
+      }
       // Owner, 22 Nov 2026 (his minimum bar): never club titles/clients from a
       // different resume than the current session's, and never append off-topic
       // bullets from other clients/roles. So the fallback only appends facts that
@@ -809,10 +835,11 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       // model's length.
       if (answerWordCount(shortBody) < route.floor) {
         const facts = nonSummaryFacts(resume)
-        const qTokens = new Set([...askTokens(question), ...askTokens(shortBody)].filter((w) => w.length > 2))
+        const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+        const answerTokens = new Set(askTokens(shortBody).filter((w) => w.length > 2))
         for (const fact of facts) {
           if (answerWordCount(shortBody) >= route.floor) break
-          if (!factRelevant(fact, qTokens)) continue
+          if (!factRelevantTo(fact, questionTokens, answerTokens)) continue
           const clean = fact.replace(/\s+/g, " ").trim()
           // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
           // capitalized word not in the resume, and "Example" is not in the resume.
@@ -953,6 +980,12 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
     const tool = (text.match(/\b(?:Splunk|Qualys|CrowdStrike|CyberArk|Sentinel|QRadar|EDR|SIEM)\b/gi) || []).some((name) => bag.includes(name.toLowerCase()))
     if (!(/\bI\b/.test(text) && tool && /\d/.test(text))) reasons.push("thin-example")
   }
+  // Owner, 22 Nov 2026 (Round 10): Q2 still showed "I'd" in the session even
+  // though shapeDisplayedAnswer converts it — the stream path's final text can
+  // carry a conditional the shaping step missed. Final cleanup: a conditional
+  // "I would" is never an answer from his resume; convert it here, on the
+  // final text, whatever path produced it.
+  if (text && text !== HONEST_LINE) text = text.replace(/\bI'd\b/g, "I").replace(/\bI would\b/gi, "I")
   const safe = !!text
     && !CONFIRM_STUB.test(text)
     && !CANNED_ASIDE.test(text)
