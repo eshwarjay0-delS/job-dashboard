@@ -2907,8 +2907,8 @@ async function transcribe(blob, who, opt) {
       const timeout = setTimeout(() => ctl.abort(), 18000);
       let retry = false, delay = 500;
       try {
-        const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
-          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
+        const res = await fetch("/api/kompas/speech", { method: "POST", signal: ctl.signal,
+          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-speech-for": "transcribe", "x-speech-hint": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase(), "x-audio-source": who === "Them" ? "system" : "mic" }, body: blob });
         if (!res.ok) {
           if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function" && !(typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled())) {
             opt.__authRetried = true;
