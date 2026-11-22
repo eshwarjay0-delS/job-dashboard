@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import {
   answerStreamPolicy, releaseProvisionalDelta,
   mustEmitFinalReplacement, candidateEvidenceForVerification,
+  shouldEmitEmptyAnswerReplacement,
 } from '../../src/lib/kompasStreamIntegrity.ts'
 import { verifyAnswer } from '../../src/lib/kompasGuards.ts'
 
@@ -103,4 +104,17 @@ test('the candidate fact-check evidence excludes unverified JD and generated dos
  assert.match(service,/const factsText = candidateEvidenceForVerification\(resumeSrc, docsSrc\)/)
  assert.doesNotMatch(service,/jdSrc && `JOB DESCRIPTION:\\n/)
  assert.doesNotMatch(service,/grounding && `BACKGROUND:\\n/)
+})
+
+test('a stale provider error cannot wipe already-delivered stream text', () => {
+  assert.equal(shouldEmitEmptyAnswerReplacement('A delivered answer.'), false)
+  assert.equal(shouldEmitEmptyAnswerReplacement(''), true)
+  assert.equal(shouldEmitEmptyAnswerReplacement(' \n\t '), true)
+  const service = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
+  const start = service.indexOf('async function streamAnswer')
+  const end = service.indexOf('async function jsonAnswer', start)
+  assert.ok(start >= 0 && end > start, 'streamAnswer must be isolated from jsonAnswer')
+  const stream = service.slice(start, end)
+  assert.match(stream, /if \(shouldEmitEmptyAnswerReplacement\(raw\)\)/)
+  assert.doesNotMatch(stream, /if \(\s*!raw\.trim\(\)\s*\|\|\s*lastErr\s*\)/)
 })
