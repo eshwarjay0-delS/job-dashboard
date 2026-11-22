@@ -134,6 +134,24 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 2, 'redo makes it again')
 })
 
+
+test('a one-line JD with a named Files resume keeps the name while asking for the email, then uses that exact resume', async () => {
+  const b = bot({ agent: null })
+  const phone = '15550020'
+  await b.wa.handle(phone, { type: 'text', id: 'm1', text: { body: `${JD}\\nuse the SOC resume` } }, {}, 'user1')
+  const pending = await b.wa.loadSession(phone)
+  assert.ok(pending.pending, 'the named resume is retained while the account is confirmed')
+  assert.equal(pending.pending.hint, 'SOC')
+  assert.match(b.said.at(-1), /Which email is this job for\\?/)
+  assert.equal(b.runs.length, 0, 'no account is guessed')
+
+  await b.wa.handle(phone, { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession(phone), 'user1')
+  assert.equal(b.runs.length, 1)
+  assert.equal(b.runs[0].givenPath, SOC, 'the explicit resume survives profile confirmation')
+  assert.equal(b.runs[0].userResumeDir, USER_DIR)
+  assert.equal(b.logs[0].hint, 'SOC')
+})
+
 // Two resumes titled for the job: the niche between them is the agent's to choose (the title came first).
 const AS1 = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec Web.docx')
 const AS2 = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec Cloud.docx')
