@@ -141,7 +141,7 @@ test('a one-line JD with a named Files resume keeps the name while asking for th
   const pending = await b.wa.loadSession(phone)
   assert.ok(pending.pending, 'the named resume is retained while the account is confirmed')
   assert.equal(pending.pending.hint, 'SOC')
-  assert.match(b.said.at(-1), /Which email is this job for\\?/)
+  assert.match(b.said.at(-1), /Which email is this job for\?/)
   assert.equal(b.runs.length, 0, 'no account is guessed')
 
   await b.wa.handle(phone, { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession(phone), 'user1')
