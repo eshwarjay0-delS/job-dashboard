@@ -800,8 +800,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           return
         }
         // Degrade, never fail: stream the best prepared material as the answer.
+        // Owner, 22 Nov 2026: a stale lastErr must never wipe a delivered
+        // answer. A lane can stream real text and then throw (OpenRouter
+        // flap), or an early lane can fail before a later one succeeds —
+        // either way raw holds a usable answer. Only an empty raw means
+        // there is nothing to show. (The button was saying "Answered."
+        // with an empty pane because replace "" cleared the delta.)
         const degraded = false
-        if (!raw.trim() || lastErr) {
+        if (!raw.trim()) {
           const failure = answerFailure(lastErr)
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
