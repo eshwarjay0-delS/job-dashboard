@@ -44,3 +44,8 @@ export function candidateEvidenceForVerification(resume: string, originalDocumen
     originalDocuments.trim() ? "ORIGINAL SOURCE DOCUMENTS:\n" + originalDocuments.trim() : "",
   ].filter(Boolean).join("\n\n")
 }
+
+/** Emit an empty replacement only when no answer text was delivered. */
+export function shouldEmitEmptyAnswerReplacement(rawText: string): boolean {
+  return rawText.trim().length === 0
+}
