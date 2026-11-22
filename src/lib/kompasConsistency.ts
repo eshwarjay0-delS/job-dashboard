@@ -653,7 +653,13 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       for (const fact of facts) {
         if (answerWordCount(shortBody) >= route.floor) break
         const clean = fact.replace(/\s+/g, " ").trim()
-        if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} Example: ${clean}`
+        // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
+        // capitalized word not in the resume, and "Example" is not in the resume —
+        // the prefix was silently stripping the whole extension (verified: gated 71
+        // words, kept 31). The fact itself is from the resume, so every capitalized
+        // word in it survives the filter.
+        const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
+        if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
       }
     }
     return trimWords(shortBody, route.ceiling)
