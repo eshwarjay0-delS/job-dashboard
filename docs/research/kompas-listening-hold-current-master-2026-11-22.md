@@ -35,3 +35,8 @@ This is a web Kompas answer-turn fix, not a voice/caption capture change. The se
 ## Next step
 
 Open a draft PR and require exact-head full CI, Kompas baseline and Plan/REA success. Review the full diff and preserve all existing Listening/second-press assertions. Only then merge and deploy; verify the exact READY production SHA and active alias. Real user-device acceptance remains separate.
+
+
+## Production recheck — 22 November 2026 15:57 UTC
+
+Vercel metadata independently confirms the active production alias now points to READY deployment `dpl_8fFnYzBNDQKdmZ45tMzWvRoB9xP3`, exact Git SHA `2839db60061b62e8ad1a19db5f31a84e4f949396`, with `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` assigned. This is the current master release, not the Listening-hold fix, which remains unmerged and unverified.
