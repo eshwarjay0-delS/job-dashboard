@@ -690,7 +690,12 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   // and a first-person tie only when the body has none.
   if (route.route === "long") {
     const core = sentenceList(body).filter((sentence) => !/^Example:/i.test(sentence)).slice(0, 4).join(" ")
-    const fact = resumeFacts(resume)[0] || ""
+    // Owner, 22 Nov 2026 (Round 6): the Example was resumeFacts(resume)[0] — the
+    // generic summary — so Q6 ended with the same "Enterprise Security Architect
+    // with 12+ years..." fragment pasted verbatim. Use a question-relevant fact
+    // instead (a line sharing tokens with the question), skipping the summary.
+    const facts = resumeFacts(resume)
+    const fact = facts.slice(1).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || facts.slice(1).find((line) => line.trim()) || ""
     const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
     const hasFirstPerson = /\bI\b/.test(core)
     const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact

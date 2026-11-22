@@ -30,7 +30,6 @@ function readHoustonResume(): string {
 
 export const HOUSTON_RESUME = readHoustonResume()
 
-const SAINT_LOUIS = /jayeshwar44|jayeshwar24|eshwarjay06|saint louis university/i
 const LEADING_RIGHT = /,\s*right\??\s*$/i
 const YES_LEAD = /^\s*(?:yes\b|yeah\b|yep\b|i personally led|i led that myself|i did lead|i led it myself)\b/i
 const INCIDENT = /\b(?:sev-?1|sev\s*1|went down|data loss|hours of downtime|lost the vpc|(?:we|i) had (?:an? )?outage|the cutover failed)\b/i
@@ -47,8 +46,16 @@ function count(text: string): number {
 }
 
 export function honestySource(resume: string | null | undefined): string {
+  // Owner, 22 Nov 2026 (Round 6): this returned the hardcoded HOUSTON_RESUME
+  // whenever the resume mentioned jayeshwar44 / Saint Louis — i.e. for the
+  // user's CURRENT resume. The Houston resume is an old profile that lacks
+  // NIST, CSPM, Okta and the current certifications, so the honesty gate
+  // flagged every extended resume fact as "not on my resume" and replaced
+  // it with a disclaimer, shrinking answers back to 22-40 words. The actual
+  // resume is the source of truth; the Houston text is only a fallback
+  // when no resume is provided at all.
   const text = String(resume || "")
-  if (!text.trim() || SAINT_LOUIS.test(text)) return HOUSTON_RESUME
+  if (!text.trim()) return HOUSTON_RESUME
   return text
 }
 
