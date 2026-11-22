@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { callLLM, callOpenAI, keysFor, modelFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
-import { employerAliases } from "@/lib/kompasResume"
+import { employerAliases, resumeCertifications } from "@/lib/kompasResume"
 import { cachedDigest, sessionFacts } from "@/lib/kompasSessionCache"
 import { createSentenceGate, sentenceCheck, sourcedOpenerFor, splitOpenerPassages, withOpener, type SourcedOpener } from "@/lib/kompasSentenceGate"
 import { hashUserId } from "@/lib/sttLedger"
@@ -1464,9 +1464,15 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     )
     const askForDigest = question // prior speech does not determine relevance ranking
     const digest = cachedDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
+    // The TF-IDF digest drops the Certifications heading and can cut the list off by budget, so a
+    // "What certifications do you hold?" ask made the model refuse ("I don't have a confirmed list")
+    // even though the resume lists them. Pin the full list here so the model always sees it with
+    // its heading; "(Preferred – pursuing)" lines mean pursued, not held.
+    const certs = resumeCertifications(resumeText)
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
       ...aliasLines,
+      certs.length ? `CERTIFICATIONS (from the resume — these are the certifications he holds, unless marked pursuing): ${certs.join("; ")}` : "",
       `RESUME (${tier === 0 ? "career-wide evidence across supported roles" : "fitted to this question"}):\n${digest}`,
     ]
       .filter(Boolean)

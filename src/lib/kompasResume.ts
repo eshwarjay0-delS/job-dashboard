@@ -166,6 +166,32 @@ export function resumeRoles(resume: string): ResumeRoles {
   return { employers, current, currentRole: cur, list }
 }
 
+/**
+ * The resume's Certifications section, as a clean list. The TF-IDF digest
+ * drops the section heading and can cut the list off by budget, so a
+ * "What certifications do you hold?" ask can make the model refuse ("I don't
+ * have a confirmed list") even though the resume lists them. The answer path
+ * pins this list in resumeFacts so the model always sees the full list with
+ * its heading. Lines marked "(Preferred – pursuing)" are kept verbatim — the
+ * model must say they are pursued, not held.
+ */
+export function resumeCertifications(resume: string): string[] {
+  const lines = cleanLines(resume)
+  const start = lines.findIndex((l) => /^certifications?\s*:?\s*$/i.test(l))
+  if (start < 0) return []
+  const out: string[] = []
+  for (let i = start + 1; i < lines.length; i++) {
+    const l = lines[i]
+    if (!l) continue
+    // A new section heading ends the list: an all-caps header line, or a known section name.
+    if (/^[A-Z][A-Z0-9 &/,.()'-]{3,}$/.test(l) && !/–|—/.test(l)) break
+    if (/^(professional experience|work experience|employment|education|skills|technical skills|projects|summary|profile|contact|references)\s*:?\s*$/i.test(l)) break
+    const item = l.replace(BULLET, "").trim()
+    if (item) out.push(item)
+  }
+  return out
+}
+
 const BULLET = /^[•▪◦●\-*\u2022\uFFFD]\s*/
 const ASK_STOP = new Set(
   "the and for with you your have has did what which how many much long this that there over from into about were was are can could would tell me any been our they them their give describe experience".split(
