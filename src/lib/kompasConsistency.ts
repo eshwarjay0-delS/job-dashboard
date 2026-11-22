@@ -395,9 +395,17 @@ function asFact(line: string): string {
   const verb = text.match(/^([A-Za-z]+)\b/)
   const past = verb ? PAST[verb[1].toLowerCase()] : ""
   if (past && verb) text = `I ${past} ${text.slice(verb[1].length).trim()}`
-  else {
-    const head = /[A-Z]/.test(text[1] || "") ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`
-    text = `I did ${head}`
+  else if (verb && /ed$/.test(verb[1].toLowerCase())) {
+    // Already past tense ("Streamed database audit logs...") — prepend "I",
+    // never "I did streamed...".
+    text = `I ${text}`
+  } else {
+    // Owner, 22 Nov 2026 (his minimum bar): never club in a garbled line.
+    // A line that is not a verb-led action (a degree, a heading, a noun
+    // phrase — "b.Tech, Computer Science...") cannot become a first-person
+    // sentence by prepending "I did". Return "" so the caller skips it
+    // instead of emitting "I did b.Tech...".
+    return ""
   }
   return /[.!?]$/.test(text) ? text : `${text}.`
 }
@@ -433,6 +441,7 @@ export function speakableLines(question: string, resume: string, jd = ""): strin
   if (tool && pool[0]) out.push(`I have not used ${tool}. ${asFact(pool[0].line)}`)
   for (const row of hits) {
     const line = asFact(row.line)
+    if (!line) continue
     if (CANNED_ASIDE.test(line) || /walk you through/i.test(line)) continue
     if (ungroundedProducts(line, `${resume}\n${question}`).length) continue
     if (out.some((kept) => nearDuplicate(kept, line))) continue
@@ -586,6 +595,11 @@ function resumeFacts(resume: string): string[] {
 // appended. The summary section (under "Professional Summary", before the next
 // heading) is generic positioning, not grounded experience — it must never be
 // appended as an "example". These are the facts OUTSIDE the summary section.
+// Owner, 22 Nov 2026 (his minimum bar): never club titles/clients from a
+// different resume than the current session's, and never append off-topic
+// bullets from other clients/roles. So this also excludes the Education and
+// Certifications sections — a degree line ("I did b.Tech...") or a heading
+// must never be appended as an experience example.
 function nonSummaryFacts(resume: string): string[] {
   const text = String(resume || "")
   const start = text.search(/professional summary/i)
@@ -595,13 +609,19 @@ function nonSummaryFacts(resume: string): string[] {
     const end = rest.search(/\n\s*(?:core competencies|professional experience|work experience|technical skills|certifications|education)\b/i)
     summary = end > 0 ? rest.slice(0, end) : rest.slice(0, 4000)
   }
+  // Education and Certifications sections are not experience — never append them.
+  const eduStart = text.search(/\n\s*education\b/i)
+  const certStart = text.search(/\n\s*certifications\b/i)
+  let excluded = summary
+  if (eduStart >= 0) excluded += "\n" + text.slice(eduStart, certStart > eduStart ? certStart : undefined)
+  if (certStart >= 0) excluded += "\n" + text.slice(certStart)
   const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
-  const summaryNorm = norm(summary)
+  const excludedNorm = norm(excluded)
   return resumeFacts(resume).filter((fact) => {
-    if (!summaryNorm) return true
+    if (!excludedNorm) return true
     const f = norm(fact)
-    // Skip a fact that appears (in full or as its first 60 chars) in the summary.
-    return !summaryNorm.includes(f.slice(0, 60)) && !summaryNorm.includes(f)
+    // Skip a fact that appears (in full or as its first 60 chars) in the excluded sections.
+    return !excludedNorm.includes(f.slice(0, 60)) && !excludedNorm.includes(f)
   })
 }
 
@@ -691,10 +711,21 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
         const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
         if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
       }
+      // Owner, 22 Nov 2026 (his minimum bar): never club titles/clients from a
+      // different resume than the current session's, and never append off-topic
+      // bullets from other clients/roles. So the fallback only appends facts that
+      // share a meaningful token with the question OR with the answer so far — an
+      // education line, a database-audit bullet on a Jenkins question, or a
+      // federation bullet on a compliance question must never be tacked on just
+      // to reach the floor. If no fact is relevant, the answer stays at the
+      // model's length.
       if (answerWordCount(shortBody) < route.floor) {
         const facts = nonSummaryFacts(resume)
+        const qTokens = new Set([...askTokens(question), ...askTokens(shortBody)].filter((w) => w.length > 2))
         for (const fact of facts) {
           if (answerWordCount(shortBody) >= route.floor) break
+          const fTokens = askTokens(fact)
+          if (!fTokens.some((w) => qTokens.has(w))) continue
           const clean = fact.replace(/\s+/g, " ").trim()
           // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
           // capitalized word not in the resume, and "Example" is not in the resume.
@@ -723,7 +754,11 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
     const hasFirstPerson = /\bI\b/.test(core)
     const tieSource = facts.find((line) => /\bI\b/.test(line)) || fact
-    const tie = !hasFirstPerson && tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    // Owner, 22 Nov 2026: the tie used to prepend "I did" to any line, producing
+    // "I did streamed..." and "I did b.Tech...". Use asFact (which converts a
+    // past-tense verb to "I streamed..." and returns "" for non-actions) and
+    // skip the tie entirely when nothing converts cleanly.
+    const tie = !hasFirstPerson && tieSource ? asFact(tieSource) : ""
     const tool = howTool(question)
     const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
     body = [core, example, gap, tie].filter(Boolean).join(" ")
