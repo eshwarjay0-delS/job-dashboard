@@ -9,7 +9,7 @@ Continue the previously approved diagnostic-only collector correction from PR #4
 - Canonical master: `19a4ef20d09f43c2a22a9f1ef4bb5cdf81725a04`.
 - Canonical production alias: `job-dashboard-fawn.vercel.app`, READY deployment `dpl_GCED4HQBdCgX7dsmiwB6RW7mzknk`, deployed SHA `b6c7f542641b96b7392710c25f1a6a803f71fd62`.
 - Previous diagnostic branch: PR #479, head `e15f7dc5aa563a69c59c6d262ac913b71f171782`. It remains untouched; its checks are not reused.
-- Current-master restack: PR #517, branch `fix/crawler-abort-diagnostics-current-master-20261122`, implementation commit `2c8cf6971efb785271e2f87afed86a458fd848fe`.
+- Current-master restack: PR #517, branch `fix/crawler-abort-diagnostics-current-master-20261122`, implementation commit `2c8cf6971efb785271e2f87afed86a458fd848fe`; Plan/REA and handoff commit `330bc195ecc17caa64255f10104a31d815c3c892`.
 
 ## Source change
 
