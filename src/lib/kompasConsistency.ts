@@ -642,7 +642,22 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
-  if (route.route === "short") return trimWords(body, 120)
+  // Owner, 22 Nov 2026: responses are lengthy always. The short route used to only trim
+  // (to 60 words), so a definition or direct ask came back stubby even after the floor was
+  // raised — nothing enforced it. Now a short answer below its floor is extended with
+  // resume facts (grounded, relevant) until it reaches the floor, before the ceiling trim.
+  if (route.route === "short") {
+    let shortBody = trimWords(body, route.ceiling)
+    if (answerWordCount(shortBody) < route.floor) {
+      const facts = resumeFacts(resume)
+      for (const fact of facts) {
+        if (answerWordCount(shortBody) >= route.floor) break
+        const clean = fact.replace(/\s+/g, " ").trim()
+        if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} Example: ${clean}`
+      }
+    }
+    return trimWords(shortBody, route.ceiling)
+  }
   // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
   // be prepended to an answer. The old long-route rebuild was [thesis, how, example, gap, tie],
   // and "how" filtered OUT every sentence starting with "I" — so once the model started
