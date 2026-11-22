@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 22 November 2026 10:41 UTC — PR #515 test-fixture follow-up
+
+- The failed full-CI run `45004068709` on head `683cd89` was investigated from the actual logs: 23 failures came from the extracted one-press/typed-question VM fixtures and one from the voice VM fixture; each threw `ReferenceError: answerCtl is not defined` inside `pumpDetectedQueue`. The app code also uses `detectedQueue`, so the fixtures need both globals.
+- Test-only correction committed to the existing owner-approved PR #515 branch: `answerCtl: null` and `detectedQueue: []` in `scripts/tests/kompas-one-press.test.mjs`, `kompas-typed-question.test.mjs`, and `kompas-voice.test.mjs`. No production code changed.
+- Commits: `285abdec3aabf639b07871434e3d44f6ac8ee3a6`, `f2b62ce9b2e7b6daad964a13ecba112906ed26a1`, `e152ea210a49f8cc7775e2ead65526f147c41d06`; Plan Journal follow-up `5a649d8a942c4fbaadbd49e839174ffcb15455d9`.
+- Exact branch head `5a649d8` has **no Actions runs/checks**. GitHub API commits did not trigger workflows, and this runtime cannot push/dispatch. PR #515 remains DRAFT and `mergeable=false`; it is also one journal-only master commit behind. Do not merge or deploy without exact-head full CI, recovery, baseline, Plan/REA and review.
+- **Continue:** obtain a normal authorized push or workflow-dispatch path to run exact-head checks; otherwise this test fix remains unverified. Production remains on `b6c7f542`. No live WhatsApp send or 17 Oct delivery evidence.
+
+
 ## 22 November 2026 08:24 UTC — WhatsApp named-resume parser restacked on current master
 
 - **Continue:** PR [#515](https://github.com/eshwarjay0-delS/job-dashboard/pull/515) is the current-master restack of the narrow parser fix previously in PR #495. The current master at branch creation was `db32d9f3e5680fdd63e8cb4a728f38c0bd8a9a71`; production alias `job-dashboard-fawn.vercel.app` was independently READY at deployment `dpl_GCED4HQBdCgX7dsmiwB6RW7mzknk`, code SHA `b6c7f542641b96b7392710c25f1a6a803f71fd62`. Master is one Plan Journal-only commit ahead of that production code.
