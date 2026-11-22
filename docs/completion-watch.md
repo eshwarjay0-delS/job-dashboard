@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 22 November 2026 — Listening-hold fix restacked on current master
+
+- Current master and canonical production alias are READY on SHA `4ebc16dc3d35911195e07c6f7152d772555c1cb7`, deployment `dpl_12S8M4WPfXRpL2JbhYPUfbEiHL5T`. Round 9's Core Competencies-dump/generic-token relevance fix is live.
+- Round 10's fresh authenticated phone acceptance remains blocked: this automation cannot control the owner's phone or access a personal live Kompas session. No real-model response or device acceptance is claimed.
+- Approved PR #530 was stale and draft. Exact head `fda0c0ff784a68481dc2cc13f30f820b5ba321e0` had full CI `45041378944` fail one test (71/72): the one-press fixture expected an immediate angle re-answer when no new question was queued, contradicting the new Listening hold. Baseline, cross-device, Plan/REA and Windows gates passed on that head.
+- New current-master restack branch `fix/kompas-listening-hold-current-master-20261122b` carries the first-press hold, preserves angle rotation only on an explicit second press, updates the contradictory one-press test, and initializes `answerCtl`/`detectedQueue` in the VM fixtures. Source commit `880a3c5c59144e62bda0bb927b974184de570ca4`; test commits `42da046407dedaa3c2091d0c775fce2fdf39b3df`, `e56e3831f9b81a6f40821c51c9f4e2de024aa1c4`, `972293945d5fff535e529bbcc0b4fefce4511d18`, `d7665728cb87a86b6536ad3e0b98f9dfd34a397e`. Plan Journal and Kompas baseline are refreshed on this branch.
+- No local Node tests/build were run (this runtime has no canonical checkout/dependencies). The restack must be validated by exact-head GitHub Actions. The existing Safe Merge Gate automation is disabled; keep the PR draft and do not merge or deploy without independent review and release evidence.
+
+Continue: open a draft PR for this restack, run exact-head full CI, Kompas baseline, cross-device and Plan/REA; if green, await review before release. Phone Round 10 acceptance requires the owner to use a fresh authenticated session and report the actual results.
+
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
