@@ -749,3 +749,11 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+## 22 November 2026 06:14 CST — PR #493 test expectations corrected, explicit selection still blocked
+
+- Full CI 44934971531 on PR #493 head 1040343 failed eight tests. Six failures were stale test expectations: current fallback wording, two below-floor cases expecting a tailored draft despite explicitly selected Files fallback, unsupported-JD message wording, cumulative document-list assertion, and swipe-reply hold wording.
+- Corrected tests now assert the exact selected original and NOT TAILORED label for the 30.8% explicit-selection fallback, and use current wording/document-count semantics. No route source was changed.
+- Remaining real failure: the normal webhook's user-named Files selection is not persisted in the recovery record (files.explicitlySelected is false). This is the required durable provenance, not a test to relax. PR #493 remains draft/stale and route change is blocked by missing canonical checkout + installed Next.js 16.3.8 route guide and the existing Vercel Sandbox 402 until 1 Dec.
+- Test correction commits: e7e0ffe04191cb1ab4a4490e4ab972f9bbd99dec, 6a17ed5ec48f9d29db6da7f273aeb13effb2ddc8, b9c1c8f2fe3645903a9a07f4afdc4117339441ec. Exact-head Actions after these commits are not visible. No live WhatsApp send/replay, DOCX, R2, Meta receipt, or 17 Oct delivery verification.
+- Next: exact-head CI; obtain approved route-handler environment; restack to current master while preserving concurrent PRs; fix durable explicit-selection provenance; four gates + Safe Merge Gate + protected preview; then production READY/alias and authenticated acceptance.
