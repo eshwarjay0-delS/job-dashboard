@@ -645,21 +645,38 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   // Owner, 22 Nov 2026: responses are lengthy always. The short route used to only trim
   // (to 60 words), so a definition or direct ask came back stubby even after the floor was
   // raised — nothing enforced it. Now a short answer below its floor is extended with
-  // resume facts (grounded, relevant) until it reaches the floor, before the ceiling trim.
+  // resume content to the floor, before the ceiling trim. The extension uses
+  // speakableLines (question-relevant, first-person resume lines), NOT resumeFacts —
+  // resumeFacts[0] is the generic resume summary, and appending it pasted the same
+  // "Enterprise Security Architect with 12+ years..." fragment onto 4 of 9 answers in
+  // Round 5. No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
+  // capitalized word not in the resume, and "Example" is not in the resume.
   if (route.route === "short") {
     let shortBody = trimWords(body, route.ceiling)
     if (answerWordCount(shortBody) < route.floor) {
-      const facts = resumeFacts(resume)
-      for (const fact of facts) {
+      // Prefer question-relevant first-person lines; fall back to resume facts.
+      // Never lead with the generic resume summary (resumeFacts[0], the "12+ years"
+      // fragment) — appending it pasted the same summary onto 4 of 9 answers in
+      // Round 5. The summary is a last resort only, after specific lines.
+      const lines = speakableLines(question, resume, jd)
+      for (const line of lines) {
         if (answerWordCount(shortBody) >= route.floor) break
-        const clean = fact.replace(/\s+/g, " ").trim()
-        // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
-        // capitalized word not in the resume, and "Example" is not in the resume —
-        // the prefix was silently stripping the whole extension (verified: gated 71
-        // words, kept 31). The fact itself is from the resume, so every capitalized
-        // word in it survives the filter.
+        const clean = line.replace(/\s+/g, " ").trim()
         const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
         if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
+      }
+      if (answerWordCount(shortBody) < route.floor) {
+        const facts = resumeFacts(resume)
+        const specific = facts.slice(1)
+        const summary = facts.slice(0, 1)
+        for (const fact of [...specific, ...summary]) {
+          if (answerWordCount(shortBody) >= route.floor) break
+          const clean = fact.replace(/\s+/g, " ").trim()
+          // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
+          // capitalized word not in the resume, and "Example" is not in the resume.
+          const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
+          if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
+        }
       }
     }
     return trimWords(shortBody, route.ceiling)
