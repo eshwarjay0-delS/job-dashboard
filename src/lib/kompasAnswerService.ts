@@ -573,7 +573,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       let raw = ""
       let lastErr = ""
       let servedModel = ""
-      const servedProvider = "openrouter"
+      let servedProvider = "openrouter"
       // Speed r6: personal history releases sentence by sentence through the guard gate (kompasSentenceGate). Any
       // failure to build the gate leaves it null, which holds every delta back exactly like guarded-final.
       const sentenceMode = job.streamPolicy === "guarded-sentence"
@@ -629,7 +629,31 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
-        if (job.orKey) {
+        // Owner, 22 Nov 2026: no delay — it must work directly when someone
+        // starts using it. Try OpenAI FIRST so a press answers in seconds
+        // instead of burning time on dead OpenRouter lanes and their
+        // cooling-down retries. Same Kompas system prompt, so the answer
+        // keeps the levels, length bands and human read-aloud shape.
+        if (!raw.trim() && !signal.aborted) {
+          const openaiKey = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+          if (openaiKey) {
+            try {
+              const openaiText = await callOpenAI(openaiKey, modelFor("openai", "light"), {
+                keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
+              }, [{ role: "user", content: job.userText }])
+              if (openaiText.trim()) {
+                raw = openaiText.trim()
+                lastErr = ""
+                servedModel = modelFor("openai", "light")
+                servedProvider = "openai"
+                show(raw + " ")
+              }
+            } catch (e) {
+              lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+            }
+          }
+        }
+        if (!raw.trim() && job.orKey) {
           const runLane = async (model: string, tag: string): Promise<"ok" | "cut" | "fail"> => {
             const began = Date.now()
             timing.lane += (timing.lane ? ">" : "") + `openrouter:${shortModel(model)}${tag}`
@@ -866,7 +890,30 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let servedProvider = "openrouter"
   let jsonTitle = ""
   try {
-    if (job.orKey) {
+    // Owner, 22 Nov 2026: no delay — it must work directly when someone
+    // starts using it. Try OpenAI FIRST so a press answers in seconds
+    // instead of burning time on dead OpenRouter lanes and their retries.
+    if (!raw.trim() && !signal.aborted) {
+      const openaiKey = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+      if (openaiKey) {
+        try {
+          const openaiText = await callOpenAI(openaiKey, modelFor("openai", "light"), {
+            keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
+          }, [{ role: "user", content: job.userText }])
+          if (openaiText.trim()) {
+            const split = splitTitle(openaiText.trim())
+            raw = split.body
+            jsonTitle = split.title
+            lastErr = ""
+            servedModel = modelFor("openai", "light")
+            servedProvider = "openai"
+          }
+        } catch (e) {
+          lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+        }
+      }
+    }
+    if (!raw.trim() && job.orKey) {
       const runLane = async (model: string) => {
         const began = Date.now()
         try {
