@@ -6203,20 +6203,13 @@ async function aiAnswer(fromAuto, options = {}) {
           questionSource: questionSource(),
         });
         if (decision.listening) {
-          const target = typeof manualAnswerTarget === "function" ? manualAnswerTarget({
-            pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
-            lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
-            pass: answerAnglePass,
-          }) : { question: "", regenerate: false, angle: "" };
-          if (target.question) {
-            liveResolved = target.question;
-            if (target.regenerate) { pressAngle = target.angle; answerAnglePass++; }
-          } else {
-            answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
-            status("Still listening.", "live");
-            logDecision("still-listening", questionSource(), lastQ || "");
-            return;
-          }
+          // "Listening" means no new ask. Do not let manualAnswerTarget search the
+          // old transcript and resurrect the already-answered question on this press.
+          // A second press remains the explicit Answer-anyway/re-ask gesture.
+          answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
+          status("Still listening.", "live");
+          logDecision("still-listening", questionSource(), lastQ || "");
+          return;
         } else if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
       } catch {}
     }

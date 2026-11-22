@@ -84,3 +84,14 @@ The 50 authenticated Kompas/ChatGPT same-question pairs, independent human 0–4
 - No source runtime code, tests, production settings, secrets, inboxes, WhatsApp messages, R2 objects, crawler rows or personal sessions were changed/read.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment with the canonical checkout and installed Next.js 16.3.8 package is supplied, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold, add synthetic negative tests, run exact-head CI/recovery/baseline/Plan-REA checks, and let Safe Merge Gate review the resulting branch. Until then, preserve all active PRs and continue independent work without sending real messages or using personal source material.
+
+
+## 22 November 2026 15:56 UTC — latest-master Kompas Listening-hold restack
+
+- Latest master is `2839db60061b62e8ad1a19db5f31a84e4f949396`, five commits beyond the earlier base; intervening changes are Kompas answer-shape/consistency and journal only, with no overlap in the Listening runtime/test files.
+- PR #527 full CI `45040416022` failed nine tests: seven typed-followup-card fixture cases lacked queue globals and two typed-question cases exposed a first-press replay of the previous answer. The approved #518 fix was reviewed and restacked on latest master: return immediately on a Listening decision, preserve second-press re-ask, and initialize all four VM fixtures.
+- Runtime commit `c4279daa45412cd7187a491749355ab61f8e0657`; fixtures `1e595687f53e2dafb43b612df0ad7c53c4e3d172`, `de3a2dbee546ed8d92d0d86024375b15c6866b45`, `98408669f1870c35f7f8507954bcd5ee7732b020`, `76a706c735dc3e25a6bc55afd6c9e9d6b4977fba`. New exact-head CI pending; no local tests/build or production deploy.
+- No voice/caption capture change, authenticated model call or native device acceptance occurred. The 50-pair/human grading and Windows/WhatsApp/mobile acceptance gaps remain.
+
+
+Production alias recheck 22 Nov 2026 15:57 UTC: `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` are assigned to READY deployment `dpl_8fFnYzBNDQKdmZ45tMzWvRoB9xP3`, exact master SHA `2839db60061b62e8ad1a19db5f31a84e4f949396`. This release contains the concurrent answer-shape/consistency commits; it does not contain the pending Listening-hold fix.
