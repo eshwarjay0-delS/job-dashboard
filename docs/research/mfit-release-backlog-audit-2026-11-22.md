@@ -84,3 +84,12 @@ The 50 authenticated Kompas/ChatGPT same-question pairs, independent human 0–4
 - No source runtime code, tests, production settings, secrets, inboxes, WhatsApp messages, R2 objects, crawler rows or personal sessions were changed/read.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment with the canonical checkout and installed Next.js 16.3.8 package is supplied, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold, add synthetic negative tests, run exact-head CI/recovery/baseline/Plan-REA checks, and let Safe Merge Gate review the resulting branch. Until then, preserve all active PRs and continue independent work without sending real messages or using personal source material.
+
+
+## 22 November 2026 15:38 UTC — parser prerequisite and CI follow-up
+
+- Canonical master at branch creation: `23acd80ed645edb3d51a1fda876548eb8367ecbd`; production alias `job-dashboard-fawn.vercel.app` was READY on exact SHA `23acd80` (deployment `dpl_GXYWcz9taCcYrFWNJ8xzM8qzFqSw`).
+- A current-master branch now carries the approved two-line JD + named Files resume parser fix, parser/library/recovery tests, WhatsApp workflow triggers, and test-fixture globals for the master CI failure. Exact branch checks are pending; this is not merged or deployed.
+- Master full CI `45035728154` passed lint and type-check but failed 24 question/voice VM tests at step 14 with missing `answerCtl`; the new branch supplies `answerCtl: null` and `detectedQueue: []` to the three affected harnesses without weakening assertions.
+- The explicit same-account selection proof and unsupported-JD hard hold remain unimplemented in production source. The installed Next.js 16.3.8 route-handler guide and runnable canonical checkout remain the exact blocker for route edits. The 17 Oct 17:28 Chicago output DOCX, R2 version, webhook correlation, Meta outbound ID and signed delivery/read receipt remain unavailable; no replay/send or R2 mutation occurred.
+- Gmail/Poke, resume confirmed-skill alignment and crawler work remain separate open backlog items. No external sends, inbox reads/mutations, live crawl or device tests occurred in this continuation.
