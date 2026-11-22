@@ -449,8 +449,11 @@ function asFact(line: string): string {
   if (past && verb) text = `I ${past} ${text.slice(verb[1].length).trim()}`
   else if (verb && /ed$/.test(verb[1].toLowerCase())) {
     // Already past tense ("Streamed database audit logs...") — prepend "I",
-    // never "I did streamed...".
-    text = `I ${text}`
+    // never "I did streamed...". Lowercase the verb's first letter: the
+    // resume capitalizes the bullet's first word, and "I Integrated" reads as
+    // a garbled artifact (Round 11: "I Integrated / I Partnered / I
+    // Discovered / I Reviewed" on every appended bullet).
+    text = `I ${text.charAt(0).toLowerCase()}${text.slice(1)}`
   } else {
     // Owner, 22 Nov 2026 (his minimum bar): never club in a garbled line.
     // A line that is not a verb-led action (a degree, a heading, a noun
@@ -699,6 +702,11 @@ function nonSummaryFacts(resume: string): string[] {
     if (/\|\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(fact)) return false
     if (/^\s*(?:\([^)]*\)\s*)+,?\s*(?:using|with|for)\b/i.test(fact)) return false
     if (/^\s*\([^)]*\)(\s*\([^)]*\))+\s*[,.]?$/i.test(fact)) return false
+    // Owner, 22 Nov 2026 (Round 11): a tags/categories fragment ("(Zero Trust)
+    // (Zero Trust Security), using Expert-level.") is not a sentence either —
+    // it is a keyword tag line that dangles at the end of an answer. Any fact
+    // that is mostly parenthetical groups is excluded.
+    if ((fact.match(/\([^)]*\)/g) || []).length >= 2 && !/\b(?:I|we|my|our)\b/i.test(fact)) return false
     return true
   })
 }
@@ -886,7 +894,15 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
     }
   }
-  if (!/\bExample:/.test(body)) {
+  // Owner, 22 Nov 2026 (Round 11): a scenario/story answer IS the narrative —
+  // the model's first-person account of the project or incident. Appending an
+  // "Example:" bullet from another area (Saviynt troubleshooting, Burp/Wiz
+  // probing) or extending with other resume bullets breaks the story and reads
+  // as pasted fragments. So for story questions the shared tail skips the
+  // Example append and the extendFromResume call entirely; the model's answer
+  // stands at its own length.
+  const isStory = route.route === "story"
+  if (!isStory && !/\bExample:/.test(body)) {
     // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts(resume)[0] — the
     // generic summary — as the Example on every long/story answer that lacked
     // one, pasting the "12+ years..." fragment onto 6 of 8 answers. Use a
@@ -905,7 +921,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
     body = `${body} ${bridge}`.trim()
   }
-  if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  if (!isStory && answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
   const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
