@@ -1,5 +1,18 @@
 # MFit Completion Watch
 
+## 22 November 2026 12:20 CST — WhatsApp two-line resume parser and current-master CI repair
+
+- Canonical master `d3a50dfa32a0d8634bb83d6d78501036324a1942` is independently READY in production as `dpl_2nb9gWxH2fTDBs2QFxoo5LnUnaDH`; `job-dashboard-fawn.vercel.app` maps to that exact SHA. PR #542's Round 11 source is live, but its 10-question fresh-phone run recorded 0 PASS / 11 FAIL.
+- Current `splitTailInstruction` still requires at least three lines, so a one-line JD followed by `use the SOC resume` is not split. The narrow parser fix accepts exactly two lines only when the first line matches an existing JD signature and the final line matches the established resume-selection grammar. It recreates the signature RegExp without the global flag, avoiding cross-call `lastIndex` state.
+- The owner-approved parser/tests from PR #527 have been restacked on current master. The restack preserves the parser, parser positives/repeated-call/short-chat/title-only negatives, synthetic WhatsApp email-confirmation + exact SOC-path selection test, recovery-contract assertion and workflow coverage. Three Kompas VM test fixtures also gain missing `answerCtl: null` and `detectedQueue: []` globals; this is test-only.
+- Current master full CI run `45050988852` FAILED at step 14: 24/72 Kompas question/voice VM tests raised `ReferenceError: answerCtl is not defined`; Lint, Type-check and earlier suites passed. The fixture repair addresses the observed missing test globals without weakening assertions or changing Kompas runtime code.
+- Exact-head remote CI is pending after this restack. This runtime has no canonical checkout/dependencies; `git ls-remote` failed DNS resolution, so no local Node tests/build ran. PR #527 remains DRAFT; no merge or new production deploy.
+- The route-level PR #493 durable explicit-selection proof and unsupported-JD hard hold remain separate and unimplemented. The approved route edit is blocked until an approved runnable environment supplies the canonical checkout and installed Next.js 16.3.8 route-handler guide; Vercel Sandbox previously returned 402 until 1 Dec 2026. No real WhatsApp send/replay, DOCX generation, R2 mutation or personal-device acceptance occurred.
+- The 17 Oct 2026 17:28 Chicago delivery remains unverified: generated DOCX, R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt are missing.
+
+Continue: await exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA; require a legitimate protected preview and Safe Merge review before merge/deploy. Keep #493 hard-hold work behind the exact environment blocker and historical delivery evidence gate.
+
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
