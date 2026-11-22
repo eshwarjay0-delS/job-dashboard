@@ -13,8 +13,19 @@ export type PlanJournalEntry = {
 }
 
 
-export const JOURNAL_UPDATED = "2026-11-22T17:26:23.000Z"
+export const JOURNAL_UPDATED = "2026-11-22T17:27:25.000Z"
 export const PLAN_JOURNAL: PlanJournalEntry[] = [
+  {
+    "id": "crawler-diagnostics-preview-canceled-2026-11-22",
+    "area": "applications",
+    "updated": "2026-11-22T17:27:25.000Z",
+    "title": "Continue: exact-head crawler status and canceled preview",
+    "approval": "approved",
+    "delivery": "blocked",
+    "detail": "Continue: source-review the approved diagnostic-only crawler PR #517. Its current exact head 4ac7f1f46bb956ec5cf939ffa70ebcecdc519d9 is draft/non-mergeable on base 19a4ef20d09f43c2a22a9f1ef4bb5cdf81725a04, behind master 4ebc16dc3d35911195e07c6f7152d772555c1cb7; no exact-head Actions runs or status are visible. Source inspection shows the diagnostic code preserves 600 ms pacing and 25,000 ms timeout, distinguishes local timeout from upstream AbortError with host attribution, and parses malformed URLs inside the cleanup boundary. The prior PR #479 exact head e15f7dc5aa563a69c59c6d262ac913b71f171782 had four green gates, but its Vercel deployment was CANCELED by ignored-build-step, not a preview. No live crawl or portal request was performed.",
+    "evidence": "PR #517 https://github.com/eshwarjay0-delS/job-dashboard/pull/517 exact head 4ac7f1f46bb956ec5cf939ffa70ebcecdc519d9: fetch_commit_workflow_runs returned none and combined status empty. PR #479 Vercel target dpl_7EAzpCdAGPMxn7GKfTiyKWjWqDQL reports state CANCELED, errorLink ignored-build-step. Current production master/alias 4ebc16dc3d35911195e07c6f7152d772555c1cb7 remains READY; this does not validate the crawler branch.",
+    "next": "Restack only after safe sequencing on current master; require exact-head full CI, crawler regression, Kompas baseline and Plan/REA, then a legitimate READY preview and review. MFit Safe Merge Gate is disabled. Keep crawling manual/on-demand; do not live-crawl or submit applications.",
+  },
   {
     "id": "kompas-listening-hold-restack-current-master-20261122",
     "area": "kompas",
