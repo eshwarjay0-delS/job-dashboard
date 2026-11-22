@@ -13,16 +13,16 @@ export type PlanJournalEntry = {
 }
 
 
-export const JOURNAL_UPDATED = "2026-11-22T17:14:08.000Z"
+export const JOURNAL_UPDATED = "2026-11-22T17:26:23.000Z"
 export const PLAN_JOURNAL: PlanJournalEntry[] = [
   {
     "id": "kompas-listening-hold-restack-current-master-20261122",
     "area": "kompas",
-    "updated": "2026-11-22T17:14:08.000Z",
+    "updated": "2026-11-22T17:26:23.000Z",
     "title": "Continue: first press holds; explicit second press re-asks",
     "approval": "approved",
     "delivery": "in progress",
-    "detail": "Continue: restack the owner-approved Listening-hold repair from PR #530 onto current master 4ebc16. The original exact head fda0c0ff784a68481dc2cc13f30f820b5ba321e0 passed the other gates but full CI 45041378944 failed one outdated test: scripts/tests/kompas-one-press.test.mjs expected a manual press with no new ask to regenerate immediately (71/72 passed). The restack PR #540 (draft, exact head ffb37ace301750dac53106c9a33d5015be3dac28) preserves the intended first-press hold, restores question-angle rotation only on the explicit second press, and updates the one-press test to verify first hold, second re-ask, third hold, fourth angle rotation. Queue VM fixtures now include answerCtl and detectedQueue. No local test/build was run; the GitHub PR gates must validate this exact restack.",
+    "detail": "Continue: restack the owner-approved Listening-hold repair from PR #530 onto current master 4ebc16. The original exact head fda0c0ff784a68481dc2cc13f30f820b5ba321e0 passed the other gates but full CI 45041378944 failed one outdated test: scripts/tests/kompas-one-press.test.mjs expected a manual press with no new ask to regenerate immediately (71/72 passed). The restack PR #540 (draft) on branch fix/kompas-listening-hold-current-master-20261122b preserves the intended first-press hold, restores question-angle rotation only on the explicit second press, and updates the one-press test to verify first hold, second re-ask, third hold, fourth angle rotation. Queue VM fixtures now include answerCtl and detectedQueue. No local test/build was run; the GitHub PR gates must validate this exact restack.",
     "evidence": "Production master 4ebc16dc3d35911195e07c6f7152d772555c1cb7 is READY at dpl_12S8M4WPfXRpL2JbhYPUfbEiHL5T with job-dashboard-fawn.vercel.app and marketfit-app.vercel.app assigned. Source commit 880a3c5c59144e62bda0bb927b974184de570ca4 and test commits 42da046407dedaa3c2091d0c775fce2fdf39b3df, e56e3831f9b81a6f40821c51c9f4e2de024aa1c4, 972293945d5fff535e529bbcc0b4fefce4511d18, d7665728cb87a86b6536ad3e0b98f9dfd34a397e. Original #530 baseline, cross-device, Plan/REA and Windows checks passed; full CI failed the single contradictory assertion. Round 10 authenticated phone acceptance was not performed.",
     "next": "Run full CI, Kompas baseline, cross-device and Plan/REA on the exact restack head. Keep it draft and unmerged until independent review; MFit Safe Merge Gate is disabled. Then use normal release flow and verify the production alias. Round 10 requires the owner-authenticated phone and fresh session; this automation cannot operate that device or call the private model with personal sources.",
     "commit": "880a3c5c59144e62bda0bb927b974184de570ca4"
