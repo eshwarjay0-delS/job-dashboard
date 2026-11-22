@@ -16,6 +16,17 @@ export type PlanJournalEntry = {
 export const JOURNAL_UPDATED = "2026-11-22T17:27:25.000Z"
 export const PLAN_JOURNAL: PlanJournalEntry[] = [
   {
+    "id": "whatsapp-current-head-hardhold-audit-20261122",
+    "area": "resume",
+    "updated": "2026-11-22T17:27:25.000Z",
+    "title": "Continue: WhatsApp hard-hold and named-resume exact-head audit",
+    "approval": "approved",
+    "delivery": "blocked",
+    "detail": "Continue the highest-priority WhatsApp work. PR #493 current head c387bc4c13bb7483235e59a786baeee89f1cd2ba has no visible exact-head workflow runs/status and remains DRAFT/non-mergeable. PR #495 head 4522a4ed9612a22fa304eb52f3772b02eb8ba44a has all four gates green but is based on old master 13542c5 and remains withheld by the recorded Safe Merge Gate review; it fixes the two-line named-resume parser, not #493's durable provenance/hard hold. PR #527 head e843cbb7da053f8788b1a4b54f15dd144a5e3b5c is stale on 23acd80; full CI failed nine tests, while WhatsApp recovery, Kompas baseline and Plan/REA passed. The approved Listening-hold repair is now in draft current-master PR #540. Next.js 16.3.8 route-handler/convention guides were retrieved via audit run 44842752926; the missing local runnable checkout/dependency tree and disabled Safe Merge Gate remain the blockers. No real send/replay, DOCX, R2 write or production mutation occurred; 17 Oct 17:28 delivery remains unverified.",
+    "evidence": "Current master/production 4ebc16dc3d35911195e07c6f7152d772555c1cb7. PR #493 head c387bc4c13bb7483235e59a786baeee89f1cd2ba: no runs/status. PR #495 head 4522a4ed9612a22fa304eb52f3772b02eb8ba44a: full CI 44951894686, WhatsApp recovery 44951894803, Kompas baseline 44951894689, Plan/REA 44951894694 all SUCCESS. PR #527 head e843cbb7da053f8788b1a4b54f15dd144a5e3b5c: full CI 45040416022 FAIL, other gates 45040416026/042/061 SUCCESS. Historical #493 head 1040343 full CI 44934971531 failed eight tests; no evidence it ran on current head.",
+    "next": "Do not bypass the recorded Safe Merge Gate hold. After safe review/owner-approved sequence, restack #495 and #493 onto current master, preserve unsupported-JD hard hold and explicit same-account selection, rerun exact-head full CI/WhatsApp recovery/Kompas baseline/Plan-REA and obtain a legitimate protected preview. Historical incident acceptance still needs the exact DOCX/R2/Meta trace and signed delivery/read evidence.",
+  },
+  {
     "id": "crawler-diagnostics-preview-canceled-2026-11-22",
     "area": "applications",
     "updated": "2026-11-22T17:27:25.000Z",
