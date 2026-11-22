@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 22 November 2026 — contract crawler abort diagnostics restacked on current master
+
+Continue: PR [#517](https://github.com/eshwarjay0-delS/job-dashboard/pull/517) on `fix/crawler-abort-diagnostics-current-master-20261122` carries the approved diagnostic-only collector correction onto master `19a4ef20d09f43c2a22a9f1ef4bb5cdf81725a04`. Source/test commit: `2c8cf6971efb785271e2f87afed86a458fd848fe`. It preserves 600 ms pacing and the 25,000 ms default timeout, distinguishes local timeout from upstream AbortError with portal-host attribution, and ensures malformed URLs still advance cleanup/pacing. Exact-head full CI, crawler regression, Plan/REA and Kompas baseline are pending; predecessor PR #479 results are not reused. PR #517 remains DRAFT pending those checks and the protected-preview/release gate. No live crawl, portal request, production-row mutation or application submission occurred. Manual/on-demand only; no daily cron; Robert Half manual-only; eTeam excluded.
+
+The previously recorded Gmail accounts-page patch (local commit `0d8b768b`) is not on GitHub. Do not revive it unchanged: it would make the synthetic skip-login identity receive account status/snapshot data without proving a verified user boundary. Open issue [#308](https://github.com/eshwarjay0-delS/job-dashboard/issues/308) records the public synthetic-owner risk, while `AGENTS.md` preserves skip-login. Keep the login behavior unchanged, but require an owner-only data-isolation resolution before removing the 503 or exposing R2-backed account metadata. No Gmail API/OAuth, inbox read, mutation or send occurred.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
