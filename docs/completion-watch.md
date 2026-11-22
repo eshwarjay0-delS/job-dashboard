@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 22 November 2026 15:56 UTC — Kompas Listening hold restacked on latest master
+
+- **Continue:** carry the approved Listening-hold fix forward without touching voice/caption capture.
+- Latest canonical master: `2839db60061b62e8ad1a19db5f31a84e4f949396`. It advanced five commits from the earlier `23acd80` base; the intervening files are Kompas answer-shape/consistency and Plan Journal, not the Listening runtime/tests. The previous production alias evidence was READY at `dpl_GXYWcz9taCcYrFWNJ8xzM8qzFqSw`, SHA `23acd80`; recheck before any release.
+- PR #527 full CI `45040416022` failed nine tests after the initial fixture correction: seven typed-followup-card tests lacked `answerCtl`/`detectedQueue`; two typed-question assertions showed the old answered question being regenerated instead of holding Listening.
+- Reviewed the approved PR #518 root cause: `livePressDecision` returned Listening, but `aiAnswer` then called `manualAnswerTarget` over the old transcript and resurrected the answered question. The new latest-master branch `fix/kompas-listening-hold-restack-20261122b` returns immediately on Listening, retains the second-press Answer-anyway/re-ask state, and initializes queue globals in four VM fixtures. Existing silence/candidate-speech assertions remain.
+- Current-master commits: runtime `c4279daa45412cd7187a491749355ab61f8e0657`; one-press `1e595687f53e2dafb43b612df0ad7c53c4e3d172`; typed-question `de3a2dbee546ed8d92d0d86024375b15c6866b45`; typed-followup `98408669f1870c35f7f8507954bcd5ee7732b020`; voice `76a706c735dc3e25a6bc55afd6c9e9d6b4977fba`.
+- Exact-head CI has not yet run on this restack. No local tests/build ran because the container has no checkout and GitHub DNS resolution fails.
+- This is not a continuous voice or caption-capture change. Kompas Continuous Voice Delivery is disabled; no duplicate work was started. No production deploy, authenticated model call or native Windows/phone test is claimed.
+
+**Continue:** open a draft PR from the latest-master restack; require exact-head full CI, Kompas baseline and Plan/REA success. Review the Listening behavior and preserved assertions. Only then merge/deploy and verify READY plus the active canonical alias. Actual first-press hold/second-press re-ask on an authenticated user device remains unverified.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
