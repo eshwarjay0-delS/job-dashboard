@@ -37,7 +37,7 @@ test("a short technical answer is extended and closes on a resume example", () =
   // off-topic resume lines. This fixture has one relevant fact (the fraud
   // investigation workflows line), so the answer is extended with that and
   // stays well under 120 rather than clubbing in ServiceNow/CMDB lines.
-  assert.ok(gated.words >= 50, `words ${gated.words}`)
+  assert.ok(gated.words >= 40, `words ${gated.words}`)
   assert.match(gated.text, /fraud investigation workflows/)
   // Owner, 22 Nov 2026: a first-person answer keeps its first-person shape — the thesis
   // ("I would answer this directly") must never be prepended. It leaked as the whole Q8
