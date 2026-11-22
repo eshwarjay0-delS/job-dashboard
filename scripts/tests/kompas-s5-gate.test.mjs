@@ -59,7 +59,7 @@ function runOnce() {
   }
   for (const row of fx.honesty) {
     const resume = resumeOf(row.resume)
-    assert.equal(/jayeshwar44|saint louis university/i.test(honestySource(resume)), false, row.id)
+    assert.equal(honestySource(resume), resume.trim() ? resume : HOUSTON_RESUME, row.id)
     const got = applyHonestyGate({ question: row.question, answer: row.answer, resume })
     const again = applyHonestyGate({ question: row.question, answer: got.text, resume })
     assert.equal(again.text, got.text, `${row.id} not stable`)
@@ -126,6 +126,18 @@ test("a loaded session resume is the allow-list", () => {
   })
   assert.match(got.text, /Terraform/)
   assert.doesNotMatch(got.text, /FortiGate|McKesson/)
+})
+
+test("the current resume stays authoritative and contact details never become spoken facts", () => {
+  assert.equal(honestySource(saint), saint)
+  assert.equal(honestySource(""), HOUSTON_RESUME)
+  const got = applyHonestyGate({
+    question: "Where did you study?",
+    answer: "I studied at Saint Louis University and then I joined Cigna.",
+    resume: saint,
+  })
+  assert.match(got.text, /Saint Louis University/)
+  assert.doesNotMatch(got.text, /Cigna|Fortinet|McKesson|jayeshwar44/)
 })
 
 test("S5 fixtures, 10 folds, same result each time", () => {
