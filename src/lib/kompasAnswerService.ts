@@ -110,11 +110,13 @@ const statusOf = (msg: string): number | undefined => {
   const m = /openrouter (\d{3})/.exec(msg || "")
   return m ? Number(m[1]) : undefined
 }
-// A 502/503/504 from the provider is a brief blip, not a block — the lanes
-// are worth one more try after a short pause, unlike a rate limit.
-function isTransient5xx(msg: string): boolean {
+// A lane failure worth one retry after a short pause: a 403 policy flap,
+// a 502/503/504 brief blip, or a network/timeout error with no status at
+// all. A missing key is permanent and is never retried.
+function isRetryable(msg: string): boolean {
+  if (!msg || /missing paid key/i.test(msg)) return false
   const s = statusOf(msg)
-  return s === 502 || s === 503 || s === 504
+  return s === 403 || s === 502 || s === 503 || s === 504 || s === undefined
 }
 const shortModel = (m: string) => m.split("/").pop() || m
 
@@ -673,8 +675,8 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           await attempt("")
           // Every lane rate-limited or the provider briefly unavailable: wait
           // and retry the lanes once — the client shows a countdown meanwhile.
-          // A 5xx is a brief blip, not a rate limit, so it gets a short fixed
-          // backoff instead of the provider's Retry-After.
+          // A transient failure is a brief blip, not a rate limit, so it gets
+          // a short fixed backoff instead of the provider's Retry-After.
           if (!raw.trim() && isRateLimit(lastErr)) {
             const wait = retryMs(lastErr)
             if (wait > 0 && wait <= 15000) {
@@ -682,7 +684,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               await sleep(wait + 300)
               await attempt(":retry")
             }
-          } else if (!raw.trim() && isTransient5xx(lastErr)) {
+          } else if (!raw.trim() && isRetryable(lastErr)) {
             emit({ type: "wait", ms: 2300 })
             await sleep(2000)
             await attempt(":retry")
@@ -836,7 +838,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       if (!raw.trim() && isRateLimit(lastErr)) {
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
-      } else if (!raw.trim() && isTransient5xx(lastErr)) {
+      } else if (!raw.trim() && isRetryable(lastErr)) {
         await sleep(2000)
         await attempt()
       }
