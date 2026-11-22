@@ -800,3 +800,10 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+## 22 November 2026 06:14 CST — contract crawler restack Type-check failure corrected
+
+- PR #517 exact head 7548ac4 had crawler regression, Kompas baseline and Plan/REA PASS; full CI 45013028073 FAILED only at Type-check (TS2322) because journal area whatsapp and REA area/method were outside the declared enum values.
+- Corrected the journal area to resume and REA labels to resume / Source and artifact analysis. No collector runtime or test changes were made in this repair.
+- Commits: fc905391744589830413685eb7459d07c44e0bd0 (journal), 477cab026da1674798284e8462802fbf32af48b4 (REA). Exact-head checks after these corrections are not visible yet; no local checkout/build.
+- Continue: require exact-head full CI, crawler regression, Plan/REA and Kompas baseline. PR #517 remains DRAFT; no protected preview, production deployment, live crawl, portal request, database mutation or application submission.
