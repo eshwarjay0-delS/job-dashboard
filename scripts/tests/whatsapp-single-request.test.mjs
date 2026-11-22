@@ -110,12 +110,13 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(runs, 2, 'resending the same pair deliberately can retry instead of disappearing')
   assert.equal(deliveries, 2)
   failNext = true
+  const beforeFailedDocs = docs.length
   await generate('123', session, 'user')
   assert.equal(runs, 3)
   assert.equal(deliveries, 2, 'a failed rewrite on an upload sends no unchanged original')
   assert.match(said.at(-1), /I could not tailor your resume just now/)
   assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
-  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /candidate5@example.test/)
+  assert.equal(docs.length, beforeFailedDocs, 'failed rewrite must not add a new document')
   assert.doesNotMatch(said.at(-1) || '', /provider timeout/)
   assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'a failed rewrite also releases its claim')
   await generate('123', session, 'user')
@@ -254,8 +255,8 @@ test('a reply to a hold re-runs with the reply experience as evidence, but a bel
   await refine('123', 'wamid.hold1', 'I have experience with Splunk and AWS', 'user')
   assert.equal(deliveries, 1, 'a below-70 redo is held and does not send a file')
   assert.equal(docs.some(text => text.includes('69.9%')), false, 'the below-70 redo is never attached')
-  assert.match(said.at(-1), /I did not send a file/)
-  assert.match(said.at(-1), /No incomplete file was delivered/)
+  assert.match(said.at(-1), /I did not send another file/)
+  assert.match(said.at(-1), /The version you already have remains unchanged/)
   const beforeFailedRefine = deliveries
   failNext = true
   await refine('123', 'wamid.hold1', 'shorten the bullets', 'user')
