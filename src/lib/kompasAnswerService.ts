@@ -685,9 +685,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               await attempt(":retry")
             }
           } else if (!raw.trim() && isRetryable(lastErr)) {
-            emit({ type: "wait", ms: 2300 })
-            await sleep(2000)
-            await attempt(":retry")
+            // The provider flaps for seconds at a time; retry twice with
+            // backoff so one request catches a working window.
+            for (const wait of [2000, 4000]) {
+              if (raw.trim() || signal.aborted || !isRetryable(lastErr)) break
+              emit({ type: "wait", ms: wait + 300 })
+              await sleep(wait)
+              await attempt(":retry")
+            }
           }
         } else { lastErr = "openrouter 503 missing paid key" }
 
@@ -839,8 +844,11 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
       } else if (!raw.trim() && isRetryable(lastErr)) {
-        await sleep(2000)
-        await attempt()
+        for (const wait of [2000, 4000]) {
+          if (raw.trim() || signal.aborted || !isRetryable(lastErr)) break
+          await sleep(wait)
+          await attempt()
+        }
       }
       if (!raw.trim() && !signal.aborted) {
         const groqKey = resolveKeys({}).groq
