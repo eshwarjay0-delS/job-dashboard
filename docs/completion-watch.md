@@ -9,6 +9,16 @@
 
 # MFit Completion Watch
 
+## 22 November 2026 13:22 CST — Round 12 production verified; Listening-hold PR CI needs fixture repair
+
+- **Current production:** master/live commit `3eb16fa611c36c6c3e6384edd1a32614a44a6d63` (Round 12). Vercel deployment `dpl_6Kkkqq9UyJfGCV6fM38zwmJne5Ce` is READY production; `job-dashboard-fawn.vercel.app` independently maps to the same deployment. This supersedes the earlier `d3a50dfa` live reference.
+- **Round 12 acceptance:** live 10 scenario/experience questions plus follow-up remains 0 PASS / 11 FAIL. Round 12 source fixes are deployed; they did not meet the live acceptance bar. Round 13 requires the real authorized phone/desktop session, original resume/JD/reference bundle, same-question ChatGPT pairs and independent human grading. Those are unavailable here; no quality claim is inferred.
+- **Approved PR #540:** exact head `cffbbdc6ee1beaeac9e8e007fc7c592ec5c6df4d`, base is older `d3a50dfa`, open/unmerged/unreleased. Kompas baseline, account-sync and Windows EXE checks passed. Full CI run 45056534914 failed six of 72 tests, all typed-followup-card expected-card assertions.
+- **Test review:** `scripts/tests/kompas-typed-followup-card.test.mjs` has a fixture line where the trailing comment swallows `transcriptionEpoch` and `transcriptionFailedEpoch`. Stacked test-only PR #545 (`c6f5386376f8fc0869143e0148298fe38a4acfec`) restores those two fields on a separate line. This is a suspected contributor; its exact-head CI is the proof gate. PR #545 has no checks yet. No production runtime edit in that stack.
+- **Environment/coordination:** no canonical checkout, local Node test run or installed Next.js docs. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are both disabled; no voice/audio changes were duplicated. No model call, WhatsApp send, inbox mutation, crawl, R2 write or device test.
+- **Continue:** check #545 exact-head CI; if green, coordinate the test correction with #540, restack #540 on latest master, then require all CI/baseline/cross-device/Plan-REA/Windows gates before merge and production release. Keep actual Listening/second-press behavior separate from source CI. Other approved Gmail/mobile, crawler, WhatsApp resume-selection and confirmed-skill alignment work remains pending with prior exact blockers.
+
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
