@@ -84,3 +84,11 @@ The 50 authenticated Kompas/ChatGPT same-question pairs, independent human 0–4
 - No source runtime code, tests, production settings, secrets, inboxes, WhatsApp messages, R2 objects, crawler rows or personal sessions were changed/read.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment with the canonical checkout and installed Next.js 16.3.8 package is supplied, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold, add synthetic negative tests, run exact-head CI/recovery/baseline/Plan-REA checks, and let Safe Merge Gate review the resulting branch. Until then, preserve all active PRs and continue independent work without sending real messages or using personal source material.
+
+
+## 22 November 2026 15:52 UTC — Kompas Listening-hold repair
+
+- PR #527 full CI `45040416022` failed nine tests after the initial queue-fixture patch: seven typed-followup-card VM cases lacked queue globals and two typed-question cases showed an actual first-press replay of the prior answered question.
+- Reviewed approved PR #518: the root cause is `aiAnswer` calling `manualAnswerTarget` after `livePressDecision` returns Listening. The current-master restack returns on Listening and preserves the explicit second-press re-ask. It initializes `answerCtl`/`detectedQueue` in all four relevant VM fixtures without weakening tests.
+- Runtime commit `ee21a0e17dded43366c36fb73e660250e0debe53`; fixture commits `6aa98eed82b09c5a95a23cd55d91985e8171ed96`, `e4cbad8247c6a901372bbbb345e8f496c98ebc4f`, `7bd3a5c20422be181457cd8df301fc97455f9f01`, `6f8e3ef90e912e8417d6c360fd4d145afb627a5b`. New exact-head validation pending; no local test/build or production deploy.
+- No voice/caption capture change, real model call or native device acceptance occurred. This does not close the 50-pair/human grading or Windows/WhatsApp/mobile acceptance gaps.
