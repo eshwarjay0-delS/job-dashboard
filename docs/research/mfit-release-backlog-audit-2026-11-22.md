@@ -102,3 +102,9 @@ Continue: complete exact-head validation and review for PR #515. If green, merge
 - Full CI `45003530190` completed FAILURE. Lint and type-check succeeded. Step 14, `Verify Kompas question-framing, one-press, typed-input and voice regressions`, failed 24 tests in `scripts/tests/kompas-voice.test.mjs` with `ReferenceError: answerCtl is not defined` from `pumpDetectedQueue`; the build stage was skipped. PR #515 does not modify that test file or `public/kompas/app.js`, so this is outside the WhatsApp parser change. Do not bypass or weaken full CI.
 - PR #515 remains DRAFT and must not merge or deploy until a new exact-head full CI succeeds. The dedicated WhatsApp recovery and other two checks are not substitutes for full CI.
 - No real WhatsApp send, model call, DOCX generation, R2 write, production mutation, Gmail action, live crawl or native device test occurred.
+## 22 November 2026 10:41 UTC — PR #515 test-fixture follow-up
+
+- The full CI failure at `683cd89` was narrowed to 24 test-harness errors: 23 from the one-press/typed-question VM fixtures and one from the voice fixture, all `ReferenceError: answerCtl is not defined` at `pumpDetectedQueue`. The test globals also omit `detectedQueue`.
+- Added only `answerCtl: null` and `detectedQueue: []` to the three test harnesses; no runtime code or product behavior changed. Commits: `285abdec3aabf639b07871434e3d44f6ac8ee3a6`, `f2b62ce9b2e7b6daad964a13ecba112906ed26a1`, `e152ea210a49f8cc7775e2ead65526f147c41d06`.
+- PR #515 current head `f3a64e56c80b2de6fd039f4dfb8b00dff11405a9` has no Actions checks. API-created commits did not trigger workflows; the environment has no canonical checkout or push/dispatch path. No test pass is claimed.
+- Continue only when exact-head Actions can run. PR #515 remains DRAFT/non-mergeable; production remains at `b6c7f542`. No merge, deployment, WhatsApp send, model call, DOCX, R2 write or incident replay.
