@@ -643,7 +643,16 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
   if (route.route === "short") return trimWords(body, 60)
-  if (route.route === "long") {
+  // The model now answers in the first person throughout (the wanted shape). When every
+  // sentence starts with "I", the non-"I" filter below empties "how" and the answer
+  // collapses to thesis + resume fragments — the Q8 failure across three live rounds.
+  // In that case keep the model's first-person body as the answer, without the thesis
+  // and without the tie-dedup that would strip it to one sentence.
+  const bodySentences = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence))
+  const firstPersonBody = bodySentences.length > 0 && bodySentences.every((sentence) => /^I\b/.test(sentence))
+  if (route.route === "long" && firstPersonBody) {
+    body = bodySentences.join(" ")
+  } else if (route.route === "long") {
     const thesis = technicalThesis(question)
     const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
     const fact = resumeFacts(resume)[0] || ""
@@ -686,7 +695,7 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
     body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
   }
-  if (route.route === "long") {
+  if (route.route === "long" && !firstPersonBody) {
     const parts = sentenceList(body)
     const opener = technicalThesis(question).slice(0, 24)
     const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))

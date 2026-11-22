@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -623,10 +623,11 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
-        if (answerRoute(job.question).route === "long") {
-          const thesis = technicalThesis(job.question)
-          if (thesis) show(thesis + " ")
-        }
+        // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
+        // reach the screen. It used to be shown as a provisional delta before the model answered,
+        // and when the final replace did not cleanly overwrite it the user saw the thesis plus
+        // resume fragments as the answer (Q8, three live rounds). The final answer comes from the
+        // replace event with the settled text; nothing provisional is shown before it.
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
         // Owner, 22 Nov 2026: no delay — it must work directly when someone
