@@ -181,6 +181,9 @@ test("gold replay median is measured after the floor binds", () => {
   // the floor; the invariant is that items WITH a relevant fact extend and
   // nothing gets clubbed.
   assert.ok(longs >= 50, `long median ${longs}`)
-  assert.ok(stories >= 50, `story median ${stories}`)
+  // Owner, 22 Nov 2026 (Round 11): a story answer IS the narrative — the
+  // shared tail no longer appends an Example or extends a story question, so
+  // a truncated gold story stays at the model's length.
+  assert.ok(stories >= 40, `story median ${stories}`)
   console.log(`replay median short ${shorts} long ${longs} story ${stories}`)
 })
