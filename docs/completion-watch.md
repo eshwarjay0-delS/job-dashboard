@@ -9,6 +9,14 @@
 
 # MFit Completion Watch
 
+## 22 November 2026 13:26 CST — PR540 fixture correction: four gates green, full CI pending
+
+- PR #540 is still open/unmerged/unreleased. Direct test-only correction commit `1b2a414122c79e0abe785ab431f39b2b702e84aa` restores `transcriptionEpoch` and `transcriptionFailedEpoch` that the fixture comment had swallowed.
+- Exact-head Windows EXE run 45060694835 **SUCCESS**, Kompas baseline 45060694908 **SUCCESS**, cross-device gate 45060694864 **SUCCESS**. Full CI 45060694833 remains **IN_PROGRESS** at migration asset closure. The earlier 45056534914 failure (6/72 typed follow-up card assertions) is superseded by the corrected head; do not count it as a current failure or current success.
+- Stacked PR #545 was closed without merge because its non-master base had no workflow checks. The correction is now on PR #540's master-targeted branch.
+- **Continue:** check exact full CI. If green, independent review is still required; restack on current master 3eb16fa and rerun all gates before merge. Production remains Round 12 SHA 3eb16fa, READY and exact alias. No user-device test was performed.
+
+
 ## 22 November 2026 13:26 CST — WhatsApp two-line resume parser is already in live source
 
 **Correction to the 12:48 section below:** current master `src/lib/role-match.ts` already accepts a guarded two-line message when the first line matches an existing job-post signature and the final line names a resume. The earlier statement that the parser still rejects all two-line JDs is superseded. Short two-line chat remains unsplit.
