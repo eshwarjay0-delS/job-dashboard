@@ -512,7 +512,7 @@ export function closestOpenAIModel(wanted: string, ids: string[]): string | null
   return hits[0]?.id || null
 }
 
-async function callOpenAI(key: string, wanted: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
+export async function callOpenAI(key: string, wanted: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
   const headers = { "authorization": `Bearer ${key}`, "content-type": "application/json" }
   let model = openaiAlias.get(wanted) || wanted
   for (let attempt = 0; ; attempt++) {
