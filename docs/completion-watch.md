@@ -9,6 +9,17 @@
 
 # MFit Completion Watch
 
+## 22 November 2026 13:26 CST — WhatsApp two-line resume parser is already in live source
+
+**Correction to the 12:48 section below:** current master `src/lib/role-match.ts` already accepts a guarded two-line message when the first line matches an existing job-post signature and the final line names a resume. The earlier statement that the parser still rejects all two-line JDs is superseded. Short two-line chat remains unsplit.
+
+- Current master `3eb16fa611c36c6c3e6384edd1a32614a44a6d63`, production deployment `dpl_6Kkkqq9UyJfGCV6fM38zwmJne5Ce`, alias exact. Source blob `b23eefb61a2f28bbd6b40910d64227743b88d165` contains the guarded parser.
+- Current master still lacks the regression tests/workflow additions from PR #495: role-match two-line JD negative/positive, WhatsApp library selected-resume flow, and recovery-contract check. PR #495 has four green checks but is non-mergeable on an older base; PR #515 is a duplicate draft with no checks. Do not merge stale branches.
+- The source parser is live; explicit-selection provenance, same-account Files confirmation, hard-hold wiring, and actual 17 Oct 17:28 delivery remain open. No WhatsApp send, R2 mutation, DOCX export or replay was performed.
+
+**Continue:** restack only the missing regression/workflow/documentation additions from #495 onto current master and run exact-head checks. After that, rework the webhook selection and hard-hold branches with the installed Next.js 16.3.8 guide and runnable checkout; do not weaken account or evidence boundaries.
+
+
 ## 22 November 2026 13:22 CST — Round 12 production verified; Listening-hold PR CI needs fixture repair
 
 - **Current production:** master/live commit `3eb16fa611c36c6c3e6384edd1a32614a44a6d63` (Round 12). Vercel deployment `dpl_6Kkkqq9UyJfGCV6fM38zwmJne5Ce` is READY production; `job-dashboard-fawn.vercel.app` independently maps to the same deployment. This supersedes the earlier `d3a50dfa` live reference.
