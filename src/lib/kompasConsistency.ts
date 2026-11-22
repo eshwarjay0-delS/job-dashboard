@@ -221,11 +221,29 @@ function tokenMatch(a: string, b: string): boolean {
   return a.slice(0, stem) === b.slice(0, stem)
 }
 
-/** Does a resume fact share a meaningful (stem-matched) token with the question
- *  or the answer so far? Used by every relevance gate so off-topic facts are
- *  never appended just to reach the floor. */
+/** Words so generic they appear in almost every resume fact — matching on one
+ *  of them is not relevance. Owner, 22 Nov 2026 (Round 9): the Q6 follow-up
+ *  tacked on database-audit and federation bullets that shared only "project"
+ *  with the question and "security" with the answer. A fact must share a
+ *  CONTENT token, not a generic one. */
+const GENERIC_RELEVANCE = new Set([
+  "project", "projects", "work", "worked", "working", "security", "team", "teams",
+  "role", "roles", "experience", "company", "business", "process", "processes",
+  "system", "systems", "service", "services", "management", "data", "using", "used",
+  "use", "support", "supported", "provide", "provided", "ensure", "ensured", "help",
+  "helped", "include", "included", "across", "within", "through", "their", "them",
+  "they", "this", "that", "with", "from", "into", "over", "under", "about", "after",
+  "before", "during", "between", "among", "also", "well", "time", "times", "part",
+  "parts", "hardest", "handle", "handled", "question", "answer", "tell", "describe",
+  "explain", "would", "could", "should", "your", "what", "when", "where", "which",
+  "there", "here", "more", "most", "some", "each", "both", "first", "second",
+])
+
+/** Does a resume fact share a meaningful (stem-matched, non-generic) token with
+ *  the question or the answer so far? Used by every relevance gate so off-topic
+ *  facts are never appended just to reach the floor. */
 function factRelevant(fact: string, tokens: Set<string>): boolean {
-  return askTokens(fact).some((w) => w.length > 2 && [...tokens].some((t) => tokenMatch(w, t)))
+  return askTokens(fact).some((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase()) && [...tokens].some((t) => !GENERIC_RELEVANCE.has(t.toLowerCase()) && tokenMatch(w, t)))
 }
 
 /** Rule score 1–4. Silent at 2 or below. A model is allowed only at the borderline score. */
@@ -631,18 +649,33 @@ function nonSummaryFacts(resume: string): string[] {
     summary = end > 0 ? rest.slice(0, end) : rest.slice(0, 4000)
   }
   // Education and Certifications sections are not experience — never append them.
+  // Owner, 22 Nov 2026 (Round 9): the Core Competencies section is also not
+  // answer prose — its lines are "Header: keyword, keyword, keyword" dumps
+  // (IAM Architecture & Saviynt Implementation: PeopleSoft 9.2, PeopleTools
+  // security, roles, ...) that were pasted verbatim onto all 9 answers.
+  // Exclude the whole section.
   const eduStart = text.search(/\n\s*education\b/i)
   const certStart = text.search(/\n\s*certifications\b/i)
+  const compStart = text.search(/\n\s*core competencies\b/i)
   let excluded = summary
   if (eduStart >= 0) excluded += "\n" + text.slice(eduStart, certStart > eduStart ? certStart : undefined)
   if (certStart >= 0) excluded += "\n" + text.slice(certStart)
+  if (compStart >= 0) {
+    const compRest = text.slice(compStart)
+    const compEnd = compRest.search(/\n\s*(?:professional experience|work experience|technical skills|certifications|education)\b/i)
+    excluded += "\n" + (compEnd > 0 ? compRest.slice(0, compEnd) : compRest.slice(0, 4000))
+  }
   const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
   const excludedNorm = norm(excluded)
   return resumeFacts(resume).filter((fact) => {
     if (!excludedNorm) return true
     const f = norm(fact)
     // Skip a fact that appears (in full or as its first 60 chars) in the excluded sections.
-    return !excludedNorm.includes(f.slice(0, 60)) && !excludedNorm.includes(f)
+    if (excludedNorm.includes(f.slice(0, 60)) || excludedNorm.includes(f)) return false
+    // Safety net: a "Header: keyword, keyword, keyword" line is a section dump,
+    // not a sentence — never append it as answer prose, wherever it lives.
+    if (/:\s*[^.!?]*,/.test(fact)) return false
+    return true
   })
 }
 
