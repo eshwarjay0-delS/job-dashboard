@@ -14,6 +14,13 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
   window.localStorage.clear()
   window.eval(bridge)
   window.eval(js)
+  // The Say-this lines now come from the model route (/api/kompas/bridge) after a 1.5s debounce:
+  // stand in for that route so the panel still renders in this test.
+  window.fetch = async (url, opts) => {
+    const body = JSON.parse(opts.body || "{}")
+    const q = body.question || ""
+    return { ok: true, json: async () => ({ lines: [q + " Start from the evidence, contain first, then fix the cause."] }) }
+  }
   assert.doesNotMatch(js, /setInterval|setTimeout\(\s*perceive|new WebSocket|\/api\/(?:kompas\/)?answer/)
   assert.match(js, /\/api\/kompas\/aside/)
   const step = window.KompasAnswerAside.perceive("You", "I'm available in the Pittsburgh area, on site.")
@@ -40,6 +47,7 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
     boosters: ["Yeah, that's true.", "I'd stay with what you just said."],
     trace: [{ line: "I owned the service catalog.", why: "Them: the catalog rollout" }],
   })
+  await new Promise((r) => setTimeout(r, 1700)) // the 1.5s bridge debounce plus the fetch
   assert.match(panel.textContent, /catalog/i)
   assert.doesNotMatch(panel.textContent, /resume|not on|won't lie|can't claim|Why do you think/i)
   const second = {
@@ -51,7 +59,7 @@ test("the page brain is event-driven, stays in memory, and private mode still hi
   }
   window.document.getElementById("question").textContent = second.question
   window.KompasAnswerAside.accept(second)
-  await new Promise((r) => setTimeout(r, 0))
+  await new Promise((r) => setTimeout(r, 1700)) // the 1.5s bridge debounce plus the fetch
   assert.match(panel.textContent, /stall|flow/i)
   assert.doesNotMatch(panel.textContent, /resume|not on|won't lie|can't claim/)
   assert.doesNotMatch(JSON.stringify(window.localStorage), /service catalog|stall/)
