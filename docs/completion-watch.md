@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 22 November 2026 15:38 UTC — WhatsApp two-line named-resume parser and exact-master CI fixture repair
+
+- **Continue:** carry the owner-approved WhatsApp parser prerequisite forward on current master, not the stale #515/#495 branches.
+- Canonical master at branch creation: `23acd80ed645edb3d51a1fda876548eb8367ecbd`. Production alias `job-dashboard-fawn.vercel.app` independently points to READY deployment `dpl_GXYWcz9taCcYrFWNJ8xzM8qzFqSw`, exact SHA `23acd80`.
+- The one-line JD + second-line `use the SOC resume` case was dropped because `splitTailInstruction` required at least three non-empty lines. The new two-line guard requires an existing JD signature on line one and the existing explicit resume-instruction grammar on the last line. It reconstructs the signature RegExp without the global flag, so repeated calls cannot inherit `lastIndex`.
+- Added parser positives/negatives, repeated-call coverage, a synthetic WhatsApp integration that retains the named SOC resume through email confirmation and uses the exact path after reply `1`, and a recovery-contract regression. The dedicated WhatsApp workflow now runs the parser and library suites.
+- Current master full CI `45035728154`: Lint and Type-check passed; step 14 failed with 24 Kompas VM test failures, including `ReferenceError: answerCtl is not defined` in `pumpDetectedQueue`. The branch adds `answerCtl: null` and `detectedQueue: []` to the one-press, typed-question and voice test fixtures; no assertions or runtime Kompas code are weakened.
+- Implementation/test commits: parser `4357cd73a7d1adff8aae2a6f6d5b71814fadbcb8`; parser tests `811c5bec8f91fb9fde2bf83cacab213018e835d7`, WhatsApp library `6267461432446f058ac05d7adbd1a6926f9f35cd`, recovery contract `6256881e4bab3268a169421a56e79b5b7c17cf04`; workflow `eea890f1a3799738ef7e7bf47340e1b77f32b163`; Kompas fixture commits `83b5929c70f8c1126cd377762c322273a161e2c1`, `0322d5ff647a375cea366601c94fe92904d06760`, `7fd71dedeafbe126dd318dcf4303628f5eb8c486`.
+- No local tests/build ran: the container has no checkout and `git ls-remote` fails DNS. Exact-head GitHub Actions must validate the new branch. The old PR #515 remains open/draft and is not reused as validation.
+- The explicit same-account selection marker and unsupported-JD hard hold remain a separate route-level task. `AGENTS.md` requires the installed Next.js 16.3.8 route-handler guide; this runtime still has no approved checkout/package environment. Do not edit route handlers until unblocked.
+- The 17 Oct 17:28 Chicago delivery remains unverified: exact output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivered/read receipt are still missing. No real WhatsApp send/replay, DOCX generation, R2 write, Gmail API/OAuth call, inbox mutation, live crawl or user-device test occurred.
+
+**Continue:** open a draft PR from `fix/whatsapp-two-line-jd-ci-fixtures-20261122`; require exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks. Review the diff before merge. If all gates pass, merge through GitHub's normal path, then verify a READY production deployment and active canonical alias on the merge SHA. Keep the historical 17 October delivery unverified.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
