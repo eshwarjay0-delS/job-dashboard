@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 22 November 2026 — WhatsApp resume hard-hold current-head audit
+
+- PR #493 exact head `c387bc4c13bb7483235e59a786baeee89f1cd2ba` is DRAFT/non-mergeable with no visible exact-head workflow runs/status. It carries durable explicit same-account selection and unsupported-JD hard hold.
+- PR #495 exact head `4522a4ed9612a22fa304eb52f3772b02eb8ba44a` has all four gates SUCCESS but is based on older master `13542c5` and the recorded Safe Merge Gate review withheld it; do not merge around that hold. It fixes the two-line JD + named resume parser, not #493's durable selection/provenance.
+- PR #527 exact head `e843cbb7da053f8788b1a4b54f15dd144a5e3b5c` is stale on base `23acd80`; full CI failed nine tests, while WhatsApp recovery, Kompas baseline and Plan/REA passed. It depends on the Listening-hold fix now in draft PR #540.
+- The Next.js 16.3.8 route-handler and route-convention guides were retrieved in audit run `44842752926`; the current wall is the lack of a canonical checkout/dependency tree for local execution and no active Safe Merge Gate review. PR #493's latest head still has no exact-head remote runs.
+- Historical 17 Oct 17:28 Chicago delivery is still unverified; exact output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivered/read receipt are missing. No send, replay, model call or production mutation occurred.
+
+Continue: preserve the hard hold, wait for the recorded review/owner-approved sequencing, then restack #495 and #493 on current master with exact-head CI and protected-preview evidence. Do not send or replay WhatsApp.
+
+
 ## 22 November 2026 — Contract-crawler exact-head and preview audit
 
 - PR #517 `fix/crawler-abort-diagnostics-current-master` is DRAFT/non-mergeable at exact head `4ac7f1f46bb956ec5cf939ffa70ebcecdc519d9`, base `19a4ef20d09f43c2a22a9f1ef4bb5cdf81725a04` (behind current master `4ebc16dc3d35911195e07c6f7152d772555c1cb7`). No exact-head workflow runs/status are visible; do not reuse predecessor checks.
