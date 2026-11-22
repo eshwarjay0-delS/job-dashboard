@@ -1,7 +1,7 @@
 import { figureList } from "@/lib/kompasFigureContext"
 import { deriveWithFallback } from "@/lib/kompasDeriveFallback"
 import { NextRequest, NextResponse } from "next/server"
-import { keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
+import { callLLM, keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
 import { employerAliases } from "@/lib/kompasResume"
@@ -713,6 +713,29 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           }
         }
 
+        // Direct-provider fallback (fastest/lightweight first): when the OpenRouter
+        // lanes and Groq are both down, ask the configured direct providers through
+        // callLLM — it falls through Gemini (free), Groq, then OpenAI/Anthropic —
+        // with the same Kompas system prompt, so the answer keeps the levels, the
+        // length bands and the human read-aloud shape. Tier "light" picks the
+        // fastest model per provider; depth comes from the prompt, not the model.
+        if (!raw.trim() && !signal.aborted) {
+          try {
+            const direct = await callLLM({
+              keys: resolveKeys({}), purpose: "kompas:answer", tier: "light",
+              system: job.system, user: job.userText, maxTokens: 4096, timeoutMs: 15000,
+            })
+            if (direct.text.trim()) {
+              raw = direct.text.trim()
+              lastErr = ""
+              servedModel = direct.model
+              show(raw + " ")
+            }
+          } catch (e) {
+            lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+          }
+        }
+
         // Still rate-limited with nothing streamed: never a 5xx on a live turn —
         // hand the client an exact wait; it regenerates by itself.
         if (!raw.trim() && isRateLimit(lastErr)) {
@@ -864,6 +887,25 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
           } catch (e) {
             lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
           }
+        }
+      }
+      // Direct-provider fallback (fastest/lightweight first): same Kompas system
+      // prompt through callLLM, so the answer keeps the levels, length bands and
+      // human read-aloud shape even when OpenRouter and Groq are both down.
+      if (!raw.trim() && !signal.aborted) {
+        try {
+          const direct = await callLLM({
+            keys: resolveKeys({}), purpose: "kompas:answer", tier: "light",
+            system: job.system, user: job.userText, maxTokens: 4096, timeoutMs: 15000,
+          })
+          if (direct.text.trim()) {
+            raw = direct.text.trim()
+            lastErr = ""
+            servedModel = direct.model
+            servedProvider = direct.provider
+          }
+        } catch (e) {
+          lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
         }
       }
     } else { lastErr = "openrouter 503 missing paid key" }
