@@ -34,7 +34,7 @@ import { answerControls, controlsPrompt, createTitleSplitter, fallbackTitle, fir
 import { dissectQuestion, dissectionPrompt, formatForBand, isProviderErrorAnswer, lengthKind, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerPassageCount, groundSpokenAnswer, premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
-import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
+import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, shouldEmitEmptyAnswerReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { notebookCausalGuidance, notebookCausalFlags } from "@/lib/kompasNotebookCausal"
@@ -800,8 +800,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           return
         }
         // Degrade, never fail: stream the best prepared material as the answer.
+        // Owner, 22 Nov 2026: a stale lastErr must never wipe a delivered
+        // answer. A lane can stream real text and then throw (OpenRouter
+        // flap), or an early lane can fail before a later one succeeds —
+        // either way raw holds a usable answer. Only an empty raw means
+        // there is nothing to show. (The button was saying "Answered."
+        // with an empty pane because replace "" cleared the delta.)
         const degraded = false
-        if (!raw.trim() || lastErr) {
+        if (shouldEmitEmptyAnswerReplacement(raw)) {
           const failure = answerFailure(lastErr)
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
