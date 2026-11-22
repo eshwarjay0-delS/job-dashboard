@@ -613,7 +613,7 @@ export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ce
 /** Long technical and concept answers floor at 120. Stories floor at 150. */
 export function answerRoute(question: string): AnswerRoute {
   const band = visibleLengthBand(question)
-  if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
+  if (isDirectAsk(question)) return { route: "short", floor: 70, ceiling: 120 }
   if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
   if (isTechnicalAsk(question)) {
     const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
@@ -642,32 +642,24 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
-  if (route.route === "short") return trimWords(body, 60)
-  // The model now answers in the first person throughout (the wanted shape). When every
-  // sentence starts with "I", the non-"I" filter below empties "how" and the answer
-  // collapses to thesis + resume fragments — the Q8 failure across three live rounds.
-  // In that case keep the model's first-person body as the answer, without the thesis
-  // and without the tie-dedup that would strip it to one sentence.
-  const bodySentences = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence))
-  const firstPersonBody = bodySentences.length > 0 && bodySentences.every((sentence) => /^I\b/.test(sentence))
-  if (route.route === "long" && firstPersonBody) {
-    body = bodySentences.join(" ")
-  } else if (route.route === "long") {
-    const thesis = technicalThesis(question)
-    const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
+  if (route.route === "short") return trimWords(body, 120)
+  // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
+  // be prepended to an answer. The old long-route rebuild was [thesis, how, example, gap, tie],
+  // and "how" filtered OUT every sentence starting with "I" — so once the model started
+  // answering in the first person throughout (the wanted shape), "how" came back empty and the
+  // answer collapsed to thesis + resume fragments (Q8, four live rounds). The model's body is
+  // the answer: keep its sentences (first-person included) as the core, add a resume Example:
+  // and a first-person tie only when the body has none.
+  if (route.route === "long") {
+    const core = sentenceList(body).filter((sentence) => !/^Example:/i.test(sentence)).slice(0, 4).join(" ")
     const fact = resumeFacts(resume)[0] || ""
     const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
+    const hasFirstPerson = /\bI\b/.test(core)
     const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
-    const tie = tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    const tie = !hasFirstPerson && tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
     const tool = howTool(question)
     const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
-    body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
-    const opener = thesis.slice(0, 24)
-    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
-    if (ties.length > 1) {
-      const last = ties[ties.length - 1]
-      body = sentenceList(body).filter((sentence) => sentence === last || sentence.startsWith(opener) || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
-    }
+    body = [core, example, gap, tie].filter(Boolean).join(" ")
   }
   if (route.route === "story") {
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
@@ -694,16 +686,6 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
     body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
-  }
-  if (route.route === "long" && !firstPersonBody) {
-    const parts = sentenceList(body)
-    const opener = technicalThesis(question).slice(0, 24)
-    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
-    const tie = ties[ties.length - 1]
-    const rest = parts.filter((sentence) => !ties.includes(sentence))
-    const lead = rest.filter((sentence) => sentence.startsWith(opener))
-    const middle = rest.filter((sentence) => !sentence.startsWith(opener))
-    body = [...lead, ...middle, tie].filter(Boolean).join(" ")
   }
   return body.trim()
 }

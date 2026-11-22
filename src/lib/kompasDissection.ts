@@ -241,14 +241,14 @@ export function visibleLengthBand(question: string, shape?: AnswerShape): Visibl
     case "opener": return { type: "opener", floor: 90, aim: 120, ceiling: 150 }
     case "follow-up": return { type: "follow-up", floor: 50, aim: 70, ceiling: 95 }
     case "compare": return { type: "comparison", floor: 75, aim: 100, ceiling: 125 }
-    case "definition": return { type: "definition", floor: 22, aim: 35, ceiling: 50 }
+    case "definition": return { type: "definition", floor: 70, aim: 90, ceiling: 120 }
     case "done":
     case "used": return { type: "experience", floor: 70, aim: 85, ceiling: 120 }
     case "star": return { type: "story", floor: 90, aim: 120, ceiling: 180 }
     case "howto":
     case "design-first":
     case "design-later": return { type: kind, floor: 70, aim: 100, ceiling: 160 }
-    default: return { type: kind, floor: 12, aim: 24, ceiling: 45 }
+    default: return { type: kind, floor: 50, aim: 75, ceiling: 110 }
   }
 }
 
