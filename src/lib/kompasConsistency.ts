@@ -727,10 +727,17 @@ function extendFromResume(text: string, question: string, resume: string, floor:
   const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2))
   const answerTokens = new Set(askTokens(out).filter((w) => w.length > 2))
   const relevant = (line: string) => factRelevantTo(line, questionTokens, answerTokens)
+  // Owner, 22 Nov 2026 (Round 12): the extension appended RAW facts, so a
+  // verbatim resume bullet ("Performed integration troubleshooting...") was
+  // pasted onto the answer — the same paste the dropVerbatimResumeSentences
+  // filter now removes. The extension must append first-person facts via
+  // asFact ("I integrated..."), never a raw bullet; a non-action line returns
+  // "" from asFact and is skipped, never pasted.
   for (const line of nonSummaryFacts(resume)) {
     if (answerWordCount(out) >= floor) break
     if (!relevant(line)) continue
-    const fact = /[.!?]$/.test(line) ? line : `${line}.`
+    const fact = asFact(line)
+    if (!fact) continue
     if (out.includes(fact)) continue
     const next = `${out} ${fact}`.trim()
     if (answerWordCount(next) > ceiling) continue
@@ -740,12 +747,14 @@ function extendFromResume(text: string, question: string, resume: string, floor:
     for (const line of nonSummaryFacts(resume)) {
       if (answerWordCount(out) >= floor) break
       if (!relevant(line)) continue
+      const fact = asFact(line)
+      if (!fact) continue
       const room = ceiling - answerWordCount(out)
       const need = floor - answerWordCount(out)
-      const words = line.split(/\s+/).filter(Boolean)
+      const words = fact.split(/\s+/).filter(Boolean)
       const take = Math.min(words.length, room)
       if (take < need || take < 4) continue
-      out = `${out} ${words.slice(0, need).join(" ")}.`.trim()
+      out = `${out} ${words.slice(0, need).join(" ")}${/[.!?]$/.test(words.slice(0, need).join(" ")) ? "" : "."}`.trim()
     }
   }
   return out
@@ -848,15 +857,19 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
         for (const fact of facts) {
           if (answerWordCount(shortBody) >= route.floor) break
           if (!factRelevantTo(fact, questionTokens, answerTokens)) continue
-          const clean = fact.replace(/\s+/g, " ").trim()
-          // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
-          // capitalized word not in the resume, and "Example" is not in the resume.
-          const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
-          if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
+          // Owner, 22 Nov 2026 (Round 12): append the fact as a first-person
+          // sentence via asFact, never a raw bullet — a raw bullet is a paste
+          // that the verbatim filter drops.
+          const clean = asFact(fact)
+          if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${clean}`
         }
       }
     }
-    return trimWords(shortBody, route.ceiling)
+    // Owner, 22 Nov 2026 (Round 12): the short route returns early, before the
+    // shared tail's dropVerbatimResumeSentences — so a tag fragment or pasted
+    // bullet in the model's raw ("(Zero Trust) (Zero Trust Security), using
+    // Expert-level.") survived. Apply the same drop here.
+    return dropVerbatimResumeSentences(trimWords(shortBody, route.ceiling), resume)
   }
   // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
   // be prepended to an answer. The old long-route rebuild was [thesis, how, example, gap, tie],
@@ -922,12 +935,55 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     body = `${body} ${bridge}`.trim()
   }
   if (!isStory && answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  // Owner, 22 Nov 2026 (Round 12): the Saviynt troubleshooting bullet was
+  // appended to 5 of 10 story answers even though the shared tail skips the
+  // Example and extendFromResume for story questions — the MODEL itself copies
+  // a resume bullet verbatim into its prose (it sees the bullet in the resume
+  // context). A verbatim resume bullet in the answer is always a paste, never
+  // the model's own first-person prose (the model paraphrases). So drop any
+  // sentence after the first that matches a resume fact verbatim. The
+  // intentional extension facts go through asFact (first-person, not verbatim)
+  // or are the constructed cert list, so they survive.
+  body = dropVerbatimResumeSentences(body, resume)
   const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
     body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
   }
   return body.trim()
+}
+
+/** Drop any sentence after the first that is a verbatim resume fact. A pasted
+ *  resume bullet ("Performed integration troubleshooting across Saviynt
+ *  connectors...") is never the model's own prose — the model writes in the
+ *  first person and paraphrases. The first sentence is kept even if it matches,
+ *  in case the model's opening closely follows a resume line. */
+function dropVerbatimResumeSentences(body: string, resume: string): string {
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
+  const resumeNorm = norm(resume || "")
+  const facts = new Set(resumeFacts(resume).map((f) => norm(f)))
+  const sentences = sentenceList(body)
+  if (sentences.length <= 1) return body
+  const kept = sentences.filter((sentence, i) => {
+    if (i === 0) return true
+    // presentSpokenAnswer formats sentences as bullet lines ("\n- ..."), so
+    // strip the bullet marker before comparing — otherwise "- Performed
+    // integration troubleshooting..." never matches the resume fact.
+    const clean = sentence.replace(/^[\s•▪●\-*]+/, "").trim()
+    const n = norm(clean)
+    if (n.length < 20) return true
+    // Owner, 22 Nov 2026 (Round 12): a tag fragment pasted at the end of an
+    // answer — "(Zero Trust) (Zero Trust Security), using Expert-level." — is
+    // not a sentence, it is a keyword tag line. Drop any sentence that is
+    // mostly parenthetical groups with no first-person content.
+    if ((clean.match(/\([^)]*\)/g) || []).length >= 2 && !/\b(?:I|we|my|our)\b/i.test(clean)) return false
+    // Verbatim if the whole sentence is a resume fact, or appears in the
+    // resume text as a contiguous chunk (covers tag fragments pasted mid-text).
+    if (facts.has(n) || facts.has(n.replace(/[.!?]+$/, ""))) return false
+    if (resumeNorm.includes(n.replace(/[.!?]+$/, "")) && n.split(/\s+/).length >= 5) return false
+    return true
+  })
+  return kept.join(" ")
 }
 
 const EXTEND_MODEL = "openai/gpt-oss-20b"

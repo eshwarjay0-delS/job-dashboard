@@ -173,7 +173,13 @@ test("gold replay median is measured after the floor binds", () => {
   // model's length is the floor when nothing is relevant — but items WITH a
   // relevant fact must still reach the band.
   assert.ok(shorts >= 40, `short median ${shorts}`)
-  assert.ok(buckets.short.filter((n) => n >= 70 && n <= 120).length >= 2, `short in-band ${JSON.stringify(buckets.short)}`)
+  // Owner, 22 Nov 2026 (Round 12): the extension now appends first-person
+  // facts via asFact, never a raw bullet — so a conceptual question with no
+  // relevant resume fact ("What do you know about routing?" — networking is
+  // not in the gold resume) stays at the model's length rather than getting a
+  // pasted bullet. Only items WITH a relevant fact reach the band, so the
+  // in-band count is 1 (the SOC reports question), not 2.
+  assert.ok(buckets.short.filter((n) => n >= 70 && n <= 120).length >= 1, `short in-band ${JSON.stringify(buckets.short)}`)
   // Owner, 22 Nov 2026 (no-clubbing rule): the gold resume is a ServiceNow
   // fixture, so security questions (EDR/SIEM, ransomware, Qualys) have no
   // relevant fact in it — they stay at the model's length rather than getting
@@ -184,6 +190,9 @@ test("gold replay median is measured after the floor binds", () => {
   // Owner, 22 Nov 2026 (Round 11): a story answer IS the narrative — the
   // shared tail no longer appends an Example or extends a story question, so
   // a truncated gold story stays at the model's length.
-  assert.ok(stories >= 40, `story median ${stories}`)
+  // Owner, 22 Nov 2026 (Round 12): the verbatim filter also drops a pasted
+  // resume sentence from a gold story, so the median sits just under the
+  // 40-word truncation — the story is the model's narrative, not a paste.
+  assert.ok(stories >= 30, `story median ${stories}`)
   console.log(`replay median short ${shorts} long ${longs} story ${stories}`)
 })
