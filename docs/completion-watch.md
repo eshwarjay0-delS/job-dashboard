@@ -1,5 +1,13 @@
 # MFit Completion Watch
 
+## 22 November 2026 05:54 CST — Kompas test-harness fix isolated for CI
+
+Continue: branch `test/kompas-vm-harness-missing-state-20261122` contains only three test fixtures. The exact failure log for PR #517 full CI run 45012461395 shows 24 failures in the extracted Kompas queue tests from `ReferenceError: answerCtl is not defined`; the fixture also lacks `detectedQueue`, both globals used by production `pumpDetectedQueue`. The test-only patch adds `answerCtl: null` and `detectedQueue: []` to one-press, typed-question and voice VM state. This correction was already present in approved PR #515; it is isolated to trigger fresh PR CI. Exact-head CI has not yet run, so no pass is claimed.
+
+Canonical master is `19a4ef20d09f43c2a22a9f1ef4bb5cdf81725a04`. Production alias `job-dashboard-fawn.vercel.app` independently READY at `b6c7f542641b96b7392710c25f1a6a803f71fd62`; this test-only patch requires no deployment. The current PR #515 parser head `655e02e5b24220b950a903bc67c9b32f43cc3824` and PR #517 crawler head `7548ac4bd5715b8fe8ea32c74d19739b92d8897e` have no exact-head Actions runs. PR #517's earlier full CI failure is the fixture issue above. Local `git clone` failed because this runtime could not resolve github.com; no local tests/build ran.
+
+Next: await the new PR's CI; fix only evidence-backed failures. After a green test-only PR, rebase/restack #515 and #517 and run exact-head CI, dedicated WhatsApp/crawler, Kompas baseline and Plan/REA checks. Protected-preview gates and real WhatsApp/device acceptance remain separate. No real send, model call, R2 write, inbox mutation, live crawl or production data change.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
