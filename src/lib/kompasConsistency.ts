@@ -579,6 +579,32 @@ function resumeFacts(resume: string): string[] {
     .filter((line) => line.split(/\s+/).length >= 4 && !/@|gmail|jayeshwar44|jayeshwar24|eshwarjay06/i.test(line))
 }
 
+// Owner, 22 Nov 2026 (Round 7): the floor extension pasted the resume SUMMARY
+// onto 8 of 9 answers. resumeFacts splits the summary paragraph into one fact
+// per sentence, so skipping only facts[0] left the other summary sentences
+// ("Proven expertise in Okta IAM...", "Skilled at configuring CSPM...") to be
+// appended. The summary section (under "Professional Summary", before the next
+// heading) is generic positioning, not grounded experience — it must never be
+// appended as an "example". These are the facts OUTSIDE the summary section.
+function nonSummaryFacts(resume: string): string[] {
+  const text = String(resume || "")
+  const start = text.search(/professional summary/i)
+  let summary = ""
+  if (start >= 0) {
+    const rest = text.slice(start)
+    const end = rest.search(/\n\s*(?:core competencies|professional experience|work experience|technical skills|certifications|education)\b/i)
+    summary = end > 0 ? rest.slice(0, end) : rest.slice(0, 4000)
+  }
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
+  const summaryNorm = norm(summary)
+  return resumeFacts(resume).filter((fact) => {
+    if (!summaryNorm) return true
+    const f = norm(fact)
+    // Skip a fact that appears (in full or as its first 60 chars) in the summary.
+    return !summaryNorm.includes(f.slice(0, 60)) && !summaryNorm.includes(f)
+  })
+}
+
 function resumeNumber(resume: string, question: string): string {
   const allowed = new Set(`${resume}\n${question}`.match(/\d[\d,]*/g) || [])
   return [...allowed][0] || ""
@@ -666,10 +692,8 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
         if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
       }
       if (answerWordCount(shortBody) < route.floor) {
-        const facts = resumeFacts(resume)
-        const specific = facts.slice(1)
-        const summary = facts.slice(0, 1)
-        for (const fact of [...specific, ...summary]) {
+        const facts = nonSummaryFacts(resume)
+        for (const fact of facts) {
           if (answerWordCount(shortBody) >= route.floor) break
           const clean = fact.replace(/\s+/g, " ").trim()
           // No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
@@ -690,15 +714,15 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   // and a first-person tie only when the body has none.
   if (route.route === "long") {
     const core = sentenceList(body).filter((sentence) => !/^Example:/i.test(sentence)).slice(0, 4).join(" ")
-    // Owner, 22 Nov 2026 (Round 6): the Example was resumeFacts(resume)[0] — the
+    // Owner, 22 Nov 2026 (Round 6/7): the Example was resumeFacts(resume)[0] — the
     // generic summary — so Q6 ended with the same "Enterprise Security Architect
-    // with 12+ years..." fragment pasted verbatim. Use a question-relevant fact
-    // instead (a line sharing tokens with the question), skipping the summary.
-    const facts = resumeFacts(resume)
-    const fact = facts.slice(1).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || facts.slice(1).find((line) => line.trim()) || ""
+    // with 12+ years..." fragment pasted verbatim, and the other summary sentences
+    // followed. Use a question-relevant fact from OUTSIDE the summary section.
+    const facts = nonSummaryFacts(resume)
+    const fact = facts.find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || facts.find((line) => line.trim()) || ""
     const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
     const hasFirstPerson = /\bI\b/.test(core)
-    const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
+    const tieSource = facts.find((line) => /\bI\b/.test(line)) || fact
     const tie = !hasFirstPerson && tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
     const tool = howTool(question)
     const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
