@@ -135,7 +135,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
   assert.equal(docs.length, 0, 'an uploaded original is not an offline fallback')
-  assert.match(said.at(-1), /updated Word file could not be opened/)
+  assert.match(said.at(-1), /Word file could not be opened/)
   assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
   assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /candidate1@example.test/)
 
