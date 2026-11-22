@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 22 November 2026 — Contract-crawler exact-head and preview audit
+
+- PR #517 `fix/crawler-abort-diagnostics-current-master` is DRAFT/non-mergeable at exact head `4ac7f1f46bb956ec5cf939ffa70ebcecdc519d9`, base `19a4ef20d09f43c2a22a9f1ef4bb5cdf81725a04` (behind current master `4ebc16dc3d35911195e07c6f7152d772555c1cb7`). No exact-head workflow runs/status are visible; do not reuse predecessor checks.
+- The earlier PR #479 head `e15f7dc5aa563a69c59c6d262ac913b71f171782` had four green gates, but its Vercel target `dpl_7EAzpCdAGPMxn7GKfTiyKWjWqDQL` is actually **CANCELED** with `ignored-build-step`, not READY preview. The green Vercel status is not preview evidence.
+- Source inspection of #517's collector confirms the intended diagnostic-only change: 600 ms pacing, 25,000 ms default request timeout, host attribution, local timer abort distinguished from upstream AbortError, and malformed URL parsing inside cleanup. No live crawl or portal request was performed.
+- No protected preview is verified. Safe Merge Gate is disabled; do not merge or release #517/#479 until exact-current-master checks and the legitimate preview/review gate are satisfied. Robert Half remains manual-only and eTeam excluded.
+
+Continue: restack/revalidate the crawler diagnostic on current master only after safe sequencing; require exact-head CI and a legitimate READY preview, then perform only an authorized safe smoke. Keep crawling manual/on-demand; no live crawl in this run.
+
+
 ## 22 November 2026 — Listening-hold fix restacked on current master
 
 - Current master and canonical production alias are READY on SHA `4ebc16dc3d35911195e07c6f7152d772555c1cb7`, deployment `dpl_12S8M4WPfXRpL2JbhYPUfbEiHL5T`. Round 9's Core Competencies-dump/generic-token relevance fix is live.
