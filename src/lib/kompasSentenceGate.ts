@@ -135,7 +135,7 @@ export interface SentenceGate {
   openerText(): string
   released(): string[]
 }
-export function createSentenceGate(o: { check: SentenceCheck; opener?: unknown; sourcePassages?: Passage[] }): SentenceGate {
+export function createSentenceGate(o: { check: SentenceCheck; opener?: unknown; sourcePassages?: Passage[]; dropSentence?: (sentence: string) => boolean }): SentenceGate {
   let buf = ""
   let stop = false
   const out: string[] = []
@@ -146,6 +146,13 @@ export function createSentenceGate(o: { check: SentenceCheck; opener?: unknown; 
     if (!t || stop) return []
     // r9: a body sentence that restates the approved opener is dropped (Lens contract §6/§7: repeat filter, then the guard)
     if (opener && repeatsOpener(t, opener)) return []
+    // Owner, 22 Nov 2026 (Round 14): the session displays the STREAM's
+    // incremental sentences, and the final gateDisplayedAnswer replace does
+    // not always overwrite them — so a refusal opening, a verbatim pasted
+    // resume bullet, or a tag fragment that survives the final shaping still
+    // shows on screen. Drop such sentences HERE, as they stream, without
+    // halting the gate (a dropped sentence is not a guard failure).
+    if (o.dropSentence && o.dropSentence(t)) return []
     let ok = false
     try { ok = o.check(t) === true } catch { ok = false }
     if (!ok) { stop = true; return [] }

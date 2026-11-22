@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -584,6 +584,12 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             check: sentenceCheck({ facts: job.guardFacts, allowed: job.allowed, asked: job.askedFigures, docs: job.sourceDocs, question: job.question, passages: job.passages || [] }),
             opener: withOpenerToo ? job.opener : null,
             sourcePassages: splitOpenerPassages(job.sourceDocs),
+            // Owner, 22 Nov 2026 (Round 14): the session displays the stream's
+            // incremental sentences, and the final gateDisplayedAnswer replace
+            // does not always overwrite them — so a refusal, a verbatim pasted
+            // bullet, or a tag fragment that the final shaping would strip
+            // still shows on screen. Filter those sentences as they stream.
+            dropSentence: (sentence: string) => dropStreamSentence(sentence, job.resume || ""),
           })
         } catch { return null }
       }
