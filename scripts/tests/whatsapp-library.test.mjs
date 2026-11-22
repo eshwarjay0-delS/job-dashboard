@@ -138,11 +138,11 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
 test('a one-line JD with a named Files resume keeps the name while asking for the email, then uses that exact resume', async () => {
   const b = bot({ agent: null })
   const phone = '15550020'
-  await b.wa.handle(phone, { type: 'text', id: 'm1', text: { body: `${JD}\\nuse the SOC resume` } }, {}, 'user1')
+  await b.wa.handle(phone, { type: 'text', id: 'm1', text: { body: `${JD}\nuse the SOC resume` } }, {}, 'user1')
   const pending = await b.wa.loadSession(phone)
   assert.ok(pending.pending, 'the named resume is retained while the account is confirmed')
   assert.equal(pending.pending.hint, 'SOC')
-  assert.match(b.said.at(-1), /Which email is this job for\\?/)
+  assert.match(b.said.at(-1), /Which email is this job for\?/)
   assert.equal(b.runs.length, 0, 'no account is guessed')
 
   await b.wa.handle(phone, { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession(phone), 'user1')

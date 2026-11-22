@@ -122,13 +122,13 @@ test('a job post that ends with "use the X resume" is the post and the name', ()
 test('a two-line job post can carry a named resume only when the first line has job-post evidence', () => {
   const oneLinePost = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
   const selected = { jd: oneLinePost, hint: 'SOC' }
-  const combined = `${oneLinePost}\\nuse the SOC resume`
+  const combined = `${oneLinePost}\nuse the SOC resume`
   assert.deepEqual(R.splitTailInstruction(combined), selected)
   assert.deepEqual(R.splitTailInstruction(combined), selected, 'repeated calls must not inherit global RegExp state')
 
-  const shortChat = 'Please use the SOC resume\\nuse the SOC resume'
+  const shortChat = 'Please use the SOC resume\nuse the SOC resume'
   assert.deepEqual(R.splitTailInstruction(shortChat), { jd: shortChat, hint: '' }, 'short chat is not a job post')
-  const titleOnly = 'Application Security Engineer\\nuse the SOC resume'
+  const titleOnly = 'Application Security Engineer\nuse the SOC resume'
   assert.deepEqual(R.splitTailInstruction(titleOnly), { jd: titleOnly, hint: '' }, 'a title alone is not enough evidence')
 })
 
