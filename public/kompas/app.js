@@ -1853,11 +1853,10 @@ function warmDesktopLevels(card, question) {
 }
 /* ---- start / stop ---- */
 let running = false;
+// Start always starts: no auth gate on the click. Auth belongs in the
+// background readiness check and in per-request answer errors, never as
+// a blocker on the button (owner standing rule, 21 Nov 2026).
 $("startBtn").onclick = () => {
-  if (!running && (sessionAuthGate === "sign_in" || sessionAuthGate === "egress")) {
-    if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) { void start(); return; }
-    offerFreshSignIn(false); return;
-  }
   running ? stop(true) : start();
 };
 
@@ -2087,11 +2086,10 @@ async function start() {
   const opening = [];
   if (srcOn.sys) opening.push(startSys());
   if (srcOn.mic) opening.push(startMic());
-  const opened = await Promise.race([
-    Promise.allSettled(opening),
-    new Promise((resolve) => setTimeout(() => resolve("timeout"), 8000)),
-  ]);
-  if (opened === "timeout") { status("Start timed out. No audio received.", "err"); starting = false; await stop(false); return; }
+  // No timeout on the picker: it is user-driven, and an 8s race discarded
+  // the pick on a laggy remote desktop and forced a re-press (the picker
+  // loop). Wait for the captures to settle, however long the pick takes.
+  await Promise.allSettled(opening);
   if (!running || generation !== sourceGeneration.You) { starting = false; return; }
   if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); starting = false; await stop(false); return; }
   starting = false;
@@ -2238,7 +2236,11 @@ async function requestSysShare() {
     try { return await navigator.mediaDevices.getDisplayMedia(opts); }
     catch (error) {
       last = error;
-      if (error && error.name === "NotAllowedError") throw error;
+      // Never re-open the picker when another picker is already open
+      // (AbortError) or the user cancelled (NotAllowedError). Only retry
+      // when the constraints themselves were rejected before any picker
+      // was shown (OverconstrainedError / TypeError).
+      if (error && (error.name === "NotAllowedError" || error.name === "AbortError")) throw error;
     }
   }
   throw last;
@@ -2347,6 +2349,7 @@ async function maybeLoadSilero(stream) {
 }
 async function startSys() {
   const generation = sourceGeneration.Them;
+  if (sysConnecting) return;
   if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
   const attempt = ++sysAttempt;
   sysConnecting = true;
