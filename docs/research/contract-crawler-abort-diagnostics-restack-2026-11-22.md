@@ -33,3 +33,9 @@ Two tests were added to `scripts/tests/crawl-collect.test.mjs`:
 - No live crawl, portal request, production-row mutation, application submission or cron change occurred.
 
 Keep PR #517 DRAFT until all exact-head gates pass and the protected-preview/release requirement is legitimately satisfied. After a valid production release, verify the READY deployment SHA and canonical alias before considering the diagnostics live. A separate authorized manual crawl is required for fresh job data.
+
+## Exact-head Type-check correction
+
+PR #517 full CI run 45013028073 failed at Type-check with TS2322 on the new journal and REA entries, not in the collector. The journal entry used area=whatsapp, but PlanJournalEntry permits resume/gmail/applications/kompas/all. REA used area=whatsapp and method=Source, workflow and test-log analysis, outside its enums. Corrected to area=resume and method=Source and artifact analysis.
+
+Correction commits: fc905391744589830413685eb7459d07c44e0bd0 (journal) and 477cab026da1674798284e8462802fbf32af48b4 (REA). The exact-head remote gates after correction are not visible yet. No local typecheck/build ran.
