@@ -17,6 +17,7 @@ function slice(start, end) {
 }
 const code = [
   src.slice(src.indexOf("const Q_CUE ="), src.indexOf(";", src.indexOf("const Q_CUE =")) + 1),
+  slice("const QW_LABELS =", "// ── Question intake"),
   slice("// ── Question intake", "// ── end question intake ──"),
   slice("function shortFollowUp(", "const armsAuto"),
   slice("function pressQuestion(", "$(\"answerBtn\")"),
@@ -40,6 +41,7 @@ function session(typed) {
     logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
     questionSource: () => "Them",
     recentContext: () => "",
+    showPressed: () => {},
     generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts }); },
   };
   s.addCard = (q, answer) => { const card = { question: q, answer }; s.cards.push(card); s.idx = s.cards.length - 1; return card; };
