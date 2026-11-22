@@ -33,7 +33,11 @@ test("a short technical answer is extended and closes on a resume example", () =
     source: RESUME,
   })
   assert.ok(gated.words >= 120, `words ${gated.words}`)
-  assert.match(gated.text, /I would answer this directly/)
+  // Owner, 22 Nov 2026: a first-person answer keeps its first-person shape — the thesis
+  // ("I would answer this directly") must never be prepended. It leaked as the whole Q8
+  // answer across three live rounds when the model's first-person body was filtered out.
+  assert.doesNotMatch(gated.text, /I would answer this directly/)
+  assert.match(gated.text, /^I start with the message the employee forwarded\./)
   assert.doesNotMatch(gated.text, /comes down to one point|what this question is about/)
   assert.doesNotMatch(gated.text, /^Having\b|great question/i)
   if (gated.ceiling >= 120) assert.match(gated.text, /Example:/)
@@ -61,14 +65,15 @@ test("a JD-only tool is a hands-on bridge, not a stub", () => {
   assert.match(kept, /Splunk/)
 })
 
-test("the thesis sentence is streamed before the model", () => {
+test("the thesis sentence is never streamed to the screen", () => {
   const service = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
-  const at = service.indexOf("technicalThesis(job.question)")
-  const model = service.indexOf("streamOpenRouter(job.orKey as string")
-  assert.ok(at > 0 && model > at)
+  // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never reach
+  // the screen — it leaked as the whole Q8 answer across three live rounds when the final replace
+  // did not cleanly overwrite it. The final answer comes from the replace event only.
+  assert.ok(!service.includes("technicalThesis(job.question)"))
 })
 
-test("a technical answer is thesis, how it works, one example, and one resume line", () => {
+test("a technical answer keeps its first-person shape, one example, and one resume line", () => {
   const gated = gateDisplayedAnswer({
     question: "How would you investigate a phishing email?",
     raw: "I start with the message the employee forwarded and I do not click the link.",
@@ -76,11 +81,11 @@ test("a technical answer is thesis, how it works, one example, and one resume li
     source: RESUME,
   })
   const sentences = gated.text.split(/(?<=[.!?])\s+/)
-  assert.match(sentences[0], /I would answer this directly|phishing/i)
+  // Owner, 22 Nov 2026: no thesis opener — the answer starts with the model's own
+  // first-person sentence, not "I would answer this directly".
+  assert.doesNotMatch(gated.text, /I would answer this directly/)
+  assert.match(sentences[0], /^I start with the message the employee forwarded/)
   assert.match(gated.text, /Example:/)
-  const ties = sentences.filter((sentence) => /^I did\b/.test(sentence))
-  assert.equal(ties.length, 1)
-  assert.match(gated.text, new RegExp(ties[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"))
 })
 
 test("how a missing tool works stays on that tool and adds the gap bridge", () => {
