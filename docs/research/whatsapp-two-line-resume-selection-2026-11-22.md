@@ -39,3 +39,11 @@ Run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA. Require
 ## Restack event
 
 Git Data restack commit: `58a975195a54b95bcb18a4efa4132a0cd4163545` (first parent current master `d3a50dfa32a0d8634bb83d6d78501036324a1942`, second parent preserved prior PR head `e843cbb7da053f8788b1a4b54f15dd144a5e3b5c`). This ref update did not create Actions runs at first inspection. The following Contents-API documentation commit is used to request a PR synchronize event; exact workflows will be verified rather than assumed.
+
+
+## Exact-head CI result (22 November 2026)
+
+- Tested head `e6799c091f0f62ee9cec881f6b005bc2459668e`: full CI `45055713456` FAILED (9/72), WhatsApp recovery `45055713482`, Kompas baseline `45055713445`, Plan/REA `45055713528` SUCCESS.
+- Seven failures were `answerCtl is not defined` in `kompas-typed-followup-card.test.mjs`; two were behavior assertions in `kompas-typed-question.test.mjs` because the current master re-answers when the approved Listening hold should pause.
+- Existing PR #540 owns both the Listening-hold behavior and fixture correction. It is draft/stale and has no exact-head workflow runs. Do not copy its runtime changes into this parser PR.
+- The current docs-only follow-up head is not covered by the predecessor CI run. Git Data/Contents commits did not trigger new Actions for that final head; normal push/workflow-dispatch capability is required.

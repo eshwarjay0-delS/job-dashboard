@@ -1,5 +1,16 @@
 # MFit Completion Watch
 
+## 22 November 2026 12:35 CST — PR #527 exact CI failure; coordinate with Listening-hold PR #540
+
+- Tested code/documentation head `e6799c091f0f62ee9cec881f6b005bc2459668e`: full CI `45055713456` FAILED at step 14 (9/72 tests failed). WhatsApp recovery `45055713482`, Kompas baseline `45055713445`, and Plan/REA `45055713528` SUCCESS.
+- Seven failures are VM harness errors in `kompas-typed-followup-card.test.mjs`: `answerCtl is not defined`. Two are behavior assertions in `kompas-typed-question.test.mjs` where an answered question is regenerated instead of holding Listening.
+- Existing PR #540 already owns the Listening-hold behavior and the typed-followup-card fixture correction. It is DRAFT, stale on base `4ebc16d`, head `1a4bd5b`, with no exact-head workflow runs. Do not duplicate #540 runtime changes in #527 or merge around sequencing.
+- #527's parser/library/recovery suite passed in the dedicated WhatsApp recovery run, but full CI failed. The docs-only follow-up changes the PR head; the predecessor run is not exact-head evidence. #527 is being returned to DRAFT until #540 is safely sequenced and exact CI can be triggered.
+- Safe Merge Gate automation is currently disabled. No merge, production deployment, real WhatsApp send/replay, DOCX generation, R2 write or device test occurred.
+
+Continue: #540 needs an authorized current-master restack and exact CI/review; then rerun #527's full CI on its latest head. A normal Git push or workflow-dispatch capability is required here because Git Data/Contents commits did not expose an exact-head workflow trigger for the final head.
+
+
 ## 22 November 2026 12:20 CST — WhatsApp two-line resume parser and current-master CI repair
 
 - Canonical master `d3a50dfa32a0d8634bb83d6d78501036324a1942` is independently READY in production as `dpl_2nb9gWxH2fTDBs2QFxoo5LnUnaDH`; `job-dashboard-fawn.vercel.app` maps to that exact SHA. PR #542's Round 11 source is live, but its 10-question fresh-phone run recorded 0 PASS / 11 FAIL.
