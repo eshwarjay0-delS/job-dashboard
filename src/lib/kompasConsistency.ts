@@ -716,6 +716,52 @@ function resumeNumber(resume: string, question: string): string {
   return [...allowed][0] || ""
 }
 
+/** Same-thread extension for a story answer below its floor. A fact is
+ *  appended only when it shares a non-generic content token with the answer's
+ *  own opening sentence (the story's thread) AND with the question. A Saviynt
+ *  bullet on a Fifth Bank Jenkins story shares only generic words ("security",
+ *  "integration") with the opening, so it is skipped; a Jenkins or Python
+ *  fact on that story shares the project token and is appended, via asFact
+ *  (first-person), never as a raw bullet. */
+function extendStorySameThread(body: string, question: string, resume: string, floor: number, ceiling: number): string {
+  let out = String(body || "").trim()
+  const opening = sentenceList(out)[0] || ""
+  // Owner, 22 Nov 2026 (Round 13): the shared token must be a CAPITALIZED
+  // word in the opening (a proper noun: a client, tool, or product — Fifth
+  // Bank, Jenkins, Python, AWS, Venafi). A lowercase process noun
+  // ("provisioning", "onboarding") is shared by many bullets, and it let the
+  // Saviynt troubleshooting bullet back onto a Fifth Bank automation story.
+  // Only a proper-noun match proves the fact is on the story's thread.
+  const openingProper = new Set(
+    (opening.match(/\b[A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)*/g) || [])
+      .flatMap((phrase) => phrase.split(/\s+/))
+      .filter((w) => w.length > 2)
+  )
+  const openingTokens = new Set(askTokens(opening).filter((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())))
+  const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())))
+  const shares = (tokens: Set<string>, line: string) => {
+    const lineTokens = askTokens(line).filter((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase()))
+    return lineTokens.some((t) => [...tokens].some((q) => tokenMatch(t, q)))
+  }
+  const sharesProper = (line: string) => {
+    const lineTokens = askTokens(line)
+    return [...openingProper].some((p) => lineTokens.some((t) => tokenMatch(t.toLowerCase(), p.toLowerCase())))
+  }
+  for (const line of nonSummaryFacts(resume)) {
+    if (answerWordCount(out) >= floor) break
+    if (!shares(openingTokens, line)) continue
+    if (!shares(questionTokens, line)) continue
+    if (!sharesProper(line)) continue
+    const fact = asFact(line)
+    if (!fact) continue
+    if (out.includes(fact.slice(0, 40))) continue
+    const next = `${out} ${fact}`.trim()
+    if (answerWordCount(next) > ceiling) continue
+    out = next
+  }
+  return out
+}
+
 function extendFromResume(text: string, question: string, resume: string, floor: number, ceiling: number): string {
   // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts in order — the
   // summary sentences first — pasting the "Enterprise Security Architect with
@@ -797,8 +843,23 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   // the model still writes hypothetical "I would" even after the grounding prompt
   // says to answer from experience. A conditional "I would" is not an answer from
   // his resume; convert it to the direct first-person form.
-  body = body.replace(/\bI'd\b/g, "I").replace(/\bI would\b/gi, "I")
+  body = body.replace(/\bI['\u2019]d\b/g, "I").replace(/\bI would\b/gi, "I")
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
+  // Owner, 22 Nov 2026 (Round 12): the model copies a resume bullet verbatim
+  // into its prose. Drop verbatim pasted sentences HERE, before the route
+  // branches and the extension run — the extension's own facts (added via
+  // asFact, first-person) must not be dropped by the same filter, and a
+  // filter that runs after the extension cannot tell a model paste from an
+  // intentional extension fact.
+  body = dropVerbatimResumeSentences(body, resume)
+  // Owner, 22 Nov 2026 (Round 13): Q5 opened "I can't point to a full
+  // migration I owned" and Q10 opened "I can't substantiate a specific time
+  // I had to learn a new security tool quickly" — then both went on to
+  // describe the actual work. A refusal/hedge opening poisons an otherwise
+  // real answer. Strip leading refusal/hedge sentences when substantive
+  // content remains after them; keep them only when the answer is nothing
+  // but the refusal.
+  body = stripRefusalOpen(body)
   // Owner, 22 Nov 2026: responses are lengthy always. The short route used to only trim
   // (to 60 words), so a definition or direct ask came back stubby even after the floor was
   // raised — nothing enforced it. Now a short answer below its floor is extended with
@@ -866,10 +927,9 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
       }
     }
     // Owner, 22 Nov 2026 (Round 12): the short route returns early, before the
-    // shared tail's dropVerbatimResumeSentences — so a tag fragment or pasted
-    // bullet in the model's raw ("(Zero Trust) (Zero Trust Security), using
-    // Expert-level.") survived. Apply the same drop here.
-    return dropVerbatimResumeSentences(trimWords(shortBody, route.ceiling), resume)
+    // shared tail — the verbatim drop now runs at the top of shapeDisplayedAnswer
+    // (before the route branches), so the short route needs no separate drop.
+    return trimWords(shortBody, route.ceiling)
   }
   // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
   // be prepended to an answer. The old long-route rebuild was [thesis, how, example, gap, tie],
@@ -903,8 +963,15 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
     body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
     if (resumeNumber(resume, question) && !/\d/.test(body)) {
-      const numbered = nonSummaryFacts(resume).find((line) => /\d/.test(line))
-      if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
+      // Owner, 22 Nov 2026 (Round 13): this appended the FIRST fact with a
+      // digit, raw — which was the Saviynt troubleshooting bullet ("PeopleSoft
+      // 9.2") on a Fifth Bank automation story. A numbered fact must be
+      // relevant to the question AND go through asFact (first-person), never
+      // pasted raw.
+      const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+      const numbered = nonSummaryFacts(resume).find((line) => /\d/.test(line) && factRelevant(line, qTokens))
+      const numberedFact = numbered ? asFact(numbered) : ""
+      if (numberedFact) body = `${body} ${numberedFact}`.trim()
     }
   }
   // Owner, 22 Nov 2026 (Round 11): a scenario/story answer IS the narrative —
@@ -914,7 +981,15 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   // as pasted fragments. So for story questions the shared tail skips the
   // Example append and the extendFromResume call entirely; the model's answer
   // stands at its own length.
+  // Owner, 22 Nov 2026 (Round 13): that left short story answers short — Q4
+  // 49w, Q7 38w, Q8 55w, follow-up 38w. So a story question below its floor
+  // gets a SAME-THREAD extension only: a fact is appended only if it shares
+  // a content token with the question AND names no client other than the one
+  // in the answer's own opening (Fifth Bank, Synack, ...). A Saviynt bullet
+  // on a Fifth Bank story, or a Synack bullet on a Fifth Bank story, is still
+  // clubbing and is skipped. The fact goes through asFact (first-person).
   const isStory = route.route === "story"
+  if (isStory && answerWordCount(body) < route.floor) body = extendStorySameThread(body, question, resume, route.floor, route.ceiling)
   if (!isStory && !/\bExample:/.test(body)) {
     // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts(resume)[0] — the
     // generic summary — as the Example on every long/story answer that lacked
@@ -935,22 +1010,51 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
     body = `${body} ${bridge}`.trim()
   }
   if (!isStory && answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
-  // Owner, 22 Nov 2026 (Round 12): the Saviynt troubleshooting bullet was
-  // appended to 5 of 10 story answers even though the shared tail skips the
-  // Example and extendFromResume for story questions — the MODEL itself copies
-  // a resume bullet verbatim into its prose (it sees the bullet in the resume
-  // context). A verbatim resume bullet in the answer is always a paste, never
-  // the model's own first-person prose (the model paraphrases). So drop any
-  // sentence after the first that matches a resume fact verbatim. The
-  // intentional extension facts go through asFact (first-person, not verbatim)
-  // or are the constructed cert list, so they survive.
-  body = dropVerbatimResumeSentences(body, resume)
   const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
     body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
   }
   return body.trim()
+}
+
+/** Drop leading refusal/hedge sentences when substantive content remains.
+ *  A refusal opening ("I can't point to a full migration I owned", "I can't
+ *  substantiate a specific time...") poisons an answer that goes on to
+ *  describe the real work. Strip it and let the work stand. Keep the refusal
+ *  only when the answer is nothing but the refusal (stripping would empty it).
+ *  Also strips a trailing hedge sentence ("That validation is the closest
+ *  experience I can speak to directly") when it follows the refusal. */
+function stripRefusalOpen(body: string): string {
+  const REFUSAL = /^(?:I (?:can ?not|cannot|can't|haven't|have not|don't|do not)|That (?:validation|work) is the closest|I (?:am|was) not able to)\b/i
+  const HEDGE = /^(?:That (?:validation|work) is the closest|The closest (?:experience|work) I can speak to)/i
+  const sentences = sentenceList(body)
+  if (sentences.length < 2) return body
+  let start = 0
+  while (start < sentences.length && REFUSAL.test(sentences[start].trim())) start++
+  // A hedge sentence immediately after the refusal goes too.
+  while (start < sentences.length && HEDGE.test(sentences[start].trim())) start++
+  const remaining = sentences.slice(start).join(" ")
+  if (start > 0 && answerWordCount(remaining) >= 10) return remaining
+  // Owner, 22 Nov 2026 (Round 13): the refusal is often EMBEDDED in the first
+  // sentence, not a standalone sentence — "I worked on IAM integration,
+  // though I can't point to a full migration I owned" and "I've used Burp
+  // Suite Pro, but I can't substantiate a specific time...". Strip the
+  // trailing "though/but I can't..." clause and the leading "I can't...,
+  // but" clause, keeping the work description that surrounds it.
+  const cleaned = sentences.map((sentence) => {
+    let s = sentence
+      .replace(/[,;]?\s*(?:though|but|however)\s+I (?:can ?not|cannot|can't|haven't|have not|don't|do not)\b.*$/i, "")
+      .replace(/^I (?:can ?not|cannot|can't|haven't|have not|don't|do not)\b[^,]*,\s*(?:but|though|however)\s+/i, "")
+      .trim()
+    return s
+  }).filter(Boolean).join(" ")
+  // Owner, 22 Nov 2026 (Round 13): the 40-word minimum blocked stripping
+  // when the remaining content was short — but the extension refills length
+  // AFTER shaping, so a short cleaned answer is fine. Only require that
+  // something substantive remains.
+  if (cleaned !== body && answerWordCount(cleaned) >= 10) return cleaned
+  return body
 }
 
 /** Drop any sentence after the first that is a verbatim resume fact. A pasted
@@ -1057,7 +1161,7 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
   // carry a conditional the shaping step missed. Final cleanup: a conditional
   // "I would" is never an answer from his resume; convert it here, on the
   // final text, whatever path produced it.
-  if (text && text !== HONEST_LINE) text = text.replace(/\bI'd\b/g, "I").replace(/\bI would\b/gi, "I")
+  if (text && text !== HONEST_LINE) text = text.replace(/\bI['\u2019]d\b/g, "I").replace(/\bI would\b/gi, "I")
   const safe = !!text
     && !CONFIRM_STUB.test(text)
     && !CANNED_ASIDE.test(text)
