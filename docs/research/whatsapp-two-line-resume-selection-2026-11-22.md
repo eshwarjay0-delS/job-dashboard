@@ -28,7 +28,7 @@ The WhatsApp resume delivery observed on 17 October 2026 at 17:28 Chicago remain
 - Current master base: `db32d9f3e5680fdd63e8cb4a728f38c0bd8a9a71`.
 - Implementation commit: `e19e40b5496c7f8b90ada941d7ae9fdd8875ee80`.
 - Test escaping correction: `071c668403ab563c742274ec0e1707b0aa4ed74e`.
-- Pull request: https://github.com/eshwarjay0-delS/job-dashboard/pull/515 (DRAFT; exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks pending).
+- Pull request: https://github.com/eshwarjay0-delS/job-dashboard/pull/515 (DRAFT; final head before this status update was `efc2290125e9d7073602d314b562bce9f8a39e34`). WhatsApp recovery `45003530191`, Kompas baseline `45003530179`, and Plan/REA `45003530241` passed. Full CI `45003530190` failed with 24 `ReferenceError: answerCtl is not defined` failures in `scripts/tests/kompas-voice.test.mjs`; lint/type-check passed and build was not reached. The PR does not touch the failing test or `public/kompas/app.js`; do not bypass full CI.
 - Prior PR #495 head `4522a4ed9612a22fa304eb52f3772b02eb8ba44a` had four green checks but was 22 commits behind current master; those results are not reused.
 
 ## What this does not complete
@@ -39,7 +39,7 @@ No local tests/build ran because this scheduled runtime has no canonical checkou
 
 ## Next steps
 
-1. Require full CI, WhatsApp resume recovery, Kompas baseline and Plan/REA schema to pass on the final PR #515 head.
+1. Keep PR #515 DRAFT until the unrelated Kompas voice test failure is corrected and a new exact-head full CI succeeds; do not weaken or bypass the gate.
 2. Review the source and merge only when all exact-head checks are green; then verify Vercel READY, production target, exact merge SHA and `job-dashboard-fawn.vercel.app` alias.
 3. Continue the explicit same-account selection proof and unsupported-JD hard hold as a separate route-level slice when the required installed Next.js docs and runnable environment are available.
 4. Recover the original 17 Oct artifacts/receipt before making any historical delivery claim.

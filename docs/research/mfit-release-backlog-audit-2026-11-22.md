@@ -96,3 +96,9 @@ The 50 authenticated Kompas/ChatGPT same-question pairs, independent human 0–4
 - No local tests/build ran because the canonical checkout and installed node_modules are unavailable. GitHub Actions on the exact PR head is the execution path. No real WhatsApp/Meta send, model call, DOCX generation, R2 write, Gmail API/OAuth call, inbox mutation, live crawl, production data mutation or device test occurred.
 
 Continue: complete exact-head validation and review for PR #515. If green, merge through the normal GitHub path and verify a READY production deployment plus the active canonical alias. Keep the 17 Oct delivery unverified and continue the separate explicit-selection/hard-hold work only when the installed Next.js 16.3.8 route-handler guide and approved runnable environment are available.
+## 22 November 2026 08:39 UTC — exact-head PR #515 validation
+
+- PR #515 final pre-update head `efc2290125e9d7073602d314b562bce9f8a39e34`: WhatsApp recovery `45003530191` SUCCESS; Kompas baseline `45003530179` SUCCESS; Plan/REA schema `45003530241` SUCCESS.
+- Full CI `45003530190` completed FAILURE. Lint and type-check succeeded. Step 14, `Verify Kompas question-framing, one-press, typed-input and voice regressions`, failed 24 tests in `scripts/tests/kompas-voice.test.mjs` with `ReferenceError: answerCtl is not defined` from `pumpDetectedQueue`; the build stage was skipped. PR #515 does not modify that test file or `public/kompas/app.js`, so this is outside the WhatsApp parser change. Do not bypass or weaken full CI.
+- PR #515 remains DRAFT and must not merge or deploy until a new exact-head full CI succeeds. The dedicated WhatsApp recovery and other two checks are not substitutes for full CI.
+- No real WhatsApp send, model call, DOCX generation, R2 write, production mutation, Gmail action, live crawl or native device test occurred.
