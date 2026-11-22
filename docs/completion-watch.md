@@ -805,3 +805,5 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - Preserve PR #540 and do not duplicate the separate Kompas Voice Delivery work (that automation is disabled). No authenticated Windows/phone acceptance or Round 13 live model/human grading occurred.
 
 Continue: open and validate the focused S5 repair PR; after it is green and merged, restack PR #540 on the new master and require fresh full CI, baseline, cross-device, Plan/REA and Windows checks before merge/deploy. Then verify READY plus the canonical alias and separately obtain consented native-device first/second-press acceptance.
+
+- Exact-head CI trigger blocker for PR #546: after opening the PR, GitHub returned no Actions runs for head `a22eb40cfa784133174853744b42baa253da7061`. This scheduled environment can read/create GitHub commits and PRs but has no normal git-push or workflow-dispatch action to start the required run. Do not merge or deploy based on source review alone. Unblock with a normal authenticated git push or a permitted workflow-dispatch operation, then verify full CI/S5, baseline, cross-device, Plan/REA and Windows checks on the exact final head.
