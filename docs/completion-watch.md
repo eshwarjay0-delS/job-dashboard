@@ -8,7 +8,7 @@
 - **Continue:** Round 12 requires a real authorized Kompas phone/desktop session, the 10 scenario/experience questions plus follow-up, paired ChatGPT responses and independent 0–4 scoring. Exact blocker: no KOMPAS_API_TOKEN, approved resume/JD/reference bundle or authenticated device session in this environment. When a canonical runnable checkout/installed guide is available, implement and test the two-line resume parser, durable explicit-selection provenance, and unsupported-JD hard hold; then exact-head CI and normal review. Gmail/mobile #474 and manual-only crawler #479 remain separate, unvalidated backlog items. Do not fabricate acceptance or enable workers/schedulers.
 
 # MFit Completion Watch
-## 23 November 2026 21:12 UTC — contract-board search validation
+## 23 November 2026 21:10 UTC — contract-board search validation
 
 - PR #561 current-master restack: code head `a34bac05`, research-only follow-up `5b454d01`. Isolated Node 22.16.0 run **4/4 passed**; focused GitHub workflow [45265726287](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45265726287) **SUCCESS** on code head.
 - Full CI [45265726249](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45265726249) **FAILED at Lint** on unrelated master `src/lib/kompasConsistency.ts:1059` prefer-const. Type-check, other regression gates and build were skipped; no full-suite pass.
