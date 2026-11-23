@@ -160,3 +160,10 @@ The 27 October journal entry that said no runnable environment was available, an
 ## Public test-fixture privacy — 15 November 2026
 
 WhatsApp regression fixtures are synthetic only. Use `example.test` email identities and reserved fictional 555-0100 through 555-0199 phone numbers; never commit private resume bodies, real account contacts, user-specific library paths, or private document fingerprints. Keep distinct test identities distinct so account-isolation assertions remain meaningful. See `docs/research/whatsapp-test-fixture-privacy-2026-11-15.md`.
+
+
+## 23 November 2026 — two-line JD + named-resume parsing
+
+The approved narrow parser correction accepts a two-line message only when line one contains an existing job-post signature and line two is a bounded named-resume instruction. This covers a one-line JD followed by `use the SOC resume`; ordinary two-line chat without a JD signature remains unsplit. The parser regression is registered in `prebuild` so full CI executes it. This does not change resume selection, account/email confirmation, explicit-selection provenance, unsupported-JD hard holds, DOCX generation, R2, or delivery behavior.
+
+The source change is on branch `fix/whatsapp-two-line-jd-master-20261123` from master `794e8cfdbd3103409552857806bab89851d5bfcb`; exact-head CI is pending. PR #493 remains the separate durable explicit-selection/hard-hold change. The 17 Oct 2026 17:28 Chicago attempt remains unverified: no output DOCX, per-run R2 version, webhook/Meta correlation, or signed receipt is available. No replay or real send is authorized by this parser change.
