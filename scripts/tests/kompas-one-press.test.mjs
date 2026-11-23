@@ -26,6 +26,7 @@ const code = [
 const SHOWN = "What is a log aggregator or syslog relay and when would you use one?";
 const OLD_A = "A log aggregator collects syslog from many hosts and forwards one stream.";
 
+// The sliced app path reads both controller and queued-question state even in a minimal VM.
 function session(lines, question = SHOWN) {
   const box = { value: "" };
   const asked = [];
