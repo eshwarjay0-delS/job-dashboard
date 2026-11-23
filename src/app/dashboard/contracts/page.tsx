@@ -9,6 +9,7 @@ import {
 } from "@/lib/jobFilters"
 import PageHeader from "@/components/layout/PageHeader"
 import { fetchJobs as fetchJobsApi } from "@/lib/jobsClient"
+import { matchesContractSearch } from "@/lib/contract-search"
 import SampleDataBanner from "@/components/SampleDataBanner"
 import {
   ClipboardList, Search, X, Globe, Clock, DollarSign, Star, Target, Building2, MapPin,
@@ -229,13 +230,13 @@ export default function ContractsDashboard() {
         const jobSkills = extractSkills(`${j.title} ${j.tags.join(" ")} ${j.body}`)
         if (!skillFilter.some(s => jobSkills.includes(s))) return false
       }
-      if (q && !(
-        j.title.toLowerCase().includes(q) ||
-        j.company.toLowerCase().includes(q) ||
-        j.location.toLowerCase().includes(q) ||
-        j.body.toLowerCase().includes(q) ||
-        j.tags.some(t => t.toLowerCase().includes(q))
-      )) return false
+      if (!matchesContractSearch(q, {
+        title: j.title,
+        company: j.company,
+        location: j.location,
+        body: j.body,
+        tags: j.tags,
+      })) return false
       return true
     })
     // Sort
