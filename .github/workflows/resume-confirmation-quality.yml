@@ -1,0 +1,28 @@
+name: Confirmed-skill resume evidence regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/resume-evidence.ts'
+      - 'src/lib/claude.ts'
+      - 'src/lib/resume-quality.ts'
+      - 'src/lib/tailor.ts'
+      - 'scripts/tests/resume-confirmation-quality.test.mjs'
+      - '.github/workflows/resume-confirmation-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --experimental-strip-types --test scripts/tests/resume-confirmation-quality.test.mjs
