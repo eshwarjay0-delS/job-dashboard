@@ -47,3 +47,8 @@ PR #563 contract-search focused workflow 45282267513 SUCCESS. PR #564 WhatsApp r
 ## 23 November 2026 22:52 UTC — full CI filter documented
 
 Ready PR #565 contract-search and #566 WhatsApp fallback are stacked on #554. The contract focused test 45282267513 passed; fresh run 45283478714 in progress. WhatsApp recovery 45282722516 and Plan/REA schema 45282722435 passed; fresh regression 45283495328 and schema 45283495328 in progress. Full CI is filtered to PR base master/main, so it will not trigger on the #554 branch. #554 has five green gates but awaits independent review. No release/live crawl/send.
+
+
+## 23 November 2026 22:56 UTC — focused gates complete
+
+#565 focused runs 45282267513 and 45283478714 SUCCESS. #566 recovery 45282722516, schema 45282722435, fresh regression 45283495328 and schema 45283495328 SUCCESS. Full CI not triggered due base branch filter master/main. #554 five gates green, independent review pending. No deployment/live crawl/send.
