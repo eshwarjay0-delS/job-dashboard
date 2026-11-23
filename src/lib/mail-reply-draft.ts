@@ -1,7 +1,7 @@
 export type ReplyDraft = { to: string; cc: string; bcc: string; subject: string; body: string; files: {name:string;type:string;data:string}[] }
 export const replyDraftKey = (user: string, account: string, thread: string) => {
   if (!user || !account || !thread) throw Error('A signed-in conversation is required.')
-  return 'mfit:reply:v1:' + JSON.stringify([user, account.toLowerCase(), thread])
+  return 'mfit:reply:v1:' + JSON.stringify([user, account.trim().toLowerCase(), thread])
 }
 export function validReplyDraft(value: unknown): value is ReplyDraft {
   const d = value as ReplyDraft
