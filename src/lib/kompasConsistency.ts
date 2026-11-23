@@ -5,6 +5,7 @@
 import { visibleLengthBand, type VisibleLength } from "./kompasDissection.ts"
 import { answerWordCount, presentSpokenAnswer, ungroundedProducts } from "./kompasAnswerPresentation.ts"
 import { repairStoryShape } from "./kompasGuards.ts"
+import { resumeCertifications } from "./kompasResume.ts"
 
 export const HONEST_LINE = "That is not on my resume, so I will not invent it."
 
@@ -207,6 +208,57 @@ function sameWord(a: string, b: string): boolean {
   return a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)))
 }
 
+/** Two tokens are relevant to each other when they are the same word or share a
+ * 6+ character stem — so "investigate" matches "investigation", "email" matches
+ * "emails", "security" matches "secure". Exact-token matching missed these and
+ * the relevance gate starved the extension (Round 8 shape test: phishing
+ * question stayed at 28 words because "investigate" never matched
+ * "investigation"). */
+function tokenMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length < 3 || b.length < 3) return false
+  const stem = Math.min(a.length, b.length, 6)
+  return a.slice(0, stem) === b.slice(0, stem)
+}
+
+/** Words so generic they appear in almost every resume fact — matching on one
+ *  of them is not relevance. Owner, 22 Nov 2026 (Round 9): the Q6 follow-up
+ *  tacked on database-audit and federation bullets that shared only "project"
+ *  with the question and "security" with the answer. A fact must share a
+ *  CONTENT token, not a generic one. */
+const GENERIC_RELEVANCE = new Set([
+  "project", "projects", "work", "worked", "working", "security", "team", "teams",
+  "role", "roles", "experience", "company", "business", "process", "processes",
+  "system", "systems", "service", "services", "management", "data", "using", "used",
+  "use", "support", "supported", "provide", "provided", "ensure", "ensured", "help",
+  "helped", "include", "included", "across", "within", "through", "their", "them",
+  "they", "this", "that", "with", "from", "into", "over", "under", "about", "after",
+  "before", "during", "between", "among", "also", "well", "time", "times", "part",
+  "parts", "hardest", "handle", "handled", "question", "answer", "tell", "describe",
+  "explain", "would", "could", "should", "your", "what", "when", "where", "which",
+  "there", "here", "more", "most", "some", "each", "both", "first", "second",
+])
+
+/** Does a resume fact share a meaningful (stem-matched, non-generic) token with
+ *  the question? Used by every relevance gate so off-topic facts are never
+ *  appended just to reach the floor. Owner, 22 Nov 2026 (Round 10): matching
+ *  on the ANSWER alone is too loose — the answer already contains many words,
+ *  so almost any fact matches something in it (the incident-investigation and
+ *  Saviynt EIC bullets were appended to every answer, and the Q6 follow-up
+ *  got Saviynt troubleshooting bullets that shared only "teams"/"functional"/
+ *  "technical" with the answer). A fact must share a content token with the
+ *  QUESTION. If none does, the answer stays at the model's length — a short
+ *  answer beats a pasted off-topic bullet. */
+function factRelevant(fact: string, tokens: Set<string>): boolean {
+  return factRelevantTo(fact, tokens, tokens)
+}
+
+function factRelevantTo(fact: string, questionTokens: Set<string>, _answerTokens: Set<string>): boolean {
+  const content = (w: string) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())
+  const factTokens = askTokens(fact).filter(content)
+  return factTokens.some((w) => [...questionTokens].some((t) => content(t) && tokenMatch(w, t)))
+}
+
 /** Rule score 1–4. Silent at 2 or below. A model is allowed only at the borderline score. */
 function priorBlob(turns: ClarifierTurn[]): string {
   return turns.map((turn) => turn.text).join(" ")
@@ -390,14 +442,30 @@ const PAST: Record<string, string> = {
 }
 
 function asFact(line: string): string {
-  let text = line.replace(/^(?:experience in|having|responsible for|worked on|expertise in|assists with|assisted with)\s+/i, "").replace(/[,:;]+$/, "").trim()
+  // Owner, 22 Nov 2026 (Round 14): a resume line can end with a keyword-tag
+  // suffix — ". (Zero Trust) (Zero Trust Security), using Expert-level" — that
+  // rides along when the line is converted to first person and dangles at the
+  // end of an answer. Strip a trailing tag suffix (parenthetical groups
+  // followed by ", using ..." or a bare parenthetical tail) before converting.
+  let text = line.replace(/\s*(?:\([^)]*\)\s*)+,?\s*using\s+[^.!?]*\.?\s*$/i, "").replace(/^(?:experience in|having|responsible for|worked on|expertise in|assists with|assisted with)\s+/i, "").replace(/[,:;]+$/, "").trim()
   if (/^I\b/.test(text)) return /[.!?]$/.test(text) ? text : `${text}.`
   const verb = text.match(/^([A-Za-z]+)\b/)
   const past = verb ? PAST[verb[1].toLowerCase()] : ""
   if (past && verb) text = `I ${past} ${text.slice(verb[1].length).trim()}`
-  else {
-    const head = /[A-Z]/.test(text[1] || "") ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`
-    text = `I did ${head}`
+  else if (verb && /ed$/.test(verb[1].toLowerCase())) {
+    // Already past tense ("Streamed database audit logs...") — prepend "I",
+    // never "I did streamed...". Lowercase the verb's first letter: the
+    // resume capitalizes the bullet's first word, and "I Integrated" reads as
+    // a garbled artifact (Round 11: "I Integrated / I Partnered / I
+    // Discovered / I Reviewed" on every appended bullet).
+    text = `I ${text.charAt(0).toLowerCase()}${text.slice(1)}`
+  } else {
+    // Owner, 22 Nov 2026 (his minimum bar): never club in a garbled line.
+    // A line that is not a verb-led action (a degree, a heading, a noun
+    // phrase — "b.Tech, Computer Science...") cannot become a first-person
+    // sentence by prepending "I did". Return "" so the caller skips it
+    // instead of emitting "I did b.Tech...".
+    return ""
   }
   return /[.!?]$/.test(text) ? text : `${text}.`
 }
@@ -423,9 +491,13 @@ function jdOnlyName(question: string, resume: string, jd: string): string {
 /** Grammatical first-person lines from resume facts. A JD-only tool is bridged, not claimed. */
 export function speakableLines(question: string, resume: string, jd = ""): string[] {
   const tool = jdOnlyName(question, resume, jd)
-  const bag = new Set(askTokens(question).filter((word) => word !== tool.toLowerCase()))
+  // Owner, 22 Nov 2026 (Round 10): the bag used the raw question tokens, so
+  // generic words scored off-topic facts — "project" matched the database-audit
+  // bullet and "part" matched "partner" in the federation bullet, and both were
+  // pasted onto the Q6 follow-up. Generic tokens never count as relevance.
+  const bag = new Set(askTokens(question).filter((word) => word !== tool.toLowerCase() && word.length > 2 && !GENERIC_RELEVANCE.has(word.toLowerCase())))
   const hits = resumeLines(resume)
-    .map((line) => ({ line, score: askTokens(line).filter((word) => [...bag].some((token) => sameWord(word, token))).length }))
+    .map((line) => ({ line, score: askTokens(line).filter((word) => [...bag].some((token) => tokenMatch(word, token))).length }))
     .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score || a.line.length - b.line.length)
   const pool = hits.length ? hits : resumeLines(resume).slice(0, 1).map((line) => ({ line, score: 0 }))
@@ -433,6 +505,7 @@ export function speakableLines(question: string, resume: string, jd = ""): strin
   if (tool && pool[0]) out.push(`I have not used ${tool}. ${asFact(pool[0].line)}`)
   for (const row of hits) {
     const line = asFact(row.line)
+    if (!line) continue
     if (CANNED_ASIDE.test(line) || /walk you through/i.test(line)) continue
     if (ungroundedProducts(line, `${resume}\n${question}`).length) continue
     if (out.some((kept) => nearDuplicate(kept, line))) continue
@@ -579,30 +652,164 @@ function resumeFacts(resume: string): string[] {
     .filter((line) => line.split(/\s+/).length >= 4 && !/@|gmail|jayeshwar44|jayeshwar24|eshwarjay06/i.test(line))
 }
 
+// Owner, 22 Nov 2026 (Round 7): the floor extension pasted the resume SUMMARY
+// onto 8 of 9 answers. resumeFacts splits the summary paragraph into one fact
+// per sentence, so skipping only facts[0] left the other summary sentences
+// ("Proven expertise in Okta IAM...", "Skilled at configuring CSPM...") to be
+// appended. The summary section (under "Professional Summary", before the next
+// heading) is generic positioning, not grounded experience — it must never be
+// appended as an "example". These are the facts OUTSIDE the summary section.
+// Owner, 22 Nov 2026 (his minimum bar): never club titles/clients from a
+// different resume than the current session's, and never append off-topic
+// bullets from other clients/roles. So this also excludes the Education and
+// Certifications sections — a degree line ("I did b.Tech...") or a heading
+// must never be appended as an experience example.
+function nonSummaryFacts(resume: string): string[] {
+  const text = String(resume || "")
+  const start = text.search(/professional summary/i)
+  let summary = ""
+  if (start >= 0) {
+    const rest = text.slice(start)
+    const end = rest.search(/\n\s*(?:core competencies|professional experience|work experience|technical skills|certifications|education)\b/i)
+    summary = end > 0 ? rest.slice(0, end) : rest.slice(0, 4000)
+  }
+  // Education and Certifications sections are not experience — never append them.
+  // Owner, 22 Nov 2026 (Round 9): the Core Competencies section is also not
+  // answer prose — its lines are "Header: keyword, keyword, keyword" dumps
+  // (IAM Architecture & Saviynt Implementation: PeopleSoft 9.2, PeopleTools
+  // security, roles, ...) that were pasted verbatim onto all 9 answers.
+  // Exclude the whole section.
+  const eduStart = text.search(/\n\s*education\b/i)
+  const certStart = text.search(/\n\s*certifications\b/i)
+  const compStart = text.search(/\n\s*core competencies\b/i)
+  let excluded = summary
+  if (eduStart >= 0) excluded += "\n" + text.slice(eduStart, certStart > eduStart ? certStart : undefined)
+  if (certStart >= 0) excluded += "\n" + text.slice(certStart)
+  if (compStart >= 0) {
+    const compRest = text.slice(compStart)
+    const compEnd = compRest.search(/\n\s*(?:professional experience|work experience|technical skills|certifications|education)\b/i)
+    excluded += "\n" + (compEnd > 0 ? compRest.slice(0, compEnd) : compRest.slice(0, 4000))
+  }
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
+  const excludedNorm = norm(excluded)
+  return resumeFacts(resume).filter((fact) => {
+    if (!excludedNorm) return true
+    const f = norm(fact)
+    // Skip a fact that appears (in full or as its first 60 chars) in the excluded sections.
+    if (excludedNorm.includes(f.slice(0, 60)) || excludedNorm.includes(f)) return false
+    // Safety net: a "Header: keyword, keyword, keyword" line is a section dump,
+    // not a sentence — never append it as answer prose, wherever it lives.
+    if (/:\s*[^.!?]*,/.test(fact)) return false
+    // Owner, 22 Nov 2026 (Round 10): a role/company heading line ("Senior
+    // Security Engineer | Nov 2023 – Present.") is not a sentence and must
+    // never be appended as answer prose. Neither is a bare parenthetical
+    // fragment ("(Governance) (Multifactor Authentication) (Identity)").
+    if (/\|\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(fact)) return false
+    if (/^\s*(?:\([^)]*\)\s*)+,?\s*(?:using|with|for)\b/i.test(fact)) return false
+    if (/^\s*\([^)]*\)(\s*\([^)]*\))+\s*[,.]?$/i.test(fact)) return false
+    // Owner, 22 Nov 2026 (Round 11): a tags/categories fragment ("(Zero Trust)
+    // (Zero Trust Security), using Expert-level.") is not a sentence either —
+    // it is a keyword tag line that dangles at the end of an answer. Any fact
+    // that is mostly parenthetical groups is excluded.
+    if ((fact.match(/\([^)]*\)/g) || []).length >= 2 && !/\b(?:I|we|my|our)\b/i.test(fact)) return false
+    return true
+  })
+}
+
 function resumeNumber(resume: string, question: string): string {
   const allowed = new Set(`${resume}\n${question}`.match(/\d[\d,]*/g) || [])
   return [...allowed][0] || ""
 }
 
-function extendFromResume(text: string, question: string, resume: string, floor: number, ceiling: number): string {
-  let out = String(text || "").trim()
-  for (const line of resumeFacts(resume)) {
+/** Same-thread extension for a story answer below its floor. A fact is
+ *  appended only when it shares a non-generic content token with the answer's
+ *  own opening sentence (the story's thread) AND with the question. A Saviynt
+ *  bullet on a Fifth Bank Jenkins story shares only generic words ("security",
+ *  "integration") with the opening, so it is skipped; a Jenkins or Python
+ *  fact on that story shares the project token and is appended, via asFact
+ *  (first-person), never as a raw bullet. */
+function extendStorySameThread(body: string, question: string, resume: string, floor: number, ceiling: number): string {
+  let out = String(body || "").trim()
+  // Owner, 22 Nov 2026 (Round 14): the proper-noun set comes from the first
+  // TWO sentences, not just the opening — the project/tool name often appears
+  // in the second sentence ("I integrated the checks into Jenkins..."), and
+  // limiting to sentence 1 left the extension with nothing to match.
+  const opening = sentenceList(out).slice(0, 2).join(" ")
+  // Owner, 22 Nov 2026 (Round 13): the shared token must be a CAPITALIZED
+  // word in the opening (a proper noun: a client, tool, or product — Fifth
+  // Bank, Jenkins, Python, AWS, Venafi). A lowercase process noun
+  // ("provisioning", "onboarding") is shared by many bullets, and it let the
+  // Saviynt troubleshooting bullet back onto a Fifth Bank automation story.
+  // Only a proper-noun match proves the fact is on the story's thread.
+  const openingProper = new Set(
+    (opening.match(/\b[A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)*/g) || [])
+      .flatMap((phrase) => phrase.split(/\s+/))
+      .filter((w) => w.length > 2)
+  )
+  const openingTokens = new Set(askTokens(opening).filter((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())))
+  const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())))
+  const shares = (tokens: Set<string>, line: string) => {
+    const lineTokens = askTokens(line).filter((w) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase()))
+    return lineTokens.some((t) => [...tokens].some((q) => tokenMatch(t, q)))
+  }
+  const sharesProper = (line: string) => {
+    const lineTokens = askTokens(line)
+    return [...openingProper].some((p) => lineTokens.some((t) => tokenMatch(t.toLowerCase(), p.toLowerCase())))
+  }
+  for (const line of nonSummaryFacts(resume)) {
     if (answerWordCount(out) >= floor) break
-    const fact = /[.!?]$/.test(line) ? line : `${line}.`
+    if (!shares(openingTokens, line)) continue
+    if (!shares(questionTokens, line)) continue
+    if (!sharesProper(line)) continue
+    const fact = asFact(line)
+    if (!fact) continue
+    if (out.includes(fact.slice(0, 40))) continue
+    const next = `${out} ${fact}`.trim()
+    if (answerWordCount(next) > ceiling) continue
+    out = next
+  }
+  return out
+}
+
+function extendFromResume(text: string, question: string, resume: string, floor: number, ceiling: number): string {
+  // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts in order — the
+  // summary sentences first — pasting the "Enterprise Security Architect with
+  // 12+ years..." fragment onto 6 of 8 answers. It must use nonSummaryFacts
+  // (no summary, no Education/Certifications) and only facts relevant to the
+  // question or the answer so far. If none is relevant, the answer stays at
+  // the model's length rather than getting an unrelated fact pasted on.
+  let out = String(text || "").trim()
+  const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+  const answerTokens = new Set(askTokens(out).filter((w) => w.length > 2))
+  const relevant = (line: string) => factRelevantTo(line, questionTokens, answerTokens)
+  // Owner, 22 Nov 2026 (Round 12): the extension appended RAW facts, so a
+  // verbatim resume bullet ("Performed integration troubleshooting...") was
+  // pasted onto the answer — the same paste the dropVerbatimResumeSentences
+  // filter now removes. The extension must append first-person facts via
+  // asFact ("I integrated..."), never a raw bullet; a non-action line returns
+  // "" from asFact and is skipped, never pasted.
+  for (const line of nonSummaryFacts(resume)) {
+    if (answerWordCount(out) >= floor) break
+    if (!relevant(line)) continue
+    const fact = asFact(line)
+    if (!fact) continue
     if (out.includes(fact)) continue
     const next = `${out} ${fact}`.trim()
     if (answerWordCount(next) > ceiling) continue
     out = next
   }
   if (answerWordCount(out) < floor) {
-    for (const line of resumeFacts(resume)) {
+    for (const line of nonSummaryFacts(resume)) {
       if (answerWordCount(out) >= floor) break
+      if (!relevant(line)) continue
+      const fact = asFact(line)
+      if (!fact) continue
       const room = ceiling - answerWordCount(out)
       const need = floor - answerWordCount(out)
-      const words = line.split(/\s+/).filter(Boolean)
+      const words = fact.split(/\s+/).filter(Boolean)
       const take = Math.min(words.length, room)
       if (take < need || take < 4) continue
-      out = `${out} ${words.slice(0, need).join(" ")}.`.trim()
+      out = `${out} ${words.slice(0, need).join(" ")}${/[.!?]$/.test(words.slice(0, need).join(" ")) ? "" : "."}`.trim()
     }
   }
   return out
@@ -613,7 +820,7 @@ export type AnswerRoute = { route: "short" | "long" | "story"; floor: number; ce
 /** Long technical and concept answers floor at 120. Stories floor at 150. */
 export function answerRoute(question: string): AnswerRoute {
   const band = visibleLengthBand(question)
-  if (isDirectAsk(question)) return { route: "short", floor: 35, ceiling: 60 }
+  if (isDirectAsk(question)) return { route: "short", floor: 70, ceiling: 120 }
   if (isBehavioralAsk(question)) return { route: "story", floor: 150, ceiling: Math.max(band.ceiling, 180) }
   if (isTechnicalAsk(question)) {
     const ceiling = band.ceiling >= 120 ? band.ceiling : Math.max(band.ceiling, 180)
@@ -641,35 +848,170 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   const route = answerRoute(question)
   let body = dropCandidateOnly(focusOnAskedTool(question, text, previous), resume, jd, transcript)
   if (!body.trim() || CONFIRM_STUB.test(body) || /not on my resume/i.test(body)) body = jdGapBridge(question, resume, jd)
+  // Owner, 22 Nov 2026 (Round 8): Q2 came back with "I'd first define..." twice —
+  // the model still writes hypothetical "I would" even after the grounding prompt
+  // says to answer from experience. A conditional "I would" is not an answer from
+  // his resume; convert it to the direct first-person form.
+  body = body.replace(/\bI['\u2019]d\b/g, "I").replace(/\bI would\b/gi, "I")
   body = sentenceList(body).filter((sentence) => !FILLER_OPEN.test(sentence)).join(" ")
-  if (route.route === "short") return trimWords(body, 60)
+  // Owner, 22 Nov 2026 (Round 12): the model copies a resume bullet verbatim
+  // into its prose. Drop verbatim pasted sentences HERE, before the route
+  // branches and the extension run — the extension's own facts (added via
+  // asFact, first-person) must not be dropped by the same filter, and a
+  // filter that runs after the extension cannot tell a model paste from an
+  // intentional extension fact.
+  body = dropVerbatimResumeSentences(body, resume)
+  // Owner, 22 Nov 2026 (Round 13): Q5 opened "I can't point to a full
+  // migration I owned" and Q10 opened "I can't substantiate a specific time
+  // I had to learn a new security tool quickly" — then both went on to
+  // describe the actual work. A refusal/hedge opening poisons an otherwise
+  // real answer. Strip leading refusal/hedge sentences when substantive
+  // content remains after them; keep them only when the answer is nothing
+  // but the refusal.
+  body = stripRefusalOpen(body)
+  // Owner, 22 Nov 2026: responses are lengthy always. The short route used to only trim
+  // (to 60 words), so a definition or direct ask came back stubby even after the floor was
+  // raised — nothing enforced it. Now a short answer below its floor is extended with
+  // resume content to the floor, before the ceiling trim. The extension uses
+  // speakableLines (question-relevant, first-person resume lines), NOT resumeFacts —
+  // resumeFacts[0] is the generic resume summary, and appending it pasted the same
+  // "Enterprise Security Architect with 12+ years..." fragment onto 4 of 9 answers in
+  // Round 5. No "Example:" prefix: sentenceUsesUnknownTool drops any sentence with a
+  // capitalized word not in the resume, and "Example" is not in the resume.
+  if (route.route === "short") {
+    let shortBody = trimWords(body, route.ceiling)
+    if (answerWordCount(shortBody) < route.floor) {
+      // Owner, 22 Nov 2026 (Round 10): a certifications question came back
+      // naming only CISSP/CCSK in the session even though the cert-append
+      // exists — because speakableLines ran first and filled the answer to
+      // the floor with other lines, so the cert-append's below-floor check
+      // never fired. For a cert question the full list IS the answer, so it
+      // goes first, before any other extension.
+      if (/certification/i.test(question)) {
+        const certs = resumeCertifications(resume)
+        if (certs.length) {
+          const held = certs.filter((c) => !/pursuing/i.test(c))
+          const pursuing = certs.filter((c) => /pursuing/i.test(c))
+          const certLine = [
+            held.length ? `I hold ${held.join("; ")}` : "",
+            pursuing.length ? `and I am pursuing ${pursuing.join("; ")}` : "",
+          ].filter(Boolean).join(" ")
+          if (certLine && !shortBody.includes(held[0] || certs[0])) {
+            shortBody = `${shortBody} ${/[.!?]$/.test(certLine) ? certLine : `${certLine}.`}`.trim()
+          }
+        }
+      }
+      // Prefer question-relevant first-person lines; fall back to resume facts.
+      // Never lead with the generic resume summary (resumeFacts[0], the "12+ years"
+      // fragment) — appending it pasted the same summary onto 4 of 9 answers in
+      // Round 5. The summary is a last resort only, after specific lines.
+      const lines = speakableLines(question, resume, jd)
+      for (const line of lines) {
+        if (answerWordCount(shortBody) >= route.floor) break
+        const clean = line.replace(/\s+/g, " ").trim()
+        const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`
+        if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${sentence}`
+      }
+      // Owner, 22 Nov 2026 (his minimum bar): never club titles/clients from a
+      // different resume than the current session's, and never append off-topic
+      // bullets from other clients/roles. So the fallback only appends facts that
+      // share a meaningful token with the question OR with the answer so far — an
+      // education line, a database-audit bullet on a Jenkins question, or a
+      // federation bullet on a compliance question must never be tacked on just
+      // to reach the floor. If no fact is relevant, the answer stays at the
+      // model's length.
+      if (answerWordCount(shortBody) < route.floor) {
+        const facts = nonSummaryFacts(resume)
+        const questionTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+        const answerTokens = new Set(askTokens(shortBody).filter((w) => w.length > 2))
+        for (const fact of facts) {
+          if (answerWordCount(shortBody) >= route.floor) break
+          if (!factRelevantTo(fact, questionTokens, answerTokens)) continue
+          // Owner, 22 Nov 2026 (Round 12): append the fact as a first-person
+          // sentence via asFact, never a raw bullet — a raw bullet is a paste
+          // that the verbatim filter drops.
+          const clean = asFact(fact)
+          if (clean && !shortBody.includes(clean.slice(0, 40))) shortBody = `${shortBody} ${clean}`
+        }
+      }
+    }
+    // Owner, 22 Nov 2026 (Round 12): the short route returns early, before the
+    // shared tail — the verbatim drop now runs at the top of shapeDisplayedAnswer
+    // (before the route branches), so the short route needs no separate drop.
+    return trimWords(shortBody, route.ceiling)
+  }
+  // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
+  // be prepended to an answer. The old long-route rebuild was [thesis, how, example, gap, tie],
+  // and "how" filtered OUT every sentence starting with "I" — so once the model started
+  // answering in the first person throughout (the wanted shape), "how" came back empty and the
+  // answer collapsed to thesis + resume fragments (Q8, four live rounds). The model's body is
+  // the answer: keep its sentences (first-person included) as the core, add a resume Example:
+  // and a first-person tie only when the body has none.
   if (route.route === "long") {
-    const thesis = technicalThesis(question)
-    const how = sentenceList(body).filter((sentence) => sentence !== thesis && !/^Example:/i.test(sentence) && !/^I\b/.test(sentence)).slice(0, 4).join(" ")
-    const fact = resumeFacts(resume)[0] || ""
+    const core = sentenceList(body).filter((sentence) => !/^Example:/i.test(sentence)).slice(0, 4).join(" ")
+    // Owner, 22 Nov 2026 (Round 6/7): the Example was resumeFacts(resume)[0] — the
+    // generic summary — so Q6 ended with the same "Enterprise Security Architect
+    // with 12+ years..." fragment pasted verbatim, and the other summary sentences
+    // followed. Use a question-relevant fact from OUTSIDE the summary section.
+    const facts = nonSummaryFacts(resume)
+    const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+    const fact = facts.find((line) => factRelevant(line, qTokens)) || facts.find((line) => line.trim()) || ""
     const example = fact ? `Example: ${fact.replace(/\s+/g, " ").trim()}` : ""
-    const tieSource = resumeFacts(resume).find((line) => /\bI\b/.test(line)) || fact
-    const tie = tieSource ? (/^I\b/.test(tieSource) ? tieSource : `I did ${tieSource.charAt(0).toLowerCase()}${tieSource.slice(1)}`) : ""
+    const hasFirstPerson = /\bI\b/.test(core)
+    const tieSource = facts.find((line) => /\bI\b/.test(line)) || fact
+    // Owner, 22 Nov 2026: the tie used to prepend "I did" to any line, producing
+    // "I did streamed..." and "I did b.Tech...". Use asFact (which converts a
+    // past-tense verb to "I streamed..." and returns "" for non-actions) and
+    // skip the tie entirely when nothing converts cleanly.
+    const tie = !hasFirstPerson && tieSource ? asFact(tieSource) : ""
     const tool = howTool(question)
     const gap = tool && !String(resume || "").toLowerCase().includes(tool.toLowerCase()) ? jdGapBridge(question, resume, jd || tool) : ""
-    body = [thesis, how, example, gap, tie].filter(Boolean).join(" ")
-    const opener = thesis.slice(0, 24)
-    const ties = sentenceList(body).filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
-    if (ties.length > 1) {
-      const last = ties[ties.length - 1]
-      body = sentenceList(body).filter((sentence) => sentence === last || sentence.startsWith(opener) || !/^I\b/.test(sentence) || /^I've had less direct/.test(sentence)).join(" ")
-    }
+    body = [core, example, gap, tie].filter(Boolean).join(" ")
   }
   if (route.route === "story") {
     const allowed = new Set((`${resume}\n${question}`.match(/\d[\d,]*/g) || []))
     body = sentenceList(body).filter((sentence) => !(sentence.match(/\d[\d,]*/g) || []).some((n) => !allowed.has(n))).join(" ") || body
     if (resumeNumber(resume, question) && !/\d/.test(body)) {
-      const numbered = resumeFacts(resume).find((line) => /\d/.test(line))
-      if (numbered) body = `${body} ${/[.!?]$/.test(numbered) ? numbered : `${numbered}.`}`.trim()
+      // Owner, 22 Nov 2026 (Round 13): this appended the FIRST fact with a
+      // digit, raw — which was the Saviynt troubleshooting bullet ("PeopleSoft
+      // 9.2") on a Fifth Bank automation story. A numbered fact must be
+      // relevant to the question AND go through asFact (first-person), never
+      // pasted raw.
+      // Owner, 22 Nov 2026 (Round 14): the digit check was still too loose —
+      // "L2" in the PeopleSoft bullet counted as a number, so the bullet was
+      // appended to a Jenkins story. Require a MEANINGFUL number: a standalone
+      // integer of 2+ digits (a count, not a tier/version label like L2/P1/9.2).
+      const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+      const numbered = nonSummaryFacts(resume).find((line) => /\b\d{2,}\b/.test(line) && factRelevant(line, qTokens))
+      const numberedFact = numbered ? asFact(numbered) : ""
+      if (numberedFact) body = `${body} ${numberedFact}`.trim()
     }
   }
-  if (!/\bExample:/.test(body)) {
-    const fact = resumeFacts(resume)[0]
+  // Owner, 22 Nov 2026 (Round 11): a scenario/story answer IS the narrative —
+  // the model's first-person account of the project or incident. Appending an
+  // "Example:" bullet from another area (Saviynt troubleshooting, Burp/Wiz
+  // probing) or extending with other resume bullets breaks the story and reads
+  // as pasted fragments. So for story questions the shared tail skips the
+  // Example append and the extendFromResume call entirely; the model's answer
+  // stands at its own length.
+  // Owner, 22 Nov 2026 (Round 13): that left short story answers short — Q4
+  // 49w, Q7 38w, Q8 55w, follow-up 38w. So a story question below its floor
+  // gets a SAME-THREAD extension only: a fact is appended only if it shares
+  // a content token with the question AND names no client other than the one
+  // in the answer's own opening (Fifth Bank, Synack, ...). A Saviynt bullet
+  // on a Fifth Bank story, or a Synack bullet on a Fifth Bank story, is still
+  // clubbing and is skipped. The fact goes through asFact (first-person).
+  const isStory = route.route === "story"
+  if (isStory && answerWordCount(body) < route.floor) body = extendStorySameThread(body, question, resume, route.floor, route.ceiling)
+  if (!isStory && !/\bExample:/.test(body)) {
+    // Owner, 22 Nov 2026 (Round 8): this appended resumeFacts(resume)[0] — the
+    // generic summary — as the Example on every long/story answer that lacked
+    // one, pasting the "12+ years..." fragment onto 6 of 8 answers. Use a
+    // question-relevant fact from outside the summary section, and skip it
+    // entirely when none is relevant or when the fact is already in the body.
+    const facts = nonSummaryFacts(resume)
+    const qTokens = new Set(askTokens(question).filter((w) => w.length > 2))
+    const fact = facts.find((line) => factRelevant(line, qTokens) && !body.includes(line.replace(/\s+/g, " ").trim().slice(0, 40))) || ""
     if (fact) {
       const example = `Example: ${fact.replace(/\s+/g, " ").trim()}`
       const next = `${body} ${/[.!?]$/.test(example) ? example : `${example}.`}`.trim()
@@ -680,23 +1022,135 @@ export function shapeDisplayedAnswer(question: string, text: string, resume: str
   if (bridge && !/with that;/.test(bridge) && !body.includes("less direct hands-on") && answerWordCount(`${body} ${bridge}`) <= route.ceiling) {
     body = `${body} ${bridge}`.trim()
   }
-  if (answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
+  if (!isStory && answerWordCount(body) < route.floor) body = extendFromResume(body, question, resume, route.floor, route.ceiling)
   const bullets = body.split(/\n/).filter((line) => /^\s*[-•]/.test(line))
   if (bullets.length > 8) {
     const prose = body.split(/\n/).filter((line) => !/^\s*[-•]/.test(line))
     body = [...prose, ...bullets.slice(0, 7), bullets.find((line) => /Example:/.test(line)) || bullets[7]].filter(Boolean).join("\n")
   }
-  if (route.route === "long") {
-    const parts = sentenceList(body)
-    const opener = technicalThesis(question).slice(0, 24)
-    const ties = parts.filter((sentence) => /^I\b/.test(sentence) && !/^I've had less direct/.test(sentence) && !sentence.startsWith(opener))
-    const tie = ties[ties.length - 1]
-    const rest = parts.filter((sentence) => !ties.includes(sentence))
-    const lead = rest.filter((sentence) => sentence.startsWith(opener))
-    const middle = rest.filter((sentence) => !sentence.startsWith(opener))
-    body = [...lead, ...middle, tie].filter(Boolean).join(" ")
-  }
   return body.trim()
+}
+
+/** Drop leading refusal/hedge sentences when substantive content remains.
+ *  A refusal opening ("I can't point to a full migration I owned", "I can't
+ *  substantiate a specific time...") poisons an answer that goes on to
+ *  describe the real work. Strip it and let the work stand. Keep the refusal
+ *  only when the answer is nothing but the refusal (stripping would empty it).
+ *  Also strips a trailing hedge sentence ("That validation is the closest
+ *  experience I can speak to directly") when it follows the refusal. */
+function stripRefusalOpen(body: string): string {
+  const REFUSAL = /^(?:I (?:can ?not|cannot|can't|haven't|have not|don't|do not)|That (?:validation|work) is the closest|I (?:am|was) not able to)\b/i
+  const HEDGE = /^(?:That (?:validation|work) is the closest|The closest (?:experience|work) I can speak to)/i
+  const sentences = sentenceList(body)
+  if (sentences.length < 2) return body
+  let start = 0
+  while (start < sentences.length && REFUSAL.test(sentences[start].trim())) start++
+  // A hedge sentence immediately after the refusal goes too.
+  while (start < sentences.length && HEDGE.test(sentences[start].trim())) start++
+  const remaining = sentences.slice(start).join(" ")
+  if (start > 0 && answerWordCount(remaining) >= 10) return remaining
+  // Owner, 22 Nov 2026 (Round 13): the refusal is often EMBEDDED in the first
+  // sentence, not a standalone sentence — "I worked on IAM integration,
+  // though I can't point to a full migration I owned" and "I've used Burp
+  // Suite Pro, but I can't substantiate a specific time...". Strip the
+  // trailing "though/but I can't..." clause and the leading "I can't...,
+  // but" clause, keeping the work description that surrounds it.
+  const cleaned = sentences.map((sentence) => {
+    let s = sentence
+      .replace(/[,;]?\s*(?:though|but|however)\s+I (?:can ?not|cannot|can't|haven't|have not|don't|do not)\b.*$/i, "")
+      .replace(/^I (?:can ?not|cannot|can't|haven't|have not|don't|do not)\b[^,]*,\s*(?:but|though|however)\s+/i, "")
+      .trim()
+    return s
+  }).filter(Boolean).join(" ")
+  // Owner, 22 Nov 2026 (Round 13): the 40-word minimum blocked stripping
+  // when the remaining content was short — but the extension refills length
+  // AFTER shaping, so a short cleaned answer is fine. Only require that
+  // something substantive remains.
+  if (cleaned !== body && answerWordCount(cleaned) >= 10) return cleaned
+  return body
+}
+
+/** Stream-gate drop check: whether a single sentence should be dropped as it
+ *  streams, before the final shaping runs. Drops (a) a refusal/hedge sentence
+ *  ("I haven't led an IAM migration", "I can't substantiate a specific time",
+ *  "I don't have a supported example", "That validation is the closest
+ *  experience..."), (b) a verbatim resume fact (first-person converted or
+ *  not — the model converts "Collaborated..." to "I collaborated..."), and
+ *  (c) a tag-fragment sentence (mostly parenthetical groups, no first person).
+ *  The final gateDisplayedAnswer shaping applies the same rules, but the
+ *  session displays the stream's incremental sentences and the final replace
+ *  does not always overwrite them (Round 14), so the stream must filter too.
+ *  A dropped sentence never halts the gate — the caller returns [] for it. */
+export function dropStreamSentence(sentence: string, resume: string): boolean {
+  const t = String(sentence || "").trim()
+  if (!t) return false
+  // (a) Refusal / hedge — a standalone sentence, or a sentence whose opening
+  // clause is a refusal ("I haven't led an IAM migration, but I have worked
+  // on..."). The clause-strip in stripRefusalOpen handles the embedded case
+  // in final shaping; the stream drops the whole sentence (the work follows
+  // in later sentences).
+  if (/^(?:I (?:can ?not|cannot|can't|haven't|have not|don't|do not)|That (?:validation|work) is the closest|I (?:am|was) not able to)\b/i.test(t)) return true
+  if (/^(?:I (?:haven't|have not|don't|do not) have (?:a|an|any) (?:supported|documented|specific|real) (?:example|time|instance))/i.test(t)) return true
+  // (c) Tag fragment — mostly parenthetical groups, no first-person content.
+  const parenGroups = (t.match(/\([^)]*\)/g) || []).length
+  if (parenGroups >= 2 && !/\b(?:I|we|my|our)\b/i.test(t)) return true
+  // (b) Verbatim resume fact — normalize hyphens (the resume uses U+2011)
+  // and strip a leading "I " before comparing, as in dropVerbatimResumeSentences.
+  const norm = (s: string) => s.replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, "-").replace(/\s+/g, " ").trim().toLowerCase()
+  const n = norm(t)
+  if (n.length < 20) return false
+  const noI = n.replace(/^i\s+(?:have\s+|had\s+)?/, "")
+  const facts = new Set(resumeFacts(resume).map((f) => norm(f)))
+  const resumeNorm = norm(resume || "")
+  if (facts.has(n) || facts.has(n.replace(/[.!?]+$/, ""))) return true
+  if (facts.has(noI) || facts.has(noI.replace(/[.!?]+$/, ""))) return true
+  if (noI.split(/\s+/).length >= 5 && resumeNorm.includes(noI.replace(/[.!?]+$/, ""))) return true
+  return false
+}
+
+/** Drop any sentence after the first that is a verbatim resume fact. A pasted
+ *  resume bullet ("Performed integration troubleshooting across Saviynt
+ *  connectors...") is never the model's own prose — the model writes in the
+ *  first person and paraphrases. The first sentence is kept even if it matches,
+ *  in case the model's opening closely follows a resume line. */
+function dropVerbatimResumeSentences(body: string, resume: string): string {
+  // Owner, 22 Nov 2026 (Round 14): the resume uses a non-breaking hyphen
+  // (U+2011) in "cross‑functional" while the model writes a regular hyphen
+  // ("cross-functional"), so a verbatim comparison missed the paste. Normalize
+  // all hyphen-like characters to a regular hyphen before comparing.
+  const norm = (s: string) => s.replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, "-").replace(/\s+/g, " ").trim().toLowerCase()
+  const resumeNorm = norm(resume || "")
+  const facts = new Set(resumeFacts(resume).map((f) => norm(f)))
+  const sentences = sentenceList(body)
+  if (sentences.length <= 1) return body
+  const kept = sentences.filter((sentence, i) => {
+    if (i === 0) return true
+    // presentSpokenAnswer formats sentences as bullet lines ("\n- ..."), so
+    // strip the bullet marker before comparing — otherwise "- Performed
+    // integration troubleshooting..." never matches the resume fact.
+    const clean = sentence.replace(/^[\s•▪●\-*]+/, "").trim()
+    const n = norm(clean)
+    if (n.length < 20) return true
+    // Owner, 22 Nov 2026 (Round 12): a tag fragment pasted at the end of an
+    // answer — "(Zero Trust) (Zero Trust Security), using Expert-level." — is
+    // not a sentence, it is a keyword tag line. Drop any sentence that is
+    // mostly parenthetical groups with no first-person content.
+    if ((clean.match(/\([^)]*\)/g) || []).length >= 2 && !/\b(?:I|we|my|our)\b/i.test(clean)) return false
+    // Verbatim if the whole sentence is a resume fact, or appears in the
+    // resume text as a contiguous chunk (covers tag fragments pasted mid-text).
+    // Owner, 22 Nov 2026 (Round 14): the model converts a bullet to first
+    // person ("Collaborated with cross-functional teams on PeopleSoft security
+    // design..." becomes "I collaborated with..."), so a verbatim check on
+    // the sentence as-is misses it. Strip a leading "I " (and "I have/had")
+    // and compare the remainder against the facts too.
+    const noI = n.replace(/^i\s+(?:have\s+|had\s+)?/, "")
+    if (facts.has(n) || facts.has(n.replace(/[.!?]+$/, ""))) return false
+    if (facts.has(noI) || facts.has(noI.replace(/[.!?]+$/, ""))) return false
+    if (resumeNorm.includes(n.replace(/[.!?]+$/, "")) && n.split(/\s+/).length >= 5) return false
+    if (resumeNorm.includes(noI.replace(/[.!?]+$/, "")) && noI.split(/\s+/).length >= 5) return false
+    return true
+  })
+  return kept.join(" ")
 }
 
 const EXTEND_MODEL = "openai/gpt-oss-20b"
@@ -765,6 +1219,12 @@ export function gateDisplayedAnswer(input: { question: string; raw: string; sour
     const tool = (text.match(/\b(?:Splunk|Qualys|CrowdStrike|CyberArk|Sentinel|QRadar|EDR|SIEM)\b/gi) || []).some((name) => bag.includes(name.toLowerCase()))
     if (!(/\bI\b/.test(text) && tool && /\d/.test(text))) reasons.push("thin-example")
   }
+  // Owner, 22 Nov 2026 (Round 10): Q2 still showed "I'd" in the session even
+  // though shapeDisplayedAnswer converts it — the stream path's final text can
+  // carry a conditional the shaping step missed. Final cleanup: a conditional
+  // "I would" is never an answer from his resume; convert it here, on the
+  // final text, whatever path produced it.
+  if (text && text !== HONEST_LINE) text = text.replace(/\bI['\u2019]d\b/g, "I").replace(/\bI would\b/gi, "I")
   const safe = !!text
     && !CONFIRM_STUB.test(text)
     && !CANNED_ASIDE.test(text)

@@ -58,7 +58,7 @@ const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDi
 // Skip sign-in when the server says authDisabled === true. A local
 // AUTH_DISABLED=false does not force the sign-in card. Only the exact value
 // off-confirmed-by-eshwar does. Default (helpers absent) follows the server.
-let skipSignInFromServer = false;
+let skipSignInFromServer = true;
 let serverSaidAuthDisabled = false;
 let recoveredSignInFrom401 = false;
 function desktopAuthDisabled() {
@@ -208,7 +208,7 @@ function beginChromeSignIn({ interactive = false } = {}) {
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
-const PAGE_BUILD = "kompas-20261119-latest";
+const PAGE_BUILD = "kompas-20261121-speak";
 const appPathFor = () => (activeSite === "marketfit" ? "/kompas/index.html" : "/index.html") + "?v=" + PAGE_BUILD;
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
@@ -219,7 +219,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "kompas", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
 
-const MIN = { width: 360, height: 280 };
+const MIN = { width: 520, height: 360 };
 const DEFAULT_SIZE = { width: 820, height: 720 };
 const MARK = { width: 184, height: 38 };
 const NUDGE = 20;
@@ -487,9 +487,9 @@ function sendState() {
 // another always-on-top window opened later (a meeting toolbar, another overlay) lands above it otherwise.
 const PIN_LEVEL = "screen-saver";
 function holdOnTop() {
-  if (!win || win.isDestroyed()) return;
+  if (!win || win.isDestroyed() || win.isMinimized()) return;
   win.setAlwaysOnTop(true, PIN_LEVEL);
-  if (win.isVisible() && !win.isMinimized() && !picker) win.moveTop();
+  if (win.isVisible() && !picker) win.moveTop();
 }
 // Nothing may leave the panel unreachable: minimised with no taskbar button (Private), stranded off every screen
 // after a monitor or resolution change, or a see-through window painting nothing after its page or the GPU died.
@@ -594,10 +594,16 @@ function createWindow() {
   win.once("ready-to-show", () => { applyProtection(); win.show(); holdOnTop(); setTimeout(() => { void checkNativeDesktopUpdate(); }, 1200); });
   win.on("blur", () => { holdOnTop(); setTimeout(holdOnTop, 120); });
   win.on("show", holdOnTop);
-  win.on("restore", holdOnTop);
-  // Owner, 5 Oct 2026: no minimise; Win+D and Win+M work as Ctrl+H for Kompas. A window Windows may not minimise is
-  // skipped by Win+M and never hears about it, so the window stays minimisable and every minimise becomes the box at once.
-  win.on("minimize", () => setTimeout(() => { if (!win || win.isDestroyed()) return; win.restore(); setCollapsed(true); bringBack(); }, 0));
+  win.on("restore", () => {
+    try { if (hideTaskbar) win.setSkipTaskbar(true); } catch {}
+    holdOnTop();
+  });
+  // Minimize stays minimized. A taskbar button is shown so the window can come back.
+  // The title-bar hide button still collapses to the mark.
+  win.on("minimize", () => {
+    if (!win || win.isDestroyed()) return;
+    try { win.setSkipTaskbar(false); } catch {}
+  });
   // 250 ms: another always-on-top window (his Chrome is one, so is a meeting toolbar) covered Kompas for up to a second at 1000.
   const pinTimer = setInterval(() => { if (win && !win.isDestroyed() && !win.isFocused()) holdOnTop(); }, 250);
   wc.on("render-process-gone", (_e, d) => { if (d.reason !== "clean-exit") setTimeout(() => { if (win && !win.isDestroyed()) { wc.reload(); bringBack(); } }, 500); });

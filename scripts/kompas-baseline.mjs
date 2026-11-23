@@ -108,6 +108,7 @@ function livePage(engine = ECHOED) {
   const asked = [], errors = []
   const s = {
     aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1, BUILD: 'baseline',
+    answerCtl: null, // the page's in-flight answer controller: the sliced code reads and assigns it, so the replay must define it
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: 0, answeredSeq: 0, transcript: [], source: 'You',
     cards: [{ question: 'Ready', answer: ['Press Start — both your mic and the call audio are on by default.'] }], idx: 0,
     box: { value: '' },

@@ -6,6 +6,7 @@ import { JSDOM } from "jsdom"
 
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
 const css = readFileSync(new URL("../../public/kompas/answer-aside.css", import.meta.url), "utf8")
+const bridge = readFileSync(new URL("../../public/kompas/bridge-lines.js", import.meta.url), "utf8")
 const js = readFileSync(new URL("../../public/kompas/answer-aside.js", import.meta.url), "utf8")
 
 function page(width, open) {
@@ -25,6 +26,7 @@ function page(width, open) {
   window.innerWidth = width
   window.localStorage.clear()
   if (open) window.localStorage.setItem("kompas-answer-aside-open", "1")
+  window.eval(bridge)
   window.eval(js)
   return { window, document: window.document }
 }
@@ -55,7 +57,7 @@ test("the arrow toggles the panel and remembers it", () => {
   assert.ok(btn)
   assert.equal(btn.getAttribute("aria-expanded"), "false")
   assert.equal(panel.hidden, true)
-  assert.equal(btn.textContent, "›")
+  assert.equal(btn.textContent, "Say")
   assert.equal(answer.closest(".a").contains(panel), false)
   assert.equal(panel.parentElement, document.body)
   assert.equal(document.getElementById("startBtn").textContent, "Start")
@@ -77,8 +79,8 @@ test("a remembered open state comes back, and a new question clears the old cont
   document.getElementById("question").textContent = sample.question
   window.KompasAnswerAside.accept(sample)
   assert.equal(panel.querySelector("h3").textContent, "Say this")
-  assert.equal(panel.querySelectorAll(".aside-questions li").length, 2)
-  assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster for this line/)
+  assert.equal(panel.querySelectorAll(".aside-questions li").length, 0)
+  assert.doesNotMatch(panel.textContent, /given what you said|I'd weigh exposure|Claim|Touch points|No booster for this line/)
   document.getElementById("question").textContent = "Why did the flow stall?"
   await new Promise((r) => setTimeout(r, 0))
   assert.doesNotMatch(panel.textContent, /Claim|Touch points|No booster|Context shows up with the next answer/)
@@ -96,20 +98,14 @@ test("section 2 toggles by hand and follows a new transcript line without a fetc
   }
   document.getElementById("question").textContent = aside.question
   window.KompasAnswerAside.accept(aside)
-  const list = document.getElementById("asideModeList")
-  assert.match(list.textContent, /Why do you think/)
-  document.getElementById("asideModeBoosters").click()
-  assert.match(list.textContent, /Yeah, that's true/)
-  assert.doesNotMatch(list.textContent, /Why do you think/)
-  document.getElementById("asideModeAuto").click()
+  assert.equal(document.getElementById("asideModeList"), null)
+  assert.doesNotMatch(document.getElementById("answerAside").textContent, /given what you said|I'd weigh|Why do you think|resume|not on|won't lie|can't claim/i)
   document.getElementById("drawerBody").textContent = "Them: So the owners are spread across the teams and the handoff is where it stalls."
   await new Promise((r) => setTimeout(r, 0))
-  const afterStatement = document.getElementById("asideModeList")
-  assert.match(afterStatement.textContent, /Yeah, that's true/)
+  assert.doesNotMatch(document.getElementById("answerAside").textContent, /given what you said|I'd weigh/)
   document.getElementById("capText").textContent = "Have you worked with the catalog before?"
   await new Promise((r) => setTimeout(r, 0))
-  const afterAsk = document.getElementById("asideModeList")
-  assert.match(afterAsk.textContent, /Why do you think/)
+  assert.doesNotMatch(document.getElementById("answerAside").textContent, /given what you said|I'd weigh/)
   let fetched = 0
   window.fetch = () => { fetched++; return Promise.resolve({ clone() { return this }, headers: { get: () => "" }, json: async () => ({}) }) }
   document.getElementById("drawerBody").textContent = "Them: Let me explain the handoff again."
@@ -117,11 +113,12 @@ test("section 2 toggles by hand and follows a new transcript line without a fetc
   assert.equal(fetched, 0)
 })
 
-test("the panel is a separate popup, and a narrow screen uses a bottom sheet", () => {
+test("the panel sits on the right with a close button and does not cover the answer", () => {
   assert.match(css, /@media \(max-width:900px\)/)
   const narrow = css.slice(css.indexOf("@media (max-width:900px)"))
-  assert.match(narrow, /bottom:\s*0/)
-  assert.match(narrow, /width:\s*100%/)
+  assert.match(narrow, /right:\s*8px/)
+  assert.match(css, /\.aside-close\{/)
+  assert.match(css, /#overlay\.bridge-open #answer\{margin-right:252px\}/)
   assert.match(css, /\.answer-aside\{[\s\S]*position:\s*absolute/)
   assert.doesNotMatch(css, /position:\s*fixed/)
   assert.doesNotMatch(css, /#startBtn\{display:\s*none|#answerBtn\{display:\s*none|#copyBtn\{display:\s*none/)

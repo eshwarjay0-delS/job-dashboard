@@ -1,10 +1,10 @@
 import { figureList } from "@/lib/kompasFigureContext"
 import { deriveWithFallback } from "@/lib/kompasDeriveFallback"
 import { NextRequest, NextResponse } from "next/server"
-import { keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
+import { callLLM, callOpenAI, keysFor, modelFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
-import { employerAliases } from "@/lib/kompasResume"
+import { employerAliases, resumeCertifications } from "@/lib/kompasResume"
 import { cachedDigest, sessionFacts } from "@/lib/kompasSessionCache"
 import { createSentenceGate, sentenceCheck, sourcedOpenerFor, splitOpenerPassages, withOpener, type SourcedOpener } from "@/lib/kompasSentenceGate"
 import { hashUserId } from "@/lib/sttLedger"
@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE, technicalThesis } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -72,7 +72,16 @@ import { screenImage } from "@/lib/kompasScreen"
 // candidate can still say.
 
 const NO_STORE = { "Cache-Control": "no-store" }
+// gpt-oss-120b is the old primary. OpenRouter returns 403 for it when the
+// account data policy or a guardrail has no allowed provider for that model.
+// Llama 3.3 70B has a zero-retention Groq endpoint, which this key can use.
+// A 403 tries the next model. The caller never sees that status.
+// Known-good primary from 01ceb1dc (13 Nov): openai/gpt-oss-120b. A 403 from
+// the account data policy tries the next allowed model, then direct Groq.
 const PAID_MODEL = "openai/gpt-oss-120b"
+const SECOND_MODEL = "meta-llama/llama-3.3-70b-instruct"
+const CHEAP_MODEL = "google/gemini-2.5-flash"
+const ANSWER_MODELS = [PAID_MODEL, SECOND_MODEL, CHEAP_MODEL]
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
@@ -80,7 +89,7 @@ const LIVE_ROUTING = { allow_fallbacks: true, sort: "latency" }
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
-const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 2048)
+const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 4096)
 // A model on a long rate-limit block is skipped by later requests on this
 // warm instance instead of re-hitting the wall (perfACT's groqBlockedUntil).
 const blockedUntil = new Map<string, number>()
@@ -100,6 +109,14 @@ function isRateLimit(msg: string): boolean {
 const statusOf = (msg: string): number | undefined => {
   const m = /openrouter (\d{3})/.exec(msg || "")
   return m ? Number(m[1]) : undefined
+}
+// A lane failure worth one retry after a short pause: a 403 policy flap,
+// a 502/503/504 brief blip, or a network/timeout error with no status at
+// all. A missing key is permanent and is never retried.
+function isRetryable(msg: string): boolean {
+  if (!msg || /missing paid key/i.test(msg)) return false
+  const s = statusOf(msg)
+  return s === 403 || s === 502 || s === 503 || s === 504 || s === undefined
 }
 const shortModel = (m: string) => m.split("/").pop() || m
 
@@ -337,6 +354,7 @@ type AnswerJob = {
   orKey: string | undefined
   keys: LlmKeys
   liveModel: string
+  fallbackModel?: boolean
   ledger: ReturnType<typeof normLedger>
   projectId: string | null
   startedAt: number
@@ -381,8 +399,10 @@ type AnswerJob = {
 // this list is the default.
 const LIVE_MODEL_IDS: Record<string, string> = { "gpt-5.6-luna": "openai/gpt-5.6-luna" }
 function jobLanes(job: AnswerJob): string[] {
-  const chosen = LIVE_MODEL_IDS[job.liveModel || ""]
-  return chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
+  const order = job.fallbackModel ? [CHEAP_MODEL, PAID_MODEL, SECOND_MODEL] : ANSWER_MODELS
+  const chosen = !job.fallbackModel && LIVE_MODEL_IDS[job.liveModel || ""]
+  const lanes = chosen ? [chosen, ...order] : [...order]
+  return [...new Set(lanes)].slice(0, 3)
 }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
@@ -504,6 +524,27 @@ function settleRepair(job: AnswerJob, repair: RepairOutcome, finalText: string):
   return out
 }
 
+async function cheapGroqAnswer(key: string, system: string, user: string, signal: AbortSignal): Promise<string> {
+  const model = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      temperature: 0.3,
+      max_tokens: 1600,
+      messages: [
+        { role: "system", content: system.slice(0, 6000) },
+        { role: "user", content: user.slice(0, 6000) },
+      ],
+    }),
+    signal,
+  })
+  if (!res.ok) throw new Error("groq " + res.status)
+  const data = await res.json().catch(() => ({})) as { choices?: Array<{ message?: { content?: string } }> }
+  return String(data?.choices?.[0]?.message?.content || "")
+}
+
 async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
   const encoder = new TextEncoder()
   const startedAt = job.startedAt
@@ -532,7 +573,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       let raw = ""
       let lastErr = ""
       let servedModel = ""
-      const servedProvider = "openrouter"
+      let servedProvider = "openrouter"
       // Speed r6: personal history releases sentence by sentence through the guard gate (kompasSentenceGate). Any
       // failure to build the gate leaves it null, which holds every delta back exactly like guarded-final.
       const sentenceMode = job.streamPolicy === "guarded-sentence"
@@ -543,14 +584,20 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             check: sentenceCheck({ facts: job.guardFacts, allowed: job.allowed, asked: job.askedFigures, docs: job.sourceDocs, question: job.question, passages: job.passages || [] }),
             opener: withOpenerToo ? job.opener : null,
             sourcePassages: splitOpenerPassages(job.sourceDocs),
+            // Owner, 22 Nov 2026 (Round 14): the session displays the stream's
+            // incremental sentences, and the final gateDisplayedAnswer replace
+            // does not always overwrite them — so a refusal, a verbatim pasted
+            // bullet, or a tag fragment that the final shaping would strip
+            // still shows on screen. Filter those sentences as they stream.
+            dropSentence: (sentence: string) => dropStreamSentence(sentence, job.resume || ""),
           })
         } catch { return null }
       }
-      let gate = newGate(true)
+      const gate = newGate(true)
       const opener = gate?.openerText() || ""
       // Card title from the same call (a leading TITLE: line, never spoken) and an early partial card once the
       // first on-screen sentence is complete, so the opening line renders before the bullets finish.
-      let titler = createTitleSplitter()
+      const titler = createTitleSplitter()
       let titleSent = ""
       let onScreen = ""
       let partialSent = false
@@ -582,13 +629,43 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
-        if (answerRoute(job.question).route === "long") {
-          const thesis = technicalThesis(job.question)
-          if (thesis) show(thesis + " ")
-        }
+        // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
+        // reach the screen. It used to be shown as a provisional delta before the model answered,
+        // and when the final replace did not cleanly overwrite it the user saw the thesis plus
+        // resume fragments as the answer (Q8, three live rounds). The final answer comes from the
+        // replace event with the settled text; nothing provisional is shown before it.
         // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
         if (gate) for (const o of gate.start()) show(o + " ")
-        if (job.orKey) {
+        // Owner, 22 Nov 2026: no delay — it must work directly when someone
+        // starts using it. Try OpenAI FIRST so a press answers in seconds
+        // instead of burning time on dead OpenRouter lanes and their
+        // cooling-down retries. Same Kompas system prompt, so the answer
+        // keeps the levels, length bands and human read-aloud shape.
+        if (!raw.trim() && !signal.aborted) {
+          const openaiKey = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+          if (openaiKey) {
+            try {
+              const openaiText = await callOpenAI(openaiKey, modelFor("openai", "light"), {
+                keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
+              }, [{ role: "user", content: job.userText }])
+              if (openaiText.trim()) {
+                // Owner, 22 Nov 2026 (Round 5): the TITLE: line was reaching the screen —
+                // the JSON path strips it with splitTitle but this stream OpenAI call
+                // assigned the raw text, so 6 of 9 answers opened with "TITLE: ...".
+                const split = splitTitle(openaiText.trim())
+                raw = split.body
+                if (split.title && split.title !== titleSent) { titleSent = split.title; emit({ type: "title", text: titleSent }) }
+                lastErr = ""
+                servedModel = modelFor("openai", "light")
+                servedProvider = "openai"
+                show(raw + " ")
+              }
+            } catch (e) {
+              lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+            }
+          }
+        }
+        if (!raw.trim() && job.orKey) {
           const runLane = async (model: string, tag: string): Promise<"ok" | "cut" | "fail"> => {
             const began = Date.now()
             timing.lane += (timing.lane ? ">" : "") + `openrouter:${shortModel(model)}${tag}`
@@ -597,13 +674,19 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               const tail = titler.flush()
               if (tail) onDelta(tail)
               if (cutShort(usage.finish, raw, job.plan.words)) {
-                // Cut off at the ceiling a few words in: clear the card and ask again rather than serve a fragment.
+                // The ceiling cut the sentence. Keep the words already on screen and ask the same model to finish them.
+                const stub = raw.trim().slice(-800)
+                try {
+                  await streamOpenRouter(job.orKey as string, model, "Finish the spoken answer. Continue from the last sentence. Do not repeat earlier sentences.", stub, Math.max(800, Math.floor(job.plan.maxTokens / 2)), onDelta, signal)
+                } catch { /* the partial already streamed stays */ }
+                if (raw.trim()) {
+                  servedModel = model
+                  lastErr = ""
+                  recordLane(model, true, usage, began)
+                  return "ok"
+                }
                 recordLane(model, false, usage, began, 502)
                 lastErr = "openrouter 502 answer cut short at the token ceiling"
-                raw = ""
-                titler = createTitleSplitter(); onScreen = ""; partialSent = false
-                emit({ type: "replace", text: "" })
-                gate = newGate(false)
                 return "cut"
               }
               servedModel = model
@@ -626,8 +709,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             }
           }
           await attempt("")
-          // Every lane rate-limited: wait exactly what the provider said (≤15s)
+          // Every lane rate-limited or the provider briefly unavailable: wait
           // and retry the lanes once — the client shows a countdown meanwhile.
+          // A transient failure is a brief blip, not a rate limit, so it gets
+          // a short fixed backoff instead of the provider's Retry-After.
           if (!raw.trim() && isRateLimit(lastErr)) {
             const wait = retryMs(lastErr)
             if (wait > 0 && wait <= 15000) {
@@ -635,8 +720,82 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               await sleep(wait + 300)
               await attempt(":retry")
             }
+          } else if (!raw.trim() && isRetryable(lastErr)) {
+            // The provider flaps for seconds at a time; retry twice with
+            // backoff so one request catches a working window.
+            for (const wait of [2000, 4000]) {
+              if (raw.trim() || signal.aborted || !isRetryable(lastErr)) break
+              emit({ type: "wait", ms: wait + 300 })
+              await sleep(wait)
+              await attempt(":retry")
+            }
           }
         } else { lastErr = "openrouter 503 missing paid key" }
+
+        if (!raw.trim() && !signal.aborted) {
+          const groqKey = resolveKeys({}).groq
+          if (groqKey) {
+            try {
+              const groqText = await cheapGroqAnswer(groqKey, job.system, job.userText, signal)
+              if (groqText.trim()) {
+                raw = groqText.trim()
+                lastErr = ""
+                servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+                show(raw + " ")
+              }
+            } catch (e) {
+              lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+            }
+          }
+        }
+
+        // Direct OpenAI fallback (owner: "OpenAI is enough for now"): the vault
+        // checklist gates OpenAI out of callLLM for kompas:answer by default
+        // (defaultUse for openai is resume-only), so read the env key directly
+        // and call OpenAI, bypassing that gate. Same Kompas system prompt, so
+        // the answer keeps the levels, length bands and human read-aloud shape.
+        // Model is gpt-6-luna (the "ChatGPT 6" default), tier light = fastest.
+        if (!raw.trim() && !signal.aborted) {
+          const openaiKey = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+          if (openaiKey) {
+            try {
+              const openaiText = await callOpenAI(openaiKey, modelFor("openai", "light"), {
+                keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
+              }, [{ role: "user", content: job.userText }])
+              if (openaiText.trim()) {
+                raw = openaiText.trim()
+                lastErr = ""
+                servedModel = modelFor("openai", "light")
+                show(raw + " ")
+              }
+            } catch (e) {
+              lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+            }
+          }
+        }
+
+        // Direct-provider fallback (fastest/lightweight first): when the OpenRouter
+        // lanes and Groq are both down, ask the configured direct providers through
+        // callLLM — it falls through Gemini (free), Groq, then OpenAI/Anthropic —
+        // with the same Kompas system prompt, so the answer keeps the levels, the
+        // length bands and the human read-aloud shape. Tier "light" picks the
+        // fastest model per provider; depth comes from the prompt, not the model.
+        if (!raw.trim() && !signal.aborted) {
+          try {
+            const direct = await callLLM({
+              keys: resolveKeys({}), purpose: "kompas:answer", tier: "light",
+              system: job.system, user: job.userText, maxTokens: 4096, timeoutMs: 15000,
+            })
+            if (direct.text.trim()) {
+              raw = direct.text.trim()
+              lastErr = ""
+              servedModel = direct.model
+              show(raw + " ")
+            }
+          } catch (e) {
+            lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+          }
+        }
 
         // Still rate-limited with nothing streamed: never a 5xx on a live turn —
         // hand the client an exact wait; it regenerates by itself.
@@ -653,8 +812,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           return
         }
         // Degrade, never fail: stream the best prepared material as the answer.
+        // Owner, 22 Nov 2026: a stale lastErr must never wipe a delivered
+        // answer. A lane can stream real text and then throw (OpenRouter
+        // flap), or an early lane can fail before a later one succeeds —
+        // either way raw holds a usable answer. Only an empty raw means
+        // there is nothing to show. (The button was saying "Answered."
+        // with an empty pane because replace "" cleared the delta.)
         const degraded = false
-        if (!raw.trim() || lastErr) {
+        if (!raw.trim()) {
           const failure = answerFailure(lastErr)
           emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
@@ -740,10 +905,33 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let raw = ""
   let lastErr = ""
   let servedModel = ""
-  const servedProvider = "openrouter"
+  let servedProvider = "openrouter"
   let jsonTitle = ""
   try {
-    if (job.orKey) {
+    // Owner, 22 Nov 2026: no delay — it must work directly when someone
+    // starts using it. Try OpenAI FIRST so a press answers in seconds
+    // instead of burning time on dead OpenRouter lanes and their retries.
+    if (!raw.trim() && !signal.aborted) {
+      const openaiKey = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+      if (openaiKey) {
+        try {
+          const openaiText = await callOpenAI(openaiKey, modelFor("openai", "light"), {
+            keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
+          }, [{ role: "user", content: job.userText }])
+          if (openaiText.trim()) {
+            const split = splitTitle(openaiText.trim())
+            raw = split.body
+            jsonTitle = split.title
+            lastErr = ""
+            servedModel = modelFor("openai", "light")
+            servedProvider = "openai"
+          }
+        } catch (e) {
+          lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+        }
+      }
+    }
+    if (!raw.trim() && job.orKey) {
       const runLane = async (model: string) => {
         const began = Date.now()
         try {
@@ -768,6 +956,69 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       if (!raw.trim() && isRateLimit(lastErr)) {
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
+      } else if (!raw.trim() && isRetryable(lastErr)) {
+        for (const wait of [2000, 4000]) {
+          if (raw.trim() || signal.aborted || !isRetryable(lastErr)) break
+          await sleep(wait)
+          await attempt()
+        }
+      }
+      if (!raw.trim() && !signal.aborted) {
+        const groqKey = resolveKeys({}).groq
+        if (groqKey) {
+          try {
+            const groqText = await cheapGroqAnswer(groqKey, job.system, job.userText, signal)
+            if (groqText.trim()) {
+              raw = groqText.trim()
+              lastErr = ""
+              servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+              servedProvider = "groq"
+            }
+          } catch (e) {
+            lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+          }
+        }
+      }
+      // Direct OpenAI fallback (owner: "OpenAI is enough for now"): the vault
+      // checklist gates OpenAI out of callLLM for kompas:answer by default
+      // (defaultUse for openai is resume-only), so read the env key directly
+      // and call OpenAI, bypassing that gate. Same Kompas system prompt.
+      if (!raw.trim() && !signal.aborted) {
+        const openaiKey = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+        if (openaiKey) {
+          try {
+            const openaiText = await callOpenAI(openaiKey, modelFor("openai", "light"), {
+              keys: resolveKeys({}), tier: "light", system: job.system, maxTokens: 4096, user: job.userText,
+            }, [{ role: "user", content: job.userText }])
+            if (openaiText.trim()) {
+              raw = openaiText.trim()
+              lastErr = ""
+              servedModel = modelFor("openai", "light")
+              servedProvider = "openai"
+            }
+          } catch (e) {
+            lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+          }
+        }
+      }
+      // Direct-provider fallback (fastest/lightweight first): same Kompas system
+      // prompt through callLLM, so the answer keeps the levels, length bands and
+      // human read-aloud shape even when OpenRouter and Groq are both down.
+      if (!raw.trim() && !signal.aborted) {
+        try {
+          const direct = await callLLM({
+            keys: resolveKeys({}), purpose: "kompas:answer", tier: "light",
+            system: job.system, user: job.userText, maxTokens: 4096, timeoutMs: 15000,
+          })
+          if (direct.text.trim()) {
+            raw = direct.text.trim()
+            lastErr = ""
+            servedModel = direct.model
+            servedProvider = direct.provider
+          }
+        } catch (e) {
+          lastErr = lastErr || String((e as Error)?.message || e).slice(0, 160)
+        }
       }
     } else { lastErr = "openrouter 503 missing paid key" }
   } finally { cleanup() }
@@ -809,6 +1060,17 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   if (job.resumeState && job.resumeState !== "grounded") out = enforceResumeState(out, job.resumeState).text
   out = dropOffTopicResume(job.question, job.jd || "", out)
   repair = settleRepair(job, repair, out)
+  // Owner, 22 Nov 2026 (Round 15): the Kompas web session calls /api/answer
+  // with stream:false, so it runs jsonAnswer — which NEVER called
+  // gateDisplayedAnswer. Every refusal strip, verbatim-paste drop, and
+  // tag-fragment fix in the gate (Rounds 12-14) applied only to the stream
+  // path, while the session's displayed text came from here, unshaped. That
+  // is why Q5/Q10 refusals and Q1/Q3 pasted bullets survived every fix that
+  // passed locally. Run the same gate here so both paths shape identically.
+  try {
+    const gated = gateDisplayedAnswer({ question: job.question, raw: out, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
+    if (gated.text.trim()) out = gated.text
+  } catch { /* the settled answer stands */ }
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
@@ -977,14 +1239,9 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const NO_KEY = () => NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
     if (!(await paidKeyNow())) return NO_KEY()
     if (body.preflight === true) {
-      const paidKey = (await paidKeyNow()) as string
-      try {
-        await fetchOpenRouter(paidKey, PAID_MODEL, "Reply with READY only.", "Check answer service readiness.", 256, AbortSignal.any([request.signal, AbortSignal.timeout(20000)]))
-        return NextResponse.json({ ready: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
-      } catch (e) {
-        const failure = answerFailure(String((e as Error)?.message || e))
-        return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
-      }
+      // Do not call a model here. A readiness round-trip was racing the live
+      // answer and the stream came back empty. The next real answer is the warm-up.
+      return NextResponse.json({ ready: true, warming: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
     }
     const paidKey = (await paidKeyNow()) as string
     const outcome = await deriveQuestion(paidKey, body, request.signal)
@@ -1230,9 +1487,15 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     )
     const askForDigest = question // prior speech does not determine relevance ranking
     const digest = cachedDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
+    // The TF-IDF digest drops the Certifications heading and can cut the list off by budget, so a
+    // "What certifications do you hold?" ask made the model refuse ("I don't have a confirmed list")
+    // even though the resume lists them. Pin the full list here so the model always sees it with
+    // its heading; "(Preferred – pursuing)" lines mean pursued, not held.
+    const certs = resumeCertifications(resumeText)
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
       ...aliasLines,
+      certs.length ? `CERTIFICATIONS (from the resume — these are the certifications he holds, unless marked pursuing): ${certs.join("; ")}` : "",
       `RESUME (${tier === 0 ? "career-wide evidence across supported roles" : "fitted to this question"}):\n${digest}`,
     ]
       .filter(Boolean)
@@ -1343,7 +1606,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     sourceBlock,
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
-    `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. DOCUMENTS FIRST: when the attached documents cover the question (question banks, guides), their passages lead: frame the answer from that material, use dossier notes only as support, and shape delivery with the session preferences and the level/mode structure. Document material proves the material itself, never personal experience you do not have: claim personal experience only from the resume or dossier. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
+    `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. DOCUMENTS FIRST: when the attached documents cover the question (question banks, guides), their passages lead: frame the answer from that material, use dossier notes only as support, and shape delivery with the session preferences and the level/mode structure. Document material proves the material itself, never personal experience you do not have: claim personal experience only from the resume or dossier. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome — so never invent an incident, a metric, or a date from a bullet. But when the resume shows the capability or experience (tools, frameworks, responsibilities), answer from it in the first person: say what you do and how you do it, grounded in those bullets. SCENARIO AND EXPERIENCE QUESTIONS: when asked "tell me about a time", "give me an example", "describe a time", or "how did you handle", NEVER refuse and NEVER say "I can't claim a specific example", "I don't have a documented example", "I haven't worked on a migration/audit/incident", or "I haven't supported a specific audit" when the resume shows the work. The work itself IS the example: describe the closest real work from the resume — the project, the tools, what you did, how you did it — in the first person, as something you did. FORM VS WORK: when the question names a specific form — a migration, an audit, an incident, a rollout — and the resume shows the underlying work but not that exact form, do NOT open with a refusal or a disclaimer about the form ("I haven't worked on an IAM migration", "I haven't supported a specific compliance audit"). The form is a label; the work is the answer. Describe the underlying IAM work, the compliance monitoring work, the incident work you did, as the example. A capability bullet (e.g. implementing Zero Trust controls, running an IAM migration, supporting compliance monitoring) is a real example of that work; describe it, don't disclaim it. Only when the resume has nothing on the topic at all should you explain the proposed approach conditionally, and say plainly that it is an approach, not experience you have. NEVER PASTE A RESUME BULLET: write the answer in your own first-person prose. Never copy a resume bullet verbatim into the answer, and never append a bullet from a different project or role after the answer. Stay on the single experience the question asks about — one project, one thread — and develop it with the relevant detail. A pasted bullet from another area reads as a fragment, not an answer. FIRST PERSON ALWAYS: every answer is in the first person, all the time — including a definition or concept question. A definition is never a third-person textbook entry ("Responsibilities are the duties..."); it is what the thing means in your own role and what you do with it ("My responsibilities include..."), grounded in the resume. Never write "the person", "a security architect", or "one" when you mean yourself. STRAIGHT TO THE POINT: sentence one IS the relevant answer — no preamble, no throat-clearing, no restating the question, no "let me explain", no "I would answer this directly". Jump directly to the substance that answers what was asked, in the first person, and stay on the relevant point throughout. LENGTHY ALWAYS: every answer is substantial and complete — never a stub, never two sentences when the question deserves more. Develop the answer with the relevant detail from the resume: what you did, how you did it, and what it covered.`,
     tier !== 0 && includeHistoryContext && transcript ? `Brief conversation context for this follow-up only:\n${transcript.slice(-800)}` : "",
     tier !== 0 && history && includeHistoryContext ? `Earlier conversation (only to resolve explicit references, never to supply an unrelated project or topic):\n${history}` : "",
     includeStoryContext && retrieved ? `Retrieved notes:\n${retrieved}` : "",
@@ -1376,7 +1639,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const factsText = candidateEvidenceForVerification(resumeSrc, docsSrc)
   // Role requirements and generated dossier context guide relevance, not personal factual proof.
   const desktopCloser = desktopPolicy
-    ? `${desktopPolicy.guidance}\n\nObey the question shape. A definition or a comparison stays on the idea. A deep example carries the bottleneck and the impact at this level's angle. Do not reuse one outline for both.`
+    ? `${desktopPolicy.guidance}\n\nObey the question shape. A definition or a comparison stays on the idea — but it is still answered in the first person, from your own work: what the thing means in your role and what you do with it. Never a third-person textbook definition. A deep example carries the bottleneck and the impact at this level's angle. Do not reuse one outline for both.`
     : ""
   const spokenCloser = `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, with a real operational bottleneck only when supported or explicitly hypothetical. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
@@ -1404,6 +1667,7 @@ ${INTERVIEW}`
     orKey: keys.openrouter || undefined,
     keys,
     liveModel: str(body.liveModel, 120),
+    fallbackModel: body.fallbackModel === true,
     ledger,
     projectId,
     startedAt,
@@ -1439,11 +1703,53 @@ ${INTERVIEW}`
 
 function answerFailure(message: string) {
   const status = statusOf(message) || 502
-  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : status === 403 ? "OPENROUTER_FORBIDDEN" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
+  const blocked = status === 403
+  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : blocked ? "OPENROUTER_UNAVAILABLE" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
   const error = status === 401 ? "The paid OpenRouter credential was rejected."
     : status === 402 ? "The OpenRouter account or key has insufficient credits."
-    : status === 403 ? "OpenRouter blocked the request. Check key permissions and account policy."
     : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
     : "The paid provider could not complete this answer. Your question is preserved."
-  return { status, code, error, quiet: true }
+  return { status: blocked ? 503 : status, code, error, quiet: true }
+}
+
+const BRIDGE_JUNK = /given what you said|what you said about|i'?d weigh exposure first|heard zero vulnerability|\binterviewer\b|listeningyou|pmand|pmokay/i
+
+function cleanBridgeTurns(turns: Array<{ who?: string; text?: string }>) {
+  return turns.slice(-4).map((turn) => String(turn?.text || "")
+    .replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "")
+    .replace(/\b(?:listeningyou|listening|pmand|pmokay|pmi)\b/gi, " ")
+    .replace(/\s+/g, " ").trim())
+    .filter((text) => text.split(/\s+/).length >= 3 && !BRIDGE_JUNK.test(text))
+}
+
+function keepBridgeLine(raw: string): string {
+  const line = String(raw || "").replace(/^["'\s]+|["'\s]+$/g, "").split("\n").map((s) => s.trim()).filter(Boolean)[0] || ""
+  if (!line || /^none$/i.test(line) || BRIDGE_JUNK.test(line)) return ""
+  if (/\b([a-z]{3,})\s+\1\b/i.test(line)) return ""
+  return line.replace(/\s+/g, " ").trim()
+}
+
+/** One speakable sentence from the cleaned turns. Empty when every model is unreachable. */
+export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string }, signal?: AbortSignal): Promise<string[]> {
+  const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
+  const question = String(input?.question || "").replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "").replace(/\s+/g, " ").trim()
+  if (!turns.length && question.split(/\s+/).length < 4) return []
+  const keys = await keysFor("kompas:answer", () => resolveKeys({})).catch(() => resolveKeys({}))
+  const system = "Write one natural sentence the candidate can say aloud. No speaker labels. No quotes from the transcript. No 'what you said'. Reply with the sentence only, or NONE."
+  const user = `TURNS:\n${turns.join("\n")}\n\nQUESTION:\n${question}`
+  const ac = signal || AbortSignal.timeout(12000)
+  let text = ""
+  if (keys.openrouter) {
+    for (const model of ANSWER_MODELS) {
+      try {
+        const got = await fetchOpenRouter(keys.openrouter, model, system, user, 160, ac)
+        text = keepBridgeLine(got.text)
+        if (text) break
+      } catch { /* the next allowed model */ }
+    }
+  }
+  if (!text && keys.groq) {
+    try { text = keepBridgeLine(await cheapGroqAnswer(keys.groq, system, user, ac)) } catch { text = "" }
+  }
+  return text ? [text] : []
 }

@@ -4,7 +4,7 @@
 .aside-toggle{
   position:absolute;
   right:16px;
-  top:16px;
+  top:148px;
   z-index:70;
   width:36px;
   height:36px;
@@ -21,10 +21,12 @@
 .aside-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .answer-aside{
   position:absolute;
-  top:60px;
-  right:16px;
-  z-index:69;
-  width:min(360px, calc(100vw - 32px));
+  top:108px;
+  right:8px;
+  bottom:48px;
+  left:auto;
+  z-index:6;
+  width:240px;
   min-height:0;
   max-height:min(70vh, 640px);
   overflow:auto;
@@ -36,6 +38,17 @@
   box-shadow:0 12px 40px rgba(0,0,0,.16);
 }
 .answer-aside[hidden]{display:none !important}
+.aside-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px}
+.aside-close{
+  position:absolute;top:6px;right:6px;z-index:2;
+  width:28px;height:28px;border:1px solid var(--line-strong);border-radius:8px;
+  background:var(--surface);color:var(--ink);font:700 16px/1 var(--sans);cursor:pointer;
+}
+.aside-close:hover{background:var(--surface-2)}
+#overlay.bridge-open .content,
+#overlay.bridge-open .card,
+#overlay.bridge-open .a,
+#overlay.bridge-open #answer{margin-right:252px}
 .answer-aside h3{
   margin:0 0 8px;
   font:700 12px/1.2 var(--sans);
@@ -112,9 +125,11 @@ html.kd.kd-private #view-copilot #answerAside{
 }
 
 html.kd #view-copilot .answer-aside{
-  top:64px;
-  right:12px;
-  width:min(320px, 34vw);
+  top:56px;
+  right:8px;
+  left:auto;
+  bottom:12px;
+  width:220px;
   max-height:min(68vh, 560px);
   background:#fdfcf9;
 }
@@ -129,18 +144,14 @@ html.kd #view-copilot #copyBtn{
   .answer-aside,
   #view-copilot .answer-aside,
   html.kd #view-copilot .answer-aside{
-    top:auto;
-    right:0;
-    left:0;
-    bottom:0;
-    width:100%;
-    max-width:none;
-    max-height:52vh;
-    border-radius:16px 16px 0 0;
+    top:56px;
+    right:8px;
+    left:auto;
+    bottom:12px;
+    width:200px;
+    max-width:42vw;
+    max-height:none;
+    border-radius:12px;
   }
-  .aside-toggle{
-    right:12px;
-    top:auto;
-    bottom:calc(52vh + 8px);
-  }
+  .aside-toggle{right:8px;top:148px}
 }

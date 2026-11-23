@@ -18,7 +18,7 @@ test("no first token within 8 seconds retries once, then shows a status", () => 
   assert.equal(ctx.firstTokenDecision(8000, true, false), "keep")
   assert.equal(ctx.firstTokenDecision(9000, false, true), "status")
   assert.match(app, /No words yet\. Retrying once\./)
-  assert.match(app, /Still no words\. Press AI Answer to try again\./)
+  assert.match(app, /recoverAnswer\("EMPTY", 400\)/)
   assert.match(app, /firstTokenRetry: true/)
 })
 
@@ -26,7 +26,7 @@ test("lowering opacity fades the panels and strengthens the answer text", () => 
   assert.match(preload, /--answer-weight/)
   assert.match(preload, /--answer-shadow/)
   assert.match(app, /--answer-weight/)
-  assert.match(css, /font-weight:var\(--answer-weight, 560\)/)
+  assert.match(css, /font-weight:var\(--answer-weight, 400\)/)
   assert.doesNotMatch(css, /max\(var\(--panel-a\),0\.94\)/)
   assert.match(css, /justify-content:space-evenly !important/)
   assert.doesNotMatch(css, /#tabPreview\{display:none !important/)

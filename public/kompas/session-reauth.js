@@ -20,13 +20,13 @@ function decideSessionStart(input) {
   const signedOut = src.noticeCode === "signed_out" || src.noticeCode === "revoked" || src.refreshCode === "signed_out" || src.refreshCode === "revoked" || src.code === "signed_out";
   // Skip-login never sends the person to Google or /login. Auth 401 and
   // Supabase HTTP 402 are not a logout: the session can still start.
+  // Skip-login and a slow or flaky answer check both start the session.
+  // The model warm-up runs in the background. It does not paint a banner.
+  const warm = { action: "proceed", egress: false, autoSignIn: false, message: "", warm: true };
   if (src.authDisabled === true) {
     if (src.interviewLive) return { action: "wait", egress: false, autoSignIn: false, message: "" };
     if (httpStatus === 200 && src.ready === true) return { action: "proceed", egress: false, autoSignIn: false, message: "" };
-    if (egress || httpStatus === 401 || httpStatus === 402 || signedOut) {
-      return { action: "proceed", egress: false, autoSignIn: false, message: "" };
-    }
-    return { action: "explain", egress: false, autoSignIn: false, message: NOT_READY };
+    return warm;
   }
   if (egress) return { action: "explain", egress: true, autoSignIn: false, message: AUTH_EGRESS_BLOCKED };
   if (src.interviewLive) return { action: "wait", egress: false, autoSignIn: false, message: "" };
@@ -34,18 +34,19 @@ function decideSessionStart(input) {
   const refreshFailed = src.refreshAttempted === true && src.refreshOk !== true;
   const refreshUnreachable = refreshFailed && (refreshStatus === 0 || refreshStatus === 503 || refreshStatus >= 500);
   if (httpStatus === 503 || refreshUnreachable || /sign_in_unavailable|issuer_unavailable/.test(hay)) {
+    if (/openrouter|not configured|answer service/.test(hay) || src.ready === false) return warm;
     return { action: "explain", egress: false, autoSignIn: false, message: AUTH_UNAVAILABLE };
   }
-  // The desktop still holds a token it did not classify as logged out. That
-  // includes a valid 3-day family and an already-used refresh race.
+  // A desktop token that is still held is not a reason to block the session.
+  // Includes a valid 3-day family and an already-used refresh race.
   if (src.hasSession === true && src.noticeCode !== "signed_out" && src.noticeCode !== "revoked") {
-    return { action: "explain", egress: false, autoSignIn: false, message: NOT_READY };
+    return warm;
   }
   const failedAuth = httpStatus === 401 && refreshFailed && refreshStatus === 401;
   if (!src.interviewLive && (signedOut || (failedAuth && src.hasSession !== true))) {
     return { action: "sign_in", egress: false, autoSignIn: true, message: AUTH_SIGNED_OUT };
   }
-  return { action: "explain", egress: false, autoSignIn: false, message: NOT_READY };
+  return warm;
 }
 
 const api = { AUTH_EGRESS_BLOCKED, AUTH_SIGNED_OUT, AUTH_UNAVAILABLE, NOT_READY, decideSessionStart };

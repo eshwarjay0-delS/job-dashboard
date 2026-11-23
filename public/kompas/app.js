@@ -1388,7 +1388,10 @@ function renderCard() {
       if (/^(?:Claim|Context|Action|Result|Close|What I did)$/.test(label)) return;
       li.className = "minihead"; inline(li, t); ul.append(li); return;
     }
-    if (kind === "pauseline" && /^(?:…|\.{3})$/.test(String(t || "").trim())) return;
+    if (kind === "pauseline" && /^(?:…|\.{3})$/.test(String(t || "").trim())) {
+      if (c.streaming) { li.className = "pauseline"; li.textContent = "Answering…"; ul.append(li); }
+      return;
+    }
     if (kind === "passage") li.className = "passage";
     else if (kind === "pauseline") li.className = "pauseline";
     inline(li, t);
@@ -1581,6 +1584,26 @@ $("sysBtn").onclick = async () => {
 };
 // Initial source-state render must wait until running and captures are initialized.
 /* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
+const ANSWER_WEIGHTS = { bold: 700, semi: 500, normal: 400 };
+function answerWeightId() {
+  const saved = LS.get("answerWeight", "normal");
+  return ANSWER_WEIGHTS[saved] ? saved : "normal";
+}
+function applyAnswerWeight() {
+  const id = answerWeightId();
+  document.documentElement.style.setProperty("--answer-weight", String(ANSWER_WEIGHTS[id]));
+  const btn = $("boldBtn");
+  if (!btn) return;
+  if (btn.dataset) btn.dataset.weight = id;
+  btn.title = id === "bold" ? "Bold" : id === "semi" ? "Semi-bold" : "Normal weight";
+  if (btn.style) btn.style.fontWeight = String(ANSWER_WEIGHTS[id]);
+}
+function cycleAnswerWeight() {
+  const order = ["bold", "semi", "normal"];
+  const next = order[(order.indexOf(answerWeightId()) + 1) % 3];
+  LS.set("answerWeight", next);
+  applyAnswerWeight();
+}
 const LOOK_FONTS = {
   times: '"Times New Roman", Times, Georgia, "Nimbus Roman", serif',
   lora: '"Lora", Georgia, "Times New Roman", serif',
@@ -1602,10 +1625,10 @@ function applyLook() {
   if (!desk) {
     const a = Math.min(1, Math.max(0.15, Number(LS.get("opacity", 1)) || 1));
     document.documentElement.style.setProperty("--panel-a", String(a));
-    document.documentElement.style.setProperty("--answer-weight", String(Math.round(560 + (1 - a) * 280)));
     document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
     if (fade && document.activeElement !== fade) fade.value = String(Math.round(a * 100));
   }
+  applyAnswerWeight();
   const fontSel = $("lookFont"); if (fontSel) fontSel.value = font;
   const textSel = $("lookText"); if (textSel && document.activeElement !== textSel) textSel.value = String(text);
   const textN = $("textSizeN"); if (textN) textN.textContent = String(text);
@@ -1621,6 +1644,7 @@ function stepText(dir) {
   const next = Math.min(40, Math.max(12, (Number(LS.get("textSize", 16)) || 16) + dir));
   LS.set("textSize", next); applyLook();
 }
+$("boldBtn")?.addEventListener("click", cycleAnswerWeight);
 $("textMinus")?.addEventListener("click", () => stepText(-2));
 $("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
@@ -1829,11 +1853,10 @@ function warmDesktopLevels(card, question) {
 }
 /* ---- start / stop ---- */
 let running = false;
+// Start always starts: no auth gate on the click. Auth belongs in the
+// background readiness check and in per-request answer errors, never as
+// a blocker on the button (owner standing rule, 21 Nov 2026).
 $("startBtn").onclick = () => {
-  if (!running && (sessionAuthGate === "sign_in" || sessionAuthGate === "egress")) {
-    if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) { void start(); return; }
-    offerFreshSignIn(false); return;
-  }
   running ? stop(true) : start();
 };
 
@@ -1867,13 +1890,17 @@ function offerFreshSignIn(auto) {
   const reason = sessionAuthGate === "egress" ? "&reason=egress" : "";
   window.location.assign("/login?next=" + encodeURIComponent("/kompas/index.html") + reason);
 }
-async function checkSessionReadiness() {
+async function checkSessionReadiness(opts) {
+  const background = !!(opts && opts.background);
   if (sessionCheckPending) return;
   sessionCheckPending = true;
   const button = $("startBtn");
-  button.disabled = true;
-  button.textContent = "Checking…";
-  status("Connecting…", "live");
+  const quiet = background || running || starting;
+  if (!quiet) {
+    button.disabled = true;
+    button.textContent = "Checking…";
+    status("Connecting…", "live");
+  }
   try {
     if (typeof ensureAuthFlag === "function") await ensureAuthFlag();
     const authOff = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
@@ -1900,8 +1927,10 @@ async function checkSessionReadiness() {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
       sessionReadyUntil = Date.now() + 30000;
-      button.textContent = "Start session";
-      status("Answer service ready. Press Start session to connect your audio.", "live");
+      if (!quiet && !running) {
+        button.textContent = "Start session";
+        status("Answer service ready. Press Start session to connect your audio.", "live");
+      }
       return;
     }
     let authState = null;
@@ -1924,12 +1953,18 @@ async function checkSessionReadiness() {
       })
       : { action: "explain", egress: false, autoSignIn: false, message: result.error || "The answer service is not ready. Please check again before starting." };
     sessionReadyUntil = 0;
-    if (decision.action === "proceed") {
+    if (decision.action === "proceed" || decision.warm) {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
       sessionReadyUntil = Date.now() + 30000;
-      button.textContent = "Start session";
-      status(authOff ? "Sign-in is off. Press Start session." : "Answer service ready. Press Start session to connect your audio.", "live");
+      if (!quiet && !running) {
+        button.textContent = "Start session";
+        status(authOff ? "Sign-in is off. Press Start session." : "Answer service ready. Press Start session to connect your audio.", "live");
+      }
+      return;
+    }
+    if (quiet || running || starting) {
+      sessionReadyUntil = Date.now() + 30000;
       return;
     }
     if (decision.action === "wait") {
@@ -1953,23 +1988,24 @@ async function checkSessionReadiness() {
       return;
     }
     sessionAuthGate = null;
-    button.textContent = "Check again";
-    status(decision.message || beforeSessionNotice(result.error), "err");
+    sessionReadyUntil = Date.now() + 30000;
+    button.textContent = "Start";
+    status("Ready — press Start to listen to the call.", "live");
   } catch (error) {
-    sessionReadyUntil = 0;
+    sessionReadyUntil = Date.now() + 30000;
+    if (quiet || running || starting) return;
     const authOffNow = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
     const message = String((error && error.message) || error || "");
     if (authOffNow && /exceed_egress|egress quota|401|402|sign in/i.test(message)) {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
-      sessionReadyUntil = Date.now() + 30000;
       button.textContent = "Start session";
       status("Sign-in is off. Press Start session.", "live");
     } else {
-      button.textContent = "Check again";
-      status(beforeSessionNotice(message), "err");
+      button.textContent = "Start";
+      status("Ready — press Start to listen to the call.", "live");
     }
-  } finally { button.disabled = false; sessionCheckPending = false; }
+  } finally { if (!quiet) button.disabled = false; sessionCheckPending = false; }
 }
 
 // A verified native Chrome handoff automatically rechecks readiness.
@@ -2029,7 +2065,10 @@ function boostedLoopbackStream(ctx, sourceNode) {
 let starting = false;
 async function start() {
   if (running || starting) return;
-  if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
+  if (Date.now() >= sessionReadyUntil) {
+    sessionReadyUntil = Date.now() + 30000;
+    void checkSessionReadiness({ background: true });
+  }
   starting = true;
   sessionReadyUntil = 0;
   void currentOutputKey().then(key => { if (key) outputDeviceKey = key; });
@@ -2047,11 +2086,10 @@ async function start() {
   const opening = [];
   if (srcOn.sys) opening.push(startSys());
   if (srcOn.mic) opening.push(startMic());
-  const opened = await Promise.race([
-    Promise.allSettled(opening),
-    new Promise((resolve) => setTimeout(() => resolve("timeout"), 8000)),
-  ]);
-  if (opened === "timeout") { status("Start timed out. No audio received.", "err"); starting = false; await stop(false); return; }
+  // No timeout on the picker: it is user-driven, and an 8s race discarded
+  // the pick on a laggy remote desktop and forced a re-press (the picker
+  // loop). Wait for the captures to settle, however long the pick takes.
+  await Promise.allSettled(opening);
   if (!running || generation !== sourceGeneration.You) { starting = false; return; }
   if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); starting = false; await stop(false); return; }
   starting = false;
@@ -2198,7 +2236,11 @@ async function requestSysShare() {
     try { return await navigator.mediaDevices.getDisplayMedia(opts); }
     catch (error) {
       last = error;
-      if (error && error.name === "NotAllowedError") throw error;
+      // Never re-open the picker when another picker is already open
+      // (AbortError) or the user cancelled (NotAllowedError). Only retry
+      // when the constraints themselves were rejected before any picker
+      // was shown (OverconstrainedError / TypeError).
+      if (error && (error.name === "NotAllowedError" || error.name === "AbortError")) throw error;
     }
   }
   throw last;
@@ -2307,6 +2349,7 @@ async function maybeLoadSilero(stream) {
 }
 async function startSys() {
   const generation = sourceGeneration.Them;
+  if (sysConnecting) return;
   if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
   const attempt = ++sysAttempt;
   sysConnecting = true;
@@ -2864,8 +2907,8 @@ async function transcribe(blob, who, opt) {
       const timeout = setTimeout(() => ctl.abort(), 18000);
       let retry = false, delay = 500;
       try {
-        const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
-          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
+        const res = await fetch("/api/kompas/speech", { method: "POST", signal: ctl.signal,
+          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-speech-for": "transcribe", "x-speech-hint": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase(), "x-audio-source": who === "Them" ? "system" : "mic" }, body: blob });
         if (!res.ok) {
           if (res.status === 401 && !opt.__authRetried && typeof tryRefreshAuth === "function" && !(typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled())) {
             opt.__authRetried = true;
@@ -3900,8 +3943,29 @@ function shouldAutoAnswer(opts) {
   return { fire: true, reason: "ready" };
 }
 
+let detectedQueue = [];
+function noteDetectedQuestion(text) {
+  const before = detectedQueue.length;
+  const plan = queueAnswerPlan({ busy: aiBusy, inflight: !!answerCtl, queue: detectedQueue, cards: cards.map(c => c.question) }, text);
+  detectedQueue = plan.queue;
+  if (!plan.start && plan.queue.length > before) status("Next question is queued.", "live");
+  return plan;
+}
+function pumpDetectedQueue() {
+  if (aiBusy || answerCtl || !detectedQueue.length) return;
+  const next = detectedQueue.shift();
+  const page = addCard(next, ["…"]);
+  showPressed(page, next);
+  aiBusy = true; aiBusySince = Date.now();
+  status("Answering", "live");
+  void generateAnswer(next, page, { pinned: true, derived: next, queued: true }).finally(() => {
+    aiBusy = false;
+    pumpDetectedQueue();
+  });
+}
 async function confirmAutoAndAnswer(tail) {
   if (isTabSmallTalk(tail) || isCandidateTabTurn(tail)) return;
+  if (aiBusy || answerCtl) { noteDetectedQuestion(tail); return; }
   const local = isRealInterviewerQuestion(tail) || confirmAutoQuestion(tail).ok;
   if (!local) return;
   try {
@@ -4493,6 +4557,10 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   text = stitched.part;
   const heardAt = Date.now();
   transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text), source: who === "You" ? "mic" : "computer" });
+  if (who === "Them" && cards[idx]) {
+    const nextLabel = labelFromHeard(cards[idx].question, text);
+    if (nextLabel && nextLabel !== cards[idx].question) { cards[idx].question = nextLabel; cards[idx].askedAt = cards[idx].askedAt || Date.now(); if (!cards[idx].streaming) renderCard(); }
+  }
   try { if (window.KompasAnswerAside && typeof window.KompasAnswerAside.hear === "function") window.KompasAnswerAside.hear(who, text, who === "You" ? "mic" : "computer"); } catch (e) {}
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
@@ -4515,12 +4583,12 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   if (!flushing) scheduleAuto();
 }
 function applyInterruptionFlush(ev) {
+  const queuedAsk = String(ev && (ev.question || ev.pivot) || "").trim();
+  if ((answerCtl || aiBusy) && queuedAsk) { noteDetectedQuestion(queuedAsk); return; }
   const cur = cards[idx];
   if (cur) {
     cur.flushed = true;
     cur.streaming = false;
-    if (answerCtl && typeof answerCtl.abort === "function") { try { answerCtl.abort(); } catch {} }
-    answerCtl = null;
   }
   const pivot = ev.pivot || pivotConstraint(ev.question || "");
   const page = addCard(ev.question || pivot, []);
@@ -5159,6 +5227,7 @@ function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
     ...(inline ? { derive: true } : {}),
     ...(opts && opts.angle ? { angle: String(opts.angle).slice(0, 240) } : {}),
     ...(opts && opts.screenImage ? { screenImage: opts.screenImage } : {}),
+    ...(opts && opts.fallbackModel ? { fallbackModel: true } : {}),
     ...fields,
     memory: typeof sessionMemoryPayload === "function" ? sessionMemoryPayload() : undefined,
     ...(rest || {}),
@@ -5277,9 +5346,9 @@ async function generateAnswer(question, card, opts = {}) {
     card.streaming = false;
     const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
     if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
-    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
+    card.meta = partial ? "" : "Answer interrupted. Retry available.";
     if (cards[idx] === card) renderCard();
-    status(error && error.message || "The answer did not finish. Press AI Answer to try again.", "err");
+    status(partial ? "Answered." : (error && error.message || "Press AI Answer to try again."), partial ? "live" : "err");
   } finally {
     clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
@@ -5290,6 +5359,37 @@ function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
   if (hasToken) return "keep";
   if (Number(elapsedMs) < 8000) return "wait";
   return alreadyRetried ? "status" : "retry";
+}
+function answerFinishPlan(state) {
+  const code = String(state && state.code || "");
+  const hasText = !!(state && state.hasText);
+  const shown = String(state && state.text || "").trim();
+  const complete = /[.!?]["')\]]*$/.test(shown);
+  const pass = Number(state && state.pass) || 0;
+  const aborted = !!(state && state.aborted) || code === "ABORT" || code === "STALL" || /empty|AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED|signed_out|UNAVAILABLE/i.test(code);
+  if (hasText && (complete || pass >= 2)) return { action: "keep", fallback: false, status: "Answered.", text: "" };
+  if (hasText) return { action: "continue", fallback: pass >= 1, waitMs: 400, status: "Finishing the sentence…", text: "" };
+  if (pass < 1) return { action: "retry", fallback: false, waitMs: 400, status: "Retrying…", text: "" };
+  if (pass < 2) return { action: "retry", fallback: true, waitMs: 400, status: "Trying a faster model…", text: "" };
+  return { action: "stop", fallback: false, status: "Press AI Answer to try again.", text: "I didn't get a full answer through. Press AI Answer and I'll take it again." };
+}
+function queueAnswerPlan(state, question) {
+  const q = String(question || "").replace(/\s+/g, " ").trim();
+  const queue = Array.isArray(state && state.queue) ? state.queue.slice() : [];
+  const have = Array.isArray(state && state.cards) ? state.cards : [];
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const same = (a, b) => { const A = norm(a), B = norm(b); return !!(A && B && (A === B || (A.length > 12 && B.length > 12 && (A.includes(B) || B.includes(A))))); };
+  if (!q || have.some((c) => same(c, q)) || queue.some((item) => same(item, q))) return { queue, start: false };
+  if (state && (state.busy || state.inflight)) return { queue: queue.concat([q]), start: false };
+  return { queue, start: true, question: q };
+}
+function labelFromHeard(cardQuestion, heard) {
+  const q = String(cardQuestion || "").replace(/\s+/g, " ").trim();
+  const line = String(heard || "").replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "").replace(/\s+/g, " ").trim();
+  const stuck = /^(?:Your introduction|Intro|Preparing…|Ready|No question yet|Deriving…)?$/i.test(q);
+  if (!stuck) return q;
+  if (line.split(/\s+/).filter(Boolean).length < 6) return q;
+  return line;
 }
 async function generateAnswerRequest(question, card, opts = {}) {
   question = cleanHeardQuestion(String(question || "").trim()); if (!question) return;
@@ -5414,18 +5514,28 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!partial && prevReal) card.answer = prevAnswer;   // a failed (re)generation never takes the last good answer with it (book rule, 23 Oct)
     else if (!partial && keepOld) card.answer = prevAnswer;
     card.meta = partial || keepOld ? (card.meta || prevMeta || "") : "";
-    const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
-    const tries = (opts.retries || 0) + 1;
-    const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
+    const hasText = (typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…")
+      || (Array.isArray(card.answer) && card.answer.join(" ").trim().length > 8 && !/^(…|Preparing…)/.test(String(card.answer[0] || "").trim()));
+    const shown = typeof card.answer === "string" ? card.answer : (Array.isArray(card.answer) ? card.answer.join(" ") : "");
+    const plan = answerFinishPlan({ code, hasText, text: shown, pass: Number(opts.answerPass) || 0, aborted: code === "ABORT" || code === "STALL" || /empty/i.test(code) });
+    if (plan.action === "retry" || plan.action === "continue") {
+      card.streaming = true;
+      if (plan.action === "retry" && !hasText) card.answer = ["Answering…"];
+      if (cards[idx] === card) renderCard();
+      status(plan.status, "live");
+      logAnswer({ failed: code || "provider_unavailable", retrying: true });
+      setTimeout(() => {
+        if (answerEpoch === epoch && card.req === ctl)
+          generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, derivedBy, answerPass: (Number(opts.answerPass) || 0) + 1, fallbackModel: !!plan.fallback, retries: (opts.retries || 0) + 1 });
+      }, plan.waitMs || 400);
+      return;
+    }
+    card.streaming = false;
+    if (!hasText && plan.text) writeAnswer(card, qid, [plan.text]);
     if (cards[idx] === card) renderCard();
-    const cooling = /429|RATE|rate limit/i.test(String(code || "")) || retryAfterMs >= 8000;
-    if (code !== "AUTH") status(retry ? (cooling ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.ceil(retryAfterMs / 1000)) + "s.") : "Still working.") : "The answer did not finish.", "live");
-    logAnswer({ failed: code || "provider_unavailable", retrying: retry });
+    if (code !== "AUTH") status(plan.status, plan.action === "keep" ? "live" : "err");
+    logAnswer({ failed: code || "provider_unavailable", retrying: false });
     sessionReadyUntil = 0;
-    if (retry) setTimeout(() => {
-      if (answerEpoch === epoch && card.req === ctl)
-        generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, derivedBy, retries: tries, regen: opts.regen || keepOld });
-    }, Math.max(500, retryAfterMs));
   };
   let fetchTimer = null;
   let firstTokenTimer = null;
@@ -5440,18 +5550,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
         try { ctl.abort(); } catch {}
         card.req = null;
         if (answerCtl === ctl) answerCtl = null;
-        generateAnswer(question, card, { ...opts, firstTokenRetry: true });
+        generateAnswer(question, card, { ...opts, firstTokenRetry: true, answerPass: (Number(opts.answerPass) || 0) + 1 });
         return;
       }
-      if (decision === "status") {
-        card.streaming = false;
-        card.req = null;
-        if (answerCtl === ctl) answerCtl = null;
-        const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
-        if (!partial) writeAnswer(card, qid, ["The answer did not start. Press AI Answer to try again."]);
-        if (cards[idx] === card) renderCard();
-        status("Still no words. Press AI Answer to try again.", "live");
-      }
+      if (decision === "status") recoverAnswer("EMPTY", 400);
     }, 8000);
     const paintTitle = (title, fromDerived) => {
       if (!title || isPlaceholderTitle(title) || card.req !== ctl) return false;
@@ -5611,7 +5713,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
     healAuthSilently();
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   } catch (e) {
-    if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — wait silently if renewal fails
+    if (isAuthError(e)) {
+      if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) {
+        recoverAnswer("ABORT", 400);
+        return;
+      }
       if (await recoverLiveAuth()) { recoverAnswer("", 800); return; }
       recoverAnswer("AUTH"); waitForAuthSilently({ question, card, opts: { ...opts, derived: derivedQ || opts.derived, derivedBy } }); return;
     }
@@ -5621,7 +5727,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (e && e.name === "AbortError") {
       if (servedBook) return;
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
-      stallRetry(); return;
+      recoverAnswer("ABORT", 400); return;
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
@@ -6016,7 +6122,12 @@ function manualAnswerTarget(opts) {
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
-    else { status("Still working on the last answer — one moment.", "live"); return; }
+    else {
+      const waiting = (options && options.queuedQuestion) || (!fromAuto && $("manualInput") && $("manualInput").value.trim()) || "";
+      if (waiting) noteDetectedQuestion(waiting);
+      status("Still working on the last answer — one moment.", "live");
+      return;
+    }
   }
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   status("Answering", "live");
@@ -6340,7 +6451,12 @@ async function aiAnswer(fromAuto, options = {}) {
     }
     if (fromAuto) return;
     const c = cards[idx];
-    if (c && /^(Your introduction)$/.test(c.question)) return await generateAnswer("Tell me about yourself", c);
+    if (c && /^(Your introduction|Intro)$/i.test(c.question)) {
+      const heard = (typeof transcript !== "undefined" ? transcript : []).filter(t => t && t.who === "Them").slice(-3).map(t => t.text).join(" ");
+      const q = labelFromHeard(c.question, heard);
+      if (q && q !== c.question) { c.question = q; showPressed(c, q); return await generateAnswer(q, c, { pinned: true, derived: q }); }
+      return await generateAnswer("Tell me about yourself", c);
+    }
     // Pressing AI Answer again re-forms the question from everything heard
     // for this card plus its earlier context, and answers that — the press
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
@@ -6362,7 +6478,7 @@ async function aiAnswer(fromAuto, options = {}) {
     setChat(true);
   } catch (error) {
     status(error.message || "Could not prepare an answer. Please retry.", "err");
-  } finally { aiBusy = false; }
+  } finally { aiBusy = false; pumpDetectedQueue(); }
 }
 $("screenBtn").onclick = analyseScreen;
 if ($("screenAnalyzeBtn")) $("screenAnalyzeBtn").onclick = analyzeSharedTab;

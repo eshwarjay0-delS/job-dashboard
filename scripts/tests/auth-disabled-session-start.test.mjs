@@ -44,14 +44,16 @@ test("skip-login starts a session on 401, 402, and a missing refresh token", () 
   assert.equal(stillLoggedIn.autoSignIn, true)
 })
 
-test("skip-login does not open sign-in during an interview and still explains a real answer outage", () => {
+test("skip-login does not open sign-in during an interview and a flaky answer check still starts", () => {
   const live = decideSessionStart({ ...dead, authDisabled: true, interviewLive: true })
   assert.equal(live.action, "wait")
   assert.equal(live.autoSignIn, false)
   const down = decideSessionStart({ httpStatus: 503, code: "OPENROUTER_NOT_CONFIGURED", authDisabled: true, interviewLive: false })
-  assert.equal(down.action, "explain")
+  assert.equal(down.action, "proceed")
   assert.equal(down.autoSignIn, false)
-  assert.equal(down.message, NOT_READY)
+  assert.equal(down.warm, true)
+  assert.equal(down.message, "")
+  assert.notEqual(down.message, NOT_READY)
 })
 
 test("Kompas does not navigate to login when skip-login is on", () => {

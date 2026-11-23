@@ -51,10 +51,19 @@ function paintScreen() {
   bar.classList.toggle("kd-live", screenName === "copilot");
 }
 
+function storedAnswerWeight() {
+  try {
+    const raw = localStorage.getItem("perfact.answerWeight");
+    const id = raw ? JSON.parse(raw) : "normal";
+    if (id === "bold") return 700;
+    if (id === "semi") return 500;
+  } catch (e) {}
+  return 400;
+}
 function applyFade(opacity) {
   const a = Math.min(1, Math.max(0.15, Number(opacity) || 1));
   document.documentElement.style.setProperty("--panel-a", String(a));
-  document.documentElement.style.setProperty("--answer-weight", String(Math.round(560 + (1 - a) * 280)));
+  document.documentElement.style.setProperty("--answer-weight", String(storedAnswerWeight()));
   document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
   const input = document.getElementById("kdFade");
   if (input && document.activeElement !== input) input.value = String(Math.round(a * 100));

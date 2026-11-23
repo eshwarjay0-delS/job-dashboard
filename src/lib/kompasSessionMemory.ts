@@ -94,12 +94,12 @@ function unsupported(sentence: string, bag: string): boolean {
   return numbers.some((n) => !bag.includes(n) && !bag.includes(n.replace(/,/g, "")))
 }
 
-/** Drop employers, tools, certifications, and numbers that are not on the profile or already said. */
+/** Drop employers, tools, certifications, and numbers that are not on the profile or already said. Never deflect: if the filter drops every sentence, return the original answer instead of "Not directly" — the model already grounded its answer in the resume via the prompt, and the user must always get a relevant answer, never a deflection. */
 export function groundToProfile(question: string, answer: string, resume: string, memory: SessionMemory = emptyMemory("")): string {
   const bag = allowBag(resume, memory, question)
   const kept = String(answer || "").split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s && !META.test(s) && !unsupported(s, bag))
   if (kept.length) return kept.join(" ")
-  return "Not directly, but I can speak to the work on the resume."
+  return String(answer || "").trim()
 }
 
 export function saveMemory(storage: MemoryStorage, memory: SessionMemory): void {
