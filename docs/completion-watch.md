@@ -1,3 +1,13 @@
+## 23 November 2026 22:48 UTC — restack focused gates completed
+
+- PR #563 contract search: focused workflow **45282267513 SUCCESS** on head `7eef052c714108290049c7c74648e9ef3f86f537`. Still DRAFT; exact-head full CI has not run.
+- PR #564 WhatsApp fallback: recovery workflow **45282722516 SUCCESS** and Plan/REA schema **45282722435 SUCCESS** on head `9465113780c59020cfdaf5e041d42dd4e93f93f8`. Still DRAFT; full CI, Kompas baseline and cross-device checks have not run on this exact head.
+- Superseded duplicates: #561 is closed in favor of #563; #557 is closed in favor of #564. Their branches and CI history are preserved.
+- PR #554 still has five green gates but awaits an independent authorized reviewer. None of these restacks is merged/deployed. Master/production remains READY at `794e8cfdbd3103409552857806bab89851d5bfcb`.
+
+Continue: wait for exact-head full CI on the restacks; no merge/release until the #554 review gate and normal sequence clear. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified; no real send/replay or data mutation occurred.
+
+
 ## 23 November 2026 22:45 UTC — clean stacked restacks for the next two approved slices
 
 - **Contract-board match-any search:** PR #563 is a clean code-only restack of #561 onto approved Kompas CI PR #554. Head `7eef052c714108290049c7c74648e9ef3f86f537`; focused regression `45282267513` is IN PROGRESS. No exact-head full CI, protected preview or production release yet. #561 is preserved until #563 validation completes.
