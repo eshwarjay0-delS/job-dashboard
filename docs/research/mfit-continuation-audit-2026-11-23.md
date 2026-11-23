@@ -30,3 +30,10 @@ Continue: request/obtain independent authorized review of #554 using normal proc
 
 
 No local checkout/dependencies/DNS are available. Vercel Sandbox previously returned 402 until 1 Dec 2026, but deployment metadata reads succeeded. No local test/build, model call, Gmail/OAuth, WhatsApp/Meta send, DOCX, R2/database mutation, live crawl/application, or authenticated browser/Windows/phone acceptance occurred. No runtime code changed.
+
+
+## 23 November 2026 22:45 UTC — restacks created
+
+- PR #563: contract-board match-any search from #561, stacked on #554. Focused workflow 45282267513 is in progress.
+- PR #564: explicit same-account WhatsApp fallback / unsupported-JD hard hold from #557, stacked on #554. Checks were not yet visible at creation.
+- PR #554 is exact-head green across five gates but awaits independent authorized review. Neither restack is merged or deployed. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified; no real send/replay or personal data action occurred.
