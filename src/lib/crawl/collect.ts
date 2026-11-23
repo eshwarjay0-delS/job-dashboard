@@ -14,16 +14,15 @@ function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return Promise.reject(abortError())
   if (ms <= 0) return Promise.resolve()
   return new Promise((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout> | undefined
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort)
+      resolve()
+    }, ms)
     const onAbort = () => {
       clearTimeout(timer)
       signal?.removeEventListener("abort", onAbort)
       reject(abortError())
     }
-    timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort)
-      resolve()
-    }, ms)
     signal?.addEventListener("abort", onAbort, { once: true })
     if (signal?.aborted) onAbort()
   })
