@@ -351,3 +351,42 @@ test('provider unavailability without explicit selection remains text-only', asy
   assert.match(said.at(-1), /Tailoring is unavailable/)
   assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
 })
+
+test("durable fallback record must match sender, account, JD, path and selection", async () => {
+  const corruptions = [
+    ["sender", job => ({ ...job, from: "15550102" })],
+    ["account", job => ({ ...job, userId: "00000000-0000-4000-8000-000000000002" })],
+    ["job description", job => ({ ...job, jd: "different job description" })],
+    ["resume path", job => ({ ...job, resumePath: SAINT_LOUIS_PATH })],
+    ["job id", job => ({ ...job, id: "other-job" })],
+    ["status", job => ({ ...job, status: "sending" })],
+    ["selection marker false", job => ({ ...job, files: { ...job.files, explicitlySelected: false } })],
+    ["selection marker absent", job => ({ ...job, files: { ...job.files, explicitlySelected: undefined } })],
+    ["selected absolute path", job => ({ ...job, files: { ...job.files, abs: SAINT_LOUIS_PATH } })],
+    ["selected relative path", job => ({ ...job, files: { ...job.files, rel: "candidate2@example.test/GRC/grc.docx" } })],
+    ["account root", job => ({ ...job, files: { ...job.files, userDir: "/data/user-resumes/another-account" } })],
+    ["profile email", job => ({ ...job, files: { ...job.files, email: "candidate2@example.test" } })],
+    ["file selection metadata missing", job => ({ ...job, files: undefined })],
+  ]
+  for (const [label, corrupt] of corruptions) {
+    const slug = label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()
+    const { generate, docs, said, filesFor } = harness(
+      async () => { throw new Error("provider down") },
+      undefined,
+      true,
+      async (id, jobs) => {
+        const job = jobs.get(id)
+        return job ? corrupt(job) : null
+      },
+    )
+    await generate("15550101", {
+      jdId: `durable-${slug}`,
+      jd: "EASM role",
+      resumePath: HOUSTON_PATH,
+      resumeName: "EASM Cybersecurity Engineer",
+    }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
+    assert.equal(docs.length, 0, `${label}: tampered recovery must never send a document`)
+    assert.match(said.at(-1), /exact Files resume you selected could not be verified/)
+  }
+})
+
