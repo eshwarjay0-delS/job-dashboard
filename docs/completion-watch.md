@@ -1,3 +1,15 @@
+## 23 November 2026 23:06 UTC — crawler focused gate also green
+
+- #569 crawler abort/timeout restack: focused `crawl-freshness` workflow job **138078245414 SUCCESS, 41/41** (5 + 3 + 8 + 25 tests). PR #551 closed as superseded; branch/history preserved.
+- The four earlier focused slices remain green: #565 contract search 4/4 twice; #566 WhatsApp recovery 133/133 twice and schema twice; #567 confirmed-skill 40/40 plus recovery 4/4; #568 Gmail/mobile 12/12.
+- **Full CI is not triggered** because workflow pull_request base filter is `master`/`main`; these PRs target non-master #554. #554 has five green gates but only the owner’s COMMENTED review; independent authorized review is still required. After normal #554 merge, restack #565–#569 onto master and run full CI.
+- Superseded #551/#552/#559/#561/#557/#563/#564 are closed, branches/history preserved. None of #565–#569 is merged/deployed. Production stays master `794e8cfdbd3103409552857806bab89851d5bfcb` READY.
+
+No local checkout/dependencies; remote focused Actions tests ran. No live resume/JD/DOCX, model call, Gmail/inbox/send, WhatsApp send/replay, R2/Meta mutation, crawl, application, deployment or device acceptance. The 17 Oct 17:28 Chicago delivery remains unverified.
+
+Continue: independent review of #554; then normal merge, restack #565–#569 on master, full CI, protected preview, production READY/alias and real acceptance.
+
+
 ## 23 November 2026 23:02 UTC — four approved slices have focused evidence
 
 - **#565 contract search:** two focused runs 45282267513 and 45283478714 SUCCESS, 4/4 each.
