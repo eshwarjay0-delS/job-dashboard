@@ -44,7 +44,7 @@ test("digest actions pass the receiving account and use account+thread React key
   const digest = readFileSync(new URL("../../src/app/dashboard/mail/_components/digest.tsx", import.meta.url), "utf8")
   const page = readFileSync(new URL("../../src/app/dashboard/mail/page.tsx", import.meta.url), "utf8")
   assert.equal([...digest.matchAll(/onOpen\(m\.id, m\.account\)/g)].length, 3)
-  assert.equal([...digest.matchAll(/key=\{interviewThreadKey\(m\.account, m\.id\)\}/g)].length, 4)
+  assert.equal([...digest.matchAll(/key=\{interviewThreadKey\(m\.account, m\.id\)\}/g)].length, 3)
   assert.match(digest, /isDigestSenderMuted\(rules, m\)/)
   assert.match(digest, /waitingDaysForDigestMail\(radar, m\)/)
   assert.doesNotMatch(digest, /new Set\(rules\.filter/)
