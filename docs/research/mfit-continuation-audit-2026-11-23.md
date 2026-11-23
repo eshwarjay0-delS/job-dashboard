@@ -52,3 +52,8 @@ Ready PR #565 contract-search and #566 WhatsApp fallback are stacked on #554. Th
 ## 23 November 2026 22:56 UTC — focused gates complete
 
 #565 focused runs 45282267513 and 45283478714 SUCCESS. #566 recovery 45282722516, schema 45282722435, fresh regression 45283495328 and schema 45283495328 SUCCESS. Full CI not triggered due base branch filter master/main. #554 five gates green, independent review pending. No deployment/live crawl/send.
+
+
+## 23 November 2026 23:02 UTC — four focused slices green
+
+Contract #565 two 4/4 runs; WhatsApp #566 two 133/133 recovery runs plus schema success; resume #567 40/40 plus recovery 4/4; Gmail #568 12/12. All are stacked on #554. Full CI is filtered to master/main and will run only after #554 normal merge and restack. #554 awaits independent review. Superseded PRs closed, branches preserved. No live resume/JD/DOCX, Gmail, WhatsApp, crawl, deployment or device acceptance.
