@@ -381,6 +381,21 @@ test('generic user/security wording alone cannot transfer IAM, and data/service 
 })
 
 
+test('a skill repeated in an exception invalidates a contradictory confirmation', () => {
+  const contradictory = [
+    'My experience includes AWS and GCP, but I have not used GCP',
+    'Confirmed skills: Azure, AWS and Terraform, excluding AWS',
+    "I have experience with Splunk and Sentinel, but I haven't used Sentinel",
+  ]
+  for (const statement of contradictory) assert.deepEqual(confirmedCandidateStatements([statement]), [], statement)
+
+  // Shared context words do not count as a repeated skill.
+  assert.deepEqual(
+    confirmedCandidateStatements(['I used AWS for security monitoring, but not Splunk for monitoring']),
+    ['I used AWS for security monitoring,'],
+  )
+})
+
 test('missing-skill statements are never confirmations, and mixed lists keep only the positive terms', () => {
   const negatives = [
     'My skills are missing AWS',
