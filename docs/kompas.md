@@ -119,3 +119,8 @@ The owner requires natural, technically defensible first-person experience and g
 ## Single-source BNY audio + written guide pipeline — 2 November 2026
 
 BNY NotebookLM audio recommendations and uploaded BNY PDF materials belong to ONE unified source-grounded dossier, not a "PDF finished / audio optional" split. The dossier source API now accepts attributed audio transcripts, requires matching original media identities when the client names required audio hashes, retains media provenance, and rejects incomplete audio coverage before generation. Source-content extraction is separate from evidence of personal achievement: a narrated example does not verify a candidate incident or metric. The actual two M4A recordings remain untranscribed in this execution environment, so no audio-complete PDF or live end-to-end transcription success is asserted. See docs/research/kompas-dual-dossier-intelligence.md.
+
+
+## Listening hold and deliberate re-ask — 23 November 2026
+
+After an answered card, a manual AI Answer press with no new interviewer ask must remain on Listening and preserve the existing answer. It must not reconstruct the old question from the transcript or silently generate a duplicate. A second deliberate press within the existing explicit re-ask window may ask the same question again from a different angle. A genuinely new typed or interviewer question still opens its own card; Auto and voice intake continue to use the same question/source rules. The VM regression runs the shipped `public/kompas/app.js` path and checks first-press hold, second-press re-ask, preserved prior answer, and angle rotation. This is source/CI evidence only; native Windows and mobile interaction remain separate acceptance gates.
