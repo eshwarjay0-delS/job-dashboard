@@ -93,7 +93,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
                   <span className="mf-digest-meta">{ago(m.ts)}{m.role ? ` · ${m.role}` : ""}</span>
                 </button>
                 <button className="mf-digest-mute" title={`Mute ${m.fromEmail} — never nudge me about them`} aria-label={`Mute ${m.fromEmail}`}
-                  disabled={saving === notifyRuleKey(m.account || "", m.fromEmail || "")} onClick={() => toggleMute(m.account || "", m.fromEmail || "")>🔕</button>
+                  disabled={saving === notifyRuleKey(m.account || "", m.fromEmail || "")} onClick={() => toggleMute(m.account || "", m.fromEmail || "")}>🔕</button>
               </div>
             ))}
           </div>
