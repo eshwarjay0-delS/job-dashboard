@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 23 November 2026 20:38 UTC — Crawler PR #551 full CI terminal blocker
+
+- Code commit `19d7ac20` fixes the prior REA enum Type-check error. Exact-head schema `45260236503`, crawler freshness `45260235924`, and Kompas baseline `45260236205` SUCCESS.
+- Full CI `45260236471` FAILED on two shared Kompas Listening-hold assertions (typed-question tests 50 and 54); 27 tests passed, 2 failed. Type-check was not reached, so do not claim it passed. Independent review of PR #554 remains required to unblock the shared tests.
+- **Continue:** retain PR #551 DRAFT/manual-only; rerun full CI after #554 review. Protected preview, production deployment and a separately authorized live crawl remain open.
+
+
 ## 23 November 2026 20:36 UTC — Crawler PR #551 full CI terminal blocker
 
 - Code commit `19d7ac20` fixes the prior REA enum Type-check error. Exact-head schema `45260236503`, crawler freshness `45260235924`, and Kompas baseline `45260236205` SUCCESS.
