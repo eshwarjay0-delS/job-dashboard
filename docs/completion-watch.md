@@ -1,9 +1,16 @@
+## 23 November 2026 15:35 CST — CI failure cause corrected from exact job logs
+
+- Full CI logs for #551 run 45260236471, #552 run 45230708625, and #559 run 45259845436 show the same two Kompas Listening-hold assertions failing (tests 50 and 54, expected 0, actual 1), not a lint failure. This is the behavior implemented in PR #554 and awaits independent review.
+- PR #557 run 45227734205 has the same two Listening-hold failures; its WhatsApp recovery, baseline and Plan/REA gates pass.
+- PR #561 run 45266458884 fails at Lint on prefer-const before type-check/build. Its focused workflow 45266458972 and Kompas baseline 45266458914 pass.
+- This corrects the earlier 15:23 summary. No checks were weakened. PR #554 still needs independent review; #557 is not live.
+
 ## 23 November 2026 15:23 CST — current backlog blockers reconciled
 
 - Canonical master 794e8cfdbd3103409552857806bab89851d5bfcb is READY in production deployment dpl_2tyBPso5SnCgHCPFCqXewExCJEYp. Both canonical aliases are verified. This is source/deployment evidence, not user-device acceptance.
 - PR #554 (S5 current-resume authority + Listening hold) is open and ready for review; all five exact-head gates are green, but the only review is self-authored and GitHub rejected self-approval. Do not bypass the independent review gate.
 - PR #557 (approved durable explicit same-account WhatsApp fallback) is draft. WhatsApp recovery, baseline and Plan/REA are green; full CI 45227734205 fails two Listening-hold assertions. The 17 Oct 17:28 Chicago send remains unverified; no replay/send or R2/Meta action.
-- Resume confirmed-skill PR #552, Gmail/mobile PR #559, crawler diagnostics PR #551, and contract-search PR #561 have their focused/baseline/Plan-REA checks green, but full CI fails the current master prefer-const lint before later checks. #555 depends on #554; #556 has the same Listening assertions failure.
+- Resume confirmed-skill PR #552, Gmail/mobile PR #559, crawler diagnostics PR #551, and contract-search PR #561 have their focused/baseline/Plan-REA checks green, but their full CI runs fail two Listening-hold assertions (tests 50 and 54). PR #557 has the same failure. PR #561 fails prefer-const lint before type-check/build. #555 depends on #554; #556 has the same Listening assertions failure.
 - Local checkout, dependencies and GitHub DNS are unavailable in this runtime. The Vercel Sandbox previously returned 402 until 1 Dec; no local tests or live actions were performed. The Vercel deployment/alias metadata is accessible.
 - **Continue:** the next independent approved slice is contract-board multi-word search (#561); its full CI remains blocked by the shared lint issue. The WhatsApp fallback remains priority once the independent #554 review and exact CI gate clear.
 
