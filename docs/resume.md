@@ -114,3 +114,8 @@ PR #564 carries the approved explicit same-account Files fallback and unsupporte
 ## 23 November 2026 — ready stacked PRs and CI blocker
 
 PR #565 contract-search and #566 WhatsApp fallback are ready for review, stacked on #554. #565 focused run 45282267513 passed; fresh 45283478714 is in progress. #566 recovery 45282722516 and schema 45282722435 passed; fresh regression 45283495328 and schema 45283495328 are in progress. Full CI is filtered to PRs targeting master/main, so it does not run on the non-master #554 base. #554 awaits independent review. No deployment or live send.
+
+
+## 23 November 2026 — focused restacks green
+
+#565 contract-search focused runs 45282267513 and 45283478714 passed. #566 WhatsApp recovery 45282722516, schema 45282722435, fresh regression 45283495328 and fresh schema 45283495328 passed. Full CI did not trigger because its pull_request base filter is master/main and these restacks target non-master #554. #554 awaits independent review. No deployment or live crawl/send.
