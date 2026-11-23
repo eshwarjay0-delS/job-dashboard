@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 23 November 2026 20:24 UTC — Gmail mute recovery tests corrected; focused gates green
+
+- Source fix commit `dab7785df536466c7bc45797c463f1ca3959d262`; test commit `5d930bec63b0b328cc6a8454b0633269b4f37c93` corrects the existing count assertion (3 mail/thread keys now remain because unmute buttons use sender-rule keys) and explicitly checks that sender-rule key.
+- Exact code/test head `5d930bec`: Gmail/mobile `45258979200` **SUCCESS**, Plan/REA `45258978883` **SUCCESS**, Kompas baseline `45258979291` **SUCCESS**; full CI `45258979321` **IN PROGRESS**. The prior focused run `45258830257` failed only that stale count assertion; it is corrected and the focused rerun is green.
+- PR #557 remains blocked by two shared Kompas Listening-hold assertions in full CI; PR #554 has six checks green but still lacks an independent authorized approval. The owner cannot approve their own PR.
+- Production alias remains READY on master `794e8cfdbd3103409552857806bab89851d5bfcb`; this Gmail fix is not live. Protected Vercel preview remains unavailable until Sandbox usage reset 1 Dec. No inbox/OAuth/send/notification/device acceptance.
+
+**Continue:** check `45258979321` to terminal on exact code head; do not merge or deploy while full CI, protected preview and real two-inbox/mobile acceptance are incomplete. Keep Poke worker, scheduler, notifications and sending disabled.
+
+
 ## 23 November 2026 20:13 UTC — Gmail digest unmute reachability fix on PR #559
 
 - **Continue:** fix the approved Poke-inspired Gmail/mobile slice. Source audit found mutes hide senders across `Needs your reply`, `Waiting on them` and `New today`, while the unmute list was derived only from `needs.filter(isMuted)`. A sender could disappear from the digest with no unmute button once they were only waiting/new or had no current mail.
