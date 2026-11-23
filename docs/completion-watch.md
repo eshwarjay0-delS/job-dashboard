@@ -1,3 +1,13 @@
+## 23 November 2026 22:45 UTC — clean stacked restacks for the next two approved slices
+
+- **Contract-board match-any search:** PR #563 is a clean code-only restack of #561 onto approved Kompas CI PR #554. Head `7eef052c714108290049c7c74648e9ef3f86f537`; focused regression `45282267513` is IN PROGRESS. No exact-head full CI, protected preview or production release yet. #561 is preserved until #563 validation completes.
+- **WhatsApp durable fallback:** PR #564 is a clean code/test/workflow restack of #557 onto #554, head `9465113780c59020cfdaf5e041d42dd4e93f93f8`. It inherits #554's green Kompas behavior/lint fixes and excludes overlapping Kompas runtime/test/docs files, so the explicit same-account Files fallback can be validated without duplicating #554. Checks were not visible at the initial query.
+- **Dependency gate:** PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259` has five exact-head gates SUCCESS (full CI, baseline, cross-device, Plan/REA, Windows EXE), but is still awaiting an independent authorized reviewer; no merge/deployment is claimed.
+- **Safety boundary:** the 17 Oct 2026 17:28 Chicago delivery remains unverified; no replay, real WhatsApp send, DOCX, R2/Meta mutation, live crawl, job submission, inbox mutation, model call or device acceptance occurred. Local checkout/dependencies are unavailable; remote GitHub Actions is the executable test path.
+
+Continue: finish exact-head tests on #563/#564, then normal independent review and sequencing for #554 before any release. Keep protected preview and production READY/alias checks separate from synthetic tests.
+
+
 ## 23 November 2026 15:35 CST — CI failure cause corrected from exact job logs
 
 - Full CI logs for #551 run 45260236471, #552 run 45230708625, and #559 run 45259845436 show the same two Kompas Listening-hold assertions failing (tests 50 and 54, expected 0, actual 1), not a lint failure. This is the behavior implemented in PR #554 and awaits independent review.
