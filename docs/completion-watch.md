@@ -1,5 +1,13 @@
 # MFit Completion Watch
 
+## 23 November 2026 03:27 UTC — Exact-head status for PRs #554 and #555
+
+- **PR #554** (`fix(kompas): combine S5 source gate and Listening hold`) is draft, current-master base, exact head `fb7e1aa8b6e47d210da21998aadaeca40cf8e474`. Kompas baseline `45105603949`, cross-device sync `45105603957`, Plan/REA `45105604023`, and Windows executable `45105603969` are SUCCESS. Full CI `45105603936` is still IN_PROGRESS at `Verify Kompas migration asset closure and lossless import`; the question-framing/one-press/typed-input/voice step has completed without a failure. No merge or deployment.
+- **PR #555** (`fix(whatsapp): preserve named resume on a real two-line JD`) is draft and stacked on #554, exact head `b959414daac3b9cddba98ccaeff671981b3f43f1`. Plan/REA schema `45105779351` is SUCCESS. No full CI or WhatsApp recovery run has triggered because its base is the #554 feature branch, not master; retarget only after #554 merges.
+- The production aliases remain on master `794e8cfdbd3103409552857806bab89851d5bfcb`, READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`. No deployment was requested for either draft.
+
+Continue: let #554 full CI finish, inspect any failure log, and require independent review before merge. Then retarget #555 to master and run its exact-head full CI/WhatsApp recovery gates. Keep PR #493's durable same-account selection and unsupported-JD hard hold blocked until the protected runnable environment and installed Next.js 16.3.8 guide are available.
+
 ## 23 November 2026 03:26 UTC — WhatsApp two-line JD parser restacked behind combined Kompas gate
 
 - Current master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY in production. `src/lib/role-match.ts` still rejects a two-line JD + named-resume hint because it requires at least three lines.
