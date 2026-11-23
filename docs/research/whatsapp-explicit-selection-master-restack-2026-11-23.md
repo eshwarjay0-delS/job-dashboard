@@ -48,3 +48,19 @@ Committed to this same draft branch as `416522b5e27cefc1284fb5dcc76736007c2e5e45
 At 23 Nov 2026 05:52 CDT, exact head `416522b5...` had WhatsApp recovery and full CI **in progress**, Kompas baseline and Plan/REA **success**; no cross-device run was visible. The prior exact head's full CI failed at the unrelated master lint error `prefer-const` in `src/lib/kompasConsistency.ts:1059`, before type-check/tests. No local tests ran; remote GitHub Actions is the available execution path. The Vercel sandbox quota is still 402 until 1 Dec 2026.
 
 No production deploy, protected preview, real WhatsApp send, DOCX, R2/Meta receipt or historical 17 Oct 17:28 replay. The incident remains unverified. Keep PR #557 DRAFT; require exact-new-head CI/recovery/baseline/cross-device/Plan-REA, independent review, protected preview, production READY/alias and consented acceptance. Shared Plan Journal/REA/Completion Watch files were not edited in this continuation because their existing draft branches (#543/#386/#387) overlap and the Safe Merge Gate automation is disabled; this research file records the source-level continuation.
+
+
+## 23 Nov 2026 — exact-head correction and remote evidence
+
+The first recovery run after the parser/workflow change (`45170734760`) exposed a test-flow mismatch: the fixture had two resume emails, but the test asserted generation before answering the bot's required “Which email?” prompt. The product must not guess an account. Corrected the test to assert no generation, verify the pending `SOC` hint, then send the explicit `1` reply before asserting the exact SOC file, same account and durable `explicitlySelected` marker. Commit: `16d8ccd1282c61b8b8543a1f3e2a46fc3b62e5d7`.
+
+
+Exact head `16d8ccd` remote evidence:
+- WhatsApp resume recovery: **SUCCESS**, run `45171343240` (including parser and route-level `whatsapp-library.test.mjs`).
+- Kompas baseline: **SUCCESS**, `45171342996`.
+- Plan Journal/REA schema: **SUCCESS**, `45171342986`.
+- Full CI: **FAILURE**, `45171343055`, still stops at the existing `prefer-const` lint error in `src/lib/kompasConsistency.ts:1059`; type-check/tests are skipped.
+- No cross-device gate was visible for this head.
+
+
+The separate behavior-neutral lint PR #556 is still DRAFT and its full CI fails two Kompas typed-question/one-press regressions (70/72 pass); the Voice Delivery task owns that behavior and I did not duplicate or merge it. PR #557 remains DRAFT and no protected preview/production deploy/device acceptance occurred. The historical 17 Oct 17:28 Chicago failure is still unverified. No real WhatsApp send, DOCX, R2 write, Meta receipt or replay was performed.
