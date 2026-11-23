@@ -810,3 +810,11 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 23 November 2026 17:30 UTC — Poke Gmail/mobile CI lint repair
+
+- PR #559 exact head `ccd81ddd342afd75dd63e21812c93dcde9a5d093` had focused Gmail/mobile `45190545684`, Kompas baseline `45190545720` and Plan/REA `45190545675` SUCCESS, but full CI `45190545652` failed at one shared lint error: `src/lib/kompasConsistency.ts:1059` (`let s` never reassigned).
+- The current-master restack carries a behavior-neutral `let` → `const` correction in `37723ac1ed2e166377ccc1340964bda021b246e0`. The owner-approved four-account cap, account+thread identity, receiving inbox selection and normal-flow mobile menu are unchanged. Poke worker/scheduler/notifications/sending stay disabled.
+- No inbox read/mutation, OAuth, email send, phone test or production deployment occurred. Exact-head CI is pending after the lint correction.
+- **Continue:** run full CI, Gmail/mobile regression, Kompas baseline and Plan/REA on the exact head; retain DRAFT until protected preview, two-inbox collision/mute/From/reconnect tests and narrow-phone acceptance are available.
