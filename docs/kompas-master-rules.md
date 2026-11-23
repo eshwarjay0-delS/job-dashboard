@@ -12,8 +12,8 @@ derive and answer request fields) and the server's real code (`deriveByCode`, `q
 calls), and checks both the question on the card and the question the model is told to answer: each press answers the
 question just asked (never an earlier one), mic-only and with call audio; his own reply, read aloud or in his own words,
 never joins the question; the interviewer's setup stays with it ("let me push on that", "rate limit it"); asks that do not
-open like a question ("my question is how you'd...") are new questions; a press with nothing new or a narrowing re-asks
-the page on screen on the next page and never reaches an older question; a sign-off gets no answer while "thanks for the
+open like a question ("my question is how you'd...") are new questions; a first press with no new interviewer ask stays on Listening; only a deliberate second press re-asks
+the answered card on a new page, preserving angle rotation and never reaches an older question; a sign-off gets no answer while "thanks for the
 overview, what drove..." does; a typed question gets its own page; no page aborts another; listed parts are reached;
 each question kind takes its lane (§1); the introduction is the whole career with total years first (§8); Director
 owners are roles. Each rule is mutation-tested: reverting any one of them fails the build. If one fails, the build fails and production stays on the last good release.
