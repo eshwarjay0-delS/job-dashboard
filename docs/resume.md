@@ -109,3 +109,8 @@ PR #564 carries the approved explicit same-account Files fallback and unsupporte
 - Contract search restack PR #563 focused workflow 45282267513 passed; full CI remains pending.
 - WhatsApp fallback restack PR #564 recovery 45282722516 and Plan/REA schema 45282722435 passed; full CI/baseline/cross-device remain pending.
 - PRs #561 and #557 were closed as superseded; their source branches and history are preserved. #554 remains awaiting independent review. No deployment or live send.
+
+
+## 23 November 2026 — ready stacked PRs and CI blocker
+
+PR #565 contract-search and #566 WhatsApp fallback are ready for review, stacked on #554. #565 focused run 45282267513 passed; fresh 45283478714 is in progress. #566 recovery 45282722516 and schema 45282722435 passed; fresh regression 45283495328 and schema 45283495328 are in progress. Full CI is filtered to PRs targeting master/main, so it does not run on the non-master #554 base. #554 awaits independent review. No deployment or live send.
