@@ -31,3 +31,8 @@ The current production alias remains READY at master `794e8cfdbd3103409552857806
 ## Shared CI repair — 23 November
 
 The current code/test head 0f194b18f730b184c18321b67d4da077c56b8895 includes the crawler abort-timer refactor, behavior-neutral prefer-const fixes in the collector and Kompas consistency gate, and four shared Kompas VM fixture initializations. Prior CI 45229384405 failed at two prefer-const errors. New exact-head full CI 45230015959, crawler regression 45230015822, Kompas baseline 45230016873 and Plan/REA 45230015849 are IN PROGRESS. No local checkout; no live crawl or production change. This does not resolve the separate Listening-hold behavior dependency in PR #554.
+
+
+## 23 Nov 2026 — REA type-check correction
+
+PR #551's full CI on head `5913afd` failed Type-check because the new REA record's `state` value was not in the declared enum. Code commit `19d7ac2024a959e4d247eb4cbc860ba2d33c58a4` replaces it with `Implemented, verification pending`; no collector, runner, fetch or portal runtime behavior changed. Corrected-head schema `45260236503`, Kompas baseline `45260236205`, and crawler freshness `45260235924` passed; full CI `45260236471` was in progress. No live crawl or production deployment.
