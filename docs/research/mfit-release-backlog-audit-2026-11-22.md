@@ -84,3 +84,8 @@ The 50 authenticated Kompas/ChatGPT same-question pairs, independent human 0–4
 - No source runtime code, tests, production settings, secrets, inboxes, WhatsApp messages, R2 objects, crawler rows or personal sessions were changed/read.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment with the canonical checkout and installed Next.js 16.3.8 package is supplied, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold, add synthetic negative tests, run exact-head CI/recovery/baseline/Plan-REA checks, and let Safe Merge Gate review the resulting branch. Until then, preserve all active PRs and continue independent work without sending real messages or using personal source material.
+
+
+## 23 Nov 2026 — WhatsApp PR #557 clean current-master restack
+
+PR #557 now targets canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` after source/test commit `a3096d79d6e9bfd761c72199a9fa407806799dc6` was created from that exact parent. The branch contains the approved WhatsApp explicit same-account fallback and unsupported-JD hard hold only; separate Kompas S5/Listening changes from #554 were excluded and remain unmerged. Previous stacked head 8ea94f had dedicated WhatsApp recovery and Plan/REA checks green but no full CI. The clean exact head initially had no GitHub check-runs; remote full CI and all acceptance gates remain pending. No local checkout, real message, DOCX, R2 write, Meta receipt or production deployment occurred. Historical 17 Oct 17:28 Chicago delivery remains unverified. See `docs/research/whatsapp-explicit-selection-master-restack-2026-11-23.md` and Plan/REA.

@@ -1,5 +1,13 @@
 # MFit Completion Watch
 
+## 23 November 2026 09:30 UTC — WhatsApp fallback restacked directly on master
+
+- PR [#557](https://github.com/eshwarjay0-delS/job-dashboard/pull/557) was reset to canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` and retargeted from the separate Kompas #554 branch to master. Source/test commit `a3096d79d6e9bfd761c72199a9fa407806799dc6` contains only the approved WhatsApp slice (15 code/test/workflow files); #554 remains unchanged and draft.
+- The explicit fallback requires durable same-account selection, exact path/email/JD/sender, pending recovery state and byte equality. Automatic matches/fresh uploads cannot send unchanged originals; unsupported JD-only additions are hard-held. Existing completed-readable below-70% disclosed-shortfall behavior is preserved.
+- Previous stacked head `8ea94f5f9429695a020b334a3f89003d01e9d9a9` had WhatsApp recovery [45139687389](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45139687389) and Plan/REA [45139687402](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45139687402) SUCCESS, but no full CI. The clean new head initially had **zero check runs** immediately after retarget; exact-head gates are pending. No local tests are possible in this environment.
+- Production remains READY on master `794e8cf`; no WhatsApp fix is live. No real send, DOCX, R2 write, Meta receipt or native-device acceptance occurred. The 17 Oct 17:28 Chicago delivery remains unverified.
+- **Next:** exact-head full CI, WhatsApp recovery, Kompas baseline, cross-device and Plan/REA; independent review; protected preview; then production READY/alias and consented acceptance. Do not replay or resend the historical incident.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
