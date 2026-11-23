@@ -21,7 +21,7 @@ function loadTS(file, mocks, sandbox = {}) {
   return module.exports
 }
 
-test('runner forwards one portal AbortSignal to fetch and both database write queries', async () => {
+test('runner wires one portal AbortSignal into fetch and both database write queries', async () => {
   const fetchSignals = [], upsertSignals = [], retireSignals = []
   const query = log => ({
     abortSignal(signal) { log.push(signal); return this },
