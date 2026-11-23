@@ -940,7 +940,7 @@ Continue: trigger PR #547's exact-head full CI via a normal authenticated push o
 **Continue:** preserve the guard; after the approved runnable checkout and guide are available, run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA, safely restack #493, then verify a consented real WhatsApp flow with delivery/read receipt. Do not replay the historical message.
 
 
-## 23 November 2026 09:26 UTC — Exact CI failures and independent-review wall
+## 23 November 2026 09:28 UTC — Exact CI failures and independent-review wall
 
 - Production remains READY at exact master SHA `794e8cfdbd3103409552857806bab89851d5bfcb` (deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`). No runtime deploy for these test-only commits.
 - The fixture/lint corrections are reviewable on **#556**, **#551** and **#552**. Latest heads: #556 `73215d9682675d2d658b84a7878ac49869453315`; #551 `c19fe4a7aa381bbbea3f1575357c9c2b8741d4b9`; #552 `d43be9128be3093031587b6b98755ebf1d5a19aa`.
