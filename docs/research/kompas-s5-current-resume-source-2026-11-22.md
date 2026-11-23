@@ -36,3 +36,12 @@ The same path exposed a privacy issue: `resumeLines` included email, URL and pho
 3. Verify the resulting production deployment is READY on the merged SHA and the canonical alias maps to it.
 4. Restack PR #540 on the new master and rerun its full exact-head gates.
 5. Separately verify first press holds Listening and a deliberate second press re-asks on a consented native device. CI is not device acceptance.
+
+
+## 23 November 2026 — latest-master restack
+
+The previous PR #546 branch head was `b2a2aaf0dd952cced5cb1a9fcb36dce94fd6a468`, based on older master 3eb16fa. It is being updated as a non-force merge commit with the current production master `794e8cfdbd3103409552857806bab89851d5bfcb` as the second parent. The restack preserves the approved S5 changes (loaded resume remains authoritative; Houston is an empty-resume fallback only; email/URL/phone-only lines are excluded from spoken evidence), the current S5 fixture, and the regression test. It also adds a synthetic case proving email, URL and phone-only lines do not enter generated spoken evidence. A behavior-neutral `let s` → `const s` correction addresses the only full-CI lint error observed on the predecessor head. No Next.js route handler, microphone, caption, session, provider or answer-routing code changes are included.
+
+Current production evidence: master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases point to that deployment. Previous PR #546 full CI `45067115976` failed at the shared lint error; its S5 baseline `45067115962` and Plan/REA `45067115967` passed. Exact-head CI for the restack remains pending. No local build/test was run because the scheduled runtime has no repository checkout and cannot resolve GitHub; the Vercel Sandbox snapshot is stopped and usage-limited until 1 December. No personal resume, model, WhatsApp, R2, database or device interaction occurred.
+
+Next: require full CI/S5, Kompas baseline, cross-device and Plan/REA success on the exact restacked head before merge. Then restack the separate first-press Listening-hold PR #540. Native-device acceptance remains unverified.

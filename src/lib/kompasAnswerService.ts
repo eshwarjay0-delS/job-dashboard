@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -584,6 +584,12 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             check: sentenceCheck({ facts: job.guardFacts, allowed: job.allowed, asked: job.askedFigures, docs: job.sourceDocs, question: job.question, passages: job.passages || [] }),
             opener: withOpenerToo ? job.opener : null,
             sourcePassages: splitOpenerPassages(job.sourceDocs),
+            // Owner, 22 Nov 2026 (Round 14): the session displays the stream's
+            // incremental sentences, and the final gateDisplayedAnswer replace
+            // does not always overwrite them — so a refusal, a verbatim pasted
+            // bullet, or a tag fragment that the final shaping would strip
+            // still shows on screen. Filter those sentences as they stream.
+            dropSentence: (sentence: string) => dropStreamSentence(sentence, job.resume || ""),
           })
         } catch { return null }
       }
@@ -1054,6 +1060,17 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   if (job.resumeState && job.resumeState !== "grounded") out = enforceResumeState(out, job.resumeState).text
   out = dropOffTopicResume(job.question, job.jd || "", out)
   repair = settleRepair(job, repair, out)
+  // Owner, 22 Nov 2026 (Round 15): the Kompas web session calls /api/answer
+  // with stream:false, so it runs jsonAnswer — which NEVER called
+  // gateDisplayedAnswer. Every refusal strip, verbatim-paste drop, and
+  // tag-fragment fix in the gate (Rounds 12-14) applied only to the stream
+  // path, while the session's displayed text came from here, unshaped. That
+  // is why Q5/Q10 refusals and Q1/Q3 pasted bullets survived every fix that
+  // passed locally. Run the same gate here so both paths shape identically.
+  try {
+    const gated = gateDisplayedAnswer({ question: job.question, raw: out, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
+    if (gated.text.trim()) out = gated.text
+  } catch { /* the settled answer stands */ }
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
