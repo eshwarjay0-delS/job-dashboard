@@ -220,3 +220,32 @@ Regression coverage checks owner/account identity, the constant-time bearer vali
 The owner confirmed in [PR #452 comment 7033546581](https://github.com/eshwarjay0-delS/job-dashboard/pull/452#issuecomment-7033546581) that four connected Gmail accounts is the maximum. Keep the existing server-side `LIMIT 4`; PR #440's no-cap migration remains unapproved. This direct 20 November instruction supersedes the earlier 13 November note that the 3–4 range was only a target. The same owner comment reiterates that the mobile menu must expand in normal document flow below the sticky header, and that the proactive Poke worker, notifications and sending remain disabled.
 
 The cap does not replace account isolation: each inbox retains its own identity, selected-From address, reconnect state and thread identity. Two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain open; no live Gmail API or outbound email test is implied.
+
+## 23 November 2026 — account-scoped digest and normal-flow mobile restack
+
+The current-master restack carries the owner-approved Poke-inspired multi-account direction into the mail UI without enabling background automation. Digest sender mutes are keyed by receiving account plus sender address. Digest/radar identity and React keys use receiving account plus provider thread ID; opening an item selects its receiving inbox. Saved reply drafts are scoped by authenticated user, receiving inbox and thread, and the visible From identity remains bound to that inbox.
+
+The mobile navigation is hidden when closed and expands below the sticky top bar in normal document flow, pushing the page content down. It does not cover, dim, scrim or make the page inert. The owner-confirmed maximum remains four connected Gmail accounts; the server RPC retains its existing `LIMIT 4`, and the client displays the server-authorized account list without silent truncation. PR #440's no-cap migration remains unapproved.
+
+The proactive Poke worker, scheduler, notifications and automatic sending remain disabled. This code/test change makes no Gmail API/OAuth call, does not read or mutate an inbox, and does not send email or WhatsApp. Two-inbox collision, selected-From, per-account reconnect and narrow-phone acceptance remain separate release gates. See `docs/research/gmail-mobile-four-account-restack-2026-11-23.md`.
+
+
+
+## 23 Nov 2026 — muted sender unmute reachability audit
+
+PR #559 source audit found that mutes filtered **Needs your reply**, **Waiting on them**, and **New today**, but the digest's unmute list used only `needs.filter(isMuted)`. A sender muted while they had a reply-needed mail could later have only waiting/new mail (or no current mail), disappear from every digest section, and lose the digest unmute control. The fix in code commit `dab7785df536466c7bc45797c463f1ca3959d262` adds `mutedNotifyRules`, enumerating and normalizing persisted `mode: never` rules by account+sender; duplicate normalized rules collapse, same sender in different inboxes remains separate, `always` rules are excluded, and each unmute button displays the receiving inbox and uses the rule identity rather than a mail/thread ID. A regression covers those cases and the component wiring. This is source/test-only. Exact-head remote validation is pending; no local test execution, Gmail API/OAuth, inbox read/mutation, email send, protected preview, production deploy or device acceptance occurred. The proactive worker, scheduler, notifications and sending remain disabled.
+
+
+## 23 Nov 2026 — JSX review correction before validation
+
+The initial implementation commit `6b310252` had an unclosed JSX event-handler brace on the mute button. Static source review caught it before CI was claimed; follow-up commit `dab7785df536466c7bc45797c463f1ca3959d262` closes the handler. Exact-head validation is pending on the corrected source. No broken intermediate commit was deployed.
+
+
+## 23 Nov 2026 — exact-head test correction and focused validation
+
+The first focused run after the mute-recovery change failed one pre-existing static assertion: it expected four mail/thread React keys. The unmute buttons now correctly use account+sender rule keys, leaving three. Test commit `5d930bec63b0b328cc6a8454b0633269b4f37c93` updates the expectation to three and explicitly checks the sender-rule key. On exact head `5d930bec63b0b328cc6a8454b0633269b4f37c93`, Gmail/mobile workflow `45258979200`, Plan/REA schema `45258978883`, and Kompas baseline `45258979291` **PASS**; full CI `45258979321` is **IN PROGRESS**. No full-CI success is claimed. No inbox/OAuth/send/device or protected-preview acceptance.
+
+
+## Final source/test head status — 23 Nov 2026
+
+Code commit `dab7785df536466c7bc45797c463f1ca3959d262`; test correction `5d930bec63b0b328cc6a8454b0633269b4f37c93`. Focused Gmail/mobile, Plan/REA schema and Kompas baseline all passed on `5d930bec63b0b328cc6a8454b0633269b4f37c93`; full CI run `45258979321` was still in progress at last check. The corrected test changed the stale count assertion to three current-mail keys and checks mute controls use account/sender keys. The final docs follow-up is `7cffd43da108ab203a4dff3c859af527a8e31b59`. No real inbox/mobile acceptance or production deployment.
