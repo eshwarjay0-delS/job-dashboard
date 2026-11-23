@@ -18,6 +18,9 @@ on:
       - 'scripts/tests/whatsapp-single-request.test.mjs'
       - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
       - 'scripts/tests/whatsapp-resume-acceptance.test.mjs'
+      - 'src/lib/role-match.ts'
+      - 'scripts/tests/role-match.test.mjs'
+      - 'scripts/tests/whatsapp-library.test.mjs'
       - '.github/workflows/whatsapp-resume-regression.yml'
   pull_request:
     paths:
@@ -49,4 +52,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs scripts/tests/whatsapp-resume-acceptance.test.mjs
+      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs scripts/tests/whatsapp-resume-acceptance.test.mjs scripts/tests/role-match.test.mjs scripts/tests/whatsapp-library.test.mjs
