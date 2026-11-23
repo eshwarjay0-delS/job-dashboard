@@ -177,3 +177,10 @@ test("spoken evidence excludes email, URL and phone-only lines", () => {
   assert.match(spoken, /SIEM alert routing/i)
   assert.doesNotMatch(spoken, /candidate@example\.test|https:\/\/example\.test|555/)
 })
+
+test("loaded resume contact-only lines never enter spoken bridge templates", () => {
+  const resume = "candidate@example.test\nhttps://example.test/profile\n+1 (555) 010-1234\nSaint Louis University\n"
+  const templates = bridgeTemplates(resume)
+  assert.ok(templates.some(text => text.includes("Saint Louis University")), "current resume evidence is retained")
+  for (const text of templates) assert.doesNotMatch(text, /candidate@example\.test|https:\/\/example\.test|555/)
+})
