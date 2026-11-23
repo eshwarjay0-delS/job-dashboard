@@ -81,3 +81,8 @@ The root PR #557 CI run `45221590086` failed in 24 VM scenarios with `ReferenceE
 ## Exact-head CI after shared fixture repair — 23 November
 
 PR #557 full CI 45227734205 now passes lint, type-check, build and all preceding steps; the four VM fixture ReferenceErrors are resolved. Only two real behavior assertions fail: empty second press and candidate-only second press must hold Listening before the subsequent re-ask. WhatsApp recovery 45227734188, Kompas baseline 45227734468 and Plan/REA 45227734178 are SUCCESS. PR #554 contains the separate Listening-hold fix with all five exact-head gates green but awaits independent review. No production release or historical WhatsApp acceptance is claimed.
+
+
+## 23 November 2026 — clean stacked validation continuation
+
+The WhatsApp source/test/workflow slice is now restacked onto the exact green Kompas PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259`, rather than duplicating its Listening-hold runtime or VM fixture fixes. The new dependent PR will validate the explicit-selection hard hold with the shared fixes in its ancestry. The original #557 and #561 branches remain preserved; this restack excludes their overlapping Kompas fixtures, lint correction, Completion Watch, Plan Journal, Plan & Vision and other shared files. Exact-head remote Actions validation is pending. No local build, real send, R2 write, DOCX, replay or device acceptance was performed.
