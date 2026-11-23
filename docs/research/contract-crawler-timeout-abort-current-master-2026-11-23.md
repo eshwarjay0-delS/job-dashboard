@@ -26,3 +26,8 @@ Commits: implementation `545359d6701dfd0ec88ce7411999cb1fa889f07`, signal correc
 ## Release and acceptance boundary
 
 The current production alias remains READY at master `794e8cfdbd3103409552857806bab89851d5bfcb`. PR #551 is DRAFT and not deployed. The contract crawler is manual/on-demand only; no cron, live crawl, DB write, or job submission occurred. Robert Half remains manual-only and eTeam excluded pending compliant feeds.
+
+
+## Shared CI repair — 23 November
+
+The current code/test head 0f194b18f730b184c18321b67d4da077c56b8895 includes the crawler abort-timer refactor, behavior-neutral prefer-const fixes in the collector and Kompas consistency gate, and four shared Kompas VM fixture initializations. Prior CI 45229384405 failed at two prefer-const errors. New exact-head full CI 45230015959, crawler regression 45230015822, Kompas baseline 45230016873 and Plan/REA 45230015849 are IN PROGRESS. No local checkout; no live crawl or production change. This does not resolve the separate Listening-hold behavior dependency in PR #554.
