@@ -220,3 +220,12 @@ Regression coverage checks owner/account identity, the constant-time bearer vali
 The owner confirmed in [PR #452 comment 7033546581](https://github.com/eshwarjay0-delS/job-dashboard/pull/452#issuecomment-7033546581) that four connected Gmail accounts is the maximum. Keep the existing server-side `LIMIT 4`; PR #440's no-cap migration remains unapproved. This direct 20 November instruction supersedes the earlier 13 November note that the 3–4 range was only a target. The same owner comment reiterates that the mobile menu must expand in normal document flow below the sticky header, and that the proactive Poke worker, notifications and sending remain disabled.
 
 The cap does not replace account isolation: each inbox retains its own identity, selected-From address, reconnect state and thread identity. Two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain open; no live Gmail API or outbound email test is implied.
+
+## 23 November 2026 — account-scoped digest and normal-flow mobile restack
+
+The current-master restack carries the owner-approved Poke-inspired multi-account direction into the mail UI without enabling background automation. Digest sender mutes are keyed by receiving account plus sender address. Digest/radar identity and React keys use receiving account plus provider thread ID; opening an item selects its receiving inbox. Saved reply drafts are scoped by authenticated user, receiving inbox and thread, and the visible From identity remains bound to that inbox.
+
+The mobile navigation is hidden when closed and expands below the sticky top bar in normal document flow, pushing the page content down. It does not cover, dim, scrim or make the page inert. The owner-confirmed maximum remains four connected Gmail accounts; the server RPC retains its existing `LIMIT 4`, and the client displays the server-authorized account list without silent truncation. PR #440's no-cap migration remains unapproved.
+
+The proactive Poke worker, scheduler, notifications and automatic sending remain disabled. This code/test change makes no Gmail API/OAuth call, does not read or mutate an inbox, and does not send email or WhatsApp. Two-inbox collision, selected-From, per-account reconnect and narrow-phone acceptance remain separate release gates. See `docs/research/gmail-mobile-four-account-restack-2026-11-23.md`.
+
