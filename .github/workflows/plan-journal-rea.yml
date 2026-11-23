@@ -5,6 +5,8 @@ on:
     paths:
       - "src/lib/plan-vision-journal.ts"
       - "src/lib/rea-register.ts"
+      - "src/lib/plan-vision.ts"
+      - "scripts/tests/plan-vision-schema.test.mjs"
       - "scripts/tests/plan-journal-schema.test.mjs"
       - "scripts/tests/rea-register.test.mjs"
       - ".github/workflows/plan-journal-rea.yml"
@@ -14,6 +16,8 @@ on:
     paths:
       - "src/lib/plan-vision-journal.ts"
       - "src/lib/rea-register.ts"
+      - "src/lib/plan-vision.ts"
+      - "scripts/tests/plan-vision-schema.test.mjs"
       - "scripts/tests/plan-journal-schema.test.mjs"
       - "scripts/tests/rea-register.test.mjs"
       - ".github/workflows/plan-journal-rea.yml"
@@ -31,4 +35,4 @@ jobs:
         with:
           node-version: "22"
       - name: Run Plan Journal and REA schema regressions
-        run: node --experimental-strip-types --test scripts/tests/plan-journal-schema.test.mjs scripts/tests/rea-register.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/plan-journal-schema.test.mjs scripts/tests/rea-register.test.mjs scripts/tests/plan-vision-schema.test.mjs
