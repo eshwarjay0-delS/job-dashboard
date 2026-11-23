@@ -779,7 +779,25 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
 // Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
-type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
+type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean; explicitlySelected?: boolean }
+
+/** A fallback is permitted only for the exact same-account Library item the user named. */
+function explicitLibraryFallbackPathMatches(files: FromFiles | undefined, session: Session, userId: string): boolean {
+  if (!files?.explicitlySelected || !files.userDir || !files.email?.trim() || !files.rel || !files.abs || !session.resumePath) return false
+  const expectedRootRaw = filesOf(userId)
+  if (!expectedRootRaw) return false // no verified account-owned resume directory
+  const expectedRoot = path.resolve(expectedRootRaw)
+  const userRoot = path.resolve(files.userDir)
+  const selectedPath = path.resolve(files.abs)
+  const sessionPath = path.resolve(session.resumePath)
+  if (userRoot !== expectedRoot || selectedPath !== sessionPath || path.isAbsolute(files.rel)) return false
+  const parts = files.rel.split("/")
+  if (parts.length < 2 || parts.some(part => !part || part === "." || part === ".." || part.includes("\\"))) return false
+  const relativePath = path.relative(userRoot, selectedPath)
+  if (!relativePath || relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false
+  if (relativePath.split(path.sep)[0].toLowerCase() !== files.email.trim().toLowerCase()) return false
+  return path.resolve(userRoot, ...parts) === selectedPath
+}
 
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
@@ -807,10 +825,6 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, said)
   }
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) {
-    await deferResumeRecovery(job, "provider_unavailable")
-    return quiet ? undefined : sendText(from, "Your resume request is saved. Tailoring is unavailable; MarketFit will retry automatically.")
-  }
   // One claim per JD across workers.
   const claimKey = `whatsapp/jobs/${job}`
   const claimToken = randomBytes(6).toString("hex")
@@ -830,6 +844,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // outer finally can clear it; armed after the "Updating..." line below.
   let progressTimer: ReturnType<typeof setTimeout> | undefined
   // A quiet recovery still owes the chat one sentence the first time. Repeating it on every later retry is noise.
+  const fallbackNotSentReason = () => files?.explicitlySelected
+    ? "The exact Files resume you selected could not be verified for this account, so I did not send an original."
+    : "No exact Files resume was explicitly selected, so I did not send an original."
   const sayOutcome = async (text: string): Promise<string | undefined> => {
     if (quiet) {
       const current = await readResumeRecovery(job).catch(() => null)
@@ -837,7 +854,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       await patchResumeRecovery(job, { toldUser: true }).catch(() => {})
     }
     told = true
-    return sendText(from, text).catch(() => undefined)
+    const outcome = failureCode === "delivery_unconfirmed" ? text : `${text} ${fallbackNotSentReason()}`
+    return sendText(from, outcome).catch(() => undefined)
   }
   let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
   // Assigned inside the run, after the job text is known. The outer catch can
@@ -847,16 +865,30 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd) return false
+    if (!resumePath || !jd || !files || !explicitLibraryFallbackPathMatches(files, session, userId)) return false
+    // Require the explicit-selection proof to survive in the durable job; retries
+    // cannot send from an in-memory or stale selection alone.
+    const durable = await readResumeRecovery(job).catch(() => null)
+    if (!durable || durable.status !== "pending" || durable.id !== job || durable.from !== from ||
+        durable.userId !== userId || durable.jd !== jd || typeof durable.resumePath !== "string" ||
+        path.resolve(durable.resumePath) !== path.resolve(resumePath) ||
+        !durable.files?.explicitlySelected || durable.files.abs !== files.abs ||
+        durable.files.rel !== files.rel || durable.files.userDir !== files.userDir ||
+        durable.files.email?.trim().toLowerCase() !== files.email.trim().toLowerCase()) return false
     const source = await readPath(resumePath).catch(() => null)
-    if (!source) return false
+    const selected = await readPath(files.abs).catch(() => null)
+    if (!source || !selected || !Buffer.from(source).equals(Buffer.from(selected))) return false
     let text = ""
-    try { text = await extractText(source) } catch { text = "" }
-    // Never substitute a resume from the other email. The path was chosen for this run.
-    if (!chosenResumeMatchesProfile(text, files?.email)) return false
+    try { text = await extractText(selected) } catch { text = "" }
+    if (!chosenResumeMatchesProfile(text, files.email)) return false
     const meta = await metaPromise
-    const name = await outputNameFor(source)
-    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
+    const name = await outputNameFor(selected)
+    const caption = [
+      "Original resume — NOT TAILORED",
+      `*${name}*`,
+      `This is the exact Files resume you selected for ${files.email}, sent unchanged.`,
+      why,
+    ].join("\n")
     await patchResumeRecovery(job, { status: "sending" })
     sending = true
     try {
@@ -877,6 +909,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
   }
   try {
+  if (!hasAnyKey(keys)) {
+    const fallbackSent = await sendClosest("No AI provider is configured, so no tailored rewrite was produced.")
+    if (fallbackSent) return
+    if (failureCode !== "delivery_unconfirmed") await deferResumeRecovery(job, "provider_unavailable")
+    await sayOutcome(failureCode === "delivery_unconfirmed"
+      ? "WhatsApp did not confirm the original resume. I will not send a duplicate while delivery is unknown."
+      : "I did not send a file. Tailoring is unavailable; MarketFit will retry automatically.")
+    return
+  }
   // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
   // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
   const cur = await loadSession(from)
@@ -887,9 +928,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (files && !quiet) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
   await saveSession(from, cur)
 
+  const fallbackNotice = files?.explicitlySelected
+    ? "If it cannot be completed, I may send only the exact Files resume you named, unchanged, if I can re-verify it; it will be labeled NOT TAILORED."
+    : "If it cannot be completed, I will explain the hold and retry; I will not send an unselected original."
   if (!quiet) await sendText(from, files
-    ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
-    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`)
+    ? `Updating ${files.said}. I will send a finished tailored Word file only if it passes the checks. ${fallbackNotice}`
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. I will send a finished tailored Word file only if it passes the checks. ${fallbackNotice}`)
 
   // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
   // 240s budget in silence and then fail. At 60s, if the run is still going,
@@ -900,7 +944,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // function stays alive under after() up to maxDuration.
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get a Word file here: the updated resume if the rewrite finishes, or the resume already chosen for this job if it does not.").catch(() => {})
+      sendText(from, `Still working on your resume — the rewrite has been running for a minute. A tailored Word file is sent only after it passes the checks. ${files?.explicitlySelected ? "An unchanged fallback is possible only for the exact Files resume you named and only if I can re-verify it; it will be labeled NOT TAILORED." : "No exact Files resume was explicitly selected, so no unchanged original fallback will be sent."}`).catch(() => {})
     }, 60_000)
   }
 
@@ -1046,7 +1090,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!file) {
     failureCode = "file_missing"
     if (await sendClosest("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.")
     return;
   }
 
@@ -1054,9 +1098,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
-    // The already-chosen resume is unchanged and is the file that goes out.
-    if (await sendClosest("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
-    await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
+    // Only a separately verified explicit Files selection may be sent unchanged.
+    if (await sendClosest("The updated file failed identity/contact/date verification, so it was not sent.")) return
+    await sayOutcome("I did not send a file. The update failed identity/contact/date verification. Your resume and job description are saved for automatic recovery.")
     return;
   }
   const meta = await metaPromise
@@ -1434,7 +1478,8 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   const budget = TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began)
   if (budget < 20_000) return sendText(from, "I did not send a file. Choosing the resume used the time I have. Send the job once more and I will start again.")
   return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
-    { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
+    { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path,
+      explicitlySelected: Boolean(prefer.hint?.trim()) && why === "because you asked for it", ...(redo ? { redo } : {}) })
 }
 
 // The resume made for this job before, sent again as it is: the outcome is already known (owner, 13 Oct 2026).
@@ -1487,12 +1532,6 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(request)
   const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(request)
 
-  const sendBaseline = async (why: string, baseline: Buffer, meta: Meta) => {
-    const name = await outputNameFor(baseline)
-    await deliver(from, baseline, name, closestResumeCaption(name, "the resume already chosen for this job", why), {
-      userId, jd: gen.jd, meta, changes: gen.changes || [], source: gen.source,
-    })
-  }
   let result: TailorResult
   try {
     result = await runTailor({
@@ -1514,14 +1553,10 @@ async function refine(from: string, replyTo: string, request: string, userId: st
       sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
     })
   } catch (error) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      const timedOut = /timed out/i.test(String(error))
-      await sendBaseline(timedOut ? "The rewrite ran out of time just now." : "The rewrite stopped before it finished.", baseline, meta)
-      return
-    }
-    return sendText(from, "The rewrite stopped before it finished, and the resume already chosen for this job could not be opened. Send the job again.")
+    const timedOut = /timed out/i.test(String(error))
+    return sendText(from, timedOut
+      ? "The update ran out of time. I did not send another file; the version you already have remains unchanged. Please retry the edit."
+      : "The update stopped before it finished. I did not send another file; the version you already have remains unchanged. Please retry the edit.")
   }
 
   const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
@@ -1529,34 +1564,24 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     return sendText(from, `Nothing needed changing for "${clip(request, 200)}". Try naming the exact skill, section, or bullet.`)
   }
 
-  // A usable rewrite is sent even under 95% coverage. An incomplete rewrite is not:
-  // the file this reply started from goes out instead, labelled as unchanged.
+  // A usable rewrite is sent even under 95% coverage. A held swipe-reply never re-sends
+  // the session/version baseline: the file already in the chat remains unchanged.
   if (!whatsappRewriteUsable(result)) {
-    const baseline = await readPath(gen.file).catch(() => null)
-    const meta = await metaPromise
-    if (baseline) {
-      await sendBaseline(unfinishedRewriteWhy(result), baseline, meta)
-      return
-    }
-    return sendText(from, qualityStop(result))
+    const reasons = describeRejectionReasons(whatsappResumeRejectionReasons(result))
+    return sendText(from, `I did not send another file. ${unfinishedRewriteWhy(result)} ${reasons.join("; ") || "The draft did not pass the completion and evidence checks."} The version you already have remains unchanged.`)
   }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
   const meta = await metaPromise
   const source = await readPath(gen.file)
   if (!file) {
-    if (source) {
-      await sendBaseline("The updated Word file could not be opened.", source, meta)
-      return
-    }
-    return sendText(from, "The update generated but the file could not be read back. Please try again.")
+    return sendText(from, "I did not send another file. The updated Word file could not be opened; the version you already have remains unchanged.")
   }
   if (!source) {
     return sendText(from, "I could not verify the original resume for this update, so no file was sent.")
   }
   if (!(await sameResumeFacts(source, file))) {
-    await sendBaseline("The update failed identity/contact/date verification, so I sent your original resume instead.", source, meta)
-    return
+    return sendText(from, "I did not send another file. The update failed identity/contact/date verification; the version you already have remains unchanged.")
   }
   const changes = [...(gen.changes || []), request]
   const name = await outputNameFor(file)
@@ -1670,12 +1695,7 @@ async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
   return sameResumeIdentity(a, b)
 }
 
-// Same switch as src/lib/jd-terms-gate.ts, kept local so the route's test harnesses need no new module mocks.
-function jdTermsGateOn(): boolean {
-  const v = String(process.env.JD_TERMS_ALWAYS_ON_SKILLS ?? "").trim().toLowerCase()
-  return !(v === "0" || v === "false" || v === "off" || v === "no")
-}
-
+// Describe JD terms that could not be placed without adding unsupported claims.
 function unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
   const list = (terms || []).filter(Boolean)
   if (!list.length || !reason) return ""
@@ -1684,33 +1704,21 @@ function unplacedTermsLine(terms: string[] | undefined, reason: string | undefin
   return `Not added to the file because ${why}: ${shown}. Add any you can speak to.`
 }
 
-function chosenLabel(files: FromFiles | undefined, resumeName?: string): string {
-  if (files?.said) return files.said.split(". I chose")[0]
-  if (resumeName) return `*${resumeName}*`
-  return "the resume already chosen for this job"
-}
-
 function unfinishedRewriteWhy(result: TailorResult): string {
+  if (whatsappResumeRejectionReasons(result).includes("unverified_jd_terms")) return "The draft included job-post terms your resume does not support, so I did not send that draft."
   if (result.partial || result.quality?.incomplete || result.skills_only) return "The rewrite was marked incomplete."
   if (result.quality_blockers?.includes("roles_unrewritten")) return "Some experience sections were not rewritten."
   return "The rewrite did not finish cleanly."
 }
 
-function closestResumeCaption(name: string, label: string, why: string): string {
-  return [
-    `*${name}*`,
-    `This is your closest matching resume (${label}) because the rewrite did not finish cleanly. ${why} This file was not rewritten.`,
-    "Reply to this file to request changes.",
-  ].join("\n")
-}
-
 function qualityStop(result: TailorResult): string {
   const reasons = whatsappResumeRejectionReasons(result)
   const invented = (result.unverified_added_keywords || []).filter(Boolean).slice(0, 6)
-  // Gate on, this refusal is gone: a job-post term in a bullet is sent back and moved to the skills line in runTailor.
-  // Gate off (JD_TERMS_ALWAYS_ON_SKILLS=0) restores it.
-  if (invented.length && !jdTermsGateOn()) {
-    return `I did not send a file. The draft added ${invented.join(", ")} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  // The helper hard-holds unsupported JD-only additions even when the detail list is empty.
+  // Explain this before the ordinary coverage shortfall so the reason is not hidden.
+  if (invented.length || reasons.includes("unverified_jd_terms")) {
+    const terms = invented.length ? invented.join(", ") : "unverified job-post terms"
+    return `I did not send a file. The draft added ${terms} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   if (reasons.includes("jd_coverage_below_floor")) {
     const pct = Number.isFinite(result.coverage) ? `${result.coverage}%` : "under 95%"
