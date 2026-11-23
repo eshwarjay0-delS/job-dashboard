@@ -3,25 +3,71 @@ import type { Fetcher, PortalAdapter, RawJob } from "./types"
 
 export const CRAWL_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (MarketFit job aggregator; contact via site)"
 
-/** One request at a time, `gapMs` apart, 25 s each, with the aggregator's own user agent. */
-export function politeFetcher(gapMs = 600): Fetcher {
+/** One request at a time, `gapMs` apart, 25 s each by default, with the aggregator's own user agent. */
+function abortError(message = "Portal request cancelled"): Error {
+  const error = new Error(message)
+  error.name = "AbortError"
+  return error
+}
+
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(abortError())
+  if (ms <= 0) return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timer)
+      signal?.removeEventListener("abort", onAbort)
+      reject(abortError())
+    }
+    signal?.addEventListener("abort", onAbort, { once: true })
+    if (signal?.aborted) onAbort()
+  })
+}
+
+export function politeFetcher(gapMs = 600, requestTimeoutMs = 25_000, portalSignal?: AbortSignal): Fetcher {
   let last = 0
   return async (url, init = {}) => {
     const wait = last + gapMs - Date.now()
-    if (wait > 0) await new Promise(r => setTimeout(r, wait))
     const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 25000)
+    let host = "unknown host"
+    let localTimeout = false
+    let t: ReturnType<typeof setTimeout> | undefined
+    const onPortalAbort = () => ctrl.abort()
+    portalSignal?.addEventListener("abort", onPortalAbort, { once: true })
+    if (portalSignal?.aborted) ctrl.abort()
     try {
+      // URL parsing and pacing remain inside the cleanup boundary, so even malformed
+      // input advances the per-portal clock without leaving abort listeners behind.
+      host = new URL(url).host
+      if (wait > 0) await abortableDelay(wait, ctrl.signal)
+      if (ctrl.signal.aborted) throw abortError()
+      t = setTimeout(() => { localTimeout = true; ctrl.abort() }, requestTimeoutMs)
       const res = await fetch(url, {
         method: init.method || "GET",
         headers: { "User-Agent": CRAWL_UA, Accept: init.accept || "text/html", ...(init.body ? { "Content-Type": "application/json" } : {}), ...init.headers },
         ...(init.body ? { body: init.body } : {}),
         signal: ctrl.signal,
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status} from ${new URL(url).host}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${host}`)
       return await res.text()
+    } catch (error) {
+      if (localTimeout) {
+        throw new Error(`Request to ${host} timed out after ${requestTimeoutMs} ms`, { cause: error })
+      }
+      if (portalSignal?.aborted) {
+        throw new Error(`Request to ${host} was cancelled by the portal time limit`, { cause: error })
+      }
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error(`Request to ${host} was aborted before the local timeout`, { cause: error })
+      }
+      throw error
     } finally {
       clearTimeout(t)
+      portalSignal?.removeEventListener("abort", onPortalAbort)
       last = Date.now()
     }
   }
@@ -54,7 +100,7 @@ export type PortalOutcome<T> = { adapter: PortalAdapter; value?: T; error?: stri
  */
 export async function crawlEach<T>(
   adapters: PortalAdapter[],
-  work: (adapter: PortalAdapter) => Promise<T>,
+  work: (adapter: PortalAdapter, signal: AbortSignal) => Promise<T>,
   opts: { concurrency: number; deadline: number; perPortalMs: number; offset?: number; now?: () => number },
 ): Promise<PortalOutcome<T>[]> {
   const now = opts.now || Date.now
@@ -71,11 +117,28 @@ export async function crawlEach<T>(
       // Nor is one started whose own time would run past the run's end (the deadline plus the usual time a portal gets).
       if (now() >= opts.deadline || now() + limit > opts.deadline + opts.perPortalMs) { out[i] = { adapter, skipped: true }; continue }
       let timer: ReturnType<typeof setTimeout> | undefined
+      const controller = new AbortController()
+      const timeoutMessage = `timed out after ${Math.round(limit / 1000)} s`
+      let timedOut = false
+      const workPromise = Promise.resolve().then(() => work(adapter, controller.signal))
       try {
-        const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(limit / 1000)} s`)), limit) })
-        out[i] = { adapter, value: await Promise.race([work(adapter), late]) }
+        const late = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            timedOut = true
+            controller.abort()
+            reject(new Error(timeoutMessage))
+          }, limit)
+        })
+        out[i] = { adapter, value: await Promise.race([workPromise, late]) }
       } catch (e) {
-        out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
+        if (timedOut) {
+          // Do not release this worker slot until abort-aware work settles. This
+          // prevents a timed-out portal from continuing beside the next portal.
+          await workPromise.catch(() => undefined)
+          out[i] = { adapter, error: timeoutMessage }
+        } else {
+          out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
+        }
       } finally {
         clearTimeout(timer)
       }
