@@ -804,12 +804,12 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - **Next:** exact-head crawler freshness, full CI, Kompas baseline and Plan/REA; resolve shared test blockers through existing PRs, then review, protected preview, READY production alias, and a separately authorized manual crawl.
 
 
-## 23 November 2026 10:39 CDT — Timeout cancellation continuation
+## 23 November 2026 10:47 CDT — Timeout cancellation continuation
 
-- PR #551 branch `fix/crawler-abort-diagnostics-round14-20261123` remains DRAFT. Source changes: per-portal AbortSignal; cancellation of pacing and in-flight fetch; cancellation forwarded to Supabase upsert/retire; cancellation check before writes; timeout work is drained before a worker slot is reused. 600 ms pacing and 25 s request timeout remain unchanged. No live crawl, scheduler or production change.
-- Current code/test head is `ba13fa90b73d4baec74fdcccd47845bba0fb6663`. Collector tests passed 8/8 on predecessor run 45218425372; that run failed in the new runner VM test because of a cross-realm deepStrictEqual. The assertion is now property-based on ba13fa90. Exact-head crawler run 45218924841, Plan/REA 45218925250, Kompas baseline 45218925017 and full CI 45218924952 were pending at this snapshot. Earlier runner test failures: missing mocked fetch, corrected at 490a2137.
+- PR #551 branch `fix/crawler-abort-diagnostics-round14-20261123` remains DRAFT. It now aborts per-portal work at timeout, drains cooperative work before releasing the worker slot, cancels pacing/fetch and forwards the same portal signal to Supabase upsert/retire. 600 ms pacing and 25 s request timeout unchanged. No live crawl, scheduler or production change.
+- Exact code/test head `5d16f9a90ff9a671b1b24c10b493a23fd3a2b50d`: crawler freshness workflow [45219883528](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45219883528) SUCCESS (8 collector tests plus runner wiring, registry and source-safety); Plan/REA [45219883454](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45219883454) SUCCESS; Kompas baseline [45219883587](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45219883587) SUCCESS. Full CI [45219883408](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45219883408) FAILED at existing master `prefer-const` `src/lib/kompasConsistency.ts:1059` (2 errors, 267 warnings); type-check/build skipped.
 - Production is independently READY on master `794e8cfdbd3103409552857806bab89851d5bfcb`; PR #551 is not live. The 10 Nov crawl remains the last evidence; no crawl or portal request was made.
-- **Continue:** inspect exact-head gates; fix only the test harness if needed, then review, protected preview, READY alias, and separately authorized manual crawl. Source permission, Robert Half manual-only and eTeam exclusion remain.
+- **Continue:** recheck exact-head checks after documentation commit; fix shared lint only through its separate reviewed PR, then review, protected preview, READY alias and separately authorized manual crawl. Source permission, Robert Half manual-only and eTeam exclusion remain.
 
 ## Backlog gate correction — automation inventory 23 November
 
