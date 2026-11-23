@@ -1,3 +1,10 @@
+## 23 November 2026 16:50 UTC — shared lint gate repaired on WhatsApp branch
+
+- PR [#557](https://github.com/eshwarjay0-delS/job-dashboard/pull/557) exact head `705e67ee2f96c55a0a974aa8d2c3f1b89e4e1e1c` full CI `45206136451` failed at Lint only before tests: `src/lib/kompasConsistency.ts:1059`, `prefer-const`. The same shared master lint blocker was preventing full CI on #559, #551 and #552.
+- Inspected the exact source; `s` is not reassigned. Applied a behavior-neutral `let s = sentence` → `const s = sentence` on #557 branch. Commit `9222023a74efc0b71a84d467dfebcfe8dc9194f6`. This does not change Kompas behavior and is not deployed.
+- Previous #557 focused gates were WhatsApp recovery `45206136245`, Kompas baseline `45206136253`, Plan/REA `45206136251` SUCCESS; full CI must rerun on the new exact head. Local checkout/tests remain unavailable (GitHub DNS resolution); remote Actions are the execution gate.
+- Production remains READY at `794e8cfdbd3103409552857806bab89851d5bfcb`. #557 stays draft until exact-head gates, independent Safe Merge Gate review, protected preview, production READY/alias and real acceptance. Historical 17 Oct 17:28 Chicago delivery remains unverified; do not replay/send.
+
 # MFit Completion Watch
 
 ## 23 November 2026 09:30 UTC — WhatsApp fallback restacked directly on master
