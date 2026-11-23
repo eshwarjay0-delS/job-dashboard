@@ -37,3 +37,8 @@ No local checkout/dependencies/DNS are available. Vercel Sandbox previously retu
 - PR #563: contract-board match-any search from #561, stacked on #554. Focused workflow 45282267513 is in progress.
 - PR #564: explicit same-account WhatsApp fallback / unsupported-JD hard hold from #557, stacked on #554. Checks were not yet visible at creation.
 - PR #554 is exact-head green across five gates but awaits independent authorized review. Neither restack is merged or deployed. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified; no real send/replay or personal data action occurred.
+
+
+## 23 November 2026 22:48 UTC — focused restack results
+
+PR #563 contract-search focused workflow 45282267513 SUCCESS. PR #564 WhatsApp recovery 45282722516 and Plan/REA schema 45282722435 SUCCESS. Both restacks remain DRAFT; full CI is pending, #564 baseline/cross-device pending. PR #561 and #557 closed as superseded with source branches preserved. PR #554 has five green gates but independent review pending. Production remains master 794e8cf READY. No live crawl, WhatsApp send/replay, DOCX, R2/Meta mutation, deployment or user-device acceptance.
