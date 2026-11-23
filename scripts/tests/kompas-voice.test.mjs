@@ -6,7 +6,7 @@ import { patchKompasVoice } from '../patch-kompas-voice.mjs';
 const source = await readFile(new URL('../../public/kompas/app.js', import.meta.url), 'utf8');
 function section(start, end) { return source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))); }
 function env(extra = {}) {
- const state = { entries: [], errors: [], current: { id: 'one', role: 'Security', voiceVocabulary: ['CyberArk'] }, transcriptionEpoch: 0, transcriptionFailedEpoch: -1, transcriptionOrder: Promise.resolve(), interimOffUntil: 0, running: true, performance, AbortController, setTimeout, clearTimeout, Blob, currentOutputKey: async () => '', showPressed: () => {}, ...extra };
+ const state = { entries: [], errors: [], current: { id: 'one', role: 'Security', voiceVocabulary: ['CyberArk'] }, answerCtl: null, detectedQueue: [], transcriptionEpoch: 0, transcriptionFailedEpoch: -1, transcriptionOrder: Promise.resolve(), interimOffUntil: 0, running: true, performance, AbortController, setTimeout, clearTimeout, Blob, currentOutputKey: async () => '', showPressed: () => {}, ...extra };
  state.status = m => state.errors.push(m);
  state.onTranscript = (who, text) => state.entries.push({ who, text });
  state.showCaption = () => {};
