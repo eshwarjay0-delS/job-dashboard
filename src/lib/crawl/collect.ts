@@ -38,10 +38,8 @@ export function politeFetcher(gapMs = 600, requestTimeoutMs = 25_000, portalSign
     let localTimeout = false
     let t: ReturnType<typeof setTimeout> | undefined
     const onPortalAbort = () => ctrl.abort()
-    const onInitAbort = () => ctrl.abort()
     portalSignal?.addEventListener("abort", onPortalAbort, { once: true })
-    init.signal?.addEventListener("abort", onInitAbort, { once: true })
-    if (portalSignal?.aborted || init.signal?.aborted) ctrl.abort()
+    if (portalSignal?.aborted) ctrl.abort()
     try {
       // URL parsing and pacing remain inside the cleanup boundary, so even malformed
       // input advances the per-portal clock without leaving abort listeners behind.
@@ -64,9 +62,6 @@ export function politeFetcher(gapMs = 600, requestTimeoutMs = 25_000, portalSign
       if (portalSignal?.aborted) {
         throw new Error(`Request to ${host} was cancelled by the portal time limit`, { cause: error })
       }
-      if (init.signal?.aborted) {
-        throw new Error(`Request to ${host} was cancelled by its caller`, { cause: error })
-      }
       if (error instanceof Error && error.name === "AbortError") {
         throw new Error(`Request to ${host} was aborted before the local timeout`, { cause: error })
       }
@@ -74,7 +69,6 @@ export function politeFetcher(gapMs = 600, requestTimeoutMs = 25_000, portalSign
     } finally {
       clearTimeout(t)
       portalSignal?.removeEventListener("abort", onPortalAbort)
-      init.signal?.removeEventListener("abort", onInitAbort)
       last = Date.now()
     }
   }
