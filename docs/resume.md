@@ -92,3 +92,8 @@ Source-controlled WhatsApp resume tests must use synthetic candidate names, dist
 - Confirmed-skill alignment PR #552 is open/draft at head f3323d2d. The confirmed-skill, WhatsApp recovery, Kompas baseline and Plan/REA gates pass; full CI 45230708625 fails the shared prefer-const lint before type-check/build. No authorized resume/JD/confirmation bundle or exported DOCX has been evaluated in this continuation; no live 95–100% match is claimed.
 - WhatsApp explicit same-account fallback PR #557 is open/draft. Recovery/baseline/Plan-REA pass, but full CI fails two Kompas Listening-hold assertions. The 17 Oct 17:28 Chicago delivery remains unverified; do not replay it.
 - Current production master SHA 794e8cfdbd3103409552857806bab89851d5bfcb is READY. The fixes above are not merged/released. Local checkout/dependencies/DNS are unavailable; no local test or personal document processing occurred.
+
+
+## 23 November 2026 — CI cause correction
+
+The confirmed-skill PR #552 full CI 45230708625 does not fail at lint. Exact job log shows two Kompas Listening-hold assertions (tests 50 and 54) fail; the resume-focused, WhatsApp recovery, baseline and Plan/REA gates pass. The required behavior is in PR #554, which awaits an independent authorized reviewer. No original resume/JD/confirmation bundle or exported DOCX was processed; no live match score is claimed.
