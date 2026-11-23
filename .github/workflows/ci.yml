@@ -157,6 +157,9 @@ jobs:
       - name: Verify Gmail Retry-After, Overview and selected-sender/account isolation
         run: node --experimental-strip-types --test scripts/tests/gmail-retry-after.test.mjs scripts/tests/mail-overview.test.mjs scripts/tests/gmail-send-account-isolation.test.mjs
 
+      - name: Verify Gmail account-scoped digest and mobile navigation
+        run: node --experimental-strip-types --test scripts/tests/dashboard-shell.test.mjs scripts/tests/mail-digest-account-isolation.test.mjs
+
       - name: Kompas S1 replay gate
         run: |
           if ! command -v google-chrome && ! command -v google-chrome-stable && ! command -v chromium && ! command -v chromium-browser; then
