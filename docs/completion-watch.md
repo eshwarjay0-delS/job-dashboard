@@ -909,3 +909,13 @@ Continue: trigger PR #547's exact-head full CI via a normal authenticated push o
 - **Other backlog:** #472 resume/JD factual alignment, #474 Gmail/mobile, #488 contract search and #517 crawler remain open with preview/real acceptance gaps; Gmail proactive worker/sending stays disabled, crawler stays manual/on-demand. Safe Merge Gate is disabled in the accessible inventory. Existing Plan & Vision reconciliation PR #543 is updated but remains DRAFT/non-mergeable on stale base; no checks ran after its API docs commits.
 
 **Continue:** #556 cannot merge while CI fails. Coordinate the fixture repair with #530 and resolve its behavior assertion on current master. Round 16 requires the private authorized token and approved source bundle. Resume WhatsApp route implementation when the runnable environment and installed guide are available; do not bypass the sandbox or review gates.
+
+
+## 22 November 2026 22:36 CDT — Contract search helper review
+
+- PR #488 exact head `371ee1ee5cc58c305de67b15f7728ed8185b9466` was reviewed. The helper implements the intended broad OR multi-word matching across title/company/location/body/tags and preserves technical tokens C++, C# and .NET. Remote full CI `44872890121` and baseline `44872890091` both SUCCESS on this exact head.
+- Focused local reproduction of the exact helper + test files in Node 22.16.0 scratch: **4/4 PASS** (OR matching, field coverage, punctuation, empty query). This does not test the contract-board client page or full repository build.
+- PR #488 remains DRAFT on base `13542c5`, 44 commits behind current master `794e8cf` with 9 divergent commits; no Plan/REA workflow or protected preview. Do not merge/deploy until safely restacked and UI/preview acceptance completes. Broad OR semantics are intentional; do not tighten to AND or literal phrase matching.
+- No crawler was run, no application submitted, and no production data changed.
+
+**Continue:** safely restack #488 on current master, run Plan/REA and protected-preview gates, and test the contract board search UI before merge/deploy. Crawler #517 remains a separate manual-only diagnostics task.
