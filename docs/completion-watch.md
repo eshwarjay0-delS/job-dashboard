@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 23 November 2026 03:26 UTC — WhatsApp two-line JD parser restacked behind combined Kompas gate
+
+- Current master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY in production. `src/lib/role-match.ts` still rejects a two-line JD + named-resume hint because it requires at least three lines.
+- New dependent branch `fix/whatsapp-two-line-jd-on-s5-listening-hold-20261123` is based on the combined S5/Listening-hold PR #554 head `fb7e1aa8b6e47d210da21998aadaeca40cf8e474`. It applies the narrow two-line guard only when the first line matches existing JD signatures; short two-line chat remains intact. The parser preserves the explicit hint and does not guess an account or choose a file.
+- Test quality correction: the predecessor #550 fixture encoded `\\n` (literal backslash+n) rather than a real newline. This branch constructs the input with `oneLinePost + "\\nuse the SOC resume"` and a true two-line short-chat negative, and registers the parser test in `prebuild`.
+- No exact-head CI, merge, deploy, integration WhatsApp flow or delivery proof yet. This PR is stacked behind #554; do not merge it first. The 17 Oct 17:28 Chicago delivery still lacks the generated DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt. No send, replay, DOCX or R2 write occurred.
+
+Continue: validate #554 first, then run the exact parser branch's full CI/WhatsApp recovery/Plan-REA gates. Preserve account confirmation and the separate same-account Files/Library hard hold. The route-level provenance/hard-hold work remains blocked by the unavailable protected Sandbox and installed Next.js 16.3.8 guide.
+
 ## 23 November 2026 03:16 UTC — Combine S5 and Listening-hold fixes before resuming WhatsApp parser
 
 - **Production baseline:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` both map to that deployment. No redeploy is needed for this work-in-progress branch.
