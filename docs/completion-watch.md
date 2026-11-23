@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 23 November 2026 20:27 UTC — Plan/REA insertion corrected
+
+- Review of the Gmail audit follow-up found a malformed REA object caused by an insertion offset. Corrected the entire new `gmail-digest-unmute-reachability` record, preserving all older entries; updated Plan Journal timestamp and Plan & Vision revision to `2026-11-23.8`.
+- Exact code head `5d930bec`: Gmail/mobile `45258979200`, schema `45258978883`, Kompas baseline `45258979291` SUCCESS; full CI `45258979321` FAILED on two existing Kompas Listening-hold assertions (tests 50 and 54 in `kompas-typed-question.test.mjs`). The corrected REA schema must be revalidated on the new head.
+- **Continue:** run the exact-head schema and full CI gates; do not merge/deploy while full CI, protected preview and real two-inbox/mobile acceptance remain incomplete.
+
+
 ## 23 November 2026 20:24 UTC — Gmail mute recovery tests corrected; focused gates green
 
 - Source fix commit `dab7785df536466c7bc45797c463f1ca3959d262`; test commit `5d930bec63b0b328cc6a8454b0633269b4f37c93` corrects the existing count assertion (3 mail/thread keys now remain because unmute buttons use sender-rule keys) and explicitly checks that sender-rule key.
