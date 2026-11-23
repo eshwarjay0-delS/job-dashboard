@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "../../src/lib/mail-digest.ts"
 import { readReplyDraft, replyDraftKey, saveReplyDraft } from "../../src/lib/mail-reply-draft.ts"
 
+// Provider thread IDs may collide across inboxes; sender mutes must remain account-scoped.
 test("digest sender mute is scoped to the receiving inbox", () => {
   const rules = [
     { account: "one@example.com", email: "recruiter@example.com", mode: "never" },
