@@ -32,19 +32,41 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
  * mapped into a relevant existing project bullet across roles, but this parser never supplies
  * an employer, project, date, title, location, contact or metric. Naming a tool in an editing
  * instruction, a question or a negation is not confirmation. */
+const CONFIRMATION_IGNORED_TERMS = new Set([
+  "i", "my", "have", "has", "had", "possess", "experience", "skills", "skill", "background", "confirmed",
+  "used", "using", "implemented", "deployed", "managed", "tested", "built", "conducted", "performed", "worked",
+  "includes", "include", "covers", "cover", "all", "every", "them", "these", "those", "listed", "required", "preferred",
+  "requirements", "requirement", "keywords", "keyword", "tools", "tool", "technologies", "technology",
+  "except", "excluding", "but", "however", "not", "never", "without", "missing", "no", "do", "does", "did",
+  "dont", "doesnt", "didnt", "cannot", "cant", "is", "are", "was", "were", "be", "with", "in", "on", "at", "for",
+  "and", "or", "of", "to", "the", "a", "an", "any", "their", "its", "it", "more", "less", "only", "very", "strong",
+  "production", "project", "projects", "role", "roles", "work", "security", "monitoring", "operations", "data",
+  "service", "services", "system", "systems", "team", "teams", "user", "users", "admin", "access", "management",
+  "application", "applications", "cloud", "network", "audit", "risk", "compliance", "process", "processes",
+  "development", "engineering", "platform", "platforms",
+])
+const confirmationTerms = (value: string) => (value.toLowerCase().match(/[a-z0-9][a-z0-9.+#/-]*/g) || [])
+  .filter(term => term.length > 1 && !CONFIRMATION_IGNORED_TERMS.has(term))
+
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
-  return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
+  return statements.flatMap(statement => statement.split(/[\\n;]+|[.!?](?=\\s|$)/)).flatMap(raw => {
     const line = raw.trim()
-    if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
+    if (!/^(?:i\\s+(?:(?:have|possess)\\b|(?:personally\\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\\b)|my\\s+(?:experience|skills|background)\\b|(?:confirmed experience|confirmed skills)\\s*:)/i.test(line)) return []
     // Reject negative assertions before treating a "my ..." sentence as positive evidence.
-    // Positive contrast remains safe only up to its explicit exception (e.g. AWS, but not GCP).
-    const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:is|are)\s+missing|missing|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\s+missing|missing|don't|doesn't|didn't|cannot|can't))\b/i
-    if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\b/i.test(line)) return []
-    const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
-    const hasException = /\b(?:except|excluding|but|however|not|never|without|missing)\b/i.test(line)
-    // Never truncate a blanket statement with an exception into a false "all skills" confirmation.
-    if (hasBlanketConfirmation && hasException) return []
-    const positive = line.split(/\b(?:except|excluding|but|however|not|never|without|missing)\b/i)[0].trim()
+    // Positive contrast is safe only before its exception (e.g. AWS, but not GCP).
+    const negativeClaim = /^(?:my\\s+(?:experience|skills|background)\\s+(?:lack(?:s|ing)?|(?:is|are)\\s+missing|missing|(?:do|does|did)\\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\\s+not|are\\s+not|has\\s+no|have\\s+no|no)|my\\s+experience\\s+(?:includes?|covers)\\s+no|(?:confirmed\\s+(?:skills|experience)\\s*:\\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\\s+missing|missing|don't|doesn't|didn't|cannot|can't))\\b/i
+    if (negativeClaim.test(line) || /^i\\s+(?:(?:have|possess)\\s+(?:no|not|never|without)|(?:do|does|did)\\s+not\\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\\b/i.test(line)) return []
+    const hasBlanketConfirmation = /\\b(?:all|every)\\b/i.test(line) && /\\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\\b/i.test(line)
+    const exception = line.match(/\\b(?:except|excluding|but|however|not|never|without|missing)\\b/i)
+    // A blanket claim with an exception is not blanket evidence. Also reject a
+    // self-contradictory list that names the same skill on both sides of its exception.
+    if (hasBlanketConfirmation && exception) return []
+    const positive = exception ? line.slice(0, exception.index).trim() : line
+    if (exception && positive) {
+      const supported = new Set(confirmationTerms(positive))
+      const excluded = confirmationTerms(line.slice(exception.index! + exception[0].length))
+      if (excluded.some(term => supported.has(term))) return []
+    }
     return positive ? [positive] : []
   })
 }
