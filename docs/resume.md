@@ -85,3 +85,10 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+
+## 23 November 2026 — current acceptance blockers
+
+- Confirmed-skill alignment PR #552 is open/draft at head f3323d2d. The confirmed-skill, WhatsApp recovery, Kompas baseline and Plan/REA gates pass; full CI 45230708625 fails the shared prefer-const lint before type-check/build. No authorized resume/JD/confirmation bundle or exported DOCX has been evaluated in this continuation; no live 95–100% match is claimed.
+- WhatsApp explicit same-account fallback PR #557 is open/draft. Recovery/baseline/Plan-REA pass, but full CI fails two Kompas Listening-hold assertions. The 17 Oct 17:28 Chicago delivery remains unverified; do not replay it.
+- Current production master SHA 794e8cfdbd3103409552857806bab89851d5bfcb is READY. The fixes above are not merged/released. Local checkout/dependencies/DNS are unavailable; no local test or personal document processing occurred.
