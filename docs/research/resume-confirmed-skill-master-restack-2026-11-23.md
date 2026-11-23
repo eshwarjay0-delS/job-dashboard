@@ -37,3 +37,8 @@ The parser now tokenizes the positive and exception portions, ignores ordinary g
 - Full CI: `45193540861` FAILURE at the existing `prefer-const` lint error in `src/lib/kompasConsistency.ts:1059`; type-check/build skipped
 
 PR #552 remains DRAFT. No local test/build, candidate resume/JD processing, model call, DOCX generation or exported-document inspection occurred. No 95–100% or 98% live match is claimed. The next gate is the shared Kompas lint/Listening-hold dependency and its independent-review requirement in PR #554, followed by exact-head full CI, protected preview and owner-authorized DOCX acceptance.
+
+
+## Shared CI repair — 23 November 2026
+
+The confirmed-skill branch now includes the behavior-neutral `let s` → `const s` lint correction and initializes `answerCtl`/`detectedQueue` in the four shared Kompas VM fixtures. This fixes the earlier CI lint/test harness blockers without changing resume evidence policy or runtime behavior. Exact current head `73341b24ae4432c2e281073855aecd2ab3be77c3`: full CI `45228044173`, focused confirmed-skill `45228044141`, and WhatsApp recovery `45228044178` are IN PROGRESS; Kompas baseline `45228044134` and Plan/REA `45228044137` SUCCESS. Local execution, real resume/JD, model and DOCX acceptance remain unavailable.
