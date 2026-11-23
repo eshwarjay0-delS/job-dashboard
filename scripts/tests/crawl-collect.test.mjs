@@ -78,3 +78,100 @@ test('portals run several at a time, the order turns with the offset, nothing st
   const failing = await crawlEach([adapters[1]], async () => { throw new Error('HTTP 503 from b.test') }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 1_000 })
   assert.equal(failing[0].error, 'HTTP 503 from b.test')
 })
+
+
+test('a portal timeout aborts cooperative work and keeps the worker slot until it settles', async () => {
+  const { crawlEach } = await import('../../src/lib/crawl/collect.ts')
+  const adapters = ['slow', 'next'].map(portal => ({ portal, firm: portal }))
+  let running = 0, maximum = 0, aborts = 0
+  const started = []
+  const outcomes = await crawlEach(adapters, (adapter, signal) => {
+    started.push(adapter.portal)
+    running++
+    maximum = Math.max(maximum, running)
+    if (adapter.portal === 'slow') {
+      return new Promise(resolve => signal.addEventListener('abort', () => {
+        aborts++
+        running--
+        resolve('cancelled')
+      }, { once: true }))
+    }
+    return new Promise(resolve => setTimeout(() => {
+      running--
+      resolve(adapter.portal)
+    }, 5))
+  }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 20 })
+  assert.equal(aborts, 1, 'the timeout must abort portal work')
+  assert.equal(maximum, 1, 'a timed-out task must not overlap the next portal')
+  assert.deepEqual(started, ['slow', 'next'])
+  assert.match(outcomes[0].error, /timed out/)
+  assert.equal(outcomes[1].value, 'next')
+})
+
+test('politeFetcher distinguishes local timeouts from upstream aborts and records the portal host', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    await assert.rejects(
+      politeFetcher(0, 5)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' }),
+      error => error.message === 'Request to www.inspyrsolutions.com timed out after 5 ms',
+    )
+
+    const portalController = new AbortController()
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    const pending = politeFetcher(0, 5000, portalController.signal)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' })
+    portalController.abort()
+    await assert.rejects(
+      pending,
+      error => error.message === 'Request to www.inspyrsolutions.com was cancelled by the portal time limit',
+    )
+    globalThis.fetch = async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError')
+    }
+    await assert.rejects(
+      politeFetcher(0, 100)('https://www.inspyrsolutions.com/wp-json/wp/v2/job-listings', { accept: 'application/json' }),
+      error => error.message === 'Request to www.inspyrsolutions.com was aborted before the local timeout',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('a malformed adapter URL still advances the request pacing clock', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  const originalNow = Date.now
+  const originalSetTimeout = globalThis.setTimeout
+  const gapMs = 137
+  const waits = []
+  try {
+    Date.now = () => 1000
+    globalThis.setTimeout = (callback, ms, ...args) => {
+      if (ms === gapMs) {
+        waits.push(ms)
+        return originalSetTimeout(callback, 0, ...args)
+      }
+      return originalSetTimeout(callback, ms, ...args)
+    }
+    globalThis.fetch = async () => ({ ok: true, text: async () => 'ok' })
+    const get = politeFetcher(gapMs, 5000)
+    await assert.rejects(get('not a valid URL'), /Invalid URL/)
+    assert.equal(await get('https://crawler.test/jobs'), 'ok')
+    assert.deepEqual(waits, [gapMs], 'the malformed URL must still advance the pacing timestamp')
+  } finally {
+    globalThis.fetch = originalFetch
+    Date.now = originalNow
+    globalThis.setTimeout = originalSetTimeout
+  }
+})
