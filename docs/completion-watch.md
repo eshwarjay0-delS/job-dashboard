@@ -1,3 +1,17 @@
+## 23 November 2026 23:02 UTC — four approved slices have focused evidence
+
+- **#565 contract search:** two focused runs 45282267513 and 45283478714 SUCCESS, 4/4 each.
+- **#566 WhatsApp fallback:** recovery 45282722516 and 45283495210 SUCCESS, 133/133 each; Plan/REA schema 45282722435 and 45283495328 SUCCESS.
+- **#567 confirmed-skill resume alignment:** 45284043448 SUCCESS, 40/40; WhatsApp recovery 45284043449 SUCCESS, 4/4.
+- **#568 Gmail/mobile:** 45284252541 SUCCESS, 12/12.
+- **Full CI hard wall:** all four ready PRs target the non-master #554 branch. `.github/workflows/ci.yml` runs full CI only for pull_request base `master` or `main`, so these stacked PRs do not receive full CI. #554 has five green gates but only the owner's COMMENTED review; independent authorized review remains required. Once #554 merges normally, restack these PRs onto master and run full CI.
+- Superseded PRs #563/#564/#561/#557/#552/#559 are closed, source branches/history preserved. None of the new slices is merged/deployed. Production remains master `794e8cfdbd3103409552857806bab89851d5bfcb` READY.
+
+No local checkout/dependencies; remote GitHub Actions executed focused tests. No real resume/JD/DOCX, model call, live Gmail/inbox/send, WhatsApp send/replay, R2/Meta mutation, live crawl/job submission, production deployment or device acceptance. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified.
+
+Continue: independent review of #554, normal merge; then restack #565–#568 on master, full CI, protected preview, production READY/alias and actual UX acceptance.
+
+
 ## 23 November 2026 22:56 UTC — focused restacks now green
 
 - #565 contract-search: both focused runs **45282267513** and **45283478714 SUCCESS**. Full CI still did not trigger because `.github/workflows/ci.yml` restricts pull_request base branches to `master`/`main`; this PR is stacked on non-master #554.
