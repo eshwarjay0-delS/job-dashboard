@@ -21,6 +21,9 @@ Contract search and crawling remain manual/on-demand. No daily cron, automatic a
 
 ## Verification
 
-Local checkout and test execution are unavailable in this automation environment because GitHub DNS does not resolve. GitHub Actions is the execution path. The PR must remain draft until the exact-head focused workflow passes, full CI is re-evaluated, and normal independent review/protected-preview requirements are satisfied. The current master has unrelated Kompas Listening-hold/lint blockers; a focused pass will not be reported as full-suite or live acceptance.
-
+- Local isolated execution: Node 22.16.0, **4 tests passed / 0 failed**. The helper and test were copied from the exact PR branch into a temporary test layout; this is not a full repository build.
+- GitHub focused workflow: run [45265726287](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45265726287) **SUCCESS** on exact head `a34bac0558e73fca6a7b08c1dfb593775972a0c6`.
+- Full CI: run [45265726249](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45265726249) **FAILED at Lint** on the unrelated current-master `src/lib/kompasConsistency.ts:1059` `prefer-const` error; type-check, remaining regression gates and build were skipped. Do not weaken the lint or Kompas checks. Exact-head follow-up is required after any branch change.
+- Production: canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; the `job-dashboard-fawn.vercel.app` alias independently resolves to that deployment. PR #561 is not deployed.
+- Vercel deployment-detail/runtime endpoints returned 403, but the Vercel deployment card and alias lookup succeeded. No protected preview for this PR was created.
 No live crawl, vendor portal access, job submission, external message, production deployment or user-device acceptance occurred in this slice.
