@@ -919,3 +919,12 @@ Continue: trigger PR #547's exact-head full CI via a normal authenticated push o
 - No crawler was run, no application submitted, and no production data changed.
 
 **Continue:** safely restack #488 on current master, run Plan/REA and protected-preview gates, and test the contract board search UI before merge/deploy. Crawler #517 remains a separate manual-only diagnostics task.
+
+
+## 22 November 2026 22:38 CDT — Crawler timeout/cancellation source review
+
+- PR #517 exact head `4ac7f1f46bb956ec5cf939ffa70ebcecdc519d9b` remains DRAFT on stale base `19a4ef20`; no exact-head workflow runs are visible.
+- Source review found `crawlEach` races `work(adapter)` against a timeout but does not cancel the work. A slow adapter can continue fetching/parsing after it is reported timed out while a worker starts another portal; the actual in-flight concurrency cap can be exceeded. Its timeout test only checks the returned outcome, not cancellation/slot retention. Non-approval review comment `6016634470` requests AbortSignal propagation or keeping the worker slot until work settles, plus a regression.
+- No live crawl/portal request was performed. Preserve manual/on-demand policy, 600 ms pacing, Robert Half manual-only, and eTeam exclusion.
+
+**Continue:** repair timeout semantics/tests on a current-master restack, require exact full CI + crawler regression + baseline + Plan/REA, and only then proceed to protected preview/release and owner-authorized crawl acceptance.
