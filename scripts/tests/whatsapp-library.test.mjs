@@ -135,10 +135,16 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 2, 'redo makes it again')
 })
 
-test('a user-named Files resume is persisted as the explicit fallback selection', async () => {
+test('a user-named Files resume is persisted as the explicit fallback selection after choosing its account', async () => {
   const b = bot({ agent: null })
   await b.wa.handle('15550011', { type: 'text', id: 'm1', text: { body: JD + '\nuse the SOC resume' } }, {}, 'user1')
+  assert.equal(b.runs.length, 0, 'the bot must ask which email when more than one account has resumes')
+  assert.match(b.said.at(-1), /which email/i)
+  const pending = await b.wa.loadSession('15550011')
+  assert.equal(pending.pending?.hint, 'SOC', 'the named resume hint survives the email-selection step')
+  await b.wa.handle('15550011', { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession('15550011'), 'user1')
   assert.equal(b.runs.length, 1)
+  assert.equal(b.runs[0].jd, JD, 'the resume instruction is removed from the job description')
   assert.equal(b.runs[0].givenPath, SOC, 'the named resume is the source actually selected')
   assert.equal(b.recoveryJobs[0].files.explicitlySelected, true)
   assert.equal(b.recoveryJobs[0].files.abs, SOC)
