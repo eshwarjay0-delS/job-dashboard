@@ -16,5 +16,5 @@ test('Plan & Vision TypeScript source parses without syntax diagnostics', () => 
   })
   const errors = (output.diagnostics || []).filter(d => d.category === ts.DiagnosticCategory.Error)
   assert.equal(errors.length, 0, errors.map(d => ts.flattenDiagnosticMessageText(d.messageText, '\\n')).join('\\n'))
-  assert.match(source, /export const PRODUCT_PLANS: ProductPlan\\[\\] = \\[/)
+  assert.ok(source.includes('export const PRODUCT_PLANS: ProductPlan[] = ['), 'PRODUCT_PLANS declaration is present')
 })
