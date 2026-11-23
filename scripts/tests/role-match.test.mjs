@@ -118,6 +118,13 @@ test('a job post that ends with "use the X resume" is the post and the name', ()
   assert.deepEqual(R.splitTailInstruction(post), { jd: post, hint: '' })
 })
 
+test('a one-line job post followed by a named resume is split, but a short message is not', () => {
+  const oneLinePost = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
+  assert.deepEqual(R.splitTailInstruction(`${oneLinePost}\nuse the SOC resume`), { jd: oneLinePost, hint: 'SOC' })
+  const short = 'Please use the SOC resume\nuse the SOC resume'
+  assert.deepEqual(R.splitTailInstruction(short), { jd: short, hint: '' }, 'two short lines are not a pasted job post')
+})
+
 test('a short question about the bot\'s own work is read as one; a job post or an instruction is not', () => {
   for (const q of ['Why did you pick that resume?', 'why did you choose the IAM one', 'how come you used the AppSec resume', 'Which resume did you use?', 'what resume did you pick for that one']) assert.equal(R.parseQuestion(q), 'why', q)
   for (const q of ['What resumes do I have?', 'show me my resumes', 'which resumes are saved', 'list my resumes']) assert.equal(R.parseQuestion(q), 'list', q)

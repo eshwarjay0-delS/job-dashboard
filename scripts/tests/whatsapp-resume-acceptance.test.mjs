@@ -28,7 +28,7 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall, chosenResumeMatchesProfile } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
@@ -160,7 +160,7 @@ test("70% job-post overlap with 95% supported coverage is the clean delivery flo
   })
   assert.equal(acceptableWhatsAppResume(draft), true, whatsappResumeRejectionReasons(draft).join(","))
 })
-test("69.9% is not a clean pass, and the finished file is still sendable", () => {
+test("69.9% is not a clean pass, but a completed readable file remains sendable with gaps", () => {
   const draft = make({
     coverage: 69.9,
     supported_coverage: 100,
@@ -172,7 +172,7 @@ test("69.9% is not a clean pass, and the finished file is still sendable", () =>
   assert.equal(gate.whatsappRewriteUsable(draft), true)
   assert.equal(gate.deliveredWithShortfall(draft), true)
 })
-test("30.8% with a role evidence gap is sent, and it is not a clean pass or a website download", () => {
+test("30.8% with a role evidence gap is not a clean pass, but a completed readable file remains sendable", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
   const draft = make({
     coverage: 30.8,
@@ -200,7 +200,7 @@ test("a role that was not rewritten still uses the library backup", () => {
   assert.equal(acceptableWhatsAppResume(draft), false)
   assert.equal(gate.acceptableWebResume(draft), false)
 })
-test("28.5% is not a clean pass, and the finished file is still sendable", () => {
+test("28.5% is not a clean pass, but a completed readable file remains sendable with gaps", () => {
   const draft = make({
     coverage: 28.5,
     supported_coverage: 100,
@@ -210,6 +210,7 @@ test("28.5% is not a clean pass, and the finished file is still sendable", () =>
   assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
   assert.equal(gate.whatsappRewriteUsable(draft), true)
+  assert.equal(gate.deliveredWithShortfall(draft), true)
 })
 test("Houston and Saint Louis emails are not treated as the same profile", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
@@ -247,6 +248,33 @@ rejects("incomplete cached report rejected even with legacy deliverable status",
 rejects("unverified JD claims are rejected independently of score", {
   unverified_added_keywords: ["Unverified Product"],
 }, "unverified_jd_terms")
+
+test("unverified JD-only additions are a hard hold, never a shortfall delivery", () => {
+  const draft = make({
+    unverified_added_keywords: ["unsupported-platform"],
+    coverage: 70,
+    supported_coverage: 100,
+  })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.equal(whatsappRewriteUsable(draft), false)
+  assert.equal(deliveredWithShortfall(draft), false)
+})
+
+test("an unverified_jd_terms quality blocker stays a hard hold when the detail list is empty", () => {
+  const draft = make({ unverified_added_keywords: [], quality_blockers: ["unverified_jd_terms"] })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(whatsappRewriteUsable(draft), false)
+  assert.equal(deliveredWithShortfall(draft), false)
+})
+
+test("a missing selected-library profile email fails closed", () => {
+  const text = "Candidate One\ncandidate1@example.test"
+  assert.equal(chosenResumeMatchesProfile(text), false)
+  assert.equal(chosenResumeMatchesProfile(text, ""), false)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test"), true)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate2@example.test"), false)
+})
 rejects("missing role rewrite is rejected independently of score", {
   quality_blockers: ["roles_unrewritten"],
 }, "roles_unrewritten")

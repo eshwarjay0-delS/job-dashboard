@@ -134,22 +134,20 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   file = null
   await generate('15550101', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 1)
-  assert.equal(docs.length, 1, 'a missing tailored file still delivers the chosen resume')
-  assert.match(docs[0].caption, /updated Word file could not be opened/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs.length, 0, 'an uploaded original is not an offline fallback')
+  assert.match(said.at(-1), /Word file could not be opened/)
+  assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /candidate1@example.test/)
 
   docs.length = 0
   file = Buffer.from('candidate2@example.test')
   samePerson = false
   await generate('15550101', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
-  assert.equal(docs.length, 1, 'an identity mismatch does not send the rewritten file')
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /identity\/contact\/date verification/)
-  assert.match(docs[0].caption, /closest matching resume/)
+  assert.equal(docs.length, 0, 'an identity mismatch never sends a fallback from an upload')
+  assert.match(said.at(-1), /identity\/contact\/date verification/)
+  assert.match(said.at(-1), /No exact Files resume was explicitly selected/)
+  assert.doesNotMatch(docs.map(d => d.body).join('\\n'), /candidate2/)
 
   file = Buffer.from('candidate1@example.test')
   samePerson = true
