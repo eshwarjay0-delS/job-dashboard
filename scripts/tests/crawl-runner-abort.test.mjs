@@ -21,7 +21,7 @@ function loadTS(file, mocks, sandbox = {}) {
   return module.exports
 }
 
-test('runner wires one portal AbortSignal into fetch and both database write queries', async () => {
+test('runner forwards the portal signal to writes and the abortable fetcher', async () => {
   const fetchSignals = [], upsertSignals = [], retireSignals = []
   const query = log => ({
     abortSignal(signal) { log.push(signal); return this },
@@ -67,7 +67,10 @@ test('runner wires one portal AbortSignal into fetch and both database write que
   assert.equal(fetchSignals.length, 1)
   assert.equal(upsertSignals.length, 1)
   assert.equal(retireSignals.length, 1)
-  assert.equal(fetchSignals[0], upsertSignals[0])
-  assert.equal(fetchSignals[0], retireSignals[0], 'the same portal signal is used for fetch and writes')
-  assert.ok(fetchSignals[0] instanceof AbortSignal)
+  assert.equal(upsertSignals[0], retireSignals[0], 'the same portal signal is used for both write queries')
+  assert.ok(fetchSignals[0] instanceof AbortSignal, 'fetch receives a request-level signal')
+  assert.ok(upsertSignals[0] instanceof AbortSignal, 'write queries receive the portal signal')
+  assert.notEqual(fetchSignals[0], upsertSignals[0], 'fetch wraps the portal signal so its own request timeout remains available')
+  const runnerSource = readFileSync(resolve(root, 'src/lib/crawl/runner.ts'), 'utf8')
+  assert.match(runnerSource, /politeFetcher\(adapter\.gapMs \?\? 600,\s*25_000,\s*signal\)/, 'runner forwards the portal signal into the fetcher')
 })
