@@ -1,9 +1,8 @@
 /**
  * Post-generation honesty gate (Parakeet S5).
- * The allow-list is the resume text the answer prompt already loaded.
- * The Fortinet Houston file is only the default when that text is missing,
- * or when the text is the Saint Louis profile. The full Fortinet docx is not
- * in the repo; the default file is the owner summary of that resume.
+ * The currently loaded resume is the source of truth for personal claims.
+ * The Fortinet Houston text is only a fallback when no non-empty resume was
+ * supplied. It must never replace a different, already-loaded candidate file.
  */
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
@@ -71,7 +70,15 @@ function personalNumber(sentence: string): string[] {
 }
 
 function resumeLines(source: string): string[] {
-  return String(source || "").split(/\n+/).map((line) => line.replace(/\s+/g, " ").trim()).filter((line) => line.length > 12)
+  // Contact details may exist in the source resume, but they are not spoken
+  // experience evidence. Never append an email, URL or phone-only line to an
+  // interview answer when a relevant evidence line is unavailable.
+  return String(source || "").split(/\n+/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line.length > 12)
+    .filter((line) => !/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(line))
+    .filter((line) => !/(?:https?:\/\/|www\.)\S+/i.test(line))
+    .filter((line) => !/^\+?[\d\s().-]{7,}$/.test(line))
 }
 
 function lineMatching(source: string, pattern: RegExp): string {

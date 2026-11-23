@@ -59,7 +59,7 @@ function runOnce() {
   }
   for (const row of fx.honesty) {
     const resume = resumeOf(row.resume)
-    assert.equal(/jayeshwar44|saint louis university/i.test(honestySource(resume)), false, row.id)
+    assert.equal(honestySource(resume), resume.trim() ? resume : HOUSTON_RESUME, row.id)
     const got = applyHonestyGate({ question: row.question, answer: row.answer, resume })
     const again = applyHonestyGate({ question: row.question, answer: got.text, resume })
     assert.equal(again.text, got.text, `${row.id} not stable`)
@@ -128,6 +128,18 @@ test("a loaded session resume is the allow-list", () => {
   assert.doesNotMatch(got.text, /FortiGate|McKesson/)
 })
 
+test("the current resume stays authoritative and contact details never become spoken facts", () => {
+  assert.equal(honestySource(saint), saint)
+  assert.equal(honestySource(""), HOUSTON_RESUME)
+  const got = applyHonestyGate({
+    question: "Where did you study?",
+    answer: "I studied at Saint Louis University and then I joined Cigna.",
+    resume: saint,
+  })
+  assert.match(got.text, /Saint Louis University/)
+  assert.doesNotMatch(got.text, /Cigna|Fortinet|McKesson|jayeshwar44/)
+})
+
 test("S5 fixtures, 10 folds, same result each time", () => {
   assert.ok(fx.screen.length >= 10)
   assert.ok(fx.press.length >= 10)
@@ -150,4 +162,18 @@ test("the page grabs the shared tab and does not ask for a new share", () => {
   assert.doesNotMatch(app, /status\("Listening, no new question yet/)
   assert.doesNotMatch(app, /status\("No new question yet/)
   assert.match(app, /function manualAnswerTarget/)
+})
+
+
+test("spoken evidence excludes email, URL and phone-only lines", () => {
+  const resume = [
+    "Candidate",
+    "candidate@example.test",
+    "https://example.test/profile",
+    "+1 (555) 010-0123",
+    "Supported project line: I configured SIEM alert routing and incident triage.",
+  ].join("\\n")
+  const spoken = bridgeTemplates(resume).join("\\n")
+  assert.match(spoken, /SIEM alert routing/i)
+  assert.doesNotMatch(spoken, /candidate@example\\.test|https:\\/\\/example\\.test|555/)
 })
