@@ -62,3 +62,8 @@ Contract #565 two 4/4 runs; WhatsApp #566 two 133/133 recovery runs plus schema 
 ## 23 November 2026 23:06 UTC — crawler gate green
 
 PR #569 crawler freshness job 138078245414 SUCCESS 41/41. PR #551 superseded/closed, branch preserved. The contract search, WhatsApp fallback, resume confirmed-skill and Gmail/mobile focused gates also passed. Full CI is filtered to master/main and is not triggered on non-master #554 base. #554 awaits independent review. No live crawl/send/resume/DOCX or deployment.
+
+
+## 23 November 2026 — current-master continuation
+
+Independent master-based review PRs #570–#574 were opened to avoid waiting on the non-master #554 branch: #570 confirmed skills, #571 Gmail/mobile, #572 WhatsApp explicit same-account Files fallback, #573 crawler timeout/abort, #574 contract-board match-any search. Exact focused results and CI are in Plan Journal and Completion Watch; every PR remains draft. The shared full-CI blocker is master prefer-const at `src/lib/kompasConsistency.ts:1059`; #574 full CI/focused are still running. The current automation inventory confirms Safe Merge Gate is disabled, despite older docs saying active. Production alias remains READY at 794e8cf. No local test, protected preview, real data action or production deploy occurred.
