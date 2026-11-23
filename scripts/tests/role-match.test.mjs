@@ -127,7 +127,7 @@ test('a short question about the bot\'s own work is read as one; a job post or a
 
 test('a one-line job post followed by a named resume is split, but a short message is not', () => {
   const oneLinePost = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
-  assert.deepEqual(R.splitTailInstruction(`${oneLinePost}\\nuse the SOC resume`), { jd: oneLinePost, hint: 'SOC' })
+  assert.deepEqual(R.splitTailInstruction(`${oneLinePost}\nuse the SOC resume`), { jd: oneLinePost, hint: 'SOC' })
   const short = 'Please use the SOC resume\\nuse the SOC resume'
   assert.deepEqual(R.splitTailInstruction(short), { jd: short, hint: '' }, 'two short lines are not a pasted job post')
 })
