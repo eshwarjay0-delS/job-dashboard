@@ -815,3 +815,11 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 
 - MFit Completion Watch is enabled hourly. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled in the accessible automation inventory; no separate Bible-Keeper automation was found. The prior statement that Safe Merge Gate was currently enabled is stale. No automation is assumed to be actively reviewing/merging these draft branches.
 - Current production master is `794e8cfdbd3103409552857806bab89851d5bfcb` and READY; no deployment was created by this continuation. The protected Vercel sandbox remains unavailable, so WhatsApp route changes cannot be safely implemented in that required environment.
+
+
+## 23 November 2026 17:40 UTC — crawler diagnostics CI blockers repaired
+
+- PR #551 code/test head 0f194b18f730b184c18321b67d4da077c56b8895 includes the timeout-cancellation diagnostics and four shared Kompas VM fixture corrections, plus behavior-neutral lint fixes for the abort timer and Kompas sentence variable. The timer refactor preserves cancellation semantics and ensures the handler exists before the listener/check can invoke it.
+- Prior full CI 45229384405 failed only at two prefer-const errors (collector timer and kompasConsistency.ts:1059). Current exact-head full CI 45230015959, crawler regression 45230015822, Kompas baseline 45230016873 and Plan/REA 45230015849 are IN PROGRESS. No current-head pass is claimed.
+- The focused crawler workflow at prior head 45229384721 SUCCESS; no live crawl, portal request, database mutation, scheduler, production deployment or application submission occurred.
+- **Continue:** inspect all exact-head runs to terminal. Keep PR #551 DRAFT and manual-only; if CI exposes the two Listening-hold tests, treat #554 as the independent review dependency and do not weaken tests or merge around it.
