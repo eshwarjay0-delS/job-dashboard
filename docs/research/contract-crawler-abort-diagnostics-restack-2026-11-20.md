@@ -24,3 +24,11 @@ Local execution is unavailable: the container has no checkout, and `git clone` f
 1. Confirm the restack head and run full CI, crawler regression, Plan/REA schema and Kompas baseline on that exact SHA.
 2. Keep PR #479 DRAFT and let the review gate sequence it; do not merge until review and the legitimate protected preview/release requirements are satisfied.
 3. If later released, verify READY production plus canonical aliases and then request a separate explicit manual crawl acceptance. Never restore cron or call Robert Half without separate permission.
+
+
+## 23 November validation update
+
+- Source restack commit: `82ee39864ec97ad6fac5b718f52c63f0fc4f3230`.
+- Exact head `82ee39864ec97ad6fac5b718f52c63f0fc4f3230`: schema run `45243825329` FAILED because the new Plan Journal object was inserted without a comma before it. The separator was repaired in the follow-up commit; no runtime code was changed in that repair.
+- On the failed head, crawler regression `45243825147` and Kompas baseline `45243825364` completed SUCCESS; full CI `45243825143` was still in progress. Verify all four gates again on the final corrected head. Do not reuse predecessor results.
+- The restacked PR is mergeable against current master but remains DRAFT. No protected preview or production release has occurred.
