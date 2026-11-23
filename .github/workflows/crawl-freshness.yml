@@ -5,6 +5,8 @@ on:
     paths:
       - "src/lib/crawl/search.ts"
       - "src/lib/crawl/collect.ts"
+      - "src/lib/crawl/runner.ts"
+      - "scripts/tests/crawl-runner-abort.test.mjs"
       - "scripts/tests/crawl-collect.test.mjs"
       - "src/lib/crawl/portals/**"
       - "scripts/tests/crawl-portals-*.test.mjs"
@@ -19,6 +21,7 @@ on:
     branches:
       - "master"
       - "fix/crawl-freshness-eteam-20261109"
+      - "fix/crawler-abort-diagnostics-round14-20261123"
     paths:
       - "src/lib/crawl/search.ts"
       - "src/lib/crawl/collect.ts"
@@ -51,5 +54,7 @@ jobs:
         run: node --experimental-strip-types --test scripts/tests/crawl-classify.test.mjs
       - name: Run collector, portal timeout and abort regressions
         run: node --experimental-strip-types --test scripts/tests/crawl-collect.test.mjs
+      - name: Run crawler runner cancellation wiring regressions
+        run: node --experimental-strip-types --test scripts/tests/crawl-runner-abort.test.mjs
       - name: Run active portal registry and source-safety regressions
         run: node --experimental-strip-types --test scripts/tests/crawl-portals-*.test.mjs
