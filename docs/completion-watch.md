@@ -938,3 +938,15 @@ Continue: trigger PR #547's exact-head full CI via a normal authenticated push o
 - No route edit/merge/deploy is possible in this runtime: no local checkout/dependencies and no installed Next.js 16.3.8 route-handler guide; Vercel Sandbox quota was reported reset 1 Dec 2026. No bypass.
 
 **Continue:** preserve the guard; after the approved runnable checkout and guide are available, run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA, safely restack #493, then verify a consented real WhatsApp flow with delivery/read receipt. Do not replay the historical message.
+
+
+## 23 November 2026 09:21 UTC — Remote CI fixture repairs and current blockers
+
+- Production is still READY at exact master SHA `794e8cfdbd3103409552857806bab89851d5bfcb` (deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`). No runtime release is needed for these test-only changes.
+- **PR #556** (`fix/kompas-round15-lint-const-20261122`) now has the one-token lint correction plus queue-control fixture fields. Current head `73215d9682675d2d658b84a7878ac49869453315`; full CI `45145972568` is in progress, baseline `45145973185` passed.
+- **PR #551** (approved crawler timeout/abort diagnostics) received the same test-fixture repair. Current head `c19fe4a7aa381bbbea3f1575357c9c2b8741d4b9`; full CI `45145980892` is in progress; crawler `45145980857`, baseline `45145980895`, Plan/REA `45145980912` passed. No live crawl; pacing/manual-only policy is unchanged.
+- **PR #552** (approved confirmed-skill resume/JD mapping) received the same fixture repair and the lint correction. Current head `d43be9128be3093031587b6b98755ebf1d5a19aa`; full CI `45145982598` is in progress; WhatsApp recovery `45145982653` and baseline `45145982492` passed. Exported-DOCX acceptance remains missing.
+- **WhatsApp #557 remains blocked**: it is stacked on #554; #554's five checks passed, but its only review is the owner's COMMENT and GitHub rejected self-approval. #557 has no full CI or independent review. The 17 Oct 17:28 Chicago delivery is unverified (no exact output DOCX, per-run R2 version, webhook correlation, Meta outbound ID or signed receipt).
+- The local clone attempt failed because this runtime cannot resolve `github.com`. Remote GitHub API editing/Actions remain available. No real WhatsApp/Gmail/model call, DOCX generation, R2/DB mutation, live crawl or device test occurred.
+
+**Continue:** inspect exact-head CI on #556/#551/#552. Do not merge if checks fail or if independent review is missing. Preserve first-press Listening/second-press explicit re-ask behavior; #554 needs a second authorized reviewer before merging. Then validate WhatsApp #557 on a clean master base with full CI, recovery, baseline and Plan/REA; real delivery acceptance is separate.
