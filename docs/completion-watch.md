@@ -8,6 +8,16 @@
 - **Continue:** Round 12 requires a real authorized Kompas phone/desktop session, the 10 scenario/experience questions plus follow-up, paired ChatGPT responses and independent 0–4 scoring. Exact blocker: no KOMPAS_API_TOKEN, approved resume/JD/reference bundle or authenticated device session in this environment. When a canonical runnable checkout/installed guide is available, implement and test the two-line resume parser, durable explicit-selection provenance, and unsupported-JD hard hold; then exact-head CI and normal review. Gmail/mobile #474 and manual-only crawler #479 remain separate, unvalidated backlog items. Do not fabricate acceptance or enable workers/schedulers.
 
 # MFit Completion Watch
+## 23 November 2026 21:04 UTC — contract-board search restack (#561)
+
+- Continued approved job-first contract search: match-any whitespace terms across title/company/location/description/tags; preserve `C++`, `C#`, and `.NET`. Current master `794e8cf` still applies the full query as a substring, so multi-word terms distributed across fields are missed.
+- Clean current-master source PR #561 adds helper, call site, four regression groups, prebuild/full-CI registration and a focused remote workflow. Eight commits are reviewable; exact-head Actions have not started at this snapshot. Local checkout is blocked by github.com DNS.
+- #488 is the stale prior draft; #561 is the current review path. Plan Journal/REA/Plan updates are recorded on this existing documentation backlog PR #543, avoiding a new shared-doc branch.
+- Scope remains manual/on-demand; no crawler schedule, live portal request, row mutation, application submission, Robert Half automation or eTeam inclusion. No production deployment or live acceptance.
+
+**Continue:** await exact-head focused workflow/full CI, keep #561 draft, and proceed only after normal review, protected preview and verified production READY/alias. No tests are weakened.
+
+
 
 ## 22 November 2026 13:26 CST — PR540 fixture correction: four gates green, full CI pending
 
