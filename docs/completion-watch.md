@@ -802,3 +802,16 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - The previous #551 head `c19fe4a` had crawler freshness, Kompas baseline and Plan/REA SUCCESS, but full CI failed with 24 unrelated Kompas VM fixture errors; the branch also carried a behavior-neutral lint fix and those fixtures. The clean restack deliberately excludes #550/#554 changes. Exact-head crawler freshness and other gates are pending; full CI may hit the same master blockers. No local tests are possible.
 - No live crawl, portal request, database mutation, scheduler, production deploy or application submission occurred. Robert Half remains manual-only and eTeam excluded pending a compliant official feed.
 - **Next:** exact-head crawler freshness, full CI, Kompas baseline and Plan/REA; resolve shared test blockers through existing PRs, then review, protected preview, READY production alias, and a separately authorized manual crawl.
+
+
+## 23 November 2026 10:39 CDT — Timeout cancellation continuation
+
+- PR #551 branch `fix/crawler-abort-diagnostics-round14-20261123` remains DRAFT. Source changes: per-portal AbortSignal; cancellation of pacing and in-flight fetch; cancellation forwarded to Supabase upsert/retire; cancellation check before writes; timeout work is drained before a worker slot is reused. 600 ms pacing and 25 s request timeout remain unchanged. No live crawl, scheduler or production change.
+- Current code/test head is `ba13fa90b73d4baec74fdcccd47845bba0fb6663`. Collector tests passed 8/8 on predecessor run 45218425372; that run failed in the new runner VM test because of a cross-realm deepStrictEqual. The assertion is now property-based on ba13fa90. Exact-head crawler run 45218924841, Plan/REA 45218925250, Kompas baseline 45218925017 and full CI 45218924952 were pending at this snapshot. Earlier runner test failures: missing mocked fetch, corrected at 490a2137.
+- Production is independently READY on master `794e8cfdbd3103409552857806bab89851d5bfcb`; PR #551 is not live. The 10 Nov crawl remains the last evidence; no crawl or portal request was made.
+- **Continue:** inspect exact-head gates; fix only the test harness if needed, then review, protected preview, READY alias, and separately authorized manual crawl. Source permission, Robert Half manual-only and eTeam exclusion remain.
+
+## Backlog gate correction — automation inventory 23 November
+
+- MFit Completion Watch is enabled hourly. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled in the accessible automation inventory; no separate Bible-Keeper automation was found. The prior statement that Safe Merge Gate was currently enabled is stale. No automation is assumed to be actively reviewing/merging these draft branches.
+- Current production master is `794e8cfdbd3103409552857806bab89851d5bfcb` and READY; no deployment was created by this continuation. The protected Vercel sandbox remains unavailable, so WhatsApp route changes cannot be safely implemented in that required environment.
