@@ -9,7 +9,7 @@ import { applyHonestyGate, honestySource, HOUSTON_RESUME, scopeAnswer, wentWrong
 const fx = JSON.parse(readFileSync(new URL("../fixtures/kompas-s5.json", import.meta.url), "utf8"))
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
-const saint = "jayeshwar44@gmail.com\nSaint Louis University\nCigna Healthcare — OT Security Analyst\n"
+const saint = "candidate@example.test\nSaint Louis University\n"
 
 function resumeOf(name) {
   if (name === "saint") return saint
@@ -137,7 +137,7 @@ test("the current resume stays authoritative and contact details never become sp
     resume: saint,
   })
   assert.match(got.text, /Saint Louis University/)
-  assert.doesNotMatch(got.text, /Cigna|Fortinet|McKesson|jayeshwar44/)
+  assert.doesNotMatch(got.text, /Cigna|Fortinet|McKesson|candidate@example\.test/)
 })
 
 test("S5 fixtures, 10 folds, same result each time", () => {
