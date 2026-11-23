@@ -119,3 +119,12 @@ PR #565 contract-search and #566 WhatsApp fallback are ready for review, stacked
 ## 23 November 2026 — focused restacks green
 
 #565 contract-search focused runs 45282267513 and 45283478714 passed. #566 WhatsApp recovery 45282722516, schema 45282722435, fresh regression 45283495328 and fresh schema 45283495328 passed. Full CI did not trigger because its pull_request base filter is master/main and these restacks target non-master #554. #554 awaits independent review. No deployment or live crawl/send.
+
+
+## 23 November 2026 — focused gates across approved work
+
+- #565 contract-search: runs 45282267513 and 45283478714 passed (4/4 each).
+- #566 WhatsApp fallback: recovery 45282722516 and 45283495210 passed (133/133 each); schema 45282722435 and 45283495328 passed.
+- #567 confirmed-skill alignment: 45284043448 passed (40/40), recovery 45284043449 passed (4/4).
+- #568 Gmail/mobile: 45284252541 passed (12/12).
+- Full CI remains blocked from triggering on non-master #554 base due master/main workflow filter. #554 awaits independent review. No production or real-data acceptance.
