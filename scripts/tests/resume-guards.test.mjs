@@ -218,13 +218,17 @@ test('keywords: Java not matched inside JavaScript', () => {
 })
 
 // Guarded WhatsApp refine failures must never attribute a non-email mismatch to email.
-// A missing original still sends no file. An identity, contact, or date mismatch does not
-// send the rewritten bytes; it sends the already-chosen baseline and names that reason.
-test('WhatsApp refine: missing original and failed identity verification have distinct, accurate refusals', () => {
+// A missing original sends no file. An identity/contact/date mismatch never sends the rewritten
+// bytes or silently resends a prior baseline. An unchanged original is possible only through the
+// durable, explicitly selected same-account Files path and keeps the exact NOT TAILORED caption.
+test('WhatsApp refine: missing original and identity mismatch never silently resend a baseline', () => {
   const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
   assert.match(route, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\."\)/)
-  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*await sendBaseline\("The update failed identity\/contact\/date verification, so I sent your original resume instead\.", source, meta\)/)
-  assert.match(route, /sendClosest\("The update failed identity\/contact\/date verification, so I sent your original resume instead\."\)/)
+  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*return sendText\(from, "I did not send another file\. The update failed identity\/contact\/date verification; the version you already have remains unchanged\."\)/)
+  assert.match(route, /if \(await sendClosest\("The updated file failed identity\/contact\/date verification, so it was not sent\."\)\) return/)
+  assert.match(route, /!durable\.files\?\.explicitlySelected/)
+  assert.match(route, /Original resume — NOT TAILORED/)
+  assert.doesNotMatch(route, /sendBaseline\("The update failed identity\/contact\/date verification/)
   assert.doesNotMatch(route, /The rewrite did not keep your name, contact details and dates/)
   assert.doesNotMatch(route, /failed the contact-details or employment-date preservation check/)
   assert.match(route, /docxIdentityText\(source\)/)

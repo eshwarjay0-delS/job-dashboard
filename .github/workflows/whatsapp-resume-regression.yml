@@ -17,6 +17,7 @@ on:
       - 'scripts/tests/whatsapp-resume-failsafe.test.mjs'
       - 'scripts/tests/whatsapp-single-request.test.mjs'
       - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
+      - 'scripts/tests/whatsapp-resume-acceptance.test.mjs'
       - '.github/workflows/whatsapp-resume-regression.yml'
   pull_request:
     paths:
@@ -34,6 +35,7 @@ on:
       - 'scripts/tests/whatsapp-resume-failsafe.test.mjs'
       - 'scripts/tests/whatsapp-single-request.test.mjs'
       - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
+      - 'scripts/tests/whatsapp-resume-acceptance.test.mjs'
   workflow_dispatch:
 jobs:
   regression:
@@ -47,4 +49,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs
+      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/whatsapp-fixture-privacy.test.mjs scripts/tests/whatsapp-resume-acceptance.test.mjs
