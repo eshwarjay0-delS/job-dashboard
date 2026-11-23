@@ -229,3 +229,8 @@ The mobile navigation is hidden when closed and expands below the sticky top bar
 
 The proactive Poke worker, scheduler, notifications and automatic sending remain disabled. This code/test change makes no Gmail API/OAuth call, does not read or mutate an inbox, and does not send email or WhatsApp. Two-inbox collision, selected-From, per-account reconnect and narrow-phone acceptance remain separate release gates. See `docs/research/gmail-mobile-four-account-restack-2026-11-23.md`.
 
+
+
+## 23 Nov 2026 — muted sender unmute reachability audit
+
+PR #559 source audit found that mutes filtered **Needs your reply**, **Waiting on them**, and **New today**, but the digest's unmute list used only `needs.filter(isMuted)`. A sender muted while they had a reply-needed mail could later have only waiting/new mail (or no current mail), disappear from every digest section, and lose the digest unmute control. The fix in code commit `6b3102523c9fc6850aeb4b41a73d210e0c2626b5` adds `mutedNotifyRules`, enumerating and normalizing persisted `mode: never` rules by account+sender; duplicate normalized rules collapse, same sender in different inboxes remains separate, `always` rules are excluded, and each unmute button displays the receiving inbox and uses the rule identity rather than a mail/thread ID. A regression covers those cases and the component wiring. This is source/test-only. Exact-head remote validation is pending; no local test execution, Gmail API/OAuth, inbox read/mutation, email send, protected preview, production deploy or device acceptance occurred. The proactive worker, scheduler, notifications and sending remain disabled.
