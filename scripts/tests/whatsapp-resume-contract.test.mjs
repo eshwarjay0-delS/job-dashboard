@@ -15,11 +15,14 @@ test('failed quality is retained for automatic recovery', () => {
   assert.match(webhook, /failureCode = "quality_rejected"/)
   assert.match(webhook, /deferResumeRecovery\(job, failureCode, failedCandidate\)/)
 })
-test('a chosen-resume failsafe is labelled and is not presented as a tailored rewrite', () => {
+test('unchanged fallback is explicitly selected, same-account, and labelled NOT TAILORED', () => {
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
   assert.match(webhook, /if \(!whatsappRewriteUsable\(result\)\)/)
-  assert.match(webhook, /This file was not rewritten/)
-  assert.match(webhook, /closest matching resume/)
+  assert.match(webhook, /Original resume — NOT TAILORED/)
+  assert.match(webhook, /explicitLibraryFallbackPathMatches/)
+  assert.match(webhook, /!durable\.files\?\.explicitlySelected/)
+  assert.match(webhook, /files\?\.explicitlySelected/)
+  assert.doesNotMatch(webhook, /closest matching resume/)
   assert.match(webhook, /acceptableWhatsAppResume\(result\)/)
 })
 test('skills recovery only restores candidate-supported job terms', () => {
