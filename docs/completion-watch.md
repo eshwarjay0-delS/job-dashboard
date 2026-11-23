@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+
+## 23 November 2026 — guarded two-line JD + named-resume parser restack
+
+Continue: the approved narrow parser slice is now isolated from the unrelated S5/Kompas branch work.
+
+- Canonical master before this change: `794e8cfdbd3103409552857806bab89851d5bfcb`; Vercel production alias `job-dashboard-fawn.vercel.app` independently resolves READY to that exact SHA (deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`). No production code changed in this slice.
+- Source root cause: `src/lib/role-match.ts` `splitTailInstruction` required at least three lines. A one-line JD plus `use the SOC resume` is two lines; the combined text exceeds `parseInstruction`'s 120-character limit, so the later splitter must preserve the named hint. The fix accepts two lines only if line one matches the existing JD-signature expression, with a fresh non-global regex; short two-line chat stays unsplit.
+- Branch: `fix/whatsapp-two-line-jd-master-20261123`. Changes: `src/lib/role-match.ts`, `scripts/tests/role-match.test.mjs`, `package.json` prebuild registration, `docs/whatsapp-kompas.md`, `src/lib/plan-vision.ts`, `src/lib/plan-vision-journal.ts` and this handoff. The regression includes 50 repeated positive calls and negative no-signature/short-chat cases.
+- Local execution was unavailable: this scheduled runtime has no canonical checkout or installed dependencies. The exact-head GitHub Actions gates, not a copied harness, must validate this branch. The prior PR #495 green checks belong to stale head `4522a4ed9612a22fa304eb52f3772b02eb8ba44a`; the prior PR #547 exact-head CI failed in an unrelated Kompas `answerCtl` test and is not reused.
+- The broader PR #493 remains DRAFT and separate: it carries the durable same-account explicit-selection proof and unsupported-JD hard hold. Do not merge overlapping or stale branches, do not relax the explicit-selection assertion, and do not touch R2/Meta or resend.
+- Current backlog boundaries remain: the 17 Oct 2026 17:28 Chicago delivery is unverified (output DOCX, per-run R2 object/version, webhook/Meta correlation, and signed receipt are missing); confirmed-experience mapping must not invent projects/actions/results/dates/metrics/credentials; Gmail stays at four accounts max with Poke worker/scheduler/notifications/sending disabled; contract crawling stays manual/on-demand, Robert Half manual-only and eTeam excluded. Kompas real 50-pair and native-device acceptance remain separate open gates.
+
+Next: open a draft PR from this branch, require exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA checks, then obtain Safe Merge Gate review. Only after a reviewed merge should production deployment be considered. Do not claim a DOCX was generated or a WhatsApp message delivered.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
