@@ -71,3 +71,8 @@ The VM fail-safe suite now iterates tampered durable recovery records for sender
 
 Execution boundary: the local canonical checkout and dependencies remain unavailable in this runtime; GitHub Actions is the executable validation path. Exact-head focused recovery, full CI, baseline, cross-device and Plan/REA results must be checked after this commit. The historical 17 Oct send remains unverified.
 
+
+
+## 23 November — shared Kompas VM harness follow-up
+
+The root PR #557 CI run `45221590086` failed in 24 VM scenarios with `ReferenceError` because four test harness states lacked the newly used `answerCtl` and `detectedQueue` fields. This follow-up stacks on #557 and initializes only those two test fields in one-press, typed-follow-up-card, typed-question and voice VM fixtures. It does not change runtime code or WhatsApp authorization/delivery behavior. Focused WhatsApp recovery `45221589969`, Plan/REA `45221590156`, and Kompas baseline `45221590317` on the parent head were SUCCESS; exact-head full CI is pending for the fixture repair. Local checkout/dependencies are unavailable; GitHub Actions is used for execution. Historical 17 Oct send remains unverified.
