@@ -887,3 +887,12 @@ Continue: trigger PR #547's exact-head full CI via a normal authenticated push o
 - **Environment wall:** no local checkout or installed Next.js 16.3.8. The persistent sandbox is stopped; the last reported resume was rejected by Vercel Sandbox usage quota (reset 1 Dec 2026). Route edits require the installed route-handler guide. Unblock with a runnable approved checkout or after sandbox capacity resets.
 
 **Continue:** once a runnable environment exists, prioritize the WhatsApp explicit same-account Files/Library selection proof and unsupported-JD hard hold, then sequence/restack #550/#540/#546 on current master and require exact-head gates. Run Round 16 only with the authorized token and approved original source bundle. No code/tests/deployment were claimed for this run.
+
+
+## 22 November 2026 19:23 CDT — Gmail connections/status stale-cookie source audit
+
+- `/api/connections/status` calls `createClient()`, uses the skip-login fallback to synthesize the owner through `auth.getUser()`, then queries `profiles` and `connected_services`. A non-quota error from either query returns 503.
+- `src/lib/supabase/server.ts` wraps the auth methods but leaves the query builder's request authorization untouched. A leftover Supabase cookie could plausibly cause a 401 while the synthetic `getUser()` returns the owner; this is a source-level path, not a confirmed live cause.
+- `softenSupabaseDataAccess` softens restriction/402/403/network/5xx but not 401. `ConnectionsClient` turns the 503 into a visible retry state. `listGoogleWorkspaceAccounts` uses service-role RPC, so the account-list query can be separate from the stale browser token.
+- **Next approved slice:** after a runnable checkout and the installed Next.js 16.3.8 guide, add synthetic stale-cookie/skip-login tests without broad 401 swallowing; keep account-list RPC owner-scoped and verify real authenticated profile/services remain intact. No live Gmail/OAuth/account/inbox or email/mobile notification was accessed.
+- This run has no local code environment. The stopped Sandbox's last recorded quota rejection resets 1 Dec 2026; unblock with an approved local/cloud checkout or after capacity resets.
