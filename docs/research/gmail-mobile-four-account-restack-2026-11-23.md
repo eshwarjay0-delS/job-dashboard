@@ -33,3 +33,8 @@ The current-master branch `feat/gmail-poke-mobile-restack-20261123` carries the 
 - Still required: exact-head full CI, Plan/REA, Kompas baseline, a legitimate protected preview, two authorized inboxes with colliding thread IDs, independent mute behavior, selected-From preservation, reconnect scoped to one inbox, and narrow-phone acceptance.
 
 No Gmail API/OAuth call, inbox read or mutation, email/WhatsApp send, scheduler creation, background notification, or live mobile/device test was performed.
+
+
+## Shared lint blocker follow-up — 23 November
+
+The current-master Gmail/mobile restack ccd81ddd342afd75dd63e21812c93dcde9a5d093 had focused regression, Kompas baseline and Plan/REA SUCCESS, but full CI failed at the shared prefer-const lint error in src/lib/kompasConsistency.ts:1059. Behavior-neutral correction commit 37723ac1ed2e166377ccc1340964bda021b246e0 changes the never-reassigned variable to const. Exact-head workflows remain pending. The four-account ceiling and account isolation remain unchanged; no real inbox, OAuth, send or phone acceptance was performed.
