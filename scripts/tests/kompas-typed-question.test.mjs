@@ -35,7 +35,7 @@ function session(typed) {
     aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: 1, answeredSeq: 1,
     transcript: [{ seq: 1, who: "Them", text: OLD_Q }],
-    cards: [{ question: OLD_Q, answer: OLD_A }], idx: 0,
+    cards: [{ question: OLD_Q, answer: OLD_A }], idx: 0, answerCtl: null,
     $: (id) => (id === "manualInput" ? box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }),
     answerAnywayHeld: null, pendingHeard: () => [], updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
     logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
