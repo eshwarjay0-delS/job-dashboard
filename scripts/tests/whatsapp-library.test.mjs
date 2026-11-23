@@ -33,7 +33,7 @@ const JD = 'Application Security Engineer. You will run threat modeling, Burp Su
 function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null, floorOk = true, kompasConsumes = false } = {}) {
   process.env.WHATSAPP_PAIR_WAIT_MS = '0'
   const store = new Map()
-  const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = [], channelCalls = []
+  const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = [], channelCalls = [], recoveryJobs = []
   const blob = {
     getText: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v) }, delete: async k => { store.delete(k) },
     putIfAbsent: async (k, v) => { if (store.has(k)) return false; store.set(k, v); return true },
@@ -87,7 +87,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/resume-evidence': load('src/lib/resume-evidence.ts'),
     '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
-      enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
+      enqueueResumeRecovery: async input => { recoveryJobs.push(input); return { ...input, status: 'pending' } },
       patchResumeRecovery: async () => {},
       deferResumeRecovery: async () => {},
       dueResumeRecoveries: async () => [],
@@ -103,7 +103,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
   // The choice of resume is its own module, shared with Apply on the website: it runs for real over the same stand-ins.
   mocks['@/lib/library-choose'] = load('src/lib/library-choose.ts', mocks)
   const wa = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { handle, loadSession };')
-  return { wa, store, said, docs, saved, used, logs, runs, events, uploads, channelCalls }
+  return { wa, store, said, docs, saved, used, logs, runs, events, uploads, channelCalls, recoveryJobs }
 }
 
 test('a job description asks which email; "1" starts from the agent\'s pick in Files and files the result there', async () => {
@@ -117,6 +117,7 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 1)
   assert.equal(b.runs[0].givenPath, APPSEC, 'the code ranks AppSec first and the agent agreed')
   assert.equal(b.runs[0].userResumeDir, USER_DIR)
+  assert.equal(b.recoveryJobs[0].files.explicitlySelected, false, 'the agent-selected closest match is not an explicit file selection')
   assert.match(b.said.find(text => text.startsWith('Updating your')) || '', /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title matches the job's role: Application Security Engineer/)
   assert.equal(b.saved.length, 1)
   assert.equal(b.saved[0].userDir, USER_DIR)
@@ -132,6 +133,22 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
 
   await b.wa.handle('15550001', { type: 'text', id: 'm3', text: { body: 'redo' } }, await b.wa.loadSession('15550001'), 'user1')
   assert.equal(b.runs.length, 2, 'redo makes it again')
+})
+
+test('a user-named Files resume is persisted as the explicit fallback selection after choosing its account', async () => {
+  const b = bot({ agent: null })
+  await b.wa.handle('15550011', { type: 'text', id: 'm1', text: { body: JD + '\nuse the SOC resume' } }, {}, 'user1')
+  assert.equal(b.runs.length, 0, 'the bot must ask which email when more than one account has resumes')
+  assert.match(b.said.at(-1), /which email/i)
+  const pending = await b.wa.loadSession('15550011')
+  assert.equal(pending.pending?.hint, 'SOC', 'the named resume hint survives the email-selection step')
+  await b.wa.handle('15550011', { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession('15550011'), 'user1')
+  assert.equal(b.runs.length, 1)
+  assert.equal(b.runs[0].jd, JD, 'the resume instruction is removed from the job description')
+  assert.equal(b.runs[0].givenPath, SOC, 'the named resume is the source actually selected')
+  assert.equal(b.recoveryJobs[0].files.explicitlySelected, true)
+  assert.equal(b.recoveryJobs[0].files.abs, SOC)
+  assert.equal(b.recoveryJobs[0].files.email, 'a@x.com')
 })
 
 // Two resumes titled for the job: the niche between them is the agent's to choose (the title came first).
