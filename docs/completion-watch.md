@@ -823,3 +823,10 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - Current exact-head runs: full CI `45228044173` IN PROGRESS; confirmed-skill regression `45228044141` IN PROGRESS; WhatsApp recovery `45228044178` IN PROGRESS; Kompas baseline `45228044134` SUCCESS; Plan/REA `45228044137` SUCCESS.
 - No local tests/build, resume/JD processing, model call, DOCX export, production deployment or device acceptance occurred. PR #552 remains DRAFT.
 - **Continue:** inspect all exact-head runs to terminal, resolve any real failures without weakening tests, then normal independent review/protected preview and owner-authorized DOCX acceptance. No live ATS match percentage is claimed.
+
+
+## 23 November 2026 17:33 UTC — confirmed-skill full CI result
+
+- PR #552 code/test head d077a743987e30067acb174c8b328bfbd3ba123f full CI 45228304791 FAILED only at the same two Kompas Listening-hold assertions (tests 50 and 54); lint, type-check, build and preceding tests passed. The shared VM fixture ReferenceErrors and prefer-const blocker are resolved on this head.
+- Confirmed-skill regression 45228304811, WhatsApp recovery 45228304849, Kompas baseline 45228304724 and Plan/REA 45228304850 all SUCCESS.
+- PR #554 has the required Listening-hold source fix and all five exact-head gates SUCCESS, but independent review is outstanding. PR #552 stays DRAFT; do not merge or claim live resume/JD/DOCX acceptance until that dependency clears.
