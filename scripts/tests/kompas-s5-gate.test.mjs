@@ -173,7 +173,7 @@ test("spoken evidence excludes email, URL and phone-only lines", () => {
     "+1 (555) 010-0123",
     "Supported project line: I configured SIEM alert routing and incident triage.",
   ].join("\n")
-  const spoken = bridgeTemplates(resume).join("\\n")
+  const spoken = bridgeTemplates(resume).join("\n")
   assert.match(spoken, /SIEM alert routing/i)
   assert.doesNotMatch(spoken, /candidate@example\.test|https:\/\/example\.test|555/)
 })
