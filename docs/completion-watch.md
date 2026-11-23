@@ -809,3 +809,11 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 23 November 2026 17:18 UTC — WhatsApp PR #557 VM fixture repair stacked
+
+- PR #557 exact head `89713ea83d12f39ef1d677147937d4fc60225996` full CI `45221590086` failed after 24 Kompas VM tests threw `ReferenceError` because the harness state omitted `answerCtl` and `detectedQueue`; WhatsApp recovery `45221589969`, Plan/REA `45221590156`, and Kompas baseline `45221590317` were SUCCESS. This is a test harness failure, not evidence of a WhatsApp delivery failure.
+- A focused stacked branch `fix/whatsapp-pr557-kompas-vm-fixtures-20261123` adds the two initialized fields to the four affected test fixtures (one-press, typed follow-up card, typed question, and voice). No production source, account policy, fallback behavior or live delivery was changed.
+- Exact PR #557 root head was not edited. No local checkout/dependencies are available; GitHub Actions is the executable validation path. No WhatsApp send, model call, DOCX/R2 write, replay, or user-device test occurred.
+- **Next:** run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on this exact stacked head; review the fixture-only diff; then sequence #557 and its follow-up through normal independent approval, protected preview, production READY/alias and consented acceptance. The 17 Oct 17:28 Chicago delivery remains unverified.
