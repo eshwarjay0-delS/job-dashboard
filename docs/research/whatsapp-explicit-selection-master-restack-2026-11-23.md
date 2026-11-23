@@ -64,3 +64,10 @@ Exact head `16d8ccd` remote evidence:
 
 
 The separate behavior-neutral lint PR #556 is still DRAFT and its full CI fails two Kompas typed-question/one-press regressions (70/72 pass); the Voice Delivery task owns that behavior and I did not duplicate or merge it. PR #557 remains DRAFT and no protected preview/production deploy/device acceptance occurred. The historical 17 Oct 17:28 Chicago failure is still unverified. No real WhatsApp send, DOCX, R2 write, Meta receipt or replay was performed.
+
+## 23 November continuation — durable-record mismatch regression
+
+The VM fail-safe suite now iterates tampered durable recovery records for sender, verified account, JD, resume path, job ID, status, missing/false explicit-selection marker, selected absolute/relative path, account root, profile email, and missing file metadata. Every case must produce **zero document sends** and a text-only “could not be verified for this account” outcome. This test-only commit does not modify the webhook route or relax the existing hard-hold behavior.
+
+Execution boundary: the local canonical checkout and dependencies remain unavailable in this runtime; GitHub Actions is the executable validation path. Exact-head focused recovery, full CI, baseline, cross-device and Plan/REA results must be checked after this commit. The historical 17 Oct send remains unverified.
+
