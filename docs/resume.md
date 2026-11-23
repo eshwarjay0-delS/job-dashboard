@@ -102,3 +102,10 @@ The confirmed-skill PR #552 full CI 45230708625 does not fail at lint. Exact job
 ## 23 November 2026 — stacked continuation
 
 PR #564 carries the approved explicit same-account Files fallback and unsupported-JD hard hold from #557 onto PR #554's green Kompas validation base. It inherits the first-press Listening and current-resume S5 corrections without copying overlapping Kompas files. Exact-head checks are pending. No real send, DOCX, R2/Meta write, production deployment or historical 17 Oct replay is claimed.
+
+
+## 23 November 2026 — focused restack checks
+
+- Contract search restack PR #563 focused workflow 45282267513 passed; full CI remains pending.
+- WhatsApp fallback restack PR #564 recovery 45282722516 and Plan/REA schema 45282722435 passed; full CI/baseline/cross-device remain pending.
+- PRs #561 and #557 were closed as superseded; their source branches and history are preserved. #554 remains awaiting independent review. No deployment or live send.
