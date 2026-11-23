@@ -42,3 +42,8 @@ No local checkout/dependencies/DNS are available. Vercel Sandbox previously retu
 ## 23 November 2026 22:48 UTC — focused restack results
 
 PR #563 contract-search focused workflow 45282267513 SUCCESS. PR #564 WhatsApp recovery 45282722516 and Plan/REA schema 45282722435 SUCCESS. Both restacks remain DRAFT; full CI is pending, #564 baseline/cross-device pending. PR #561 and #557 closed as superseded with source branches preserved. PR #554 has five green gates but independent review pending. Production remains master 794e8cf READY. No live crawl, WhatsApp send/replay, DOCX, R2/Meta mutation, deployment or user-device acceptance.
+
+
+## 23 November 2026 22:52 UTC — full CI filter documented
+
+Ready PR #565 contract-search and #566 WhatsApp fallback are stacked on #554. The contract focused test 45282267513 passed; fresh run 45283478714 in progress. WhatsApp recovery 45282722516 and Plan/REA schema 45282722435 passed; fresh regression 45283495328 and schema 45283495328 in progress. Full CI is filtered to PR base master/main, so it will not trigger on the #554 branch. #554 has five green gates but awaits independent review. No release/live crawl/send.
