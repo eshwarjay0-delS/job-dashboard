@@ -928,3 +928,13 @@ Continue: trigger PR #547's exact-head full CI via a normal authenticated push o
 - No live crawl/portal request was performed. Preserve manual/on-demand policy, 600 ms pacing, Robert Half manual-only, and eTeam exclusion.
 
 **Continue:** repair timeout semantics/tests on a current-master restack, require exact full CI + crawler regression + baseline + Plan/REA, and only then proceed to protected preview/release and owner-authorized crawl acceptance.
+
+
+## 22 November 2026 22:40 CDT — WhatsApp PR #493 source audit
+
+- Exact head `c387bc4c13bb7483235e59a786baeee89f1cd2ba` remains DRAFT/non-mergeable on stale base `13542c5`; no exact-head workflow runs are visible.
+- Source review confirms the explicit same-account fallback guard: explicit selection marker, verified account root and userDir match, selected absolute path equals the session resumePath, relative path is safe and starts in the matching email folder; durable recovery must match sender/user/JD/path/selection; original/selected DOCX bytes must match and extracted profile email must be unique. Unverified JD-only additions remain hard-held.
+- These are code safeguards, not runtime proof. The 17 Oct 17:28 Chicago failure still has no recovered original DOCX/JD/output, per-run R2 version, webhook correlation, Meta message ID or signed delivery/read receipt. No model call, R2 write, document send, replay, or device test was performed.
+- No route edit/merge/deploy is possible in this runtime: no local checkout/dependencies and no installed Next.js 16.3.8 route-handler guide; Vercel Sandbox quota was reported reset 1 Dec 2026. No bypass.
+
+**Continue:** preserve the guard; after the approved runnable checkout and guide are available, run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA, safely restack #493, then verify a consented real WhatsApp flow with delivery/read receipt. Do not replay the historical message.
