@@ -76,3 +76,8 @@ Execution boundary: the local canonical checkout and dependencies remain unavail
 ## 23 November — shared Kompas VM harness follow-up
 
 The root PR #557 CI run `45221590086` failed in 24 VM scenarios with `ReferenceError` because four test harness states lacked the newly used `answerCtl` and `detectedQueue` fields. This follow-up stacks on #557 and initializes only those two test fields in one-press, typed-follow-up-card, typed-question and voice VM fixtures. It does not change runtime code or WhatsApp authorization/delivery behavior. Focused WhatsApp recovery `45221589969`, Plan/REA `45221590156`, and Kompas baseline `45221590317` on the parent head were SUCCESS; exact-head full CI is pending for the fixture repair. Local checkout/dependencies are unavailable; GitHub Actions is used for execution. Historical 17 Oct send remains unverified.
+
+
+## Exact-head CI after shared fixture repair — 23 November
+
+PR #557 full CI 45227734205 now passes lint, type-check, build and all preceding steps; the four VM fixture ReferenceErrors are resolved. Only two real behavior assertions fail: empty second press and candidate-only second press must hold Listening before the subsequent re-ask. WhatsApp recovery 45227734188, Kompas baseline 45227734468 and Plan/REA 45227734178 are SUCCESS. PR #554 contains the separate Listening-hold fix with all five exact-head gates green but awaits independent review. No production release or historical WhatsApp acceptance is claimed.
