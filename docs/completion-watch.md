@@ -837,3 +837,10 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled in the accessible automation inventory; no separate Bible-Keeper task was found. No voice/caption changes were duplicated.
 
 Continue: validate the current-master S5 restack on exact-head full CI/S5, baseline, cross-device and Plan/REA; only merge if all required checks pass. Then restack PR #540 and continue the approved Listening-hold fix. Keep the WhatsApp explicit-selection/hard-hold route blocked until an approved runnable checkout with installed Next.js 16.3.8 docs is available; do not bypass the Vercel limit or use the unapproved R2 CAS/lease design.
+
+## 23 November 2026 03:29 UTC — PR #555 latest-head check correction
+
+- PR #555's earlier head `b959414daac3b9cddba98ccaeff671981b3f43f1` had Plan/REA schema run `45105779351` SUCCESS. Two later documentation updates advanced the current head to `5f399881d6866d85195d26bbfe4f6dc8d66d97b0`; no exact-head check is recorded for the latest head. The parser code and test are unchanged by those documentation-only commits.
+- PR #555 remains draft and stacked on PR #554; full CI and WhatsApp recovery have not triggered on the current head because the base is a feature branch. Do not reuse the predecessor schema result as current-head evidence.
+
+Continue: after #554 merges, retarget #555 to master and run all exact-head gates before review or deployment.
