@@ -1,5 +1,20 @@
 # MFit Completion Watch
 
+## 23 November 2026 03:45 UTC — Round 15 live; S5 test fixtures corrected on PR #554
+
+- **Round 15 production:** master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` independently point to that exact deployment. The fix routes settled JSON answers through `gateDisplayedAnswer`. This is source release evidence, not live answer-quality acceptance.
+- **PR #554:** draft combined S5 current-resume source correction + first-press Listening hold. CI `45107159818` failed two S5 assertions because the fixture still had Cigna and expected the previous Houston fallback. Corrected the fixture to `candidate@example.test` + Saint Louis University and assert that non-empty current resume remains authoritative; Houston is only the empty-resume fallback. Also fixed the contact-line regex and actual newline fixture.
+- **Current exact head:** `020a0bbdf9368251d21fb71b9dd9af4f8c2f09bd`. Full CI `45107748456` is IN PROGRESS; cross-device `45107748427`, Plan/REA `45107748548`, baseline `45107748416`, Windows `45107748430` are SUCCESS. No merge or deployment for #554 yet.
+- **Next:** wait for exact-head full CI. Merge only after green checks and independent review; then deploy the merged SHA and verify both aliases. Real Round16 requires the owner-authorized KOMPAS_API_TOKEN, approved resume/JD bundle and authenticated phone session. Q2, Q7, Q4/Q8/Q10 defects remain open.
+- **WhatsApp / Oct 17:** historical delivery remains unverified; no generated DOCX, per-run R2 version, webhook correlation, Meta outbound ID or signed delivery/read receipt. No replay/send.
+- **Dependent parser #555:** draft, stacked on #554; full CI and WhatsApp recovery gates are still absent on latest head. Do not merge it first.
+- **Other independent branches:** #552 confirmed-skill alignment is draft and its exact-head CI failed only on the shared `src/lib/kompasConsistency.ts:1059` prefer-const lint error; #551 crawler diagnostics is draft, exact-head CI failed on that lint plus missing `answerCtl` fixture controls in Kompas tests. #554 carries both corrections; retest after its merge.
+- **Gmail/mobile:** #454 Retry-After restack and #474 four-account/mobile digest remain draft, non-mergeable, and protected preview is unavailable. No Gmail API/OAuth, inbox read/write, email send, scheduler or notifications.
+- **Crawler:** #551 diagnostics remain manual/on-demand; no live crawl. 600 ms pacing/25 s timeout preserved; Robert Half manual-only and eTeam excluded.
+
+Continue: monitor #554 exact-head CI, inspect any new failures, and preserve the separate route-level WhatsApp hard-hold blocker (installed Next.js 16.3.8 docs + protected runnable Sandbox).
+
+
 ## 23 November 2026 03:16 UTC — Combine S5 and Listening-hold fixes before resuming WhatsApp parser
 
 - **Production baseline:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` both map to that deployment. No redeploy is needed for this work-in-progress branch.
