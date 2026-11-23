@@ -244,3 +244,8 @@ The initial implementation commit `6b310252` had an unclosed JSX event-handler b
 ## 23 Nov 2026 — exact-head test correction and focused validation
 
 The first focused run after the mute-recovery change failed one pre-existing static assertion: it expected four mail/thread React keys. The unmute buttons now correctly use account+sender rule keys, leaving three. Test commit `5d930bec63b0b328cc6a8454b0633269b4f37c93` updates the expectation to three and explicitly checks the sender-rule key. On exact head `5d930bec63b0b328cc6a8454b0633269b4f37c93`, Gmail/mobile workflow `45258979200`, Plan/REA schema `45258978883`, and Kompas baseline `45258979291` **PASS**; full CI `45258979321` is **IN PROGRESS**. No full-CI success is claimed. No inbox/OAuth/send/device or protected-preview acceptance.
+
+
+## Final source/test head status — 23 Nov 2026
+
+Code commit `dab7785df536466c7bc45797c463f1ca3959d262`; test correction `5d930bec63b0b328cc6a8454b0633269b4f37c93`. Focused Gmail/mobile, Plan/REA schema and Kompas baseline all passed on `5d930bec63b0b328cc6a8454b0633269b4f37c93`; full CI run `45258979321` was still in progress at last check. The corrected test changed the stale count assertion to three current-mail keys and checks mute controls use account/sender keys. The final docs follow-up is `7cffd43da108ab203a4dff3c859af527a8e31b59`. No real inbox/mobile acceptance or production deployment.
