@@ -42,3 +42,8 @@ PR #552 remains DRAFT. No local test/build, candidate resume/JD processing, mode
 ## Shared CI repair — 23 November 2026
 
 The confirmed-skill branch now includes the behavior-neutral `let s` → `const s` lint correction and initializes `answerCtl`/`detectedQueue` in the four shared Kompas VM fixtures. This fixes the earlier CI lint/test harness blockers without changing resume evidence policy or runtime behavior. Exact current head `73341b24ae4432c2e281073855aecd2ab3be77c3`: full CI `45228044173`, focused confirmed-skill `45228044141`, and WhatsApp recovery `45228044178` are IN PROGRESS; Kompas baseline `45228044134` and Plan/REA `45228044137` SUCCESS. Local execution, real resume/JD, model and DOCX acceptance remain unavailable.
+
+
+## Exact-head full CI result — 23 November
+
+Current code/test head d077a743987e30067acb174c8b328bfbd3ba123f full CI 45228304791 failed only tests 50 and 54, which assert the shared Kompas Listening-hold behavior. Lint, type-check, build and all preceding test steps pass; the shared VM fixture and prefer-const blockers are resolved. Confirmed-skill 45228304811, WhatsApp recovery 45228304849, Kompas baseline 45228304724 and Plan/REA 45228304850 SUCCESS. PR #554 contains the Listening-hold fix with all five gates green but awaits independent review. No live resume/JD, model, DOCX or production acceptance.
