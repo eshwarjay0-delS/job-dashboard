@@ -41,3 +41,8 @@ PR #551's full CI on head `5913afd` failed Type-check because the new REA record
 ## 23 Nov 2026 — REA type-check correction
 
 PR #551's full CI on head `5913afd` failed Type-check because the new REA record's `state` value was not in the declared enum. Code commit `67810506a1b4d8a062ac9fba44d5152c88c1cb1e` replaces it with `Implemented, verification pending`; no collector, runner, fetch or portal runtime behavior changed. Corrected-head schema `45260236503`, Kompas baseline `45260236205`, and crawler freshness `45260235924` passed; full CI `45260236471` was in progress. No live crawl or production deployment.
+
+
+## 23 Nov 2026 — corrected-head full CI terminal status
+
+Code commit `19d7ac2024a959e4d247eb4cbc860ba2d33c58a4` fixes the previous Type-check enum failure. Corrected-head schema `45260236503`, crawler freshness `45260235924`, and Kompas baseline `45260236205` passed. Full CI `45260236471` failed on two shared Kompas Listening-hold assertions (tests 50 and 54); 27 tests passed, 2 failed, and Type-check was not reached. Do not claim type-check success on this head. No live crawl or production deployment.
