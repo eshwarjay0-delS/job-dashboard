@@ -34,3 +34,17 @@ No production deployment, real WhatsApp or Meta message, DOCX, R2 write, model c
 3. Protected preview and production READY deployment with canonical alias verified.
 4. Consented live acceptance with no duplicate/unsafe fallback; verify delivery evidence.
 5. Keep historical 17 Oct delivery separate from any newly generated file; never replay or resend to manufacture evidence.
+
+
+## 23 November 2026 — two-line JD + named-resume parser repair
+
+Static review of the clean restack found the route-level acceptance case in `scripts/tests/whatsapp-library.test.mjs`: a one-line JD followed by `use the SOC resume`. The existing `parseInstruction` rejects the combined message over 120 characters, then `splitTailInstruction` still rejected two-line input (`lines.length < 3`), losing the hint and silently choosing by relevance instead. The earlier PR #495 correction described this exact shape.
+
+Committed to this same draft branch as `416522b5e27cefc1284fb5dcc76736007c2e5e45`:
+- `splitTailInstruction` now accepts exactly two lines only when the JD line has an existing job-post signature; three-or-more-line behavior remains unchanged.
+- Added a unit regression for the two-line JD/named resume and a negative short-chat case.
+- The dedicated WhatsApp recovery workflow now runs `role-match.test.mjs` and the route-level `whatsapp-library.test.mjs`, and triggers on those paths.
+
+At 23 Nov 2026 05:52 CDT, exact head `416522b5...` had WhatsApp recovery and full CI **in progress**, Kompas baseline and Plan/REA **success**; no cross-device run was visible. The prior exact head's full CI failed at the unrelated master lint error `prefer-const` in `src/lib/kompasConsistency.ts:1059`, before type-check/tests. No local tests ran; remote GitHub Actions is the available execution path. The Vercel sandbox quota is still 402 until 1 Dec 2026.
+
+No production deploy, protected preview, real WhatsApp send, DOCX, R2/Meta receipt or historical 17 Oct 17:28 replay. The incident remains unverified. Keep PR #557 DRAFT; require exact-new-head CI/recovery/baseline/cross-device/Plan-REA, independent review, protected preview, production READY/alias and consented acceptance. Shared Plan Journal/REA/Completion Watch files were not edited in this continuation because their existing draft branches (#543/#386/#387) overlap and the Safe Merge Gate automation is disabled; this research file records the source-level continuation.
