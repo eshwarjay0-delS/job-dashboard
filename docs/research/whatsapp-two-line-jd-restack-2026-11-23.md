@@ -42,3 +42,7 @@ Commit sequence (branch):
 ## Next
 
 Run all exact-head gates on this branch. If green, review and merge via the normal gate, deploy one approved merged SHA, verify the live alias and parser/API behavior, then separately require a consented two-step named-resume/account-confirmation flow without an outbound WhatsApp send.
+
+## Exact-head lint follow-up
+
+Full CI run [45091214598](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45091214598) failed at Lint with one error in `src/lib/kompasConsistency.ts:1059`: `s` was never reassigned (`prefer-const`). The remaining 267 lint findings were warnings. This is unrelated to the WhatsApp parser and was corrected by changing only `let s = sentence` to `const s = sentence`, commit `23cd3d3253ab62166e79bb87c49a32c6bac6ef10`. No answer-shaping behavior changed. Full CI and all exact-head checks must rerun after this commit.
