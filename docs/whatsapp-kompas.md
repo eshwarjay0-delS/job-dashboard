@@ -160,3 +160,8 @@ The 27 October journal entry that said no runnable environment was available, an
 ## Public test-fixture privacy — 15 November 2026
 
 WhatsApp regression fixtures are synthetic only. Use `example.test` email identities and reserved fictional 555-0100 through 555-0199 phone numbers; never commit private resume bodies, real account contacts, user-specific library paths, or private document fingerprints. Keep distinct test identities distinct so account-isolation assertions remain meaningful. See `docs/research/whatsapp-test-fixture-privacy-2026-11-15.md`.
+
+
+## Two-line job description with an explicit resume hint — 23 November 2026
+
+A message consisting of one job-description line followed by an explicit final line such as `use the SOC resume` may be split only when the first line matches the existing job-post signatures. A short two-line chat is kept intact. The parser preserves the resume hint; it does not choose an email/account, auto-select a file, authorize a fallback, or bypass the verified same-account Files/Library selection flow. This parser regression is source/CI coverage only. The 17 October delivery remains unverified, and no real WhatsApp send, replay, DOCX export or R2 write is part of this change.
