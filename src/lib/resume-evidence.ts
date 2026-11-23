@@ -49,15 +49,15 @@ const confirmationTerms = (value: string) => (value.toLowerCase().match(/[a-z0-9
   .filter(term => term.length > 1 && !CONFIRMATION_IGNORED_TERMS.has(term))
 
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
-  return statements.flatMap(statement => statement.split(/[\\n;]+|[.!?](?=\\s|$)/)).flatMap(raw => {
+  return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
-    if (!/^(?:i\\s+(?:(?:have|possess)\\b|(?:personally\\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\\b)|my\\s+(?:experience|skills|background)\\b|(?:confirmed experience|confirmed skills)\\s*:)/i.test(line)) return []
+    if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
     // Reject negative assertions before treating a "my ..." sentence as positive evidence.
     // Positive contrast is safe only before its exception (e.g. AWS, but not GCP).
-    const negativeClaim = /^(?:my\\s+(?:experience|skills|background)\\s+(?:lack(?:s|ing)?|(?:is|are)\\s+missing|missing|(?:do|does|did)\\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\\s+not|are\\s+not|has\\s+no|have\\s+no|no)|my\\s+experience\\s+(?:includes?|covers)\\s+no|(?:confirmed\\s+(?:skills|experience)\\s*:\\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\\s+missing|missing|don't|doesn't|didn't|cannot|can't))\\b/i
-    if (negativeClaim.test(line) || /^i\\s+(?:(?:have|possess)\\s+(?:no|not|never|without)|(?:do|does|did)\\s+not\\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\\b/i.test(line)) return []
-    const hasBlanketConfirmation = /\\b(?:all|every)\\b/i.test(line) && /\\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\\b/i.test(line)
-    const exception = line.match(/\\b(?:except|excluding|but|however|not|never|without|missing)\\b/i)
+    const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:is|are)\s+missing|missing|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\s+missing|missing|don't|doesn't|didn't|cannot|can't))\b/i
+    if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\b/i.test(line)) return []
+    const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
+    const exception = line.match(/\b(?:except|excluding|but|however|not|never|without|missing)\b/i)
     // A blanket claim with an exception is not blanket evidence. Also reject a
     // self-contradictory list that names the same skill on both sides of its exception.
     if (hasBlanketConfirmation && exception) return []
