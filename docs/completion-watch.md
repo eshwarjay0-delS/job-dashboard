@@ -81,6 +81,18 @@ Continue: finish exact-head tests on #563/#564, then normal independent review a
 
 # MFit Completion Watch
 
+## 23 November 2026 23:49 UTC — Round 15 release and common CI blocker reconciled
+
+- **Production:** current master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at Vercel production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases independently point to it. This is Round 15's JSON answer-path gate fix. The full CI run `45092314450` failed at Lint on `src/lib/kompasConsistency.ts:1059` (`prefer-const`); type-check/build and downstream gates were skipped. Kompas baseline `45092314520` and Plan/REA `45092314531` passed.
+- **Shared Kompas PR #554:** head `4fafd56663bb5ddce064dcebea8802d758bb8259` has full CI `45122715488`, cross-device `45122715477`, baseline `45122715552`, Plan/REA `45122715522`, and Windows `45122715531` all SUCCESS. It is open/unmerged; independent authorized review is required. Self-approval was rejected. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled, so no automatic reviewer/merge is active.
+- **Current-master approved restacks:** #570 resume confirmed-skill (40/40), #571 Gmail/mobile (12/12), #572 WhatsApp recovery (133/133), #573 crawler (41/41), and #574 contract search (4/4) each have focused success and Kompas baseline success. Their full CI runs all fail at the common master lint blocker; no full suite or deployment acceptance is claimed. #573 full CI `45289867721` and focused `45289867811`; #574 full CI `45290294631`, focused `45290294629`, baseline `45290294762`.
+- **Lint follow-up #556:** exact head `73215d9682675d2d658b84a7878ac49869453315` includes the behavior-neutral `let`→`const` correction and fixture-state additions. Full CI `45145972568` fails 24 first-press Listening/typed/voice assertions because the runtime hold from #554 is not in master. Do not weaken tests or merge a failing gate.
+- **Independent review performed:** contract-search source reviewed; helper checks any whitespace-separated term across title/company/location/body/tags and preserves technical punctuation. Exact focused 4/4 is green; full CI still fails. No code changed in this run.
+- No local checkout/dependencies. No live resume/JD/DOCX, Gmail/inbox, WhatsApp send/replay, R2/Meta, crawl, production deploy of the pending restacks, or native-device acceptance occurred. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified.
+
+Continue: obtain an independent authorized review for #554; do not self-approve or merge. After normal merge, restack #570–#574 onto master and require exact-head full CI, protected preview, production READY/alias, and separate real acceptance. WhatsApp route implementation remains blocked until an approved runnable checkout supplies installed Next.js 16.3.8 route-handler documentation.
+
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
