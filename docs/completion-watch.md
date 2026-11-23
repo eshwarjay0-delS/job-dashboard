@@ -796,13 +796,13 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
 
 
-## 23 November 2026 — current-master production verified; crawler restack validation repair
+## 23 November 2026 — crawler restack: schema repaired, full CI blocked by current-master Kompas lint
 
-- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to it. No deploy was needed for this audit.
-- **Kompas:** Round 15's JSON-answer-path fix is live on this SHA. The 0/11 live session score came from predecessor build `7ea4414`; a post-fix Round 16 and real Windows/phone acceptance remain open.
-- **Continue:** PR #479's approved crawler diagnostics were restacked onto current master in source commit `82ee39864ec97ad6fac5b718f52c63f0fc4f3230`. It preserves 600 ms pacing/25 s default timeout, distinguishes local timeout from upstream abort, and moves malformed URL parsing inside cleanup. It adds two deterministic tests and no schedule, adapter, retry, storage, classifier, or submission behavior.
-- **Remote validation:** schema run `45243825329` failed because the Plan Journal insertion lacked a comma separator. This was repaired in the follow-up commit. Crawler regression `45243825147` and Kompas baseline `45243825364` passed; full CI `45243825143` was still running when checked. Verify all exact-head gates again; do not reuse the failed schema run or predecessor-head tests.
-- **Preview/release:** prior PR head `e15f7dc5` Vercel status was canceled by Ignored Build Step. No protected preview exists, and the restacked diagnostics are not live. Keep PR #479 DRAFT; no production deployment, cron, or manual crawl.
-- **Execution limit:** local clone/test is unavailable because container DNS cannot resolve GitHub. Remote Actions is the executable validation path. No portal request, row mutation, external message, or application submission occurred.
+- **Production remains verified:** master `794e8cfdbd3103409552857806bab89851d5bfcb`, READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; canonical `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to it. No deploy was needed.
+- **Crawler PR #479:** source commit `82ee39864ec97ad6fac5b718f52c63f0fc4f3230` restacked onto current master. Follow-up documentation/syntax fix `c23840b70c3bba9079b4b9918cbe72eb7adbdd2e` repaired a missing Plan Journal comma. Exact head `c23840b70c3bba9079b4b9918cbe72eb7adbdd2e` is mergeable/clean but remains DRAFT.
+- **Exact-head gates:** schema `45244208302`, crawler regression `45244208043`, Kompas baseline `45244208334` PASS. Full CI `45244208042` FAILED at lint with `prefer-const` in `src/lib/kompasConsistency.ts:1059`. This is unrelated to crawler diagnostics and is not changed in #479.
+- **Coordination:** PR #556 already attempts the one-token lint correction, but its full CI is not green; PR #554 carries the Listening-hold behavior and needs a second authorized reviewer. Do not duplicate or cherry-pick their work into #479.
+- **Preview:** prior Vercel status was canceled by Ignored Build Step; no protected preview exists. The diagnostic code is not live. No deployment, cron, or crawl.
+- **Local execution:** clone failed due DNS for `github.com`; no local tests/build. Remote Actions is the available validation path.
 
-Next: verify full CI, crawler regression, Plan/REA and Kompas baseline on the corrected final PR head; keep the draft until review and protected preview are satisfied.
+Next: keep PR #479 DRAFT. Let #556/#554 resolve the shared Kompas quality gate separately; then rerun exact-head full CI and protected preview for #479. Do not merge/deploy or run a live crawl without review and a separate manual crawl request.

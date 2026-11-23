@@ -32,3 +32,10 @@ Local execution is unavailable: the container has no checkout, and `git clone` f
 - Exact head `82ee39864ec97ad6fac5b718f52c63f0fc4f3230`: schema run `45243825329` FAILED because the new Plan Journal object was inserted without a comma before it. The separator was repaired in the follow-up commit; no runtime code was changed in that repair.
 - On the failed head, crawler regression `45243825147` and Kompas baseline `45243825364` completed SUCCESS; full CI `45243825143` was still in progress. Verify all four gates again on the final corrected head. Do not reuse predecessor results.
 - The restacked PR is mergeable against current master but remains DRAFT. No protected preview or production release has occurred.
+
+
+## Exact-head validation update (23 November)
+- Source/restack commit `82ee39864ec97ad6fac5b718f52c63f0fc4f3230`; documentation/syntax repair commit `c23840b70c3bba9079b4b9918cbe72eb7adbdd2e`.
+- Exact head `c23840b70c3bba9079b4b9918cbe72eb7adbdd2e`: schema `45244208302`, crawler regression `45244208043`, and Kompas baseline `45244208334` SUCCESS. Full CI `45244208042` FAILED in lint due unrelated `prefer-const` at `src/lib/kompasConsistency.ts:1059`.
+- PR #556 already attempts the one-token lint fix, but its full CI is not green. PR #554 is the current Listening-hold source branch requiring another authorized reviewer. Do not duplicate either.
+- PR #479 is mergeable/clean against current master but remains DRAFT. No protected preview or production release. Exact current master production remains READY on `794e8cf`.
