@@ -128,3 +128,8 @@ PR #565 contract-search and #566 WhatsApp fallback are ready for review, stacked
 - #567 confirmed-skill alignment: 45284043448 passed (40/40), recovery 45284043449 passed (4/4).
 - #568 Gmail/mobile: 45284252541 passed (12/12).
 - Full CI remains blocked from triggering on non-master #554 base due master/main workflow filter. #554 awaits independent review. No production or real-data acceptance.
+
+
+## 23 November 2026 — crawler focused gate
+
+Crawler restack PR #569 freshness job 138078245414 passed 41/41 (5+3+8+25). PR #551 closed as superseded; branch preserved. Full CI blocked by the master/main base filter on #554. No live crawl or job-row mutation.
