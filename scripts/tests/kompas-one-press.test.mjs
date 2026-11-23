@@ -30,7 +30,7 @@ function session(lines, question = SHOWN) {
   const box = { value: "" };
   const asked = [];
   const s = {
-    aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
+    aiBusy: false, aiBusySince: 0, autoTimer: null, answerCtl: null, detectedQueue: [], transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: lines.length + 1, answeredSeq: 0,
     transcript: lines.map((row, i) => (typeof row === "string" ? { seq: i + 1, who: "Them", text: row } : { seq: i + 1, who: row.who || "Them", text: row.text })),
     cards: [{ question, answer: OLD_A, qid: "q-shown" }], idx: 0,
@@ -63,23 +63,29 @@ test("one press answers one question when 100 questions are queued", async () =>
   assert.equal(s.cards.filter(c => /item\d+zzzz/.test(c.question || "")).length, 1);
 });
 
-test("with nothing new queued, a manual press answers the latest question from another angle", async () => {
+test("with nothing new queued, the first press holds and the second explicitly re-asks from another angle", async () => {
   const { s, asked } = session([]);
   s.transcript = [{ seq: 1, who: "Them", text: SHOWN, at: 1_000 }];
   s.answeredSeq = 1;
   s.heardSeq = 1;
   await s.aiAnswer(false);
-  assert.equal(asked.length, 1, "an already-answered ask is regenerated");
+  assert.equal(asked.length, 0, "the first press must not resurrect an answered question");
+  assert.match(String((s.statuses || []).map(x => x.m).join(" ")), /Still listening/i);
+  assert.equal(s.cards[0].answer, OLD_A);
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 1, "the second press is the explicit re-ask");
   assert.match(asked[0].q, /log aggregator/);
   assert.equal(asked[0].opts.reask, true);
   assert.ok(asked[0].opts.angle);
-  assert.doesNotMatch(String((s.statuses || []).map(x => x.m).join(" ")), /no new question/i);
   assert.equal(s.cards[0].answer, OLD_A);
   const page = s.cards[s.cards.length - 1];
   page.answer = "I would start with the relay and say why it exists in one clear sentence.";
   page.streaming = false;
   await s.aiAnswer(false);
-  assert.equal(asked.length, 2);
+  assert.equal(asked.length, 1, "a first press after a completed re-ask returns to Listening");
+  assert.match(String((s.statuses || []).map(x => x.m).join(" ")), /Still listening/i);
+  await s.aiAnswer(false);
+  assert.equal(asked.length, 2, "a second press re-asks again");
   assert.notEqual(asked[1].opts.angle, asked[0].opts.angle);
 });
 

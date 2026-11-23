@@ -9,7 +9,7 @@ import { applyHonestyGate, honestySource, HOUSTON_RESUME, scopeAnswer, wentWrong
 const fx = JSON.parse(readFileSync(new URL("../fixtures/kompas-s5.json", import.meta.url), "utf8"))
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
-const saint = "jayeshwar44@gmail.com\nSaint Louis University\nCigna Healthcare — OT Security Analyst\n"
+const saint = "candidate@example.test\nSaint Louis University\n"
 
 function resumeOf(name) {
   if (name === "saint") return saint
@@ -59,7 +59,7 @@ function runOnce() {
   }
   for (const row of fx.honesty) {
     const resume = resumeOf(row.resume)
-    assert.equal(/jayeshwar44|saint louis university/i.test(honestySource(resume)), false, row.id)
+    assert.equal(honestySource(resume), resume.trim() ? resume : HOUSTON_RESUME, row.id)
     const got = applyHonestyGate({ question: row.question, answer: row.answer, resume })
     const again = applyHonestyGate({ question: row.question, answer: got.text, resume })
     assert.equal(again.text, got.text, `${row.id} not stable`)
@@ -128,6 +128,18 @@ test("a loaded session resume is the allow-list", () => {
   assert.doesNotMatch(got.text, /FortiGate|McKesson/)
 })
 
+test("the current resume stays authoritative and contact details never become spoken facts", () => {
+  assert.equal(honestySource(saint), saint)
+  assert.equal(honestySource(""), HOUSTON_RESUME)
+  const got = applyHonestyGate({
+    question: "Where did you study?",
+    answer: "I studied at Saint Louis University and then I joined Cigna.",
+    resume: saint,
+  })
+  assert.match(got.text, /Saint Louis University/)
+  assert.doesNotMatch(got.text, /Cigna|Fortinet|McKesson|candidate@example\.test/)
+})
+
 test("S5 fixtures, 10 folds, same result each time", () => {
   assert.ok(fx.screen.length >= 10)
   assert.ok(fx.press.length >= 10)
@@ -150,4 +162,25 @@ test("the page grabs the shared tab and does not ask for a new share", () => {
   assert.doesNotMatch(app, /status\("Listening, no new question yet/)
   assert.doesNotMatch(app, /status\("No new question yet/)
   assert.match(app, /function manualAnswerTarget/)
+})
+
+
+test("spoken evidence excludes email, URL and phone-only lines", () => {
+  const resume = [
+    "Candidate",
+    "candidate@example.test",
+    "https://example.test/profile",
+    "+1 (555) 010-0123",
+    "Supported project line: I configured SIEM alert routing and incident triage.",
+  ].join("\n")
+  const spoken = bridgeTemplates(resume).join("\n")
+  assert.match(spoken, /SIEM alert routing/i)
+  assert.doesNotMatch(spoken, /candidate@example\.test|https:\/\/example\.test|555/)
+})
+
+test("loaded resume contact-only lines never enter spoken bridge templates", () => {
+  const resume = "candidate@example.test\nhttps://example.test/profile\n+1 (555) 010-1234\nSaint Louis University\n"
+  const templates = bridgeTemplates(resume)
+  assert.ok(templates.some(text => text.includes("Saint Louis University")), "current resume evidence is retained")
+  for (const text of templates) assert.doesNotMatch(text, /candidate@example\.test|https:\/\/example\.test|555/)
 })

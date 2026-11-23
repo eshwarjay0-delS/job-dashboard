@@ -6203,24 +6203,34 @@ async function aiAnswer(fromAuto, options = {}) {
           questionSource: questionSource(),
         });
         if (decision.listening) {
-          const target = typeof manualAnswerTarget === "function" ? manualAnswerTarget({
-            pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
-            lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
-            pass: answerAnglePass,
-          }) : { question: "", regenerate: false, angle: "" };
-          if (target.question) {
-            liveResolved = target.question;
-            if (target.regenerate) { pressAngle = target.angle; answerAnglePass++; }
-          } else {
-            answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
-            status("Still listening.", "live");
-            logDecision("still-listening", questionSource(), lastQ || "");
-            return;
-          }
+          // "Listening" means no new ask. Do not let manualAnswerTarget search the
+          // old transcript and resurrect the already-answered question on this press.
+          // A second press remains the explicit Answer-anyway/re-ask gesture.
+          answerAnywayHeld = { lines: pending.slice(), at: Date.now(), silenceReask: true };
+          status("Still listening.", "live");
+          logDecision("still-listening", questionSource(), lastQ || "");
+          return;
         } else if (decision.question && (decision.reason === "merge" || decision.reason === "outstanding")) liveResolved = decision.question;
       } catch {}
     }
-    if (!fromAuto && !typedText && !anyway && liveResolved && !pending.length) {
+    // The first press stays on Listening. Only the explicit second press
+    // re-asks the completed card, preserving the existing angle rotation.
+    if (!fromAuto && !typedText && silenceAnyway) {
+      try {
+        const curCard = cards[idx];
+        const lastQ = curCard && curCard.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(curCard.question) ? curCard.question : "";
+        const target = typeof manualAnswerTarget === "function" ? manualAnswerTarget({
+          pending, recent: (typeof transcript !== "undefined" && transcript) ? transcript : pending,
+          lastQuestion: lastQ, alreadyAnswered: !!(curCard && typeof hasAnswer === "function" && hasAnswer(curCard)),
+          pass: answerAnglePass,
+        }) : { question: "", regenerate: false, angle: "" };
+        if (target.question) {
+          liveResolved = target.question;
+          if (target.regenerate) { pressAngle = target.angle; answerAnglePass++; }
+        }
+      } catch {}
+    }
+    if (!fromAuto && !typedText && (!anyway || silenceAnyway) && liveResolved && !pending.length) {
       const curHold = cards[idx];
       const page = curHold && typeof hasAnswer === "function" && hasAnswer(curHold) ? addCard(liveResolved, ["…"]) : (curHold || addCard(liveResolved, ["…"]));
       page.heard = liveResolved; page.formed = liveResolved;

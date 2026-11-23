@@ -119,3 +119,13 @@ The owner requires natural, technically defensible first-person experience and g
 ## Single-source BNY audio + written guide pipeline — 2 November 2026
 
 BNY NotebookLM audio recommendations and uploaded BNY PDF materials belong to ONE unified source-grounded dossier, not a "PDF finished / audio optional" split. The dossier source API now accepts attributed audio transcripts, requires matching original media identities when the client names required audio hashes, retains media provenance, and rejects incomplete audio coverage before generation. Source-content extraction is separate from evidence of personal achievement: a narrated example does not verify a candidate incident or metric. The actual two M4A recordings remain untranscribed in this execution environment, so no audio-complete PDF or live end-to-end transcription success is asserted. See docs/research/kompas-dual-dossier-intelligence.md.
+
+
+## Listening hold and deliberate re-ask — 23 November 2026
+
+After an answered card, a manual AI Answer press with no new interviewer ask must remain on Listening and preserve the existing answer. It must not reconstruct the old question from the transcript or silently generate a duplicate. A second deliberate press within the existing explicit re-ask window may ask the same question again from a different angle. A genuinely new typed or interviewer question still opens its own card; Auto and voice intake continue to use the same question/source rules. The VM regression runs the shipped `public/kompas/app.js` path and checks first-press hold, second-press re-ask, preserved prior answer, and angle rotation. This is source/CI evidence only; native Windows and mobile interaction remain separate acceptance gates.
+
+
+## Loaded-resume authority in S5 — 23 November 2026
+
+A non-empty resume already loaded into the current Kompas session is the only source of candidate facts. The Fortinet/Houston summary is a fallback only when no resume is supplied; it must never replace a different loaded profile. Email, URL and phone-only lines are not spoken experience evidence. The S5 regression checks the loaded Saint Louis synthetic resume, preserves Saint Louis University, rejects unsupported Cigna/Fortinet/McKesson claims, and prevents contact-detail leakage. PR #554 combines this guard with the approved first-press Listening hold: the first manual press with no new interviewer ask stays on Listening; a deliberate second press re-asks from another angle. The PR's exact-head full CI, Kompas baseline, cross-device, Plan/REA and Windows executable gates have all passed. It remains draft pending a second authorized reviewer or approved merge-gate process, then merge and production release. Native Windows/mobile acceptance is separate.
