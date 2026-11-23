@@ -1,5 +1,20 @@
 # MFit Completion Watch
 
+## 23 November 2026 06:12 UTC — S5 fixture expectation corrected; exact-head CI running
+
+- **Approved Kompas slice:** PR [#554](https://github.com/eshwarjay0-delS/job-dashboard/pull/554) combines the loaded-resume source-of-truth guard with the first-press Listening hold and explicit second-press re-ask. It is still DRAFT, unmerged and unreleased.
+- **New failure evidence:** full CI [45108046375](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45108046375) reached the S5 gate and failed one fixture row: the synthetic Saint Louis resume contains no Fortinet evidence, but the old row still required Fortinet. The actual output retained Saint Louis University and refused the unsupported Cigna claim; the guard behaved correctly.
+- **Correction:** commit `8126dbc7df60043597b1860fd9bee9b1fadd19cc` renames the row to `unsupported-cigna-saint-resume`, requires Saint Louis University, and rejects Cigna, Fortinet, McKesson and the synthetic email. This is a test-only change, not a runtime behavior change.
+- **Exact-head checks for 8126dbc:** Kompas baseline [45122384370](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45122384370), cross-device [45122384401](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45122384401), and Plan/REA [45122384324](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45122384324) are SUCCESS. Full CI [45122384407](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45122384407) and Windows executable [45122384293](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45122384293) were IN PROGRESS at this update. No local checkout/build/test was available.
+- **Production boundary:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` remains READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` point to it. PR #554 has not been deployed. No native-device acceptance is claimed.
+- **Priority carry-forward:** WhatsApp 17 Oct 17:28 Chicago delivery remains unverified; no output DOCX, per-run R2 version, webhook correlation, Meta outbound ID or signed receipt. Explicit same-account Files/Library selection with exact label **Original resume — NOT TAILORED** and the unsupported-JD hard hold remain the required correction. Route edits remain blocked until an approved runnable environment supplies the canonical checkout and installed Next.js 16.3.8 route-handler guide; the protected Vercel Sandbox quota resets 1 Dec 2026. Do not replay or send a real message.
+- Resume confirmed-skill PR #552, WhatsApp parser #550 and crawler diagnostics #551 are dependent on this shared lint/Kompas test correction and need exact-head revalidation/restacking. Gmail/mobile remains gated by protected preview and two-inbox/selected-From/narrow-phone acceptance; four connected accounts maximum, and Poke worker/scheduler/notifications/sending remain disabled. Contract crawling stays manual/on-demand; Robert Half manual-only and eTeam excluded.
+
+Continue: finish exact-head CI/Windows validation and source review for #554; if green, merge and release it through the normal path, then restack the dependent approved slices without overwriting other work.
+
+
+
+
 ## 23 November 2026 03:45 UTC — Round 15 live; S5 test fixtures corrected on PR #554
 
 - **Round 15 production:** master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` independently point to that exact deployment. The fix routes settled JSON answers through `gateDisplayedAnswer`. This is source release evidence, not live answer-quality acceptance.
