@@ -46,3 +46,8 @@ Run all exact-head gates on this branch. If green, review and merge via the norm
 ## Exact-head lint follow-up
 
 Full CI run [45091214598](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45091214598) failed at Lint with one error in `src/lib/kompasConsistency.ts:1059`: `s` was never reassigned (`prefer-const`). The remaining 267 lint findings were warnings. This is unrelated to the WhatsApp parser and was corrected by changing only `let s = sentence` to `const s = sentence`, commit `23cd3d3253ab62166e79bb87c49a32c6bac6ef10`. No answer-shaping behavior changed. Full CI and all exact-head checks must rerun after this commit.
+
+
+## Listening-hold CI blocker
+
+On exact PR #550 head `f45e134752559bcd09d5b709c7d29330faffb23c`, full CI [45091575895](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45091575895) failed in the Kompas question-framing/one-press/typed-input/voice test step. Two Listening-hold assertions (tests 50 and 54) expected zero generated answers but observed one. Lint/typecheck/build passed; Kompas baseline and Plan/REA schema passed. Do not change these Kompas behaviors in the parser PR; coordinate with existing Kompas work. PR #540 full CI also failed on a separate S5 fixture (run 45060694833), and PR #518 currently has no check runs, so no clean Kompas gate is established. The parser fix remains unmerged and unreleased.
