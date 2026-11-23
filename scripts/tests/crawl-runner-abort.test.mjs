@@ -41,7 +41,11 @@ test('runner wires one portal AbortSignal into fetch and both database write que
       }
     },
   }
-  const collect = loadTS('src/lib/crawl/collect.ts', {})
+  const fakeFetch = async (_url, init) => {
+    fetchSignals.push(init.signal)
+    return { ok: true, text: async () => 'synthetic listing' }
+  }
+  const collect = loadTS('src/lib/crawl/collect.ts', {}, { fetch: fakeFetch })
   const adapter = {
     portal: 'synthetic', firm: 'Synthetic',
     listUrls: ['https://jobs.example.test/list'],
@@ -53,12 +57,7 @@ test('runner wires one portal AbortSignal into fetch and both database write que
     './classify': { classifyWorkType: () => 'contract', normalizeDate: () => null },
     './collect': collect,
     './text': { scrubContacts: text => text },
-  }, {
-    fetch: async (_url, init) => {
-      fetchSignals.push(init.signal)
-      return { ok: true, text: async () => 'synthetic listing' }
-    },
-  })
+  }, { fetch: fakeFetch })
   const results = await runCrawl()
   assert.deepEqual(results, [{ portal: 'synthetic', firm: 'Synthetic', found: 1, upserted: 1 }])
   assert.equal(fetchSignals.length, 1)
