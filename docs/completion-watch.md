@@ -815,3 +815,11 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - Approved behavior: positive candidate confirmations support only the named skill and may map into relevant existing project bullets across roles. Negations, questions, instructions, second-person, exceptions and JD-only requirements do not confirm; no employer/project/action/outcome/title/date/location/contact/metric/credential is invented.
 - A focused workflow `resume-confirmation-quality.yml` was added. Previous head d43be912 had resume regression and baseline SUCCESS but full CI failed on unrelated `kompasConsistency.ts:1059` prefer-const lint. Exact clean-restack checks are pending; no local tests, candidate data, DOCX, live match or production acceptance occurred.
 - **Next:** exact-head focused regression, full CI, baseline and Plan/REA; independent review, protected preview and owner-authorized resume/JD plus exported-DOCX acceptance before release.
+
+
+## 23 November 2026 17:28 UTC — confirmed-skill CI unblocked
+
+- PR #552 current exact head `73341b24ae4432c2e281073855aecd2ab3be77c3` now includes the behavior-neutral `let s` → `const s` lint correction and the four shared Kompas VM fixture initializations (`answerCtl:null`, `detectedQueue:[]`). These fixes address the prior full-CI blocker at `src/lib/kompasConsistency.ts:1059` and fixture ReferenceErrors without changing resume evidence logic or Kompas runtime behavior.
+- Current exact-head runs: full CI `45228044173` IN PROGRESS; confirmed-skill regression `45228044141` IN PROGRESS; WhatsApp recovery `45228044178` IN PROGRESS; Kompas baseline `45228044134` SUCCESS; Plan/REA `45228044137` SUCCESS.
+- No local tests/build, resume/JD processing, model call, DOCX export, production deployment or device acceptance occurred. PR #552 remains DRAFT.
+- **Continue:** inspect all exact-head runs to terminal, resolve any real failures without weakening tests, then normal independent review/protected preview and owner-authorized DOCX acceptance. No live ATS match percentage is claimed.
