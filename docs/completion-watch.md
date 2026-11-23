@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 23 November 2026 20:35 UTC — Crawler PR #551 Type-check metadata correction
+
+- Full CI on previous head `5913afd` failed Type-check because its REA state literal was outside the declared enum. Behavior-neutral code commit `19d7ac20` changes it to `Implemented, verification pending`.
+- Corrected exact head `19d7ac20`: Plan/REA schema `45260236503` SUCCESS, Kompas baseline `45260236205` SUCCESS, crawler freshness `45260235924` SUCCESS, full CI `45260236471` IN PROGRESS at last check. No type-check success is claimed until the full CI reaches that step and completes.
+- **Continue:** await full CI; preserve DRAFT and manual-only crawling. Protected preview, production release and separately authorized live crawl remain open.
+
+
 ## 23 November 2026 20:33 UTC — Crawler PR #551 Type-check metadata correction
 
 - Full CI on previous head `5913afd` failed Type-check because its REA state literal was outside the declared enum. Behavior-neutral code commit `19d7ac20` changes it to `Implemented, verification pending`.

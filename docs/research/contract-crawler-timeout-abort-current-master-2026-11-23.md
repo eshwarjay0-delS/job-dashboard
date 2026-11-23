@@ -36,3 +36,8 @@ The current code/test head 0f194b18f730b184c18321b67d4da077c56b8895 includes the
 ## 23 Nov 2026 — REA type-check correction
 
 PR #551's full CI on head `5913afd` failed Type-check because the new REA record's `state` value was not in the declared enum. Code commit `19d7ac2024a959e4d247eb4cbc860ba2d33c58a4` replaces it with `Implemented, verification pending`; no collector, runner, fetch or portal runtime behavior changed. Corrected-head schema `45260236503`, Kompas baseline `45260236205`, and crawler freshness `45260235924` passed; full CI `45260236471` was in progress. No live crawl or production deployment.
+
+
+## 23 Nov 2026 — REA type-check correction
+
+PR #551's full CI on head `5913afd` failed Type-check because the new REA record's `state` value was not in the declared enum. Code commit `67810506a1b4d8a062ac9fba44d5152c88c1cb1e` replaces it with `Implemented, verification pending`; no collector, runner, fetch or portal runtime behavior changed. Corrected-head schema `45260236503`, Kompas baseline `45260236205`, and crawler freshness `45260235924` passed; full CI `45260236471` was in progress. No live crawl or production deployment.
