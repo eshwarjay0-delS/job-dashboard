@@ -8,14 +8,14 @@
 - **Continue:** Round 12 requires a real authorized Kompas phone/desktop session, the 10 scenario/experience questions plus follow-up, paired ChatGPT responses and independent 0–4 scoring. Exact blocker: no KOMPAS_API_TOKEN, approved resume/JD/reference bundle or authenticated device session in this environment. When a canonical runnable checkout/installed guide is available, implement and test the two-line resume parser, durable explicit-selection provenance, and unsupported-JD hard hold; then exact-head CI and normal review. Gmail/mobile #474 and manual-only crawler #479 remain separate, unvalidated backlog items. Do not fabricate acceptance or enable workers/schedulers.
 
 # MFit Completion Watch
-## 23 November 2026 21:10 UTC — contract-board search validation
+## 23 November 2026 21:11 UTC — contract-board search exact-head checks
 
 - PR #561 current-master restack: code head `a34bac05`, research-only follow-up `5b454d01`. Isolated Node 22.16.0 run **4/4 passed**; focused GitHub workflow [45265726287](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45265726287) **SUCCESS** on code head.
-- Full CI [45265726249](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45265726249) **FAILED at Lint** on unrelated master `src/lib/kompasConsistency.ts:1059` prefer-const. Type-check, other regression gates and build were skipped; no full-suite pass.
-- Production master `794e8cf` is READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `get_alias` independently maps `job-dashboard-fawn.vercel.app` to that deployment. #561 is not deployed.
-- #561 remains DRAFT. Vercel project/runtime reads return 403, CLI absent; no protected preview. The code is unchanged after the docs follow-up, but no workflow rerun exists on the new docs-only head.
-- Plan Journal, Applications Plan, REA and Completion Watch updates are on this existing documentation PR #543; its exact new-head workflows have not started. No live contract search/crawl, portal request, application or data mutation.
-  
+- On the latest branch head `5b454d01`, focused workflow [45266458972](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45266458972) and Kompas baseline [45266458914](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45266458914) **SUCCESS**. Full CI [45266458884](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45266458884) **FAILED at Lint** on unrelated master `src/lib/kompasConsistency.ts:1059` prefer-const. Type-check, other regression gates and build were skipped.
+- Production master `794e8cf` is READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` independently map to that deployment. #561 is not deployed.
+- Vercel project/runtime reads returned 403, CLI absent; no protected preview. #561 remains DRAFT.
+- Plan Journal, Applications Plan, REA and Completion Watch updates are on this existing documentation PR #543; exact-head Plan/REA runs did not start after API commits. No live contract search/crawl, portal request, application or data mutation.
+
 **Continue:** keep #561 draft; resolve shared lint/full-CI gate through existing reviewed work, then rerun exact-head full CI, independent review, protected preview, production READY+alias and authenticated UI acceptance. No tests weakened.
 
 
