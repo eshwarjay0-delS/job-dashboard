@@ -817,3 +817,11 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - A focused stacked branch `fix/whatsapp-pr557-kompas-vm-fixtures-20261123` adds the two initialized fields to the four affected test fixtures (one-press, typed follow-up card, typed question, and voice). No production source, account policy, fallback behavior or live delivery was changed.
 - Exact PR #557 root head was not edited. No local checkout/dependencies are available; GitHub Actions is the executable validation path. No WhatsApp send, model call, DOCX/R2 write, replay, or user-device test occurred.
 - **Next:** run full CI, WhatsApp recovery, Kompas baseline and Plan/REA on this exact stacked head; review the fixture-only diff; then sequence #557 and its follow-up through normal independent approval, protected preview, production READY/alias and consented acceptance. The 17 Oct 17:28 Chicago delivery remains unverified.
+
+
+## 23 November 2026 17:36 UTC — WhatsApp fixture failures narrowed to Listening-hold dependency
+
+- PR #557 code/test head 89713ea83d12f39ef1d677147937d4fc60225996 plus stacked fixture/doc follow-up now has full CI 45227734205: lint, type-check, build and all earlier regression steps PASS; the only remaining failures are two tests (50 and 54) asserting that an empty/candidate-only second press should hold Listening and re-ask on a subsequent press. This is not a WhatsApp fallback test failure.
+- Exact PR #557 WhatsApp recovery 45227734188, Kompas baseline 45227734468 and Plan/REA 45227734178 SUCCESS. The four missing VM fields were repaired; the 24 ReferenceErrors are gone.
+- The required Listening-hold implementation is in separate PR #554 (all five gates SUCCESS at exact head 4fafd56663bb5ddce064dcebea8802d758bb8259). Its independent authorized review remains outstanding; the review process cannot be bypassed. #557 must be revalidated after that dependency is accepted.
+- No real WhatsApp send, DOCX, R2 write, replay, Meta receipt, user device or production acceptance occurred. Historical 17 Oct 17:28 Chicago send remains unverified.
