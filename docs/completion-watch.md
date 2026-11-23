@@ -1,3 +1,13 @@
+## 23 November 2026 22:52 UTC — ready PRs, exact full-CI trigger blocker
+
+- The green focused restacks were moved from draft to ready-for-review PRs: contract search **#565** and WhatsApp fallback **#566**. Their code branches are still stacked on PR #554; no runtime release.
+- #565: focused contract search run 45282267513 SUCCESS; a newly triggered rerun 45283478714 is IN PROGRESS. #566: WhatsApp recovery 45282722516 and Plan/REA schema 45282722435 SUCCESS; fresh regression 45283495328 and schema 45283495328 are IN PROGRESS.
+- **Exact full-CI blocker:** `.github/workflows/ci.yml` is filtered to pull requests targeting `master` or `main`. Because #565/#566 target the non-master #554 branch, the full CI workflow does not trigger. #554 itself is green but still needs independent authorized review. After #554 merges, these restacks must target master to receive the full CI gate; no merge gate is bypassed.
+- Draft duplicates #563/#564 and older #561/#557 are closed; branches/history preserved. No live WhatsApp, DOCX, R2/Meta, crawl, application, inbox or device action. The 17 Oct 17:28 Chicago delivery remains unverified.
+
+Continue: complete focused checks, obtain independent review of #554, merge in normal order only after gate approval, restack #565/#566 to master, run full CI, then protected preview and production READY/alias plus real acceptance.
+
+
 ## 23 November 2026 22:48 UTC — restack focused gates completed
 
 - PR #563 contract search: focused workflow **45282267513 SUCCESS** on head `7eef052c714108290049c7c74648e9ef3f86f537`. Still DRAFT; exact-head full CI has not run.
