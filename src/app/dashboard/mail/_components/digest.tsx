@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import type { Mail, Interview } from "@/app/dashboard/_suite/sample"
 import type { NotifyRule } from "@/app/api/gmail/notify-rules/route"
 import { interviewThreadKey } from "@/lib/interview-mail-link"
-import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "@/lib/mail-digest"
+import { isDigestSenderMuted, mutedNotifyRules, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "@/lib/mail-digest"
 
 export type DigestRadar = {
   threadId: string; account: string; to: string; subject: string
@@ -28,9 +28,9 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
   }, [])
   const isMuted = (m: Mail) => isDigestSenderMuted(rules, m)
 
-  async function toggleMute(m: Mail) {
-    const email = (m.fromEmail || "").trim().toLowerCase()
-    const account = (m.account || "").trim().toLowerCase()
+  async function toggleMute(account: string, email: string) {
+    email = (email || "").trim().toLowerCase()
+    account = (account || "").trim().toLowerCase()
     const key = notifyRuleKey(account, email)
     if (!email || !account || !key || saving) return
     setSaving(key)
@@ -46,7 +46,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
   const dayAgo = Date.now() - 864e5
   const newToday = mails.filter(m => m.unread && (m.ts || 0) > dayAgo && !isMuted(m))
   const topNeeds = [...needs].filter(m => !isMuted(m)).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3)
-  const mutedNeeds = needs.filter(isMuted)
+  const mutedRules = mutedNotifyRules(rules)
   const waitingLong = theirs
     .map(m => ({ m, days: waitingDaysForDigestMail(radar, m) }))
     .filter(x => x.days >= 7 && !isMuted(x.m))
@@ -57,7 +57,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
     .sort((a, b) => (a.ts || a.start || 0) - (b.ts || b.start || 0))
     .slice(0, 3)
 
-  if (!topNeeds.length && !waitingLong.length && !newToday.length && !mutedNeeds.length && !upcoming.length) return null
+  if (!topNeeds.length && !waitingLong.length && !newToday.length && !mutedRules.length && !upcoming.length) return null
 
   const ago = (ts?: number) => {
     if (!ts) return ""
@@ -93,7 +93,7 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
                   <span className="mf-digest-meta">{ago(m.ts)}{m.role ? ` · ${m.role}` : ""}</span>
                 </button>
                 <button className="mf-digest-mute" title={`Mute ${m.fromEmail} — never nudge me about them`} aria-label={`Mute ${m.fromEmail}`}
-                  disabled={saving === notifyRuleKey(m.account || "", m.fromEmail || "")} onClick={() => toggleMute(m)}>🔕</button>
+                  disabled={saving === notifyRuleKey(m.account || "", m.fromEmail || "")} onClick={() => toggleMute(m.account || "", m.fromEmail || "")>🔕</button>
               </div>
             ))}
           </div>
@@ -140,12 +140,12 @@ export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen
           </div>
         )}
       </div>
-      {mutedNeeds.length > 0 && (
+      {mutedRules.length > 0 && (
         <p className="mf-digest-muted">
-          🔕 {mutedNeeds.length} muted {mutedNeeds.length === 1 ? "sender" : "senders"} hidden from nudges
-          {mutedNeeds.slice(0, 3).map(m => (
-            <button key={interviewThreadKey(m.account, m.id)} className="mf-digest-unmute" onClick={() => toggleMute(m)}
-              title={`Unmute ${m.fromEmail}`}>{m.from || m.fromEmail} ✕</button>
+          🔕 {mutedRules.length} muted {mutedRules.length === 1 ? "sender" : "senders"} hidden from nudges
+          {mutedRules.map(rule => (
+            <button key={notifyRuleKey(rule.account, rule.email)} className="mf-digest-unmute" onClick={() => toggleMute(rule.account, rule.email)}
+              title={`Unmute ${rule.email} in ${rule.account}`}>{rule.email} · {rule.account} ✕</button>
           ))}
         </p>
       )}

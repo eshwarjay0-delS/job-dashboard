@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { readFileSync } from "node:fs"
-import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "../../src/lib/mail-digest.ts"
+import { isDigestSenderMuted, mutedNotifyRules, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "../../src/lib/mail-digest.ts"
 import { readReplyDraft, replyDraftKey, saveReplyDraft } from "../../src/lib/mail-reply-draft.ts"
 
 // Provider thread IDs may collide across inboxes; sender mutes must remain account-scoped.
@@ -98,4 +98,26 @@ test("mobile inbox toggles show server-authorized accounts and the RPC enforces 
   assert.match(data, /return unique\.map\(/)
   assert.doesNotMatch(data, /(?:emails|unique)\.slice\(\s*0\s*,\s*4\s*\)/)
   assert.match(migration, /order by a\.is_primary desc, a\.connected_at asc\s+limit 4/i)
+})
+
+
+test("all muted senders remain unmutable even when absent from Needs your reply", () => {
+  const rules = [
+    { account: "one@example.com", email: "recruiter@example.com", mode: "never" },
+    { account: " ONE@example.com ", email: " RECRUITER@example.com ", mode: "never" },
+    { account: "two@example.com", email: "recruiter@example.com", mode: "never" },
+    { account: "two@example.com", email: "active@example.com", mode: "always" },
+    { account: "three@example.com", email: "only-new@example.com", mode: "never" },
+  ]
+  const muted = mutedNotifyRules(rules)
+  assert.deepEqual(muted.map(r => notifyRuleKey(r.account, r.email)), [
+    "one@example.com:recruiter@example.com",
+    "two@example.com:recruiter@example.com",
+    "three@example.com:only-new@example.com",
+  ])
+  const digest = readFileSync(new URL("../../src/app/dashboard/mail/_components/digest.tsx", import.meta.url), "utf8")
+  assert.match(digest, /const mutedRules = mutedNotifyRules\(rules\)/)
+  assert.match(digest, /mutedRules\.map\(rule =>/)
+  assert.match(digest, /toggleMute\(rule\.account, rule\.email\)/)
+  assert.doesNotMatch(digest, /mutedNeeds\.slice\(0,\s*3\)/)
 })

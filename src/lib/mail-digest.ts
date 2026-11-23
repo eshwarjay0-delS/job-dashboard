@@ -37,3 +37,15 @@ export function waitingDaysForDigestMail(radar: readonly DigestRadarIdentity[], 
   const key = interviewThreadKey(normalizeIdentity(mail.account), mail.id)
   return radar.find(row => interviewThreadKey(normalizeIdentity(row.account), row.threadId) === key)?.daysWaiting ?? 0
 }
+
+/** All muted inbox/sender rules, even when the sender has no current digest mail. */
+export function mutedNotifyRules(rules: readonly NotifyRule[]): NotifyRule[] {
+  const byKey = new Map<string, NotifyRule>()
+  for (const rule of rules) {
+    if (rule.mode !== "never") continue
+    const account = normalizeIdentity(rule.account), email = normalizeIdentity(rule.email)
+    const key = notifyRuleKey(account, email)
+    if (key) byKey.set(key, { account, email, mode: "never" })
+  }
+  return [...byKey.values()]
+}
