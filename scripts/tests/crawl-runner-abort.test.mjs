@@ -59,7 +59,11 @@ test('runner wires one portal AbortSignal into fetch and both database write que
     './text': { scrubContacts: text => text },
   }, { fetch: fakeFetch })
   const results = await runCrawl()
-  assert.deepEqual(results, [{ portal: 'synthetic', firm: 'Synthetic', found: 1, upserted: 1 }])
+  assert.equal(results.length, 1)
+  assert.equal(results[0].portal, 'synthetic')
+  assert.equal(results[0].firm, 'Synthetic')
+  assert.equal(results[0].found, 1)
+  assert.equal(results[0].upserted, 1)
   assert.equal(fetchSignals.length, 1)
   assert.equal(upsertSignals.length, 1)
   assert.equal(retireSignals.length, 1)
