@@ -97,3 +97,8 @@ Source-controlled WhatsApp resume tests must use synthetic candidate names, dist
 ## 23 November 2026 — CI cause correction
 
 The confirmed-skill PR #552 full CI 45230708625 does not fail at lint. Exact job log shows two Kompas Listening-hold assertions (tests 50 and 54) fail; the resume-focused, WhatsApp recovery, baseline and Plan/REA gates pass. The required behavior is in PR #554, which awaits an independent authorized reviewer. No original resume/JD/confirmation bundle or exported DOCX was processed; no live match score is claimed.
+
+
+## 23 November 2026 — stacked continuation
+
+PR #564 carries the approved explicit same-account Files fallback and unsupported-JD hard hold from #557 onto PR #554's green Kompas validation base. It inherits the first-press Listening and current-resume S5 corrections without copying overlapping Kompas files. Exact-head checks are pending. No real send, DOCX, R2/Meta write, production deployment or historical 17 Oct replay is claimed.
