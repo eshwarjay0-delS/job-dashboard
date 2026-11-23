@@ -1,0 +1,28 @@
+name: Gmail account and mobile regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/app/dashboard/dashboard-shell.css'
+      - 'src/app/dashboard/sidebar-nav.tsx'
+      - 'src/app/dashboard/mail/**'
+      - 'src/lib/mail-digest.ts'
+      - 'src/lib/mail-reply-draft.ts'
+      - 'scripts/tests/dashboard-shell.test.mjs'
+      - 'scripts/tests/mail-digest-account-isolation.test.mjs'
+      - '.github/workflows/gmail-mobile-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gmail-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify account-scoped digest, reply identity and normal-flow mobile navigation
+        run: node --experimental-strip-types --test scripts/tests/dashboard-shell.test.mjs scripts/tests/mail-digest-account-isolation.test.mjs
