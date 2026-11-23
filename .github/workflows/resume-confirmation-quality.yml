@@ -8,6 +8,11 @@ on:
       - 'src/lib/resume-quality.ts'
       - 'src/lib/tailor.ts'
       - 'scripts/tests/resume-confirmation-quality.test.mjs'
+      - 'src/lib/plan-vision.ts'
+      - 'src/lib/plan-vision-journal.ts'
+      - 'src/lib/rea-register.ts'
+      - 'docs/research/resume-confirmed-skill-master-restack-2026-11-23.md'
+      - 'docs/completion-watch.md'
       - '.github/workflows/resume-confirmation-quality.yml'
   workflow_dispatch:
 
