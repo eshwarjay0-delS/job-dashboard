@@ -833,3 +833,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 ## 24 November 2026 — PR #575 test-source audit
 
 Remote source inspection of PR #575 found a missing closing parenthesis in `scripts/tests/apply-clearance-filter.test.mjs` that would make Node fail to parse the test file. Corrected in `0fb890a5207c34d9ad6966b6b255d1da3734e796`. This is a test-source correction, not evidence of local execution. The earlier focused crawler workflow did not prove this test file was executed. Exact-head full CI must re-run after the correction; PR #575 remains draft, and the shared #554 release/review gate, protected preview, production/API acceptance, and explicit manual crawl request remain separate.
+
+
+### PR #575 status API cross-check (24 Nov 2026)
+
+Direct GitHub REST PR response on head `f7043df4a58e75ca2c4bd80cd0f282ee7f54779` reports `mergeable=true`, `mergeable_state=unstable` (the normalized connector's `mergeable=false` was stale). The same SHA has `actions/runs?head_sha` total_count 0 and commit status `pending` with no statuses. CI is not verified or triggered by this API-created follow-up; a push/workflow-trigger-capable authorized environment is needed to run exact-head CI. No merge or deployment.
