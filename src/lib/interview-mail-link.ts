@@ -6,7 +6,7 @@
 // account side, because the two lists spell the account the same way but not always in the same case.
 
 export const interviewThreadKey = (account: string, threadId: string): string =>
-  `${String(account || "").toLowerCase()}:${String(threadId || "")}`
+  `${String(account || "").trim().toLowerCase()}:${String(threadId || "")}`
 
 export function interviewThreadKeys(interviews: { account?: string; threadId?: string }[]): Set<string> {
   return new Set((interviews || []).filter(iv => iv.threadId).map(iv => interviewThreadKey(iv.account || "", iv.threadId || "")))
@@ -15,6 +15,10 @@ export function interviewThreadKeys(interviews: { account?: string; threadId?: s
 export const mailHasInterview = (keys: Set<string>, account: string, threadId: string): boolean =>
   keys.has(interviewThreadKey(account, threadId))
 
-/** The board always renders at the top of /dashboard/calendar, so a thread link lands on its card by anchor. */
-export const interviewBoardHref = (threadId: string): string =>
-  `/dashboard/calendar#interview-${encodeURIComponent(threadId)}`
+/** Board anchors are account + provider thread ID; identical thread IDs in different inboxes stay distinct. */
+export const interviewBoardAnchor = (account: string, threadId: string): string =>
+  `interview-${interviewThreadKey(account, threadId)}`
+
+/** Link directly to the account-specific interview card. */
+export const interviewBoardHref = (threadId: string, account: string): string =>
+  `/dashboard/calendar#${interviewBoardAnchor(account, threadId)}`

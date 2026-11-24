@@ -1,0 +1,28 @@
+name: Gmail interview-board account identity regression
+
+on:
+  push:
+    branches:
+      - fix/gmail-interview-board-account-anchor-20261124
+  pull_request:
+    paths:
+      - 'src/lib/interview-mail-link.ts'
+      - 'src/app/dashboard/calendar/_components/interview-board.tsx'
+      - 'src/app/dashboard/mail/page.tsx'
+      - 'scripts/tests/interview-mail-link.test.mjs'
+      - 'scripts/tests/interview-automation-ui.test.mjs'
+      - '.github/workflows/gmail-interview-board-identity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  account-scoped-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify account-scoped interview anchors and mail links
+        run: node --experimental-strip-types --test scripts/tests/interview-mail-link.test.mjs scripts/tests/interview-automation-ui.test.mjs
