@@ -40,6 +40,18 @@ test('no and lack exceptions narrow a positive confirmation instead of confirmin
   }
 })
 
+test('negative contractions narrow a mixed confirmation and repeated skills reject contradictions', () => {
+  for (const statement of [
+    "I used AWS and don't know GCP",
+    "I used AWS and haven't used GCP",
+    "I used AWS and can't use GCP",
+    "I used AWS and cannot use GCP",
+  ]) {
+    assert.deepEqual(confirmedCandidateStatements([statement]), ['I used AWS'])
+  }
+  assert.deepEqual(confirmedCandidateStatements(["I used AWS and don't know AWS"]), [])
+})
+
 test('technical punctuation remains part of confirmed skills', () => {
   assert.deepEqual(confirmedCandidateStatements(['I have experience with .NET, Node.js and ASP.NET']), ['I have experience with .NET, Node.js and ASP.NET'])
   assert.deepEqual(confirmedCandidateStatements(['I used Node.js. Add AWS']), ['I used Node.js'])
