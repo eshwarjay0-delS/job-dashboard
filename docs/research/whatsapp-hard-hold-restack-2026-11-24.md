@@ -16,7 +16,7 @@ This restack isolates the hard-hold/identity helper fix from the unapproved R2 C
 
 - Remove `unverified_jd_terms` from the WhatsApp shortfall-delivery allowlist.
 - Explicitly fail `whatsappRewriteUsable` when unverified added keywords exist or the cached quality blocker is `unverified_jd_terms`, including an empty detail list.
-- Require a nonblank profile email before `chosenResumeMatchesProfile` can return true; the document must contain exactly one matching email.
+- Require a nonblank profile email before `chosenResumeMatchesProfile` can return true; the document must contain exactly one matching email. Commit `667bc5568c9d1975f4f5169a251d6d10eb71d469` also aligned the comments and removed the redundant unverified-term shortfall branch.
 - Add three synthetic regression cases for unsupported JD-only terms, a stale blocker with empty details, and missing/blank/matching/mismatching profile email.
 - Wire the existing acceptance test file into full CI and the WhatsApp resume regression workflow.
 
