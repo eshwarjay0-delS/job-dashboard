@@ -1057,3 +1057,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - **Execution/coordination:** local clone/DNS and installed Next.js docs remain unavailable; Vercel Sandbox quota wall is recorded until 1 Dec. MFit Completion Watch enabled; Safe Merge Gate and Kompas Continuous Voice Delivery disabled; no Bible-Keeper found. No duplicate voice work or external sends.
 
 **Continue:** obtain the required independent review for #554; then restack the approved dependent slices and rerun exact-head full CI before any merge or production deployment. Keep the real WhatsApp, DOCX, Gmail/mobile, crawler, Kompas 50-pair and native-device acceptance gates open.
+
+
+### Plan & Vision baseline refresh
+
+The product-plan revision is now `2026-11-24.9` in `src/lib/plan-vision.ts`. Its Gmail, Resume, Applications and Kompas baselines append the current 24 Nov exact-head evidence while retaining the older history. This is a documentation-only update, not a product-code release. PR #562 head `5b85399d19e6edfae4a0f211e79943845cf73e52`: Plan/REA schema 45462324685 SUCCESS, Kompas baseline 45462324756 SUCCESS, full CI 45462324676 still IN PROGRESS at last check.
