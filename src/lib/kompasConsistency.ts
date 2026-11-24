@@ -1056,7 +1056,7 @@ function stripRefusalOpen(body: string): string {
   // trailing "though/but I can't..." clause and the leading "I can't...,
   // but" clause, keeping the work description that surrounds it.
   const cleaned = sentences.map((sentence) => {
-    let s = sentence
+    const s = sentence
       .replace(/[,;]?\s*(?:though|but|however)\s+I (?:can ?not|cannot|can't|haven't|have not|don't|do not)\b.*$/i, "")
       .replace(/^I (?:can ?not|cannot|can't|haven't|have not|don't|do not)\b[^,]*,\s*(?:but|though|however)\s+/i, "")
       .trim()
