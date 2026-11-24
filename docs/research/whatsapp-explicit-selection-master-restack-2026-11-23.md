@@ -116,3 +116,26 @@ The dependency is PR #554, exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`
 Production remains READY on master `794e8cf` / deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; PR #572 is not merged or deployed. No local test/build ran because the canonical checkout and installed dependencies are unavailable. The installed Next.js 16.3.8 route-handler guide remains required before additional route edits; the prior Vercel Sandbox snapshot request returned HTTP 402 with the recorded reset on 1 Dec 2026. No real WhatsApp/Meta send, R2 write, DOCX, model call, historical replay, production mutation or device acceptance occurred. The 17 Oct 2026 17:28 Chicago incident remains unverified.
 
 Next: obtain independent review for PR #554; after merge, restack #572 onto the resulting master and rerun full CI, WhatsApp recovery, Kompas baseline, cross-device and Plan/REA on the exact new head. Then require protected preview, production READY/alias and consented acceptance. Never replay the historical attempt to manufacture evidence.
+
+
+## 24 November 2026 — exact-head fixture repair and remaining shared Listening-hold failure
+
+On PR #572 branch `fix/whatsapp-explicit-selection-master-restack-20261123-continuation`, the prior full CI failure was isolated to four Kompas VM harness states missing `answerCtl` and `detectedQueue`. This follow-up initializes only those test fields in:
+- `scripts/tests/kompas-typed-question.test.mjs`
+- `scripts/tests/kompas-typed-followup-card.test.mjs`
+- `scripts/tests/kompas-voice.test.mjs`
+- `scripts/tests/kompas-one-press.test.mjs`
+
+Commits: `720c4f549bfa0cefe72ae599b9ef2b556ff6f143`, `a1b4d33a55c70254d784b8a9471f0f2867ae31c1`, `04661e2595b4ad8dd13ddf8802806a189a32d313`, `061b0bc1296437a056ecad985126d77e8e3e9c9d`.
+
+Exact head `061b0bc1296437a056ecad985126d77e8e3e9c9d`:
+- WhatsApp recovery `45349292292`: **SUCCESS**.
+- Kompas baseline `45349292298`: **SUCCESS**.
+- Plan/REA `45349292294`: **SUCCESS**.
+- Full CI `45349292258`: **FAILURE**. The missing fixture references are resolved; 70/72 question/voice tests pass. Only the two first-press Listening-hold assertions remain: silence and already-answered candidate-only speech must not regenerate an answer.
+
+Those two runtime assertions belong to PR #554, exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`, whose full CI, baseline, cross-device, Plan/REA and Windows x64 executable workflows all pass. Its only recorded review is owner-authored, so a second authorized reviewer is required before merge. Do not duplicate the Listening-hold runtime or bypass the independent-review gate. PR #572 remains DRAFT, unmerged and undeployed; production remains master `794e8cf`.
+
+No local checkout or installed dependencies were available. No route code changed in this fixture-only follow-up; the installed Next.js 16.3.8 route-handler guide remains required before any further route edits. No real WhatsApp/Meta send, DOCX, R2 write, model call, database mutation, historical replay or device acceptance occurred. The 17 Oct 17:28 Chicago delivery remains **unverified**; output DOCX, R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt are missing.
+
+Next: obtain independent authorized review for #554; after approved merge, restack #572 onto the reviewed master and rerun every exact-head gate. Require protected preview, production READY/alias and consented live delivery acceptance before calling it shipped.
