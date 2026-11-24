@@ -1,6 +1,6 @@
 ## 24 November 2026 — Plan Journal schema self-correction
 
-The initial insertion targeted the type-array bracket; subsequent repair attempts mislocated the entry in existing string/nested-array content and caused schema failures. The original PR #562 Plan Journal and REA files were restored, the Plan Journal entry was added to its existing unshift call, and the REA entry was added at its top-level array close. This was an authoring error in the documentation PR, not a product runtime defect; exact-head schema/full CI are pending.
+The first insertion targeted the type-array bracket; subsequent repair attempts mislocated the entry in existing string/nested-array content and caused schema failures. The original PR #562 Plan Journal and REA files were restored. The Plan Journal review entry is now placed in the existing `PLAN_JOURNAL.unshift` call, and the REA entry is appended at the top-level `REA_SESSIONS` array close. Exact-head schema/full CI are pending. This was an authoring error in the documentation PR, not a product runtime defect.
 
 ## 24 November 2026 10:07 UTC — WhatsApp fallback containment review
 
