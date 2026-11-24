@@ -794,3 +794,8 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 24 November 2026 — contract crawler pacing abort regression
+
+- PR #573 test-only continuation at 672c7bdf49f55c8473357f56b7ad16e7379d9c16 corrects a test setup that initially failed to establish the request pacing clock. It now performs one synthetic fetch, aborts the second during its 250 ms delay, and verifies no second fetch starts. Exact crawler regression 45353417281 and baseline 45353417257 passed; full CI 45353417177 failed at shared prefer-const lint in src/lib/kompasConsistency.ts:1059. PR #554 contains the common fix and remains awaiting independent review. No portal fetch, production DB mutation or deployment occurred; crawler remains manual/on-demand.

@@ -61,3 +61,8 @@ The crawler timeout/abort source and tests are restacked onto PR #554's exact gr
 ## Completion Watch independent master restack — 23 November 2026
 
 This continuation copies the reviewed collector/runner diagnostics from PR #569 exact head `e68ea50ef27133c18bf688693218b52461df3767` onto canonical master `794e8cfdbd3103409552857806bab89851d5bfcb`, without the Kompas #554 dependency. The original focused crawl test result is historical; exact-head dedicated regression and full CI must rerun. No live portal requests, storage mutations, job applications or schedule changes occurred.
+
+
+## 24 November 2026 — pacing abort regression
+
+24 November 2026: PR #573 test-only crawler continuation is at code/test head 672c7bdf49f55c8473357f56b7ad16e7379d9c16. The pacing-abort regression was corrected after its first exact-head attempt failed because the test had no prior request to establish a pacing wait. The corrected test first performs a synthetic request, then aborts during the second request's 250 ms pacing delay and asserts no second fetch starts. Exact crawler regression 45353417281 and Kompas baseline 45353417257 SUCCESS; full CI 45353417177 FAILED at the shared master prefer-const lint in src/lib/kompasConsistency.ts:1059. PR #554 already contains this one-line lint correction plus the shared VM fixture/Listening-hold fix, but its five gates are green and independent authorized review is still missing. Do not duplicate or merge that PR's voice runtime. This PR remains DRAFT; no protected preview, live crawl, Supabase crawl mutation, application or production deployment. Crawler stays manual/on-demand; Robert Half remains manual-only and eTeam excluded.
