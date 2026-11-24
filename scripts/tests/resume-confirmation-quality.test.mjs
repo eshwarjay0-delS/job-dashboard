@@ -398,7 +398,7 @@ test('a skill repeated in an exception invalidates a contradictory confirmation'
   // Shared context words do not count as a repeated skill.
   assert.deepEqual(
     confirmedCandidateStatements(['I used AWS for security monitoring, but not Splunk for monitoring']),
-    ['I used AWS for security monitoring,'],
+    ['I used AWS for security monitoring'],
   )
 })
 
@@ -413,7 +413,7 @@ test('missing-skill statements are never confirmations, and mixed lists keep onl
 
   assert.deepEqual(
     confirmedCandidateStatements(['Confirmed skills: AWS, missing GCP']),
-    ['Confirmed skills: AWS,'],
+    ['Confirmed skills: AWS'],
   )
   assert.deepEqual(
     confirmedCandidateStatements(['My experience includes AWS, but not GCP']),
