@@ -24,6 +24,7 @@ function load(file, mocks = {}, extra = '') {
 
 const pick = load('src/lib/library-pick.ts')
 const roles = load('src/lib/role-match.ts')
+const explicitFallbackPathGuard = load('src/lib/whatsapp-explicit-library-path.ts')
 const USERS = path.join('/data', 'user-resumes')
 const USER_DIR = path.join(USERS, 'user1')
 const SOC = path.join(USER_DIR, 'a@x.com', 'SOC Analyst', 'SOC.docx')
@@ -44,6 +45,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async input => { channelCalls.push(input); return kompasConsumes } },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
     'next/server': {},
+    '@/lib/storagePolicy': { storageMode: () => 'r2' },
+    '@/lib/whatsapp-explicit-library-path': explicitFallbackPathGuard,
     '@/lib/storagePolicy': { storageMode: () => 'r2' },
     '@/lib/storagePolicy': { storageMode: () => 'r2' },
     '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
