@@ -99,3 +99,20 @@ The direct-to-master restack is tracked in PR #572. Exact head 6046251fce4d2cdb6
 A single behavior-neutral correction was committed to the PR branch as 5ee5fd9c033059c88bd7ff64c5e8a460ac5385c9, changing only that binding from let to const. On exact new head 5ee5fd9, full CI 45305829573 and WhatsApp recovery 45305829533 were in progress when recorded; Kompas baseline 45305829583 and Plan/REA schema 45305829601 were SUCCESS. The previous head's recovery/Plan results are not substituted for the new head.
 
 No local tests ran because this environment has no canonical checkout or installed dependencies. No route code was edited in this lint-only follow-up. The installed Next.js 16.3.8 route-handler guide is still required before further route changes; Vercel Sandbox is unavailable with HTTP 402 until 1 Dec 2026. PR #572 remains DRAFT, unmerged and undeployed; current production remains READY on master 794e8cf. No real WhatsApp/Meta send, DOCX, R2 write, replay or device acceptance occurred. The historical 17 Oct 17:28 Chicago delivery remains unverified.
+
+
+## 24 November 2026 — exact-head master restack status and shared CI dependency
+
+The current-master restack is PR #572, branch `fix/whatsapp-explicit-selection-master-restack-20261123-continuation`, exact head `084ff85bd14a6012cc7eff67bb8e3ab55993bdb2`, 38 commits ahead of and 0 behind master `794e8cfdbd3103409552857806bab89851d5bfcb` at the time of this audit. The branch retains the owner-approved behavior: only the exact explicitly selected same-account Files/Library item may be sent unchanged; the caption is exactly **Original resume — NOT TAILORED**; fresh uploads and automatic closest matches are text-only on failure; unverified JD-only additions are a hard hold; no R2 CAS/lease/fencing or uploaded-original-after-timeout behavior is included.
+
+Exact-head evidence:
+- WhatsApp resume recovery `45308210437`: **SUCCESS**.
+- Kompas baseline `45308210436`: **SUCCESS**.
+- Plan/REA schema `45308210342`: **SUCCESS**.
+- Full CI `45308210433`: **FAILURE** in the shared Kompas question/voice VM suite. Lint, type-check, build and earlier gates passed; 24 VM cases fail with `answerCtl is not defined` in `scripts/tests/kompas-voice.test.mjs` / `pumpDetectedQueue`. No cross-device run was visible for this head.
+
+The dependency is PR #554, exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`, which combines the already-approved current-resume authority, first-press Listening hold and VM fixture initialization. Its full CI `45123770495`, Kompas baseline `45123770380`, cross-device `45123770446`, Plan/REA `45123770546` and Windows executable `45123770398` all passed. Only the owner's self-authored review comment is recorded; GitHub rejected self-approval, so an independent authorized reviewer is required before merge. Do not copy its voice/Listening changes into this WhatsApp branch.
+
+Production remains READY on master `794e8cf` / deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; PR #572 is not merged or deployed. No local test/build ran because the canonical checkout and installed dependencies are unavailable. The installed Next.js 16.3.8 route-handler guide remains required before additional route edits; the prior Vercel Sandbox snapshot request returned HTTP 402 with the recorded reset on 1 Dec 2026. No real WhatsApp/Meta send, R2 write, DOCX, model call, historical replay, production mutation or device acceptance occurred. The 17 Oct 2026 17:28 Chicago incident remains unverified.
+
+Next: obtain independent review for PR #554; after merge, restack #572 onto the resulting master and rerun full CI, WhatsApp recovery, Kompas baseline, cross-device and Plan/REA on the exact new head. Then require protected preview, production READY/alias and consented acceptance. Never replay the historical attempt to manufacture evidence.
