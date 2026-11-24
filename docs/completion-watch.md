@@ -794,3 +794,37 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 24 November 2026 — current-master continuation and clearance-safe pagination
+
+**Canonical release:** Master `794e8cfdbd3103409552857806bab89851d5bfcb` is independently READY in production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to that deployment. This includes the Nov 23 Round 15 `jsonAnswer` gate correction. Round 15 production quality is not remeasured; the last recorded 0/11 session result was before the fix, and no new authenticated Round 16 answers were generated.
+
+### Priority 1 — 17 Oct WhatsApp resume failure
+
+- Current approved PR [#572](https://github.com/eshwarjay0-delS/job-dashboard/pull/572), head `fc16b77a349231d840e1c673ac93d1dfc0bf4d22`, recovery 137/137, Kompas baseline and Plan/REA SUCCESS; full CI `45383666040` FAILS 70/72 on the two first-press Listening-hold assertions. The current branch adds filesystem symlink-containment tests and explicit same-account fallback, but no real DOCX/send/R2/Meta evidence.
+- Shared approved PR [#554](https://github.com/eshwarjay0-delS/job-dashboard/pull/554), head `4fafd56663bb5ddce064dcebea8802d758bb8259`, full CI, baseline, cross-device, Plan/REA and Windows executable checks all SUCCESS. It is open, non-draft and mergeable, but the independent review/self-approval gate has no authorized second reviewer; Safe Merge Gate is disabled. Do not self-merge or bypass.
+- Historical 17 Oct 17:28 Chicago send remains unverified: generated DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt are missing. No replay or real send.
+
+### Priority 2 — resume/JD/confirmed experience
+
+- PR [#570](https://github.com/eshwarjay0-delS/job-dashboard/pull/570), head `7f249f5a0f52ecdac6e902dc7909497506c145f7`, focused confirmation, WhatsApp recovery, baseline and Plan/REA checks SUCCESS. Full CI fails at the shared master `prefer-const` lint in `src/lib/kompasConsistency.ts:1059` (the correction is included in #554). No resume/JD/DOCX or live ATS match was processed; 95–100%/98% is not accepted from synthetic tests.
+
+### Priority 3 — Poke-inspired Gmail/mobile
+
+- PR [#387](https://github.com/eshwarjay0-delS/job-dashboard/pull/387) remains DRAFT/non-mergeable and needs a conflict-aware current-master restack plus protected preview and two-inbox/selected-From/reconnect/narrow-phone acceptance. Keep the proactive worker, scheduler, notifications and sending disabled. No Gmail API or inbox mutation occurred.
+
+### Priority 4 — contract crawler/search
+
+- PR #381 is merged and keeps the contract crawler manual/on-demand only; Robert Half remains manual-only, eTeam excluded.
+- New current-master restack [#575](https://github.com/eshwarjay0-delS/job-dashboard/pull/575), branch `fix/crawl-clearance-pagination-master-restack-20261124`, adds bounded stable clearance-safe page scanning, a truthful scan-cap flag and Apply notice, with synthetic page/route tests. Exact-head CI is pending; local test execution is unavailable because the container cannot resolve GitHub. Protected preview requires private `KOMPAS_VERCEL_API_TOKEN`. Keep draft; no crawl, DB mutation, portal request or deployment.
+- Stale PR #288 is preserved; its earlier checks are not reused as current-head evidence. No classifier C2H expansion from PR #291 is approved.
+
+### Kompas coordination and acceptance
+
+
+- MFit Completion Watch is enabled hourly. Safe Merge Gate and Kompas Continuous Voice Delivery are disabled; no separate Bible-Keeper was found. Do not duplicate #554's voice/Listening/S5 work or bypass its second-review gate.
+- Round 15 fix is live source, but real authenticated paired 50-answer comparison/human grading and Windows/phone/WhatsApp voice/session acceptance remain open. Private KOMPAS_API_TOKEN and approved original resume/JD/reference bundles are required for the 50 pairs.
+
+
+**Continue:** let the authorized reviewer/merge-gate process resolve #554; exact-head recheck #572/#570 after its merge. For #575, finish exact-head CI and review, but keep the protected preview, production release and public API acceptance separate. No live crawler run without a separate owner request.
