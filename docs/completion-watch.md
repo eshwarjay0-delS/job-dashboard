@@ -1,3 +1,11 @@
+## 24 November 2026 10:07 UTC — WhatsApp fallback containment review
+
+- Master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY in production as `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; the canonical `job-dashboard-fawn.vercel.app` alias resolves to that deployment. PR #572 is not deployed.
+- PR #572 exact head `c571fa74c81980f69c650b68fae1d5e6307dc0f8`: WhatsApp recovery `45351411271`, Kompas baseline `45351411126`, Plan/REA `45351411099` SUCCESS; full CI `45351410987` FAILURE at the shared Kompas VM/Listening-hold dependency. The owner-approved explicit-selection/hard-hold slice remains draft.
+- Source review posted non-blocking comment `6037323332`: fallback containment is lexical; local FsStorage reads follow symlinks, so a symlink under an account resume root could escape the physical root. R2 object-key storage has no symlink semantics; this is a local-mode hardening note, not a production exploit claim. Suggested mode-aware realpath containment or symlink rejection plus regression.
+- No local tests, DOCX processing, WhatsApp send/replay, R2 write, private-session access or historical receipt were performed. The 17 Oct 17:28 Chicago incident remains unverified.
+- **Continue:** keep #572 unmerged; obtain independent authorized review for #554, then restack #572 and rerun exact-head full CI/recovery/baseline/Plan-REA. Protected preview, production READY/alias and consented real delivery acceptance remain separate.
+
 ## 24 November 2026 04:44 UTC — resume evidence guard focused-green, full CI lint-red
 
 - **Live baseline:** production remains READY on master `794e8cfdbd3103409552857806bab89851d5bfcb`, deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`, with both canonical aliases assigned. Round 15 is live; no Round 16 real-model acceptance.
