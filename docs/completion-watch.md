@@ -93,6 +93,17 @@ Continue: finish exact-head tests on #563/#564, then normal independent review a
 
 # MFit Completion Watch
 
+## 24 November 2026 06:15 UTC — resume negative-contraction guard tested
+
+- **New source correction on PR #570:** “I haven't used AWS” could previously pass the positive “I have” prefix. The negative guard now includes `haven't`; two regression cases cover “I haven't used AWS” and “I haven't worked with Splunk”. This is a fail-closed resume-evidence correction, not added experience.
+- **Commits:** source `03d4d7d330dcf1609d668a1fa2aecbc0fe946e91`; test `d226a0183a78598752945c6fa5cafec613b36581`. PR #570 is still DRAFT and unmerged/unreleased.
+- **Exact-head results:** confirmed-skill regression [45338791921](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791921) **SUCCESS, 53/53**; WhatsApp recovery [45338791841](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791841) SUCCESS; Kompas baseline [45338791879](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791879) SUCCESS; Plan/REA schema [45338791842](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791842) SUCCESS. Full CI [45338791876](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791876) **FAILED at lint**: `prefer-const` in `src/lib/kompasConsistency.ts:1059` (1 error, 267 warnings); type-check/build/tests were skipped.
+- **Production:** unchanged READY master `794e8cfdbd3103409552857806bab89851d5bfcb`; this resume correction is not live. No candidate resume/JD/DOCX, model call or live acceptance occurred.
+- **Hard wall:** local clone fails DNS for GitHub; remote CI is available. PR #554 is green but cannot merge without a second authorized reviewer; the Safe Merge Gate is disabled. No bypass.
+  
+Continue: keep #570 draft; after the shared #554 review/merge gate clears, rerun exact-head full CI and then protected preview/owner-authorized DOCX acceptance.
+
+
 ## 23 November 2026 23:49 UTC — Round 15 release and common CI blocker reconciled
 
 - **Production:** current master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at Vercel production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases independently point to it. This is Round 15's JSON answer-path gate fix. Full CI `45092314450` failed at Lint on `src/lib/kompasConsistency.ts:1059` (`prefer-const`); type-check/build and downstream gates were skipped. Kompas baseline `45092314520` and Plan/REA `45092314531` passed.
