@@ -33,3 +33,14 @@ The review identified that the first master-restack implementation placed the Gm
 - Regression commit: `0e91d68c2a076f26616414da137343950b7f15d1`.
 - Tests assert same-account normalization, distinct anchors for the same provider thread ID in different inboxes, and absence of the plaintext email from the fragment.
 - Exact-head focused workflow is pending; full CI remains dependent on the separately reviewed #554 Kompas fix. No local checkout, protected preview, Gmail API/OAuth, inbox mutation, email send or device acceptance occurred.
+
+
+## 24 November 2026 — exact-head regression results and shared lint blocker
+
+On PR #577 head `1188d32fe11b4fa8252a4886ccfd721a6e6edf75`:
+- Focused account-scoped-links workflow `45452255057`: SUCCESS.
+- Plan Journal / REA schema workflow `45452255091`: SUCCESS.
+- Kompas baseline `45452255115`: SUCCESS.
+- Full CI `45452255006`: FAILURE at the existing master lint error `src/lib/kompasConsistency.ts:1059` (`prefer-const`, variable `s` is never reassigned). Type-check and subsequent gates were skipped; this is not attributed to the Gmail change.
+
+The shared lint correction is already in PR #554, whose five exact-head gates pass, but the PR cannot merge until an independent authorized reviewer reviews it. Keep #577 draft and do not duplicate or bypass that fix. Protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`; no local checkout, Gmail API/OAuth, inbox mutation, email send or device acceptance occurred.
