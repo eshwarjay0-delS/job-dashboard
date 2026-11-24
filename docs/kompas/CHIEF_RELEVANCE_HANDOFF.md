@@ -1,5 +1,14 @@
 # Kompas Chief Relevance Handoff
 
+## 24 November 2026 — Round 15 is live; Round 16 and native acceptance remain open
+
+Canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY in production as deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` independently resolves to that exact deployment. Round 15 corrected a path mismatch: the hosted web session calls `/api/answer` with `stream:false`, so it displays `jsonAnswer`; the refusal/verbatim/fragment gate had previously been applied only to `streamAnswer`. The settled non-streaming answer now runs `gateDisplayedAnswer` after `dropOffTopicResume` and `settleRepair`, before the response is returned. The stream-path guard remains as a separate safety net.
+
+This verifies the deployed source path, not a successful fresh live answer set. Round 16 still needs the same 10 scenario/experience questions plus follow-up on an authorized phone session. The remaining recorded failures are Q2 generic/no-incident, Q7 garbled run-on and mid-word truncation, and Q4/Q8/Q10 brevity. The 50 authenticated Kompas-versus-ChatGPT pairs, independent human 0–4 grading, and native Windows/mobile/WhatsApp speech/latency acceptance remain open. Do not equate the 15/15 baseline or shape fixtures with live quality or 50-fold acceptance.
+
+Shared release coordination: PR #554 exact head `4fafd56663bb5ddce064dcebea8802d758bb8259` has full CI, baseline, cross-device, Plan/REA and Windows executable checks all SUCCESS, but no independent authorized approval is recorded; GitHub rejected self-approval. PR #572's latest full CI reaches the Kompas VM voice suite and fails because `answerCtl` is undefined in `scripts/tests/kompas-voice.test.mjs`; its WhatsApp recovery, Kompas baseline and Plan/REA gates pass. Keep this as a dependency on the separately scoped Listening-hold/VM-fixture work. Do not duplicate microphone, voice or caption changes in the WhatsApp branch.
+
+
 **Owner's objective:** Kompas must sound like a strong, attentive, technically capable interview candidate. It must answer the *meaning and expectations* of the question, not mechanically match terms from the resume, job description, earlier replies, or nearby technical topics. The canonical system is MFit Kompas; the hosted web experience, Windows desktop wrapper, and WhatsApp session share the answering service.
 
 This guide is an explicit operating procedure for developers and evaluators, **not** a transfer of hidden model reasoning or evidence that the model has been fine-tuned. It defines observable behavior, reproducible checks, and strict source boundaries.
