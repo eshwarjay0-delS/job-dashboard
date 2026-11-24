@@ -1,4 +1,8 @@
 
+## 24 November 2026 — fresh 7-day WhatsApp runtime evidence
+
+Read-only Vercel aggregation found 2 quality-gate refusals across 2 users on /api/whatsapp/webhook (first 29 Oct 18:00:41 UTC, last 20 Nov 20:25:58 UTC), older deployment dpl_EZce7dEERrv1eVUFf64YoAzwoicb, SHA 3a1b0bb. Samples: 100% raw/support coverage, 5 roles, 0 JD terms placed, roles_unrewritten; and a partial/incomplete 100% draft with draft_parts_missing/quality_incomplete/quality_not_deliverable/roles_unrewritten. One ServiceUnavailable (19 Nov) and one skills-only 43.1% no-writer result (20 Nov) also surfaced. Current production is newer SHA 794e8cf; these logs do not prove a current deployment regression or exact root cause. Non-PII evidence posted to issue #132 comment 7135769358. No DOCX, private resume/JD, replay or send.
+
 ## 24 November 2026 09:06 CST — historical WhatsApp evidence and resume/JD blocker
 
 - Accessible prior-chat evidence: screenshot context around 17:28 Chicago on 17 Oct showed a live resume-generation failure; the assistant said the file was held after repair. Full JD, generated DOCX and server trace were unavailable. No recipient/message text, R2 object/version, request/webhook correlation, Meta outbound ID or signed delivery/read receipt recovered.
