@@ -82,3 +82,16 @@ Review comment 6041959064 on PR #572 asks for a synthetic regression matching pr
 ### Plan & Vision baseline refresh
 
 The product-plan revision is now `2026-11-24.9` in `src/lib/plan-vision.ts`. Its Gmail, Resume, Applications and Kompas baselines append the current 24 Nov exact-head evidence while retaining the older history. This is a documentation-only update, not a product-code release. PR #562 head `5b85399d19e6edfae4a0f211e79943845cf73e52`: Plan/REA schema 45462324685 SUCCESS, Kompas baseline 45462324756 SUCCESS, full CI 45462324676 still IN PROGRESS at last check.
+
+
+## 24 November 2026 13:53 CST — run 11 continuation and independent crawler review
+
+- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to it. No redeploy was needed.
+- **PR #554:** exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI, Kompas baseline, cross-device, Plan/REA and Windows checks all SUCCESS. It is still awaiting a second authorized reviewer; self-approval is rejected. Safe Merge Gate is disabled. No merge attempted.
+- **PR #572 WhatsApp fallback:** exact head `741f8eeb284b2faeb5223c80162cc5f7d1344705`; recovery, baseline and schema checks SUCCESS; full CI FAILURE on the two first-press Listening-hold assertions covered by #554. No merge/deploy or real send.
+- **Other approved master restacks:** #570 confirmed-skill, #571 Gmail/mobile, #573 crawler diagnostics, #574 match-any search, #575 clearance pagination, #576 Gmail digest/mobile and #577 account-scoped links remain unmerged. Their focused/baseline gates are green where present; each full CI is still failing on the shared current-master Kompas/lint dependency. No preview/live acceptance is claimed.
+- **New review finding:** PR #575 offset paging orders on mutable `last_seen_at`; overlapping manual crawls can update that key during paging and shift offsets. Comment [7142844746](https://github.com/eshwarjay0-delS/job-dashboard/pull/575#issuecomment-7142844746) asks for mitigation or a documented concurrency exclusion plus regression. This is a static risk, not a confirmed runtime defect; no local test was run.
+- **Historical WhatsApp incident:** 17 Oct 2026 17:28 Chicago remains unverified. Generated DOCX, R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt are still missing; no replay/resend.
+- **Execution wall:** no canonical local checkout or installed Next.js 16.3.8 guide (GitHub DNS fails); Vercel Sandbox is blocked by storage usage; protected preview needs the private `KOMPAS_VERCEL_API_TOKEN`. No code test/build, Gmail/WhatsApp action, crawl, model call, R2/DB mutation or device acceptance was performed.
+
+**Continue:** the second authorized review of #554 is the hard gate. Once normally merged, conflict-aware restack #572 and #570, then #571/#576 and #573–#575/#577; rerun exact-head full CI, protected preview and production acceptance. Keep the #575 pagination drift review open until mitigated or explicitly excluded.
