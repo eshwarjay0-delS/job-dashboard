@@ -1,3 +1,14 @@
+## 24 November 2026 08:53 CST — current-head recheck and Gmail anchor privacy review
+
+- Production remains READY at master `794e8cfdbd3103409552857806bab89851d5bfcb` (`dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`); both canonical aliases match. Round 15 is live; no Round 16 model acceptance.
+- PR #554: exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI `45123770495`, baseline `45123770380`, cross-device `45123770446`, Plan/REA `45123770546`, Windows `45123770398` all green. Merge is still blocked by the missing second authorized reviewer; no self-merge.
+- PR #572: head `fc16b77a349231d840e1c673ac93d1dfc0bf4d22`; WhatsApp recovery `45383665978`, baseline `45383665803`, Plan/REA `45383666072` green. Full CI `45383666040` = 70/72; two first-press Listening-hold assertions fail because #554 runtime fix is not merged.
+- PRs #570/#571/#573/#574/#575/#576 remain unmerged. Exact-head focused/baseline gates are green where applicable; full CI runs `45386097754`, `45289419329`, `45354245507`, `45382941056`, `45400055679`, `45401091730` fail at shared Kompas question/voice assertions or lint. No release is implied.
+- PR #577 exact head `723a13377fe8c53e7ba2d67821429485978459fe`: focused account-scoped links `45409242379` passed 11/11 (repeat `45409224285` green). Review `6041657441` flags plaintext Gmail address in DOM anchor/fragment and asks for opaque account identity/hash; PR is not full-CI/protected-preview/live accepted.
+- **Execution wall:** no local checkout/dependencies; `git ls-remote` failed DNS. Vercel Sandbox 402 until 1 Dec and protected preview token unavailable. No model call, WhatsApp send/replay, R2/DB write, Gmail read/send, crawl or device acceptance.
+
+Continue: second authorized review for #554; after normal merge, restack #572 and other dependent approved slices. For #577, address opaque-anchor privacy, run full CI, and require protected preview plus two-inbox/mobile acceptance.
+
 ## 24 November 2026 10:30 UTC — latest current-master backlog reconciliation
 
 - **Production:** master `794e8cfdbd3103409552857806bab89851d5bfcb`, READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; canonical `job-dashboard-fawn.vercel.app` independently resolves to that deployment.
