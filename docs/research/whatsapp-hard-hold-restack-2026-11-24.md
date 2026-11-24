@@ -24,7 +24,7 @@ The explicit-selection proof and exact fallback caption are deliberately not cla
 
 ## Validation and release state
 
-- Source, tests and CI wiring are committed to branch `fix/whatsapp-hard-hold-restack-20261124`; remote CI is pending.
+- Source, tests and CI wiring are committed to branch `fix/whatsapp-hard-hold-restack-20261124`; remote exact-head checks are pending for the docs follow-up.
 - No local checkout or installed `node_modules` is available in this scheduled environment. GitHub Actions is the test path; no local test/build is claimed.
 - No merge, production deployment, DOCX generation, R2 write, model call, WhatsApp send, historical replay, database mutation, or user-device test occurred.
 - Original PR #486 is still a draft and non-mergeable on its stale base. It remains open until this restack has exact-head checks; it should be closed as superseded only after the replacement is validated.
