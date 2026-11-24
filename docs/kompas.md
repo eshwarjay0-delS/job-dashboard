@@ -119,3 +119,11 @@ The owner requires natural, technically defensible first-person experience and g
 ## Single-source BNY audio + written guide pipeline — 2 November 2026
 
 BNY NotebookLM audio recommendations and uploaded BNY PDF materials belong to ONE unified source-grounded dossier, not a "PDF finished / audio optional" split. The dossier source API now accepts attributed audio transcripts, requires matching original media identities when the client names required audio hashes, retains media provenance, and rejects incomplete audio coverage before generation. Source-content extraction is separate from evidence of personal achievement: a narrated example does not verify a candidate incident or metric. The actual two M4A recordings remain untranscribed in this execution environment, so no audio-complete PDF or live end-to-end transcription success is asserted. See docs/research/kompas-dual-dossier-intelligence.md.
+
+## S5 question/Listening-hold continuation — 24 November 2026
+
+PR #554 is the current shared Kompas fix for question framing, repeated AI Answer press, Listening hold, typed-input/voice regressions, and the test harness. Its exact head 4fafd56663bb5ddce064dcebea8802d758bb8259 has five successful gates: full CI 45123770495, Kompas baseline 45123770380, cross-device sync 45123770446, Plan/REA 45123770546, and Windows x64 executable 45123770398. It also fixes the current-master prefer-const lint error and initializes answerCtl/detectedQueue in the shared VM harness.
+
+PR #554 is not merged: the only recorded review is the repository owner's COMMENTED review, and GitHub rejected self-approval. A second authorized reviewer is required. Direct-master restacks #572/#570/#571/#573/#574 currently fail at either the shared lint error or the shared Kompas VM fixture/Listening-hold suite; do not duplicate or bypass the #554 fix. PR #572's WhatsApp recovery, baseline and Plan/REA gates pass, but full CI fails on answerCtl ReferenceError in that shared VM suite.
+
+The canonical production alias remains READY on master 794e8cf (deployment dpl_2tyBPso5SnCgHCPFCqXewExCJEYp). No native Windows/phone E2E, actual authenticated cross-device session test, 50-pair Kompas/ChatGPT answer comparison or human grading is claimed. The separate Kompas Continuous Voice Delivery automation is disabled; no duplicate voice/caption changes were made.
