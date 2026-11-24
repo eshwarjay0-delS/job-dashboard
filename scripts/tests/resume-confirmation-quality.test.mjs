@@ -14,6 +14,12 @@ test('an exception cannot confirm every requirement', () => {
   assert.deepEqual(confirmedCandidateStatements(['I used AWS but not GCP']), ['I used AWS'])
 })
 
+test('no and lack exceptions narrow a positive confirmation instead of confirming the excluded skill', () => {
+  for (const statement of ['I used AWS and no GCP', 'I used AWS and lack GCP', 'I used AWS and lacking GCP']) {
+    assert.deepEqual(confirmedCandidateStatements([statement]), ['I used AWS'])
+  }
+})
+
 test('technical punctuation remains part of confirmed skills', () => {
   assert.deepEqual(confirmedCandidateStatements(['I have experience with .NET, Node.js and ASP.NET']), ['I have experience with .NET, Node.js and ASP.NET'])
   assert.deepEqual(confirmedCandidateStatements(['I used Node.js. Add AWS']), ['I used Node.js'])
