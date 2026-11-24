@@ -67,3 +67,18 @@ PR #569 crawler freshness job 138078245414 SUCCESS 41/41. PR #551 superseded/clo
 ## 23 November 2026 — current-master continuation
 
 Independent master-based review PRs #570–#574 were opened to avoid waiting on the non-master #554 branch: #570 confirmed skills, #571 Gmail/mobile, #572 WhatsApp explicit same-account Files fallback, #573 crawler timeout/abort, #574 contract-board match-any search. Exact focused results and CI are in Plan Journal and Completion Watch; every PR remains draft. The shared full-CI blocker is master prefer-const at `src/lib/kompasConsistency.ts:1059`; #574 full CI/focused are still running. The current automation inventory confirms Safe Merge Gate is disabled, despite older docs saying active. Production alias remains READY at 794e8cf. No local test, protected preview, real data action or production deploy occurred.
+
+
+## 24 November 2026 — confirmed-skill negative contraction correction
+
+Static review of current-master PR #570 found that “I haven't used AWS” could pass the positive “I have” prefix because the negative guard covered “have not” but not the contraction “haven't”. The guard now includes “haven't”; two synthetic regressions reject “I haven't used AWS” and “I haven't worked with Splunk”. This correction is fail-closed and does not create candidate facts.
+
+- Source commit: 03d4d7d330dcf1609d668a1fa2aecbc0fe946e91
+- Test commit / exact PR #570 head: d226a0183a78598752945c6fa5cafec613b36581
+- Confirmed-skill focused run 45338791921: SUCCESS, 53/53
+- WhatsApp recovery 45338791841: SUCCESS
+- Kompas baseline 45338791879: SUCCESS
+- Plan/REA schema 45338791842: SUCCESS
+- Full CI 45338791876: FAILURE at lint, `src/lib/kompasConsistency.ts:1059` (`prefer-const`; 1 error, 267 warnings). Type-check/build/tests were skipped.
+
+PR #570 remains DRAFT/unmerged/unreleased. No local checkout/test/build; local GitHub DNS failed. No resume/JD/DOCX, model call, production deploy or real acceptance. Continue after the shared #554 independent-review gate clears; rerun exact-head full CI and require review, protected preview and owner-authorized DOCX acceptance.
