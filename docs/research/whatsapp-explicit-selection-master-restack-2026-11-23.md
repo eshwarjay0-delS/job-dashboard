@@ -91,3 +91,11 @@ The WhatsApp source/test/workflow slice is now restacked onto the exact green Ko
 ## Completion Watch independent restack correction — 23 November 2026
 
 The original PR #566 is still stacked on Kompas PR #554. This new branch independently copies its exact reviewed code/tests from #566 head `9465113780c59020cfdaf5e041d42dd4e93f93f8` onto canonical master `794e8cfdbd3103409552857806bab89851d5bfcb`. Original #566 focused recovery and Plan/REA successes are historical; exact-head gates on this new branch must run again. The 17 Oct 17:28 Chicago delivery remains unverified; no real outbound message or replay is performed.
+
+## 24 November 2026 — master restack lint unblock and validation follow-through
+
+The direct-to-master restack is tracked in PR #572. Exact head 6046251fce4d2cdb6a8f4481454b8a468b551132 passed WhatsApp recovery 45289773580, Kompas baseline 45289773937, and Plan/REA schema 45289773611; full CI 45289773784 failed only because the current master Round 15 file had let s = sentence at src/lib/kompasConsistency.ts:1059 and ESLint requires const.
+
+A single behavior-neutral correction was committed to the PR branch as 5ee5fd9c033059c88bd7ff64c5e8a460ac5385c9, changing only that binding from let to const. On exact new head 5ee5fd9, full CI 45305829573 and WhatsApp recovery 45305829533 were in progress when recorded; Kompas baseline 45305829583 and Plan/REA schema 45305829601 were SUCCESS. The previous head's recovery/Plan results are not substituted for the new head.
+
+No local tests ran because this environment has no canonical checkout or installed dependencies. No route code was edited in this lint-only follow-up. The installed Next.js 16.3.8 route-handler guide is still required before further route changes; Vercel Sandbox is unavailable with HTTP 402 until 1 Dec 2026. PR #572 remains DRAFT, unmerged and undeployed; current production remains READY on master 794e8cf. No real WhatsApp/Meta send, DOCX, R2 write, replay or device acceptance occurred. The historical 17 Oct 17:28 Chicago delivery remains unverified.
