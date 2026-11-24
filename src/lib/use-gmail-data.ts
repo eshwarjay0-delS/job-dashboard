@@ -323,7 +323,7 @@ export interface GmailAccount {
 const TINTS = ["#1c1b16", "#58564c", "#8d8975", "#bcb6a6", "#4d4b44"]
 
 export function buildAccounts(emails: string[]): GmailAccount[] {
-  const unique = [...new Set(emails)]
+  const unique = [...new Set(emails)].slice(0, 4)
   return unique.map((email, i) => ({
     id: email,
     email,
