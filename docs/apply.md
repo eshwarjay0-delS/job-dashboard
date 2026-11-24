@@ -28,7 +28,7 @@ When the user searches "software developer", the engine spiders all vendor porta
 - Modeled on how Jobright AI crawls LinkedIn and job sites into one database. We do the same for prime vendor portals.
 - Pipeline: manual/on-demand crawl → per-site adapters → normalized job records (title, company, location, work type, rate if listed, posted date, source URL, vendor) → dedupe → full-text + faceted search (role, location, work type, remote).
 - Work-type tagging is mandatory: every job carries W2 / C2C / 1099 / C2H. Contract-only filtering is the default view.
-- Clearance-required roles are excluded by default across both the aggregated search and stored crawler lanes. Explicit `no clearance required` wording remains eligible; an internal API override does not change the default Apply experience. Evidence: `docs/research/contract-clearance-filter.md`.
+- Clearance-required roles are excluded by default across both the aggregated search and stored crawler lanes. Explicit `no clearance required` wording remains eligible; an internal API override does not change the default Apply experience. Evidence: `docs/research/contract-clearance-filter.md`. Current master still uses one bounded over-fetch before filtering and can underfill clearance-safe results; PR #575 replaces that with ordered bounded pagination and reports when the cap is reached.
 - Start with the top portals by volume; expand adapter coverage over time. Adapters are isolated per site so one site's redesign never breaks the rest.
 
 ### 2. Inclusive browser (browse without leaving)
@@ -199,3 +199,8 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## 24 November 2026 — clearance-safe pagination restack
+
+The current master can underfill contract search: it fetches only 4× the requested limit (capped at 100) once, then filters clearance roles. If that window is clearance-heavy, later eligible listings are never considered. Approved PR #575 replaces this with deterministic `last_seen_at DESC, id ASC` page scanning, bounded to `min(1,000, max(100, limit × 10))` rows. It reports `clearance_scan_limited` rather than silently implying a full result set. The Apply UI explains the cap and suggests narrowing the search. This candidate is not merged or deployed; exact-head CI, protected preview and production/API acceptance remain pending. Contract crawling remains manual/on-demand only.
