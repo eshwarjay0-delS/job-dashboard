@@ -849,7 +849,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    // Local filesystem paths are checked physically before an unchanged-original send; R2 keys have no symlink semantics.
+    // The original-file path is a security boundary: local containment must pass; R2 keys have no symlink semantics.
     if (!resumePath || !jd || !files || !(await explicitLibraryFallbackPathMatches(files, session, filesOf(userId), storageMode(process.env)))) return false
     // Require the explicit-selection proof to survive in the durable job; retries
     // cannot send from an in-memory or stale selection alone.
