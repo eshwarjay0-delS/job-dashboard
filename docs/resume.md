@@ -60,6 +60,10 @@ The final generation stage must be experience repair, not Skills keyword placeme
 
 The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
 
+
+## Negative contraction guard — 24 November 2026
+
+A negated skill is not candidate confirmation. The confirmed-skill parser now rejects the contraction “I haven't used AWS” (which previously could match the positive “I have” prefix) and “I haven't worked with Splunk.” This is a conservative rejection, not a new claim or skill. Source commit 03d4d7d330dcf1609d668a1fa2aecbc0fe946e91; synthetic regression commit d226a0183a78598752945c6fa5cafec613b36581. Focused remote test 45338791921 passed 53/53; full CI remains blocked by the unrelated prefer-const lint at src/lib/kompasConsistency.ts:1059.
 ## Actual counts and weighting — 20 October 2026
 
 Matched-term counts must come from the exported document, not a weighted percentage converted into an integer. Weighted coverage remains separate; both measures must meet the existing acceptance thresholds. Cache generation 16 supersedes generation 15 while retaining its incomplete-rewrite safeguard. Evidence: `docs/research/resume-score-counts.md`.
