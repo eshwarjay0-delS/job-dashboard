@@ -520,7 +520,7 @@ export default function MailPage() {
                     )}</div>
                     <ThreadActions mail={x} rules={tracked}/>
                     {mailHasInterview(interviewKeys, x.account, x.id) && (
-                      <Link href={interviewBoardHref(x.id)}
+                      <Link href={interviewBoardHref(x.id, x.account)}
                         style={{ flex: "none", marginTop: 14, minHeight: 36, padding: "0 12px", display: "inline-flex", alignItems: "center", borderRadius: 999, border: "1px solid var(--border-strong)", background: "var(--surface)", color: "var(--text)", fontSize: 13, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>
                         Interview
                       </Link>
@@ -571,7 +571,7 @@ export default function MailPage() {
               {m && <button type="button" className="mf-mail-back" onClick={() => { setSel(null); setSelectedInbox("") }} aria-label="Back to inbox">← Back</button>}
               {m && mailHasInterview(interviewKeys, m.account, m.id) && (
                 <div style={{ margin: "0 0 10px" }}>
-                  <Link href={interviewBoardHref(m.id)} style={{ fontSize: 13.5, fontWeight: 700, color: "var(--accent-txt)" }}>View this interview on the Interviews board →</Link>
+                  <Link href={interviewBoardHref(m.id, m.account)} style={{ fontSize: 13.5, fontWeight: 700, color: "var(--accent-txt)" }}>View this interview on the Interviews board →</Link>
                 </div>
               )}
               {m && <FoldedConversation key={`${m.account}:${m.id}`} mail={m} tint={acct(m.account).tint} restored={restored.includes(m.id)} onSent={()=>approve(m.id)} target={mailTarget} words={mailWords} canSendForYou={subTrack?.canSendForYou ?? false} onSubChanged={loadSubTrack} />}

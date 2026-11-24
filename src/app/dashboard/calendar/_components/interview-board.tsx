@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import Link from "next/link"
+import { interviewBoardAnchor } from "@/lib/interview-mail-link"
 import RecruiterButton from "../../_components/recruiter-button"
 import { createClient } from "@/lib/supabase/client"
 import { dayList, DEFAULT_DAYS, sendNowBlockReason, type Tracked } from "@/lib/interview-track"
@@ -197,7 +198,7 @@ export default function InterviewBoard() {
           const mine = !!t.forYou?.on
           const sendBlock = sendNowBlockReason({ phase: t.phase, contact: t.contact, theyWrote: t.theyWrote })
           return (
-            <article key={t.id} id={t.threadId ? `interview-${t.threadId}` : undefined} style={{ ...card, borderLeft: t.action === "none" ? undefined : "4px solid var(--spot)" }}>
+            <article key={t.id} id={t.threadId ? interviewBoardAnchor(t.account, t.threadId) : undefined} style={{ ...card, borderLeft: t.action === "none" ? undefined : "4px solid var(--spot)" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span style={tag}>{PHASE[t.phase]}</span>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 650, overflowWrap: "anywhere" }}>{t.role}{t.company ? <span style={{ fontWeight: 400, color: "var(--text-muted)" }}> · {t.company}</span> : null}</span>

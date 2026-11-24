@@ -13,7 +13,9 @@ test('the inbox carries an Interviews pile that links both ways to the board', (
   assert.ok(mail.includes('interviewBoardHref('), 'thread links to its board card')
   assert.ok(mail.includes('View this interview on the Interviews board'), 'open thread links back')
   const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
-  assert.ok(board.includes('interview-${t.threadId}'), 'board cards carry their thread anchor')
+  assert.ok(board.includes('interviewBoardAnchor(t.account, t.threadId)'), 'board cards carry an account-scoped thread anchor')
+  assert.ok(mail.includes('interviewBoardHref(x.id, x.account)'), 'mail rows pass the receiving inbox')
+  assert.ok(mail.includes('interviewBoardHref(m.id, m.account)'), 'open thread passes the receiving inbox')
 })
 
 test('what is sent for him stays visible, editable, and sendable at once, on ticked days', () => {

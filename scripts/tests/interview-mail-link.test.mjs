@@ -1,22 +1,35 @@
 // A thread and its interview card belong together when the interview names that thread. The inbox pile and the
 // links both ways ride on that match, and it must not care how the account was cased in either list.
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { interviewThreadKey, interviewThreadKeys, mailHasInterview, interviewBoardHref } from '../../src/lib/interview-mail-link.ts'
+import { interviewThreadKey, interviewThreadKeys, mailHasInterview, interviewBoardAnchor, interviewBoardHref } from '../../src/lib/interview-mail-link.ts'
 
 test('a thread and its interview card match on account and thread, whatever the case', () => {
   const keys = interviewThreadKeys([
-    { account: 'Jayeshwar44@Gmail.com', threadId: 'abc123' },
-    { account: 'eshwarjay05@gmail.com', threadId: undefined },
-    { account: 'eshwarjay05@gmail.com' },
+    { account: 'one@example.test', threadId: 'abc123' },
+    { account: 'two@example.test', threadId: undefined },
+    { account: 'two@example.test' },
   ])
   assert.equal(keys.size, 1, 'threads without an id are not keys')
-  assert.ok(mailHasInterview(keys, 'jayeshwar44@gmail.com', 'abc123'))
-  assert.ok(!mailHasInterview(keys, 'jayeshwar44@gmail.com', 'other'))
-  assert.ok(!mailHasInterview(keys, 'eshwarjay05@gmail.com', 'abc123'))
-  assert.equal(interviewThreadKey('A@B.com', 't'), 'a@b.com:t')
+  assert.ok(mailHasInterview(keys, 'one@example.test', 'abc123'))
+  assert.ok(!mailHasInterview(keys, 'one@example.test', 'other'))
+  assert.ok(!mailHasInterview(keys, 'two@example.test', 'abc123'))
+  assert.equal(interviewThreadKey(' A@B.com ', 't'), 'a@b.com:t')
 })
 
-test('the board link lands on the thread card by anchor', () => {
-  assert.equal(interviewBoardHref('abc123'), '/dashboard/calendar#interview-abc123')
+test('same provider thread IDs in different inboxes have opaque, distinct board anchors', () => {
+  const one = interviewBoardAnchor('One@example.test', 'abc123')
+  const two = interviewBoardAnchor('Two@example.test', 'abc123')
+  assert.notEqual(one, two, 'same provider thread ID must not collide across inboxes')
+  assert.equal(interviewBoardAnchor(' ONE@example.test ', 'abc123'), one, 'account normalization stays stable')
+  assert.match(one, /^interview-[a-f0-9]{16}:abc123$/)
+  assert.ok(!one.includes('one@example.test'), 'DOM id must not contain the Gmail address')
+  assert.ok(!interviewBoardHref('abc123', 'ONE@example.test').includes('example.test'), 'URL fragment must not leak the inbox')
+  assert.equal(interviewBoardHref('abc123', 'ONE@example.test'), `/dashboard/calendar#${one}`)
+  const board = readFileSync(new URL('../../src/app/dashboard/calendar/_components/interview-board.tsx', import.meta.url), 'utf8')
+  const mail = readFileSync(new URL('../../src/app/dashboard/mail/page.tsx', import.meta.url), 'utf8')
+  assert.match(board, /id=\{t\.threadId \? interviewBoardAnchor\(t\.account, t\.threadId\) : undefined\}/)
+  assert.match(mail, /interviewBoardHref\(x\.id, x\.account\)/)
+  assert.match(mail, /interviewBoardHref\(m\.id, m\.account\)/)
 })
