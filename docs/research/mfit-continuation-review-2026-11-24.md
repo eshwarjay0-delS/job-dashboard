@@ -77,3 +77,8 @@ Review comment 6041959064 on PR #572 asks for a synthetic regression matching pr
 - No Gmail mutation/send, WhatsApp send/replay, R2/database write, live crawl, model call, personal DOCX processing or native-device acceptance occurred in this run.
 
 **Continue:** keep #572 DRAFT and unmerged; after a second authorized reviewer clears #554 and it merges through normal gates, conflict-aware restack #572 and the dependent resume/Gmail/crawler/contract slices, then rerun exact-head full CI and focused checks. Preserve the historical 17 Oct delivery, real DOCX, two-inbox/mobile, live crawler, 50-pair model and native-device acceptance gaps until independently evidenced.
+
+
+### Plan & Vision baseline refresh
+
+The product-plan revision is now `2026-11-24.9` in `src/lib/plan-vision.ts`. Its Gmail, Resume, Applications and Kompas baselines append the current 24 Nov exact-head evidence while retaining the older history. This is a documentation-only update, not a product-code release. PR #562 head `5b85399d19e6edfae4a0f211e79943845cf73e52`: Plan/REA schema 45462324685 SUCCESS, Kompas baseline 45462324756 SUCCESS, full CI 45462324676 still IN PROGRESS at last check.
