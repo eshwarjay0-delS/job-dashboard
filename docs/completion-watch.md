@@ -1,3 +1,7 @@
+## 24 November 2026 — Plan Journal schema self-correction
+
+The initial new Plan Journal entry was inserted at the TypeScript type-array bracket instead of the literal value array, and the first literal-array repair omitted the comma separator. The Plan Journal/REA schema run therefore failed. Both declarations are now restored, the REA entry passed its schema test, and the Plan Journal comma is corrected; exact-head schema/full CI are being rerun. This is an authoring error in the documentation PR, not a product runtime defect.
+
 ## 24 November 2026 10:07 UTC — WhatsApp fallback containment review
 
 - Master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY in production as `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; the canonical `job-dashboard-fawn.vercel.app` alias resolves to that deployment. PR #572 is not deployed.
