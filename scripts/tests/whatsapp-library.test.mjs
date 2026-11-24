@@ -165,7 +165,7 @@ test('a named Files label matching multiple items cannot authorize unchanged fal
   assert.equal((await b.wa.loadSession('15550012')).pending?.hint, 'SOC')
   await b.wa.handle('15550012', { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession('15550012'), 'user1')
   assert.equal(b.runs.length, 1, 'the named match may still be used for ordinary tailoring')
-  assert.equal(b.runs[0].givenPath, SOC)
+  assert.ok([SOC, SOC_DUP].includes(b.runs[0].givenPath), 'the chooser may rank either matching candidate for ordinary tailoring')
   assert.equal(b.recoveryJobs[0].files.explicitlySelected, false, 'two matching Files items are not an exact selection')
   assert.match(
     b.said.find(text => text.startsWith('Updating your')) || '',

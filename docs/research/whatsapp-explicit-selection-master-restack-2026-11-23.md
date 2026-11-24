@@ -148,3 +148,10 @@ A source review of `library-choose.ts` found that `matchHint` can return multipl
 The chooser now sets `why = because you asked for it` only when exactly one item matched. When multiple items match, it uses a distinct explanation; the existing webhook marker therefore remains false. Normal tailoring may still use the chosen candidate, but a failed rewrite cannot send an unchanged original under the exact-selection label.
 
 A new `whatsapp-library.test.mjs` case creates two SOC Analyst candidates and verifies that the selection is not marked explicit. The unique SOC selection test remains in place. Exact-head remote validation is pending; no route code, WhatsApp send, R2 write, model call or production deployment occurred.
+
+
+## 24 November 2026 — ambiguous-name regression assertion correction
+
+The first exact-head WhatsApp recovery run after the unique-match guard passed 133/134 tests. The only failure was the new test assuming the chooser must select the first of two matching SOC Files items. The existing role ranker selected the second matching candidate; this is allowed for ordinary tailoring. The test now accepts either matching path while continuing to assert that the exact fallback marker is false and the ambiguity reason is surfaced.
+
+This changes no runtime ranking or fallback logic. The exact-head recovery, Plan/REA and full CI workflows must be rerun; the shared Listening-hold assertions remain a separate PR #554 dependency.

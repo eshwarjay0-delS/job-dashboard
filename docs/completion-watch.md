@@ -20,6 +20,12 @@ A source review of `matchHint` found that it can return multiple same-account Fi
 
 Continue: validate this ambiguity guard on the exact PR #572 head, then wait for independent authorized review of PR #554 before restacking the shared Listening-hold fix.
 
+## 24 November 2026 — ambiguous-name test correction
+
+The first exact-head WhatsApp recovery run after the unique-match guard failed 1 of 134 tests. The only failure was an over-specific assertion that the chooser must select the first of two matching SOC Files items; the existing role ranker selected the second, which is valid for normal tailoring. The test now accepts either matching candidate while still requiring `explicitlySelected=false` and the ambiguity explanation. This is a test-only correction; no runtime ranking change. Exact-head rerun is pending.
+
+Continue: validate the corrected ambiguous-name guard on the new PR #572 head; keep the branch unmerged until the shared Listening-hold dependency in PR #554 is independently reviewed and merged.
+
 ## 24 November 2026 — current production, shared CI dependency and approved restacks
 
 - **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is independently READY in production as `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` resolves to that deployment. Round 15's `jsonAnswer` gate fix is live. It fixes the non-streaming path used by the web session; Round 16 live-answer acceptance has not been run.
