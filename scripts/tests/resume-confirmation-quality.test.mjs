@@ -417,6 +417,6 @@ test('missing-skill statements are never confirmations, and mixed lists keep onl
   )
   assert.deepEqual(
     confirmedCandidateStatements(['My experience includes AWS, but not GCP']),
-    ['My experience includes AWS,'],
+    ['My experience includes AWS'],
   )
 })
