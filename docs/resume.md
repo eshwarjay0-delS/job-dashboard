@@ -58,7 +58,7 @@ The final generation stage must be experience repair, not Skills keyword placeme
 
 ## Confirmed-keyword boundary — 22 October 2026
 
-The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
+The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. Mixed or negative confirmations narrow to the positive clause only: AWS with a no-GCP exception supports AWS, not GCP; no, lack and lacking are exception boundaries. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
 
 ## Actual counts and weighting — 20 October 2026
 
