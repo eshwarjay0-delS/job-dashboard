@@ -34,3 +34,14 @@ PR #577 at `723a13377fe8c53e7ba2d67821429485978459fe` passed the focused account
 2. After normal merge, restack #572 and dependent approved slices and rerun exact-head gates.
 3. Address #577's opaque-anchor review note, rerun full CI, then require protected preview and consented two-inbox/mobile acceptance.
 4. Keep the 17 Oct WhatsApp incident, real resume/JD/DOCX review, 50-pair human-grade Kompas benchmark, and native Windows/phone/WhatsApp acceptance open until evidence exists.
+
+
+## Historical WhatsApp incident and related production evidence
+
+Accessible prior-chat context records a screenshot at about 17:28 Chicago on 17 October 2026: a live resume-generation failure was visible and the assistant said the file was held after repair. The full JD, generated DOCX and server trace were not available; an earlier WhatsApp search found no matching record. No exact message text, recipient, original file, request correlation, R2 object/version, Meta outbound ID or signed delivered/read receipt has been recovered.
+
+A read-only iZap check is **not the MFit channel**: its single business had no WhatsApp number, connection status was disconnected, no inbound had ever been recorded, no outbound had ever been proven to Meta, and a 17-Oct resume message search returned 0. This cannot establish that MFit's separate Meta channel was disconnected; it only means iZap has no historical evidence to provide.
+
+Open issue #132 documents a separate 30-Oct production refusal at 100% keyword/support coverage with quality_incomplete, quality_not_deliverable, and role_evidence_gaps across five roles. PR #570 current-master restack contains role-scoped deterministic gap weaving plus explicit confirmed-skill alignment; its exact-head focused/recovery/baseline/Plan-REA checks pass, but full CI fails on the shared Kompas #554 question/voice dependency. It is unmerged/unreleased, and no resume/JD/DOCX was processed. PR #572 includes a regression that an incomplete 100%-coverage draft is held; exact-head recovery/baseline/Plan-REA pass, full CI is 70/72 because the two Listening-hold assertions await #554. Neither PR proves the 30-Oct incident is repaired in production.
+
+Issue #201 separately tracks durable, identity-safe recovery for swipe-reply refinements; it is not proof the 17-Oct incident used that path. No resend/replay or live WhatsApp test occurred.
