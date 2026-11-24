@@ -18,6 +18,7 @@ on:
       - 'scripts/tests/whatsapp-single-request.test.mjs'
       - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
       - 'scripts/tests/whatsapp-resume-acceptance.test.mjs'
+      - 'src/lib/whatsapp-explicit-library-path.ts'
       - 'src/lib/role-match.ts'
       - 'scripts/tests/role-match.test.mjs'
       - 'scripts/tests/whatsapp-library.test.mjs'
@@ -39,6 +40,8 @@ on:
       - 'scripts/tests/whatsapp-single-request.test.mjs'
       - 'scripts/tests/whatsapp-fixture-privacy.test.mjs'
       - 'scripts/tests/whatsapp-resume-acceptance.test.mjs'
+      - 'src/lib/whatsapp-explicit-library-path.ts'
+      - 'scripts/tests/whatsapp-library.test.mjs'
   workflow_dispatch:
 jobs:
   regression:

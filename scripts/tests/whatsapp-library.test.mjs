@@ -45,6 +45,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
     'next/server': {},
     '@/lib/storagePolicy': { storageMode: () => 'r2' },
+    '@/lib/storagePolicy': { storageMode: () => 'r2' },
     '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
     '@/lib/llm': { resolveKeys: () => ({}), hasAnyKey: () => true, keysFor: async () => ({ gemini: 'g' }), tailorKeys: k => k },
