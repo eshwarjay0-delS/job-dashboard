@@ -186,13 +186,15 @@ test('portal cancellation during request pacing prevents the next fetch', async 
   try {
     Date.now = () => 1000
     globalThis.fetch = async () => { fetchCalls++; return { ok: true, text: async () => 'unexpected' } }
-    const pending = politeFetcher(250, 5000, controller.signal)('https://crawler.test/jobs')
+    const get = politeFetcher(250, 5000, controller.signal)
+    assert.equal(await get('https://crawler.test/first'), 'unexpected')
+    const pending = get('https://crawler.test/jobs')
     controller.abort()
     await assert.rejects(
       pending,
       error => error.message === 'Request to crawler.test was cancelled by the portal time limit',
     )
-    assert.equal(fetchCalls, 0, 'a cancelled pacing wait must not start a network request')
+    assert.equal(fetchCalls, 1, 'only the first request should run; the cancelled pacing wait must not start another')
   } finally {
     globalThis.fetch = originalFetch
     Date.now = originalNow
