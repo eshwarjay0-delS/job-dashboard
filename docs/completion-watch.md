@@ -1,6 +1,6 @@
 ## 24 November 2026 — Plan Journal schema self-correction
 
-The initial new Plan Journal entry was inserted at the TypeScript type-array bracket instead of the literal value array, and the first literal-array repair omitted the comma separator. The Plan Journal/REA schema run therefore failed. Both declarations are now restored, the REA entry passed its schema test, and the Plan Journal comma is corrected; exact-head schema/full CI are being rerun. This is an authoring error in the documentation PR, not a product runtime defect.
+The initial insertion targeted the type-array bracket; subsequent repair attempts mislocated the entry in existing string/nested-array content and caused schema failures. The original PR #562 Plan Journal and REA files were restored, the Plan Journal entry was added to its existing unshift call, and the REA entry was added at its top-level array close. This was an authoring error in the documentation PR, not a product runtime defect; exact-head schema/full CI are pending.
 
 ## 24 November 2026 10:07 UTC — WhatsApp fallback containment review
 
