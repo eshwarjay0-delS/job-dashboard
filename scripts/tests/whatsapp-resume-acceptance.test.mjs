@@ -28,7 +28,7 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall, chosenResumeMatchesProfile } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
@@ -410,4 +410,31 @@ test("Nov4 hold transparency: rejection codes become plain words, unknowns dropp
   assert.equal(describeRejectionReasons(["quality_not_deliverable", "quality_not_deliverable"]).join(" | "), "the quality report does not clear the delivery bar")
   assert.equal(describeRejectionReasons(["some_future_blocker", "ats_check_failed"]).length, 0)
   assert.equal(describeRejectionReasons([]).length, 0)
+})
+
+test("unverified JD-only additions are a hard hold, never a shortfall delivery", () => {
+  const draft = make({
+    unverified_added_keywords: ["unsupported-platform"],
+    coverage: 70,
+    supported_coverage: 100,
+  })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.equal(whatsappRewriteUsable(draft), false)
+  assert.equal(deliveredWithShortfall(draft), false)
+})
+
+test("an unverified_jd_terms quality blocker stays a hard hold when the detail list is empty", () => {
+  const draft = make({ unverified_added_keywords: [], quality_blockers: ["unverified_jd_terms"] })
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("unverified_jd_terms"))
+  assert.equal(whatsappRewriteUsable(draft), false)
+  assert.equal(deliveredWithShortfall(draft), false)
+})
+
+test("a missing selected-library profile email fails closed", () => {
+  const text = "Candidate One\\ncandidate1@example.test"
+  assert.equal(chosenResumeMatchesProfile(text), false)
+  assert.equal(chosenResumeMatchesProfile(text, ""), false)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test"), true)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate2@example.test"), false)
 })
