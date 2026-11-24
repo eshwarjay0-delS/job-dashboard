@@ -8,6 +8,26 @@ for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I ha
 for (const input of ['I have experience with AWS and Terraform', 'I personally deployed CyberArk EPM', 'My experience includes SOX testing', 'Confirmed skills: Python', 'Confirmed experience: SOX testing']) {
   test(`explicit experience is retained: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), [input]))
 }
+for (const input of [
+  'I have maybe used AWS',
+  'I used AWS, maybe',
+  'I used AWS, I think',
+  'My experience includes AWS, possibly',
+  'I have experience with AWS?',
+  'Confirmed skills: AWS, maybe',
+]) {
+  test(`uncertain or question-form confirmation is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
+}
+
+for (const input of [
+  'I have experience with all required skills?',
+  'I have experience with all required skills, maybe',
+  'I have experience with all required skills, I think',
+  'I might have experience with all required skills',
+]) {
+  test(`uncertain or question-form blanket confirmation is rejected: ${input}`, () => assert.equal(explicitlyConfirmsAllRequirements([input]), false))
+}
+
 test('an exception cannot confirm every requirement', () => {
   assert.equal(explicitlyConfirmsAllRequirements(['I have experience with all required skills except GCP']), false)
   assert.deepEqual(confirmedCandidateStatements(['I have experience with all required skills except GCP']), [])
