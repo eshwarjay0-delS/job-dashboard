@@ -30,3 +30,8 @@ Current-master source was fetched via GitHub. PR #575 contains five code/test fi
 ## Next gate
 
 Require exact-head full CI, crawler regression, Plan/REA schema, Kompas baseline and manual-only policy regression. Review the source and synthetic tests. Keep draft until the legitimate protected preview is available; do not bypass protection. After merge/deploy, verify the READY canonical alias and public API response. A post-change crawl requires a separate explicit owner request.
+
+
+## 24 November — test-source audit correction
+
+A remote source audit of the PR branch found a missing closing parenthesis in `scripts/tests/apply-clearance-filter.test.mjs` (the first crawler assertion), which would prevent Node from parsing that test file. Corrected on commit `0fb890a5207c34d9ad6966b6b255d1da3734e796`. This was found through GitHub source inspection; no local execution is available. Exact-head remote CI must confirm the test file parses and runs. The earlier crawler-focused green run did not establish that this file had executed.
