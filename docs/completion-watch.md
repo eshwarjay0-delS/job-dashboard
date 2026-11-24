@@ -828,3 +828,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 
 
 **Continue:** let the authorized reviewer/merge-gate process resolve #554; exact-head recheck #572/#570 after its merge. For #575, finish exact-head CI and review, but keep the protected preview, production release and public API acceptance separate. No live crawler run without a separate owner request.
+
+
+## 24 November 2026 — PR #575 test-source audit
+
+Remote source inspection of PR #575 found a missing closing parenthesis in `scripts/tests/apply-clearance-filter.test.mjs` that would make Node fail to parse the test file. Corrected in `0fb890a5207c34d9ad6966b6b255d1da3734e796`. This is a test-source correction, not evidence of local execution. The earlier focused crawler workflow did not prove this test file was executed. Exact-head full CI must re-run after the correction; PR #575 remains draft, and the shared #554 release/review gate, protected preview, production/API acceptance, and explicit manual crawl request remain separate.
