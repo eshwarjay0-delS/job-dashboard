@@ -64,3 +64,11 @@ The branch-only lint correction passed the resume-specific and WhatsApp regressi
 ## Documentation commit provenance — 24 November
 
 Plan & Vision, the completion-watch ledger, and the journal were updated in commit c7ebd468953d5b9f7d82b7888e3efd77d19380e1 to record the exact lint correction and the newly exposed shared Kompas VM fixture dependency. Code/test evidence is from head 96a8b909f68421e35e0f642a9b9c0c090838435b; these results do not transfer to this documentation head. Exact-head reruns are required.
+
+
+## 24 November 2026 — mixed negative contractions
+
+Static review of the exact PR #570 branch exposed a false-positive boundary: the exception regex recognized words such as `not`, `no`, `but` and `lack`, but not negative contractions. A phrase like `I used AWS and don't know GCP` was retained in full, which could let the keyword extractor treat GCP as confirmed. The branch now recognizes `don't`, `doesn't`, `didn't`, `haven't`, `hasn't`, `can't`, `cannot`, `won't`, and common negative contractions. Regression cases require mixed statements to retain AWS only and reject a repeated AWS on both sides of the boundary.
+
+
+Code commit: `9e49a49b9d46fb65f25dd6d6591cb325944dd044`; test commit: `4c3f45f7130189382f0172b3726cbf1f14ca0115`. The local reduced reproduction passed five cases, but the exact focused GitHub workflow did not run on this new head (connector commits do not trigger Actions; no dispatch action is available). No local repository clone or full test/build was available because the container could not resolve GitHub. Keep the PR draft and require exact-head validation before merge/deploy.
