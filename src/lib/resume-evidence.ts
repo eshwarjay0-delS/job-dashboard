@@ -18,9 +18,11 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
 /** A blanket confirmation can support the complete supplied requirement set, but a
  * formatting instruction such as "add all keywords" cannot. Keep this deliberately
  * narrow: the statement must explicitly attribute experience to the candidate. */
+const UNCERTAIN_CONFIRMATION = /\b(?:maybe|might|may|possibly|perhaps|probably|think|believe|guess|unsure|uncertain|not\s+sure|not\s+certain|if\s+i\s+recall|as\s+far\s+as\s+i\s+remember|iirc|sort\s+of|kind\s+of|cannot\s+recall|can't\s+recall)\b/i
+
 export function explicitlyConfirmsAllRequirements(statements: readonly string[]): boolean {
   const text = statements.filter(Boolean).join("\n").replace(/\s+/g, " ").toLowerCase()
-  if (!text || /\b(?:except|excluding|not|never|no experience|without)\b/.test(text)) return false
+  if (!text || /\b(?:except|excluding|not|never|no experience|without)\b/.test(text) || UNCERTAIN_CONFIRMATION.test(text) || text.includes("?")) return false
   return [
     /\bi\s+(?:have|possess)\s+experience\s+(?:with|in|using)\s+(?:all|every)\s+(?:(?:of\s+)?them|(?:(?:of\s+)?(?:these|those|the|listed|required(?:\s+and\s+preferred)?|preferred)\s+)?(?:skills?|requirements?|keywords?|tools?|technolog(?:y|ies)))\b/,
     /\bmy\s+experience\s+(?:includes|covers)\s+(?:all|every)\s+(?:(?:of\s+)?(?:these|those|the|listed|required|preferred)\s+)?(?:skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/,
@@ -49,8 +51,9 @@ const confirmationTerms = (value: string) => (value.toLowerCase().match(/[a-z0-9
   .filter(term => term.length > 1 && !CONFIRMATION_IGNORED_TERMS.has(term))
 
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
-  return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
+  return statements.flatMap(statement => statement.split(/[\n;]+|[.!](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
+    if (!line || raw.includes("?") || UNCERTAIN_CONFIRMATION.test(line)) return []
     if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
     // Reject negative assertions before treating a "my ..." sentence as positive evidence.
     // Positive contrast is safe only before its exception (e.g. AWS, but not GCP).
