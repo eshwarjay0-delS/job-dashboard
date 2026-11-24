@@ -175,3 +175,26 @@ test('a malformed adapter URL still advances the request pacing clock', async ()
     globalThis.setTimeout = originalSetTimeout
   }
 })
+
+
+test('portal cancellation during request pacing prevents the next fetch', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  const originalNow = Date.now
+  const controller = new AbortController()
+  let fetchCalls = 0
+  try {
+    Date.now = () => 1000
+    globalThis.fetch = async () => { fetchCalls++; return { ok: true, text: async () => 'unexpected' } }
+    const pending = politeFetcher(250, 5000, controller.signal)('https://crawler.test/jobs')
+    controller.abort()
+    await assert.rejects(
+      pending,
+      error => error.message === 'Request to crawler.test was cancelled by the portal time limit',
+    )
+    assert.equal(fetchCalls, 0, 'a cancelled pacing wait must not start a network request')
+  } finally {
+    globalThis.fetch = originalFetch
+    Date.now = originalNow
+  }
+})
