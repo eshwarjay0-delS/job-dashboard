@@ -53,7 +53,9 @@ export async function chooseResume(opts: { userDir: string; userId: string; emai
     const named = matchHint(all, prefer.hint)
     if (!named.length) return { kind: "unnamed", hint: prefer.hint, have: titlesOf(all) }
     pool = named
-    why = "because you asked for it"
+    why = named.length === 1
+      ? "because you asked for it"
+      : "because more than one Files item matched the name you gave"
   } else {
     const n = narrowByRole(all, role)
     pool = n.pool

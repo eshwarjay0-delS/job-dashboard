@@ -14,6 +14,12 @@
 
 Continue: obtain an independent authorized review for PR #554. After approval and merge, restack PR #572 on the reviewed master and rerun exact-head full CI, WhatsApp recovery, Kompas baseline, cross-device and Plan/REA; then require protected preview, production READY/alias and consented real acceptance. Keep #570/#571/#573/#574 draft until their exact-head full CI and task-specific acceptance gates pass.
 
+## 24 November 2026 — ambiguous WhatsApp Files name guard
+
+A source review of `matchHint` found that it can return multiple same-account Files items for a broad label such as SOC. The old explicit marker treated any non-empty hint as an exact selection. The PR #572 continuation now grants the exact fallback marker only when exactly one Files item matches; an ambiguous hint may still guide ordinary tailoring, but cannot authorize sending an unchanged original. A new two-candidate SOC regression asserts that `explicitlySelected` remains false. Exact-head remote validation is pending; no send or R2 write occurred.
+
+Continue: validate this ambiguity guard on the exact PR #572 head, then wait for independent authorized review of PR #554 before restacking the shared Listening-hold fix.
+
 ## 24 November 2026 — current production, shared CI dependency and approved restacks
 
 - **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is independently READY in production as `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` resolves to that deployment. Round 15's `jsonAnswer` gate fix is live. It fixes the non-streaming path used by the web session; Round 16 live-answer acceptance has not been run.

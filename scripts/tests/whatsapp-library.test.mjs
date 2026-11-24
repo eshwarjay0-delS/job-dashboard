@@ -151,6 +151,28 @@ test('a user-named Files resume is persisted as the explicit fallback selection 
   assert.equal(b.recoveryJobs[0].files.email, 'a@x.com')
 })
 
+const SOC_DUP = path.join(USER_DIR, 'a@x.com', 'SOC Analyst', 'SOC Cloud.docx')
+
+test('a named Files label matching multiple items cannot authorize unchanged fallback', async () => {
+  const b = bot({
+    agent: null,
+    extra: [{
+      path: SOC_DUP, email: 'a@x.com', folder: 'SOC Analyst', name: 'SOC Cloud',
+      title: 'SOC Analyst', depth: 0, keywords: ['splunk', 'cloudwatch'], at: 3,
+    }],
+  })
+  await b.wa.handle('15550012', { type: 'text', id: 'm1', text: { body: JD + '\nuse the SOC resume' } }, {}, 'user1')
+  assert.equal((await b.wa.loadSession('15550012')).pending?.hint, 'SOC')
+  await b.wa.handle('15550012', { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession('15550012'), 'user1')
+  assert.equal(b.runs.length, 1, 'the named match may still be used for ordinary tailoring')
+  assert.equal(b.runs[0].givenPath, SOC)
+  assert.equal(b.recoveryJobs[0].files.explicitlySelected, false, 'two matching Files items are not an exact selection')
+  assert.match(
+    b.said.find(text => text.startsWith('Updating your')) || '',
+    /more than one Files item matched the name you gave/,
+  )
+})
+
 // Two resumes titled for the job: the niche between them is the agent's to choose (the title came first).
 const AS1 = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec Web.docx')
 const AS2 = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec Cloud.docx')

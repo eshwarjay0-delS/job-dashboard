@@ -139,3 +139,12 @@ Those two runtime assertions belong to PR #554, exact head `4fafd56663bb5ddce064
 No local checkout or installed dependencies were available. No route code changed in this fixture-only follow-up; the installed Next.js 16.3.8 route-handler guide remains required before any further route edits. No real WhatsApp/Meta send, DOCX, R2 write, model call, database mutation, historical replay or device acceptance occurred. The 17 Oct 17:28 Chicago delivery remains **unverified**; output DOCX, R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt are missing.
 
 Next: obtain independent authorized review for #554; after approved merge, restack #572 onto the reviewed master and rerun every exact-head gate. Require protected preview, production READY/alias and consented live delivery acceptance before calling it shipped.
+
+
+## 24 November 2026 — ambiguous name hints cannot authorize unchanged fallback
+
+A source review of `library-choose.ts` found that `matchHint` can return multiple Files items for a broad label such as SOC. The old explicit marker used any non-empty hint plus the reason string, so a broad hint could incorrectly authorize an unchanged original fallback even though the exact file was ambiguous.
+
+The chooser now sets `why = because you asked for it` only when exactly one item matched. When multiple items match, it uses a distinct explanation; the existing webhook marker therefore remains false. Normal tailoring may still use the chosen candidate, but a failed rewrite cannot send an unchanged original under the exact-selection label.
+
+A new `whatsapp-library.test.mjs` case creates two SOC Analyst candidates and verifies that the selection is not marked explicit. The unique SOC selection test remains in place. Exact-head remote validation is pending; no route code, WhatsApp send, R2 write, model call or production deployment occurred.
