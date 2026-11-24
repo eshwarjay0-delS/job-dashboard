@@ -60,6 +60,10 @@ The final generation stage must be experience repair, not Skills keyword placeme
 
 The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
 
+
+## Negative contraction guard — 24 November 2026
+
+A negated skill is not candidate confirmation. The confirmed-skill parser now rejects the contraction “I haven't used AWS” (which previously could match the positive “I have” prefix) and “I haven't worked with Splunk.” This is a conservative rejection, not a new claim or skill. Source commit 03d4d7d330dcf1609d668a1fa2aecbc0fe946e91; synthetic regression commit d226a0183a78598752945c6fa5cafec613b36581. Focused remote test 45338791921 passed 53/53; full CI remains blocked by the unrelated prefer-const lint at src/lib/kompasConsistency.ts:1059.
 ## Actual counts and weighting — 20 October 2026
 
 Matched-term counts must come from the exported document, not a weighted percentage converted into an integer. Weighted coverage remains separate; both measures must meet the existing acceptance thresholds. Cache generation 16 supersedes generation 15 while retaining its incomplete-rewrite safeguard. Evidence: `docs/research/resume-score-counts.md`.
@@ -85,3 +89,51 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+
+## 23 November 2026 — current acceptance blockers
+
+- Confirmed-skill alignment PR #552 is open/draft at head f3323d2d. The confirmed-skill, WhatsApp recovery, Kompas baseline and Plan/REA gates pass; full CI 45230708625 fails the shared prefer-const lint before type-check/build. No authorized resume/JD/confirmation bundle or exported DOCX has been evaluated in this continuation; no live 95–100% match is claimed.
+- WhatsApp explicit same-account fallback PR #557 is open/draft. Recovery/baseline/Plan-REA pass, but full CI fails two Kompas Listening-hold assertions. The 17 Oct 17:28 Chicago delivery remains unverified; do not replay it.
+- Current production master SHA 794e8cfdbd3103409552857806bab89851d5bfcb is READY. The fixes above are not merged/released. Local checkout/dependencies/DNS are unavailable; no local test or personal document processing occurred.
+
+
+## 23 November 2026 — CI cause correction
+
+The confirmed-skill PR #552 full CI 45230708625 does not fail at lint. Exact job log shows two Kompas Listening-hold assertions (tests 50 and 54) fail; the resume-focused, WhatsApp recovery, baseline and Plan/REA gates pass. The required behavior is in PR #554, which awaits an independent authorized reviewer. No original resume/JD/confirmation bundle or exported DOCX was processed; no live match score is claimed.
+
+
+## 23 November 2026 — stacked continuation
+
+PR #564 carries the approved explicit same-account Files fallback and unsupported-JD hard hold from #557 onto PR #554's green Kompas validation base. It inherits the first-press Listening and current-resume S5 corrections without copying overlapping Kompas files. Exact-head checks are pending. No real send, DOCX, R2/Meta write, production deployment or historical 17 Oct replay is claimed.
+
+
+## 23 November 2026 — focused restack checks
+
+- Contract search restack PR #563 focused workflow 45282267513 passed; full CI remains pending.
+- WhatsApp fallback restack PR #564 recovery 45282722516 and Plan/REA schema 45282722435 passed; full CI/baseline/cross-device remain pending.
+- PRs #561 and #557 were closed as superseded; their source branches and history are preserved. #554 remains awaiting independent review. No deployment or live send.
+
+
+## 23 November 2026 — ready stacked PRs and CI blocker
+
+PR #565 contract-search and #566 WhatsApp fallback are ready for review, stacked on #554. #565 focused run 45282267513 passed; fresh 45283478714 is in progress. #566 recovery 45282722516 and schema 45282722435 passed; fresh regression 45283495328 and schema 45283495328 are in progress. Full CI is filtered to PRs targeting master/main, so it does not run on the non-master #554 base. #554 awaits independent review. No deployment or live send.
+
+
+## 23 November 2026 — focused restacks green
+
+#565 contract-search focused runs 45282267513 and 45283478714 passed. #566 WhatsApp recovery 45282722516, schema 45282722435, fresh regression 45283495328 and fresh schema 45283495328 passed. Full CI did not trigger because its pull_request base filter is master/main and these restacks target non-master #554. #554 awaits independent review. No deployment or live crawl/send.
+
+
+## 23 November 2026 — focused gates across approved work
+
+- #565 contract-search: runs 45282267513 and 45283478714 passed (4/4 each).
+- #566 WhatsApp fallback: recovery 45282722516 and 45283495210 passed (133/133 each); schema 45282722435 and 45283495328 passed.
+- #567 confirmed-skill alignment: 45284043448 passed (40/40), recovery 45284043449 passed (4/4).
+- #568 Gmail/mobile: 45284252541 passed (12/12).
+- Full CI remains blocked from triggering on non-master #554 base due master/main workflow filter. #554 awaits independent review. No production or real-data acceptance.
+
+
+## 23 November 2026 — crawler focused gate
+
+Crawler restack PR #569 freshness job 138078245414 passed 41/41 (5+3+8+25). PR #551 closed as superseded; branch preserved. Full CI blocked by the master/main base filter on #554. No live crawl or job-row mutation.

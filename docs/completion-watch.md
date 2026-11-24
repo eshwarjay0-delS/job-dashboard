@@ -1,4 +1,178 @@
+
+## 24 November 2026 — fresh 7-day WhatsApp runtime evidence
+
+Read-only Vercel aggregation found 2 quality-gate refusals across 2 users on /api/whatsapp/webhook (first 29 Oct 18:00:41 UTC, last 20 Nov 20:25:58 UTC), older deployment dpl_EZce7dEERrv1eVUFf64YoAzwoicb, SHA 3a1b0bb. Samples: 100% raw/support coverage, 5 roles, 0 JD terms placed, roles_unrewritten; and a partial/incomplete 100% draft with draft_parts_missing/quality_incomplete/quality_not_deliverable/roles_unrewritten. One ServiceUnavailable (19 Nov) and one skills-only 43.1% no-writer result (20 Nov) also surfaced. Current production is newer SHA 794e8cf; these logs do not prove a current deployment regression or exact root cause. Non-PII evidence posted to issue #132 comment 7135769358. No DOCX, private resume/JD, replay or send.
+
+## 24 November 2026 09:06 CST — historical WhatsApp evidence and resume/JD blocker
+
+- Accessible prior-chat evidence: screenshot context around 17:28 Chicago on 17 Oct showed a live resume-generation failure; the assistant said the file was held after repair. Full JD, generated DOCX and server trace were unavailable. No recipient/message text, R2 object/version, request/webhook correlation, Meta outbound ID or signed delivery/read receipt recovered.
+- Read-only iZap check: its single business has no connected WhatsApp number; status is disconnected with no inbound/outbound evidence. Searching 17 Oct for resume returned 0. This is a separate integration, not proof MFit's Meta channel was disconnected.
+- Open issue #132 records 30 Oct 100% raw/support coverage but quality_incomplete, quality_not_deliverable, role_evidence_gaps and five roles. PR #570 current-master restack contains role-scoped gap weaving/confirmed-skill alignment; focused gates pass, full CI fails at the shared #554 question/voice dependency. It is unmerged/unreleased. PR #572's incomplete-100%-coverage hold test is present; exact-head recovery/baseline/Plan-REA pass, full CI 70/72 awaits #554. Neither is production acceptance.
+- Issue #201 separately tracks durable safe recovery for swipe-reply refinement. No replay/send or live WhatsApp test.
+
+Continue: obtain independent review for #554; then restack and rerun #572/#570. Historical incident remains blocked on authorized MFit storage/provider evidence and a real end-to-end acceptance, not iZap.
+## 24 November 2026 08:53 CST — current-head recheck and Gmail anchor privacy review
+
+- Production remains READY at master `794e8cfdbd3103409552857806bab89851d5bfcb` (`dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`); both canonical aliases match. Round 15 is live; no Round 16 model acceptance.
+- PR #554: exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI `45123770495`, baseline `45123770380`, cross-device `45123770446`, Plan/REA `45123770546`, Windows `45123770398` all green. Merge is still blocked by the missing second authorized reviewer; no self-merge.
+- PR #572: head `fc16b77a349231d840e1c673ac93d1dfc0bf4d22`; WhatsApp recovery `45383665978`, baseline `45383665803`, Plan/REA `45383666072` green. Full CI `45383666040` = 70/72; two first-press Listening-hold assertions fail because #554 runtime fix is not merged.
+- PRs #570/#571/#573/#574/#575/#576 remain unmerged. Exact-head focused/baseline gates are green where applicable; full CI runs `45386097754`, `45289419329`, `45354245507`, `45382941056`, `45400055679`, `45401091730` fail at shared Kompas question/voice assertions or lint. No release is implied.
+- PR #577 exact head `723a13377fe8c53e7ba2d67821429485978459fe`: focused account-scoped links `45409242379` passed 11/11 (repeat `45409224285` green). Review `6041657441` flags plaintext Gmail address in DOM anchor/fragment and asks for opaque account identity/hash; PR is not full-CI/protected-preview/live accepted.
+- **Execution wall:** no local checkout/dependencies; `git ls-remote` failed DNS. Vercel Sandbox 402 until 1 Dec and protected preview token unavailable. No model call, WhatsApp send/replay, R2/DB write, Gmail read/send, crawl or device acceptance.
+
+Continue: second authorized review for #554; after normal merge, restack #572 and other dependent approved slices. For #577, address opaque-anchor privacy, run full CI, and require protected preview plus two-inbox/mobile acceptance.
+
+## 24 November 2026 10:30 UTC — latest current-master backlog reconciliation
+
+- **Production:** master `794e8cfdbd3103409552857806bab89851d5bfcb`, READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; canonical `job-dashboard-fawn.vercel.app` independently resolves to that deployment.
+- **#554 Kompas S5/Listening hold:** exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI `45123770495`, cross-device `45123770446`, Plan/REA `45123770546`, baseline `45123770380`, Windows EXE `45123770398` all SUCCESS. It remains unmerged because a second authorized reviewer is required; self-approval was rejected.
+- **#570 resume/JD confirmed-skill alignment:** exact head `bf46a4ec13df74b7d637735d643365907b588be7`; confirmed-skill regression `45356156016` SUCCESS and baseline `45356155919` SUCCESS; full CI `45356155988`, WhatsApp recovery `45356156040`, Plan/REA `45356156005` FAILED. No real resume/JD/DOCX acceptance.
+- **#571 Gmail/mobile:** exact head `0ccde7e48784b2e845e92b859da70c366e5b9d83`; Gmail/mobile `45289419319` and baseline `45289419450` SUCCESS; full CI `45289419329` FAILED. Four-account ceiling; no inbox/device acceptance.
+- **#572 WhatsApp explicit-selection fallback:** exact head `c571fa74c81980f69c650b68fae1d5e6307dc0f8`; recovery `45351411271`, baseline `45351411126`, Plan/REA `45351411099` SUCCESS; full CI `45351410987` FAILED. Draft/unmerged. Review ID `6037323332` notes lexical containment vs symlinks in local filesystem mode; R2 is not implicated.
+- **#573 crawler:** exact head `5b719759066c649975b4582b41b20f111b194450`; crawler regression `45354245589`, baseline `45354245689`, Plan/REA `45354245480` SUCCESS; full CI `45354245507` FAILED. Manual/on-demand only; no crawl.
+- **#574 contract search:** exact head `98ba36c2cfac9cf316ad05f1b90805adab35aeba`; contract search `45290294629` and baseline `45290294762` SUCCESS; full CI `45290294631` FAILED.
+- **Documentation PR #562:** latest known head `0c6cf16c2ccc1ce1b22fdaaadee1f01417f4d8f9`; Plan/REA schema `45374955478` and Kompas baseline `45374955653` SUCCESS; full CI `45374955454` IN_PROGRESS at that head. The review finding is recorded in Plan Journal, REA and the research note; the initial documentation insertion error was repaired.
+- **Execution boundary:** no local checkout/dependencies; no local product tests, WhatsApp send/replay, DOCX processing, Gmail reads/sends, crawler run, job application, R2/DB mutation or native-device acceptance in this run. The historical 17 Oct 17:28 Chicago WhatsApp incident remains unverified.
+
+**Continue:** PR #554 needs independent review. After it merges normally, restack #572 and the other current-master PRs and rerun exact-head full CI plus focused gates; keep them unreleased until review, protected preview, production READY/alias and real acceptance are independently proven.
+## 24 November 2026 — Plan Journal schema self-correction
+
+The first insertion targeted the type-array bracket; subsequent repair attempts mislocated the entry in existing string/nested-array content and caused schema failures. The original PR #562 Plan Journal and REA files were restored. The Plan Journal review entry is now placed in the existing `PLAN_JOURNAL.unshift` call, and the REA entry is appended at the top-level `REA_SESSIONS` array close. Exact-head schema/full CI are pending. This was an authoring error in the documentation PR, not a product runtime defect.
+
+## 24 November 2026 10:07 UTC — WhatsApp fallback containment review
+
+- Master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY in production as `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; the canonical `job-dashboard-fawn.vercel.app` alias resolves to that deployment. PR #572 is not deployed.
+- PR #572 exact head `c571fa74c81980f69c650b68fae1d5e6307dc0f8`: WhatsApp recovery `45351411271`, Kompas baseline `45351411126`, Plan/REA `45351411099` SUCCESS; full CI `45351410987` FAILURE at the shared Kompas VM/Listening-hold dependency. The owner-approved explicit-selection/hard-hold slice remains draft.
+- Source review posted non-blocking comment `6037323332`: fallback containment is lexical; local FsStorage reads follow symlinks, so a symlink under an account resume root could escape the physical root. R2 object-key storage has no symlink semantics; this is a local-mode hardening note, not a production exploit claim. Suggested mode-aware realpath containment or symlink rejection plus regression.
+- No local tests, DOCX processing, WhatsApp send/replay, R2 write, private-session access or historical receipt were performed. The 17 Oct 17:28 Chicago incident remains unverified.
+- **Continue:** keep #572 unmerged; obtain independent authorized review for #554, then restack #572 and rerun exact-head full CI/recovery/baseline/Plan-REA. Protected preview, production READY/alias and consented real delivery acceptance remain separate.
+
+## 24 November 2026 04:44 UTC — resume evidence guard focused-green, full CI lint-red
+
+- **Live baseline:** production remains READY on master `794e8cfdbd3103409552857806bab89851d5bfcb`, deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`, with both canonical aliases assigned. Round 15 is live; no Round 16 real-model acceptance.
+- **WhatsApp #572:** exact head `4da31c2160a4a06b90f3fb50e765b649725f626e`; recovery `45310913213`, baseline `45310913178`, and Plan/REA `45310913198` pass. Full CI `45310913176` fails 24 VM cases (48 pass) because `answerCtl` is undefined in typed-question/voice harnesses. The explicit same-account fallback source guard was spot-reviewed; no new finding was recorded, but this is not full code or live review.
+- **Shared gate:** PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259` has all five gates green (full CI, baseline, cross-device, Plan/REA, Windows). The only review is the owner's COMMENTED review; self-approval was rejected. A second authorized reviewer is still required. Safe Merge Gate is disabled; do not self-merge or bypass.
+- **Resume #570 follow-up:** source commit `225ac92873376cff9aa2489b0a79c23720e36ba9` and test commit `96d678e926991b363b5ee359b17e155ea8844e6e` reject hedge/interrogative confirmations and add 10 regression cases. Exact-head confirmed-skill `45327928570`, WhatsApp recovery `45327928508`, baseline `45327928493`, and Plan/REA `45327928507` all SUCCESS. Full CI `45327928476` completed FAILURE at Lint, job `138221900329`, exact `prefer-const` at `src/lib/kompasConsistency.ts:1059`; no local test run or merge/deploy.
+- **Independent master restacks:** #570 confirmed-skill (40/40 focused), #571 Gmail/mobile (12/12), #573 crawler (41/41), #574 contract search (4/4) have focused/baseline successes, but full CI failed on the shared `prefer-const` lint at `src/lib/kompasConsistency.ts:1059`. Source review of #570 exact head `880e9a0c65a3a97e08abaa4ca1aa6789a7139af7` found a false-positive evidence expansion: `I have maybe used AWS` and `I have experience with AWS?` can be retained as confirmations. Non-approval review comment [6033709471](https://github.com/eshwarjay0-delS/job-dashboard/pull/570#pullrequestreview-6033709471) requests uncertainty/interrogative guards and tests. This is not locally executed. Keep the resume branch draft/unreleased until fixed and validated; keep all restacks unreleased until #554 is normally merged and full CI reruns.
+- **Execution wall:** resuming `mfit-continuation-20261120-run11` returned `snapshot_not_found`; container `git clone` failed because `github.com` DNS could not resolve. No canonical checkout/dependencies, local tests or build are available. Fresh approved sandbox/checkout with installed Next.js 16.3.8 route-handler docs is needed; existing sandbox-creation quota reset is recorded as 1 Dec 2026.
+- No runtime code branch was changed; documentation-only changes were made on PR #562. Automation inventory is 12 total, 1 enabled (MFit Completion Watch), 11 paused; MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled, so no voice/caption work was duplicated. No WhatsApp send/replay, Meta/R2 mutation, personal resume/JD/DOCX, Gmail read/send, live crawl, model call, deployment or device acceptance. The 17 Oct 17:28 Chicago delivery remains unverified; output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed receipt are missing. A read-only 30-minute production error query for /api/whatsapp/webhook, /api/kompas/answer and /api/gmail found no error clusters; error/fatal log groups were empty, so this is not proof of successful traffic or acceptance.
+
+**Continue:** after a second authorized reviewer clears #554 and it merges normally, restack #570 (preserving `225ac928`/`96d678e`) onto the resulting master and rerun full CI; it is currently red at `prefer-const`. Then restack #572/#571/#573/#574 onto master and rerun exact-head full CI plus focused gates. Restack #572/#570/#571/#573/#574 onto the resulting master and rerun exact-head full CI plus focused gates. Preserve the incident and real-acceptance blockers.
+
+## 23 November 2026 23:06 UTC — crawler focused gate also green
+
+- #569 crawler abort/timeout restack: focused `crawl-freshness` workflow job **138078245414 SUCCESS, 41/41** (5 + 3 + 8 + 25 tests). PR #551 closed as superseded; branch/history preserved.
+- The four earlier focused slices remain green: #565 contract search 4/4 twice; #566 WhatsApp recovery 133/133 twice and schema twice; #567 confirmed-skill 40/40 plus recovery 4/4; #568 Gmail/mobile 12/12.
+- **Full CI is not triggered** because workflow pull_request base filter is `master`/`main`; these PRs target non-master #554. #554 has five green gates but only the owner’s COMMENTED review; independent authorized review is still required. After normal #554 merge, restack #565–#569 onto master and run full CI.
+- Superseded #551/#552/#559/#561/#557/#563/#564 are closed, branches/history preserved. None of #565–#569 is merged/deployed. Production stays master `794e8cfdbd3103409552857806bab89851d5bfcb` READY.
+
+No local checkout/dependencies; remote focused Actions tests ran. No live resume/JD/DOCX, model call, Gmail/inbox/send, WhatsApp send/replay, R2/Meta mutation, crawl, application, deployment or device acceptance. The 17 Oct 17:28 Chicago delivery remains unverified.
+
+Continue: independent review of #554; then normal merge, restack #565–#569 on master, full CI, protected preview, production READY/alias and real acceptance.
+
+
+## 23 November 2026 23:02 UTC — four approved slices have focused evidence
+
+- **#565 contract search:** two focused runs 45282267513 and 45283478714 SUCCESS, 4/4 each.
+- **#566 WhatsApp fallback:** recovery 45282722516 and 45283495210 SUCCESS, 133/133 each; Plan/REA schema 45282722435 and 45283495328 SUCCESS.
+- **#567 confirmed-skill resume alignment:** 45284043448 SUCCESS, 40/40; WhatsApp recovery 45284043449 SUCCESS, 4/4.
+- **#568 Gmail/mobile:** 45284252541 SUCCESS, 12/12.
+- **Full CI hard wall:** all four ready PRs target the non-master #554 branch. `.github/workflows/ci.yml` runs full CI only for pull_request base `master` or `main`, so these stacked PRs do not receive full CI. #554 has five green gates but only the owner's COMMENTED review; independent authorized review remains required. Once #554 merges normally, restack these PRs onto master and run full CI.
+- Superseded PRs #563/#564/#561/#557/#552/#559 are closed, source branches/history preserved. None of the new slices is merged/deployed. Production remains master `794e8cfdbd3103409552857806bab89851d5bfcb` READY.
+
+No local checkout/dependencies; remote GitHub Actions executed focused tests. No real resume/JD/DOCX, model call, live Gmail/inbox/send, WhatsApp send/replay, R2/Meta mutation, live crawl/job submission, production deployment or device acceptance. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified.
+
+Continue: independent review of #554, normal merge; then restack #565–#568 on master, full CI, protected preview, production READY/alias and actual UX acceptance.
+
+
+## 23 November 2026 22:56 UTC — focused restacks now green
+
+- #565 contract-search: both focused runs **45282267513** and **45283478714 SUCCESS**. Full CI still did not trigger because `.github/workflows/ci.yml` restricts pull_request base branches to `master`/`main`; this PR is stacked on non-master #554.
+- #566 WhatsApp: recovery **45282722516**, schema **45282722435**, fresh regression **45283495328**, and fresh schema **45283495328 SUCCESS**. Full CI is likewise base-filtered and will run after #554 is independently reviewed/merged and these restacks target master.
+- Both ready PRs are mergeable but not merged/deployed. #554 remains the independent-review hard gate with five green checks. No live crawl, WhatsApp send/replay, DOCX, R2/Meta mutation, inbox, application, model call or device test. The 17 Oct 17:28 Chicago delivery remains unverified.
+
+Continue: #554 independent review/normal merge first; then restack #565/#566 onto master and run full CI before preview/deploy/acceptance.
+
+
+## 23 November 2026 22:52 UTC — ready PRs, exact full-CI trigger blocker
+
+- The green focused restacks were moved from draft to ready-for-review PRs: contract search **#565** and WhatsApp fallback **#566**. Their code branches are still stacked on PR #554; no runtime release.
+- #565: focused contract search run 45282267513 SUCCESS; a newly triggered rerun 45283478714 is IN PROGRESS. #566: WhatsApp recovery 45282722516 and Plan/REA schema 45282722435 SUCCESS; fresh regression 45283495328 and schema 45283495328 are IN PROGRESS.
+- **Exact full-CI blocker:** `.github/workflows/ci.yml` is filtered to pull requests targeting `master` or `main`. Because #565/#566 target the non-master #554 branch, the full CI workflow does not trigger. #554 itself is green but still needs independent authorized review. After #554 merges, these restacks must target master to receive the full CI gate; no merge gate is bypassed.
+- Draft duplicates #563/#564 and older #561/#557 are closed; branches/history preserved. No live WhatsApp, DOCX, R2/Meta, crawl, application, inbox or device action. The 17 Oct 17:28 Chicago delivery remains unverified.
+
+Continue: complete focused checks, obtain independent review of #554, merge in normal order only after gate approval, restack #565/#566 to master, run full CI, then protected preview and production READY/alias plus real acceptance.
+
+
+## 23 November 2026 22:48 UTC — restack focused gates completed
+
+- PR #563 contract search: focused workflow **45282267513 SUCCESS** on head `7eef052c714108290049c7c74648e9ef3f86f537`. Still DRAFT; exact-head full CI has not run.
+- PR #564 WhatsApp fallback: recovery workflow **45282722516 SUCCESS** and Plan/REA schema **45282722435 SUCCESS** on head `9465113780c59020cfdaf5e041d42dd4e93f93f8`. Still DRAFT; full CI, Kompas baseline and cross-device checks have not run on this exact head.
+- Superseded duplicates: #561 is closed in favor of #563; #557 is closed in favor of #564. Their branches and CI history are preserved.
+- PR #554 still has five green gates but awaits an independent authorized reviewer. None of these restacks is merged/deployed. Master/production remains READY at `794e8cfdbd3103409552857806bab89851d5bfcb`.
+
+Continue: wait for exact-head full CI on the restacks; no merge/release until the #554 review gate and normal sequence clear. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified; no real send/replay or data mutation occurred.
+
+
+## 23 November 2026 22:45 UTC — clean stacked restacks for the next two approved slices
+
+- **Contract-board match-any search:** PR #563 is a clean code-only restack of #561 onto approved Kompas CI PR #554. Head `7eef052c714108290049c7c74648e9ef3f86f537`; focused regression `45282267513` is IN PROGRESS. No exact-head full CI, protected preview or production release yet. #561 is preserved until #563 validation completes.
+- **WhatsApp durable fallback:** PR #564 is a clean code/test/workflow restack of #557 onto #554, head `9465113780c59020cfdaf5e041d42dd4e93f93f8`. It inherits #554's green Kompas behavior/lint fixes and excludes overlapping Kompas runtime/test/docs files, so the explicit same-account Files fallback can be validated without duplicating #554. Checks were not visible at the initial query.
+- **Dependency gate:** PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259` has five exact-head gates SUCCESS (full CI, baseline, cross-device, Plan/REA, Windows EXE), but is still awaiting an independent authorized reviewer; no merge/deployment is claimed.
+- **Safety boundary:** the 17 Oct 2026 17:28 Chicago delivery remains unverified; no replay, real WhatsApp send, DOCX, R2/Meta mutation, live crawl, job submission, inbox mutation, model call or device acceptance occurred. Local checkout/dependencies are unavailable; remote GitHub Actions is the executable test path.
+
+Continue: finish exact-head tests on #563/#564, then normal independent review and sequencing for #554 before any release. Keep protected preview and production READY/alias checks separate from synthetic tests.
+
+
+## 23 November 2026 15:35 CST — CI failure cause corrected from exact job logs
+
+- Full CI logs for #551 run 45260236471, #552 run 45230708625, and #559 run 45259845436 show the same two Kompas Listening-hold assertions failing (tests 50 and 54, expected 0, actual 1), not a lint failure. This is the behavior implemented in PR #554 and awaits independent review.
+- PR #557 run 45227734205 has the same two Listening-hold failures; its WhatsApp recovery, baseline and Plan/REA gates pass.
+- PR #561 run 45266458884 fails at Lint on prefer-const before type-check/build. Its focused workflow 45266458972 and Kompas baseline 45266458914 pass.
+- This corrects the earlier 15:23 summary. No checks were weakened. PR #554 still needs independent review; #557 is not live.
+
+## 23 November 2026 15:23 CST — current backlog blockers reconciled
+
+- Canonical master 794e8cfdbd3103409552857806bab89851d5bfcb is READY in production deployment dpl_2tyBPso5SnCgHCPFCqXewExCJEYp. Both canonical aliases are verified. This is source/deployment evidence, not user-device acceptance.
+- PR #554 (S5 current-resume authority + Listening hold) is open and ready for review; all five exact-head gates are green, but the only review is self-authored and GitHub rejected self-approval. Do not bypass the independent review gate.
+- PR #557 (approved durable explicit same-account WhatsApp fallback) is draft. WhatsApp recovery, baseline and Plan/REA are green; full CI 45227734205 fails two Listening-hold assertions. The 17 Oct 17:28 Chicago send remains unverified; no replay/send or R2/Meta action.
+- Resume confirmed-skill PR #552, Gmail/mobile PR #559, crawler diagnostics PR #551, and contract-search PR #561 have their focused/baseline/Plan-REA checks green, but their full CI runs fail two Listening-hold assertions (tests 50 and 54). PR #557 has the same failure. PR #561 fails prefer-const lint before type-check/build. #555 depends on #554; #556 has the same Listening assertions failure.
+- Local checkout, dependencies and GitHub DNS are unavailable in this runtime. The Vercel Sandbox previously returned 402 until 1 Dec; no local tests or live actions were performed. The Vercel deployment/alias metadata is accessible.
+- **Continue:** the next independent approved slice is contract-board multi-word search (#561); its full CI remains blocked by the shared lint issue. The WhatsApp fallback remains priority once the independent #554 review and exact CI gate clear.
+
 # MFit Completion Watch
+
+## 24 November 2026 06:15 UTC — resume negative-contraction guard tested
+
+- **New source correction on PR #570:** “I haven't used AWS” could previously pass the positive “I have” prefix. The negative guard now includes `haven't`; two regression cases cover “I haven't used AWS” and “I haven't worked with Splunk”. This is a fail-closed resume-evidence correction, not added experience.
+- **Commits:** source `03d4d7d330dcf1609d668a1fa2aecbc0fe946e91`; test `d226a0183a78598752945c6fa5cafec613b36581`. PR #570 is still DRAFT and unmerged/unreleased.
+- **Exact-head results:** confirmed-skill regression [45338791921](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791921) **SUCCESS, 53/53**; WhatsApp recovery [45338791841](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791841) SUCCESS; Kompas baseline [45338791879](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791879) SUCCESS; Plan/REA schema [45338791842](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791842) SUCCESS. Full CI [45338791876](https://github.com/eshwarjay0-delS/job-dashboard/actions/runs/45338791876) **FAILED at lint**: `prefer-const` in `src/lib/kompasConsistency.ts:1059` (1 error, 267 warnings); type-check/build/tests were skipped.
+- **Production:** unchanged READY master `794e8cfdbd3103409552857806bab89851d5bfcb`; this resume correction is not live. No candidate resume/JD/DOCX, model call or live acceptance occurred.
+- **Hard wall:** local clone fails DNS for GitHub; remote CI is available. PR #554 is green but cannot merge without a second authorized reviewer; the Safe Merge Gate is disabled. No bypass.
+  
+Continue: keep #570 draft; after the shared #554 review/merge gate clears, rerun exact-head full CI and then protected preview/owner-authorized DOCX acceptance.
+
+
+## 23 November 2026 23:49 UTC — Round 15 release and common CI blocker reconciled
+
+- **Production:** current master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at Vercel production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases independently point to it. This is Round 15's JSON answer-path gate fix. Full CI `45092314450` failed at Lint on `src/lib/kompasConsistency.ts:1059` (`prefer-const`); type-check/build and downstream gates were skipped. Kompas baseline `45092314520` and Plan/REA `45092314531` passed.
+- **Shared Kompas PR #554:** head `4fafd56663bb5ddce064dcebea8802d758bb8259` has full CI `45122715488`, cross-device `45122715477`, baseline `45122715552`, Plan/REA `45122715522`, and Windows `45122715531` all SUCCESS. It is open/unmerged; independent authorized review is required. Self-approval was rejected. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled, so no automatic reviewer/merge is active.
+- **Current-master approved restacks:** #570 resume confirmed-skill (40/40), #571 Gmail/mobile (12/12), #572 WhatsApp recovery (133/133), #573 crawler (41/41), and #574 contract search (4/4) each have focused success and Kompas baseline success. Their full CI runs all fail at the common master lint blocker; no full suite or deployment acceptance is claimed. #573 full CI `45289867721` and focused `45289867811`; #574 full CI `45290294631`, focused `45290294629`, baseline `45290294762`.
+- **Lint follow-up #556:** exact head `73215d9682675d2d658b84a7878ac49869453315` includes the behavior-neutral `let`→`const` correction and fixture-state additions. Full CI `45145972568` fails 24 first-press Listening/typed/voice assertions because the runtime hold from #554 is not in master. Do not weaken tests or merge a failing gate.
+- **Independent review performed:** contract-search source reviewed; helper checks any whitespace-separated term across title/company/location/body/tags and preserves technical punctuation. The exact focused workflow is 4/4; I also ran the exact helper/test in an isolated Node 22.16.0 temporary layout, 4/4 passed. This is not a full repository build or live contract-board smoke.
+- No local canonical checkout/dependencies. No live resume/JD/DOCX, Gmail/inbox, WhatsApp send/replay, R2/Meta, crawl, production deploy of the pending restacks, or native-device acceptance occurred. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified.
+
+Continue: obtain an independent authorized review for #554; do not self-approve or merge. After normal merge, restack #570–#574 onto master and require exact-head full CI, protected preview, production READY/alias, and separate real acceptance. WhatsApp route implementation remains blocked until an approved runnable checkout supplies installed Next.js 16.3.8 route-handler documentation.
+
+- **Production:** current master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at Vercel production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases independently point to it. This is Round 15's JSON answer-path gate fix. The full CI run `45092314450` failed at Lint on `src/lib/kompasConsistency.ts:1059` (`prefer-const`); type-check/build and downstream gates were skipped. Kompas baseline `45092314520` and Plan/REA `45092314531` passed.
+- **Shared Kompas PR #554:** head `4fafd56663bb5ddce064dcebea8802d758bb8259` has full CI `45122715488`, cross-device `45122715477`, baseline `45122715552`, Plan/REA `45122715522`, and Windows `45122715531` all SUCCESS. It is open/unmerged; independent authorized review is required. Self-approval was rejected. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled, so no automatic reviewer/merge is active.
+- **Current-master approved restacks:** #570 resume confirmed-skill (40/40), #571 Gmail/mobile (12/12), #572 WhatsApp recovery (133/133), #573 crawler (41/41), and #574 contract search (4/4) each have focused success and Kompas baseline success. Their full CI runs all fail at the common master lint blocker; no full suite or deployment acceptance is claimed. #573 full CI `45289867721` and focused `45289867811`; #574 full CI `45290294631`, focused `45290294629`, baseline `45290294762`.
+- **Lint follow-up #556:** exact head `73215d9682675d2d658b84a7878ac49869453315` includes the behavior-neutral `let`→`const` correction and fixture-state additions. Full CI `45145972568` fails 24 first-press Listening/typed/voice assertions because the runtime hold from #554 is not in master. Do not weaken tests or merge a failing gate.
+- **Independent review performed:** contract-search source reviewed; helper checks any whitespace-separated term across title/company/location/body/tags and preserves technical punctuation. Exact focused 4/4 is green; full CI still fails. No code changed in this run.
+- No local checkout/dependencies. No live resume/JD/DOCX, Gmail/inbox, WhatsApp send/replay, R2/Meta, crawl, production deploy of the pending restacks, or native-device acceptance occurred. The 17 Oct 17:28 Chicago WhatsApp delivery remains unverified.
+
+Continue: obtain an independent authorized review for #554; do not self-approve or merge. After normal merge, restack #570–#574 onto master and require exact-head full CI, protected preview, production READY/alias, and separate real acceptance. WhatsApp route implementation remains blocked until an approved runnable checkout supplies installed Next.js 16.3.8 route-handler documentation.
+
 
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
@@ -794,3 +968,132 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 23 November 2026 23:38 UTC — current-master continuation and review-wall correction
+
+- **#570 confirmed-skill resume**: head `b84664ece0d2b3a3cbd09dcd3766faebd528bd2d`; 40/40 focused, WhatsApp recovery and baseline SUCCESS; full CI FAILED at master `src/lib/kompasConsistency.ts:1059` `prefer-const`. No live resume/JD/DOCX.
+- **#571 Gmail/mobile**: exact head `0ccde7e48784b2e845e92b859da70c366e5b9d83`; corrected normal-flow dashboard-shell test; Gmail/mobile 12/12 and baseline SUCCESS; full CI FAILED at the same master lint. Four accounts maximum; proactive Poke worker, scheduler, notifications and sending remain disabled. No Gmail API/OAuth/inbox/send/phone acceptance.
+- **#572 WhatsApp explicit same-account Files fallback**: head `6046251fce4d2cdb6a8f4481454b8a468b551132`; recovery 133/133, Plan/REA and baseline SUCCESS; full CI FAILED at same master lint. Only durable, verified same-account explicit selection can send an unchanged `Original resume — NOT TAILORED`; no live send/replay, and the 17 Oct 17:28 Chicago incident remains unverified.
+- **#573 crawler abort/timeout**: head `2cb83ad60304ccc98e10d70ce12c10e086fe3440`; focused 41/41 and baseline SUCCESS; full CI FAILED at same master lint. Manual/on-demand only, no crawl/DB mutation.
+- **#574 contract search**: head `98ba36c2cfac9cf316ad05f1b90805adab35aeba`; focused and full CI still IN PROGRESS, baseline SUCCESS. No live portal/crawl/application.
+- All #570–#574 are DRAFT/unmerged/unreleased. Production remains READY on master `794e8cfdbd3103409552857806bab89851d5bfcb` (deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`). 
+- Automation inventory: **MFit Completion Watch ENABLED; MFit Safe Merge Gate DISABLED; Kompas Continuous Voice Delivery DISABLED; no Bible-Keeper found**. This supersedes older documentation saying Safe Merge Gate is active. #554 has five green gates but lacks an independent authorized review; no automatic reviewer is sequencing it. 
+- Exact wall: no canonical local checkout/dependencies; Vercel Sandbox 402 usage limit (reset 1 Dec 2026). The installed Next.js 16.3.8 Route Handler guide was recovered from the prior GitHub Actions audit logs and read this run. Remote GitHub source/Actions work; no local tests. No live resume/JD/DOCX, Gmail/WhatsApp, model, crawl, application or device acceptance. 
+**Continue:** independent authorized reviewer for #554; exact-head CI #574 and preserve #572/#573; after #554 review/merge, rebase master-based drafts and rerun full CI, then protected preview and real acceptance. Keep all drafts; do not merge or claim release from green focused tests.
+
+ 
+## 24 November 2026 03:25 UTC — Round 15 production and exact-head gate reconciliation
+
+- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`. Both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to this exact SHA. Round 15 is live: the non-streaming `jsonAnswer` path now applies `gateDisplayedAnswer` before returning. Live authenticated Round 16 response acceptance is still unavailable; synthetic tests are not a live quality claim.
+- **#554 Kompas S5/Listening hold:** exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI 45123770495, Kompas baseline 45123770380, cross-device 45123770446, Plan/REA 45123770546, Windows executable 45123770398 all SUCCESS. It is ready for review, but only the owner's COMMENTED review exists. A second authorized reviewer is required; MFit Safe Merge Gate is disabled. No merge/deploy attempted.
+- **#572 WhatsApp fallback:** latest head `4da31c2160a4a06b90f3fb50e765b649725f626e`. Recovery 45310913213 (133/133), baseline 45310913178 and Plan/REA 45310913198 SUCCESS. Full CI 45310913176 FAILS in Kompas question-framing/typed/voice VM suite: 24 tests report `answerCtl is not defined` in `scripts/tests/kompas-voice.test.mjs`. This is the shared harness/Listening-hold dependency addressed by #554, not a failed WhatsApp recovery gate. Keep draft; do not duplicate #554 or merge before its independent review.
+- **#570 resume alignment:** latest head `880e9a0c65a3a97e08abaa4ca1aa6789a7139af7`; focused confirmed-skill 45315236385, recovery 45315236440, baseline 45315236389 (92/92), Plan/REA 45315236439 SUCCESS. Full CI 45315236384 FAILS at `src/lib/kompasConsistency.ts:1059 prefer-const`. No personal DOCX acceptance.
+- **#571 Gmail/mobile:** head `0ccde7e48784b2e845e92b859da70c366e5b9d83`; focused 45289419319 (12/12) and baseline 45289419450 SUCCESS; full CI 45289419329 FAILS at the same lint. Four-account ceiling; proactive workers/schedulers/notifications/sending remain disabled. No inbox/device acceptance.
+- **#573 crawler abort diagnostics:** head `2cb83ad60304ccc98e10d70ce12c10e086fe3440`; focused 45289867811 (41/41), baseline 45289867654 SUCCESS; full CI 45289867721 FAILS at the same lint. Manual/on-demand only; no crawl or DB mutation.
+- **#574 contract match-any search:** head `98ba36c2cfac9cf316ad05f1b90805adab35aeba`; focused 45290294629 (4/4), baseline 45290294762 SUCCESS; full CI 45290294631 FAILS at the same lint. Source review of the narrow helper/test showed the intended OR matching across title/company/location/body/tags and whitespace splitting that preserves `C++`, `C#` and `.NET`; this is not live contract-board acceptance.
+- **Execution limits:** no canonical checkout or installed dependencies in the local container; remote GitHub source/Actions remains available. No local tests/build, authenticated resume/JD/DOCX, Gmail read/send, WhatsApp send/replay, model call, R2/DB mutation, live crawl, job application, or user-device acceptance occurred. The protected Vercel Sandbox usage wall is recorded to reset 1 Dec; no billing or quota bypass.
+
+**Continue:** obtain independent review for #554; after approved merge, restack #572/#570/#571/#573/#574 on the new master and rerun exact-head full CI and focused gates. Keep all unmerged PRs unreleased until review, protected preview and production READY/alias evidence; keep real acceptance gaps explicit.
+
+
+## 24 Nov 2026 continuation — exact-head release and regression follow-up
+
+- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb`; Vercel `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp` READY and the `job-dashboard-fawn.vercel.app` alias independently matches. No production deployment was made this run.
+- **WhatsApp #572:** the approved explicit same-account original fallback now has a filesystem-aware guard in the draft branch. Local mode verifies realpath containment and rejects symlink components; R2 keys retain object-key semantics; unavailable storage fails closed. Reviewable commits: `308de2b` (guard/tests), `792bed3` (storage-mode test mock), `460ed4` (workflow path coverage), `8f0784` (guard comment), `db7119` (load the real helper in the route harness), and latest comment-only `fc16b7`. The first remote runs failed because the test harness lacked the new imports; the mock was corrected, not hidden.
+- **WhatsApp evidence:** exact recovery workflow `45383542395` SUCCESS, **137/137 tests** on `db711900`; baseline `45383542593` SUCCESS; Plan/REA `45383542174` SUCCESS. Full CI `45383542432` FAILED only two shared Kompas Listening-hold assertions (tests 50 and 54; 70/72). The latest PR head `fc16b77` is comment-only beyond the tested `db711900`. No live WhatsApp send or historical 17 Oct 17:28 Chicago delivery evidence.
+- **Shared Kompas blocker #554:** exact head `4fafd566`; full CI `45123770495`, account-sync `45123770446`, baseline `45123770380`, Plan/REA `45123770546`, and Windows Caption Capture `45123770398` all SUCCESS. It still requires an independent authorized reviewer; do not self-merge or bypass review.
+- **Confirmed-skill resume #570:** exact head `bf46a4ec`; focused 53/53 pass, but full CI `45356155988` fails the master lint and recovery `45356156040` plus Plan/REA `45356156005` fail. The schema runner did not expose the underlying module-import stack; this remains untriaged. No resume/JD/DOCX acceptance.
+- **Gmail/mobile #571:** exact head `0ccde7e`; focused 12/12 and baseline pass; full CI `45289419329` fails at the shared master lint. Four-account limit remains; proactive Poke worker/scheduler/notifications/sending are disabled. No live inbox/OAuth/send or phone acceptance.
+- **Crawler #573:** exact head `5b719759`; focused 41/41, baseline and Plan/REA pass; full CI `45354245507` fails at the shared master lint. Manual/on-demand only; no live crawl.
+- **Contract search #574:** lint correction commit `3d03ea05`; contract-focused 4/4 and baseline passed on prior head, but full CI `45382941056` fails 24 Kompas question-framing/typed/voice tests because #554 is not merged. No live contract search acceptance.
+- **Execution:** local clone failed because github.com DNS could not resolve; code was inspected through GitHub and tested through remote Actions. No local build, live model call, source DOCX, WhatsApp/email action, crawler, or owner device was used.
+
+**Continue:** monitor the exact #572 full-CI run; after the independent #554 review and normal merge, conflict-aware restack #572, #570, #571, #573 and #574 onto current master and rerun each exact-head full CI plus focused gates. Only deploy a reviewed green merge; preserve the real 17 Oct, live resume/DOCX, Gmail two-inbox/mobile, crawler and contract acceptance gaps.
+
+## 24 November 2026 — Current-head blockers and final-DOCX approval provenance
+
+- **Confirmed-skill resume PR #570:** commit `7f249f5a0f52ecdac6e902dc7909497506c145f7` repaired a missing comma in `src/lib/plan-vision-journal.ts` that broke typecheck/schema on the prior head. Exact-head resume regression, WhatsApp recovery, Kompas baseline and Plan/REA schema passed. Full CI still fails 24 shared Kompas VM cases with `answerCtl is not defined`; the fix belongs to PR #554 and is not duplicated. No real resume/JD/DOCX or match score was generated.
+- **WhatsApp explicit-selection fallback PR #572:** head `fc16b77a349231d840e1c673ac93d1dfc0bf4d22`; recovery 137/137, baseline and Plan/REA pass; full CI 70/72 with two Listening-hold assertions (tests 50 and 54). The source now includes real-path containment and symlink escape regressions, but production delivery is not verified. Keep it draft until #554's independent review and exact-head full CI.
+- **Gmail/mobile PR #571:** head `0ccde7e48784b2e845e92b859da70c366e5b9d83`; focused 12/12 and baseline pass; full CI fails the same shared `prefer-const` at `src/lib/kompasConsistency.ts:1059`. Four accounts maximum; Poke scheduler/worker, notifications and sending remain disabled.
+- **Crawler PR #573:** head `5b719759066c649975b4582b41b20f111b194450`; crawler regression 41/41, baseline and Plan/REA pass; full CI fails the same shared lint. Manual/on-demand only; no live crawl.
+- **Contract search PR #574:** head `3d03ea05e797bd9d25b1fa12d2625e91268b0ffa`; focused contract tests 4/4 and baseline pass; full CI fails 24 shared Kompas VM cases with `answerCtl is not defined`. No live contract search acceptance.
+- **Shared gate PR #554:** head `4fafd56663bb5ddce064dcebea8802d758bb8259` has full CI, cross-device, baseline, Plan/REA and Windows checks green, but still lacks an independent authorized reviewer. Do not merge or copy its fix into dependent branches.
+- **Final-DOCX Gemini loop approval correction:** direct owner approval recovered from accessible prior context at 15 Nov 2026 22:06:43 UTC authorizes scoring the actual final DOCX with the exact prompt `Give me an ATS score`, identifying weak/missing JD terms, correcting only source/explicit-confirmation-supported gaps, re-exporting and rechecking within a bounded budget. The 19 Nov 19:29:41 UTC reminder that it is unfinished does not revoke approval. PR #417 only implements the score-only stage; the correction/re-export/recheck stage remains approved and unimplemented. The prior 19 Nov proposed-only note is superseded, not erased.
+- **Production:** canonical master and both aliases were verified READY at `794e8cfdbd3103409552857806bab89851d5bfcb`, deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`. No deployment was attempted in this run.
+- **Execution limit:** GitHub source and Actions were accessible, but a local clone failed DNS resolution for `github.com`; no local build, personal DOCX, model call, live WhatsApp/Gmail, crawl, or owner-device test occurred.
+
+**Continue:** after #554 receives independent review and merges normally, conflict-aware restack the approved #572/#570/#571/#573/#574 slices and run exact-head full CI, focused gates, protected preview and production READY/alias checks. In parallel, current-master restack #417 and implement the approved bounded final-DOCX loop only with source-boundary tests. Preserve all live acceptance gaps; do not equate green unit tests with 95–100%/98% resume quality.
+
+## 24 November 2026 13:42 UTC — Gmail interview-board anchors restacked onto master
+
+- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` independently point to that deployment.
+- **New independent slice:** PR #577 is rebased directly on master, commit `723a13377fe8c53e7ba2d67821429485978459fe` (7 files). It makes Calendar anchors and Mail links account+thread-specific, trims/lowercases account identity, and uses synthetic `example.test` fixtures. It does not include #576's digest/mobile changes. Exact-head focused workflow `45409242379` SUCCESS; no exact-head full CI run was found yet. It remains DRAFT and is not deployed.
+- **Shared gate:** PR #554 head `4fafd566` has full CI, cross-device, Plan/REA, baseline and Windows checks SUCCESS but needs a second authorized reviewer. Safe Merge Gate is disabled; do not self-merge or copy the runtime fix around it.
+- **WhatsApp #572:** exact head `fc16b77`; recovery `45383665978`, baseline `45383665803`, Plan/REA `45383666072` SUCCESS; full CI `45383666040` FAILED in the Kompas question/one-press/typed-input/voice regression step. The earlier 137/137 recovery run was on predecessor `db711900`, not this head. No real send/replay or 17 Oct receipt.
+- **Resume #570:** exact head `7f249f5`; confirmed-skill, recovery, baseline and Plan/REA gates SUCCESS; full CI `45386097754` FAILED in the same shared Kompas question/voice step. Earlier 53/53 focused result was on `d226a018`; no DOCX/ATS acceptance.
+- **Gmail/mobile #571:** focused 12/12 and baseline SUCCESS; full CI `45289419329` FAILED at Lint. Four-account ceiling, Poke worker/scheduler/notifications/sending disabled; no inbox/phone acceptance.
+- **Crawler #573:** 41/41 focused, baseline and Plan/REA SUCCESS; full CI `45354245507` FAILED at Lint. Manual/on-demand only; no crawl.
+- **Contract search #574:** focused 4/4 and baseline SUCCESS; full CI `45290294631` FAILED in Kompas question/voice tests.
+- **Crawler pagination #575:** dedicated manual-only, freshness/classification, baseline and Plan/REA gates SUCCESS; full CI `45400055679` FAILED at Lint. No crawl.
+- **Gmail/mobile base #576:** baseline SUCCESS; full CI `45401091730` FAILED at Lint. #577 no longer depends on this PR.
+- **Gemini final-DOCX loop:** direct 15 Nov approval remains recorded; #417 implements score-only first stage on a stale base, no actual DOCX/model call or bounded correction loop yet.
+- **Execution wall:** local checkout/dependencies unavailable (GitHub DNS); protected preview needs private `KOMPAS_VERCEL_API_TOKEN`. GitHub Actions is available. No personal source DOCX, Gmail API/OAuth, inbox mutation, WhatsApp, crawler, model or device action occurred.
+
+**Continue:** check exact-head full CI for #577; keep #554/#572/#570/#571/#573/#574/#575/#576 unmerged until the independent reviewer and shared Kompas CI dependencies clear. Then restack conflict-aware, rerun all gates, protected preview, production READY/aliases and owner-consented acceptance.
+
+## 24 November 2026 18:34 UTC — WhatsApp exact-shape regression and current release gates
+
+- **Production:** master `794e8cfdbd3103409552857806bab89851d5bfcb` remains READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases resolve to it. No new deployment.
+- **WhatsApp #572:** test-only commit `741f8eeb284b2faeb5223c80162cc5f7d1344705` adds the exact 100% raw/support + incomplete + `role_evidence_gaps` hold regression requested by review 6041959064. Recovery 45460461642 passed 138/138; baseline 45460461650 and schema 45460461660 passed. Full CI 45460461747 failed 70/72, only Listening-hold tests 50 and 54. Runtime code unchanged; no live send/replay.
+- **Shared Kompas gate #554:** exact head `4fafd56663bb5ddce064dcebea8802d758bb8259` has five green gates but still lacks a second authorized reviewer. No self-approval or merge.
+- **Gmail #577:** exact head `4c6c2bb803055038e1ddbbdf065e934d08992328` replaces raw email in account/thread anchors with a stable hash. Focused 11/11, schema and baseline pass; full CI fails the existing `prefer-const` lint at `src/lib/kompasConsistency.ts:1059`. DRAFT; no protected preview or real two-inbox/mobile acceptance.
+- **Resume #570:** focused, recovery, baseline and schema pass; full CI fails in shared Kompas question/typed/voice tests. No DOCX or live ATS result.
+- **Gmail/mobile #571:** 12/12 focused and baseline pass; full CI fails the shared lint. Four-account limit; Poke scheduler, worker, notifications and sending remain disabled.
+- **Crawler #573:** 41/41 focused, baseline and schema pass; full CI fails shared lint. Manual/on-demand only.
+- **Contract search #574:** 4/4 focused and baseline pass; full CI fails shared Kompas question/voice tests. No live search.
+- **Runtime evidence:** the seven-day WhatsApp error groups last occurred on older deployments through 20 Nov; the current 30-minute error/warning grouping is empty. This does not prove usage or delivery.
+- **Historical 17 Oct 17:28 Chicago request:** still held/undelivered at the screenshot point, with no output DOCX, R2 version, webhook correlation, Meta outbound ID or signed receipt. No replay or resend. Recruiter JD email was read-only; recruiter-provided years/visa text is not candidate evidence. Exact 27,724-byte source was not re-established this run.
+- **Execution/coordination:** local clone/DNS and installed Next.js docs remain unavailable; Vercel Sandbox quota wall is recorded until 1 Dec. MFit Completion Watch enabled; Safe Merge Gate and Kompas Continuous Voice Delivery disabled; no Bible-Keeper found. No duplicate voice work or external sends.
+
+**Continue:** obtain the required independent review for #554; then restack the approved dependent slices and rerun exact-head full CI before any merge or production deployment. Keep the real WhatsApp, DOCX, Gmail/mobile, crawler, Kompas 50-pair and native-device acceptance gates open.
+
+
+### Plan & Vision baseline refresh
+
+The product-plan revision is now `2026-11-24.9` in `src/lib/plan-vision.ts`. Its Gmail, Resume, Applications and Kompas baselines append the current 24 Nov exact-head evidence while retaining the older history. This is a documentation-only update, not a product-code release. PR #562 head `5b85399d19e6edfae4a0f211e79943845cf73e52`: Plan/REA schema 45462324685 SUCCESS, Kompas baseline 45462324756 SUCCESS, full CI 45462324676 still IN PROGRESS at last check.
+
+
+## 24 November 2026 12:46 CST — exact-head continuation and shared gate reconciliation
+
+- **Live production:** Canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` both resolve to that exact deployment. No candidate PR is live.
+- **PR #554 is the shared Kompas gate:** head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI `45123770495`, cross-device `45123770446`, Plan/REA `45123770546`, baseline `45123770380`, and Windows EXE `45123770398` are all SUCCESS. It combines approved S5 resume-authority and first-press Listening-hold changes, VM fixture completion, and the `prefer-const` correction in `kompasConsistency.ts`. The exact code diff was reviewed for scope. It still needs a second authorized reviewer; Safe Merge Gate is disabled, so no self-merge or bypass.
+- **PR #572 WhatsApp fallback:** current head `741f8eeb284b2faeb5223c80162cc5f7d1344705`; recovery `45460461642`, baseline `45460461650`, Plan/REA `45460461660` SUCCESS. Full CI `45460461747` is 70/72: failures #50 and #54 assert first-press Listening hold, which #554 has not yet landed in master. Keep draft. Exact same-account explicit Files/Library selection, path/byte/identity proof and the label `Original resume — NOT TAILORED` remain required. The 17 Oct 17:28 Chicago delivery is still unverified (output DOCX, R2 object/version, webhook correlation, Meta outbound ID and signed receipt missing).
+- **PR #570 resume confirmed-skill alignment:** head `7f249f5a0f52ecdac6e902dc7909497506c145f7`; focused confirmed-skill, WhatsApp, baseline and Plan/REA runs `45386097601`, `45386097708`, `45386097908`, `45386097737` SUCCESS; full CI `45386097754` fails on missing `answerCtl` in the shared Kompas VM fixtures. No personal resume/JD, exported DOCX or live match acceptance.
+- **PR #576 Gmail digest/mobile:** head `1757fb68715081525de0f8c7b8bd3bf531ebff20`; Kompas baseline `45401091926` SUCCESS, full CI `45401091730` fails on the shared `prefer-const` lint error. Four-account limit and normal-flow mobile expansion remain; Poke worker, notifications and sending stay disabled. No inbox/device acceptance.
+- **PR #575 crawler pagination:** head `e618ae96f008786ee3bc6d81f1563ae7ee1340c7`; crawler, freshness, manual-only and Plan/REA gates `45400057277`, `45400056874`, `45400060536`, `45400055757` SUCCESS; full CI `45400055679` fails on `prefer-const`. Crawl remains manual/on-demand; no live crawl or DB write.
+- **PR #574 contract search:** head `3d03ea05e797bd9d25b1fa12d2625e91268b0ffa`; focused search `45382941034` and baseline `45382941068` SUCCESS; full CI `45382941056` fails the shared VM `answerCtl` fixture. No live contract-board acceptance.
+- **PR #573 crawler abort/timeout diagnostics:** head `5b719759066c649975b4582b41b20f111b194450`; crawler regression `45354245589`, baseline `45354245689`, Plan/REA `45354245480` SUCCESS; full CI `45354245507` fails at `prefer-const`. No crawl.
+- **PR #577 Gmail account-scoped interview links:** head `4c6c2bb803055038e1ddbbdf065e934d08992328`; focused account-scoped links, Plan/REA and baseline `45452980973`, `45452980985`, `45452980956` SUCCESS; full CI `45452981389` fails at `prefer-const`. It uses an opaque account hash plus thread ID, not plaintext Gmail in the fragment; this is a navigation key, not security. No Gmail API/OAuth or email action.
+- **PR #555 two-line JD parser:** stacked on #554, draft/non-mergeable; only Plan/REA run `45106144078` SUCCESS. It must not merge ahead of #554.
+- **Independent hard wall:** no canonical local checkout or installed dependencies in this environment, so no local test/build. Several PRs are green only on focused gates; shared full CI cannot be cleared until #554 is independently reviewed and merged normally. Protected Vercel preview also requires private `KOMPAS_VERCEL_API_TOKEN`. The separate Kompas voice/caption automation is disabled and this run did not edit voice/audio/caption runtime. No real Gmail, WhatsApp send/replay, DOCX, crawl, application, model call, R2/DB mutation or native-device acceptance occurred.
+
+**Continue:** obtain the second authorized review for #554. After it merges normally, restack #572 and #570 first, then #571/#576 and #573–#575/#577, rerun each exact-head full CI and focused gate, and keep all candidates unreleased until protected preview, production READY/alias and owner-authorized live acceptance are recorded.
+
+
+## 24 November 2026 13:53 CST — run 11 continuation and independent crawler review
+
+- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; independent alias lookup confirms `job-dashboard-fawn.vercel.app` points to it. No redeploy was needed.
+- **PR #554:** exact head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI, Kompas baseline, cross-device, Plan/REA and Windows checks all SUCCESS. It is still awaiting a second authorized reviewer; self-approval is rejected. Safe Merge Gate is disabled. No merge attempted.
+- **PR #572 WhatsApp fallback:** exact head `741f8eeb284b2faeb5223c80162cc5f7d1344705`; recovery, baseline and schema checks SUCCESS; full CI FAILURE on the two first-press Listening-hold assertions covered by #554. No merge/deploy or real send.
+- **Other approved master restacks:** #570 confirmed-skill, #571 Gmail/mobile, #573 crawler diagnostics, #574 match-any search, #575 clearance pagination, #576 Gmail digest/mobile and #577 account-scoped links remain unmerged. Their focused/baseline gates are green where present; each full CI is still failing on the shared current-master Kompas/lint dependency. No preview/live acceptance is claimed.
+- **New review finding:** PR #575 offset paging orders on mutable `last_seen_at`; overlapping manual crawls can update that key during paging and shift offsets. Comment [7142844746](https://github.com/eshwarjay0-delS/job-dashboard/pull/575#issuecomment-7142844746) asks for mitigation or a documented concurrency exclusion plus regression. This is a static risk, not a confirmed runtime defect; no local test was run.
+- **Historical WhatsApp incident:** 17 Oct 2026 17:28 Chicago remains unverified. Generated DOCX, R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt are still missing; no replay/resend.
+- **Execution wall:** no canonical local checkout or installed Next.js 16.3.8 guide (GitHub DNS fails); Vercel Sandbox is blocked by storage usage; protected preview needs the private `KOMPAS_VERCEL_API_TOKEN`. No code test/build, Gmail/WhatsApp action, crawl, model call, R2/DB mutation or device acceptance was performed.
+
+**Continue:** the second authorized review of #554 is the hard gate. Once normally merged, conflict-aware restack #572 and #570, then #571/#576 and #573–#575/#577; rerun exact-head full CI, protected preview and production acceptance. Keep the #575 pagination drift review open until mitigated or explicitly excluded.
+
+
+## 24 November 2026 13:53 CST — second crawler review finding
+
+PR #575 now has two static-review comments: [offset-pagination drift](https://github.com/eshwarjay0-delS/job-dashboard/pull/575#issuecomment-7142844746) and [manual POST duration mismatch](https://github.com/eshwarjay0-delS/job-dashboard/pull/575#issuecomment-7142902775). The current `POST /api/crawl/jobs` route exports `maxDuration = 60`, while `runCrawl` allows a 230-second start deadline and up to 60 seconds per portal, with comments expecting roughly 290 seconds. The legacy secret-protected `GET /api/crawl/run` has `maxDuration = 300`, but product documentation identifies POST as the normal manual trigger. This is a source-config mismatch; no crawl was run. Reconcile route duration and runner budget after the installed Next.js 16.3.8 guide and plan limits are available, and add a test. Do not change cron or trigger a live crawl.
