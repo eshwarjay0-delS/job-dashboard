@@ -27,7 +27,7 @@ export const WHATSAPP_JOB_POST_FLOOR = 70
 const WHATSAPP_SHORTFALL_REASONS = new Set([
   "jd_coverage_below_floor",
   "supported_coverage_below_floor",
-  "unverified_jd_terms",
+  
   "quality_not_deliverable",
   "role_evidence_gaps",
 ])
@@ -148,6 +148,9 @@ export function whatsappRewriteUsable(result: TailorResult): boolean {
   if (!result?.token) return false
   if (result.unchanged || !result.diff?.length) return false
   if (result.skills_only || result.partial || result.quality?.incomplete) return false
+  // Unverified JD-only claims must never pass as a shortfall-delivery file.
+  if (result.unverified_added_keywords?.length) return false
+  if (result.quality_blockers?.includes("unverified_jd_terms")) return false
   if (atsExportUnreadable(result.ats)) return false
   return whatsappResumeRejectionReasons(result).every(reason =>
     WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")
@@ -168,8 +171,8 @@ export function deliveredWithShortfall(result: TailorResult): boolean {
  * No selected email means the person uploaded that file. Two emails in one file
  * are a mixed profile and are not sent. */
 export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
-  if (!email) return true
-  const want = email.toLowerCase()
+  const want = String(email || "").trim().toLowerCase()
+  if (!want) return false
   const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
   return found.length === 1 && found[0] === want
 }
