@@ -8,7 +8,8 @@ const applyPage=fs.readFileSync(new URL('../../src/app/dashboard/apply/page.tsx'
 
 test('both live Apply result lanes enforce the shared clearance boundary',()=>{
  assert.match(aggregate,/requiresSecurityClearance\(`\$\{j\.title\} \$\{j\.description\}`\)/)
- assert.match(crawler,/rows\.filter\(job => !requiresSecurityClearance/)
+ assert.match(crawler,/collectFilteredPages/)
+ assert.match(crawler,/job => requiresSecurityClearance/
  assert.match(crawler,/searchParams\.get\("clearance"\) !== "include"/)
 })
 
