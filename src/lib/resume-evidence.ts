@@ -57,11 +57,11 @@ export function confirmedCandidateStatements(statements: readonly string[]): str
     const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:is|are)\s+missing|missing|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\s+missing|missing|don't|doesn't|didn't|cannot|can't))\b/i
     if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|cannot|can't)\b/i.test(line)) return []
     const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
-    const exception = line.match(/\b(?:except|excluding|but|however|not|never|without|missing)\b/i)
+    const exception = line.match(/\b(?:except|excluding|but|however|not|never|without|no|lack(?:s|ing)?|missing)\b/i)
     // A blanket claim with an exception is not blanket evidence. Also reject a
     // self-contradictory list that names the same skill on both sides of its exception.
     if (hasBlanketConfirmation && exception) return []
-    const positive = exception ? line.slice(0, exception.index).trim() : line
+    const positive = exception ? line.slice(0, exception.index).trim().replace(/(?:,|\b(?:and|or))\s*$/i, "").trim() : line
     if (exception && positive) {
       const supported = new Set(confirmationTerms(positive))
       const excluded = confirmationTerms(line.slice(exception.index! + exception[0].length))
