@@ -23,3 +23,13 @@ Interview matching already uses receiving account + provider thread ID, but the 
 - Full CI remains blocked by shared Kompas #554 dependency; #554 has five exact-head gates green but needs a second authorized reviewer. Do not copy or merge around that gate.
 - No local tests (no canonical checkout/dependencies). Protected Vercel preview requires private `KOMPAS_VERCEL_API_TOKEN`.
 - Two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain separate. No Gmail API/OAuth, inbox mutation, email send or real-device acceptance occurred.
+
+
+## 24 November 2026 — opaque account anchor correction
+
+The review identified that the first master-restack implementation placed the Gmail address in a public DOM id / URL fragment. The helper now emits a stable 16-hex-character hash of the normalized receiving inbox plus the provider thread ID. The thread ID remains in the fragment for direct card navigation; the inbox address does not. The hash is a UI key, not an authentication control.
+
+- Source commit: `8ce61c327f78b18c517bbb6dc5688336f4fe0008`.
+- Regression commit: `0e91d68c2a076f26616414da137343950b7f15d1`.
+- Tests assert same-account normalization, distinct anchors for the same provider thread ID in different inboxes, and absence of the plaintext email from the fragment.
+- Exact-head focused workflow is pending; full CI remains dependent on the separately reviewed #554 Kompas fix. No local checkout, protected preview, Gmail API/OAuth, inbox mutation, email send or device acceptance occurred.
