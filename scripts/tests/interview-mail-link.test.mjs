@@ -18,13 +18,15 @@ test('a thread and its interview card match on account and thread, whatever the 
   assert.equal(interviewThreadKey(' A@B.com ', 't'), 'a@b.com:t')
 })
 
-test('same provider thread IDs in different inboxes have distinct board anchors and links', () => {
+test('same provider thread IDs in different inboxes have opaque, distinct board anchors', () => {
   const one = interviewBoardAnchor('One@example.test', 'abc123')
   const two = interviewBoardAnchor('Two@example.test', 'abc123')
-  assert.equal(one, 'interview-one@example.test:abc123')
-  assert.equal(two, 'interview-two@example.test:abc123')
-  assert.notEqual(one, two)
-  assert.equal(interviewBoardHref('abc123', 'ONE@example.test'), '/dashboard/calendar#interview-one@example.test:abc123')
+  assert.notEqual(one, two, 'same provider thread ID must not collide across inboxes')
+  assert.equal(interviewBoardAnchor(' ONE@example.test ', 'abc123'), one, 'account normalization stays stable')
+  assert.match(one, /^interview-[a-f0-9]{16}:abc123$/)
+  assert.ok(!one.includes('one@example.test'), 'DOM id must not contain the Gmail address')
+  assert.ok(!interviewBoardHref('abc123', 'ONE@example.test').includes('example.test'), 'URL fragment must not leak the inbox')
+  assert.equal(interviewBoardHref('abc123', 'ONE@example.test'), `/dashboard/calendar#${one}`)
   const board = readFileSync(new URL('../../src/app/dashboard/calendar/_components/interview-board.tsx', import.meta.url), 'utf8')
   const mail = readFileSync(new URL('../../src/app/dashboard/mail/page.tsx', import.meta.url), 'utf8')
   assert.match(board, /id=\{t\.threadId \? interviewBoardAnchor\(t\.account, t\.threadId\) : undefined\}/)
