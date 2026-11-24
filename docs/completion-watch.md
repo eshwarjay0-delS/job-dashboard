@@ -1,3 +1,12 @@
+
+## 24 November 2026 09:06 CST — historical WhatsApp evidence and resume/JD blocker
+
+- Accessible prior-chat evidence: screenshot context around 17:28 Chicago on 17 Oct showed a live resume-generation failure; the assistant said the file was held after repair. Full JD, generated DOCX and server trace were unavailable. No recipient/message text, R2 object/version, request/webhook correlation, Meta outbound ID or signed delivery/read receipt recovered.
+- Read-only iZap check: its single business has no connected WhatsApp number; status is disconnected with no inbound/outbound evidence. Searching 17 Oct for resume returned 0. This is a separate integration, not proof MFit's Meta channel was disconnected.
+- Open issue #132 records 30 Oct 100% raw/support coverage but quality_incomplete, quality_not_deliverable, role_evidence_gaps and five roles. PR #570 current-master restack contains role-scoped gap weaving/confirmed-skill alignment; focused gates pass, full CI fails at the shared #554 question/voice dependency. It is unmerged/unreleased. PR #572's incomplete-100%-coverage hold test is present; exact-head recovery/baseline/Plan-REA pass, full CI 70/72 awaits #554. Neither is production acceptance.
+- Issue #201 separately tracks durable safe recovery for swipe-reply refinement. No replay/send or live WhatsApp test.
+
+Continue: obtain independent review for #554; then restack and rerun #572/#570. Historical incident remains blocked on authorized MFit storage/provider evidence and a real end-to-end acceptance, not iZap.
 ## 24 November 2026 08:53 CST — current-head recheck and Gmail anchor privacy review
 
 - Production remains READY at master `794e8cfdbd3103409552857806bab89851d5bfcb` (`dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`); both canonical aliases match. Round 15 is live; no Round 16 model acceptance.
