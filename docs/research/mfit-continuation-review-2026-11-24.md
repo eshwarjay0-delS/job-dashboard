@@ -95,3 +95,8 @@ The product-plan revision is now `2026-11-24.9` in `src/lib/plan-vision.ts`. Its
 - **Execution wall:** no canonical local checkout or installed Next.js 16.3.8 guide (GitHub DNS fails); Vercel Sandbox is blocked by storage usage; protected preview needs the private `KOMPAS_VERCEL_API_TOKEN`. No code test/build, Gmail/WhatsApp action, crawl, model call, R2/DB mutation or device acceptance was performed.
 
 **Continue:** the second authorized review of #554 is the hard gate. Once normally merged, conflict-aware restack #572 and #570, then #571/#576 and #573–#575/#577; rerun exact-head full CI, protected preview and production acceptance. Keep the #575 pagination drift review open until mitigated or explicitly excluded.
+
+
+## 24 November 2026 13:53 CST — second crawler review finding
+
+PR #575 now has two static-review comments: [offset-pagination drift](https://github.com/eshwarjay0-delS/job-dashboard/pull/575#issuecomment-7142844746) and [manual POST duration mismatch](https://github.com/eshwarjay0-delS/job-dashboard/pull/575#issuecomment-7142902775). The current `POST /api/crawl/jobs` route exports `maxDuration = 60`, while `runCrawl` allows a 230-second start deadline and up to 60 seconds per portal, with comments expecting roughly 290 seconds. The legacy secret-protected `GET /api/crawl/run` has `maxDuration = 300`, but product documentation identifies POST as the normal manual trigger. This is a source-config mismatch; no crawl was run. Reconcile route duration and runner budget after the installed Next.js 16.3.8 guide and plan limits are available, and add a test. Do not change cron or trigger a live crawl.
