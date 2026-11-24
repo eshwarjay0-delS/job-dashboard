@@ -60,6 +60,11 @@ The final generation stage must be experience repair, not Skills keyword placeme
 
 The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. Mixed or negative confirmations narrow to the positive clause only: AWS with a no-GCP exception supports AWS, not GCP; no, lack and lacking are exception boundaries. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
 
+## Mixed negative clause boundary — 24 November 2026
+
+A positive skill statement followed by a negative contraction must not confirm the excluded skill. The approved parser correction adds explicit boundaries for don't/doesn't/didn't, haven't/hasn't, can't/cannot, won't and common contractions. Synthetic cases retain only AWS from mixed AWS/GCP statements and reject a contradictory repeated AWS. Code commit 9e49a49b9d46fb65f25dd6d6591cb325944dd044; tests commit 4c3f45f7130189382f0172b3726cbf1f14ca0115. The new branch has not yet received exact-head CI; a local reduced reproduction is not a repository test.
+
+
 ## Actual counts and weighting — 20 October 2026
 
 Matched-term counts must come from the exported document, not a weighted percentage converted into an integer. Weighted coverage remains separate; both measures must meet the existing acceptance thresholds. Cache generation 16 supersedes generation 15 while retaining its incomplete-rewrite safeguard. Evidence: `docs/research/resume-score-counts.md`.
