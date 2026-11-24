@@ -1041,3 +1041,19 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - **Execution wall:** local checkout/dependencies unavailable (GitHub DNS); protected preview needs private `KOMPAS_VERCEL_API_TOKEN`. GitHub Actions is available. No personal source DOCX, Gmail API/OAuth, inbox mutation, WhatsApp, crawler, model or device action occurred.
 
 **Continue:** check exact-head full CI for #577; keep #554/#572/#570/#571/#573/#574/#575/#576 unmerged until the independent reviewer and shared Kompas CI dependencies clear. Then restack conflict-aware, rerun all gates, protected preview, production READY/aliases and owner-consented acceptance.
+
+## 24 November 2026 18:34 UTC — WhatsApp exact-shape regression and current release gates
+
+- **Production:** master `794e8cfdbd3103409552857806bab89851d5bfcb` remains READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both canonical aliases resolve to it. No new deployment.
+- **WhatsApp #572:** test-only commit `741f8eeb284b2faeb5223c80162cc5f7d1344705` adds the exact 100% raw/support + incomplete + `role_evidence_gaps` hold regression requested by review 6041959064. Recovery 45460461642 passed 138/138; baseline 45460461650 and schema 45460461660 passed. Full CI 45460461747 failed 70/72, only Listening-hold tests 50 and 54. Runtime code unchanged; no live send/replay.
+- **Shared Kompas gate #554:** exact head `4fafd56663bb5ddce064dcebea8802d758bb8259` has five green gates but still lacks a second authorized reviewer. No self-approval or merge.
+- **Gmail #577:** exact head `4c6c2bb803055038e1ddbbdf065e934d08992328` replaces raw email in account/thread anchors with a stable hash. Focused 11/11, schema and baseline pass; full CI fails the existing `prefer-const` lint at `src/lib/kompasConsistency.ts:1059`. DRAFT; no protected preview or real two-inbox/mobile acceptance.
+- **Resume #570:** focused, recovery, baseline and schema pass; full CI fails in shared Kompas question/typed/voice tests. No DOCX or live ATS result.
+- **Gmail/mobile #571:** 12/12 focused and baseline pass; full CI fails the shared lint. Four-account limit; Poke scheduler, worker, notifications and sending remain disabled.
+- **Crawler #573:** 41/41 focused, baseline and schema pass; full CI fails shared lint. Manual/on-demand only.
+- **Contract search #574:** 4/4 focused and baseline pass; full CI fails shared Kompas question/voice tests. No live search.
+- **Runtime evidence:** the seven-day WhatsApp error groups last occurred on older deployments through 20 Nov; the current 30-minute error/warning grouping is empty. This does not prove usage or delivery.
+- **Historical 17 Oct 17:28 Chicago request:** still held/undelivered at the screenshot point, with no output DOCX, R2 version, webhook correlation, Meta outbound ID or signed receipt. No replay or resend. Recruiter JD email was read-only; recruiter-provided years/visa text is not candidate evidence. Exact 27,724-byte source was not re-established this run.
+- **Execution/coordination:** local clone/DNS and installed Next.js docs remain unavailable; Vercel Sandbox quota wall is recorded until 1 Dec. MFit Completion Watch enabled; Safe Merge Gate and Kompas Continuous Voice Delivery disabled; no Bible-Keeper found. No duplicate voice work or external sends.
+
+**Continue:** obtain the required independent review for #554; then restack the approved dependent slices and rerun exact-head full CI before any merge or production deployment. Keep the real WhatsApp, DOCX, Gmail/mobile, crawler, Kompas 50-pair and native-device acceptance gates open.
