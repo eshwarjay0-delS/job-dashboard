@@ -1000,3 +1000,20 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - **Execution limit:** GitHub source and Actions were accessible, but a local clone failed DNS resolution for `github.com`; no local build, personal DOCX, model call, live WhatsApp/Gmail, crawl, or owner-device test occurred.
 
 **Continue:** after #554 receives independent review and merges normally, conflict-aware restack the approved #572/#570/#571/#573/#574 slices and run exact-head full CI, focused gates, protected preview and production READY/alias checks. In parallel, current-master restack #417 and implement the approved bounded final-DOCX loop only with source-boundary tests. Preserve all live acceptance gaps; do not equate green unit tests with 95–100%/98% resume quality.
+
+## 24 November 2026 13:42 UTC — Gmail interview-board anchors restacked onto master
+
+- **Production:** canonical master `794e8cfdbd3103409552857806bab89851d5bfcb` is READY at `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` independently point to that deployment.
+- **New independent slice:** PR #577 is rebased directly on master, commit `723a13377fe8c53e7ba2d67821429485978459fe` (7 files). It makes Calendar anchors and Mail links account+thread-specific, trims/lowercases account identity, and uses synthetic `example.test` fixtures. It does not include #576's digest/mobile changes. Exact-head focused workflow `45409242379` SUCCESS; no exact-head full CI run was found yet. It remains DRAFT and is not deployed.
+- **Shared gate:** PR #554 head `4fafd566` has full CI, cross-device, Plan/REA, baseline and Windows checks SUCCESS but needs a second authorized reviewer. Safe Merge Gate is disabled; do not self-merge or copy the runtime fix around it.
+- **WhatsApp #572:** exact head `fc16b77`; recovery `45383665978`, baseline `45383665803`, Plan/REA `45383666072` SUCCESS; full CI `45383666040` FAILED in the Kompas question/one-press/typed-input/voice regression step. The earlier 137/137 recovery run was on predecessor `db711900`, not this head. No real send/replay or 17 Oct receipt.
+- **Resume #570:** exact head `7f249f5`; confirmed-skill, recovery, baseline and Plan/REA gates SUCCESS; full CI `45386097754` FAILED in the same shared Kompas question/voice step. Earlier 53/53 focused result was on `d226a018`; no DOCX/ATS acceptance.
+- **Gmail/mobile #571:** focused 12/12 and baseline SUCCESS; full CI `45289419329` FAILED at Lint. Four-account ceiling, Poke worker/scheduler/notifications/sending disabled; no inbox/phone acceptance.
+- **Crawler #573:** 41/41 focused, baseline and Plan/REA SUCCESS; full CI `45354245507` FAILED at Lint. Manual/on-demand only; no crawl.
+- **Contract search #574:** focused 4/4 and baseline SUCCESS; full CI `45290294631` FAILED in Kompas question/voice tests.
+- **Crawler pagination #575:** dedicated manual-only, freshness/classification, baseline and Plan/REA gates SUCCESS; full CI `45400055679` FAILED at Lint. No crawl.
+- **Gmail/mobile base #576:** baseline SUCCESS; full CI `45401091730` FAILED at Lint. #577 no longer depends on this PR.
+- **Gemini final-DOCX loop:** direct 15 Nov approval remains recorded; #417 implements score-only first stage on a stale base, no actual DOCX/model call or bounded correction loop yet.
+- **Execution wall:** local checkout/dependencies unavailable (GitHub DNS); protected preview needs private `KOMPAS_VERCEL_API_TOKEN`. GitHub Actions is available. No personal source DOCX, Gmail API/OAuth, inbox mutation, WhatsApp, crawler, model or device action occurred.
+
+**Continue:** check exact-head full CI for #577; keep #554/#572/#570/#571/#573/#574/#575/#576 unmerged until the independent reviewer and shared Kompas CI dependencies clear. Then restack conflict-aware, rerun all gates, protected preview, production READY/aliases and owner-consented acceptance.
