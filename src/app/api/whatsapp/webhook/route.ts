@@ -21,6 +21,8 @@ import { NextRequest, NextResponse, after } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, readPath, writePath, existsPath, deletePath } from "@/lib/storage"
+import { storageMode } from "@/lib/storagePolicy"
+import { explicitLibraryFallbackPathMatches } from "@/lib/whatsapp-explicit-library-path"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
@@ -781,24 +783,6 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 // Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
 type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean; explicitlySelected?: boolean }
 
-/** A fallback is permitted only for the exact same-account Library item the user named. */
-function explicitLibraryFallbackPathMatches(files: FromFiles | undefined, session: Session, userId: string): boolean {
-  if (!files?.explicitlySelected || !files.userDir || !files.email?.trim() || !files.rel || !files.abs || !session.resumePath) return false
-  const expectedRootRaw = filesOf(userId)
-  if (!expectedRootRaw) return false // no verified account-owned resume directory
-  const expectedRoot = path.resolve(expectedRootRaw)
-  const userRoot = path.resolve(files.userDir)
-  const selectedPath = path.resolve(files.abs)
-  const sessionPath = path.resolve(session.resumePath)
-  if (userRoot !== expectedRoot || selectedPath !== sessionPath || path.isAbsolute(files.rel)) return false
-  const parts = files.rel.split("/")
-  if (parts.length < 2 || parts.some(part => !part || part === "." || part === ".." || part.includes("\\"))) return false
-  const relativePath = path.relative(userRoot, selectedPath)
-  if (!relativePath || relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false
-  if (relativePath.split(path.sep)[0].toLowerCase() !== files.email.trim().toLowerCase()) return false
-  return path.resolve(userRoot, ...parts) === selectedPath
-}
-
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
   if (!session.jd || !session.resumePath) return quiet ? undefined : sendText(from, HELP)
@@ -865,7 +849,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd || !files || !explicitLibraryFallbackPathMatches(files, session, userId)) return false
+    if (!resumePath || !jd || !files || !(await explicitLibraryFallbackPathMatches(files, session, filesOf(userId), storageMode(process.env)))) return false
     // Require the explicit-selection proof to survive in the durable job; retries
     // cannot send from an in-memory or stale selection alone.
     const durable = await readResumeRecovery(job).catch(() => null)

@@ -1,9 +1,11 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
+import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { fileURLToPath } from "node:url"
-import { dirname, resolve } from "node:path"
+import { dirname, resolve, join } from "node:path"
+import { tmpdir } from "node:os"
 import vm from "node:vm"
 
 const require = createRequire(import.meta.url)
@@ -438,4 +440,57 @@ test("Nov4 hold transparency: rejection codes become plain words, unknowns dropp
   assert.equal(describeRejectionReasons(["quality_not_deliverable", "quality_not_deliverable"]).join(" | "), "the quality report does not clear the delivery bar")
   assert.equal(describeRejectionReasons(["some_future_blocker", "ats_check_failed"]).length, 0)
   assert.equal(describeRejectionReasons([]).length, 0)
+})
+
+
+const explicitFallbackGuard = loadTS("src/lib/whatsapp-explicit-library-path.ts").explicitLibraryFallbackPathMatches
+const whatsappRouteSource = readFileSync(resolve(root, "src/app/api/whatsapp/webhook/route.ts"), "utf8")
+
+test("filesystem explicit-library fallback is bound to the real account path and rejects symlinks", async () => {
+  const base = await mkdtemp(join(tmpdir(), "mfit-wa-path-"))
+  try {
+    const userDir = join(base, "user-resumes", "owner")
+    const email = "candidate@example.test"
+    const file = join(userDir, email, "Security", "resume.docx")
+    await mkdir(dirname(file), { recursive: true })
+    await writeFile(file, "synthetic resume bytes")
+    const selection = { userDir, email, rel: `${email}/Security/resume.docx`, abs: file, explicitlySelected: true }
+    const session = { resumePath: file }
+    assert.equal(await explicitFallbackGuard(selection, session, userDir, "filesystem"), true)
+
+    const outside = join(base, "outside.docx")
+    await writeFile(outside, "synthetic outside bytes")
+    const outsideLink = join(dirname(file), "outside-link.docx")
+    await symlink(outside, outsideLink)
+    assert.equal(await explicitFallbackGuard({ ...selection, rel: `${email}/Security/outside-link.docx`, abs: outsideLink }, { resumePath: outsideLink }, userDir, "filesystem"), false)
+
+    const insideLink = join(dirname(file), "inside-link.docx")
+    await symlink(file, insideLink)
+    assert.equal(await explicitFallbackGuard({ ...selection, rel: `${email}/Security/inside-link.docx`, abs: insideLink }, { resumePath: insideLink }, userDir, "filesystem"), false)
+
+    const outsideDir = join(base, "outside-dir")
+    await mkdir(outsideDir)
+    const linkedDir = join(userDir, email, "linked-dir")
+    await symlink(outsideDir, linkedDir, "dir")
+    const linkedFile = join(linkedDir, "resume.docx")
+    await writeFile(join(outsideDir, "resume.docx"), "synthetic outside directory bytes")
+    assert.equal(await explicitFallbackGuard({ ...selection, rel: `${email}/linked-dir/resume.docx`, abs: linkedFile }, { resumePath: linkedFile }, userDir, "filesystem"), false)
+  } finally {
+    await rm(base, { recursive: true, force: true })
+  }
+})
+
+test("explicit-library fallback keeps R2 key semantics and fails closed when storage is unavailable", async () => {
+  const userDir = "/tmp/mf/user-resumes/owner"
+  const email = "candidate@example.test"
+  const file = join(userDir, email, "Security", "resume.docx")
+  const selection = { userDir, email, rel: `${email}/Security/resume.docx`, abs: file, explicitlySelected: true }
+  assert.equal(await explicitFallbackGuard(selection, { resumePath: file }, userDir, "r2"), true)
+  assert.equal(await explicitFallbackGuard(selection, { resumePath: file }, userDir, "unavailable"), false)
+  assert.equal(await explicitFallbackGuard({ ...selection, explicitlySelected: false }, { resumePath: file }, userDir, "r2"), false)
+  assert.equal(await explicitFallbackGuard(selection, { resumePath: join(userDir, email, "Security", "other.docx") }, userDir, "r2"), false)
+})
+
+test("WhatsApp unchanged fallback awaits the account-root/storage-mode path guard", () => {
+  assert.match(whatsappRouteSource, /await explicitLibraryFallbackPathMatches\(files, session, filesOf\(userId\), storageMode\(process\.env\)\)/)
 })
