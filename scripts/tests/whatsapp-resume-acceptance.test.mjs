@@ -432,7 +432,7 @@ test("an unverified_jd_terms quality blocker stays a hard hold when the detail l
 })
 
 test("a missing selected-library profile email fails closed", () => {
-  const text = "Candidate One\\ncandidate1@example.test"
+  const text = "Candidate One\ncandidate1@example.test"
   assert.equal(chosenResumeMatchesProfile(text), false)
   assert.equal(chosenResumeMatchesProfile(text, ""), false)
   assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test"), true)
