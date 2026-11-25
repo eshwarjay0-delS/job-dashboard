@@ -845,3 +845,6 @@ PR #578 code/test head `afd6ede475fe61bf05432fafefe4b01e9aa8fdfb`: WhatsApp reco
 - **Coordination:** MFit Completion Watch is enabled. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled in the accessible automation inventory; no separate Bible-Keeper was found. No duplicate voice/caption changes were made.
 
 **Continue:** obtain exact-head CI for the updated #578 branch; if the shared Kompas gate still fails, keep it draft and continue the independent resume/JD alignment or contract-search work without merging or weakening the Kompas checks. Keep the 17 Oct delivery unverified until its original artifacts and signed provider receipt are recovered.
+
+
+Exact branch-head trigger: the code/test commit `5f38fc716849af742324dc667039b11765be09fb` and Plan/REA/Completion Watch/research reconciliation commit `aafbfad61b50f5246deb0b7b94b5f329fed02207` are now on PR #578. This follow-up documentation commit is deliberately separate from runtime source; require fresh Actions on the final branch head before any merge decision.
