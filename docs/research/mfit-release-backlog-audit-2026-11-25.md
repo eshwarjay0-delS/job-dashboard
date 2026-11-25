@@ -37,7 +37,7 @@ PR [#583](https://github.com/eshwarjay0-delS/job-dashboard/pull/583) is a draft 
 - Adds a control regression for the 30 Oct 100%-coverage, incomplete `role_evidence_gaps` shape.
 - Wires the suite into full CI and WhatsApp recovery.
 
-Commits: helper `7c82f0e32f23a4f010f18f58d98912282c36b36c`; tests `b8a8ab0ff7983364dc81f204b88e6b49d207ce01`; full-CI wiring `7131e27c6243499d16a5ee81a0a8435048a3b18b`; recovery-workflow wiring `05e130d941f4bc8fe090b7ca18fc318234643d37`; corrected newline fixture `a4f96d39b58024e090cdac250c4fa293a9177856`. The first recovery run failed one test because its fixture used a literal backslash-n; the failure was inspected and corrected. On the corrected exact head, Kompas baseline 45686440422 is SUCCESS; full CI 45686440622 and WhatsApp recovery 45686440634 were IN PROGRESS at audit time. No local test was run. PR #583 is not merged or deployed.
+Commits: helper `7c82f0e32f23a4f010f18f58d98912282c36b36c`; tests `b8a8ab0ff7983364dc81f204b88e6b49d207ce01`; full-CI wiring `7131e27c6243499d16a5ee81a0a8435048a3b18b`; recovery-workflow wiring `05e130d941f4bc8fe090b7ca18fc318234643d37`; corrected newline fixture `a4f96d39b58024e090cdac250c4fa293a9177856`. The first recovery run failed one test because its fixture used a literal backslash-n; the failure was inspected and corrected. On the corrected exact head, Kompas baseline 45686440422 and WhatsApp recovery 45686440634 are SUCCESS; full CI 45686440622 was IN PROGRESS at audit time. No local test was run. PR #583 is not merged or deployed.
 
 The route-level durable explicit-selection proof remains separate in [PR #572](https://github.com/eshwarjay0-delS/job-dashboard/pull/572), head `741f8eeb284b2faeb5223c80162cc5f7d1344705`. Its full CI 45460461747 fails two shared Listening-hold assertions; WhatsApp recovery 45460461642, baseline 45460461650 and schema 45460461660 pass. It remains DRAFT/non-mergeable. Shared PR [#554](https://github.com/eshwarjay0-delS/job-dashboard/pull/554), head `4fafd56663bb5ddce064dcebea8802d758bb8259`, has six successful checks but is non-mergeable and still needs a second authorized reviewer. Do not self-approve or bypass that gate.
 
@@ -45,7 +45,7 @@ The route-level durable explicit-selection proof remains separate in [PR #572](h
 
 The owner-approved mapping rule remains: explicit candidate-confirmed skills may be mapped into relevant existing project bullets, but the JD alone cannot create an employer, project, action, outcome, date, title, metric or credential. Web raw JD overlap remains 95%; WhatsApp may disclose a completed readable 70–94.9% result only with supported coverage at the approved floor; 98% remains a target, not a hard send threshold.
 
-PR [#570](https://github.com/eshwarjay0-delS/job-dashboard/pull/570), head `100b64d852a2ef5ad1ad3ae96653d86abeffbafc`, remains DRAFT. Schema 45682847656 and Kompas baseline 45682847151 pass; one focused regression 45682847187 passes, a second regression 45682847248 fails, and full CI 45682847235 fails. No candidate resume/JD/confirmation bundle was processed and no DOCX or live 95–100%/98% match is claimed.
+PR [#570](https://github.com/eshwarjay0-delS/job-dashboard/pull/570), latest branch head `0b0af88b82ff2f6bcd89f5384ac59c398f73cb66`, remains DRAFT. Focused confirmation 45682847187 passed 54/54 on prior head `100b64d`. Full CI 45682847235 and WhatsApp recovery 45682847248 stopped at typecheck because the PR's own REA entry omitted required `commits`; I added the missing exact source/test/final-head commit list in 0b0af88. No fresh exact-head workflow has appeared while the PR remains draft. Schema 45682847656 and baseline 45682847151 passed on the prior head. No candidate resume/JD/confirmation bundle was processed and no DOCX or live 95–100%/98% match is claimed.
 
 ## Poke-inspired Gmail/mobile
 
@@ -62,7 +62,7 @@ PR [#575](https://github.com/eshwarjay0-delS/job-dashboard/pull/575), head `31ae
 - `/api/crawl/jobs` has `maxDuration=60`, while the runner budget can exceed that; do not change route duration without the installed Next.js guide and Vercel-plan confirmation.
 - Protected preview requires the owner-controlled credential; it is unavailable in this environment.
 
-No crawl, portal request, DB mutation or application submission was performed. PR #574 contract search, head `3d4bfd58cd746088ee0147e6aab79d5b37abaf47`, has regression/schema/baseline checks green but full CI 45602990382 failed and remains DRAFT/non-mergeable.
+No crawl, portal request, DB mutation or application submission was performed. PR #581's one-line prefer-const cleanup is superseded: current master a17b3267 already has the const declaration and its full CI passed. Do not merge the duplicate draft. PR #574 contract search, head `3d4bfd58cd746088ee0147e6aab79d5b37abaf47`, has regression/schema/baseline checks green but full CI 45602990382 failed and remains DRAFT/non-mergeable.
 
 ## Execution environment and coordination
 
