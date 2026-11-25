@@ -30,7 +30,7 @@ function session(lines, question = SHOWN) {
   const box = { value: "" };
   const asked = [];
   const s = {
-    aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
+    aiBusy: false, aiBusySince: 0, autoTimer: null, answerCtl: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: lines.length + 1, answeredSeq: 0,
     transcript: lines.map((row, i) => (typeof row === "string" ? { seq: i + 1, who: "Them", text: row } : { seq: i + 1, who: row.who || "Them", text: row.text })),
     cards: [{ question, answer: OLD_A, qid: "q-shown" }], idx: 0,

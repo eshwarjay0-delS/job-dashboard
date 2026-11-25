@@ -6,7 +6,7 @@ import { patchKompasVoice } from '../patch-kompas-voice.mjs';
 const source = await readFile(new URL('../../public/kompas/app.js', import.meta.url), 'utf8');
 function section(start, end) { return source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))); }
 function env(extra = {}) {
- const state = { entries: [], errors: [], current: { id: 'one', role: 'Security', voiceVocabulary: ['CyberArk'] }, transcriptionEpoch: 0, transcriptionFailedEpoch: -1, transcriptionOrder: Promise.resolve(), interimOffUntil: 0, running: true, performance, AbortController, setTimeout, clearTimeout, Blob, currentOutputKey: async () => '', showPressed: () => {}, ...extra };
+ const state = { entries: [], errors: [], current: { id: 'one', role: 'Security', voiceVocabulary: ['CyberArk'] }, transcriptionEpoch: 0, transcriptionFailedEpoch: -1, transcriptionOrder: Promise.resolve(), interimOffUntil: 0, running: true, answerCtl: null, performance, AbortController, setTimeout, clearTimeout, Blob, currentOutputKey: async () => '', showPressed: () => {}, ...extra };
  state.status = m => state.errors.push(m);
  state.onTranscript = (who, text) => state.entries.push({ who, text });
  state.showCaption = () => {};
@@ -154,7 +154,7 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  // the press threw inside its own try and generateAnswer was never reached (0 !== 1). Same slices and the same
  // kind of stand-ins as scripts/tests/kompas-typed-question.test.mjs; a session always holds a placeholder card.
  const box={value:''},node={classList:{add(){},remove(){},toggle(){},contains:()=>false}};
- const s=env({aiBusy:false,aiBusySince:0,autoTimer:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],answerAnywayHeld:null,pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],cards:[{question:'Ready',answer:['…']}],idx:0,$:id=>id==='manualInput'?box:node,setChat:()=>{},logEvent:()=>{},logDecision:()=>{},renderCard:()=>{},toTop:()=>{},plainAnswer:a=>String(a),questionSource:()=>'Them',recentContext:()=>'',addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
+ const s=env({aiBusy:false,aiBusySince:0,autoTimer:null,answerCtl:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],answerAnywayHeld:null,pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],cards:[{question:'Ready',answer:['…']}],idx:0,$:id=>id==='manualInput'?box:node,setChat:()=>{},logEvent:()=>{},logDecision:()=>{},renderCard:()=>{},toTop:()=>{},plainAnswer:a=>String(a),questionSource:()=>'Them',recentContext:()=>'',addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
  vm.runInContext(source.slice(source.indexOf('const Q_CUE ='), source.indexOf(';', source.indexOf('const Q_CUE =')) + 1),s);
  vm.runInContext(section("const QW_LABELS =", '// ── Question intake'),s);
  vm.runInContext(section('// ── Question intake', '// ── end question intake ──'),s);

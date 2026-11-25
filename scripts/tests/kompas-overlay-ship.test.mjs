@@ -42,7 +42,7 @@ test("minimize stays minimized and the title bar sits above the preview", () => 
 })
 
 test("answer weight defaults to normal, cycles bold then semi, and the answer pane is sans", () => {
-  assert.match(app, /const ANSWER_WEIGHTS = \{ bold: 700, semi: 500, normal: 400 \}/)
+  assert.match(app, /const ANSWER_WEIGHTS = \{ bold: 700, semi: 600, normal: 400 \}/)
   assert.match(app, /LS\.get\("answerWeight", "normal"\)/)
   assert.match(app, /const order = \["bold", "semi", "normal"\]/)
   assert.match(css, /#answer,#answer li,#answer li\.passage[\s\S]*font-family:var\(--sans\) !important/)

@@ -472,7 +472,7 @@ function place(i) {
   win.focus();
 }
 
-function prefs() { return { onTop: !!config.onTop, isPrivate: !!config.isPrivate, opacity: config.opacity, version: app.getVersion() }; }
+function prefs() { return { onTop: !!config.onTop, isPrivate: !!config.isPrivate, opacity: config.opacity, answerWeight: config.answerWeight || "normal", version: app.getVersion() }; }
 
 function sendState() {
   if (!win || win.isDestroyed()) return;
@@ -486,8 +486,9 @@ function sendState() {
 // "pop-up-menu" up it sits above the taskbar. Re-asserted on blur, show, restore, wake and every 250 ms, because
 // another always-on-top window opened later (a meeting toolbar, another overlay) lands above it otherwise.
 const PIN_LEVEL = "screen-saver";
+let userMinimized = false;
 function holdOnTop() {
-  if (!win || win.isDestroyed() || win.isMinimized()) return;
+  if (!win || win.isDestroyed() || win.isMinimized() || userMinimized) return;
   win.setAlwaysOnTop(true, PIN_LEVEL);
   if (win.isVisible() && !picker) win.moveTop();
 }
@@ -503,9 +504,12 @@ function ensureOnScreen() {
   try { win.setBounds({ x: Math.round(wa.x + (wa.width - width) / 2), y: wa.y, width, height }); } finally { suppressMagnet--; }
   rememberBounds();
 }
-function bringBack() {
+function bringBack(opts) {
   if (!win || win.isDestroyed()) return;
+  const force = !!(opts && opts.force);
+  if (!force && (userMinimized || win.isMinimized())) return;
   if (win.isMinimized()) win.restore();
+  userMinimized = false;
   if (!win.isVisible()) win.showInactive();
   ensureOnScreen();
   win.webContents.invalidate();
@@ -515,6 +519,7 @@ function bringBack() {
 function setPrefs(p) {
   if (typeof p.isPrivate === "boolean") { config.isPrivate = p.isPrivate; applyProtection(); }
   if (typeof p.opacity === "number" && p.opacity >= 0.15 && p.opacity <= 1) config.opacity = p.opacity;
+  if (p.answerWeight === "bold" || p.answerWeight === "semi" || p.answerWeight === "normal") config.answerWeight = p.answerWeight;
   writeConfig();
   sendState();
   return prefs();
@@ -566,7 +571,8 @@ function createWindow() {
     frame: false,
     backgroundColor: "#00000000",
     resizable: true,
-    minimizable: true,                    // only so Windows reports Win+D / Win+M; a minimise is never kept (see "minimize" below)
+    minimizable: true,
+    closable: true,
     maximizable: false,
     fullscreenable: false,
     alwaysOnTop: true,
@@ -595,18 +601,20 @@ function createWindow() {
   win.on("blur", () => { holdOnTop(); setTimeout(holdOnTop, 120); });
   win.on("show", holdOnTop);
   win.on("restore", () => {
+    userMinimized = false;
     try { if (hideTaskbar) win.setSkipTaskbar(true); } catch {}
     holdOnTop();
   });
-  // Minimize stays minimized. A taskbar button is shown so the window can come back.
-  // The title-bar hide button still collapses to the mark.
+  // Minimize stays minimized. Blur, the pin timer, and a display change must not
+  // restore it. A taskbar button is shown so the window can come back.
   win.on("minimize", () => {
     if (!win || win.isDestroyed()) return;
+    userMinimized = true;
     try { win.setSkipTaskbar(false); } catch {}
   });
   // 250 ms: another always-on-top window (his Chrome is one, so is a meeting toolbar) covered Kompas for up to a second at 1000.
   const pinTimer = setInterval(() => { if (win && !win.isDestroyed() && !win.isFocused()) holdOnTop(); }, 250);
-  wc.on("render-process-gone", (_e, d) => { if (d.reason !== "clean-exit") setTimeout(() => { if (win && !win.isDestroyed()) { wc.reload(); bringBack(); } }, 500); });
+  wc.on("render-process-gone", (_e, d) => { if (d.reason !== "clean-exit") setTimeout(() => { if (win && !win.isDestroyed()) { wc.reload(); bringBack({ force: true }); } }, 500); });
   win.on("page-title-updated", (e) => e.preventDefault());
   win.on("moved", onMoved);
   win.on("resized", rememberBounds);
@@ -745,7 +753,14 @@ async function captionSnapshotOnce() {
 }
 function wireIpc() {
   ipcMain.on("kompas:collapse", (_e, on) => setCollapsed(typeof on === "boolean" ? on : !collapsed));
-  ipcMain.on("kompas:close", () => win && win.close());
+  ipcMain.on("kompas:minimize", () => {
+    if (!win || win.isDestroyed()) return;
+    userMinimized = true;
+    try { win.setSkipTaskbar(false); } catch {}
+    if (win.isMinimized()) return;
+    win.minimize();
+  });
+  ipcMain.on("kompas:close", () => { if (win && !win.isDestroyed()) win.close(); });
   ipcMain.handle("kompas:prefs", () => ({ collapsed, ...prefs() }));
   ipcMain.handle("kompas:set-prefs", (_e, p) => setPrefs(p || {}));
   ipcMain.on("kompas:place", openPicker);
@@ -835,7 +850,7 @@ async function takeProtocolArgv(argv) {
     stopSignInPoll();
     if (win && !win.isDestroyed()) {
       if (win.isMinimized()) win.restore();
-      win.show(); bringBack(); win.focus();
+      win.show(); bringBack({ force: true }); win.focus();
     }
     continueSignedIn();
   }
@@ -852,7 +867,7 @@ else {
     if (await takeProtocolArgv(argv)) {
       if (!win) return;
       if (win.isMinimized()) win.restore();
-      win.show(); bringBack(); win.focus();
+      win.show(); bringBack({ force: true }); win.focus();
       return;
     }
     const callback = desktopAuth.callback(argv);
@@ -860,7 +875,7 @@ else {
       const accepted = await desktopAuth.acceptCallback(callback, pendingSession?.ownerId || "");
       if (accepted && win && !win.isDestroyed()) {
         if (win.isMinimized()) win.restore();
-        win.show(); bringBack(); win.focus();
+        win.show(); bringBack({ force: true }); win.focus();
         continueSignedIn();
       } else if (!accepted && !desktopAuth.hasSession()) beginChromeSignIn();
       return;
@@ -881,7 +896,7 @@ else {
     }
     if (!win) return;
     if (win.isMinimized()) win.restore();
-    win.show(); bringBack(); win.focus();
+    win.show(); bringBack({ force: true }); win.focus();
     if (win.webContents.isLoading()) return;
     deliverSession();
   });

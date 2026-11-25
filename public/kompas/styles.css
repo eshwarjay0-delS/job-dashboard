@@ -1652,6 +1652,16 @@ html.kd #view-copilot #answer{
    Minimize, close, AI Answer, Start, and More stay clickable. */
 html.kd .kd-bar,html.kd #kdBar{z-index:480 !important;pointer-events:auto !important}
 html.kd #kdHide,html.kd #kdClose,html.kd #moreBtn,#view-copilot #startBtn,#view-copilot #answerBtn,#view-copilot #moreBtn{position:relative;z-index:2;pointer-events:auto !important}
+html.kd #kdBar,html.kd .kd-bar{z-index:1000 !important}
+html.kd .kd-right{position:relative !important;top:auto !important;right:auto !important;flex:0 0 auto !important;width:auto !important;min-width:max-content !important;margin-left:auto !important;z-index:1002 !important;pointer-events:auto !important}
+html.kd #kdHide,html.kd #kdClose,html.kd #kdMove,html.kd .kd-right button,html.kd .kd-right label,html.kd .kd-right input{-webkit-app-region:no-drag !important;pointer-events:auto !important;z-index:1003 !important;opacity:1 !important}
+html.kd .kd-grip{z-index:2 !important;pointer-events:auto}
+html.kd .kd-grip-n{right:220px !important}
+html.kd #view-copilot{z-index:20 !important}
+.ready-banner{display:inline-flex;align-items:center;gap:8px;color:var(--red);font-weight:600}
+.ready-banner[hidden]{display:none !important}
+#readyCheck{pointer-events:auto;border:1px solid var(--red);background:transparent;color:var(--red);border-radius:999px;padding:2px 8px;cursor:pointer}
+#answer,#answer li,#clarifyLive,.answer-aside,.clarify-live{opacity:1 !important}
 #answer,#answer li,#answer li.passage,html.kd #view-copilot #answer,html.kd #view-copilot #answer li{font-family:var(--sans) !important;font-weight:var(--answer-weight, 400) !important}
 /* The answer pane stays solid paper. The window behind it (a YouTube tab, a meeting) must not show through. */
 html.kd #view-copilot #card,
@@ -1673,21 +1683,28 @@ html.kd.desktop-focus.theme-dark #view-copilot #answer{
 /* Narrow desktop window: close and minimize stay pinned at the top-right.
    The session buttons wrap under that bar and do not cover the question. */
 html.kd .kd-right{
-  position:absolute !important;
-  top:0 !important;
-  right:0 !important;
+  position:relative !important;
+  top:auto !important;
+  right:auto !important;
   left:auto !important;
   flex:0 0 auto !important;
   width:auto !important;
-  min-width:0 !important;
-  z-index:500 !important;
+  min-width:max-content !important;
+  margin-left:auto !important;
+  z-index:1002 !important;
+  pointer-events:auto !important;
   background:#fdfcf9 !important;
   padding:4px 6px !important;
 }
 html.kd #kdClose,html.kd #kdHide,html.kd #kdMove{
   display:inline-flex !important;
   visibility:visible !important;
+  opacity:1 !important;
   flex:0 0 auto !important;
+  position:relative !important;
+  z-index:1003 !important;
+  pointer-events:auto !important;
+  -webkit-app-region:no-drag !important;
 }
 html.kd #view-copilot{top:48px !important}
 html.kd #view-copilot .overlay .bar-actions{
@@ -1715,3 +1732,7 @@ html.kd .a-tools .mini,html.kd #boldBtn,html.kd #textMinus,html.kd #textPlus{
   font-size:13px !important;
   padding:0 8px !important;
 }
+html.kd .kd-grip{z-index:2 !important}
+html.kd .kd-grip-n{right:220px !important}
+html.kd #view-copilot{z-index:20 !important;top:48px !important}
+#answer,#answer li,#clarifyLive,.answer-aside,.clarify-live{opacity:1 !important}

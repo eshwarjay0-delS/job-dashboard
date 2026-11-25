@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 25 November 2026 — Kompas overlay P0: start, window, clarifier, bold
+
+The answer preflight no longer disables Start. It is a 1.8 second probe with two retries. Timeout, 4xx, 5xx, a kompas:// cross-origin miss, and a slow cold start all start, and the existing answer fallback chain is unchanged. Check again re-probes and clears the red banner. Minimize stays minimized. Close and Minimize are the title-bar buttons, above the resize grips, and they are not a drag region. The clarifier is a separate popup that follows the live question. The opacity slider fades the paper and does not hide the clarifier or the answer text. The B button left of the font size cycles bold 700, semi-bold 600, and normal 400, default normal, stored in localStorage and the desktop prefs. Houston text is only the empty-resume fallback. A non-empty loaded resume is not replaced. Skip-login was not edited. The shell is Electron. There is no Tauri app in this repo. The installed Windows exe needs the desktop workflow after the ship. This is not a live listen.
+
+Local: overlay P0 tests pass, S1 replay pass, S5 gate pass, clarifier fixtures 47/47, adversarial 20/20, baseline 92/92, tsc pass, eslint 0 errors (267 existing warnings). The speakable-lines unit inside kompas-clarifier-fixtures.test.mjs already failed on master before this change. The 47-case fixture runner passed.
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
