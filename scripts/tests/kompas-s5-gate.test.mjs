@@ -59,7 +59,13 @@ function runOnce() {
   }
   for (const row of fx.honesty) {
     const resume = resumeOf(row.resume)
-    assert.equal(/jayeshwar44|saint louis university/i.test(honestySource(resume)), false, row.id)
+    const source = honestySource(resume)
+    if (!String(resume || "").trim()) {
+      assert.equal(source, HOUSTON_RESUME, row.id)
+      assert.equal(/jayeshwar44|saint louis university/i.test(source), false, row.id)
+    } else {
+      assert.equal(source, resume, row.id)
+    }
     const got = applyHonestyGate({ question: row.question, answer: row.answer, resume })
     const again = applyHonestyGate({ question: row.question, answer: got.text, resume })
     assert.equal(again.text, got.text, `${row.id} not stable`)

@@ -16,7 +16,7 @@ The desktop shell is Electron in `legacy/perfact/desktop`. `frame` is false. The
 
 ## Honesty
 
-A resume that is only the short Saint Louis profile (`jayeshwar44` or "Saint Louis University", and none of Fortinet, NIST, CSPM, Okta) still uses the Houston Fortinet source. A loaded resume that names those current terms stays the source. That is the Round 6 rule, plus the S5 fixture's short profile.
+Houston text is only the fallback when the resume string is empty. A non-empty loaded resume is the honesty source. A school name, an email, or a missing Fortinet/NIST/CSPM/Okta keyword does not replace that text with the Houston demo.
 
 ## Not verified
 
