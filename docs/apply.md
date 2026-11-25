@@ -23,6 +23,8 @@ A centralized place where a normal user searches **contract jobs** across every 
 
 ### 1. Inclusive search (the crawler)
 
+Short tokens such as `IT` use whole-word boundaries (`IT` matches, but `with`, `site`, `security`, and `commit` do not). Match-any multi-word search and punctuation-bearing terms `C++`, `C#`, and `.NET` remain preserved.
+
 When the user searches "software developer", the engine spiders all vendor portals in our directory and returns software engineering contract jobs from across every site — one ranked list, not 57 tabs.
 
 - Modeled on how Jobright AI crawls LinkedIn and job sites into one database. We do the same for prime vendor portals.
