@@ -14,6 +14,17 @@ export type ContractSearchFields = {
  * Splitting only on whitespace deliberately preserves technical tokens such as
  * C++, C#, and .NET.
  */
+function matchesTerm(haystack: string, term: string): boolean {
+  // Short tokens (IT, AI, QA, C#) must match as words, not inside "with",
+  // "site", "security", or "commit". Longer technical tokens retain substring
+  // matching so C++, .NET, and multi-word searches behave as before.
+  if (term.length <= 2) {
+    const tokens = haystack.split(/[^a-z0-9+#.]+/i).filter(Boolean)
+    return tokens.some(token => token === term)
+  }
+  return haystack.includes(term)
+}
+
 export function matchesContractSearch(query: string, fields: ContractSearchFields): boolean {
   const terms = String(query ?? "").trim().toLowerCase().split(/\s+/).filter(Boolean)
   if (!terms.length) return true
@@ -28,5 +39,5 @@ export function matchesContractSearch(query: string, fields: ContractSearchField
     .join(" ")
     .toLowerCase()
 
-  return terms.some(term => haystack.includes(term))
+  return terms.some(term => matchesTerm(haystack, term))
 }
