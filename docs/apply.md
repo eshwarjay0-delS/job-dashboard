@@ -199,3 +199,12 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## Contract crawler freshness — 25 November 2026
+
+The last completed production crawl was 10 November 2026 11:00:24–11:01:11 UTC: 20 portals, 6,818 found/upserted and one error. The production jobs table has 14,566 rows and 12,407 active flags, but zero active rows have been seen inside the 14-day freshness window; the newest listing was last seen 10 November 11:01:11 UTC. The jobs API applies the 14-day cutoff before returning results, so the live contract feed may currently be empty. No crawl has run since 10 November.
+
+The eTeam portal has 907 historical rows (818 active flags), but zero are fresh inside 14 days; its newest row was last seen 8 November. eTeam remains in `PENDING_PORTALS`, not active adapters, and stale historical rows are hidden by the cutoff rather than deleted. Robert Half has zero crawler rows and remains manual-only. The active registry has 20 approved adapters; `vercel.json` contains no contract-crawler cron. This is a read-only status audit; no portal request, manual crawl, database mutation or application submission occurred.
+
+**Next acceptance:** only after explicit owner authorization, run one manual crawl of the 20 approved active adapters, excluding eTeam and Robert Half, then verify the public jobs API's fresh 14-day results and record the run/error counts. Do not add a daily cron, delete historical rows, re-enable eTeam, scrape Robert Half, or ship unapproved contract-to-hire classification semantics.
