@@ -97,3 +97,8 @@ PR #583 is now exact-head green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`: f
 ## 25 November 2026 — journal syntax correction
 
 PR #585 checkpoint `096b641d87d634081a9701938c6042d752b1a093` had baseline `45710965750` SUCCESS, but Plan/REA `45710966015` failed TypeScript parsing because the new WhatsApp journal entry was raw JSON outside the `PLAN_JOURNAL.unshift` calls. This correction wraps it correctly and includes the required `commits` array. Focused resume `45710965688`, WhatsApp recovery `45710966001` and full CI `45710965601` were in progress; fresh exact-head gates are required. PR #583 now has all three checks green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`, but remains draft and explicit-selection acceptance is missing.
+
+
+## 25 November 2026 — current correction head cfe1638114
+
+The new WhatsApp journal entry is now a valid `PLAN_JOURNAL.unshift({...})` call with the required `commits` array. Current PR #585 head is `cfe1638114ffaea906c2d705528008b5697df98f`. Fresh baseline `45711226334`, focused resume `45711226226`, WhatsApp recovery `45711226362`, and full CI `45711226418` are IN PROGRESS; the Plan/REA workflow has not yet appeared. Previous schema failure `45710966015` belongs to `096b641d`, not the correction. Do not reuse old results. No local execution or owner resume/JD/DOCX acceptance.

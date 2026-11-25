@@ -828,3 +828,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 ## 25 November 2026 — journal syntax correction
 
 PR #585 head `096b641d87d634081a9701938c6042d752b1a093` has Kompas baseline `45710965750` SUCCESS; Plan/REA `45710966015` failed with TypeScript syntax because the new WhatsApp journal object was appended outside `PLAN_JOURNAL.unshift` calls. The correction wraps it as a call and includes `commits`. Focused resume `45710965688`, recovery `45710966001` and full CI `45710965601` were still running; fresh exact-head checks are required. PR #583 is now source/test green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` (full CI `45692952469`, recovery `45692953138`, baseline `45692952593` SUCCESS) but remains draft/selection-gated. PR #587 remains blocked by four full-CI fallback/unverified-term failures.
+
+
+## 25 November 2026 — latest PR #585 correction head
+
+PR #585 current head `cfe1638114ffaea906c2d705528008b5697df98f` corrects the invalid journal entry from `096b641d` by using `PLAN_JOURNAL.unshift` with the required `commits` array. Fresh exact-head baseline `45711226334`, focused resume `45711226226`, WhatsApp recovery `45711226362` and full CI `45711226418` are IN PROGRESS; no fresh Plan/REA run has appeared. The prior schema failure `45710966015` was on the older head `096b641d`, not this correction. Do not reuse those results. PR #583 remains draft but all three gates are green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`; PR #587 still fails four full-CI delivery expectations. Keep the explicit-selection route blocked until the canonical checkout and installed Next.js 16.3.8 guide are available.
