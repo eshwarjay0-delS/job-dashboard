@@ -47,3 +47,11 @@ Regression coverage now exercises snapshot filtering, the cap signal and the rou
 ## Exact-head validation update — 25 November 2026
 
 Code/test head `c38508dd12641250a86f2953b888b66a6e851448`: crawler freshness/classification `45588555323`, manual-only `45588555335`, Plan/REA `45588555396`, and Kompas baseline `45588555314` all SUCCESS. Full CI `45588555512` FAILED on shared lint `src/lib/kompasConsistency.ts:1059` (`prefer-const`); this is part of PR #554 and is not duplicated here. The first Plan/REA run failed because the updated REA entry lacked a comma; corrected in `d01ba02` and schema check passed on `c38508dd`. No local Node execution. PR #575 remains DRAFT; protected preview, production/API acceptance and separate manual crawl authorization are pending.
+
+## 25 November 2026 — terminal and filled-limit edge coverage
+
+The current PR #575 code/test head adds two helper regressions: a terminal database snapshot shorter than the scan cap can underfill without setting `clearance_scan_limited`; and if the visible limit is filled at the cap, the response does not show a misleading limited notice.
+
+Code/test commit: `dff71866c839a7ba42c61dac39d37d0b473c75ed`. Exact-head crawler freshness/classification `45648678364`, manual-only `45648678152`, Plan/REA `45648678127`, and Kompas baseline `45648678301` passed. Full CI `45648677995` failed at the existing master `prefer-const` lint error in `src/lib/kompasConsistency.ts:1059`, before type-check/build. The docs-only follow-up head `a7d972337b2344a8d76b6d7e923b3aaeb88d91e3` has Plan/REA schema `45650386942` SUCCESS.
+
+The candidate remains DRAFT and unreleased. PR #554 is the shared lint/Kompas VM prerequisite; its exact-head source gates pass, but it still requires a second authorized reviewer. Protected preview requires the owner-controlled `KOMPAS_VERCEL_API_TOKEN`. No production crawl, portal request, DB mutation, job submission or deployment occurred. Manual/on-demand policy, Robert Half manual-only and eTeam exclusion remain unchanged.
