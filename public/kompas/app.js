@@ -1988,6 +1988,14 @@ async function checkSessionReadiness(opts) {
         authDisabled: authOff,
       })
       : { action: "proceed", warm: true, egress: false, autoSignIn: false, message: "" };
+    if (decision.action === "proceed" || decision.warm || authOff) {
+      sessionAuthGate = null;
+      sessionAuthPrompted = false;
+      hideReadyBanner();
+      if (button && !running && !button.classList.contains("on")) button.textContent = "Start";
+      if (authOff && !running) status("Sign-in is off. Press Start session.", "live");
+      return { ...probed, start: true, fallback: probed.fallback !== false };
+    }
     if (decision.action === "sign_in" && !running && !authOff) {
       sessionAuthGate = "sign_in";
       if (button) button.textContent = "Sign in";
