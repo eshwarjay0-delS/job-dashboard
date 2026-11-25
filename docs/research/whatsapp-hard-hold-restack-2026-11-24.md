@@ -96,3 +96,8 @@ PR #583 current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` has full CI `456
 ## 25 November 2026 — current PR #583/#585 status
 
 PR #583 current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` has full CI `45692952469`, WhatsApp recovery `45692953138` and Kompas baseline `45692952593` all SUCCESS, but remains DRAFT. PR #585 journal syntax correction is at `cfe1638114ffaea906c2d705528008b5697df98f`; fresh exact-head checks are pending, and the prior schema failure was on `096b641d`. No protected preview, route-level explicit selection, real send, R2 write, model call, DOCX generation, replay or device acceptance.
+
+
+## 25 November 2026 — PR #583 exact-head gate
+
+PR #583 current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` has full CI `45692952469`, WhatsApp recovery `45692953138` and Kompas baseline `45692952593` all SUCCESS. It remains DRAFT and selection-gated; no protected preview, real send, R2 write, model call, DOCX generation, historical replay or device acceptance.

@@ -833,3 +833,8 @@ PR #585 head `096b641d87d634081a9701938c6042d752b1a093` has Kompas baseline `457
 ## 25 November 2026 — latest PR #585 correction head
 
 PR #585 current head `cfe1638114ffaea906c2d705528008b5697df98f` corrects the invalid journal entry from `096b641d` by using `PLAN_JOURNAL.unshift` with the required `commits` array. Fresh exact-head baseline `45711226334`, focused resume `45711226226`, WhatsApp recovery `45711226362` and full CI `45711226418` are IN PROGRESS; no fresh Plan/REA run has appeared. The prior schema failure `45710966015` was on the older head `096b641d`, not this correction. Do not reuse those results. PR #583 remains draft but all three gates are green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`; PR #587 still fails four full-CI delivery expectations. Keep the explicit-selection route blocked until the canonical checkout and installed Next.js 16.3.8 guide are available.
+
+
+## 25 November 2026 — current PR #585 syntax correction
+
+PR #585 head `c4c619aeeae2c031700ff0c31e139b468ac6419b` had Plan/REA `45711456866` fail with `ERR_INVALID_TYPESCRIPT_SYNTAX`: two updated journal entries were raw JSON rather than `PLAN_JOURNAL.unshift` calls. This correction wraps both updated records; the new WhatsApp record is already wrapped. Fresh exact-head checks are required; baseline `45711456533` was SUCCESS, focused resume `45711456226`, recovery `45711456477` and full CI `45711456418` were still in progress. PR #583 all three gates are green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`, but remains draft/selection-gated; #587 still fails four full-CI expectations.
