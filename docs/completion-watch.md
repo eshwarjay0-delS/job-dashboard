@@ -852,3 +852,10 @@ Direct GitHub REST PR response on head `f7043df4a58e75ca2c4bd80cd0f282ee7f54779`
 
 - The first remote Plan/REA schema run on commit `9238501` failed because the updated first REA entry was missing its separator comma. Corrected in commit `d01ba02`; this is a documentation syntax correction, not a runtime code change.
 - The crawler single-snapshot source and regression tests remain on this draft PR. Exact-head checks must run on the new tree before any merge decision. Local execution remains unavailable; no preview, production release, live crawl, DB mutation or application submission.
+
+
+## 25 November 2026 09:47 UTC — exact-head clearance snapshot checks
+
+- Code/test head `c38508dd12641250a86f2953b888b66a6e851448`: crawler freshness/classification `45588555323`, manual-only `45588555335`, Plan/REA schema `45588555396`, Kompas baseline `45588555314` all SUCCESS. Full CI `45588555512` FAILED at the shared lint `src/lib/kompasConsistency.ts:1059` (`prefer-const`). The first REA schema run failed because of a missing separator comma in the update; corrected in `d01ba02` and rechecked successfully on c38508dd.
+- Keep PR #575 DRAFT and unreleased. The bounded single-snapshot source and tests passed their focused remote gates; full CI is blocked by the shared Kompas #554 fix/review. Protected preview requires the private token. No local execution, production deploy, crawler run, portal request, database mutation or application submission.
+- **Next:** independent review/merge of #554 when authorized; rerun full CI for #575 on a content-changing head, protected preview and public API acceptance, then separately request a manual crawl.
