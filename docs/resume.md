@@ -85,3 +85,8 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+
+## 25 November 2026 — WhatsApp role-evidence hard hold
+
+A high raw JD-overlap score and a 100% supported-coverage score do not override an unresolved `role_evidence_gaps` quality blocker. The current-master restack adds a fail-closed rule when JD overlap is at least 70% and supported coverage is at least 95%, even if the quality report says `incomplete=false`. The synthetic 82% / 100% case is held rather than delivered. This is separate from the approved below-70% finished-file shortfall path, which may still be sent with the missing terms disclosed. Do not use the new guard as evidence that the historical 17 Oct delivery was reproduced or fixed. The exact original source DOCX and matching Risk & Controls JD are recorded as privately recovered in PR #275; the generated output DOCX and signed Meta delivery/read receipt remain unavailable. Source/test change is pending exact-head CI, protected preview and production release.
