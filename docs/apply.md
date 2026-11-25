@@ -199,3 +199,11 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## Contract-crawler request diagnostics — PR #479 (not yet live)
+
+The approved diagnostic slice preserves the contract crawler's manual/on-demand policy. It keeps the default 600 ms request pacing and 25,000 ms timeout, adds portal-host attribution, distinguishes a locally triggered timeout from an upstream `AbortError`, and moves URL parsing into the cleanup/pacing boundary so malformed URLs still release the timer and advance the pacing clock. Two synthetic tests cover timeout-vs-upstream-abort and malformed-URL cleanup.
+
+
+This change does not add a portal, permission, retry/backoff, scheduler, storage behavior, classification, job retirement, application submission, or live crawl. The diagnostic code is on draft PR #479 only; current master/production does not include it. Prior exact-head CI on `e15f7dc5aa563a69c59c6d262ac913b71f171782` passed, but its Vercel status was canceled by the Ignored Build Step and did not produce a protected preview. A current-master restack must rerun all gates.

@@ -800,3 +800,15 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 23 November 2026 — crawler restack: schema repaired, full CI blocked by current-master Kompas lint
+
+- **Production remains verified:** master `794e8cfdbd3103409552857806bab89851d5bfcb`, READY deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp`; canonical `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to it. No deploy was needed.
+- **Crawler PR #479:** source commit `82ee39864ec97ad6fac5b718f52c63f0fc4f3230` restacked onto current master. Follow-up documentation/syntax fix `c23840b70c3bba9079b4b9918cbe72eb7adbdd2e` repaired a missing Plan Journal comma. Exact head `c23840b70c3bba9079b4b9918cbe72eb7adbdd2e` is mergeable/clean but remains DRAFT.
+- **Exact-head gates:** schema `45244208302`, crawler regression `45244208043`, Kompas baseline `45244208334` PASS. Full CI `45244208042` FAILED at lint with `prefer-const` in `src/lib/kompasConsistency.ts:1059`. This is unrelated to crawler diagnostics and is not changed in #479.
+- **Coordination:** PR #556 already attempts the one-token lint correction, but its full CI is not green; PR #554 carries the Listening-hold behavior and needs a second authorized reviewer. Do not duplicate or cherry-pick their work into #479.
+- **Preview:** prior Vercel status was canceled by Ignored Build Step; no protected preview exists. The diagnostic code is not live. No deployment, cron, or crawl.
+- **Local execution:** clone failed due DNS for `github.com`; no local tests/build. Remote Actions is the available validation path.
+
+Next: keep PR #479 DRAFT. Let #556/#554 resolve the shared Kompas quality gate separately; then rerun exact-head full CI and protected preview for #479. Do not merge/deploy or run a live crawl without review and a separate manual crawl request.
