@@ -85,3 +85,21 @@ The separate capture heuristics in PR #462 are **not directly owner-approved in 
 PR #462 exact-head CI, Kompas baseline, cross-device, Plan/REA and Windows package gates passed. It was merged by `cursor[bot]` as `4f5030938b6b13b7996fb215e35b8aebad2230b2` and is now behind the canonical production alias. The PR body said “No [ship] on this commit” while the resulting merge commit begins `[ship]`; the Git-linked pipeline deployed it. No PR review was recorded. Treat the new capture heuristics as proposed, not owner-accepted; do not extend or claim their acceptance without a direct owner decision. The JD-only evidence filter remains aligned with the approved Chief Relevance rule.
 
 Actual Windows Live Captions listen-through, complete-tail preservation and native acceptance remain unverified. A synthetic 20/20 suite and a READY deployment are not substitutes. Any rollback must be narrowly scoped to the unapproved capture heuristics and must preserve the JD-only evidence filter; do not change production behavior without a separate owner decision.
+
+
+## 25 November 2026 — merged relevance chain and current live acceptance
+
+The required source-backed Chief relevance code chain is in the current production source:
+
+- PR [#113](https://github.com/eshwarjay0-delS/job-dashboard/pull/113), 50-fold question-first relevance, merged as `ed9a5e7f358df8f0e0e7db4b75f21beb5315d519`; full CI `40816404212` SUCCESS.
+- PR [#114](https://github.com/eshwarjay0-delS/job-dashboard/pull/114), current-ask/constraint kernel, and validation PR [#115](https://github.com/eshwarjay0-delS/job-dashboard/pull/115), merged at `ef82692088e2ebbf7c70e813c5e003e6f09ceed6`; full CI `40809123021` SUCCESS.
+- PR [#234](https://github.com/eshwarjay0-delS/job-dashboard/pull/234) merged as `ee57ace0f931f67d5d8b8634a185c70840a69c1f`; full CI `43319912433`, baseline `43319912381`, cross-device `43319912376`, Plan/REA `43319912389`, and Windows executable `43319912514` all SUCCESS.
+- PR [#258](https://github.com/eshwarjay0-delS/job-dashboard/pull/258) merge `14e4f2ed073b8c0aab8e773d0ed67403d7bc7ce4` is also an ancestor of current master.
+
+Compare-commits confirms those merges are ancestors of current master `794e8cfdbd3103409552857806bab89851d5bfcb`. Production deployment `dpl_2tyBPso5SnCgHCPFCqXewExCJEYp` is READY on that exact SHA; both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` independently map to it. Round 15's `jsonAnswer` gate fix is deployed. The next actual Round 16 retest (the same ten scenario/experience questions plus follow-up) has **not** been run.
+
+PR [#262](https://github.com/eshwarjay0-delS/job-dashboard/pull/262) remains OPEN and nonmergeable at `30cc94b7db156419ced5abb09e296b3fc04d0e5c`: six commits ahead, 157 behind current master, no exact-head workflow runs, and a 25-file diff touching the answer service. Preserve #258 and current master; do not merge or blindly rebase this stale branch. PR [#270](https://github.com/eshwarjay0-delS/job-dashboard/pull/270) remains a separate DRAFT/nonmergeable voice branch. The Kompas Continuous Voice Delivery automation is currently disabled; no voice changes were duplicated.
+
+The live quality gate remains open: at least 50 actual paired Kompas/ChatGPT answers from identical authorized source materials and questions, followed by independent human 0–4 scorecards. This requires the authorized private `KOMPAS_API_TOKEN` and approved original resume/JD/reference bundles. Synthetic 50/54-fold fixtures, unit tests, source review, CI and a READY deployment are not substitutes. No model call or personal-source processing occurred in this audit.
+
+**Continue:** when those authorized inputs are available, run Round 16 and the real 50-pair comparison with identical question conditions; score interviewer intent, requested facets, grounded personal claims, spoken naturalness, constrained scenarios, unnecessary jargon and latency separately. Reconcile #262 only through a conflict-aware current-master restack with exact full CI and shared web/desktop/WhatsApp gates; preserve #258. Keep #270 in its separate voice lane.
