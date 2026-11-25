@@ -794,3 +794,11 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 25 November 2026 — contract-search short-token boundary correction
+
+- PR #574 now includes whole-token matching for query terms of two characters or fewer; this specifically prevents `IT` from matching inside `with`, `site`, `security`, or `commit`, while keeping match-any behavior and punctuation-bearing longer tokens.
+- Source/test commits: `1412fa6905bf2f5dd50ee86da83cfd5ed8940b2c` / `e7efc507070b02fbd62dd764a2364fbc2b6074e0`; Apply and research-doc commits `7f7d47915e8c2ea6c24f730a41cdd76fed8c61e0` / `f0fb4acefc49be3991a5880cff7d7d1a63d83c10`; Plan Journal `d039704fe0b8e63b5fc3457664a2ea6e7b720aad`.
+- The branch is still DRAFT and mergeable=false. Exact-head Actions has no runs/statuses yet; local tests are blocked by this sandbox's DNS failure to GitHub. No production deployment or live crawl/search acceptance.
+- Continue: wait for remote focused test/full-CI execution, keep the PR draft, and preserve manual-only crawler, clearance, Robert Half and eTeam restrictions.
