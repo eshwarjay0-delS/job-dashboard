@@ -897,3 +897,10 @@ No live crawl, portal request, database write, job submission or application was
 - Execution wall remains: no canonical checkout/dependencies or installed Next.js 16.3.8 guide in this container; the persistent Vercel Sandbox was blocked by usage quota through 1 Dec 2026; protected preview requires private `KOMPAS_VERCEL_API_TOKEN`; user browser/phone/Windows device is not accessible. No local tests/build, model call, real WhatsApp send, R2/DB mutation or device acceptance occurred.
 
 **Continue:** require the normal independent review/merge of #554, then conflict-aware restack #572 + #578 and run exact-head full CI/recovery/baseline/Plan-REA, protected preview, production READY + canonical alias, and owner-consented delivery evidence. Continue other independent approved work without claiming the #581 lint change or synthetic tests fixed the live resume failure.
+
+
+### Gmail Retry-After correction — source now present on production master (25 Nov)
+
+- The previously reported client/server cooldown mismatch is corrected in current master: `/api/gmail/application-chains` returns HTTP 429 with `Retry-After: 30`; the Overview scanner now reads that header through `gmailRetryDelaySeconds`, honors delta-seconds and HTTP-date, never shortens below its 15/40/65-second fallback, and uses one abortable timer capped at 24 hours. Longer/overflow cooldowns become a hold instead of an early retry.
+- Current master/READY alias SHA `794e8cfdbd3103409552857806bab89851d5bfcb` includes `src/lib/gmail-retry-after.ts`, its focused test `scripts/tests/gmail-retry-after.test.mjs`, and the Overview wiring. The test covers numeric/date/missing/invalid headers, fallback floors, overflow, long waits, and interleaved account delays. Source/deployment is verified; this run did not retrieve a fresh exact-head CI result for this test or perform Gmail OAuth/API calls, so authenticated rate-limit recovery remains unverified.
+- Continue: keep the worker/scheduler and sending disabled; validate retry behavior with authorized inboxes when owner device/API access is available. No message or inbox mutation was performed.
