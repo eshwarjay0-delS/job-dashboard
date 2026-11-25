@@ -45,3 +45,12 @@ test("empty and whitespace-only searches keep the full list", () => {
   assert.equal(matchesContractSearch("", fields), true)
   assert.equal(matchesContractSearch("   \t  ", fields), true)
 })
+ 
+test("short search terms such as IT require whole-token boundaries", () => {
+  assert.equal(matchesContractSearch("IT", { title: "IT Security Engineer" }), true)
+  assert.equal(matchesContractSearch("it", { tags: ["IT support"] }), true)
+  assert.equal(matchesContractSearch("IT", { body: "Build systems with Terraform" }), false)
+  assert.equal(matchesContractSearch("IT", { body: "Site reliability engineering" }), false)
+  assert.equal(matchesContractSearch("IT", { body: "Security engineering" }), false)
+  assert.equal(matchesContractSearch("IT", { body: "Commit the infrastructure code" }), false)
+})
