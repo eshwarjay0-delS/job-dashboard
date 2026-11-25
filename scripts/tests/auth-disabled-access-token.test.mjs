@@ -29,12 +29,12 @@ const ENV_KEYS = [
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
 ]
 
-function withEnv(vars, fn) {
+async function withEnv(vars, fn) {
   const previous = Object.fromEntries(ENV_KEYS.map(key => [key, Object.prototype.hasOwnProperty.call(process.env, key) ? process.env[key] : undefined]))
   try {
     for (const key of ENV_KEYS) delete process.env[key]
     Object.assign(process.env, vars)
-    return fn()
+    return await fn()
   } finally {
     for (const key of ENV_KEYS) {
       if (previous[key] === undefined) delete process.env[key]
@@ -111,4 +111,19 @@ test('connections status degrades on profile/services failure instead of 503ing 
   assert.match(route, /console\.error\("connections status: profiles read failed"/)
   assert.match(route, /console\.error\("connections status: connected_services read failed"/)
   assert.match(route, /Could not load your saved Google accounts/)
+})
+
+
+test('custom synthetic owner identity remains stable across awaited session and user reads', async () => {
+  const ownerId = '11111111-2222-3333-4444-555555555555'
+  const ownerEmail = 'synthetic-owner@example.test'
+  const { session, user } = await patchedSession({
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'sb_publishable_faketestkey123',
+    AUTH_DISABLED_USER_ID: ownerId,
+    AUTH_DISABLED_USER_EMAIL: ownerEmail,
+  })
+  assert.equal(session.user.id, ownerId)
+  assert.equal(session.user.email, ownerEmail)
+  assert.equal(user.id, ownerId)
+  assert.equal(user.email, ownerEmail)
 })
