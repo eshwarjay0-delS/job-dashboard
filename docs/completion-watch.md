@@ -838,3 +838,8 @@ PR #585 current head `cfe1638114ffaea906c2d705528008b5697df98f` corrects the inv
 ## 25 November 2026 — current PR #585 syntax correction
 
 PR #585 head `c4c619aeeae2c031700ff0c31e139b468ac6419b` had Plan/REA `45711456866` fail with `ERR_INVALID_TYPESCRIPT_SYNTAX`: two updated journal entries were raw JSON rather than `PLAN_JOURNAL.unshift` calls. This correction wraps both updated records; the new WhatsApp record is already wrapped. Fresh exact-head checks are required; baseline `45711456533` was SUCCESS, focused resume `45711456226`, recovery `45711456477` and full CI `45711456418` were still in progress. PR #583 all three gates are green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`, but remains draft/selection-gated; #587 still fails four full-CI expectations.
+
+
+## 25 November 2026 — current journal schema correction
+
+PR #585 head `552cf45c6bc45d9efdc650aa5c4bbff8bfaefc90` failed Plan/REA `45711641514`: two in-array journal entries were wrapped in `PLAN_JOURNAL.unshift`, and the new outside-array entry used unsupported `commits` instead of `commit`. This correction restores raw objects inside the array and uses `commit` singular for the valid outside-array unshift. Fresh exact-head tests are required. Baseline `45711641444` was IN PROGRESS, focused resume `45711641451`, recovery `45711641629` and full CI `45711641522` were IN PROGRESS. PR #583 all three gates are green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`; #587 still fails four full-CI delivery expectations.

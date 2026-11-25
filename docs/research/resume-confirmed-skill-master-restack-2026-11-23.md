@@ -107,3 +107,8 @@ The new WhatsApp journal entry is now a valid `PLAN_JOURNAL.unshift({...})` call
 ## 25 November 2026 — journal wrapper correction
 
 PR #585 checkpoint `c4c619aeeae2c031700ff0c31e139b468ac6419b` failed Plan/REA `45711456866` with TypeScript syntax because two updated existing journal records were raw JSON. This correction wraps them as `PLAN_JOURNAL.unshift` calls. Fresh exact-head tests are required. Baseline `45711456533` was green; focused resume `45711456226`, WhatsApp recovery `45711456477` and full CI `45711456418` were in progress. No local execution or owner resume/JD/DOCX acceptance.
+
+
+## 25 November 2026 — Plan Journal shape correction
+
+PR #585 checkpoint `552cf45c6bc45d9efdc650aa5c4bbff8bfaefc90` failed Plan/REA `45711641514`: two entries inside the `PLAN_JOURNAL` array were wrapped in `unshift` calls, and the outside-array entry used unsupported `commits` instead of the type's `commit` field. This correction restores the array entries as raw JSON objects and uses `commit` singular for the outside-array unshift. Fresh exact-head tests are required. Baseline `45711641444`, focused resume `45711641451`, WhatsApp recovery `45711641629` and full CI `45711641522` were in progress. No local execution or owner resume/JD/DOCX acceptance.
