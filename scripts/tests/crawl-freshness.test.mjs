@@ -78,6 +78,15 @@ test("single bounded snapshot reports underfill at the scan cap", () => {
   assert.equal(result.scanLimited, true)
 })
 
+test("snapshot helper clamps scans at the hard 1,000-row ceiling", () => {
+  const snapshot = Array.from({ length: 1500 }, (_, id) => ({ id, clearance: true }))
+  const result = collectFilteredSnapshot(snapshot, 100, row => row.clearance, 1500)
+  assert.equal(result.scanned, 1000)
+  assert.equal(result.excluded, 1000)
+  assert.deepEqual(result.items, [])
+  assert.equal(result.scanLimited, true)
+})
+
 test("clearance route uses one bounded query and no mutable offset pages", () => {
   const route = read("../../src/app/api/crawl/jobs/route.ts")
   assert.match(route, /const scanLimit = Math\.min\(1000, Math\.max\(100, limit \* 10\)\)/)
