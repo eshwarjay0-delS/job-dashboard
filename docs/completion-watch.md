@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 25 November 2026 11:22 UTC — shared prefer-const lint unblocker submitted
+
+- **Continue:** unblock the common lint error that caused several approved current-master restacks to fail before other CI suites ran. Source review confirms `src/lib/kompasConsistency.ts:1059` has `let s = sentence` with no reassignment; the submitted correction is `const` only.
+- **PR #581:** https://github.com/eshwarjay0-delS/job-dashboard/pull/581, branch `fix/kompas-consistency-prefer-const-20261125`, code commit `9350d28e0326dd4a6161d37adb485e359223491c`, base `794e8cfdbd3103409552857806bab89851d5bfcb. One file changed; no runtime behavior.
+- **Validation:** no local checkout/dependencies, so no local lint/test/build. Exact-head GitHub CI is pending; the Kompas baseline gate was observed in progress. Keep PR draft until all required checks and review pass.
+- **Scope/coordination:** does not resolve PR #554's independently reviewed Listening-hold/VM-fixture gate; no voice work duplicated. #579 owns Plan & Vision reconciliation. No WhatsApp send, Gmail read/send, live crawl, model call, personal resume, R2/database mutation or device acceptance.
+
+Continue: await exact-head CI and review for #581, then resume the highest-priority WhatsApp hard-hold/fallback restack without merging around #554.
+
+
 ## 21 November 2026 — OpenRouter 403 falls through to the next model
 
 A non-streaming `{question}` on a8c469fb returned HTTP 403 OPENROUTER_FORBIDDEN in about half a second. The first model was openai/gpt-oss-120b. That 403 is the account data policy or a guardrail with no allowed provider for the model. The first model is now meta-llama/llama-3.3-70b-instruct. A 403 tries gpt-oss-120b, then gemini-2.5-flash, then direct Groq. The caller does not see HTTP 403. No desktop rebuild. Five production questions follow the ship.
