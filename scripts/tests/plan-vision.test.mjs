@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import { PRODUCT_PLANS, productPlan, planImage, planText } from '../../src/lib/plan-vision.ts'
+import { PLAN_REVISION, PRODUCT_PLANS, productPlan, planImage, planText } from '../../src/lib/plan-vision.ts'
+import { PLAN_JOURNAL } from '../../src/lib/plan-vision-journal.ts'
 
 test('every plan exports the same workstreams, build steps and checks as its notes', () => {
   assert.deepEqual(PRODUCT_PLANS.map(p => p.id), ['gmail', 'applications', 'resume', 'kompas'])
@@ -27,4 +28,19 @@ test('image labels are escaped as text', () => {
   const svg = new JSDOM(planImage(p), {contentType:'image/svg+xml'}).window.document
   assert.equal(svg.querySelector('script'), null)
   assert.ok(svg.querySelector('title').textContent.includes(p.title))
+})
+
+
+test('resume alignment handoff reflects the current-master restack and remains blocked for live acceptance', () => {
+  const resume = productPlan('resume')
+  assert.equal(PLAN_REVISION, '2026-11-25.2')
+  assert.match(resume.baseline, /PR #570 current-master restack/)
+  assert.match(resume.baseline, /53\/53/)
+  assert.match(resume.baseline, /answerCtl.*detectedQueue/)
+  assert.match(resume.baseline, /protected preview and owner-authorized resume\/JD\/explicit[- ]confirmation\/exported-DOCX acceptance remain missing/)
+  const handoff = PLAN_JOURNAL.find(entry => entry.id === 'resume-confirmed-skill-current-master-restack-2026-11-25')
+  assert.ok(handoff)
+  assert.equal(handoff.approval, 'approved')
+  assert.equal(handoff.delivery, 'in progress')
+  assert.match(handoff.next, /independent review/)
 })
