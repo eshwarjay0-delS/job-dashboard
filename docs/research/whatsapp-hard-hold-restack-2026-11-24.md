@@ -46,3 +46,17 @@ The durable explicit-selection route task remains blocked by the absence of a ca
 ## 25 November — shared lint blocker corrected on this draft
 
 The full CI failure at `src/lib/kompasConsistency.ts:1059` was `prefer-const` only. This branch now changes the local `let s` to `const s` in the existing sentence cleanup, with no behavior change intended. Commit `71a1f74b03c766fd5fbec5aa69e4476064c6b605`. Fresh exact-head CI is required; prior full-CI failure cannot be reused.
+
+
+## 25 November 2026 — review correction: false-incomplete role-evidence gap
+
+The PR #578 review was corrected on 24 Nov: the Oct 30 issue #132 sample actually recorded `incomplete=true`; the earlier wording must not imply that the helper reproduced or caused that historical incident. The residual concern is a separate synthetic combination where `role_evidence_gaps` and `quality_not_deliverable` remain while `quality.incomplete=false`. Those codes were still shortfall-allowlisted.
+
+### Narrow correction
+
+- When `role_evidence_gaps` is present and JD overlap is at least 70% while supported coverage is at least 95%, `whatsappRewriteUsable` now fails closed even if `quality.incomplete=false`.
+- The existing below-70% finished-file shortfall behavior remains unchanged; the 30.8% / 30.8% positive regression continues to document that separate approved path.
+- Added a synthetic 82% JD / 100% supported-coverage test with `quality.incomplete=false`, `quality_not_deliverable`, and `role_evidence_gaps`; it asserts the draft is neither usable nor delivered with shortfall.
+- Source/test commit: `5f38fc716849af742324dc667039b11765be09fb` on PR #578. Exact-head Actions were not yet visible when this note was prepared. No local checkout/test run.
+
+This is a stricter helper-level regression guard, not a reproduction of either the Oct 30 sample or the separate 17 Oct 17:28 Chicago delivery. The 17 Oct output DOCX, per-run R2 key/version, request/webhook/Meta correlation and signed delivered/read receipt remain missing. No DOCX, model call, R2 write, real WhatsApp send, replay or user-device acceptance occurred.
