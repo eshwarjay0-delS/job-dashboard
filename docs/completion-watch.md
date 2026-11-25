@@ -848,3 +848,8 @@ PR #578 code/test head `afd6ede475fe61bf05432fafefe4b01e9aa8fdfb`: WhatsApp reco
 
 
 Exact branch-head trigger: the code/test commit `5f38fc716849af742324dc667039b11765be09fb` and Plan/REA/Completion Watch/research reconciliation commit `aafbfad61b50f5246deb0b7b94b5f329fed02207` are now on PR #578. This follow-up documentation commit is deliberately separate from runtime source; require fresh Actions on the final branch head before any merge decision.
+
+
+## 25 November 2026 — correction to the 17 October source-recovery record
+
+PR [#275](https://github.com/eshwarjay0-delS/job-dashboard/pull/275), merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`, records that the exact original input DOCX and matching Risk & Controls JD were recovered and reviewed privately from the user's Library and inbox. The public record intentionally omits source locators, digests, screenshot IDs and Gmail thread identifiers. This run found similarly named Library DOCX files and a matching Risk & Controls email, but did not independently re-hash or prove that a candidate Library copy is byte-identical to the original WhatsApp upload. Treat the PR #275 recovery record as the documented private recovery, not as a new byte-level verification. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta message ID and signed delivered/read receipt remain unavailable. No replay or send.

@@ -60,3 +60,10 @@ The PR #578 review was corrected on 24 Nov: the Oct 30 issue #132 sample actuall
 - Source/test commit: `5f38fc716849af742324dc667039b11765be09fb` on PR #578. Exact-head Actions were not yet visible when this note was prepared. No local checkout/test run.
 
 This is a stricter helper-level regression guard, not a reproduction of either the Oct 30 sample or the separate 17 Oct 17:28 Chicago delivery. The 17 Oct output DOCX, per-run R2 key/version, request/webhook/Meta correlation and signed delivered/read receipt remain missing. No DOCX, model call, R2 write, real WhatsApp send, replay or user-device acceptance occurred.
+
+
+## 25 November 2026 — source-recovery correction from PR #275
+
+PR #275, merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`, records that the exact original input DOCX and matching Risk & Controls JD were recovered and reviewed privately from the user's Library and inbox. Public artifacts omit the source locator, file digest, screenshot artifact ID and Gmail thread identifier. The current run found similarly named Library DOCX candidates and a Risk & Controls JD email, but did not independently prove byte identity with the original WhatsApp upload. Do not revert the documented recovery to “source unavailable,” and do not upgrade it to a new byte-level verification.
+
+The generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta outbound message ID and signed delivery/read receipt remain missing. Source/JD recovery does not establish that a generated file was stored, sent, delivered or read. No replay, re-export, R2 mutation or outbound WhatsApp send occurred.
