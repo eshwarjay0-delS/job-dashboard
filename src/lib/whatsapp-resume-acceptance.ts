@@ -162,17 +162,18 @@ export function deliveredWithShortfall(result: TailorResult): boolean {
     || reasons.includes("supported_coverage_below_floor")
 }
 
-/** Validate profile identity after explicit Files/Library selection is established.
- * A missing profile email is not proof of ownership. Mixed-profile resumes are rejected.
- * This check does not establish that the caller recorded an explicit selection. */
-export function chosenResumeMatchesProfile(text: string, email?: string): boolean {
+/** Validate identity only after the caller has durable proof of an explicit same-account
+ * Files/Library selection. A matching email is necessary but never proves selection.
+ * Missing selection proof, missing email, or mixed-profile bytes fail closed. */
+export function chosenResumeMatchesProfile(text: string, email?: string, explicitlySelected = false): boolean {
+  if (!explicitlySelected) return false
   const want = String(email || "").trim().toLowerCase()
   if (!want) return false
   const found = [...new Set((String(text || "").match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(s => s.toLowerCase()))]
   return found.length === 1 && found[0] === want
 }
 
-/** Plain words for rejection codes, for the message that tells the user why a
+/** Plain words/** Plain words for rejection codes, for the message that tells the user why a
  * draft was held. Unknown codes are dropped, never shown as jargon. */
 const REJECTION_WORDS: Record<string, string> = {
   no_document_token: "no finished document was produced",

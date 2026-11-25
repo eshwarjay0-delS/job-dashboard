@@ -432,12 +432,16 @@ test("an unverified_jd_terms quality blocker stays a hard hold when the detail l
   assert.equal(deliveredWithShortfall(draft), false)
 })
 
-test("a missing selected-library profile email fails closed", () => {
+test("an original requires explicit same-account selection proof and a matching profile email", () => {
   const text = "Candidate One\ncandidate1@example.test"
   assert.equal(chosenResumeMatchesProfile(text), false)
   assert.equal(chosenResumeMatchesProfile(text, ""), false)
-  assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test"), true)
-  assert.equal(chosenResumeMatchesProfile(text, "candidate2@example.test"), false)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test"), false, "matching email alone is not selection proof")
+  assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test", false), false)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test", true), true)
+  assert.equal(chosenResumeMatchesProfile(text, "candidate2@example.test", true), false)
+  assert.equal(chosenResumeMatchesProfile(text, "", true), false)
+})
 })
 
 test("honest professional gap excludes unsupported additions even when supported coverage is 100%", () => {
