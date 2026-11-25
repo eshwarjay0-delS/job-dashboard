@@ -93,3 +93,28 @@ test("clearance route uses one bounded query and no mutable offset pages", () =>
   assert.match(route, /query\.limit\(scanLimit\)/)
   assert.doesNotMatch(route, /\.range\(offset/)
 })
+
+test("a short terminal snapshot reports underfill without claiming the scan cap was reached", () => {
+  const snapshot = [
+    { id: "1", clearance: true },
+    { id: "2", clearance: false },
+    { id: "3", clearance: true },
+  ]
+  const result = collectFilteredSnapshot(snapshot, 3, row => row.clearance, 100)
+  assert.deepEqual(result.items.map(row => row.id), ["2"])
+  assert.equal(result.scanned, 3)
+  assert.equal(result.excluded, 2)
+  assert.equal(result.scanLimited, false)
+})
+
+test("reaching the scan cap is not reported as limited after the visible limit is filled", () => {
+  const snapshot = [
+    ...Array.from({ length: 10 }, (_, id) => ({ id, clearance: false })),
+    ...Array.from({ length: 5 }, (_, index) => ({ id: 10 + index, clearance: true })),
+  ]
+  const result = collectFilteredSnapshot(snapshot, 10, row => row.clearance, 10)
+  assert.deepEqual(result.items.map(row => row.id), Array.from({ length: 10 }, (_, id) => id))
+  assert.equal(result.scanned, 10)
+  assert.equal(result.excluded, 0)
+  assert.equal(result.scanLimited, false)
+})
