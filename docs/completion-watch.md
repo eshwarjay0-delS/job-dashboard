@@ -800,3 +800,27 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 25 November 2026 18:49 UTC — continue: current-master clearance-safe contract crawler
+
+**Canonical release:** production alias job-dashboard-fawn.vercel.app is independently READY at deployment dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW, exact master SHA a17b3267e271c77cd8887312445271b7fa172bd0. get_alias and get_deployment agree on the deployment and production target. Vercel reports no production runtime error clusters in the preceding 24 hours. This is the current app release, not acceptance of the open crawler candidate.
+
+### Continued approved slice — PR #575
+
+- The approved contract-only Apply/crawler slice is being restacked from the old 794e8cf base onto the current production master a17b3267e271c77cd8887312445271b7fa172bd0. It replaces the 4x/100 over-fetch followed by clearance filtering with one ordered bounded query snapshot (last_seen_at DESC, id ASC), in-memory clearance filtering, no offset pagination, a maximum 1,000-row scan and a visible clearance_scan_limited notice when the cap underfills.
+- Existing exact-head evidence before restack: crawler freshness/classification 45650723494 SUCCESS, manual-only policy 45650723480 SUCCESS, Kompas baseline 45650723475 SUCCESS and Plan/REA 45650723671 SUCCESS. Full CI 45650723496 FAILED at the old master prefer-const lint error. Current master a17b3267e271c77cd8887312445271b7fa172bd0 has the const correction and the shared answerCtl / detectedQueue VM harness initialization; the restack must receive fresh exact-head checks.
+- The PR remains DRAFT. It does not add adapters, change contract classification, change clearance policy, restore a daily crawler cron, crawl Robert Half or eTeam, submit applications, or mutate production data. Robert Half remains manual-only, eTeam excluded, and the contract crawler manual/on-demand only.
+- No live crawl, portal request, Supabase row mutation, application submission, preview, production deployment or post-release API smoke was performed.
+
+### Other priority blockers carried forward
+
+- **17 Oct 2026 17:28 Chicago WhatsApp resume failure:** still unverified. Missing output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivered/read receipt. No replay/resend. Approved fallback is only an explicitly selected same-account Files/Library resume, unchanged, labeled exactly Original resume — NOT TAILORED; no closest-match/cross-account substitution. Unsupported JD-only claims remain a hard hold. PR #572 route fallback and PR #578 helper hard hold remain blocked by the shared Kompas gate.
+- **Shared Kompas PR #554:** exact head 4fafd56663bb5ddce064dcebea8802d758bb8259 has full CI 45123770495, baseline 45123770380, cross-device 45123770446, Plan/REA 45123770546, and Windows executable 45123770398 all SUCCESS. Only review is a self-authored COMMENTED note; a second authorized reviewer is still required. GitHub rejects self-approval. Do not merge or bypass.
+- **Resume/JD/confirmed experience PR #570:** focused confirmed-skill and WhatsApp recovery workflows pass; exact-head full CI 45386097754 failed. No real DOCX/JD/confirmation or live 95–100%/98% match acceptance.
+- **Poke-inspired Gmail/mobile PR #576:** four-account cap and account/thread/sender isolation are in the draft; prior full CI 45401091730 failed at the old lint gate. No Gmail API/OAuth, inbox mutation, email send, protected preview, two-inbox or narrow-phone acceptance. Proactive worker, scheduler, notifications and sending remain disabled.
+- **Contract search PR #574:** focused search workflow 45602990255, baseline 45602990449 and Plan/REA 45602990253 passed; full CI 45602990382 failed in the shared Kompas suite. Preserve whole-token IT matching and C++/C#/.NET; no live search acceptance.
+
+### Continue
+
+Continue: finish the current-master restack of PR #575, run exact-head full CI plus crawler freshness/classification, manual-only, Kompas baseline and Plan/REA checks, and keep the PR DRAFT until independent review and protected preview are available. Do not run a live crawl or change production rows; a post-release manual crawl requires a separate explicit owner request.
