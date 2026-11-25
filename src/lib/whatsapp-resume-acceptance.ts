@@ -147,6 +147,14 @@ export function whatsappRewriteUsable(result: TailorResult): boolean {
   // Unverified JD-only claims must never pass as a shortfall-delivery file.
   if (result.unverified_added_keywords?.length) return false
   if (result.quality_blockers?.includes("unverified_jd_terms")) return false
+  // A high supported-coverage score cannot mask unresolved role-level evidence.
+  // Keep the separately approved below-70% disclosed-shortfall path unchanged.
+  const hasRoleEvidenceGap = result.quality_blockers?.includes("role_evidence_gaps")
+  const coverage = result.coverage
+  const supported = result.supported_coverage
+  if (hasRoleEvidenceGap &&
+      Number.isFinite(coverage) && coverage! >= WHATSAPP_JOB_POST_FLOOR &&
+      Number.isFinite(supported) && supported! >= WHATSAPP_SUPPORTED_FLOOR) return false
   if (atsExportUnreadable(result.ats)) return false
   return whatsappResumeRejectionReasons(result).every(reason =>
     WHATSAPP_SHORTFALL_REASONS.has(reason) || reason === "ats_check_failed")

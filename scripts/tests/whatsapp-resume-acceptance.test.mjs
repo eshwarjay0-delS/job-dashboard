@@ -188,6 +188,24 @@ test("30.8% with a role evidence gap is sent, and it is not a clean pass or a we
   assert.equal(gate.acceptableWebResume(draft), false)
   assert.equal(gate.honestProfessionalGap(draft), false)
 })
+test("high JD and supported coverage do not waive a non-incomplete role-evidence blocker", () => {
+  const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+  const draft = make({
+    coverage: 82,
+    supported_coverage: 100,
+    quality: resumeQuality({ matched: 82, total: 100, missing: ["role evidence"], partial: false, unfinished: false }),
+    quality_blockers: ["role_evidence_gaps"],
+  })
+  assert.equal(draft.quality.incomplete, false)
+  const reasons = whatsappResumeRejectionReasons(draft)
+  assert.ok(reasons.includes("quality_not_deliverable"))
+  assert.ok(reasons.includes("role_evidence_gaps"))
+  assert.equal(gate.honestProfessionalGap(draft), false)
+  assert.equal(gate.whatsappRewriteUsable(draft), false)
+  assert.equal(gate.deliveredWithShortfall(draft), false)
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.equal(gate.acceptableWebResume(draft), false)
+})
 test("a role that was not rewritten still uses the library backup", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
   const draft = make({
