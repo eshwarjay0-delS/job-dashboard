@@ -32,3 +32,8 @@ No live crawl, vendor portal access, job submission, external message, productio
 ## Completion Watch independent master restack — 23 November 2026
 
 This continuation copies the contract-board match-any-term helper and focused tests from PR #565 exact head `7eef052c714108290049c7c74648e9ef3f86f537` onto canonical master `794e8cfdbd3103409552857806bab89851d5bfcb`, avoiding the Kompas #554 dependency. The two historical focused 4/4 runs are not reused as exact-head CI. No local tests, live crawl, job-row mutation, or applications were run.
+
+
+## Owner correction — short-term `IT` boundary (25 November 2026)
+
+A short query term such as `IT` must match a whole token, not a substring in `with`, `site`, `security`, or `commit`. The helper now applies whole-token matching to terms of two characters or fewer, while preserving punctuation and the existing match-any behavior for longer technical terms. The new regression covers positive title/tag matches and negative substring cases. This is a user correction, not a new public-source finding; no external source was consulted.
