@@ -112,3 +112,8 @@ PR #585 checkpoint `c4c619aeeae2c031700ff0c31e139b468ac6419b` failed Plan/REA `4
 ## 25 November 2026 — Plan Journal shape correction
 
 PR #585 checkpoint `552cf45c6bc45d9efdc650aa5c4bbff8bfaefc90` failed Plan/REA `45711641514`: two entries inside the `PLAN_JOURNAL` array were wrapped in `unshift` calls, and the outside-array entry used unsupported `commits` instead of the type's `commit` field. This correction restores the array entries as raw JSON objects and uses `commit` singular for the outside-array unshift. Fresh exact-head tests are required. Baseline `45711641444`, focused resume `45711641451`, WhatsApp recovery `45711641629` and full CI `45711641522` were in progress. No local execution or owner resume/JD/DOCX acceptance.
+
+
+## 25 November 2026 — duplicate journal line correction
+
+PR #585 checkpoint `47a95ecf39fff802064f6a24cbbebf16f2171354` failed Plan/REA `45711941869` because a duplicate raw JSON copy of the WhatsApp journal entry remained after the unshift conversion. This correction removes the duplicate and keeps one valid `PLAN_JOURNAL.unshift` call with supported `commit` singular. Fresh exact-head checks are required. Baseline `45711942119`, focused resume `45711941872`, WhatsApp recovery `45711941852` and full CI `45711941895` were in progress. No local execution or owner resume/JD/DOCX acceptance.

@@ -843,3 +843,8 @@ PR #585 head `c4c619aeeae2c031700ff0c31e139b468ac6419b` had Plan/REA `4571145686
 ## 25 November 2026 — current journal schema correction
 
 PR #585 head `552cf45c6bc45d9efdc650aa5c4bbff8bfaefc90` failed Plan/REA `45711641514`: two in-array journal entries were wrapped in `PLAN_JOURNAL.unshift`, and the new outside-array entry used unsupported `commits` instead of `commit`. This correction restores raw objects inside the array and uses `commit` singular for the valid outside-array unshift. Fresh exact-head tests are required. Baseline `45711641444` was IN PROGRESS, focused resume `45711641451`, recovery `45711641629` and full CI `45711641522` were IN PROGRESS. PR #583 all three gates are green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`; #587 still fails four full-CI delivery expectations.
+
+
+## 25 November 2026 — duplicate journal line correction
+
+PR #585 head `47a95ecf39fff802064f6a24cbbebf16f2171354` failed Plan/REA `45711941869` because a duplicate raw JSON copy of the new WhatsApp journal entry remained after conversion to an outside-array `PLAN_JOURNAL.unshift`. This correction removes the raw duplicate and retains one valid call with supported `commit` singular. Fresh exact-head checks are required. Baseline `45711942119`, focused resume `45711941872`, recovery `45711941852` and full CI `45711941895` were IN PROGRESS. PR #583 is green but draft/selection-gated; PR #587 remains four full-CI failures.
