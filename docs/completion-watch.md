@@ -813,3 +813,13 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - **Kompas:** source/deployment status is not native acceptance. The 50 real paired answers/human review and authenticated web/Windows/mobile/WhatsApp voice/caption acceptance remain open. The separate voice task is disabled; no duplicate voice edits.
 
 **Continue:** wait for PR #585 full CI, keep it DRAFT, then independent review/protected preview and owner-authorized resume/JD/confirmation + exported-DOCX acceptance. In parallel, leave #587/#583 blocked by the explicit-selection route prerequisites; do not merge or send real documents. Keep the Gmail worker and crawler manual-only.
+
+
+## 25 November 2026 — status correction after latest checks
+
+- **PR #583 WhatsApp hard hold:** current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`; full CI `45692952469`, WhatsApp recovery `45692953138`, and Kompas baseline `45692952593` all SUCCESS. Still DRAFT; no independent review/protected preview or explicit-selection route acceptance.
+- **PR #585 confirmed-skill resume:** head `70602bc6dc236cb47e6f479dd84cab0beab60f4a`; baseline `45710598713` SUCCESS, but Plan/REA `45710598768` failed test 1 (new journal entry missing required `commits` field). Focused resume `45710599241`, recovery `45710598850`, and full CI `45710599584` were still in progress. Correction adds the real PR #587 commit SHA to the journal entry; rerun the exact-head gates before reusing any results.
+- **PR #587 helper:** exact head `b669456cbc9cf009c887aa31174f993c9588a848`; full CI `45708007879` failed tests 18, 93, 95, and 102. The existing assertions expect fallback without explicit selection/profile proof or delivery of unverified `supplierninja`. The email match is identity only. Do not loosen the hard hold or change assertions to green until the durable route selection guard is implemented.
+- The explicit-selection route remains blocked by no canonical checkout, no installed `node_modules/next/dist/docs`, and prior sandbox 402 reset `2026-12-01`. No real send, model call, DOCX, R2 write, replay or device acceptance. #585/#583 remain drafts; #587 is not mergeable as tested.
+
+**Continue:** add `commits` to the new #585 journal entry and rerun exact-head schema/CI. Keep #585 draft; require independent review, protected preview and owner-authorized resume/JD/confirmation plus exported-DOCX acceptance. No real WhatsApp delivery.

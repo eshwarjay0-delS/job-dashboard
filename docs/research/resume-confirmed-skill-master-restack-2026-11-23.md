@@ -87,3 +87,8 @@ The exact-head Plan/REA check `45698344753` failed test 14 (`scripts/tests/rea-r
 ## 25 November 2026 — exact-head gates after Plan Vision restoration
 
 PR #585 head `51499df38d85e0b1d05c6569c6ca9938e97aad4` restores the four product plans, preserves the historical Gmail scope and updates the Resume baseline. Plan/REA `45709615784`, focused resume `45709615521`, WhatsApp recovery `45709615499`, and Kompas baseline `45709615421` are SUCCESS. Full CI `45709615495` remains IN PROGRESS at Type-check. No results are reused from earlier heads. No local build, candidate resume/JD/confirmation, model call, DOCX export, protected preview or owner acceptance occurred.
+
+
+## 25 November 2026 — latest PR #585/#583/#587 gate correction
+
+PR #583 is now exact-head green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`: full CI `45692952469`, WhatsApp recovery `45692953138`, Kompas baseline `45692952593` all SUCCESS. It remains DRAFT and explicit-selection acceptance is missing. PR #585 head `70602bc6` has baseline `45710598713` SUCCESS; schema `45710598768` failed test 1 because the new journal entry omitted required `commits`; focused resume `45710599241`, recovery `45710598850` and full CI `45710599584` were still in progress. This correction adds the real PR #587 SHA to the new journal entry. Fresh exact-head checks are required. No local execution or owner resume/JD/DOCX acceptance.

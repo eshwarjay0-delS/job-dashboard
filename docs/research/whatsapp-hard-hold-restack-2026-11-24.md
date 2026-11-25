@@ -81,3 +81,8 @@ PR #275 (merged as `864cb9e906543b006ea730a8de1fa3e65b652ab9`) records private r
 ## 25 November 2026 — exact-head CI failure review
 
 PR #587 exact head `b669456cbc9cf009c887aa31174f993c9588a848` has Plan/REA `45708007770`, Kompas baseline `45708007920` and WhatsApp recovery `45708008113` SUCCESS, but full CI `45708007879` fails four existing tests: `whatsapp-5fold.test.mjs` test 18; `whatsapp-resume-failsafe.test.mjs` tests 93 and 95; and `whatsapp-single-request.test.mjs` test 102. The old expectations send a fallback without explicit selection/profile proof or send a tailored result with unverified JD-only `supplierninja`. Do not make these green by relaxing the hard hold. The durable explicit-selection route remains unimplemented and is blocked by the absent canonical checkout, installed Next.js 16.3.8 route-handler guide and runnable local environment (or the recorded sandbox reset on 1 Dec). PR #583 remains a separate exact-head check with full CI/recovery pending. No real WhatsApp send, R2 write, model call, DOCX generation, replay or device acceptance occurred.
+
+
+## 25 November 2026 — PR #583 release gate now green
+
+PR #583 exact current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` has full CI `45692952469`, WhatsApp recovery `45692953138`, and Kompas baseline `45692952593` all SUCCESS. It is still DRAFT. This proves source/test checks only; no protected preview, route-level explicit-selection provenance, real Meta send, R2 write, model call, DOCX generation, historical replay or device acceptance.

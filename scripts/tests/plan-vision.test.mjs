@@ -33,7 +33,7 @@ test('image labels are escaped as text', () => {
 
 test('resume alignment handoff reflects the current-master restack and remains blocked for live acceptance', () => {
   const resume = productPlan('resume')
-  assert.equal(PLAN_REVISION, '2026-11-25.4')
+  assert.equal(PLAN_REVISION, '2026-11-25.5')
   assert.match(resume.baseline, /PR #585 clean current-master restack/)
   assert.match(resume.baseline, /54\/54/)
   assert.match(resume.baseline, /those results are not reused/)
