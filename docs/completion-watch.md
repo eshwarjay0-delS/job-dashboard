@@ -1,5 +1,41 @@
 # MFit Completion Watch
 
+## 25 November 2026 — verified overlay release and active backlog
+
+This section supersedes stale current-status statements below; earlier entries are retained as history.
+
+### Production and Kompas overlay
+
+- Canonical master and production are `a17b3267e271c77cd8887312445271b7fa172bd0`.
+- Production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` is READY at that exact SHA. Independent alias lookup confirms `job-dashboard-fawn.vercel.app`.
+- PR [#582](https://github.com/eshwarjay0-delS/job-dashboard/pull/582) merged at 16:54:25Z. Exact-head and master CI, schema, Kompas baseline, account-sync, Vercel status and Windows build all passed (runs 45657099297, 45657099464, 45657099238, 45657099207, 45657099213, 45658988293, 45658988359, 45658988373, 45658988350, 45658988221).
+- The official [Kompas.exe release](https://github.com/eshwarjay0-delS/job-dashboard/releases/tag/kompas-desktop-latest) was updated at 16:55:57Z; SHA256 `b8532183d34294f100f5dbf721e8fcd682d7c9529f949fb768dd96b9088e31c1`.
+- The overlay P0 includes failure-tolerant Start, Check again re-probe, working Minimize/Close controls, live-question clarifier, paper-only opacity, and a 700/600/400 bold cycle with normal default.
+- Current `src/lib/kompasHonestyGate.ts` keeps a non-empty loaded resume unchanged and uses the Houston fixture only for an empty resume; the S5 tests assert both paths. The earlier short-Saint substitution concern is superseded by current source/test evidence.
+- A two-hour production runtime-error query returned no grouped errors. This is not a native/user acceptance test. The owner's installed Windows click-through, login/session start, voice/caption, mobile and 50 authenticated answer pairs with independent human grading remain open.
+
+### WhatsApp — priority continuation
+
+- The 17 Oct 2026 17:28 Chicago delivery incident remains unverified. Source DOCX and matching JD were previously recovered; source facts remain quarantined. Generated output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivered/read receipt are still missing. Do not replay or resend.
+- The latest owner correction requires an explicitly selected same-account Files/Library item for fallback, exact label **Original resume — NOT TAILORED**, and no automatic closest-match, fresh-upload substitution or partial rewrite.
+- **Continue: PR #583** is the clean current-master helper hard-hold restack. Current corrected head `a4f96d39b58024e090cdac250c4fa293a9177856`. It blocks unsupported JD-only additions, fails closed without a nonblank matching profile email, preserves the honest 70–94.9% completed-draft band, and adds the 30 Oct incomplete-role regression. The first regression run failed one escaped-newline fixture; that was corrected. Exact-head Kompas baseline 45686440422 is SUCCESS; full CI 45686440622 and WhatsApp recovery 45686440634 are IN PROGRESS. PR #583 remains DRAFT and is not deployed.
+- The durable route-level explicit-selection proof remains in PR #572, head `741f8eeb284b2faeb5223c80162cc5f7d1344705`; full CI 45460461747 fails two Listening-hold assertions while recovery 45460461642, baseline 45460461650 and schema 45460461660 pass. Shared PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259` has six green checks but needs a second authorized review and is non-mergeable. Do not self-approve or bypass it.
+
+### Resume, Gmail and crawler
+
+- Resume confirmed-skill PR #570 head `100b64d852a2ef5ad1ad3ae96653d86abeffbafc`: schema 45682847656 and baseline 45682847151 pass; one regression passes and one fails; full CI 45682847235 fails. No real candidate bundle or DOCX acceptance.
+- Gmail PR #580 head `f783adb36d9332589028b1717eb40b0a8da07a51`: all four checks pass, but its own description requires the owner's merge tap. Four-account maximum remains authoritative; Poke worker/scheduler/notifications/sending stay disabled. PR #571 and #576 remain drafts with full-CI failures. No Gmail API/OAuth call or inbox mutation.
+- Contract crawler PR #575 head `31aeaf67011b0c12a4c736f054fed5b17004af42`: full CI 45682807511, manual-only 45682807661, freshness 45682807558, baseline 45682807483 and schema 45682807522 all SUCCESS. It remains DRAFT: location/remote filters can underfill after the 100-row API result, `/api/crawl/jobs` maxDuration 60 is shorter than the runner budget, and protected preview is unavailable. Manual/on-demand only; no live crawl. PR #574 full CI 45602990382 fails.
+
+### Exact environment blocker and coordination
+
+The current container has no canonical checkout, package.json or installed `node_modules/next/dist/docs`. AGENTS.md requires the installed Next.js 16.3.8 guide before route-code edits. The prior WhatsApp sandbox resume returned HTTP 402 snapshot quota exhaustion with recorded reset 2026-12-01T00:00:00Z; it was not retried. An approved local/cloud environment with the canonical checkout and installed package is required for the durable route-level fallback work.
+
+MFit Completion Watch is enabled. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled. No separate Bible-Keeper automation was found. No voice/caption work was duplicated, and no real message, email, model, R2, DB, crawl or device test was performed.
+
+**Continue:** finish exact-head full CI and WhatsApp recovery on PR #583, keep it draft until independent review, then implement the explicit same-account Files/Library selection route when the installed Next.js environment is available. Preserve the 17 Oct incident as unverified until the output DOCX and signed delivery evidence are recovered.
+
+
 ## 25 November 2026 — Kompas overlay P0: start, window, clarifier, bold
 
 The answer preflight no longer disables Start. It is a 1.8 second probe with two retries. Timeout, 4xx, 5xx, a kompas:// cross-origin miss, and a slow cold start all start, and the existing answer fallback chain is unchanged. Check again re-probes and clears the red banner. Minimize stays minimized. Close and Minimize are the title-bar buttons, above the resize grips, and they are not a drag region. The clarifier is a separate popup that follows the live question. The opacity slider fades the paper and does not hide the clarifier or the answer text. The B button left of the font size cycles bold 700, semi-bold 600, and normal 400, default normal, stored in localStorage and the desktop prefs. Houston text is only the empty-resume fallback. A non-empty loaded resume is not replaced. Skip-login was not edited. The shell is Electron. There is no Tauri app in this repo. The installed Windows exe needs the desktop workflow after the ship. This is not a live listen.
