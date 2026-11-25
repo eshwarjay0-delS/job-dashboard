@@ -111,17 +111,20 @@ const low = {
   keyword_analysis: { matched: [], added: ['supplierninja'], missing: ['soc 2', 'tprm', 'supplier', 'vendor'] },
 }
 
-test('unverified JD-only additions hard-hold the tailored file and fall back to the same-profile original', async () => {
+test('a below-floor rewrite still delivers that Word file and names the missing terms', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
   await generate('15550101', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.equal(docs[0].body, HOUSTON)
-  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews|supplierninja/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.doesNotMatch(docs[0].caption, /supplierninja/)
+  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].body, /candidate1@example.test/)
+  assert.doesNotMatch(docs[0].body, /candidate2/)
+  assert.match(docs[0].caption, /30\.8%/)
+  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
+  assert.match(docs[0].caption, /supplierninja/)
+  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
   assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
@@ -157,8 +160,7 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
-test('a finished 30.8% rewrite with unverified JD additions sends the same-profile original', async () => {
-  const finished = {
+test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () =>  const finished = {
     ...low,
     token: 'easm-scored',
     quality: { ...low.quality, incomplete: false, status: 'needs_review' },
@@ -171,10 +173,15 @@ test('a finished 30.8% rewrite with unverified JD additions sends the same-profi
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.equal(docs[0].body, HOUSTON)
-  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews|supplierninja/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.doesNotMatch(docs[0].caption, /supplierninja/)
+  assert.match(docs[0].body, /Rewrote supplier reviews/)
+  assert.match(docs[0].caption, /30\.8%/)
+  assert.match(docs[0].caption, /Skills your resume already supports: 30\.8%/)
+  assert.match(docs[0].caption, /ATS parse check: 92%/)
+  assert.match(docs[0].caption, /Risk factor:/)
+  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
+  assert.doesNotMatch(docs[0].caption, /was not rewritten/)
+  assert.doesNotMatch(docs[0].caption, /marked incomplete/)
+  assert.doesNotMatch(docs[0].caption, /closest matching resume/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
