@@ -1,3 +1,9 @@
+## 2026-11-25 — Kompas overlay P0 (visible after ship; desktop exe needs a new build)
+
+Start is never blocked on the answer preflight. The probe is 1.8s with retry and backoff. Check again re-probes and clears the not-ready banner. Minimize stays down, and Close destroys the window. The clarifier popup shows the live question and is not inside the question or answer box. Opacity fades the paper only. B cycles 700 / 600 / 400, default 400, and is saved in localStorage and desktop settings. Skip-login was not edited. No Tauri project exists here; the window is the Electron shell.
+
+**Checked:** scripts/tests/kompas-overlay-p0.test.mjs, S1 replay, S5 gate, clarifier 47/47, adversarial 20/20, baseline 92/92, tsc, eslint 0 errors. Not a live click-through. The page updates with the web ship. The installed exe needs the Windows desktop workflow.
+
 ## 2026-11-21 — Queue the next question, drop the Say this template, finish a cut sentence
 
 A detected question no longer cancels the answer already on screen. It waits in a queue, the current answer is shown, then the next one starts. Say this no longer builds a sentence from raw transcript tokens. If the model is unreachable the panel stays empty. A stream that stops mid-sentence keeps the words and continues, and the footer does not say the answer did not finish once words are on screen. The Say toggle is below Next. The OpenRouter 403 fallback is in the same ship. One desktop build follows because the page script changed.

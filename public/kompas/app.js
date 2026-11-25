@@ -1584,7 +1584,7 @@ $("sysBtn").onclick = async () => {
 };
 // Initial source-state render must wait until running and captures are initialized.
 /* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
-const ANSWER_WEIGHTS = { bold: 700, semi: 500, normal: 400 };
+const ANSWER_WEIGHTS = { bold: 700, semi: 600, normal: 400 };
 function answerWeightId() {
   const saved = LS.get("answerWeight", "normal");
   return ANSWER_WEIGHTS[saved] ? saved : "normal";
@@ -1592,16 +1592,19 @@ function answerWeightId() {
 function applyAnswerWeight() {
   const id = answerWeightId();
   document.documentElement.style.setProperty("--answer-weight", String(ANSWER_WEIGHTS[id]));
+  document.documentElement.style.setProperty("--answer-shadow", "0");
   const btn = $("boldBtn");
   if (!btn) return;
   if (btn.dataset) btn.dataset.weight = id;
   btn.title = id === "bold" ? "Bold" : id === "semi" ? "Semi-bold" : "Normal weight";
+  btn.setAttribute("aria-pressed", id === "normal" ? "false" : "true");
   if (btn.style) btn.style.fontWeight = String(ANSWER_WEIGHTS[id]);
 }
 function cycleAnswerWeight() {
   const order = ["bold", "semi", "normal"];
   const next = order[(order.indexOf(answerWeightId()) + 1) % 3];
   LS.set("answerWeight", next);
+  try { window.kompasDesktop?.setAnswerWeight?.(next); } catch {}
   applyAnswerWeight();
 }
 const LOOK_FONTS = {
@@ -1625,7 +1628,7 @@ function applyLook() {
   if (!desk) {
     const a = Math.min(1, Math.max(0.15, Number(LS.get("opacity", 1)) || 1));
     document.documentElement.style.setProperty("--panel-a", String(a));
-    document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
+    document.documentElement.style.setProperty("--answer-shadow", "0");
     if (fade && document.activeElement !== fade) fade.value = String(Math.round(a * 100));
   }
   applyAnswerWeight();
@@ -1879,7 +1882,57 @@ let sessionReadyUntil = 0;
 let sessionCheckPending = false;
 let sessionAuthGate = null;
 let sessionAuthPrompted = false;
+let readyBannerDismissed = false;
 let __lastAuthFailure = null;
+function hideReadyBanner() {
+  const banner = $("readyBanner");
+  if (banner) banner.hidden = true;
+}
+function paintReadyBanner(message) {
+  const banner = $("readyBanner");
+  const text = $("readyBannerText");
+  const show = !!message && !readyBannerDismissed;
+  if (!show) { hideReadyBanner(); return; }
+  if (text) text.textContent = message;
+  if (banner) banner.hidden = false;
+  status(message, "err");
+}
+function clearReadyBanner() {
+  readyBannerDismissed = true;
+  hideReadyBanner();
+  const button = $("startBtn");
+  if (button) button.disabled = false;
+  if (!running) status("Ready — press Start to listen to the call.", "live");
+}
+async function probeAnswerService(req) {
+  const timeoutMs = Math.min(4000, Math.max(400, Number(req && req.timeoutMs) || 1800));
+  const once = async () => {
+    const ctl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => { try { ctl.abort(); } catch {} }, timeoutMs) : 0;
+    try {
+      const response = await fetch("/api/answer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ preflight: true }),
+        signal: ctl ? ctl.signal : undefined,
+      });
+      const body = await response.json().catch(() => ({}));
+      return { response, body };
+    } finally { if (timer) clearTimeout(timer); }
+  };
+  let hit = await once();
+  const authOff = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
+  if (hit.response.status === 401 && !authOff) {
+    let refreshOk = false;
+    if (typeof window.kompasDesktop?.refreshAuth === "function") {
+      refreshOk = await window.kompasDesktop.refreshAuth("rejected").catch(() => false);
+    } else if (typeof tryRefreshAuth === "function") {
+      refreshOk = await tryRefreshAuth("rejected");
+    }
+    if (refreshOk) hit = await once();
+  }
+  return { status: hit.response.status, ready: hit.body.ready === true, body: hit.body };
+}
 function offerFreshSignIn(auto) {
   if (running) return;
   if (typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled()) return;
@@ -1891,122 +1944,81 @@ function offerFreshSignIn(auto) {
   window.location.assign("/login?next=" + encodeURIComponent("/kompas/index.html") + reason);
 }
 async function checkSessionReadiness(opts) {
-  const background = !!(opts && opts.background);
-  if (sessionCheckPending) return;
+  const recheck = !!(opts && opts.recheck);
+  if (sessionCheckPending && !recheck) return { start: true };
   sessionCheckPending = true;
   const button = $("startBtn");
-  const quiet = background || running || starting;
-  if (!quiet) {
-    button.disabled = true;
-    button.textContent = "Checking…";
-    status("Connecting…", "live");
-  }
+  if (button) button.disabled = false;
   try {
     if (typeof ensureAuthFlag === "function") await ensureAuthFlag();
     const authOff = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
-    const attempt = () => fetch("/api/answer", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ preflight: true }), signal: AbortSignal.timeout(50000),
-    });
-    let response = await attempt();
-    let refreshAttempted = false;
-    let refreshOk = false;
-    if (response.status === 401 && !authOff) {
-      refreshAttempted = true;
-      if (typeof window.kompasDesktop?.refreshAuth === "function") {
-        // Browser sign-in and Electron are different security contexts. Restore
-        // only the native token family; never borrow another account's cookies.
-        refreshOk = await window.kompasDesktop.refreshAuth("rejected").catch(() => false);
-      } else if (typeof tryRefreshAuth === "function") {
-        refreshOk = await tryRefreshAuth("rejected");
-      }
-      if (refreshOk) response = await attempt();
-    }
-    const result = await response.json().catch(() => ({}));
-    if (response.ok && result.ready === true) {
+    const origin = (typeof location !== "undefined" && location.origin) || "";
+    const probed = (globalThis.KompasReadiness && KompasReadiness.probeReadiness)
+      ? await KompasReadiness.probeReadiness((req) => probeAnswerService(req), {
+        origin, timeoutMs: 1800, backoff: [250, 700], recheck,
+        crossOrigin: /^kompas:/i.test(origin),
+      })
+      : { start: true, ready: false, fallback: true, banner: "", reason: "unknown", status: 0 };
+    if (button) button.disabled = false;
+    sessionReadyUntil = Date.now() + 30000;
+    if (probed.ready || recheck) {
       sessionAuthGate = null;
       sessionAuthPrompted = false;
-      sessionReadyUntil = Date.now() + 30000;
-      if (!quiet && !running) {
-        button.textContent = "Start session";
-        status("Answer service ready. Press Start session to connect your audio.", "live");
-      }
-      return;
+      if (recheck) clearReadyBanner();
+      else hideReadyBanner();
+      return { ...probed, start: true };
     }
     let authState = null;
     if (typeof window.kompasDesktop?.authState === "function") authState = await window.kompasDesktop.authState().catch(() => null);
     const failure = __lastAuthFailure || {};
+    const result = probed.body || {};
     const decision = (globalThis.KompasSessionReauth && KompasSessionReauth.decideSessionStart)
       ? KompasSessionReauth.decideSessionStart({
-        httpStatus: response.status,
+        httpStatus: probed.status,
         code: result.code || "",
         message: result.error || result.message || "",
         interviewLive: !!running,
-        refreshAttempted,
-        refreshOk,
-        refreshStatus: failure.status || (authState && authState.notice && authState.notice.code === "egress_quota" ? 402 : response.status === 401 && refreshAttempted && !refreshOk ? 401 : 0),
+        refreshAttempted: probed.status === 401,
+        refreshOk: false,
+        refreshStatus: failure.status || (authState && authState.notice && authState.notice.code === "egress_quota" ? 402 : probed.status === 401 ? 401 : 0),
         refreshCode: failure.code || (authState && authState.notice && authState.notice.code) || "",
         noticeCode: authState && authState.notice ? authState.notice.code : "",
         hasSession: authState ? authState.hasSession === true : undefined,
-        ready: result.ready === true,
+        ready: probed.ready === true,
         authDisabled: authOff,
       })
-      : { action: "explain", egress: false, autoSignIn: false, message: result.error || "The answer service is not ready. Please check again before starting." };
-    sessionReadyUntil = 0;
-    if (decision.action === "proceed" || decision.warm) {
-      sessionAuthGate = null;
-      sessionAuthPrompted = false;
-      sessionReadyUntil = Date.now() + 30000;
-      if (!quiet && !running) {
-        button.textContent = "Start session";
-        status(authOff ? "Sign-in is off. Press Start session." : "Answer service ready. Press Start session to connect your audio.", "live");
-      }
-      return;
-    }
-    if (quiet || running || starting) {
-      sessionReadyUntil = Date.now() + 30000;
-      return;
-    }
-    if (decision.action === "wait") {
-      if (!running) button.textContent = "Start";
-      return;
-    }
-    if (decision.action === "sign_in") {
+      : { action: "proceed", warm: true, egress: false, autoSignIn: false, message: "" };
+    if (decision.action === "sign_in" && !running && !authOff) {
       sessionAuthGate = "sign_in";
-      button.textContent = "Sign in";
+      if (button) button.textContent = "Sign in";
       status(decision.message, "err");
       if (decision.autoSignIn && !sessionAuthPrompted) {
         sessionAuthPrompted = true;
         offerFreshSignIn(true);
       }
-      return;
+      return { ...probed, start: true };
     }
-    if (decision.egress) {
+    if (decision.egress && !running && !authOff) {
       sessionAuthGate = "egress";
-      button.textContent = "Sign in";
+      if (button) button.textContent = "Sign in";
       status(decision.message, "err");
-      return;
+      return { ...probed, start: true };
     }
     sessionAuthGate = null;
-    sessionReadyUntil = Date.now() + 30000;
-    button.textContent = "Start";
-    status("Ready — press Start to listen to the call.", "live");
+    if (button && !running && !button.classList.contains("on")) button.textContent = "Start";
+    if (probed.banner) paintReadyBanner(beforeSessionNotice(probed.banner));
+    else hideReadyBanner();
+    return { ...probed, start: true, fallback: probed.fallback !== false };
   } catch (error) {
     sessionReadyUntil = Date.now() + 30000;
-    if (quiet || running || starting) return;
-    const authOffNow = typeof isKompasAuthDisabled === "function" && isKompasAuthDisabled();
+    if (button) button.disabled = false;
+    if (!running && button && !button.classList.contains("on")) button.textContent = "Start";
     const message = String((error && error.message) || error || "");
-    if (authOffNow && /exceed_egress|egress quota|401|402|sign in/i.test(message)) {
-      sessionAuthGate = null;
-      sessionAuthPrompted = false;
-      button.textContent = "Start session";
-      status("Sign-in is off. Press Start session.", "live");
-    } else {
-      button.textContent = "Start";
-      status("Ready — press Start to listen to the call.", "live");
-    }
-  } finally { if (!quiet) button.disabled = false; sessionCheckPending = false; }
+    if (!readyBannerDismissed && !running && /timeout|aborted|failed|fetch/i.test(message)) paintReadyBanner(beforeSessionNotice(message));
+    return { start: true, ready: false, fallback: true, banner: "", reason: "timeout" };
+  } finally { if (button) button.disabled = false; sessionCheckPending = false; }
 }
+$("readyCheck")?.addEventListener("click", () => { void checkSessionReadiness({ background: true, recheck: true }); });
 
 // A verified native Chrome handoff automatically rechecks readiness.
 if (typeof window.kompasDesktop?.onAuthReady === "function") {
@@ -2015,7 +2027,7 @@ if (typeof window.kompasDesktop?.onAuthReady === "function") {
     // sessions, not just re-enable the Start button.
     void accountSessionSync?.refresh();
     if (pendingDesktopHandoffs.size) void resumePendingDesktopHandoffs();
-    if (!running) void checkSessionReadiness();
+    if (!running) void checkSessionReadiness({ background: true });
   });
 }
 let outputDeviceKey = "";

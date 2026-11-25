@@ -190,6 +190,32 @@
 
   var bridgeTimer = 0;
   var bridgeCtl = null;
+  function liveQuestionText() {
+    var t = questionText();
+    if (!t || /waiting for the interview/i.test(t)) return "";
+    return t;
+  }
+  function paintClarify(openIfLive) {
+    var panel = document.getElementById("answerAside");
+    if (!panel) return;
+    var overlay = document.getElementById("overlay");
+    var answer = document.getElementById("answer");
+    var nest = answer && answer.closest ? answer.closest(".a") : null;
+    var questionBox = document.getElementById("question");
+    var questionNest = questionBox && questionBox.closest ? questionBox.closest(".q") : null;
+    var host = overlay || panel.parentElement;
+    if (host && ((nest && nest.contains(panel)) || (questionNest && questionNest.contains(panel)))) host.appendChild(panel);
+    var live = liveQuestionText();
+    var node = document.getElementById("clarifyLive");
+    if (!node) {
+      node = el("p", "clarify-live", live);
+      node.id = "clarifyLive";
+      panel.appendChild(node);
+    } else if (live) node.textContent = live;
+    node.style.opacity = "1";
+    panel.style.opacity = "1";
+    if (openIfLive && live) setOpen(true);
+  }
   function paintBridgeShell() {
     var panel = document.getElementById("answerAside");
     if (!panel) return;
@@ -203,6 +229,7 @@
     close.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setOpen(false); });
     head.appendChild(close);
     panel.appendChild(head);
+    paintClarify(false);
   }
   function paintBridgeLines(lines) {
     paintBridgeShell();
@@ -320,9 +347,11 @@
   function onQuestion() {
     var q = document.getElementById("question");
     var stemNow = stem(q && q.textContent);
-    if (stemNow === lastStem) return;
+    var changed = stemNow !== lastStem;
+    if (!changed) { paintClarify(false); return; }
     lastStem = stemNow;
     manual = null;
+    paintClarify(true);
     var hit = lookup(stemNow);
     if (hit) render(hit);
     else if (stemNow) { current = null; paintLocal(); }

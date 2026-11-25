@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld("kompasDesktop", {
   setLive: (on) => ipcRenderer.send("kompas:live", !!on),
   getPrivate: () => ipcRenderer.invoke("kompas:get-private"),
   setPrivate: (on) => ipcRenderer.invoke("kompas:set-private", !!on),
+  setAnswerWeight: (id) => ipcRenderer.invoke("kompas:set-prefs", { answerWeight: id === "bold" || id === "semi" ? id : "normal" }),
+  minimize: () => ipcRenderer.send("kompas:minimize"),
+  close: () => ipcRenderer.send("kompas:close"),
   onPrivate: (fn) => { ipcRenderer.on("kompas:private", (_e, on) => fn(!!on)); },
   takeSession: () => ipcRenderer.invoke("kompas:take-session"),
   onSession: (fn) => { ipcRenderer.on("kompas:session", (_e, s) => fn(s)); },
@@ -56,18 +59,25 @@ function storedAnswerWeight() {
     const raw = localStorage.getItem("perfact.answerWeight");
     const id = raw ? JSON.parse(raw) : "normal";
     if (id === "bold") return 700;
-    if (id === "semi") return 500;
+    if (id === "semi") return 600;
   } catch (e) {}
   return 400;
 }
 function applyFade(opacity) {
   const a = Math.min(1, Math.max(0.15, Number(opacity) || 1));
   document.documentElement.style.setProperty("--panel-a", String(a));
+  // Opacity fades the paper only. The B button owns the answer weight.
   document.documentElement.style.setProperty("--answer-weight", String(storedAnswerWeight()));
-  document.documentElement.style.setProperty("--answer-shadow", String(+(1 - a).toFixed(3)));
+  document.documentElement.style.setProperty("--answer-shadow", "0");
   const input = document.getElementById("kdFade");
   if (input && document.activeElement !== input) input.value = String(Math.round(a * 100));
   try { localStorage.setItem("kompas-opacity", String(a)); } catch (e) {}
+  const clarify = document.getElementById("answerAside");
+  const live = document.getElementById("clarifyLive");
+  const answer = document.getElementById("answer");
+  if (clarify) clarify.style.opacity = "1";
+  if (live) live.style.opacity = "1";
+  if (answer) answer.style.opacity = "1";
 }
 
 function paintState(s) {
@@ -77,11 +87,16 @@ function paintState(s) {
   if (tgl) tgl.checked = !!s.isPrivate;
   if (pin) { pin.classList.toggle("on", !!s.onTop); pin.setAttribute("aria-pressed", String(!!s.onTop)); }
   if (s && typeof s.opacity === "number") applyFade(s.opacity);
+  if (s && (s.answerWeight === "bold" || s.answerWeight === "semi" || s.answerWeight === "normal")) {
+    try { localStorage.setItem("perfact.answerWeight", JSON.stringify(s.answerWeight)); } catch (e) {}
+    document.documentElement.style.setProperty("--answer-weight", s.answerWeight === "bold" ? "700" : s.answerWeight === "semi" ? "600" : "400");
+  }
 }
 
 function build() {
   document.documentElement.classList.add("kd");
   bar = el("header", { id: "kdBar", class: "kd-bar" });
+  bar.setAttribute("data-tauri-drag-region", "");
   const left = el("div", { class: "kd-left" });
   const live = el("div", { class: "kd-livetools" });
   // the live screen's header controls, moved here so there is one header; app.js still finds them by id
@@ -118,9 +133,10 @@ function build() {
     '<span>Opacity</span><input type="range" id="kdFade" min="15" max="100" step="5" value="100" />');
   const priv = el("label", { class: "kd-private", title: "Private: Zoom, Teams, Meet, OBS and screenshots cannot see this window" },
     '<span>Private</span><input type="checkbox" class="tgl" id="kdPrivate" />');
-  const hide = el("button", { class: "kd-ico", id: "kdHide", title: "Hide to a small box (Ctrl+H)" }, ICON.hide);
+  const hide = el("button", { class: "kd-ico", id: "kdHide", title: "Minimize", "aria-label": "Minimize" }, ICON.hide);
   const move = el("button", { class: "kd-ico", id: "kdMove", title: "Place Kompas: pick one of six screen sections" }, ICON.move);
-  const close = el("button", { class: "kd-ico kd-close", id: "kdClose", title: "Quit Kompas" }, ICON.close);
+  const close = el("button", { class: "kd-ico kd-close", id: "kdClose", title: "Close", "aria-label": "Close" }, ICON.close);
+  for (const btn of [hide, move, close]) btn.removeAttribute("data-tauri-drag-region");
   right.append(fade, priv, hide, move, close);   // no pin: Kompas is always on top (owner, 5 Oct 2026)
   bar.append(left, live, el("span", { class: "kd-spacer" }), right);
   document.body.prepend(bar);
@@ -152,9 +168,9 @@ function build() {
   fadeInput.addEventListener("input", (e) => setFade(Number(e.target.value) / 100));
   fade.addEventListener("dblclick", () => { fadeInput.value = "100"; setFade(1); });
   document.getElementById("kdPrivate").addEventListener("change", (e) => ipcRenderer.invoke("kompas:set-prefs", { isPrivate: e.target.checked }));
-  hide.addEventListener("click", () => ipcRenderer.send("kompas:collapse", true));
+  hide.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); ipcRenderer.send("kompas:minimize"); });
   move.addEventListener("click", () => ipcRenderer.send("kompas:place"));
-  close.addEventListener("click", () => ipcRenderer.send("kompas:close"));
+  close.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); ipcRenderer.send("kompas:close"); });
   document.getElementById("kdMarkOpen").addEventListener("click", () => ipcRenderer.send("kompas:collapse", false));
 
   ipcRenderer.on("kompas:state", (_e, s) => paintState(s));

@@ -25,7 +25,8 @@
   right:8px;
   bottom:48px;
   left:auto;
-  z-index:6;
+  z-index:30;
+  opacity:1 !important;
   width:240px;
   min-height:0;
   max-height:min(70vh, 640px);
@@ -99,6 +100,13 @@
 .aside-hist-label{font:600 11px/1.2 var(--sans);letter-spacing:.03em;text-transform:uppercase;color:var(--faint)}
 .aside-summary,.aside-say{margin:0 0 10px;font-size:13.5px;line-height:1.45;color:var(--ink)}
 .aside-say{font-weight:650}
+.clarify-live,#clarifyLive{
+  display:block;
+  margin:0 0 8px;
+  color:var(--ink);
+  font:400 14px/1.45 var(--sans);
+  opacity:1 !important;
+}
 .aside-empty{
   margin:0;
   color:var(--muted);

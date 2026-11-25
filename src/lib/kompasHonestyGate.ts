@@ -56,6 +56,10 @@ export function honestySource(resume: string | null | undefined): string {
   // when no resume is provided at all.
   const text = String(resume || "")
   if (!text.trim()) return HOUSTON_RESUME
+  // A short Saint Louis profile is not the Houston resume. The loaded current
+  // resume (Fortinet, NIST, CSPM, Okta) stays the source. Round 6 still applies.
+  const shortSaint = /jayeshwar44|saint louis university/i.test(text) && !/fortinet|nist|cspm|okta/i.test(text)
+  if (shortSaint) return HOUSTON_RESUME
   return text
 }
 
