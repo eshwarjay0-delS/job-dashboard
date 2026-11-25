@@ -73,3 +73,19 @@ MFit Completion Watch is enabled. MFit Safe Merge Gate and Kompas Continuous Voi
 ## Continue
 
 **Continue:** validate the corrected exact-head PR #583 (full CI and WhatsApp recovery), keep it draft until independent review, then continue the durable same-account Files/Library selection route when the installed Next.js environment is available. Preserve the historical 17 Oct incident as unverified until its original output and signed delivery evidence are recovered. In parallel, keep Gmail #580 behind its owner tap and crawler #575 behind protected preview plus the documented search/duration acceptance gaps.
+
+
+## 25 November 2026 16:31 CDT — follow-up exact-head status
+
+Canonical master `a17b3267e271c77cd8887312445271b7fa172bd0` and Vercel READY production `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` are exact; the two canonical aliases are assigned. Direct public HTTP smoke through the web retrieval tool was inaccessible, so no direct endpoint response is claimed.
+
+- Resume/JD/confirmed-experience PR #585 exact head `2e3d6f41b89694567992e45c73426f5add474141`: full CI 45712144382, focused resume 45712144296, WhatsApp recovery 45712144329, baseline 45712144568, Plan/REA 45712144317 all SUCCESS. Draft remains; no protected preview, real source/JD/confirmation bundle or DOCX acceptance. Source review found no obvious defect this pass; tests are synthetic.
+- WhatsApp hard-hold PR #587 head `da0e82786c2ef0504a68b76517d3baa136a7ab8`: two outdated tests were corrected to expect the original same-profile resume instead of a tailored file containing unverified JD-only `supplierninja` (commit da0e827). Full CI 45714896244 and WhatsApp recovery 45714896267 are IN PROGRESS; baseline 45714896266 and schema 45714896243 SUCCESS. Previous head b669456 failed four assertions; two now corrected. The remaining missing-file fallback failures are preserved because an uploaded resume with no profile email is explicit user input but the route calls `chosenResumeMatchesProfile(text, files?.email)` and blocks fallback when `files` is absent. This requires route-level source distinction and identity verification, not test weakening.
+- PR #583 predecessor head 7e00a7: full CI 45698027675 and WhatsApp recovery 45698027739 FAILED (malformed test syntax); baseline 45698027687 SUCCESS. Do not merge/reuse predecessor green checks.
+- Gmail PR #580 four gates green, owner tap remains; PR #474 three gates green but DRAFT/non-mergeable, two-inbox/mobile acceptance missing. Poke worker and send remain disabled.
+- Contract crawler PR #575 five gates green but DRAFT; filter underfill, route duration vs runner budget and protected preview remain. No crawl.
+- Kompas PR #554 five gates green but DRAFT/non-mergeable; second authorized reviewer required. No voice/caption duplication.
+
+No local checkout, installed dependencies, Next.js 16.3.8 route guide, or sandbox restore is available. No route edit, local test/build, model call, DOCX, real email/WhatsApp, R2/database/inbox mutation, crawl, or device acceptance occurred.
+
+**Continue:** wait for exact-head #587 CI/recovery, keep it unmerged while upload fallback is failing; fix route only with the required installed Next.js environment. Continue #585 source review and leave it DRAFT until protected preview and authenticated resume/JD/confirmation plus exported-DOCX acceptance.
