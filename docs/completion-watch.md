@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 25 November 2026 11:22 UTC — common lint fix and WhatsApp gate reconciled
+
+- **PR #581** is a one-file, behavior-neutral current-master correction: `src/lib/kompasConsistency.ts:1059` changes an unreassigned `let s = sentence` to `const`. The branch is `fix/kompas-consistency-prefer-const-20261125`, commit `9350d28e0326dd4a6161d37adb485e359223491c`, based on master `794e8cfdbd3103409552857806bab89851d5bfcb. No local checkout/dependencies; local tests/build were not run. Kompas baseline passed; full CI is still in progress.
+- **Correction:** PR #578's exact-head full CI did **not** fail at lint. Its Lint and Type-check passed, then the Kompas question-framing/one-press/typed-input/voice regression suite failed at 70/72. WhatsApp recovery, Plan/REA and baseline passed. The remaining failure is the shared #554 Listening-hold/VM-fixture dependency, not the lint correction.
+- #581 remains draft for remote full CI and independent review. It can help other current-master restacks that failed at lint (#570, #574, #575, #576, #573), but it cannot bypass #554's separate review gate.
+
+Continue: let the active Safe Merge Gate review exact-head #581 and #579. After the shared #554 dependency is independently approved, continue the approved WhatsApp explicit-selection fallback + unsupported-JD hard hold; do not send/replay or claim the 17 Oct 17:28 Chicago file was delivered.
+
+
 ## 25 November 2026 11:22 UTC — shared prefer-const lint unblocker submitted
 
 - **Continue:** unblock the common lint error that caused several approved current-master restacks to fail before other CI suites ran. Source review confirms `src/lib/kompasConsistency.ts:1059` has `let s = sentence` with no reassignment; the submitted correction is `const` only.
