@@ -822,3 +822,9 @@ Continue: open the draft replacement for the approved WhatsApp hard-hold slice a
 ## 25 November — WhatsApp hard-hold draft lint correction
 
 PR #578 now carries the harmless `let`→`const` fix for the exact full-CI lint error at `src/lib/kompasConsistency.ts:1059` (source commit `71a1f74b03c766fd5fbec5aa69e4476064c6b605`). Exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema must be rerun; previous tests apply only to earlier heads. Keep DRAFT; no production or real-message acceptance.
+
+
+
+## 25 Nov — WhatsApp hard-hold gate update
+
+Exact PR #578 head afd6ede475fe61bf05432fafefe4b01e9aa8fdfb: Plan/REA 45602453473 and Kompas baseline 45602452974 passed; WhatsApp recovery 45602453342 and full CI 45602453480 are IN PROGRESS after the lint-only correction. Keep draft; no production or real-send acceptance.
