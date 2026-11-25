@@ -42,3 +42,8 @@ A remote source audit of the PR branch found a missing closing parenthesis in `s
 The previous multi-page offset scan used `last_seen_at`, a sort key that manual crawls can update while the search is paging. Even with a UUID tie-breaker, a moving row can cross an offset and be skipped or duplicated. The approved continuation replaces that scan with one ordered bounded query snapshot, then filters clearance in memory. The same 14-day cutoff, default exclusion, 100–1,000-row cap, explicit cap warning and manual-only crawler policy remain.
 
 Regression coverage now exercises snapshot filtering, the cap signal and the route's single-query/no-offset contract. The tests are committed on PR #575, but no local Node execution occurred. Exact-head remote CI is pending; the common master lint/Kompas fixture blocker remains tied to PR #554. Protected preview and production/API acceptance remain pending.
+
+
+## Exact-head validation update — 25 November 2026
+
+Code/test head `c38508dd12641250a86f2953b888b66a6e851448`: crawler freshness/classification `45588555323`, manual-only `45588555335`, Plan/REA `45588555396`, and Kompas baseline `45588555314` all SUCCESS. Full CI `45588555512` FAILED on shared lint `src/lib/kompasConsistency.ts:1059` (`prefer-const`); this is part of PR #554 and is not duplicated here. The first Plan/REA run failed because the updated REA entry lacked a comma; corrected in `d01ba02` and schema check passed on `c38508dd`. No local Node execution. PR #575 remains DRAFT; protected preview, production/API acceptance and separate manual crawl authorization are pending.
