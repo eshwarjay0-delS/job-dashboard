@@ -8,14 +8,16 @@ const applyPage=fs.readFileSync(new URL('../../src/app/dashboard/apply/page.tsx'
 
 test('both live Apply result lanes enforce the shared clearance boundary',()=>{
  assert.match(aggregate,/requiresSecurityClearance\(`\$\{j\.title\} \$\{j\.description\}`\)/)
- assert.match(crawler,/collectFilteredPages/)
+ assert.match(crawler,/collectFilteredSnapshot/)
  assert.match(crawler,/job => requiresSecurityClearance/)
  assert.match(crawler,/searchParams\.get\("clearance"\) !== "include"/)
 })
 
 test('crawler fills the requested limit with bounded clearance-safe pagination',()=>{
- assert.match(crawler,/collectFilteredPages/)
- assert.match(crawler,/query\.range\(offset, offset \+ pageSize - 1\)/)
+ assert.match(crawler,/collectFilteredSnapshot/)
+ assert.match(crawler,/query\.limit\(scanLimit\)/)
+ assert.match(crawler,/const scanLimit = Math\.min\(1000, Math\.max\(100, limit \* 10\)\)/)
+ assert.doesNotMatch(crawler,/\.range\(offset/)
  assert.match(crawler,/job => requiresSecurityClearance/)
  assert.match(crawler,/excluded_clearance: excludedClearance/)
  assert.match(crawler,/clearance_scan_limited: clearanceScanLimited/)

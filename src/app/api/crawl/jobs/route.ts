@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
-import { CRAWL_FRESHNESS_DAYS, collectFilteredPages, crawlFreshnessCutoff, crawlSearchOrFilter } from "@/lib/crawl/search"
+import { CRAWL_FRESHNESS_DAYS, collectFilteredSnapshot, crawlFreshnessCutoff, crawlSearchOrFilter } from "@/lib/crawl/search"
 import { requiresSecurityClearance } from "@/lib/contract-jobs"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -40,15 +40,14 @@ export async function GET(req: NextRequest) {
   let clearanceScanLimited = false
   if (excludeClearance) {
     try {
-      const scanned = await collectFilteredPages(
-        async (offset, pageSize) => {
-          const { data, error } = await query.range(offset, offset + pageSize - 1)
-          if (error) throw new Error(error.message)
-          return data ?? []
-        },
+      const scanLimit = Math.min(1000, Math.max(100, limit * 10))
+      const { data, error } = await query.limit(scanLimit)
+      if (error) throw new Error(error.message)
+      const scanned = collectFilteredSnapshot(
+        data ?? [],
         limit,
         job => requiresSecurityClearance(`${job.title || ""} ${job.description || ""}`),
-        { pageSize: 100, maxRows: Math.min(1000, Math.max(100, limit * 10)) },
+        scanLimit,
       )
       jobs = scanned.items
       excludedClearance = scanned.excluded

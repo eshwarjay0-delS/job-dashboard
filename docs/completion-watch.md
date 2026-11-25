@@ -838,3 +838,11 @@ Remote source inspection of PR #575 found a missing closing parenthesis in `scri
 ### PR #575 status API cross-check (24 Nov 2026)
 
 Direct GitHub REST PR response on head `f7043df4a58e75ca2c4bd80cd0f282ee7f54779` reports `mergeable=true`, `mergeable_state=unstable` (the normalized connector's `mergeable=false` was stale). The same SHA has `actions/runs?head_sha` total_count 0 and commit status `pending` with no statuses. CI is not verified or triggered by this API-created follow-up; a push/workflow-trigger-capable authorized environment is needed to run exact-head CI. No merge or deployment.
+
+
+## 25 November 2026 09:33 UTC — clearance pagination concurrency correction
+
+- Continue: PR #575's earlier offset pagination over mutable `last_seen_at` could skip or duplicate rows during a concurrent manual crawl. The branch now performs one ordered bounded query snapshot and filters clearance in memory; no offset paging is used. The 100–1,000 row cap and `clearance_scan_limited` notice remain.
+- Synthetic regressions cover filling from a clearance-heavy snapshot, underfill/cap signaling, and the route's single-query/no-offset contract. This is source/test work, not a local run.
+- Exact-head remote checks are pending after the commit. The known master full-CI blocker is the shared `prefer-const` lint and Kompas VM fixtures, which PR #554 addresses but still awaits an independent authorized reviewer. The protected Vercel preview token is unavailable; no production release or crawl.
+- **Next:** wait for the exact PR-head focused crawler/manual-only/Plan-REA/Kompas-baseline workflows; retain draft and release gates until the full CI, review and protected preview clear. Production/API acceptance and a separate owner-authorized manual crawl are still required.

@@ -35,3 +35,10 @@ Require exact-head full CI, crawler regression, Plan/REA schema, Kompas baseline
 ## 24 November — test-source audit correction
 
 A remote source audit of the PR branch found a missing closing parenthesis in `scripts/tests/apply-clearance-filter.test.mjs` (the first crawler assertion), which would prevent Node from parsing that test file. Corrected on commit `0fb890a5207c34d9ad6966b6b255d1da3734e796`. This was found through GitHub source inspection; no local execution is available. Exact-head remote CI must confirm the test file parses and runs. The earlier crawler-focused green run did not establish that this file had executed.
+
+
+## 25 November — concurrent crawler write correction
+
+The previous multi-page offset scan used `last_seen_at`, a sort key that manual crawls can update while the search is paging. Even with a UUID tie-breaker, a moving row can cross an offset and be skipped or duplicated. The approved continuation replaces that scan with one ordered bounded query snapshot, then filters clearance in memory. The same 14-day cutoff, default exclusion, 100–1,000-row cap, explicit cap warning and manual-only crawler policy remain.
+
+Regression coverage now exercises snapshot filtering, the cap signal and the route's single-query/no-offset contract. The tests are committed on PR #575, but no local Node execution occurred. Exact-head remote CI is pending; the common master lint/Kompas fixture blocker remains tied to PR #554. Protected preview and production/API acceptance remain pending.
