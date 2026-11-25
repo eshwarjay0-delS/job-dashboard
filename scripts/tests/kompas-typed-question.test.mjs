@@ -32,7 +32,7 @@ function session(typed) {
   const box = { value: typed };
   const asked = [];
   const s = {
-    aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
+    aiBusy: false, aiBusySince: 0, autoTimer: null, answerCtl: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: 1, answeredSeq: 1,
     transcript: [{ seq: 1, who: "Them", text: OLD_Q }],
     cards: [{ question: OLD_Q, answer: OLD_A }], idx: 0,
@@ -110,12 +110,10 @@ test("a lone typed keyword is its own question on the next page", async () => {
   assert.equal(asked[0].opts.reask, undefined);
 });
 
-test("pressing AI Answer again with nothing typed holds Listening, then a second press re-asks", async () => {
+test("pressing AI Answer again with nothing typed re-asks the open question from another angle", async () => {
   const { s, asked } = session("");
   await s.aiAnswer(false);
-  assert.equal(asked.length, 0, "silence does not regenerate");
-  assert.equal(s.cards.length, 1);
-  await s.aiAnswer(false);
+  assert.equal(asked.length, 1, "an empty press re-asks the question already on screen");
   assert.equal(s.cards.length, 2);
   assert.equal(s.cards[0].answer, OLD_A, "the finished page is not wiped");
   assert.equal(asked[0].card, s.cards[1]);
@@ -160,11 +158,12 @@ test("a new question heard since the last answer opens a new page and is not a r
   assert.notEqual(asked[0].opts.reask, true, "a new question is answered as new, not as the old one again");
   assert.doesNotMatch(String(asked[0].heard), /Current question \(on screen\)/);
 });
-test("a press with only candidate speech after an answer holds Listening, then a second press re-asks", async () => {
+test("a press with only candidate speech after an answer re-asks the interviewer question", async () => {
   const { s, asked } = heardSession(["and I also checked the proxy logs for that host"]);
   await s.aiAnswer(false);
-  assert.equal(asked.length, 0, "already-answered candidate talk does not regenerate");
-  await s.aiAnswer(false);
+  assert.equal(asked.length, 1, "candidate talk does not become a new interviewer question");
   assert.equal(s.cards.length, 2);
+  assert.equal(s.cards[0].answer, OLD_A);
   assert.equal(asked[0].opts.reask, true);
+  assert.doesNotMatch(String(asked[0].heard), /proxy logs/);
 });

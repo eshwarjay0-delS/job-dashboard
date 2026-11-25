@@ -33,7 +33,7 @@ function session(typed, cards) {
   const box = { value: typed };
   const asked = [];
   const s = {
-    aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
+    aiBusy: false, aiBusySince: 0, autoTimer: null, answerCtl: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
     running: false, captures: [], finals: new Set(), flushing: false, heardSeq: 1, answeredSeq: 1,
     transcript: [{ seq: 1, who: "Them", text: OLD_Q }],
     cards: cards || [{ question: OLD_Q, answer: OLD_A }], idx: (cards || [1]).length - 1,
