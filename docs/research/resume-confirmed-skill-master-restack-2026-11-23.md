@@ -82,3 +82,8 @@ PR #585 is the clean current-master restack on `a17b3267e271c77cd8887312445271b7
 ## 25 November 2026 — Plan & Vision regression correction
 
 The exact-head Plan/REA check `45698344753` failed test 14 (`scripts/tests/rea-register.test.mjs`) because the PR #585 `src/lib/plan-vision.ts` restack omitted the historical `docs/gmail.md` scope phrase and removed the Job Applications workstream. This was a documentation regression, not a resume-engine test failure. The correction is based on current master `a17b3267e271c77cd8887312445271b7fa172bd0`, restores the complete four-workstream Gmail, Job Applications, Resume and Kompas plan, bumps the plan revision to `2026-11-25.3`, and appends the #585 exact-head evidence and acceptance limits to the Resume baseline. The existing Plan Vision regression asserts the four plan IDs, revision, confirmed-skill handoff and remaining gates. Exact-head reruns are required after this correction; prior CI results are not reused. No local test/build was executed because this runtime has no canonical checkout/dependencies. No resume/JD, model or DOCX processing occurred.
+ 
+
+## 25 November 2026 — exact-head gates after Plan Vision restoration
+
+PR #585 head `51499df38d85e0b1d05c6569c6ca9938e97aad4` restores the four product plans, preserves the historical Gmail scope and updates the Resume baseline. Plan/REA `45709615784`, focused resume `45709615521`, WhatsApp recovery `45709615499`, and Kompas baseline `45709615421` are SUCCESS. Full CI `45709615495` remains IN PROGRESS at Type-check. No results are reused from earlier heads. No local build, candidate resume/JD/confirmation, model call, DOCX export, protected preview or owner acceptance occurred.
