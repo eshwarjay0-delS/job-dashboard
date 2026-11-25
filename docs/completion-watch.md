@@ -828,3 +828,8 @@ PR #578 now carries the harmless `let`→`const` fix for the exact full-CI lint 
 ## 25 Nov — WhatsApp hard-hold gate update
 
 Exact PR #578 head afd6ede475fe61bf05432fafefe4b01e9aa8fdfb: Plan/REA 45602453473 and Kompas baseline 45602452974 passed; WhatsApp recovery 45602453342 and full CI 45602453480 are IN PROGRESS after the lint-only correction. Keep draft; no production or real-send acceptance.
+
+
+## 25 Nov — WhatsApp hard-hold gate result
+
+PR #578 code/test head `afd6ede475fe61bf05432fafefe4b01e9aa8fdfb`: WhatsApp recovery `45602453342`, Kompas baseline `45602452974`, and Plan/REA `45602453473` SUCCESS. Full CI `45602453480` FAILED at step 14, the shared Kompas question-framing/one-press/typed-input/voice gate; lint, type-check, build and preceding tests passed. The branch includes the harmless `let`→`const` lint correction. Keep draft. #554 still requires independent review; no live WhatsApp acceptance.
