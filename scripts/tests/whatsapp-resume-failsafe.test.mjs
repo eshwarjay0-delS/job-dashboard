@@ -118,13 +118,11 @@ test('a below-floor rewrite still delivers that Word file and names the missing 
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
   assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.match(docs[0].caption, /supplierninja/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs[0].body, HOUSTON, 'an unsupported JD-only addition hard-holds the generated file and only the same-profile chosen original is used')
+  assert.match(docs[0].caption, /closest matching resume/)
+  assert.match(docs[0].caption, /This file was not rewritten/)
+  assert.match(docs[0].body, /candidate1@example\.test/)
+  assert.doesNotMatch(docs[0].body, /candidate2|Rewrote supplier reviews|supplierninja/)
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
   assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
 })
@@ -164,6 +162,8 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
   const finished = {
     ...low,
     token: 'easm-scored',
+    unverified_added_keywords: [],
+    keyword_analysis: { ...low.keyword_analysis, added: [] },
     quality: { ...low.quality, incomplete: false, status: 'needs_review' },
     quality_blockers: ['role_evidence_gaps'],
     ats: { score: 92, passed: true, checks: [], issues: [] },
