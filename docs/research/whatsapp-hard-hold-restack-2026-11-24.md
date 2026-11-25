@@ -86,3 +86,8 @@ PR #587 exact head `b669456cbc9cf009c887aa31174f993c9588a848` has Plan/REA `4570
 ## 25 November 2026 — PR #583 release gate now green
 
 PR #583 exact current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` has full CI `45692952469`, WhatsApp recovery `45692953138`, and Kompas baseline `45692952593` all SUCCESS. It is still DRAFT. This proves source/test checks only; no protected preview, route-level explicit-selection provenance, real Meta send, R2 write, model call, DOCX generation, historical replay or device acceptance.
+
+
+## 25 November 2026 — PR #583 exact-head verification
+
+PR #583 current head `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` has full CI `45692952469`, WhatsApp recovery `45692953138`, and Kompas baseline `45692952593` all SUCCESS. It remains DRAFT. This verifies source/test gates only; no protected preview, route-level explicit-selection provenance, real Meta send, R2 write, model call, DOCX generation, historical replay or device acceptance.

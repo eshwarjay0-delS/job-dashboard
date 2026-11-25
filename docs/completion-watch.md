@@ -823,3 +823,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - The explicit-selection route remains blocked by no canonical checkout, no installed `node_modules/next/dist/docs`, and prior sandbox 402 reset `2026-12-01`. No real send, model call, DOCX, R2 write, replay or device acceptance. #585/#583 remain drafts; #587 is not mergeable as tested.
 
 **Continue:** add `commits` to the new #585 journal entry and rerun exact-head schema/CI. Keep #585 draft; require independent review, protected preview and owner-authorized resume/JD/confirmation plus exported-DOCX acceptance. No real WhatsApp delivery.
+
+
+## 25 November 2026 — journal syntax correction
+
+PR #585 head `096b641d87d634081a9701938c6042d752b1a093` has Kompas baseline `45710965750` SUCCESS; Plan/REA `45710966015` failed with TypeScript syntax because the new WhatsApp journal object was appended outside `PLAN_JOURNAL.unshift` calls. The correction wraps it as a call and includes `commits`. Focused resume `45710965688`, recovery `45710966001` and full CI `45710965601` were still running; fresh exact-head checks are required. PR #583 is now source/test green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c` (full CI `45692952469`, recovery `45692953138`, baseline `45692952593` SUCCESS) but remains draft/selection-gated. PR #587 remains blocked by four full-CI fallback/unverified-term failures.

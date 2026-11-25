@@ -92,3 +92,8 @@ PR #585 head `51499df38d85e0b1d05c6569c6ca9938e97aad4` restores the four product
 ## 25 November 2026 — latest PR #585/#583/#587 gate correction
 
 PR #583 is now exact-head green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`: full CI `45692952469`, WhatsApp recovery `45692953138`, Kompas baseline `45692952593` all SUCCESS. It remains DRAFT and explicit-selection acceptance is missing. PR #585 head `70602bc6` has baseline `45710598713` SUCCESS; schema `45710598768` failed test 1 because the new journal entry omitted required `commits`; focused resume `45710599241`, recovery `45710598850` and full CI `45710599584` were still in progress. This correction adds the real PR #587 SHA to the new journal entry. Fresh exact-head checks are required. No local execution or owner resume/JD/DOCX acceptance.
+
+
+## 25 November 2026 — journal syntax correction
+
+PR #585 checkpoint `096b641d87d634081a9701938c6042d752b1a093` had baseline `45710965750` SUCCESS, but Plan/REA `45710966015` failed TypeScript parsing because the new WhatsApp journal entry was raw JSON outside the `PLAN_JOURNAL.unshift` calls. This correction wraps it correctly and includes the required `commits` array. Focused resume `45710965688`, WhatsApp recovery `45710966001` and full CI `45710965601` were in progress; fresh exact-head gates are required. PR #583 now has all three checks green at `7e00a7fbe58172c6b125b112bd1944e26fea4a6c`, but remains draft and explicit-selection acceptance is missing.
