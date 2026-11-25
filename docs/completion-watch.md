@@ -802,3 +802,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - Source/test commits: `1412fa6905bf2f5dd50ee86da83cfd5ed8940b2c` / `e7efc507070b02fbd62dd764a2364fbc2b6074e0`; Apply and research-doc commits `7f7d47915e8c2ea6c24f730a41cdd76fed8c61e0` / `f0fb4acefc49be3991a5880cff7d7d1a63d83c10`; Plan Journal `d039704fe0b8e63b5fc3457664a2ea6e7b720aad`.
 - The branch is still DRAFT and mergeable=false. Exact-head Actions has no runs/statuses yet; local tests are blocked by this sandbox's DNS failure to GitHub. No production deployment or live crawl/search acceptance.
 - Continue: wait for remote focused test/full-CI execution, keep the PR draft, and preserve manual-only crawler, clearance, Robert Half and eTeam restrictions.
+
+
+## 25 Nov — contract-search gate update
+
+Exact-head focused contract-search workflow 45602260751, Plan/REA 45602260640, and Kompas baseline 45602260616 passed. Full CI 45602260671 is still IN PROGRESS. The code/test tree is unchanged from the focused run; keep draft until full CI, independent review, protected preview, production release and live search acceptance.
