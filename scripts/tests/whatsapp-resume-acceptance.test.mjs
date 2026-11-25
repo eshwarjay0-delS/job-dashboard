@@ -28,7 +28,7 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall, chosenResumeMatchesProfile } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, honestProfessionalGap, describeRejectionReasons, whatsappResumeRejectionReasons, whatsappRewriteUsable, deliveredWithShortfall, chosenResumeMatchesProfile } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
@@ -437,4 +437,19 @@ test("a missing selected-library profile email fails closed", () => {
   assert.equal(chosenResumeMatchesProfile(text, ""), false)
   assert.equal(chosenResumeMatchesProfile(text, "candidate1@example.test"), true)
   assert.equal(chosenResumeMatchesProfile(text, "candidate2@example.test"), false)
+})
+
+
+test("honest professional gap excludes unsupported additions even when supported coverage is 100%", () => {
+  const supportedGap = make({
+    coverage: 82,
+    supported_coverage: 100,
+    quality: resumeQuality({ matched: 82, total: 100, missing: ["unsupported-platform"], partial: false }),
+  })
+  assert.equal(honestProfessionalGap(supportedGap), true, "control: a finished, supported 82% gap is honestly disclosable")
+  const unsupported = { ...supportedGap, unverified_added_keywords: ["unsupported-platform"] }
+  assert.equal(honestProfessionalGap(unsupported), false)
+  assert.ok(whatsappResumeRejectionReasons(unsupported).includes("unverified_jd_terms"))
+  assert.equal(whatsappRewriteUsable(unsupported), false)
+  assert.equal(deliveredWithShortfall(unsupported), false)
 })
