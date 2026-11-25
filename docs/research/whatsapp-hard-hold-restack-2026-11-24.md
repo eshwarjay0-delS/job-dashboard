@@ -41,3 +41,8 @@ The durable explicit-selection route task remains blocked by the absence of a ca
 2. Keep the replacement PR DRAFT; review and protected preview/release gates remain separate.
 3. Only after the required environment is available, implement durable same-account explicit Files/Library selection and exact fallback caption; preserve the original source and all account isolation.
 4. Do not claim the 17 October file was delivered without the missing artifacts and provider receipt.
+
+
+## 25 November — shared lint blocker corrected on this draft
+
+The full CI failure at `src/lib/kompasConsistency.ts:1059` was `prefer-const` only. This branch now changes the local `let s` to `const s` in the existing sentence cleanup, with no behavior change intended. Commit `71a1f74b03c766fd5fbec5aa69e4476064c6b605`. Fresh exact-head CI is required; prior full-CI failure cannot be reused.
