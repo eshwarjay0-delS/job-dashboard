@@ -846,3 +846,9 @@ Direct GitHub REST PR response on head `f7043df4a58e75ca2c4bd80cd0f282ee7f54779`
 - Synthetic regressions cover filling from a clearance-heavy snapshot, underfill/cap signaling, and the route's single-query/no-offset contract. This is source/test work, not a local run.
 - Exact-head remote checks are pending after the commit. The known master full-CI blocker is the shared `prefer-const` lint and Kompas VM fixtures, which PR #554 addresses but still awaits an independent authorized reviewer. The protected Vercel preview token is unavailable; no production release or crawl.
 - **Next:** wait for the exact PR-head focused crawler/manual-only/Plan-REA/Kompas-baseline workflows; retain draft and release gates until the full CI, review and protected preview clear. Production/API acceptance and a separate owner-authorized manual crawl are still required.
+
+
+## 25 November 2026 09:45 UTC — REA schema syntax correction
+
+- The first remote Plan/REA schema run on commit `9238501` failed because the updated first REA entry was missing its separator comma. Corrected in commit `d01ba02`; this is a documentation syntax correction, not a runtime code change.
+- The crawler single-snapshot source and regression tests remain on this draft PR. Exact-head checks must run on the new tree before any merge decision. Local execution remains unavailable; no preview, production release, live crawl, DB mutation or application submission.
