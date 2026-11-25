@@ -837,3 +837,13 @@ A second pass over the full GitHub Actions logs corrected three descriptions abo
 - Source-level tests cover owner-scoped Blob routing, login-off first-read upload, explicit signed-in import, retry retention, account switching and second-device simulation. These are synthetic checks, not actual same-account browser/Windows/mobile acceptance. WhatsApp's R2 store remains a separate catalog.
 
 **Acceptance remains open:** obtain an approved metadata-only Blob listing or owner-device test, verify the original owner browser's first-read upload, then verify the same session IDs/artifact counts on a second authorized device. Separately verify signed-in mode's explicit Import local sessions and cross-account isolation. Preserve AUTH_DISABLED; do not inspect private payloads, auto-assign unscoped legacy sessions to another account, or claim Windows/mobile/WhatsApp convergence without actual devices.
+
+
+### Contract crawler freshness — 25 November 2026
+
+- Read-only production aggregate: `mfit_crawl_jobs` has 14,566 rows and 12,407 active flags, but **0 active rows are fresh inside the 14-day window**. All 12,407 active-flag rows are older than the cutoff; newest `last_seen_at` is 10 Nov 2026 11:01:11Z. The search API applies `crawlFreshnessCutoff()` before returning rows, so current contract results may be empty.
+- Latest recorded crawl: 10 Nov 2026 11:00:24–11:01:11Z, 20 portals, 6,818 found/upserted, one error. No crawl has run since. Current source has 20 active adapters and 10 pending; `vercel.json` has no contract-crawler cron.
+- eTeam has 907 historical rows (818 active flags), zero fresh within 14 days, newest seen 8 Nov. It is in `PENDING_PORTALS`, not active adapters; stale rows are hidden by freshness cutoff and were not deleted. Robert Half has zero crawler rows and remains manual-only.
+- PR #574 focused search regression passes, but exact full CI `45382941056` fails 24 Kompas question/one-press VM assertions. PR #575 focused crawler/freshness/manual-only checks pass, but full CI `45485435272` fails the shared `prefer-const` lint at line 1059. Both remain draft; shared #554 review gate remains open.
+
+No live crawl, portal request, database write, job submission or application was performed. **Continue:** after explicit owner authorization for one manual run, use only the 20 approved adapters (never eTeam or Robert Half), then verify the 14-day jobs API and record run/error counts. Do not create a daily cron, delete historical rows, re-enable eTeam or ship unapproved C2H semantics. Until a manual run is authorized and completed, the live contract-results feed may be empty.
