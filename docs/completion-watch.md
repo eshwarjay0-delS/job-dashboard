@@ -807,3 +807,8 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 ## 25 Nov — contract-search gate update
 
 Exact-head focused contract-search workflow 45602260751, Plan/REA 45602260640, and Kompas baseline 45602260616 passed. Full CI 45602260671 is still IN PROGRESS. The code/test tree is unchanged from the focused run; keep draft until full CI, independent review, protected preview, production release and live search acceptance.
+
+
+## 25 Nov — contract-search tests started on current draft head
+
+The unchanged code/test tree previously passed focused workflow `45602260751` (4 test groups). Current PR head `05eb747c72d51a150f6543f54f869c4b18302168`: Plan/REA `45602794312` and Kompas baseline `45602794255` SUCCESS; focused workflow `45602794306` and full CI `45602794434` IN PROGRESS. Keep draft; no live crawl/search, preview, deployment or acceptance.
