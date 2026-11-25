@@ -160,7 +160,8 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
   assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
 })
 
-test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () =>  const finished = {
+test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
+  const finished = {
     ...low,
     token: 'easm-scored',
     quality: { ...low.quality, incomplete: false, status: 'needs_review' },
