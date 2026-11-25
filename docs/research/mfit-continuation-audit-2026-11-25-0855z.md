@@ -27,3 +27,14 @@ This is a documentation-only evidence supplement to the open draft backlog PR #5
 ## Next
 
 Continue: obtain the required independent review of #554 through the normal process; then rerun full CI on the latest #578/#572 heads and integrate the explicit-selection route proof with the hard hold only after the shared gates pass. Keep #580 behind the owner's tap, and preserve the resume/JD, Gmail/mobile, crawler, Kompas 50-pair and native-device acceptance backlog.
+
+## 25 November 2026, 14:21 UTC — exact-head recheck
+
+- Production alias metadata remains READY on `794e8cfdbd3103409552857806bab89851d5bfcb`; public HTTP smoke is inaccessible from this environment. No new release.
+- PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259`: full CI, baseline, account-sync, Plan/REA and Windows executable checks all SUCCESS. Only the owner's COMMENTED review is recorded; independent authorized review is the merge blocker.
+- Combined WhatsApp PR #566 head `9465113780c59020cfdaf5e041d42dd4e93f93f8` has focused recovery `45283495328` and Plan/REA `45283495210` SUCCESS, but full CI/baseline/cross-device are not run because it is stacked on #554. Source review confirms durable explicit selection, account-root/email/path checks, owner/sender/JD/source binding, byte equality and unique profile-email checks before unchanged fallback.
+- WhatsApp #578 head `61c45c91092fb4411428499d5c89a7efb71ec4cb`: recovery `45603013099`, baseline `45603012986`, Plan/REA `45603012994` SUCCESS; full CI `45603012948` fails 24 shared Kompas VM fixture cases (`answerCtl is not defined`). #572 head `741f8eeb284b2faeb5223c80162cc5f7d1344705` has recovery/baseline/Plan-REA SUCCESS and full CI `45460461747` fails two Listening-hold assertions. Neither is merged/deployed.
+- Resume #570, Gmail #571/#577, contract search #574 and crawler #479 remain draft with focused gates green where reported but full CI blocked by shared Kompas failures. No real resume/JD, Gmail account, crawler, or device acceptance.
+- Local checkout/test unavailable: DNS failure for GitHub in container; public HTTP smoke also inaccessible. No source code was changed; this is a documentation/evidence continuation.
+
+**Next:** the #554 independent review must be completed through the normal gate. Then restack #566 to master and run exact-head full CI plus focused gates before preview/deployment/device acceptance. Historical WhatsApp delivery remains unverified; no resend/replay.
