@@ -122,3 +122,8 @@ PR #585 checkpoint `47a95ecf39fff802064f6a24cbbebf16f2171354` failed Plan/REA `4
 ## 26 November 2026 — current-master merge restack
 
 The PR branch is being merge-restacked with canonical master `e2a94783041559c8c0c317f860ef1ba792de9fc9`, whose two commits since the earlier `a17b3267` base are Plan & Vision / Completion Watch / REA documentation-only updates. The current master versions of those records are preserved and receive an additive resume entry; the reviewed resume source/test files remain the same. The five green runs on predecessor head `2e3d6f41b89694567992e45c73426f5add474141` are not reused. Fresh exact-head checks are required. Protected preview and owner-authorized real resume/JD/explicit-confirmation plus exported-DOCX acceptance remain open. No live match, DOCX or production release is claimed.
+
+
+## 26 November 2026 — exact-head verification complete
+
+Current PR #585 head `4788c82908ef2af7e17dbc97cf6b1383a29354d9` is clean against master `e2a94783041559c8c0c317f860ef1ba792de9fc9`. All five exact-head gates passed: focused resume `45838366516` (54/54), full CI `45838366530`, WhatsApp recovery `45838366613` (52/52), Kompas baseline `45838366695`, Plan/REA `45838366633` (15/15). Merge-restack commit `26f2c724d81cffea587880d6ced19b161e2360d8`; plan correction commit `4788c82908ef2af7e17dbc97cf6b1383a29354d9`. PR remains DRAFT. No protected preview, owner-authorized real resume/JD/confirmation bundle, exported DOCX, model call, production deployment or live 95–100%/98% match has occurred.
