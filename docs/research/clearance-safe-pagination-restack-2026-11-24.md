@@ -68,3 +68,10 @@ The candidate is being isolated from PR #575's unrelated Kompas overlay/desktop 
 
 
 **Limitations:** location/remote filtering remains client-side and can underfill; the crawl POST route's 60-second Vercel duration is shorter than the runner deadline; protected preview is unavailable. The sandbox could not resolve GitHub, so no local tests/build were run. Exact-head remote CI is pending. No live crawl, portal request, DB write or application was performed.
+
+
+## 26 November — PR #590 clean current-master restack
+
+The candidate is isolated from PR #575's unrelated Kompas overlay/desktop changes. PR #590 applies only the five crawler/search/UI/test files to current master, with the clearance notice and research record. Current master at restack start: `e2a94783041559c8c0c317f860ef1ba792de9fc9`; production alias was still READY at `a17b3267e271c77cd8887312445271b7fa172bd0`. Source changes reviewed: a stable `last_seen_at DESC, id ASC` order, one bounded query (100–1,000 rows), clearance filtering before the requested limit, and a user-visible scan-cap notice. The existing 14-day freshness, contract default, `clearance=include`, adapter list, manual-only crawl schedule, Robert Half manual-only and eTeam exclusion remain unchanged. Source commit: `7cf941373cf203c8327b5592d719b60677579630`.
+
+**Limitations:** location/remote filtering remains client-side and can underfill; the crawl POST route's 60-second Vercel duration is shorter than the runner deadline; protected preview is unavailable. The sandbox could not resolve GitHub, so no local tests/build were run. Exact-head remote CI is pending. No live crawl, portal request, DB write or application was performed.

@@ -866,3 +866,10 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - Environment: no canonical checkout, installed dependencies, or installed Next.js 16.3.8 route-handler guide; sandbox restore remains 402 until 1 Dec. No route edits, local tests/build, DOCX, model, email/WhatsApp, R2/DB/inbox mutation, crawl or user-device acceptance.
 
 **Next:** finish exact-head #587 CI/recovery without weakening hard-hold assertions; implement durable selection and the unchanged original fallback in the required environment. Keep #585 DRAFT until real source/JD/confirmation and DOCX acceptance; reconcile #584/#585 Plan files before merging.
+
+## 26 November 2026 — clean crawler restack PR #590
+
+- Created draft PR #590 from current master e2a94783041559c8c0c317f860ef1ba792de9fc9; source commit 7cf941373cf203c8327b5592d719b60677579630. Only five crawler/search/UI/test files plus Apply/research docs are included; unrelated Kompas overlay/desktop changes from #575 are excluded. The earlier #575 branch remains draft/scope-mixed; its green gates are not reused.
+- The candidate uses one ordered bounded snapshot, clearance filtering before the visible limit, stable id tie-breaker, and a cap warning. Manual/on-demand crawl, 14-day freshness, Robert Half manual-only, eTeam exclusion and adapter list are unchanged.
+- Exact-head remote CI and crawler/manual-only/Kompas/Plan-REA gates are pending. Local clone failed due github.com DNS; no local tests/build. Protected preview is unavailable. Location/remote underfill and the 60-second route versus 230-second runner budget remain unresolved. No crawl, portal request, DB mutation, application or deployment occurred.
+- Production alias still READY at a17b3267e271c77cd8887312445271b7fa172bd0; PR #590 is not live.
