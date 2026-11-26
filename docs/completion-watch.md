@@ -1,7 +1,7 @@
 # MFit Completion Watch
 
 ## 26 November 2026 — run 20 remote review and release reconciliation (16:42 CST)
-- **Documentation checkpoint:** Plan Journal entry `mfit-completion-watch-run20-20261126`, Plan Vision revision `2026-11-26.9`, and the run-20 section are on PR #594 branch commits `67d8e874`, `dabd7e8e`, and `443a861a`. The latest exact branch head `443a861a692069c1050a618b99177035feb9af1f` has no workflow runs/statuses visible yet; prior CI on the earlier head is not reused, so this docs PR is not merge-ready.
+- **Documentation checkpoint:** Plan Journal entry `mfit-completion-watch-run20-20261126`, Plan Vision revision `2026-11-26.9`, and the run-20 section are on PR #594. At intermediate exact head `07988d7f0c271eee1d3b9b52e027da95cff73897`, Plan/REA `45906972989` and Kompas baseline `45906972899` SUCCESS; full CI `45906973038` was IN_PROGRESS. This subsequent documentation-only update retriggers CI; merge remains gated on the latest exact head.
 
 
 - **Master/production:** current master is `6a8790897e888267084f207bdd826fcd0f61b399`. Alias `job-dashboard-fawn.vercel.app` independently maps to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. No runtime deployment is needed for the docs-only checkpoint.
