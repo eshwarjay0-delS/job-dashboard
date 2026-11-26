@@ -7,7 +7,7 @@ Continue only owner-approved canonical MFit/MarketFit and Kompas work. No source
 ## Production checkpoint
 
 - Canonical production alias job-dashboard-fawn.vercel.app and Vercel deployment metadata independently report READY, production, exact runtime SHA a17b3267e271c77cd8887312445271b7fa172bd0, deployment dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW.
-- Current master checkpoint e2a94783041559c8c0c317f860ef1ba792de9fc9 is documentation-only; no runtime redeployment is required for the docs checkpoint.
+- Current master checkpoint 1843c2f4f932b8de5e92ae02c47c13995c7cc5e is documentation-only; no runtime redeployment is required for the docs checkpoint.
 - READY metadata is not a public API smoke, authenticated acceptance, resume quality score, or native-device test.
 
 ## Highest-priority WhatsApp resume failure
