@@ -213,9 +213,10 @@ test("28.5% is not a clean pass, and the finished file is still sendable", () =>
 })
 test("Houston and Saint Louis emails are not treated as the same profile", () => {
   const gate = loadTS("src/lib/whatsapp-resume-acceptance.ts")
-  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com"), true)
-  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
-  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com\njayeshwar44@gmail.com", "eshwarjay05@gmail.com"), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com", true), true, "only an explicitly selected matching profile passes")
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\njayeshwar44@gmail.com", "eshwarjay05@gmail.com", true), false)
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com\njayeshwar44@gmail.com", "eshwarjay05@gmail.com", true), false, "mixed profile content is rejected")
+  assert.equal(gate.chosenResumeMatchesProfile("Eshwar Jay\neshwarjay05@gmail.com", "eshwarjay05@gmail.com"), false, "matching email alone is not selection proof")
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
