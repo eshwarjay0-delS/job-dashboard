@@ -123,7 +123,7 @@ test('unsupported JD-only additions hold the draft and do not substitute an unse
   assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })
 
-test('a failed or incomplete rewritetest('failed or incomplete rewrites do not substitute an unselected original', async () => {
+test('failed or incomplete rewrites do not substitute an unselected original', async () => {
   let mode = 'throw'
   const { generate, docs, said, filesFor } = harness(async () => {
     if (mode === 'throw') throw new Error('provider down')
@@ -146,7 +146,7 @@ test('a failed or incomplete rewritetest('failed or incomplete rewrites do not s
   assert.match(said.join('\n'), /saved for another try/)
 })
 
-test('a finished 30.8% rewritetest('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
+test('a completed supported 30.8% role-evidence gap is disclosed without unsupported additions', async () => {
   const finished = {
     ...low,
     token: 'easm-scored',
@@ -174,7 +174,7 @@ test('a finished 30.8% rewritetest('a finished 30.8% rewrite with a role evidenc
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
-test('a slow constructed-JD rewrite with unverified additions is held without an original substitution', async () => {
+test('slow completed rewrites with unverified JD-only additions are held', async () => {
   const finished = {
     token: 'iam-rewritten', score: 97, coverage: 97, supported_coverage: 98,
     diff: [{ section: 'Experience', before: 'Administered access.', after: 'Administered access, using SailPoint and CyberArk.' }],
@@ -198,7 +198,7 @@ test('a slow constructed-JD rewrite with unverified additions is held without an
   assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })
 
-test('roles that were not rewrittentest('roles that were not rewritten do not substitute an unselected original', async () => {
+test('roles that were not rewritten do not substitute an unselected original', async () => {
   const unfinished = {
     ...low,
     token: 'easm-unrewritten',
@@ -216,7 +216,7 @@ test('roles that were not rewrittentest('roles that were not rewritten do not su
   assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })
 
-test('the Houston and Saint Louistest('unselected originals from either profile are never sent as a fallback', async () => {
+test('unselected originals from either profile are never sent as a fallback', async () => {
   const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
   await generate('15550101', {
     jdId: 'houston', jd: 'EASM role',
@@ -232,23 +232,4 @@ test('the Houston and Saint Louistest('unselected originals from either profile 
   }, TEST_USER_ID, 60_000, filesFor(SAINT_LOUIS_PATH))
   assert.equal(docs.length, 0)
   assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
-})
-
-  const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
-  await generate('15550101', {
-    jdId: 'houston', jd: 'EASM role',
-    resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-
-  docs.length = 0
-  await generate('15550101', {
-    jdId: 'wrong-profile', jd: 'EASM role again',
-    resumePath: SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
-  }, TEST_USER_ID, 60_000, filesFor(SAINT_LOUIS_PATH))
-  assert.equal(docs.length, 0, 'a Saint Louis file is not sent for the Houston profile')
-  assert.doesNotMatch(said.join('\n'), /candidate2/)
-  assert.doesNotMatch(docs.map(d => d.body).join('\n'), /candidate2/)
 })
