@@ -2,7 +2,7 @@
 
 ## Approval and scope
 
-The owner-approved 19 November correction is authoritative: an original resume fallback requires a durable explicit same-account Files/Library selection and the exact label **Original resume — NOT TAILORED**. Unsupported JD-only candidate claims are a hard hold. This slice is helper/test/CI/docs only; it does not implement route-level selection provenance, upload substitution, R2 leases/CAS/fencing, or provider delivery changes.
+The owner-approved 19 November correction is authoritative: an original resume fallback requires a durable explicit same-account Files/Library selection and the exact label **Original resume — NOT TAILORED**. Unsupported JD-only candidate claims are a hard hold. This slice is helper/test/CI/docs only; it does not implement route-level selection provenance, uploaded-original substitution, R2 leases/CAS/fencing, or provider delivery changes.
 
 ## Exact-head failure evidence
 
@@ -24,7 +24,7 @@ These are policy-conflicting expectations, not grounds to weaken the hard hold. 
 
 ## Verification boundaries
 
-The clean branch is based on the run-11 Plan & Vision checkpoint `e8247967fc32f83942ebf0bf6b80f9f5d9e3c515`. The GitHub blob preparation succeeded; no local checkout, package.json, node_modules, or installed Next.js 16.3.8 route guide is available, so no local tests/build were run. Remote exact-head CI is pending.
+Clean restack PR #591 is based on the run-11 checkpoint `e8247967fc32f83942ebf0bf6b80f9f5d9e3c515`; corrected head is `15786e552c35ec8f2e9b8079ea84f63cd78ec9c5`. Initial head `950aa1a` failed CI/recovery because the checkpoint note was outside the quoted baseline; the corrected commit fixes it. Exact-head CI/recovery/baseline/schema runs for the corrected commit are not yet visible. The Plan/REA checkpoint and corrected tests are committed, but no local checkout, package.json, node_modules, or installed Next.js 16.3.8 route-handler guide is available, so no local tests/build were run.
 
 Protected preview needs the owner-controlled private `KOMPAS_VERCEL_API_TOKEN`; it is unavailable and must not be bypassed. No production deployment, DOCX generation, model call, Meta send, R2 write, historical replay, database mutation, or user-device acceptance occurred.
 
@@ -34,4 +34,4 @@ The 17 October 2026 17:28 Chicago WhatsApp delivery remains unverified. The gene
 
 ## Next gate
 
-Run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on the clean restack. Keep it DRAFT until independent review and legitimate protected preview. Durable same-account Files/Library selection provenance and the exact fallback route implementation require a compliant checkout with installed Next.js 16.3.8 docs; keep them blocked rather than substituting a matching email or synthetic test.
+Run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on corrected head. Keep DRAFT until independent review and legitimate protected preview. Durable same-account Files/Library selection provenance and the exact fallback route implementation require a compliant checkout with installed Next.js 16.3.8 docs; keep them blocked rather than substituting a matching email or synthetic test.

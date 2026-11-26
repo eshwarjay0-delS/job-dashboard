@@ -946,3 +946,12 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 
 - Source/test restack only; no route-level durable Files/Library selection provenance was added. Protected preview and independent review remain required.
 - No canonical checkout, local test/build, Next.js 16.3.8 docs, DOCX generation, Meta send, R2 write, replay, DB mutation, deployment or device acceptance occurred. The 17 Oct 17:28 Chicago incident remains unverified.
+
+
+## 26 November 2026 — PR #591 WhatsApp hard-hold test-policy restack
+
+PR #591 `fix/whatsapp-hard-hold-master-restack-20261126-run11` head `15786e552c35ec8f2e9b8079ea84f63cd78ec9c5` carries the approved helper-level hard hold and policy-corrected tests. PR #587 initial head `1e2a1bf9a508f3d5b7dc175ca865b7f70182d202` full CI `45715458709` failed tests 18, 93, 95, 102 (job `139560242380`); WhatsApp recovery `45715458683`, baseline `45715458615` and schema `45715458626` passed. The failure log confirms old expectations for unselected-original fallback and unsupported `supplierninja` delivery. Corrected tests from #583 preserve the hard hold; the supported 30.8% role-gap control clears unsupported additions. The first #591 commit `950aa1a` also failed CI/recovery because the new Plan note was inserted outside the quoted baseline; commit `15786` fixes the syntax. Baseline `45791919886` and schema `45791919798` passed on the initial head; exact-head checks for the correction are not yet visible.
+
+
+- The helper and synthetic tests are source/test scope only. Email match is not durable explicit selection. No webhook route selection provenance, production deployment, DOCX, model, Meta send, R2 write, replay, database or device acceptance occurred.
+- Keep #591 DRAFT until corrected-head CI/recovery/baseline/schema, independent review and legitimate protected preview. Durable same-account Files/Library selection and the 17 Oct 17:28 Chicago delivery acceptance remain blocked/unverified.
