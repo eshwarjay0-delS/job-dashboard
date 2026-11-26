@@ -1,14 +1,12 @@
 ## 26 November 2026 — WhatsApp hard-hold test repair (PR #583)
 
-- Continued the approved hard-hold slice. Commit `33b1397aba58015fc1d7e4a582baf286328135fc` repaired the failsafe test tail; `5ea892d09ae7af70413fb1b5cfca4401e79efd63` removed one extra close from `whatsapp-resume-acceptance.test.mjs` after exact-head recovery CI failed to parse at line 445. Typecheck passed; baseline `45737876497` passed. Exact-head full CI `45737876489` and WhatsApp recovery `45737876571` are still running on `5ea892d`.
-- **No runtime change:** no webhook/route, durable selection provenance, storage, R2 or outbound send changes. Unsupported JD-only additions remain held; original-resume substitution still requires explicit same-account Files/Library selection.
-- **Do not merge or release:** PR #583 remains DRAFT; clean restack to current master, independent review, protected preview, and route-level explicit selection are pending. The 17 Oct 17:28 delivery is still unverified without generated DOCX, R2 object/version, request/webhook correlation, Meta outbound ID and signed receipt.
-- **Environment:** no canonical local checkout or installed dependencies, so no local tests. Vercel deployment/alias/runtime reads returned 403; no authorized CLI/sandbox fallback was available. Last documented live runtime SHA remains `a17b3267e271c77cd8887312445271b7fa172bd0`; this run did not re-verify it.
+- **Test-only commits:** `33b1397aba58015fc1d7e4a582baf286328135fc` repaired the failsafe test tail; `5ea892d09ae7af70413fb1b5cfca4401e79efd63` removed a duplicate close in the acceptance test; `58093f3f252d39b6b1ef3f05c4a9d72401b7ebb8` corrected the profile identity fixture so a matching email passes only with explicit selection proof. No route/webhook, R2, storage or delivery runtime changed.
+- **Evidence:** recovery `45737876571` on `5ea892d` failed because the profile test expected true without explicit selection; 52/53 tests passed, and typecheck passed. Baseline `45737876497` passed. Full CI `45737876489` was still running at the last check. No check/run was visible for `58093f3` yet; previous head results do not carry forward.
+- **Policy preserved:** unsupported JD-only claims remain held. Original-resume fallback remains blocked until durable explicit same-account Files/Library selection is proven. PR #583 stays DRAFT and is not deployed; independent review, protected preview, clean restack to current master, route integration and historical 17 Oct output/delivery evidence remain pending.
+- **Environment:** no canonical checkout/dependencies, so no local execution. Vercel reads returned 403 and no authorized CLI/sandbox fallback was available. Last recorded production runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0` was not re-verified in this run.
 
-**Continue:** finish exact-head CI/recovery, preserve the hard hold, and proceed to durable explicit-selection route only in the approved environment with the installed Next.js 16.3.8 guide.
+**Continue:** verify exact-head CI/recovery on `58093f3` or current branch head; fix only evidence-backed defects, and keep the hard hold intact.
 
-
-# MFit Completion Watch
 
 ## 25 November 2026 — Kompas overlay P0: start, window, clarifier, bold
 
