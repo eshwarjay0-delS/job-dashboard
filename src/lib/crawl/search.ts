@@ -41,3 +41,35 @@ export function crawlSearchOrFilter(input: string): string | null {
   if (!terms.length) return null
   return terms.flatMap(term => SEARCH_FIELDS.map(field => `${field}.ilike.*${term}*`)).join(",")
 }
+
+
+export type FilteredSnapshotResult<T> = {
+  items: T[]
+  scanned: number
+  excluded: number
+  scanLimited: boolean
+}
+
+/** Filter one ordered database snapshot.
+ * Avoid offset pagination over mutable last_seen_at: concurrent crawls can move
+ * rows between pages. The caller performs one bounded query, then filters it
+ * in memory so this request sees a stable result set.
+ */
+export function collectFilteredSnapshot<T>(
+  rows: readonly T[],
+  limit: number,
+  exclude: (row: T) => boolean,
+  scanLimit: number,
+): FilteredSnapshotResult<T> {
+  const target = Math.max(1, Math.min(100, Math.floor(limit) || 20))
+  const maxRows = Math.max(1, Math.min(1000, Math.floor(scanLimit) || 1000))
+  const snapshot = rows.slice(0, maxRows)
+  const visible = snapshot.filter(row => !exclude(row))
+
+  return {
+    items: visible.slice(0, target),
+    scanned: snapshot.length,
+    excluded: snapshot.length - visible.length,
+    scanLimited: visible.length < target && snapshot.length >= maxRows,
+  }
+}
