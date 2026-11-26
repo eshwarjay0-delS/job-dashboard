@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 26 November 2026 07:44 UTC — remote validation snapshot
+
+- PR #590 exact-head five gates remain SUCCESS; its preview query returned zero deployments. #585's preview query also returned zero.
+- PR #589 docs branch full CI `45777783374` is still IN PROGRESS at Install dependencies; Plan/REA `45777783400` and Kompas baseline `45777783457` are SUCCESS. Do not merge or call the docs validated until full CI is terminal green.
+- Current master `e2a94783041559c8c0c317f860ef1ba792de9fc9` is docs-only; production alias remains READY on `a17b3267e271c77cd8887312445271b7fa172bd0`. No runtime redeploy.
+- PR #583 exact head `0ff97fb5dc0cef4c612e8d4fbd43025ddd378166` is comment-only cleanup, with no exact-head checks. #587 remains four full-CI policy failures. #580 remains green but owner-tap gated.
+- No local code/test execution or protected preview; canonical checkout, installed Next.js 16.3.8 docs, and protected-preview credential are unavailable.
+
+**Continue:** wait for #589 full CI; keep it DRAFT. Resume route-level WhatsApp work only in the compliant environment; do not merge stale/untested branches, send real documents, or declare the 17 Oct delivery verified.
+
 ## 26 November 2026 07:42 UTC — PR #583 comment-only cleanup
 
 - Committed the static-review typo correction on #583: `0ff97fb5dc0cef4c612e8d4fbd43025ddd378166` removes the duplicate comment opener only; no behavior or tests changed.
