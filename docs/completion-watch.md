@@ -1,5 +1,11 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 14 documentation schema correction
+
+- PR #589 run-13 REA schema check failed on job `139992542505` (workflow `45843932244`) because the Gmail REA entry referenced draft-only `src/lib/mail-digest.ts`, which does not exist on this docs branch. The test correctly caught the missing path.
+- Corrected the Gmail REA source list in commit `79ccc49932bc94849b203d8282dbc10b399d8f0e` to use the PR URL and branch-present documentation/workflow paths; no source code changed. Plan Journal records the failure and correction in `8881f1a377bb2ce2d37bb39c1acfa6524cedfd5c`.
+- **Next:** verify the new exact-head schema, full CI and baseline. The earlier failure is not a pass; no draft was merged or deployed.
+
 ## 26 November 2026 — run 13 Gmail/mobile source review
 
 - **PR #576:** exact head `1757fb68715081525de0f8c7b8bd3bf531ebff20`, DRAFT on stale base `794e8cfdbd3103409552857806bab89851d5bfcb`. Static review COMMENT `6076244479` found no obvious defect in the narrow diff: sender mutes key receiving account+sender, waiting-radar and React mail keys use account+thread, open actions pass the receiving account, reply/draft binding uses user+account+thread, the mobile menu is normal-flow and supports outside click/Escape/focus return, and buildAccounts retains four accounts. This is source review, not two-inbox/mobile acceptance.
