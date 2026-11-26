@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 26 November 2026 07:40 UTC — WhatsApp hard-hold source review
+
+- **PR #587:** Read the exact-head CI log. The four failures are policy mismatches: test 18/102 expect fallback without verified selection/profile identity; tests 93/95 expect sending a `supplierninja` JD-only addition. Keep hard-hold behavior. If testing the below-70% disclosed-shortfall path, isolate a finished supported control with no unsupported additions. COMMENT review `6070212949`; no approval.
+- **PR #583:** Static review of latest head `b7e0172ab019c52b89592dfc6087e82e434251ab` confirms the helper requires explicit-selection proof plus matching nonblank profile email, but route/session still does not persist or pass proof, so fallback is disabled rather than complete. The diff also has a duplicated comment opener. COMMENT review `6070210905`; exact-head check-runs are absent, branch non-mergeable; do not merge.
+- **Other exact gates:** #590's five checks are now SUCCESS, including full CI `45774672289`; protected preview and live API acceptance remain missing. #580's four checks are SUCCESS and COMMENT review `6070180119` was added; the owner merge tap remains required.
+- **No source implementation:** local `git ls-remote` failed DNS for `github.com`; no canonical checkout, dependencies or installed Next.js 16.3.8 route guide are available. No local tests/build, preview, API smoke, message send, model call, DOCX, R2/database/inbox mutation, crawl or user-device test occurred.
+- Plan & Vision and the journal on docs PR #589 now record these review findings and current gate evidence; its remote schema/full CI is queued. No product code changed.
+
+**Continue:** the durable route-level same-account selection proof and exact original-resume fallback remain blocked by the compliant checkout/Next.js docs. Keep all affected drafts behind exact-head CI, independent review and protected preview; do not merge #580 without the owner tap or replay the 17 Oct incident without its missing output/provider evidence.
+
 ## 26 November 2026 07:38 UTC — run 11 continuation and exact-head correction
 
 - **Current master / production:** master is documentation-only `e2a94783041559c8c0c317f860ef1ba792de9fc9`. Vercel independently confirmed both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` point to READY production `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. No runtime redeploy is needed for the docs-only commits.
