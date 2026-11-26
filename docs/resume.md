@@ -85,3 +85,8 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 ## Synthetic public regression fixtures — 15 November 2026
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
+
+
+## Final-DOCX Gemini feedback boundary — 26 November 2026
+
+The direct 3 November owner wording asks Gemini exactly `Give me ATS score` for feedback and asks which JD keywords are missing or weak so corrections can be considered. This approves the score/feedback and keyword-identification stage. It does **not** establish approval for automatic correction, re-export or recheck. The broader automated loop remains proposed until direct owner approval is recovered. Keep the ATS score and suggestions diagnostic only; candidate experience still requires the source resume or explicit candidate confirmation. This does not change the 95–100% factual-match goal or authorize unsupported claims. PR #417 is the score-only first-stage draft; no real Gemini call or exported-DOCX acceptance is claimed.
