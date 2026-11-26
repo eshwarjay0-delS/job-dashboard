@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 12 live crawler freshness audit (08:43 CDT)
+
+- **Production:** canonical master is docs-only `e2a94783041559c8c0c317f860ef1ba792de9fc9`; live deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` is READY on runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to it. Public `/api/health` is HTTP 200.
+- **Crawler freshness:** `GET /api/crawl/jobs?limit=5` is HTTP 200 but empty, with contract default, 14-day freshness and clearance excluded. Read-only Supabase SQL shows exact `mfit_crawl_jobs` count 14,566, active 12,407, active contract 8,850, and 0 active contract rows within 14 days. Latest `last_seen_at` is 10 Nov 2026 11:01:11.191 UTC. The latest run finished 11:01:11.601 UTC, found/upserted 6,818 and recorded one error. This is stale data, not an empty table; do not weaken the freshness cutoff.
+- **Separate source:** `GET /api/jobs?q=cybersecurity&type=contract&limit=5` returns 15 Jobright rows. It is not the vendor crawler and does not refresh `mfit_crawl_jobs`.
+- **Manual-only wall:** no crawl was triggered. The 12 Nov owner correction removes recurring crawl; `POST /api/crawl/jobs` requires admin, and this run has no admin session. The unblock is owner/admin-authorized manual crawl.
+- **Crawler PR #590:** exact head `1de4a3e493380f009d2b14dd35d0451f27392d51`, all five gates SUCCESS (full CI 139755342092, freshness 139755342096, manual-only 139755341736, baseline 139755349078, schema 139755341820). DRAFT; protected preview/public API acceptance absent. Known gaps: client location/remote filters can underfill after 100 rows; POST route 60s is shorter than runner 230s.
+- **Resume #585:** latest head `3f619a35b640bd7485916c41b75d8cec4d8cb18c`, all five gates now terminal SUCCESS (full CI 139980804670, focused resume 139980806070, WhatsApp recovery 139980805281, baseline 139980805414, schema 139980805405). This supersedes the earlier IN PROGRESS checkpoint. Still DRAFT: no protected preview, owner-authorized source/JD/confirmation bundle or exported DOCX acceptance; not a live 95–100%/98% match.
+- **WhatsApp hard hold #591:** head `b4b110c48da5d8f260bb183849f0ee27b5f99f18`, full CI 45792574554 FAILED tests 93/94/96/97/98; recovery/baseline/schema pass. The route still sends closest/original fallback without durable same-account Files/Library selection provenance. Keep assertions; do not weaken or send/replay.
+- **Official-source review:** Greenhouse public board GET, Lever public Postings API, Ashby published/listed API/feed and Workable authenticated/broad-feed boundaries are recorded in `docs/research/mfit-crawler-live-freshness-2026-11-26.md`. No vendor request or adapter was added.
+- **Execution limits:** sandbox DNS cannot resolve `github.com`; no canonical checkout/package/installed Next.js 16.3.8 guide. No local test/build, protected preview, crawl, portal request, DB mutation, model/DOCX, real send, inbox or device acceptance. PR #589's earlier full CI is green, but new documentation commits require fresh exact-head checks.
+
+**Continue:** manual-only crawl remains owner/admin gated. Source-review the server-side location/remote filter, bounded pagination and route/runner budget without editing route code until the compliant environment is available. Keep #590 and #585 DRAFT behind preview/acceptance/review; preserve #591's hard hold.
+
 ## 26 November 2026 — run 11 exact-head continuation (05:53 CDT)
 
 - **Master/production:** master is documentation commit `e2a94783041559c8c0c317f860ef1ba792de9fc9`; its GitHub Vercel status is SUCCESS with description **Canceled by Ignored Build Step**. Vercel deployment/alias GETs returned **403 forbidden**, so current live alias is not independently verified. Last verified production was `a17b3267e271c77cd8887312445271b7fa172bd0`; this is historical, not a fresh check. No deployment was attempted.
