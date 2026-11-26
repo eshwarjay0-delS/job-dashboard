@@ -2,7 +2,7 @@
 
 ## 26 November 2026 — run 17 remote source review (12:51 CST)
 
-- **Production:** alias `job-dashboard-fawn.vercel.app` and deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; current master `e2a94783041559c8c0c317f860ef1ba792de9fc9` is docs-only. No runtime deploy needed for this checkpoint.
+- **Production:** alias `job-dashboard-fawn.vercel.app` and deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; current master `1843c2f4f932b8de5e92ae02c47c13995c7cc5e` is docs-only. No runtime deploy needed for this checkpoint.
 - **WhatsApp #591:** exact head `b4b110c48da5d8f260bb183849f0ee27b5f99f18`, full CI `45792574554` FAILS tests 93/94/96/97/98 (100/105 pass). Recovery `45792574886`, baseline `45792574496`, schema `45792574863` PASS. The unchanged route still calls `sendClosest` after hard-hold rejection without durable same-account Files/Library selection provenance. Keep DRAFT/fail-closed. Historical 17 Oct 17:28 Chicago delivery remains unverified (output DOCX, R2 key/version, correlation, Meta ID and signed receipt absent); no replay/send.
 - **Resume #585:** exact head `3f619a35b640bd7485916c41b75d8cec4d8cb18c`; five gates green, focused 54-case test passed. Still DRAFT pending protected preview, owner-authorized source/JD/confirmations and exported DOCX inspection.
 - **Crawler #590:** exact head `1de4a3e493380f009d2b14dd35d0451f27392d51`; five gates green. Still DRAFT pending protected preview/API smoke. Client location/remote filtering can underfill after 100; route 60s is shorter than runner 230s. Manual/on-demand only; no crawl.
