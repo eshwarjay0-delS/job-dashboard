@@ -1,5 +1,19 @@
 # MFit Completion Watch
 
+## 26 November 2026 07:21 UTC — run 11 exact-head reconciliation
+
+- **Master / production:** canonical master is `e2a94783041559c8c0c317f860ef1ba792de9fc9`; production alias `job-dashboard-fawn.vercel.app` independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`, deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`. Public `/api/crawl/jobs?limit=1` and `/api/health` retrieval failed; no runtime API smoke is claimed.
+- **Crawler #590:** code head `968e159ec275ce8ae23dbae54f0d32dbd1d8f925` had five gates SUCCESS. Documentation head `1de4a3e493380f009d2b14dd35d0451f27392d51` now has four dedicated gates SUCCESS and full CI `45774672289` still IN PROGRESS. Vercel branch preview query returned zero deployments. Review COMMENT `6069975680` is not approval; keep DRAFT.
+- **WhatsApp #572:** current branch head `534c2107a9b1353bcf38ca3c8d41609e46ee3ed4` has CI `43807462701`, recovery `43807462736`, baseline `43807462779`, schema `43807462847` SUCCESS, but branch is 29 ahead/74 behind master. Webhook route blob `7ec8dd7727ca454bde76ad794f921b2206efae82` is identical to master; helper checks email, not durable selection. Review COMMENT `6070007756`; body claim is unsupported.
+- **WhatsApp #587:** exact head `1e2a1bf9a508f3d5b7dc175ca865b7f70182d202`; full CI `45715458709` FAILS four assertions; recovery `45715458683`, baseline `45715458615`, Plan/REA `45715458626` pass. Do not weaken the hard-hold/fallback tests.
+- **WhatsApp #583:** code head `b1c28eae8a362614a8118e1008f3ea08ec293eef` had CI `45692952469`, recovery `45692953138`, baseline `45692952593` SUCCESS. Current branch head `695eb641ce480f85926fda391555fbb5e04f667a` has no exact workflow runs, is 32 ahead/3 behind master, and includes `src/lib/kompasConsistency.ts` shared #554 change. Review COMMENT `6070026941`; remove overlap and restack. Keep draft.
+- **Resume/JD #585:** head `2e3d6f41b89694567992e45c73426f5add474141`, five gates SUCCESS; protected preview and owner-authorized source/JD/confirmation plus exported DOCX acceptance remain.
+- **Gmail #577:** head `4c6c2bb803055038e1ddbbdf065e934d08992328`; focused identity `45452980973`, Plan/REA `45452980985`, baseline `45452980956` SUCCESS; full CI `45452981389` FAILURE at prefer-const `src/lib/kompasConsistency.ts:1059`. Branch 11 ahead/3 behind master; keep draft pending restack, protected preview and two-inbox/mobile acceptance.
+- **Execution boundary:** no canonical checkout/package or installed Next.js 16.3.8 guide; route edits/local tests/build remain unavailable. Preview needs private `KOMPAS_VERCEL_API_TOKEN`; no value was accessed. No email/WhatsApp send, R2/DB/inbox mutation, live crawl, model, DOCX, application or device test occurred.
+
+**Continue:** complete #590 current-head full CI and then obtain protected preview/API acceptance. The next WhatsApp route-level durable explicit same-account selection and exact Original resume — NOT TAILORED fallback/hard hold requires the compliant checkout/Next.js guide and independent #554 review; do not merge stale #572/#583/#587. #585 still needs real bundle/DOCX acceptance. #577 needs a clean current-master restack and lint correction before two-inbox/mobile acceptance.
+
+
 ## 25 November 2026 — exact-head continuation checkpoint (18:24 CDT)
 - **Contract-search scope review:** COMMENT 6066938178 found #574 carries the shared `kompasConsistency.ts` prefer-const fix from #554, which still requires a second authorized reviewer. Keep the contract-search PR DRAFT and restack without that file; do not bypass #554.
 - **Crawler scope review:** #575 has five green gates, but COMMENT review 6066925246 found its 28-file diff also includes unrelated Kompas desktop/overlay/VM source, tests, fixtures and Plan/REA changes overlapping #582. Keep DRAFT; restack only crawler/Apply files, focused tests and narrow docs on current master.
