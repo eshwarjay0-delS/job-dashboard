@@ -33,8 +33,8 @@ test('image labels are escaped as text', () => {
 
 test('resume alignment handoff reflects the current-master restack and remains blocked for live acceptance', () => {
   const resume = productPlan('resume')
-  assert.equal(PLAN_REVISION, '2026-11-26.10')
-  assert.match(resume.baseline, /PR #593 current-master restack of #585/)
+  assert.equal(PLAN_REVISION, '2026-11-26.11')
+  assert.match(resume.baseline, /PR #595 current-master restack of #585/)
   assert.match(resume.baseline, /54\/54/)
   assert.match(resume.baseline, /those results are not reused/)
   assert.match(resume.baseline, /protected preview and owner-authorized resume\/JD\/explicit[- ]confirmation\/exported-DOCX acceptance remain missing/)
