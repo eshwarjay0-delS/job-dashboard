@@ -1,5 +1,12 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 13 Gmail/mobile source review
+
+- **PR #576:** exact head `1757fb68715081525de0f8c7b8bd3bf531ebff20`, DRAFT on stale base `794e8cfdbd3103409552857806bab89851d5bfcb`. Static review COMMENT `6076244479` found no obvious defect in the narrow diff: sender mutes key receiving account+sender, waiting-radar and React mail keys use account+thread, open actions pass the receiving account, reply/draft binding uses user+account+thread, the mobile menu is normal-flow and supports outside click/Escape/focus return, and buildAccounts retains four accounts. This is source review, not two-inbox/mobile acceptance.
+- **CI:** Kompas baseline `45401091926` SUCCESS. Full CI `45401091730` FAILURE only at shared Lint `src/lib/kompasConsistency.ts:1059` (`prefer-const`); current master `e2a947` already has the `const` correction. The Gmail account-isolation test is wired into CI but did not run because lint stopped first. Do not claim the Gmail test passed.
+- **Next:** clean-restack #576 on current master in the compliant environment, run exact-head full CI including the Gmail digest isolation test, then protected preview and owner-consented two-inbox/narrow-phone acceptance. Keep draft. No Gmail OAuth/inbox was accessed and proactive Poke workers/scheduler/notifications/sending remain disabled.
+- Research note: `docs/research/mfit-gmail-mobile-static-review-2026-11-26.md` and the Gmail plan checkpoint are added on the documentation branch.
+
 ## 26 November 2026 — run 12 live crawler freshness audit (08:43 CDT)
 
 - **Production:** canonical master is docs-only `e2a94783041559c8c0c317f860ef1ba792de9fc9`; live deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` is READY on runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` resolve to it. Public `/api/health` is HTTP 200.
