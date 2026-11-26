@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 26 November 2026 — WhatsApp incident read-only probe (16:19 UTC)
+
+- iZap has one business scope with **no WhatsApp number attached**. The 17 Oct 2026 date search (`resume`, America/Chicago) and empty-query read both returned zero messages.
+- Connection status reports disconnected, no inbound ever recorded and no outbound proven to reach Meta. **This scope is not proven to be the MarketFit incident's number**; zero results do not disprove the historical failure.
+- No message, replay, pause/resume, media download or other write action was attempted.
+- Exact blocker: the correct authorized business scope and incident evidence (generated DOCX, per-run R2 object/version, webhook correlation, Meta `wamid`, signed delivery/read receipt or failure status) are still unavailable.
+
+**Continue:** recover the incident through the correct business and canonical server/provider logs; correlate selection/generation/upload/webhook/send/delivery before classifying. No real-message test or replay.
+
 ## 26 November 2026 — run 16 exact-head continuation (16:06 UTC)
 
 - **Master and production:** master `e2a94783041559c8c0c317f860ef1ba792de9fc9` is documentation-only. Alias `job-dashboard-fawn.vercel.app` and deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` independently verified READY on runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Earlier Vercel 403 is superseded; no runtime deployment is needed for this docs-only master.
