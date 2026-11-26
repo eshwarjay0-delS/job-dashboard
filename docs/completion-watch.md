@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 16 exact-head continuation (16:06 UTC)
+
+- **Master and production:** master `e2a94783041559c8c0c317f860ef1ba792de9fc9` is documentation-only. Alias `job-dashboard-fawn.vercel.app` and deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` independently verified READY on runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Earlier Vercel 403 is superseded; no runtime deployment is needed for this docs-only master.
+- **WhatsApp #591:** exact head `b4b110c48da5d8f260bb183849f0ee27b5f99f18`; full CI `45792574554` fails tests 93, 94, 96, 97, 98 (100/105 passed). Recovery `45792574886`, baseline `45792574496`, schema `45792574863` SUCCESS. Static review confirms helper hold is not durable explicit selection proof and webhook still calls `sendClosest` after rejection, allowing an original without same-account selection. Keep fail-closed tests. PR remains DRAFT.
+- **Crawler #590:** exact head `1de4a3e493380f009d2b14dd35d0451f27392d51`, five gates SUCCESS; static review found no blocking defect. DRAFT pending protected preview and public API smoke. Known gaps: client location/remote filtering can underfill after the 100-row page; POST route is 60s while runner budget is 230s.
+- **Resume alignment #585:** exact head `3f619a35b640bd7485916c41b75d8cec4d8cb18c`, five gates SUCCESS and focused 54 cases; DRAFT pending protected preview, owner-authorized resume/JD/explicit confirmations and exported DOCX inspection.
+- **Gmail:** #580 four checks SUCCESS but owner merge tap remains; #576 full CI fails shared `prefer-const` lint and digest account-isolation test did not run. #554 still needs a second authorized reviewer. Four-account ceiling and disabled Poke workers/scheduler/notifications/sending remain.
+- **Historical WhatsApp incident:** 17 Oct 2026 17:28 Chicago remains unverified; generated output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed receipt are missing. No replay/resend.
+- **Execution wall:** no canonical checkout, package/dependencies or installed Next.js 16.3.8 route guide. No local tests/build, route edits, protected preview, live model/DOCX, Gmail OAuth/inbox mutation, WhatsApp send, R2/DB mutation, crawl or device acceptance.
+
+**Continue:** implement durable same-account Files/Library selection provenance and exact **Original resume — NOT TAILORED** fallback with unsupported-JD hard hold only in the compliant checkout/Next.js environment. Keep #591 fail-closed and draft; continue independent source review without bypassing protected preview, owner merge taps or second-review gates.
+
 ## 26 November 2026 — run 15 Kompas Chief Relevance release ancestry
 
 - PR #113 (50-fold relevance discipline) is MERGED at 'ed9a5e7f358df8f0e0e7db4b75f21beb5315d519'; #114 (current ask/constraints) is MERGED at 'ef82692088e2ebbf7c70e813c5e003e6f09ceed6'; validation-only #115 is also merged at that #114 SHA.
