@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 26 November 2026 07:38 UTC — run 11 continuation and exact-head correction
+
+- **Current master / production:** master is documentation-only `e2a94783041559c8c0c317f860ef1ba792de9fc9`. Vercel independently confirmed both `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app` point to READY production `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. No runtime redeploy is needed for the docs-only commits.
+- **Crawler #590:** exact head `1de4a3e493380f009d2b14dd35d0451f27392d51` now has all five gates SUCCESS (full CI, crawler freshness, manual-only, schema, Kompas baseline). Review COMMENT `6069975680` is not approval. Keep DRAFT: protected preview and public API acceptance are missing; location/remote filtering can underfill after 100 rows, and the 60-second route duration is shorter than the runner's 230-second budget. No live crawl or production mutation.
+- **Resume/JD #585:** exact head `2e3d6f41b89694567992e45c73426f5add474141` has all five checks SUCCESS, but is DRAFT/dirty on old base `a17b3267`. Protected preview, owner-authorized resume/JD/explicit confirmations, and exported-DOCX acceptance remain missing. Do not claim 98% live match.
+- **WhatsApp #587:** full CI `45715458709` still FAILS four policy-conflicting fallback/unverified-term assertions; recovery, baseline and Plan/REA pass. #583's current head `b7e0172ab019c52b89592dfc6087e82e434251ab` has no check-runs and is non-mergeable. Explicit-selection route work is blocked; don't weaken tests or merge stale branches.
+- **Gmail #580:** exact head `f783adb36d9332589028b1717eb40b0a8da07a51` is clean, non-draft and four gates SUCCESS. Static review COMMENT `6070180119` was added; it is not approval. The owner merge tap remains required. No Gmail OAuth, inbox mutation, two-inbox or mobile acceptance.
+- **Execution wall:** local `git ls-remote` failed because this runtime could not resolve `github.com`; there is no canonical checkout, `package.json`, `node_modules` or installed Next.js 16.3.8 route guide. No local tests/build, protected preview, public API smoke, real email/WhatsApp send, DOCX generation, R2/DB/inbox mutation, crawl, model call or user-device test occurred.
+- **Documentation:** Plan & Vision baselines and the journal were refreshed on the existing DRAFT docs PR #589. Its updated head is `d218ae8c2706c748f9842a6d682ce5e188471d57`; exact-head CI/Plan-REA validation is pending. No product runtime behavior changed.
+
+**Continue:** route-level durable same-account Files/Library selection proof and the exact `Original resume — NOT TAILORED` fallback still require the compliant checkout/installed Next.js docs. Keep #585/#587/#583/#590 DRAFT behind the real preview/review gates; do not merge #580 without the owner tap. Preserve the 17 Oct delivery as unresolved until the output DOCX, R2 version, webhook correlation, Meta outbound ID and signed receipt are available.
+
 ## 26 November 2026 07:21 UTC — run 11 exact-head reconciliation
 
 - **Master / production:** canonical master is `e2a94783041559c8c0c317f860ef1ba792de9fc9`; production alias `job-dashboard-fawn.vercel.app` independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`, deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`. Public `/api/crawl/jobs?limit=1` and `/api/health` retrieval failed; no runtime API smoke is claimed.
