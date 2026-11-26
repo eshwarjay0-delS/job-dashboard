@@ -35,3 +35,7 @@ The 17 October 2026 17:28 Chicago WhatsApp delivery remains unverified. The gene
 ## Next gate
 
 Run exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema on corrected head. Keep DRAFT until independent review and legitimate protected preview. Durable same-account Files/Library selection provenance and the exact fallback route implementation require a compliant checkout with installed Next.js 16.3.8 docs; keep them blocked rather than substituting a matching email or synthetic test.
+
+## Workflow trigger
+
+The corrected documentation tree commit did not publish Actions runs on its own. A contents-API push update to this research note is being used to trigger the exact-head GitHub workflows. This step is documentation-only; the source helper and test changes remain unchanged.
