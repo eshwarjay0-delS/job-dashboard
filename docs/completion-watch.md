@@ -1,6 +1,7 @@
 # MFit Completion Watch
 
 ## 25 November 2026 — exact-head continuation checkpoint (18:24 CDT)
+- **Contract-search scope review:** COMMENT 6066938178 found #574 carries the shared `kompasConsistency.ts` prefer-const fix from #554, which still requires a second authorized reviewer. Keep the contract-search PR DRAFT and restack without that file; do not bypass #554.
 - **Crawler scope review:** #575 has five green gates, but COMMENT review 6066925246 found its 28-file diff also includes unrelated Kompas desktop/overlay/VM source, tests, fixtures and Plan/REA changes overlapping #582. Keep DRAFT; restack only crawler/Apply files, focused tests and narrow docs on current master.
 
 - **Master/production:** master is documentation commit `b6cf57a0ca068c841fb8f5d0bea391060095d64b` (#584). Canonical production alias `job-dashboard-fawn.vercel.app` remains READY on runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`, deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`. No new deployment was requested.
