@@ -199,3 +199,11 @@ The owner explicitly corrected the schedule on 12 Nov 2026: the daily contract-c
 - The normal manual trigger is `POST /api/crawl/jobs`, guarded by `adminOf(req)`. The secret-protected `GET /api/crawl/run` remains a manual compatibility endpoint, not a scheduled job.
 - Robert Half remains in `PENDING_PORTALS` and must not be added to `ADAPTERS` or crawled without express written permission or a sanctioned feed/API with commercial-aggregation rights.
 - Do not run a live crawl or mutate production rows as part of this correction. The next crawl requires a separate explicit manual request.
+
+
+## 26 November 2026 — live freshness audit
+
+Read-only production smoke now confirms `/api/health` returns 200 and `/api/crawl/jobs?limit=5` returns an empty contract-only list with the 14-day freshness cutoff. Supabase exact count is 14,566 stored/12,407 active, including 8,850 active contract rows; none are fresh within 14 days. The latest crawl run is 10 Nov 11:00:24 UTC (6,818 found/upserted, one error). This is a **stale-data** condition, not an empty table. The separate Jobright-backed `/api/jobs` query returns 15 contract listings, but it is not the vendor crawler.
+
+
+The crawler remains **manual/on-demand only** per the 12 Nov owner correction. No crawl was triggered because this run has no admin session. The exact unblock is an owner/admin-authorized manual run; do not restore a cron or loosen the freshness filter. PR #590's clean bounded clearance-filter restack is five-gate green but DRAFT pending protected preview and public API acceptance. Remaining design gaps: client location/remote filtering can underfill after the 100-row page, and the 60-second POST route is shorter than the runner's 230-second budget. See `docs/research/mfit-crawler-live-freshness-2026-11-26.md` for evidence and official public ATS-source notes.
