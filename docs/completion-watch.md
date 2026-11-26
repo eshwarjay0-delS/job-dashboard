@@ -1,5 +1,17 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 11 exact-head continuation (05:53 CDT)
+
+- **Master/production:** master is documentation commit `e2a94783041559c8c0c317f860ef1ba792de9fc9`; its GitHub Vercel status is SUCCESS with description **Canceled by Ignored Build Step**. Vercel deployment/alias GETs returned **403 forbidden**, so current live alias is not independently verified. Last verified production was `a17b3267e271c77cd8887312445271b7fa172bd0`; this is historical, not a fresh check. No deployment was attempted.
+- **Contract crawler (#590):** clean restack head `1de4a3e493380f009d2b14dd35d0451f27392d51`; full CI `45774672289`, crawler freshness `45774672245`, manual-only `45774672193`, baseline `45774672297`, Plan/REA `45774672248` all SUCCESS. COMMENT review `6073714572` found no blocking defect; this is not approval. DRAFT; protected preview/live crawl absent. Location/remote client filtering may underfill; route duration 60s still conflicts with runner 230s.
+- **WhatsApp hard hold (#591):** head `b4b110c48da5d8f260bb183849f0ee27b5f99f18`; full CI `45792574554` FAILED 5/105 (tests 93, 94, 96, 97, 98). Recovery `45792574886`, baseline `45792574496`, schema `45792574863` SUCCESS. Source/log review found webhook rejection still calls `sendClosest`, so an original can be sent without durable same-account selection. COMMENT review `6073718321`; keep DRAFT and do not weaken assertions.
+- **Resume alignment (#585):** exact head `2e3d6f41b89694567992e45c73426f5add474141`, five gates green (45712144382, 45712144296, 45712144329, 45712144568, 45712144317). DRAFT/non-mergeable on stale base `a17b3267`; protected preview and owner-authorized source resume/JD/confirmation plus exported DOCX acceptance missing. Static review COMMENT `6066913221` is not approval.
+- **Gmail (#580):** three gates green (45678959016, 45678959010, 45678958981); owner merge tap remains. No live OAuth, inbox, two-inbox or mobile test. **Poke-inspired #474** is still DRAFT/non-mergeable on older base with three green gates; colliding thread IDs, selected-From, reconnect and mobile acceptance remain.
+- **Other gates:** #575 five gates green but polluted 28-file scope; clean crawler-only restack #590 is the reviewed path. #574 full CI fails and its scope includes shared #554 lint fix requiring second review. No bypass.
+- **Environment wall:** no canonical checkout, `package.json`, `node_modules`, or installed Next.js 16.3.8 route docs. Sandbox restore was previously 402 until 1 Dec; Vercel API is 403 in this run. No local tests/build, protected preview, live crawl, model, DOCX, Meta send, R2/DB/inbox mutation, deployment, or device acceptance. The 17 Oct 17:28 Chicago delivery remains unverified: generated DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound ID and signed receipt are missing.
+
+**Continue:** durable explicit same-account Files/Library selection and exact `Original resume — NOT TAILORED` fallback with unsupported-JD hard hold requires the compliant development environment. Preserve #591's failing route assertions. Protected-preview acceptance for #590 and #585 remains blocked by unavailable access/source bundle.
+
 ## 26 November 2026 07:44 UTC — remote validation snapshot
 
 - PR #590 exact-head five gates remain SUCCESS; its preview query returned zero deployments. #585's preview query also returned zero.
