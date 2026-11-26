@@ -90,7 +90,7 @@ PR #278 head `3782c97dea69a8632135586bdb8296ad1790c781` now passes full CI `4277
 
 The canonical production alias remains on `a66c108bff6175149c4aadd882ab11128445b8cc`; no production deployment or authenticated recovery smoke was performed. The PR remains held because PR #274's stricter identity verification is security-sensitive and has no retrieved user-authored approval. The separate voice preview HTTP gate is owned by Kompas Continuous Voice Delivery. Do not ship the recovery fix alone or treat a preview build as production.
 
-The historical 17 Oct 17:28 incident remains separately blocked by the missing generated DOCX and per-run R2/webhook/Meta trace, plus owner reconciliation of conflicting source facts. No real WhatsApp send, model generation or R2 write was performed.
+The historical 17 Oct 17:28 incident remains separately blocked by the missing generated output, per-run R2/webhook/Meta trace and signed delivery evidence. The exact WhatsApp-uploaded source bytes are not currently verified; historical education/employment/credential claims remain unverified/unreconciled, not a proven contradiction, pending owner reconciliation. No real WhatsApp send, model generation or R2 write was performed.
 
 
 ## 10 November 2026 — evidence-bound send-safety proposal
@@ -109,7 +109,7 @@ PR #279 head `cc7e4ea675d808a89f4b4ea1f22711b0be7141b7` has Kompas baseline `427
 
 A prior private review recorded a same-name 27,724-byte archive item and digest, but later scoped Library searches did not surface the exact WhatsApp-uploaded source bytes. Treat the size and digest as historical only, not proof of the exact input. The matching JD reference was recovered from the user's private inbox. Historical education, employer chronology, experience length and credential claims remain unverified/unreconciled, not a proven contradiction, until the exact source is available and the owner reconciles it. The generated output DOCX, per-run R2 object key/version, webhook correlation, Meta message ID and signed delivery/read receipt remain unavailable; no exact replay or delivery claim is made.
 
-The direct 3 Nov user wording
+The direct 3 Nov user wording asks Gemini exactly `Give me ATS score` for feedback and asks which JD keywords are missing/weak so corrections can be considered. The retrieved wording does not approve automatic correction, re-export or recheck. A later repository summary claimed a 15 Nov approval, but no direct user-authored 15 Nov approval was recovered in this scoped prior-context search; this is not a claim that every chat was searched. Keep the score and keyword suggestions diagnostic, never experience evidence. The final-DOCX score/feedback stage is the approved scope; the expanded automated correction/re-export/recheck loop remains proposed until direct owner approval. Current `src/lib/tailor.ts` has pre-generation Gemini keyword passes, deterministic exported-DOCX ATS parsing and final-document gap feedback, but the separate final-DOCX score-only diagnostic is not yet verified on a real exported file.
 
 PR #279 exact head `073dd98465ac81426dcc6ec1c9ae9b4f80120e61` has full CI 42795044313, Kompas baseline 42795044640, and WhatsApp recovery regression 42795044615 all SUCCESS; it remains DRAFT and requires owner review for WhatsApp external-send behavior. Its Vercel status remains build-rate-limit. No real model call, resume write, WhatsApp send, R2 write or email send was performed.
 
@@ -164,4 +164,4 @@ The current-master candidates remain separate:
 - PR #399: exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA passed; protected preview remains unavailable.
 - PR #400: exact-head source gates passed; protected preview, authorized source/JD/confirmation and exported-DOCX acceptance remain outstanding.
 
-No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of conflicting source facts are available. Do not replay it or claim delivery.
+No model call, DOCX generation, R2 write, WhatsApp send, or user-device test was performed. Keep the original 17 October incident open until its generated output, per-run R2 object/version, webhook correlation, Meta message ID, signed delivery/read receipt and owner reconciliation of historical source claims are available. Do not replay it or claim delivery.
