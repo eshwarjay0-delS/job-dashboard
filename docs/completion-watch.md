@@ -1,5 +1,14 @@
 # MFit Completion Watch
 
+## 26 November 2026 07:42 UTC — PR #583 comment-only cleanup
+
+- Committed the static-review typo correction on #583: `0ff97fb5dc0cef4c612e8d4fbd43025ddd378166` removes the duplicate comment opener only; no behavior or tests changed.
+- PR #583 exact head is now `0ff97fb5dc0cef4c612e8d4fbd43025ddd378166`, base remains old `a17b3267`, DRAFT/dirty. No exact-head check runs or PR workflow runs are visible. Earlier CI does not transfer. Review COMMENT `6070210905` was anchored to the prior head; #587 COMMENT `6070212949` identifies the four policy-conflicting tests.
+- Route-level durable selection proof is still absent; helper-only fail-closed code blocks original fallback until explicit selection can be persisted and passed. The shared Kompas lint dependency and stale base prevent safe merge.
+- Plan & Vision journal/baselines updated on docs PR #589; its CI remains queued. No local tests/build, protected preview, real message/model/DOCX/R2/DB/inbox/crawl or device acceptance.
+
+**Continue:** wait for #583 exact-head CI, then clean restack only approved WhatsApp code/tests on current master when the canonical checkout and installed Next.js 16.3.8 docs are available. Do not merge, deploy or replay the historical 17 Oct run.
+
 ## 26 November 2026 07:40 UTC — WhatsApp hard-hold source review
 
 - **PR #587:** Read the exact-head CI log. The four failures are policy mismatches: test 18/102 expect fallback without verified selection/profile identity; tests 93/95 expect sending a `supplierninja` JD-only addition. Keep hard-hold behavior. If testing the below-70% disclosed-shortfall path, isolate a finished supported control with no unsupported additions. COMMENT review `6070212949`; no approval.
