@@ -1,6 +1,7 @@
 # MFit Completion Watch
 
 ## 25 November 2026 — exact-head continuation checkpoint (18:24 CDT)
+- **Crawler scope review:** #575 has five green gates, but COMMENT review 6066925246 found its 28-file diff also includes unrelated Kompas desktop/overlay/VM source, tests, fixtures and Plan/REA changes overlapping #582. Keep DRAFT; restack only crawler/Apply files, focused tests and narrow docs on current master.
 
 - **Master/production:** master is documentation commit `b6cf57a0ca068c841fb8f5d0bea391060095d64b` (#584). Canonical production alias `job-dashboard-fawn.vercel.app` remains READY on runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`, deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`. No new deployment was requested.
 - **Confirmed-skill resume alignment (#585):** exact head `2e3d6f41b89694567992e45c73426f5add474141`; full CI, focused confirmation, WhatsApp recovery, Kompas baseline and Plan/REA all SUCCESS (45712144382, 45712144296, 45712144329, 45712144568, 45712144317). Static review COMMENT 6066913221 found no blocking source defect; this is not approval. Protected preview, real owner-authorized resume/JD/confirmation bundle and exported DOCX inspection remain missing. Keep DRAFT.
