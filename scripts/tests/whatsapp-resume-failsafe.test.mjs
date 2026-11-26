@@ -1,4 +1,4 @@
-// WhatsApp must always deliver a resume file for the profile already chosen.
+// WhatsApp never substitutes an original unless durable explicit same-account Files/Library selection is proven.
 // Nov 6, 2026: the EASM run refused a 30.8% rewrite and sent no file.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -111,25 +111,19 @@ const low = {
   keyword_analysis: { matched: [], added: ['supplierninja'], missing: ['soc 2', 'tprm', 'supplier', 'vendor'] },
 }
 
-test('a below-floor rewrite still delivers that Word file and names the missing terms', async () => {
+test('unsupported JD-only additions hold the draft and do not substitute an unselected original', async () => {
   const { generate, docs, said, filesFor } = harness(async () => low)
   await generate('15550101', {
     jdId: 'easm', jd: 'EASM cybersecurity engineer with SOC 2 and TPRM',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.match(docs[0].caption, /30\.8%/)
-  assert.match(docs[0].caption, /Still missing: soc 2, tprm, supplier, vendor/)
-  assert.match(docs[0].caption, /supplierninja/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
-  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
-  assert.match(said.join('\n'), /EASM Cybersecurity Engineer/)
+  assert.equal(docs.length, 0, 'the unsupported draft and the unselected original are both held')
+  assert.match(said.join('\n'), /I did not send a file/)
+  assert.match(said.join('\n'), /saved for another try/)
+  assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })
 
-test('a failed or incomplete rewrite still delivers the chosen library resume', async () => {
+test('failed or incomplete rewrites do not substitute an unselected original', async () => {
   let mode = 'throw'
   const { generate, docs, said, filesFor } = harness(async () => {
     if (mode === 'throw') throw new Error('provider down')
@@ -140,30 +134,24 @@ test('a failed or incomplete rewrite still delivers the chosen library resume', 
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }
   await generate('15550101', session, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.equal(docs[0].body, HOUSTON)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.match(docs[0].caption, /EASM Cybersecurity Engineer/)
-  assert.match(docs[0].caption, /in GRC and IT Risk/)
-  assert.match(docs[0].caption, /did not finish cleanly/)
-  assert.match(docs[0].caption, /was not rewritten/)
-  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
-  assert.doesNotMatch(said.join('\n'), /No incomplete file was delivered/)
+  assert.equal(docs.length, 0)
+  assert.match(said.join('\n'), /could not tailor your resume just now/)
+  assert.match(said.join('\n'), /saved/)
+  assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 
   mode = 'partial'
-  docs.length = 0
   await generate('15550101', { ...session, jdId: 'easm-partial' }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.equal(docs[0].body, HOUSTON)
-  assert.match(docs[0].caption, /marked incomplete/)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.doesNotMatch(docs[0].caption, /No incomplete file was delivered/)
+  assert.equal(docs.length, 0)
+  assert.match(said.join('\n'), /I did not send a file/)
+  assert.match(said.join('\n'), /saved for another try/)
 })
 
-test('a finished 30.8% rewrite with a role evidence gap sends the updated file, not the library file', async () => {
+test('a completed supported 30.8% role-evidence gap is disclosed without unsupported additions', async () => {
   const finished = {
     ...low,
     token: 'easm-scored',
+    unverified_added_keywords: [],
+    keyword_analysis: { ...low.keyword_analysis, added: [] },
     quality: { ...low.quality, incomplete: false, status: 'needs_review' },
     quality_blockers: ['role_evidence_gaps'],
     ats: { score: 92, passed: true, checks: [], issues: [] },
@@ -186,10 +174,11 @@ test('a finished 30.8% rewrite with a role evidence gap sends the updated file, 
   assert.doesNotMatch(said.join('\n'), /I did not send a file/)
 })
 
-test('a slow constructed-JD rewrite sends the rewritten file, not the original', async () => {
+test('slow completed rewrites with unverified JD-only additions are held', async () => {
   const finished = {
     token: 'iam-rewritten', score: 97, coverage: 97, supported_coverage: 98,
     diff: [{ section: 'Experience', before: 'Administered access.', after: 'Administered access, using SailPoint and CyberArk.' }],
+    unverified_added_keywords: ['sailpoint', 'cyberark'],
     quality: { status: 'coverage_met', matched: 97, total: 100, missing: [], incomplete: false },
     quality_blockers: [],
     ats: { score: 100, passed: true, checks: [], issues: [] },
@@ -203,51 +192,44 @@ test('a slow constructed-JD rewrite sends the rewritten file, not the original',
     jdId: 'iam-slow', jd: 'IAM consultant with SailPoint and CyberArk',
     resumePath: HOUSTON_PATH, resumeName: 'Senior IAM Business Analyst',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /Rewrote supplier reviews/)
-  assert.match(docs[0].caption, /97%/)
-  assert.doesNotMatch(docs[0].caption, /was not rewritten/)
-  assert.doesNotMatch(docs[0].caption, /did not finish cleanly/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
-  assert.doesNotMatch(said.join('\n'), /I did not send a file/)
+  assert.equal(docs.length, 0, 'unverified JD-only additions are a hard hold even after a slow, completed rewrite')
+  assert.match(said.join('\n'), /I did not send a file/)
+  assert.match(said.join('\n'), /saved for another try/)
+  assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })
 
-test('roles that were not rewritten still send the chosen library file', async () => {
+test('roles that were not rewritten do not substitute an unselected original', async () => {
   const unfinished = {
     ...low,
     token: 'easm-unrewritten',
     quality: { ...low.quality, incomplete: false },
     quality_blockers: ['roles_unrewritten'],
   }
-  const { generate, docs, filesFor } = harness(async () => unfinished)
+  const { generate, docs, said, filesFor } = harness(async () => unfinished)
   await generate('15550101', {
     jdId: 'easm-roles', jd: 'EASM cybersecurity engineer',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.equal(docs[0].body, HOUSTON)
-  assert.match(docs[0].caption, /closest matching resume/)
-  assert.match(docs[0].caption, /Some experience sections were not rewritten/)
-  assert.match(docs[0].caption, /was not rewritten/)
-  assert.doesNotMatch(docs[0].body, /Rewrote supplier reviews/)
+  assert.equal(docs.length, 0)
+  assert.match(said.join('\n'), /I did not send a file/)
+  assert.match(said.join('\n'), /saved/)
+  assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })
 
-test('the Houston and Saint Louis profiles are not mixed when the failsafe sends a file', async () => {
+test('unselected originals from either profile are never sent as a fallback', async () => {
   const { generate, docs, said, filesFor } = harness(async () => { throw new Error('provider down') })
   await generate('15550101', {
     jdId: 'houston', jd: 'EASM role',
     resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH))
-  assert.equal(docs.length, 1)
-  assert.match(docs[0].body, /candidate1@example.test/)
-  assert.doesNotMatch(docs[0].body, /candidate2/)
+  assert.equal(docs.length, 0)
+  assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 
-  docs.length = 0
+  said.length = 0
   await generate('15550101', {
     jdId: 'wrong-profile', jd: 'EASM role again',
     resumePath: SAINT_LOUIS_PATH, resumeName: 'EASM Cybersecurity Engineer',
   }, TEST_USER_ID, 60_000, filesFor(SAINT_LOUIS_PATH))
-  assert.equal(docs.length, 0, 'a Saint Louis file is not sent for the Houston profile')
-  assert.doesNotMatch(said.join('\n'), /candidate2/)
-  assert.doesNotMatch(docs.map(d => d.body).join('\n'), /candidate2/)
+  assert.equal(docs.length, 0)
+  assert.doesNotMatch(said.join('\n'), /candidate1@example\.test|candidate2@example\.test/)
 })

@@ -937,3 +937,12 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 - **Execution evidence:** GitHub source/PR/workflow and Vercel alias metadata were inspected. No local tests/build, protected preview, live Gmail API/OAuth, inbox mutation, WhatsApp send, R2/DB mutation, live crawl, DOCX generation or user-device acceptance occurred.
 
 **Next:** when the WhatsApp sandbox resets on 1 December or an approved environment provides the canonical checkout and installed Next.js 16.3.8 docs, implement explicit same-account Files/Library selection provenance plus the exact **Original resume — NOT TAILORED** fallback and unsupported-JD hard hold. Meanwhile continue clean, non-overlapping Gmail/crawler reviews without merging drafts or bypassing protected-preview/reviewer gates.
+
+
+## 26 November 2026 — WhatsApp hard-hold test-policy restack
+
+**Continue:** helper-level unsupported-JD hard hold and fail-closed resume delivery. PR #587 exact head `1e2a1bf9a508f3d5b7dc175ca865b7f70182d202` full CI `45715458709` failed four assertions (tests 18, 93, 95 and 102); WhatsApp recovery `45715458683`, Kompas baseline `45715458615`, Plan/REA `45715458626` passed. The failure log shows tests expecting fallback without explicit same-account selection and delivery of an unsupported JD-only term `supplierninja`. Corrected test assertions from #583 were inspected and are being carried into a clean restack. The 30.8% role-evidence-gap control must remove unsupported terms before it can remain a disclosed-shortfall control. Provider failure/unchanged paths do not send an unselected original.
+
+
+- Source/test restack only; no route-level durable Files/Library selection provenance was added. Protected preview and independent review remain required.
+- No canonical checkout, local test/build, Next.js 16.3.8 docs, DOCX generation, Meta send, R2 write, replay, DB mutation, deployment or device acceptance occurred. The 17 Oct 17:28 Chicago incident remains unverified.
