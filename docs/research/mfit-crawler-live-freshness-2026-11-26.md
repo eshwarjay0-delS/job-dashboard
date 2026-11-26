@@ -34,9 +34,9 @@ Clean crawler-only restack head `1de4a3e493380f009d2b14dd35d0451f27392d51` has f
 ## Public ATS-source reference review
 
 - **Greenhouse:** official Job Board API GET `/v1/boards/{board_token}/jobs` returns published jobs; `content=true` adds descriptions. The documentation notes request rate limiting. Only application submission POST requires Basic Auth. Use public board tokens found on the vendor's own careers link, and do not submit applications.
-- **Lever:** its Postings API is publicly accessible for published public postings; its XML-feed use case is also documented. Do not confuse the public Postings API with the authenticated Lever Data API or ingest internal/unlisted postings.
+- **Lever:** the official public Postings API is separate from the authenticated v1 Data API. The public board API returns published postings, not internal postings, and does not provide full-text search; a company/site slug is required. The XML feed is a separate distribution path described in Lever’s official job-board use case. No application POST was used.
 - **Ashby:** the public Job Postings API returns published board postings and compensation optionally. The returned `isListed` field matters; do not expose unlisted postings. Ashby separately documents an opt-in dedicated partner feed that is updated hourly.
-- **Workable:** the open-jobs API requires a token with `r_jobs` access; the XML feed spans customers' published Jobs by Workable listings and is described as an advanced option. Do not use the broad feed without an appropriate permission/partner basis.
+- **Workable:** the official careers-page guide documents public GET endpoints for a company's published jobs (`/api/accounts/{subdomain}?details=true`) and its locations/departments. The authenticated `/spi/v3/jobs` endpoint requires an API token with `r_jobs` and returns job states; filter to `published`. The public guide does not establish an XML feed, so this audit does not claim or use one.
 
 These are adapter candidates, not newly implemented or live-tested sources. Respect vendor terms, rate limits, published/listed visibility, attribution and manual-only cadence.
 
@@ -50,9 +50,15 @@ These are adapter candidates, not newly implemented or live-tested sources. Resp
 ## Official sources
 
 - Greenhouse Job Board API: https://docs.greenhouse.io/job-board
-- Lever public Postings API: https://hire.lever.co/developer/documentation and https://hire.lever.co/developer/support
+- Lever public Postings API: https://github.com/Lever/postings-api; official XML-feed use case: https://hire.lever.co/developer/usecases
 - Ashby public Job Postings API: https://developers.ashbyhq.com/docs/public-job-posting-api
 - Ashby listed-only API guidance: https://developers.ashbyhq.com/reference/jobpostinglist
 - Ashby partner feed: https://developers.ashbyhq.com/docs/dedicated-partner-job-feeds
-- Workable API: https://help.workable.com/hc/en-us/articles/115013356548-Workable-API-Documentation
-- Workable careers-page API: https://help.workable.com/hc/en-us/articles/115012771647-Using-the-Workable-API-to-create-a-careers-page
+- Workable public careers-page API: https://help.workable.com/hc/en-us/articles/115012771647-Using-the-Workable-API-to-create-a-careers-page
+- Workable authenticated SPI jobs API: https://workable.readme.io/reference/jobs
+- Workable token/scopes guide: https://workable.readme.io/reference/generate-an-access-token
+
+
+## Source-link correction (26 November 2026)
+
+The Lever public Postings API is documented in the official `Lever/postings-api` repository, distinct from the authenticated Lever v1 Data API docs. Workable's official careers-page guide shows public company-scoped GET endpoints; the `/spi/v3/jobs` API is authenticated (`r_jobs`) and requires filtering published states. This audit did **not** verify an XML feed for Workable; the earlier XML-feed statement was removed. No endpoint was requested.
