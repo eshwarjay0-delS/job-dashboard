@@ -58,7 +58,12 @@ The final generation stage must be experience repair, not Skills keyword placeme
 
 ## Confirmed-keyword boundary — 22 October 2026
 
-The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
+The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. Mixed or negative confirmations narrow to the positive clause only: AWS with a no-GCP exception supports AWS, not GCP; no, lack and lacking are exception boundaries. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
+
+## Mixed negative clause boundary — 24 November 2026
+
+A positive skill statement followed by a negative contraction must not confirm the excluded skill. The approved parser correction adds explicit boundaries for don't/doesn't/didn't, haven't/hasn't, can't/cannot, won't and common contractions. Synthetic cases retain only AWS from mixed AWS/GCP statements and reject a contradictory repeated AWS. Code commit 9e49a49b9d46fb65f25dd6d6591cb325944dd044; tests commit 4c3f45f7130189382f0172b3726cbf1f14ca0115. The new branch has not yet received exact-head CI; a local reduced reproduction is not a repository test.
+
 
 ## Actual counts and weighting — 20 October 2026
 
@@ -86,6 +91,14 @@ Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu
 
 Source-controlled WhatsApp resume tests must use synthetic candidate names, distinct `example.test` email addresses, and fictional phone numbers in the reserved 555-0100 through 555-0199 range. Do not embed private resume text, account identifiers, contact details, private filenames, or archive paths in public fixtures. Preserve cross-account test distinctions with different synthetic identities. The privacy regression is `scripts/tests/whatsapp-fixture-privacy.test.mjs`; passing it is source hygiene, not proof of live WhatsApp delivery or resume quality.
 
+
+## 25 November 2026 — confirmed-skill clean current-master restack
+
+PR #585 is the clean restack of the owner-approved confirmed-skill alignment on canonical master `a17b3267e271c77cd8887312445271b7fa172bd0`. It carries only the four resume source files, focused confirmation regression suite, dedicated workflow, and resume policy/research documentation; the unrelated Kompas overlay and desktop changes from PR #570 are excluded.
+
+An explicit positive candidate confirmation can support the named skill in relevant existing project bullets across roles, including earlier roles, even when the source bullet does not name the tool. It does not create a new employer, project, action, outcome, title, date, location, contact, metric, credential, or unrelated project detail. Negative, uncertain, question-form, second-person, editing-instruction, JD-only, and contradictory confirmations are rejected or narrowed to the positive portion.
+
+The previous PR #570 exact head `0b0af88b82ff2f6bcd89f5384ac59c398f73cb66` passed its focused 54-case regression, WhatsApp recovery, Kompas baseline, Plan/REA, and full CI. Those results are historical and are **not reused** for PR #585; fresh exact-head focused resume, full CI, WhatsApp recovery, baseline, and Plan/REA checks are required. No real resume/JD, model call, DOCX export, protected preview, production deployment, or 95–100%/98% live match was produced. Owner-authorized source resume/JD/explicit confirmations and exported-DOCX inspection remain required. The expanded Gemini correction/re-export/recheck loop remains proposed, not approved; only the separate score-only first stage is retained.
 
 ## Final-DOCX Gemini feedback boundary — 26 November 2026
 
