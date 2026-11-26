@@ -84,3 +84,73 @@ The 50 authenticated Kompas/ChatGPT same-question pairs, independent human 0–4
 - No source runtime code, tests, production settings, secrets, inboxes, WhatsApp messages, R2 objects, crawler rows or personal sessions were changed/read.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment with the canonical checkout and installed Next.js 16.3.8 package is supplied, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold, add synthetic negative tests, run exact-head CI/recovery/baseline/Plan-REA checks, and let Safe Merge Gate review the resulting branch. Until then, preserve all active PRs and continue independent work without sending real messages or using personal source material.
+
+
+---
+
+## 2026-11-22 02:17 CST continuation addendum — current source, PRs and production
+
+This addendum supersedes earlier status statements in this audit where the source, PR heads, deployment, provider test or automation state has since changed. Historical evidence above is retained.
+
+### Canonical source and production
+
+- GitHub master: `db32d9f3e5680fdd63e8cb4a728f38c0bd8a9a71`.
+- Its parent/product-code SHA: `b6c7f542641b96b7392710c25f1a6a803f71fd62`.
+- Production alias `job-dashboard-fawn.vercel.app` and `marketfit-app.vercel.app`: READY deployment `dpl_GCED4HQBdCgX7dsmiwB6RW7mzknk`, exact runtime SHA `b6c7f542641b96b7392710c25f1a6a803f71fd62`, aliasError null. The master commit after that SHA is journal-only; no duplicate product deployment was requested.
+- Last-hour Vercel runtime-error query returned no grouped errors. This is not a claim that the application is error-free or accepted on a real device.
+- Direct OpenAI fallback is now recorded as deployed in the Plan Journal. The journal reports two live rounds, 10/10 answers HTTP 200 via `meta.provider=openai`, model `gpt-6-luna`, approximately 8–11 seconds each. This verifies the direct OpenAI lane, not the full Windows/phone/WhatsApp experience.
+- The separate additional-provider path introduced by PR #510 still has an unresolved owner keep/revert decision. Do not test personal resume/JD/interview material through that path until its data-handling approval is explicit.
+
+### WhatsApp — 17 October delivery remains unverified
+
+Current master still contains the material gaps that the open WhatsApp branches are intended to close:
+
+- `src/lib/role-match.ts` uses the current labelled/first-line title extraction; it does not yet include PR #495's named-resume preservation for a two-line JD.
+- `src/lib/whatsapp-resume-acceptance.ts` still places `unverified_jd_terms` in the shortfall set, and its comments describe the old below-70% send behavior. PR #486 changes this to a hard hold.
+- The webhook still calls `chosenResumeMatchesProfile(text, files?.email)` without a durable `explicitlySelected` marker on its current `FromFiles` type. PR #493 adds the durable same-account Files/Library selection proof and removes implicit unchanged-baseline delivery.
+- No original output DOCX, exact R2 object/version, webhook correlation, Meta message ID, or signed delivery/read receipt was available. The 17 Oct 17:28 Chicago delivery is **not verified**.
+
+Exact PR state checked against GitHub on this run:
+
+| PR | Exact head | Checks | State / blocker |
+|---|---|---|---|
+| [#486](https://github.com/eshwarjay0-delS/job-dashboard/pull/486) | `1047e638b15c54eda7aeac1bd6313622c140cb04` | Full CI, recovery, baseline, Plan/REA all SUCCESS | DRAFT, nonmergeable; still requires sequencing and source-backed route acceptance |
+| [#493](https://github.com/eshwarjay0-delS/job-dashboard/pull/493) | `1040343cca65fd2a3b1ec0919365db43076ed00a` | Recovery, baseline, Plan/REA SUCCESS; full CI `44934971531` FAILURE | DRAFT, nonmergeable; no merge |
+| [#495](https://github.com/eshwarjay0-delS/job-dashboard/pull/495) | `4522a4ed9612a22fa304eb52f3772b02eb8ba44a` | 4/4 exact-head workflows SUCCESS | Open, non-draft, mergeable, but Safe Merge Gate's 07:23Z review withheld it because the branch was stale/diverged and overlapped #493's external-delivery/Plan/REA/test work |
+
+The Vercel sandbox `mfit-whatsapp-resume-restack-20261115` and snapshot `snap_hGkcvPIR7Vw016qcK7dK8s4eQo3f` still exist. The recorded Hobby Sandbox 402 reset is **2026-12-01T00:00:00Z**. The current local container has no canonical checkout, Vercel CLI, installed dependencies or Next.js 16.3.8 route-handler guide. No retry was made before the stated reset, no billing/protection was bypassed, and no real WhatsApp message was sent.
+
+### Resume/JD/confirmed experience
+
+- [#472](https://github.com/eshwarjay0-delS/job-dashboard/pull/472), head `e4afb4475e291d367d16c06778930fead3ed08ff`: full CI `44740851727`, recovery `44740851656`, baseline `44740851702`, Plan/REA `44740851769` all SUCCESS. It remains DRAFT/nonmergeable on an older base. No authenticated original resume + exact JD + explicit candidate confirmations or exported-DOCX acceptance bundle was available. No new skill/employer/project claim was invented.
+- The source-level confirmation helpers are present in current master, but the full approved alignment branch is not integrated. No 95–100% or 98% live match claim is made.
+
+### Poke-inspired Gmail/mobile
+
+- [#474](https://github.com/eshwarjay0-delS/job-dashboard/pull/474), head `56ba9341479854e3e3b8f59dc99814226721209b`: full CI `44746084731`, baseline `44746084686`, Plan/REA `44746084809` SUCCESS. It remains DRAFT/nonmergeable.
+- Four-account ceiling remains authoritative. Protected preview, two authorized inboxes with colliding thread IDs, selected-From preservation, per-account reconnect and narrow-phone acceptance are still unverified. Proactive sending remains disabled; no Gmail OAuth/inbox mutation or real email occurred.
+
+### Contract job search/crawler
+
+- [#479](https://github.com/eshwarjay0-delS/job-dashboard/pull/479), head `e15f7dc5aa563a69c59c6d262ac913b71f171782`: full CI `44805332914`, crawler regression `44805332916`, baseline `44805332732`, Plan/REA `44805332755` SUCCESS; DRAFT/nonmergeable, protected preview and live crawl acceptance missing.
+- [#488](https://github.com/eshwarjay0-delS/job-dashboard/pull/488), head `371ee1ee5cc58c305de67b15f7728ed8185b9466`: full CI `44872890121` and baseline `44872890091` SUCCESS; DRAFT/mergeable, Plan/REA and preview incomplete.
+- [#489](https://github.com/eshwarjay0-delS/job-dashboard/pull/489), head `2dd7525f8a5d1d416e1a0d21a4b6bb5c1b121b82`: manual-only regression `44872487790`, crawler regression `44872487754`, baseline `44872487757`, full CI `44872487789` SUCCESS; DRAFT/mergeable, protected preview and authenticated API smoke missing.
+- Contract crawling remains manual/on-demand only; no cron was added. No crawl or portal request was made in this run.
+
+### Independent Kompas test continuation
+
+- Created [PR #514](https://github.com/eshwarjay0-delS/job-dashboard/pull/514), current head `667e17b1459a0289f17b401d8524a9ab946bc11f`, a current-master restack of test-only PR #500. It fixes the unclosed mocked response object in `scripts/tests/kompas-brain-ui.test.mjs`, installs the local fetch stub before browser-script evaluation, and asserts two exact question-scoped calls to `/api/kompas/bridge`.
+- Added a focused GitHub Actions workflow so this test runs independently even if an earlier unrelated CI step stops the main suite.
+- Focused bridge workflow `45001879757`: SUCCESS. Kompas baseline `45001879854`: SUCCESS.
+- Full CI `45001879775`: FAILURE at the separate question-framing/voice step; 24/72 tests fail with `ReferenceError: answerCtl is not defined` in `pumpDetectedQueue` from `scripts/tests/kompas-voice.test.mjs`. This PR does not edit voice code or suppress the failures. It remains DRAFT; no merge or deployment.
+- Original #500 full CI `44964170569` was confirmed to fail at `kompas-brain-ui.test.mjs:73` with `SyntaxError: Unexpected token ')'`; PR #514 corrects that exact defect.
+
+### Coordination and documentation boundary
+
+- MFit Completion Watch: ENABLED.
+- MFit Safe Merge Gate: DISABLED after its completed 07:23Z review; that review merged zero PRs and withheld #495. Do not assume automated review/merge is currently active or re-enable it from this run.
+- Kompas Continuous Voice Delivery: DISABLED. No voice/caption source edits were made; the current full-CI failure is recorded, not repaired here.
+- No Bible-Keeper audit automation was present in the accessible automation inventory.
+- PR [#491](https://github.com/eshwarjay0-delS/job-dashboard/pull/491) remains open, DRAFT and nonmergeable, and edits shared Plan Journal, Plan & Vision, REA and Completion Watch files. This addendum records the new source/test/deployment evidence without editing those shared files. Append the corresponding Plan Journal/REA entry only after #491 is sequenced, to avoid conflicting edits.
+
+No user email, WhatsApp message, external send, Gmail API/OAuth request, crawler request, R2 mutation, production session/data mutation, secret read or billing/protection change was performed in this continuation.

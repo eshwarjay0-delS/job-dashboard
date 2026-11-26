@@ -1,0 +1,30 @@
+name: Kompas answer-aside bridge regression
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/kompas-brain-ui-regression.yml"
+      - "scripts/tests/kompas-brain-ui.test.mjs"
+      - "public/kompas/answer-aside.js"
+      - "public/kompas/bridge-lines.js"
+      - "public/kompas/index.html"
+      - "docs/research/mfit-release-backlog-audit-2026-11-22.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify the debounced answer-aside bridge stays local and question-scoped
+        run: node --test scripts/tests/kompas-brain-ui.test.mjs
