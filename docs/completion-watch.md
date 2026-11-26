@@ -1,5 +1,41 @@
 # MFit Completion Watch
 
+## 25 November 2026 — verified overlay release and active backlog
+
+This section supersedes stale current-status statements below; earlier entries are retained as history.
+
+### Production and Kompas overlay
+
+- Canonical master and production are `a17b3267e271c77cd8887312445271b7fa172bd0`.
+- Production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` is READY at that exact SHA. Independent alias lookup confirms `job-dashboard-fawn.vercel.app`.
+- PR [#582](https://github.com/eshwarjay0-delS/job-dashboard/pull/582) merged at 16:54:25Z. Exact-head and master CI, schema, Kompas baseline, account-sync, Vercel status and Windows build all passed (runs 45657099297, 45657099464, 45657099238, 45657099207, 45657099213, 45658988293, 45658988359, 45658988373, 45658988350, 45658988221).
+- The official [Kompas.exe release](https://github.com/eshwarjay0-delS/job-dashboard/releases/tag/kompas-desktop-latest) was updated at 16:55:57Z; SHA256 `b8532183d34294f100f5dbf721e8fcd682d7c9529f949fb768dd96b9088e31c1`.
+- The overlay P0 includes failure-tolerant Start, Check again re-probe, working Minimize/Close controls, live-question clarifier, paper-only opacity, and a 700/600/400 bold cycle with normal default.
+- Current `src/lib/kompasHonestyGate.ts` keeps a non-empty loaded resume unchanged and uses the Houston fixture only for an empty resume; the S5 tests assert both paths. The earlier short-Saint substitution concern is superseded by current source/test evidence.
+- A two-hour production runtime-error query returned no grouped errors. This is not a native/user acceptance test. The owner's installed Windows click-through, login/session start, voice/caption, mobile and 50 authenticated answer pairs with independent human grading remain open.
+
+### WhatsApp — priority continuation
+
+- The 17 Oct 2026 17:28 Chicago delivery incident remains unverified. Source DOCX and matching JD were previously recovered; source facts remain quarantined. Generated output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivered/read receipt are still missing. Do not replay or resend.
+- The latest owner correction requires an explicitly selected same-account Files/Library item for fallback, exact label **Original resume — NOT TAILORED**, and no automatic closest-match, fresh-upload substitution or partial rewrite.
+- **Continue: PR #583** is the clean current-master helper hard-hold restack at exact head `b1c28eae8a362614a8118e1008f3ea08ec293eef`. The first corrected head `a4f96d39...` passed baseline and WhatsApp recovery but full CI `45686440622` exposed four stale WhatsApp test expectations. Three test-only commits now update those expectations: no original fallback without verified profile identity; unsupported JD-only `supplierninja` is held instead of delivered as tailored; the supported role-evidence-gap control removes that unsupported addition; and provider-failure/unchanged retries do not send an unverified original. Exact-head Kompas baseline `45692952593` is SUCCESS; full CI `45692952469` and WhatsApp recovery `45692953138` are IN PROGRESS. No route/session runtime code changed. PR #583 remains DRAFT and is not deployed; email match still does not prove explicit Files/Library selection.
+- The durable route-level explicit-selection proof remains in PR #572, head `741f8eeb284b2faeb5223c80162cc5f7d1344705`; full CI 45460461747 fails two Listening-hold assertions while recovery 45460461642, baseline 45460461650 and schema 45460461660 pass. Shared PR #554 head `4fafd56663bb5ddce064dcebea8802d758bb8259` has six green checks but needs a second authorized review and is non-mergeable. Do not self-approve or bypass it.
+
+### Resume, Gmail and crawler
+
+- Resume confirmed-skill PR #570 latest branch head `0b0af88b82ff2f6bcd89f5384ac59c398f73cb66`: focused confirmation 45682847187 passed 54/54 on prior head `100b64d`; full CI 45682847235 and WhatsApp recovery 45682847248 stopped at typecheck because the PR's REA entry lacked required `commits`. That field was added in 0b0af88; no new exact-head run has appeared while the PR remains draft. Schema 45682847656 and baseline 45682847151 passed on the prior head.
+- Gmail PR #580 head `f783adb36d9332589028b1717eb40b0a8da07a51`: all four checks pass, but its own description requires the owner's merge tap. Four-account maximum remains authoritative; Poke worker/scheduler/notifications/sending stay disabled. PR #571 and #576 remain drafts with full-CI failures. No Gmail API/OAuth call or inbox mutation.
+- Contract crawler PR #575 head `31aeaf67011b0c12a4c736f054fed5b17004af42`: full CI 45682807511, manual-only 45682807661, freshness 45682807558, baseline 45682807483 and schema 45682807522 all SUCCESS. It remains DRAFT: location/remote filters can underfill after the 100-row API result, `/api/crawl/jobs` maxDuration 60 is shorter than the runner budget, and protected preview is unavailable. Manual/on-demand only; no live crawl. PR #574 full CI 45602990382 fails. The one-line lint PR #581 is superseded: current master already has the const declaration and its full CI passed; do not merge the duplicate draft.
+
+### Exact environment blocker and coordination
+
+The current container has no canonical checkout, package.json or installed `node_modules/next/dist/docs`. AGENTS.md requires the installed Next.js 16.3.8 guide before route-code edits. The prior WhatsApp sandbox resume returned HTTP 402 snapshot quota exhaustion with recorded reset 2026-12-01T00:00:00Z; it was not retried. An approved local/cloud environment with the canonical checkout and installed package is required for the durable route-level fallback work.
+
+MFit Completion Watch is enabled. MFit Safe Merge Gate and Kompas Continuous Voice Delivery are disabled. No separate Bible-Keeper automation was found. No voice/caption work was duplicated, and no real message, email, model, R2, DB, crawl or device test was performed.
+
+**Continue:** finish exact-head full CI and WhatsApp recovery on PR #583, keep it draft until independent review, then implement the explicit same-account Files/Library selection route when the installed Next.js environment is available. Preserve the 17 Oct incident as unverified until the output DOCX and signed delivery evidence are recovered.
+
+
 ## 25 November 2026 — Kompas overlay P0: start, window, clarifier, bold
 
 The answer preflight no longer disables Start. It is a 1.8 second probe with two retries. Timeout, 4xx, 5xx, a kompas:// cross-origin miss, and a slow cold start all start, and the existing answer fallback chain is unchanged. Check again re-probes and clears the red banner. Minimize stays minimized. Close and Minimize are the title-bar buttons, above the resize grips, and they are not a drag region. The clarifier is a separate popup that follows the live question. The opacity slider fades the paper and does not hide the clarifier or the answer text. The B button left of the font size cycles bold 700, semi-bold 600, and normal 400, default normal, stored in localStorage and the desktop prefs. Houston text is only the empty-resume fallback. A non-empty loaded resume is not replaced. Skip-login was not edited. The shell is Electron. There is no Tauri app in this repo. The installed Windows exe needs the desktop workflow after the ship. This is not a live listen.
@@ -800,3 +836,20 @@ The persistent sandbox `mfit-whatsapp-resume-restack-20261115` and its snapshot 
 MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice Delivery is disabled; no voice/caption changes were duplicated. No separate Bible-Keeper automation was found in the accessible automation inventory. This run changed no runtime code, did not run local tests/builds, and did not send email/WhatsApp, call a model, mutate R2/database/inbox/crawler rows, read personal sessions or test a user device.
 
 **Continue:** after Vercel Sandbox usage resets on 1 December 2026, or an approved local/cloud environment provides the canonical checkout and installed Next.js 16.3.8 package, resume `mfit-whatsapp-resume-restack-20261115`. Implement only the explicit same-account Files/Library selection proof and unsupported-JD hard hold with synthetic negative tests. Let Safe Merge Gate sequence existing PRs; do not parallel-edit its branches.
+
+
+## 25 November 2026 — 16:48 CDT correction and exact-head refresh
+
+**Continue: preserve the WhatsApp hard hold; finish durable same-account selection only in a compliant environment.**
+
+- Production master a17b3267e271c77cd8887312445271b7fa172bd0 is READY at Vercel deployment dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW; both canonical aliases map to it. Aggregate WhatsApp webhook/recovery errors showed none in the last 24 hours; last 30 minutes had no function logs. Direct public HTTP smoke via the web retrieval tool was inaccessible, so this is deployment metadata/runtime aggregation only.
+- Resume/JD alignment PR #585 exact head 2e3d6f41b89694567992e45c73426f5add474141 passed full CI 45712144382, focused resume 45712144296, recovery 45712144329, baseline 45712144568 and Plan/REA 45712144317. DRAFT; source review found no obvious defect, but protected preview, real resume/JD/confirmation and DOCX acceptance are missing.
+- WhatsApp hard-hold PR #587 current head 1e2a1bf9a508f3d5b7dc175ca865b7f70182d202 remains DRAFT. Full CI 45715458709 FAILED four assertions; recovery 45715458683, baseline 45715458615 and schema 45715458626 SUCCESS. The four assertions on prior head b669456 expected either unsupported supplierninja-tailored delivery or fallback without explicit same-account Files/Library selection. The 20/24 Nov owner correction forbids closest-match/upload substitution; these expectations are unsafe and must not be rewritten to green. Test-only edits were briefly attempted and reverted; the failsafe test blob SHA matches the predecessor, so net assertions are unchanged. Durable explicit selection provenance and the unchanged Original resume — NOT TAILORED fallback remain unimplemented.
+- PR #583 predecessor 7e00a7 full CI 45698027675 and recovery 45698027739 FAILED; baseline 45698027687 SUCCESS. Malformed test syntax is on that predecessor.
+- Gmail #580 CI/schema/baseline SUCCESS; owner tap remains. #474 CI/schema/baseline SUCCESS but DRAFT/non-mergeable; two-inbox collision, selected-From, reconnect and narrow-phone acceptance missing. Poke worker, scheduler, notifications and sending stay disabled.
+- Contract crawler #575 five gates SUCCESS but DRAFT; client location/remote filtering can underfill after the bounded server page; runner budget/protected preview remain. No crawl/application.
+- Kompas #554 five gates SUCCESS but DRAFT/non-mergeable; second authorized reviewer required. No duplicate voice/caption work.
+- Plan & Vision #584 prior head 0d4c54fc3261e46c75df57c5f1f86b03ba02f37e has no workflow runs visible. Previous head 294ebdc full CI 45715731602 and schema 45715731673 FAILED because the new journal entry was missing a separator; baseline 45715731679 SUCCESS. I am correcting the comma and keeping the branch open; the new exact-head CI is not yet visible. #585 also carries Plan files, so reconcile before merging. Safe Merge Gate disabled; no separate Bible-Keeper found; Kompas Voice Delivery disabled.
+- Environment: no canonical checkout, installed dependencies, or installed Next.js 16.3.8 route-handler guide; sandbox restore remains 402 until 1 Dec. No route edits, local tests/build, DOCX, model, email/WhatsApp, R2/DB/inbox mutation, crawl or user-device acceptance.
+
+**Next:** finish exact-head #587 CI/recovery without weakening hard-hold assertions; implement durable selection and the unchanged original fallback in the required environment. Keep #585 DRAFT until real source/JD/confirmation and DOCX acceptance; reconcile #584/#585 Plan files before merging.
