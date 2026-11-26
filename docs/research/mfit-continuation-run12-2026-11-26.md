@@ -50,3 +50,13 @@ Continue: correct the Plan & Vision syntax regression on the documentation branc
 - **Environment wall:** no canonical checkout, package.json, installed dependencies, or Next.js 16.3.8 route-handler guide; prior sandbox restore 402 until 1 Dec. No local execution, protected preview, model, DOCX, Meta send, R2/DB/inbox mutation, crawl, deployment or device acceptance in this run.
 
 **Continue:** implement durable same-account Files/Library selection provenance and exact Original resume — NOT TAILORED fallback plus the hard hold only after the compliant checkout/installed Next.js guide is restored or provided. While blocked, continue the independent source-review backlog; keep #585/#590 DRAFT and #591 failing until the runtime is actually corrected and reviewed.
+
+
+## Run 15 — Kompas Chief Relevance production-ancestry audit
+
+- PR #113 is MERGED at 'ed9a5e7f358df8f0e0e7db4b75f21beb5315d519'; PR #114 is MERGED at 'ef82692088e2ebbf7c70e813c5e003e6f09ceed6'; validation-only #115 is also MERGED at that #114 commit.
+- GitHub compare confirms production runtime SHA 'a17b3267e271c77cd8887312445271b7fa172bd0' descends from #113's merge and #114/#115's merge (merge-base is each exact merge SHA; production is ahead, behind=0). This verifies release ancestry, not live answer quality.
+- Issue #120 remains OPEN. Required real acceptance is still 50 actual same-question Kompas/ChatGPT paired responses from approved original source bundles, private raw outputs/timings and independent human 0–4 scorecards, plus native Windows/WhatsApp/mobile speech continuity and latency. No authorized KOMPAS_API_TOKEN or original source bundles were accessed; no actual paired model responses or human grades were generated.
+- Issue #152 remains OPEN for the authenticated exact-head preview gate; private preview bypass is unavailable. Do not bypass Vercel protection. Kompas Continuous Voice Delivery is disabled in the accessible automation inventory, so no voice/caption edits were duplicated.
+
+**Continue:** keep issue #120 open and the synthetic 50/54-fold tests clearly separate from the live 50-pair acceptance. When authorized source bundles, token and reviewer are available, run the exact same questions/materials through Kompas and ChatGPT, preserve evidence privately, score each axis independently, and then complete native acceptance.
