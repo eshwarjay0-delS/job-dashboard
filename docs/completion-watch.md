@@ -1,5 +1,15 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 15 Kompas Chief Relevance release ancestry
+
+- PR #113 (50-fold relevance discipline) is MERGED at 'ed9a5e7f358df8f0e0e7db4b75f21beb5315d519'; #114 (current ask/constraints) is MERGED at 'ef82692088e2ebbf7c70e813c5e003e6f09ceed6'; validation-only #115 is also merged at that #114 SHA.
+- GitHub compare verifies READY production SHA 'a17b3267e271c77cd8887312445271b7fa172bd0' is a descendant of both merges (merge-base exact, behind=0). This is release ancestry, not live answer-quality evidence.
+- Issue #120 remains OPEN: 50 actual same-question Kompas/ChatGPT responses from approved original bundles, private raw/timing evidence and independent human 0–4 scorecards, plus native Windows/WhatsApp/mobile speech continuity/latency remain unverified. No private KOMPAS_API_TOKEN or source bundles were accessed; no live model pairs or human grading were run.
+- Issue #152 remains OPEN for the authenticated exact-head preview gate; its private bypass is unavailable. Kompas Continuous Voice Delivery is disabled; no voice/caption work was duplicated.
+
+**Continue:** keep #120 OPEN until real paired responses, human review and native acceptance are recorded. Obtain approved source bundles and the private token; use the protected preview gate under #152 without bypassing Vercel. Do not replace this with synthetic tests or claim quality from merged source.
+
+
 ## 26 November 2026 — run 15 exact-head source review (09:04 CDT)
 
 - **Live production:** Vercel independently confirmed alias 'job-dashboard-fawn.vercel.app' resolves to READY production deployment 'dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW' at SHA 'a17b3267e271c77cd8887312445271b7fa172bd0'. This is older than the unmerged drafts; no deployment is needed for this documentation-only checkpoint.
