@@ -173,7 +173,7 @@ export function chosenResumeMatchesProfile(text: string, email?: string, explici
   return found.length === 1 && found[0] === want
 }
 
-/** Plain words/** Plain words for rejection codes, for the message that tells the user why a
+/** Plain words for rejection codes, for the message that tells the user why a
  * draft was held. Unknown codes are dropped, never shown as jargon. */
 const REJECTION_WORDS: Record<string, string> = {
   no_document_token: "no finished document was produced",
