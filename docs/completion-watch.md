@@ -1,5 +1,18 @@
 # MFit Completion Watch
 
+## 26 November 2026 — run 15 exact-head source review (09:04 CDT)
+
+- **Live production:** Vercel independently confirmed alias 'job-dashboard-fawn.vercel.app' resolves to READY production deployment 'dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW' at SHA 'a17b3267e271c77cd8887312445271b7fa172bd0'. This is older than the unmerged drafts; no deployment is needed for this documentation-only checkpoint.
+- **Resume alignment #585:** exact head '3f619a35b640bd7485916c41b75d8cec4d8cb18c'; all five checks SUCCESS (full CI 45840572809, focused resume 45840572953, WhatsApp recovery 45840572984, Kompas baseline 45840572981, Plan/REA 45840572878). The 54-case suite passed. The five source/test files are byte-identical to the previously reviewed head 2e3d6f41b89694567992e45c73426f5add474141; review still applies. Keep DRAFT: protected preview, owner-authorized resume/JD/confirmations and exported DOCX acceptance remain absent.
+- **Crawler #590:** exact head '1de4a3e493380f009d2b14dd35d0451f27392d51', five gates SUCCESS. Static comments are not approval. Keep DRAFT; protected preview/public API smoke are absent; location/remote filters can underfill after the 100-row result, and 60-second route duration is shorter than runner 230 seconds. No crawl or DB mutation.
+- **WhatsApp hard hold #591:** exact head 'b4b110c48da5d8f260bb183849f0ee27b5f99f18'; CI 45792574554 FAILS five tests 93,94,96,97,98 (100/105 pass); recovery 45792574886, baseline 45792574496 and schema 45792574863 SUCCESS. Failure logs prove the unchanged route sends an original fallback when selection provenance is not durable. Preserve the fail-closed tests. Route-level implementation is blocked by missing canonical checkout and installed Next.js 16.3.8 docs; the 17 Oct 17:28 Chicago delivery remains unverified.
+- **Gmail/mobile #576:** full CI 45401091730 failed at shared prefer-const lint in kompasConsistency.ts:1059; type-check and digest-account-isolation test did not execute. Baseline 45401091926 SUCCESS. #554 still needs a second authorized reviewer; do not bypass. #580 four checks are green but the owner merge tap remains. No OAuth/inbox access, email send, or Poke worker/scheduler/notifications.
+- **Plan & Vision documentation:** run-15 exact-head evidence was added to the research note and journal; product baselines were updated to revision 2026-11-26.6. PR #589 head 8006ca has Plan/REA schema 45844994248 and Kompas baseline 45844994298 SUCCESS; full CI 45844994400 is IN PROGRESS. Fresh checks are required after these documentation commits.
+- **Environment:** no canonical checkout, package.json, installed dependencies or Next.js 16.3.8 route guide; the persistent sandbox restore previously returned 402 until 1 Dec. No local test/build, protected preview, model, DOCX, external send, R2/DB/inbox mutation, crawl, deployment or user-device acceptance occurred.
+
+**Continue:** implement durable same-account Files/Library selection provenance and the exact **Original resume — NOT TAILORED** fallback plus hard hold in the compliant environment when restored/provided. Until then, keep #585/#590 DRAFT and #591 failing closed; continue independent approved source reviews without merging or deploying drafts.
+
+
 ## 26 November 2026 — run 14 documentation schema correction
 
 - PR #589 run-13 REA schema check failed on job `139992542505` (workflow `45843932244`) because the Gmail REA entry referenced draft-only `src/lib/mail-digest.ts`, which does not exist on this docs branch. The test correctly caught the missing path.
