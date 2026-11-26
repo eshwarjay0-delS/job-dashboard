@@ -442,7 +442,6 @@ test("an original requires explicit same-account selection proof and a matching 
   assert.equal(chosenResumeMatchesProfile(text, "candidate2@example.test", true), false)
   assert.equal(chosenResumeMatchesProfile(text, "", true), false)
 })
-})
 
 test("honest professional gap excludes unsupported additions even when supported coverage is 100%", () => {
   const supportedGap = make({
