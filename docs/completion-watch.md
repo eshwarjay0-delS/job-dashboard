@@ -1170,3 +1170,8 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - Production remains READY at runtime `a17b3267`; master is documentation-only. PR #598 is open, mergeable, non-draft, with no independent approval. Protected preview and authorized real resume/JD/confirmation/DOCX acceptance are missing.
 
 **Continue:** poll the exact latest head; correct any failing test on that head. Keep unmerged pending all gates, independent approval, protected preview and real exported-DOCX acceptance. P0 WhatsApp #591 is still blocked on a compliant checkout/dependencies and installed Next.js 16.3.8 guide; do not weaken failing assertions.
+
+
+## Run 28 Gmail current-head refresh
+
+PR #576 current head `e6ba204e4ff5079eb2933190f29c29c7674b5328` has full CI and Kompas baseline SUCCESS, but remains DRAFT on base `794e8cfdbd3103409552857806bab89851d5bfcb` (21 ahead/8 behind master `1eb604b`). The account-bound shared/inflight caches and generation reset are present; COMMENT `7218246884` still identifies a snapshot publication race after async `snapshotKey` without a current-user/generation recheck. No protected preview, OAuth/inbox, two-account collision, selected-From/reconnect or mobile acceptance. Poke proactive worker/scheduler/notifications/sending remain disabled.
