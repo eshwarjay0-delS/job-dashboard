@@ -19,6 +19,12 @@ export function candidateEvidenceInput(jd: string, confirmations: readonly strin
  * formatting instruction such as "add all keywords" cannot. Keep this deliberately
  * narrow: the statement must explicitly attribute experience to the candidate. */
 const UNCERTAIN_CONFIRMATION = /\b(?:maybe|might|may|possibly|perhaps|probably|think|believe|guess|unsure|uncertain|not\s+sure|not\s+certain|if\s+i\s+recall|as\s+far\s+as\s+i\s+remember|iirc|sort\s+of|kind\s+of|cannot\s+recall|can't\s+recall)\b/i
+/** Subject changes are not candidate confirmation. Split coordinated clauses so the
+ * candidate's own statement can survive without attributing a teammate/client skill. */
+const OTHER_ATTRIBUTED_SUBJECT_BOUNDARY = /(?:,\s*(?:(?:and|but|while|whereas|although|plus)\s+)?|\s+(?:and|but|while|whereas|although|plus)\s+)(?=(?:(?:my|our|the)\s+)?(?:team|colleagues?|coworkers?|co-workers?|clients?|customers?|organizations?|organisations?|companies?|departments?|staff|managers?|leads?|supervisors?|partners?|vendors?|contractors?|groups?|peers?|others?)\b|i\b|we\b)/gi
+/** Passive clauses explicitly attributed to another group are stripped before
+ * candidate parsing; a comma-separated skill list is otherwise left intact. */
+const OTHER_PASSIVE_ATTRIBUTION = /(?:,\s*(?:(?:and|but|while|whereas|although|plus)\s+)?|\s+(?:and|but|while|whereas|although|plus)\s+)[A-Za-z0-9.+#-]+(?:\s+(?:and|or)\s+[A-Za-z0-9.+#-]+)*\s+(?:was|were|is|are|has been|have been|had been)?\s+(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked|configured|administered|maintained|operated|supported|installed|monitored|reviewed|assessed|integrated|developed|created|secured|owned|ran|executed)\s+by\s+(?:(?:my|our|the)\s+)?(?:team|colleagues?|coworkers?|co-workers?|clients?|customers?|organizations?|organisations?|companies?|departments?|staff|managers?|leads?|supervisors?|partners?|vendors?|contractors?|groups?|peers?|others?)\b/gi
 
 export function explicitlyConfirmsAllRequirements(statements: readonly string[]): boolean {
   const text = statements.filter(Boolean).join("\n").replace(/\s+/g, " ").toLowerCase()
@@ -51,26 +57,30 @@ const confirmationTerms = (value: string) => (value.toLowerCase().match(/[a-z0-9
   .filter(term => term.length > 1 && !CONFIRMATION_IGNORED_TERMS.has(term))
 
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
-  return statements.flatMap(statement => statement.split(/[\n;]+|[.!](?=\s|$)/)).flatMap(raw => {
-    const line = raw.trim()
-    if (!line || raw.includes("?") || UNCERTAIN_CONFIRMATION.test(line)) return []
-    if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
-    // Reject negative assertions before treating a "my ..." sentence as positive evidence.
-    // Positive contrast is safe only before its exception (e.g. AWS, but not GCP).
-    const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:is|are)\s+missing|missing|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\s+missing|missing|don't|doesn't|didn't|cannot|can't))\b/i
-    if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|haven't|cannot|can't)\b/i.test(line)) return []
-    const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
-    const exception = line.match(/\b(?:except|excluding|but|however|not|never|without|no|lack(?:s|ing)?|missing|don't|doesn't|didn't|haven't|hasn't|can't|cannot|won't|isn't|aren't|wasn't|weren't|shouldn't|wouldn't|mustn't)\b/i)
-    // A blanket claim with an exception is not blanket evidence. Also reject a
-    // self-contradictory list that names the same skill on both sides of its exception.
-    if (hasBlanketConfirmation && exception) return []
-    const positive = exception ? line.slice(0, exception.index).trim().replace(/(?:,|\b(?:and|or))\s*$/i, "").trim() : line
-    if (exception && positive) {
-      const supported = new Set(confirmationTerms(positive))
-      const excluded = confirmationTerms(line.slice(exception.index! + exception[0].length))
-      if (excluded.some(term => supported.has(term))) return []
-    }
-    return positive ? [positive] : []
+  const sentences = statements.flatMap(statement => statement.split(/[\n;]+|[.!](?=\s|$)/))
+  return sentences.flatMap(raw => {
+    const withoutPassiveOthers = raw.replace(OTHER_PASSIVE_ATTRIBUTION, " ")
+    return withoutPassiveOthers.split(OTHER_ATTRIBUTED_SUBJECT_BOUNDARY).flatMap(rawClause => {
+      const line = rawClause.trim()
+      if (!line || rawClause.includes("?") || UNCERTAIN_CONFIRMATION.test(line)) return []
+      if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
+      // Reject negative assertions before treating a "my ..." sentence as positive evidence.
+      // Positive contrast is safe only before its exception (e.g. AWS, but not GCP).
+      const negativeClaim = /^(?:my\s+(?:experience|skills|background)\s+(?:lack(?:s|ing)?|(?:is|are)\s+missing|missing|(?:do|does|did)\s+not|don't|doesn't|didn't|cannot|can't|never|isn't|aren't|is\s+not|are\s+not|has\s+no|have\s+no|no)|my\s+experience\s+(?:includes?|covers)\s+no|(?:confirmed\s+(?:skills|experience)\s*:\s*)(?:no|not|never|without|lack(?:s|ing)?|(?:is|are)\s+missing|missing|don't|doesn't|didn't|cannot|can't))\b/i
+      if (negativeClaim.test(line) || /^i\s+(?:(?:have|possess)\s+(?:no|not|never|without)|(?:do|does|did)\s+not\s+(?:have|possess)|don't|doesn't|didn't|haven't|cannot|can't)\b/i.test(line)) return []
+      const hasBlanketConfirmation = /\b(?:all|every)\b/i.test(line) && /\b(?:them|skills?|requirements?|keywords?|tools?|technolog(?:y|ies))\b/i.test(line)
+      const exception = line.match(/\b(?:except|excluding|but|however|not|never|without|no|lack(?:s|ing)?|missing|don't|doesn't|didn't|haven't|hasn't|can't|cannot|won't|isn't|aren't|wasn't|weren't|shouldn't|wouldn't|mustn't)\b/i)
+      // A blanket claim with an exception is not blanket evidence. Also reject a
+      // self-contradictory list that names the same skill on both sides of its exception.
+      if (hasBlanketConfirmation && exception) return []
+      const positive = exception ? line.slice(0, exception.index).trim().replace(/(?:,|\b(?:and|or))\s*$/i, "").trim() : line
+      if (exception && positive) {
+        const supported = new Set(confirmationTerms(positive))
+        const excluded = confirmationTerms(line.slice(exception.index! + exception[0].length))
+        if (excluded.some(term => supported.has(term))) return []
+      }
+      return positive ? [positive] : []
+    })
   })
 }
 
