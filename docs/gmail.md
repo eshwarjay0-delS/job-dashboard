@@ -225,3 +225,8 @@ The cap does not replace account isolation: each inbox retains its own identity,
 ## 26 November 2026 — multi-account/mobile review checkpoint
 
 PR #576 (head `1757fb68715081525de0f8c7b8bd3bf531ebff20`) adds account-scoped sender mutes and waiting-radar identity, account+thread keys/actions, reply/draft account binding, a four-account cap, and normal-flow mobile navigation. Static review COMMENT `6076244479` found no obvious defect in this narrow diff. Its Kompas baseline passes, but full CI fails at stale-base shared lint `prefer-const` in `src/lib/kompasConsistency.ts:1059`; current master `e2a947` already has that correction. The Gmail account-isolation test is wired into CI but did not run because lint stopped first. PR remains DRAFT pending a current-master restack, exact-head full CI, protected preview, and owner-consented two-inbox/narrow-phone acceptance. No Gmail OAuth or inbox was accessed. Poke-style proactive workers/scheduler/notifications/sending remain disabled. See `docs/research/mfit-gmail-mobile-static-review-2026-11-26.md` for evidence.
+
+
+## 27 November 2026 — account-switch race regression
+
+PR #576 test commit `e6ba204e4ff5079eb2933190f29c29c7674b5328` adds a source-executed A→B race: defer Account A's seven endpoint responses, switch auth to B, resolve B then A, and assert A cannot publish or snapshot while B remains the only account. Full CI `46039242535` is IN_PROGRESS; baseline `46039242543` SUCCESS. The branch is DRAFT/stale (20 ahead/8 behind); no local test, OAuth, inbox, protected preview or mobile acceptance. Four accounts remain the ceiling; proactive Poke workers/scheduler/notifications/sending are disabled.
