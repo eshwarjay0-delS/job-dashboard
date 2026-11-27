@@ -11,7 +11,7 @@ import { serverReportsAuthDisabled } from "@/lib/authDisabledClient"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 import { ChevronRight, Moon, Sun } from "lucide-react"
-import { forgetGmailData } from "@/lib/use-gmail-data"
+import { forgetGmailData, resetGmailDataForAccountSwitch, refreshGmailDataForCurrentAccount } from "@/lib/use-gmail-data"
 import { forgetSetupDone } from "./onboarding-gate"
 
 // Resume-only accounts retain Resume and Connections (WhatsApp only); never expose Jobs, Gmail or Kompas navigation.
@@ -316,6 +316,10 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       if (event !== "INITIAL_SESSION" && id !== knownUserId) {
         knownUserId = id
         authRevision += 1
+        // Gmail cache and its listeners must reset before another account is displayed.
+        resetGmailDataForAccountSwitch()
+        if (id) refreshGmailDataForCurrentAccount()
+        else forgetGmailData()
         // Another account, or none: the link goes at once and comes back only if the server says this one is an admin too.
         const revision = authRevision
         setAdmin(false)
