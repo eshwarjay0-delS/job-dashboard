@@ -52,3 +52,7 @@ Continue: clean-restack #595 on current master, add the candidate-attribution re
 ## Run 22 — Library source candidates for the 17 Oct WhatsApp incident (27 Nov 2026)
 
 A title-only Library DOCX search covering 17 Oct 20:00 UTC-18 Oct 04:00 UTC returned zero. Nearby Oct 16 files surfaced: `Eshwar_Resume(1).docx` (19:49:28 UTC, 18,283 bytes, seven-page cybersecurity resume) and `Eshwar_Resume(3).docx` (20:54:43 UTC, 40,609 bytes, Salesforce Development/CPQ content, not the incident resume). They are date-adjacent candidates only; neither is correlated to the exact WhatsApp upload. No original checksum, generated DOCX, R2 version, webhook correlation, Meta outbound ID or signed receipt. Do not replay the failed run; a re-upload is a new evidence bundle.
+
+## Run 22 — iZap and Library incident-history check (27 Nov 2026)
+
+Read-only iZap status: business `eshwarjay0` disconnected, no WhatsApp number linked, history sync never, outbound never; `search_messages` query `resume` for 17 Oct 2026 (America/Chicago) returned zero. The Library title-only DOCX search for 17 Oct 20:00 UTC–18 Oct 04:00 UTC also returned zero. Nearby Oct 16 candidates are not correlated to the exact upload; the Salesforce/CPQ file is excluded. Exact source checksum, generated DOCX, R2 object/version, webhook correlation, Meta outbound ID and signed receipt are missing. No replay or send.
