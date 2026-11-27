@@ -19,3 +19,11 @@ The resulting sentence still starts with a candidate-confirmation pattern, so th
 
 ## Next
 Add negative attribution cases for active subjects such as someone/anyone, contractors, consultants and similar non-candidate actors, retaining a positive control for an ordinary candidate list. Run the repository tests in a compliant checkout, rerun all exact-head CI, review the correction, and preserve protected preview and real DOCX acceptance gates. Never use the JD itself as candidate evidence.
+
+
+## Implementation follow-up
+
+- Source commit `cd64bd3e55ef49ebb964c40c55ac2f21133bd358` expanded the active actor matcher for someone/somebody/anyone/anybody, contractors, subcontractors, consultants, vendors, other/another people and external/outside/third-party actor patterns.
+- Test commit `0220196fa82205f3d2ee6642b55a321c692e822e` added 17 negative cases plus two candidate-list positive controls. Isolated copied-regex simulation passed 17/17 negatives and retained 2 positives; this is not repository execution.
+- Exact-head full CI `45954137838`, focused `45954137715`, WhatsApp recovery `45954137850` are IN_PROGRESS; baseline `45954137753` and Plan/REA `45954137763` SUCCESS. Current PR head `0220196fa82205f3d2ee6642b55a321c692e822e`.
+- No local test/build, merge, deploy, preview, real resume/JD/model/DOCX acceptance. Keep the PR DRAFT and wait for terminal exact-head checks.
