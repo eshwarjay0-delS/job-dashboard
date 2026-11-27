@@ -37,3 +37,24 @@ export function waitingDaysForDigestMail(radar: readonly DigestRadarIdentity[], 
   const key = interviewThreadKey(normalizeIdentity(mail.account), mail.id)
   return radar.find(row => interviewThreadKey(normalizeIdentity(row.account), row.threadId) === key)?.daysWaiting ?? 0
 }
+
+
+/** Enforce the four-inbox ceiling in server data paths, matching the mobile UI. */
+export const MAX_GMAIL_ACCOUNTS = 4
+export function limitGmailAccounts<T extends { google_email: string }>(accounts: readonly T[], max = MAX_GMAIL_ACCOUNTS): T[] {
+  const limit = Math.max(0, Math.floor(max))
+  if (!limit) return []
+  const seen = new Set<string>()
+  const out: T[] = []
+  for (const account of accounts) {
+    const email = normalizeIdentity(account.google_email)
+    if (!email || seen.has(email)) continue
+    seen.add(email)
+    out.push(account)
+    if (out.length >= limit) break
+  }
+  return out
+}
+export function enabledGmailAccounts<T extends { google_email: string; gmail_enabled: boolean }>(accounts: readonly T[], max = MAX_GMAIL_ACCOUNTS): T[] {
+  return limitGmailAccounts(accounts, max).filter(account => account.gmail_enabled)
+}
