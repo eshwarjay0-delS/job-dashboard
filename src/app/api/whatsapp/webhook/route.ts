@@ -1128,7 +1128,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       await patchResumeRecovery(job, { status: "pending" })
       sending = false
       failureCode = "whatsapp_http_rejected"
-      // Meta rejected this upload, so nothing was accepted. The already-chosen resume can still go out.
+      // Meta rejected this upload, so nothing was accepted. Only the explicitly selected same-account original may go out.
       if (await sendSelectedOriginal("WhatsApp refused the updated file.")) return
     } else failureCode = "delivery_unconfirmed"
     await sayOutcome(refused
