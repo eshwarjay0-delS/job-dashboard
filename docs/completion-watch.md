@@ -1,3 +1,10 @@
+## 27 November 2026 — run 22 Gmail full-CI checkpoint (05:27 UTC)
+
+- **PR #576:** full CI `45944935727` SUCCESS and Kompas baseline `45944935730` SUCCESS at head `27f096f`. This validates the shared `let`→`const` correction only. Static privacy COMMENT `6083838182` remains: unbound `shared`/`inflight` caches plus auth-change path can potentially show A's mail to B if session replacement bypasses explicit signOut. No leak reproduced; do not merge while this is unresolved. Require owner-bound caches and A→B regression, protected preview and two-inbox/phone acceptance.
+- **PR #598:** focused confirmed-skill run `45945333982` SUCCESS (8/8), WhatsApp recovery `45945333791` SUCCESS (9/9), baseline `45945333814` and Plan/REA `45945333780` SUCCESS. Full CI `45945333802` remains IN_PROGRESS at Lint. Keep unmerged pending full CI, independent review, preview and authorized real DOCX.
+- **PR #599 docs:** latest branch head `665a473` was recorded before this update; latest-head workflow runs were not visible. Older full CI `45945732173`, schema `45945731259`, baseline `45945731258` were IN_PROGRESS.
+  
+**Continue:** fix the #576 cache owner binding before merge; check #598 full CI terminal. Keep docs PR #599 draft until its latest-head checks are visible/green. No production deployment or live acceptance.
 ## 27 November 2026 — run 22 validation checkpoint (05:26 UTC)
 
 - **PR #598:** exact head `1b2a68fa`; focused confirmed-skill run `45945333982` SUCCESS (8/8) and WhatsApp recovery `45945333791` SUCCESS (9/9), plus baseline `45945333814` and Plan/REA `45945333780` SUCCESS. Full CI `45945333802` remains IN_PROGRESS at Lint. No merge or live resume/DOCX acceptance.
