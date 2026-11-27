@@ -98,6 +98,7 @@ test("Gmail data cache is account-scoped and cleared before an account switch", 
   assert.match(data, /shared\\?\\.userKey === key/)
   assert.match(sidebar, /resetGmailDataForAccountSwitch/)
   assert.match(sidebar, /refreshGmailDataForCurrentAccount/)
+  assert.match(sidebar, /window\.setTimeout\(\(\) =>/)
 })
 
 test("Gmail routes enforce the four-account ceiling server-side, including requested account IDs", () => {
