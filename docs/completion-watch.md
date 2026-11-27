@@ -1,3 +1,25 @@
+## 27 November 2026 — run 22 (05:10 CST)
+
+### Production / master
+- Current master checkpoint: `1eb604b33cfe58f3c0f6ad611d346d5921e184ff`; GitHub Vercel status is SUCCESS. Canonical alias `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Compare with master shows seven documentation-only commits. No runtime redeploy was warranted. Public HTTP health/version smoke was not performed.
+
+### Poke-inspired Gmail/mobile
+- PR #576 current head `10f9203fbb73a12b69d5db911231aebea92b34bb` is DRAFT and diverged from master (20 ahead/8 behind). Full CI `45986016579` FAILS tests 28/29; Lint and Type-check passed. Kompas baseline `45986016719` SUCCESS. Corrective COMMENT `7216651849` posted; no code was changed.
+- The current PR diff **does** cap `GET /api/gmail-sync`, validates `POST` account choice against the four-account enabled list, and caps `fetchClassifiedThreads` live/snapshot paths. This resolves the earlier server-side cap concern in the branch; the CI regression is still failing. The previous review comment `7213935218` is partially superseded by this diff.
+- Owner-approved scope remains four accounts maximum, account/sender identity and mobile behavior. No Poke worker, scheduler, notifications, sending, live OAuth, two-inbox, selected-From/reconnect or phone acceptance.
+
+### Resume/JD/confirmed experience
+- PR #595 current head `db4322e0c293523e13b58af72da9617874d41fab` is DRAFT and diverged 36 ahead/2 behind master; no exact-head workflow runs/status were returned. Earlier five green gates on `77ebbaac` are stale and not reused. Current source now adds attribution splitting/other-subject suppression plus team/colleague/client/organization regressions, appearing to address the previous AWS/GCP team-attribution bug; it is not validated until exact-head CI passes. COMMENT `7216778432` records this non-approval. The deterministic role-scoped placement gap remains. No authorized resume/JD/confirmation bundle or DOCX acceptance.
+- PR #591 exact head `b4b110c48da5d8f260bb183849f0ee27b5f99f18` full CI `45792574554` fails tests 93/94/96/97/98. WhatsApp recovery `45792574886`, Kompas baseline `45792574496`, and Plan/REA schema `45792574863` pass. Durable explicit same-account Files/Library selection provenance is missing; retain exact `Original resume — NOT TAILORED` fallback and hard hold. The 17 Oct 17:28 Chicago delivery remains unverified (output DOCX, R2 object/version, webhook correlation, Meta outbound ID, signed receipt missing); no replay/send.
+
+### Contract crawler and Kompas
+- PR #590 exact head `1de4a3e493380f009d2b14dd35d0451f27392d51`: five gates SUCCESS; DRAFT pending protected preview/public API smoke. Location/remote filters can underfill after 100 rows; POST duration 60s vs runner 230s. Contract crawler remains manual/on-demand only; no crawl. Last recorded 26 Nov freshness snapshot (not rechecked today): 0 fresh contract rows within 14 days, latest crawl 10 Nov.
+- Kompas #113/#114/#115 release ancestry remains verified. Issue #120 (50 actual same-question paired answers + independent human grading) and #152 (authenticated protected-preview gate) remain open. Native Windows/mobile/WhatsApp acceptance is unverified. Kompas Continuous Voice Delivery is disabled; no duplicate voice/caption edits.
+
+### Execution / next step
+- Remote GitHub source/CI review was available, but no canonical checkout, dependencies or installed Next.js 16.3.8 route guide were present; previous Git clone failed DNS. Last recorded Vercel sandbox restore 402 is quota-blocked until 1 Dec 2026 00:00 UTC; not retried in this run. No local test/build, real email/WhatsApp, crawl, model/DOCX, R2/DB mutation or device acceptance.
+- Continue: clean-restack #576, fix the two overescaped test regexes, and run exact-head full CI after a compliant checkout and installed guide are restored. P0 #591 route-level selection/fallback remains first implementation priority. #595 attribution source fix awaits CI; deterministic role-placement repair remains. Do not bypass preview, billing, owner merge taps or device acceptance.
+
 ## 27 November 2026 — run 21 (20:36 CST)
 
 - **Canonical production:** `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Current master is `9c35c4c00be558aaac927df5ba5c1625c540d4ca`, six documentation commits ahead of that runtime SHA; the comparison shows docs-only changes. No runtime redeploy is needed for this checkpoint.
