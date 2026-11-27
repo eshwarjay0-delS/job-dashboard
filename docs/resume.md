@@ -99,3 +99,10 @@ The owner-approved rule remains narrow: an explicit candidate confirmation may s
 Master-based restack PR [#595](https://github.com/eshwarjay0-delS/job-dashboard/pull/595) has all five exact-head gates green, but remains DRAFT/non-mergeable pending a clean restack, protected preview, and owner-authorized resume/JD/confirmation plus exported-DOCX inspection. Static review COMMENT 6082791060 found that a sentence such as “I used AWS, and my team used GCP” can be retained as one candidate statement, incorrectly treating the team's GCP experience as the candidate's. The parser needs attribution regressions for team, colleague, client and organization clauses. Existing unresolved review thread 4713559321 also identifies a deterministic placement gap: a confirmed skill absent from original bullets can be allowed by the prompt/guard but is not a deterministic role-gap weave candidate.
 
 PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Library selection is still absent from the actual WhatsApp route/session fallback. The 17 Oct 17:28 Chicago delivery remains unverified. No candidate bundle, model call or exported DOCX was processed here. The web 95% floor remains; 98% is a target, not a claimed live match.
+
+
+## Confirmed-skill attribution regression — 27 November 2026
+
+The current #598 matcher is being extended to distinguish candidate experience from passive progressive and negated clauses. Source-derived examples such as “I used AWS and GCP is being used by my team” and “I used AWS and GCP was not managed by my team” initially retained GCP as candidate evidence. The approved source/test branch now recognizes progressive/negated passive auxiliaries and singular actors; an isolated simulation passes eight negatives while preserving “I used AWS and GCP.” This is not local parser test execution.
+
+Latest exact-head PR #598 checks are queued. Keep it unmerged pending full CI, independent review, protected preview, and an owner-authorized real resume/JD/confirmation plus exported-DOCX review. The 95% floor remains; 98% is a target, not a live match claim.
