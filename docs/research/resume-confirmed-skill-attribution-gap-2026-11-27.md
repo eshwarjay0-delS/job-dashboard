@@ -30,3 +30,7 @@ Continue: verify exact-head remote focused/full workflows, resolve failures with
 ## Exact validation update
 
 Latest code commit c209bd2c631ad6e87bee3b0ddd5cb38a64d6d37e. Initial focused run 45932860471 failed 1/56; first correction a3e526 failed 2/56 because comma residue and Node.js punctuation stripping. Latest focused run 45933554666 passed 56/56; WhatsApp recovery 45933554510, Plan/REA schema 45933554488 and Kompas baseline 45933554535 passed. Full CI 45933554574 is still in progress. No local execution, protected preview, real resume/JD/confirmation, model or DOCX acceptance.
+
+## Run 24 follow-up — possessive plural passive actors
+
+Static source review found a narrow remaining case in the passive actor regex: after a passive verb, possessive plural actors such as `by my contractors`, `by our subcontractors`, and `by their external vendors` were not recognized by the possessive branch. The splitter can therefore leave the candidate-prefixed sentence intact. Source commit `6960a0580321a2fa0872992e5f9c7568fbea2a3b` expands the possessive passive actor group to plural nouns and optional external/outside/third-party modifiers; test commit `6eeb44181ec9471011a1984f61c3961c186d6dfb` adds three negative inputs requiring only `I used AWS` to survive. This is a source/test change, not local execution. Prior five-green gates on `0220196f` are not reused. Exact-head checks are pending; keep DRAFT, with independent review, protected preview and real resume/JD/confirmation/exported-DOCX acceptance still missing.
