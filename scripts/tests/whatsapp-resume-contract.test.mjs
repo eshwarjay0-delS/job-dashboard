@@ -117,7 +117,7 @@ test('WhatsApp never mistakes Meta API acceptance for handset delivery', () => {
   assert.match(webhook, /I will not send a duplicate while its status is unknown/)
 })
 test('a failed JD stays saved without asking for manual resubmission', () => {
-  assert.match(webhook, /The rewrite produced no changes, so this is the resume already chosen for this job, unchanged/)
+  assert.match(webhook, /The rewrite produced no changes, so the selected library resume is being sent unchanged/)
   assert.match(webhook, /The document upload is unconfirmed\. Your request is saved/)
   assert.doesNotMatch(webhook, /If nothing arrives, send \*redo\*/)
 })
