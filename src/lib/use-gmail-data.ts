@@ -56,8 +56,8 @@ const EMPTY: Loaded = {
   connected: false, error: null, snapshotNotice: null,
 }
 
-let shared: { data: Loaded; at: number } | null = null
-let inflight: Promise<Loaded> | null = null
+let shared: { userKey: string; data: Loaded; at: number } | null = null
+let inflight: { userKey: string | null; promise: Promise<Loaded> } | null = null
 let generation = 0
 const listeners = new Set<(d: Loaded) => void>()
 
@@ -110,23 +110,47 @@ function writeSnapshot(key: string, s: Snapshot): void {
   }
 }
 
-/** Signing out forgets the mail kept in this tab and on this device. */
-export function forgetGmailData(): void {
+/** Clear the in-memory mail before another authenticated account is shown. Keep per-user snapshots on account switch. */
+export function resetGmailDataForAccountSwitch(): void {
   generation++
   shared = null
   inflight = null
+  listeners.forEach(hear => hear(EMPTY))
+}
+
+/** Reload for the account that Supabase currently confirms. */
+export function refreshGmailDataForCurrentAccount(): void {
+  void (async () => {
+    const key = await snapshotKey()
+    const snap = key ? readSnapshot(key) : null
+    if (key && snap && snap.mails.length) {
+      listeners.forEach(hear => hear({
+        ...EMPTY, connected: true,
+        mails: snap.mails, applications: snap.applications || [], interviews: snap.interviews || [],
+        steps: snap.steps || [], unfollowed: snap.unfollowed || [], drafts: snap.drafts || [],
+        radar: snap.radar || [], issues: snap.issues || [],
+      }))
+    }
+    void loadShared(false)
+  })()
+}
+
+/** Signing out forgets the mail kept in this tab and on this device. */
+export function forgetGmailData(): void {
+  resetGmailDataForAccountSwitch()
   try {
     for (const k of Object.keys(localStorage)) if (k.startsWith(SNAPSHOT_PREFIX)) localStorage.removeItem(k)
   } catch { /* storage unavailable: nothing was kept */ }
 }
 
-async function fetchAll(force: boolean): Promise<Loaded> {
+async function fetchAll(force: boolean, expectedUserKey: string | null): Promise<Loaded> {
   // Check the Gmail connection first.
   const status = await getJSON<{ connected: boolean; reason?: string; snapshotNotice?: string | null }>("/api/gmail-sync")
   if (!status.data) {
     // The check itself failed (a dropped connection, a server hiccup): keep what is on screen and say why.
     const msg = `Couldn't check Gmail just now: ${status.error}. Tap refresh to retry.`
-    return shared ? { ...shared.data, error: msg } : { ...EMPTY, error: msg }
+    const previous = expectedUserKey && shared?.userKey === expectedUserKey ? shared.data : null
+    return previous ? { ...previous, error: msg } : { ...EMPTY, error: msg }
   }
   if (status.data.snapshotNotice && !status.data.connected) {
     return { ...EMPTY, snapshotNotice: status.data.snapshotNotice, error: null }
@@ -186,7 +210,7 @@ async function fetchAll(force: boolean): Promise<Loaded> {
   // Save the fresh copy so the next page opens instantly, even after a reload.
   if (data.mails.length > 0) {
     const key = await snapshotKey()
-    if (key) writeSnapshot(key, {
+    if (key && key === expectedUserKey) writeSnapshot(key, {
       mails: data.mails, applications: data.applications, interviews: data.interviews, steps: data.steps,
       unfollowed: data.unfollowed, drafts: data.drafts, radar: data.radar, issues: data.issues, savedAt: Date.now(),
     })
@@ -196,53 +220,67 @@ async function fetchAll(force: boolean): Promise<Loaded> {
 
 // One load at a time for the whole app; whoever asks while it runs gets the same answer. A forced refresh starts its
 // own. An answer that arrives after signing out is dropped.
-function loadShared(force: boolean): Promise<Loaded> {
-  if (inflight && !force) return inflight
+async function loadShared(force: boolean): Promise<Loaded> {
+  const userKey = await snapshotKey()
+  if (inflight && inflight.userKey === userKey && !force) return inflight.promise
+  if (!force && userKey && shared?.userKey === userKey && Date.now() - shared.at < FRESH_MS) return shared.data
   const gen = generation
-  const p = fetchAll(force).then(data => {
-    if (gen === generation) {
-      shared = { data, at: Date.now() }
+  const p = fetchAll(force, userKey).then(async data => {
+    const currentUserKey = await snapshotKey()
+    if (gen === generation && currentUserKey === userKey) {
+      shared = userKey ? { userKey, data, at: Date.now() } : null
       listeners.forEach(hear => hear(data))
     }
     return data
   })
-  inflight = p
-  p.finally(() => { if (inflight === p) inflight = null }).catch(() => {})
+  inflight = { userKey, promise: p }
+  p.finally(() => { if (inflight?.promise === p) inflight = null }).catch(() => {})
   return p
 }
 
 export function useGmailData(): GmailData {
-  const [data, setData] = useState<Loaded>(() => shared?.data ?? EMPTY)
-  const [updatedAt, setUpdatedAt] = useState<number | null>(() => shared?.at ?? null)
-  const [loading, setLoading] = useState(() => !shared)
+  const [data, setData] = useState<Loaded>(EMPTY)
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Every page showing mail hears every load, whichever page started it.
+  // Every page showing mail hears the active account's load; a reset clears stale mail immediately.
   useEffect(() => {
-    const hear = (d: Loaded) => { setData(d); setUpdatedAt(shared?.at ?? Date.now()); setLoading(false) }
+    const hear = (d: Loaded) => { setData(d); setUpdatedAt(shared?.at ?? null); setLoading(false) }
     listeners.add(hear)
     return () => { listeners.delete(hear) }
   }, [])
 
-  // On opening: the copy in this tab if there is one, else the copy on this device, then a quiet check when it is old.
+  // On opening: only reuse an in-memory copy whose key matches this signed-in user, else the same user's device copy.
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      if (shared) {
+      const key = await snapshotKey()
+      if (cancelled) return
+      if (!key) {
+        setData(EMPTY)
+        setUpdatedAt(null)
+        setLoading(false)
+        return
+      }
+      if (shared?.userKey === key) {
+        setData(shared.data)
+        setUpdatedAt(shared.at)
+        setLoading(false)
         if (Date.now() - shared.at >= FRESH_MS) void loadShared(false)
         return
       }
-      const key = await snapshotKey()
-      const snap = key ? readSnapshot(key) : null
-      if (!cancelled && !shared && snap && snap.mails.length > 0) {
+      const snap = readSnapshot(key)
+      if (!cancelled && snap && snap.mails.length > 0) {
         setData({
           ...EMPTY, connected: true,
           mails: snap.mails, applications: snap.applications || [], interviews: snap.interviews || [],
           steps: snap.steps || [], unfollowed: snap.unfollowed || [], drafts: snap.drafts || [],
           radar: snap.radar || [], issues: snap.issues || [],
         })
+        setUpdatedAt(snap.savedAt)
         setLoading(false)
       }
-      void loadShared(false)
+      if (!cancelled) void loadShared(false)
     })()
     return () => { cancelled = true }
   }, [])
@@ -250,7 +288,7 @@ export function useGmailData(): GmailData {
   // Manual refresh forces an incremental Gmail sync (only what's new — fast).
   const refresh = useCallback((force = true) => {
     setLoading(true)
-    void loadShared(force).then(() => setLoading(false))
+    void loadShared(force).then(() => setLoading(false)).catch(() => setLoading(false))
   }, [])
 
   // Real-time pulse: quietly re-check every 2 minutes, and catch up when the tab comes back into focus, like the Gmail
