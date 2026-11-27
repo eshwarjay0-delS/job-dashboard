@@ -207,3 +207,8 @@ Read-only production smoke now confirms `/api/health` returns 200 and `/api/craw
 
 
 The crawler remains **manual/on-demand only** per the 12 Nov owner correction. No crawl was triggered because this run has no admin session. The exact unblock is an owner/admin-authorized manual run; do not restore a cron or loosen the freshness filter. PR #590's clean bounded clearance-filter restack is five-gate green but DRAFT pending protected preview and public API acceptance. Remaining design gaps: client location/remote filtering can underfill after the 100-row page, and the 60-second POST route is shorter than the runner's 230-second budget. See `docs/research/mfit-crawler-live-freshness-2026-11-26.md` for evidence and official public ATS-source notes.
+
+
+## 27 November 2026 — crawler filter underfill review
+
+PR #605 has all four remote gates green, but Apply still filters location/remote after the crawler's bounded 1,000-row result; the API request omits these filters. A later matching job may be missed and the scan-limit notice may be false. Static review COMMENT `6091418603`; no live crawl. Next: add test-first server-side location/remote filters before the limit (or bounded continuation), an accurate scan-limit notice, exact CI, independent review, protected preview and API smoke.
