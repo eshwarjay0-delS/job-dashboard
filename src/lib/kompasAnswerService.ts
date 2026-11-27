@@ -27,6 +27,7 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
+import { fitLevelAnswer, levelContract } from "@/lib/kompasLevelContract"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
@@ -885,6 +886,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         if (opener) finalText = withOpener(finalText, opener)
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
         finalText = dropOffTopicResume(job.question, job.jd || "", keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || ""))
+        finalText = fitLevelAnswer(finalText, levelContract(job.level, job.question))
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
@@ -1092,6 +1094,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     const gated = gateDisplayedAnswer({ question: job.question, raw: out, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) out = gated.text
   } catch { /* the settled answer stands */ }
+  out = fitLevelAnswer(out, levelContract(job.level, job.question))
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
@@ -1438,6 +1441,10 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     else if (cardControls.length === "short") plan.words = Math.max(16, Math.round(plan.words * 0.65))
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
+    const levelBand = levelContract(level, question)
+    plan.words = levelBand.target
+    plan.maxTokens = levelBand.maxTokens
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
   }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
@@ -1602,9 +1609,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape && !CODE_ASK_Q.test(question) ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     level === "director" && !CODE_ASK_Q.test(question) ? DIRECTOR_OPENING : "",
-    CODE_ASK_Q.test(question) ? `LENGTH CEILING: the fenced code block sits outside the spoken-word budget; any prose after it stays within ${plan.words} spoken words and the answer finishes when all asked parts are answered.` : cardControls.length === "long"
-      ? `LENGTH: Long. Land near ${visibleLengthBand(question).aim} spoken words and do not stop before ${visibleLengthBand(question).floor}. One sentence is not a long answer. An introduction uses that opener length.`
-      : `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
+    CODE_ASK_Q.test(question) ? `LENGTH CEILING: the fenced code block sits outside the spoken-word budget; any prose after it stays within ${plan.words} spoken words and the answer finishes when all asked parts are answered.` : levelContract(level, question).prompt,
     `ROLE FIRST: Answer this question for the role in the job description. Use a resume fact only when it is evidence for this question. Do not drag an unrelated platform from the resume into the answer. Do not invent an employer, a deployment, or a metric.`,
     depthGuidance,
     storyMode && tier !== 0 && routedProject
@@ -1750,11 +1755,32 @@ function keepBridgeLine(raw: string): string {
   return line.replace(/\s+/g, " ").trim()
 }
 
-/** Speakable lines from the resume only. No model call, so a blocked key cannot fill the panel with junk. */
+function normBridge(text: string): string {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function echoesQuestion(line: string, question: string): boolean {
+  const q = normBridge(question)
+  const l = normBridge(line).replace(/^yeah so (?:in my last role|on) /, "")
+  if (!q || !l) return false
+  if (l === q || l.includes(q) || (q.length > 12 && q.includes(l))) return true
+  const qWords = q.split(" ").filter((w) => w.length > 3)
+  if (qWords.length && qWords.every((w) => l.includes(w)) && l.split(" ").length <= qWords.length + 3) return true
+  return false
+}
+
+/** One opener plus one or two resume lines. The question itself is never a line. */
 export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string; resume?: string }): Promise<string[]> {
   const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
-  const question = String(input?.question || turns[turns.length - 1] || "").replace(/\s+/g, " ").trim()
-  const spoken = localSpokenAnswer(question, String(input?.resume || ""))
-  return spoken.split(/(?<=[.!?])\s+/).map((line) => keepBridgeLine(line)).filter(Boolean).slice(0, 3)
+  const question = String(input?.question || turns.filter((t) => t).slice(-1)[0] || "").replace(/\s+/g, " ").trim()
+  const words = new Set(question.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 4 && !/^(about|would|could|should|there|their|where|yourself)$/.test(w)))
+  const lines = String(input?.resume || "").split(/\n+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 8)
+  const ranked = lines.map((line) => ({
+    line,
+    n: line.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w)).length,
+  })).filter((row) => row.n > 0).sort((a, b) => b.n - a.n).slice(0, 2)
+  const body = ranked.map((row) => (/[.!?]$/.test(row.line) ? row.line : row.line + ".")).filter((line) => !echoesQuestion(line, question))
+  if (!body.length) return []
+  return ["Yeah, so in my last role.", ...body].map((line) => keepBridgeLine(line)).filter((line) => line && !echoesQuestion(line, question)).slice(0, 3)
 }
 

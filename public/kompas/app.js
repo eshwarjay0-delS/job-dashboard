@@ -3141,8 +3141,8 @@ const AUTO_QUIET_MS = 2200;
 function pendingHeard() { return transcript.filter(t => t.seq > answeredSeq); }
 function updatePending() {
   const who = typeof liveInterviewer === "function" ? liveInterviewer() : "Them";
-  const asks = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them");
-  const n = asks.length, b = $("pendCount"); if (!b) return;
+  const asks = pendingHeard().filter(t => t.who === "Them" && isRealInterviewerQuestion(t.text));
+  const n = asks.length + (Array.isArray(detectedQueue) ? detectedQueue.length : 0), b = $("pendCount"); if (!b) return;
   if (asks[0] && Date.now() - Number(asks[0].at || 0) > 90000) status("A question has been waiting 90 seconds.", "live");
   b.textContent = n; b.classList.toggle("hidden", !n);
   $("answerBtn").title = n ? `Answer everything heard since the last answer — ${n} line${n > 1 ? "s" : ""} (Ctrl+Enter)` : "Answer the latest question again (Ctrl+Enter)";
@@ -3981,35 +3981,44 @@ function noteDetectedQuestion(text) {
   if (!plan.start && plan.queue.length > before) status("Next question is queued.", "live");
   return plan;
 }
-function pumpDetectedQueue() {
-  if (aiBusy || answerCtl || !detectedQueue.length) return;
-  const next = detectedQueue.shift();
+function showQueuedAnswer(text) {
+  const next = String(text || "").replace(/\s+/g, " ").trim();
+  if (!next) return;
+  answeredSeq = heardSeq;
   const page = addCard(next, ["…"]);
+  page.streaming = true;
   showPressed(page, next);
   aiBusy = true; aiBusySince = Date.now();
   status("Answering", "live");
+  updatePending();
   void generateAnswer(next, page, { pinned: true, derived: next, queued: true }).finally(() => {
     aiBusy = false;
     pumpDetectedQueue();
   });
 }
+function pumpDetectedQueue() {
+  if (!detectedQueue.length) return;
+  const next = detectedQueue.shift();
+  showQueuedAnswer(next);
+}
 async function confirmAutoAndAnswer(tail) {
   if (isTabSmallTalk(tail) || isCandidateTabTurn(tail)) return;
-  if (aiBusy || answerCtl) { noteDetectedQuestion(tail); return; }
   const local = isRealInterviewerQuestion(tail) || confirmAutoQuestion(tail).ok;
   if (!local) return;
-  try {
-    const res = await fetch("/api/kompas/answer", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: String(tail || "").slice(0, 2000), transcript: typeof recentContext === "function" ? recentContext() : "" }) });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.derived && !data.noQuestion && questionEnded(data.derived) && !paraphrasesOwn(data.derived)) {
-        if (cards.some(c => sameAsk(data.derived, c.question || ""))) return;
-      }
-    }
-  } catch { /* a real interviewer question still answers when derive is down */ }
-  if (cards.some(c => sameAsk(tail, c.question || ""))) return;
-  if (!autoOn || !armsAuto()) return;
-  await aiAnswer(true);
+  const plan = secondQuestionPlan({
+    card: (cards[idx] && cards[idx].question) || "",
+    queue: detectedQueue,
+    badge: detectedQueue.length,
+    busy: !!(aiBusy || answerCtl),
+  }, { who: "Them", text: tail, ask: true });
+  if (plan.action === "ignore") return;
+  if (plan.action === "queue") {
+    noteDetectedQuestion(tail);
+    const released = releaseQueuedAnswer({ card: plan.card, queue: detectedQueue });
+    if (released.action === "switch" && released.switchMs < 2000) showQueuedAnswer(released.card);
+    return;
+  }
+  showQueuedAnswer(plan.card);
 }
 let streamingSttReady = false;
 const streamingSttSessions = new Map();
@@ -4198,7 +4207,7 @@ function liveInterviewer() {
   if (captures.some(c => c.who === "Them") || pendingHeard().some(t => t.who === "Them")) return "Them";
   return questionSource();
 }
-const armsAuto = () => pendingHeard().some(t => utteranceWho(t.text) === "Them" && isGatedQuestion(t.text) && !isTabSmallTalk(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
+const armsAuto = () => pendingHeard().some(t => t.who === "Them" && isRealInterviewerQuestion(t.text) && !isTabSmallTalk(t.text) && (!captureStartedAt || t.at >= captureStartedAt) && !duplicateAsk(t.text));
 function themQuietNow() {
   if (window.__kompasSileroLive) return window.__kompasVadEndedAt ? Date.now() - window.__kompasVadEndedAt : 0;
   const themCap = captures.find(c => c.who === "Them");
@@ -4231,7 +4240,7 @@ function scheduleAuto() {
   noteTurnGate();
   if (!autoOn) return;
   if (!armsAuto()) { scheduleUnsure(); return; }
-  const gated = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them").filter(t => !isTabSmallTalk(t.text));
+  const gated = pendingHeard().filter(t => t.who === "Them" && isRealInterviewerQuestion(t.text)).filter(t => !isTabSmallTalk(t.text));
   const tail = gated.length ? gated[gated.length - 1].text : "";
   const wait = autoWaitMs(tail);
   const askWait = interviewerAskEndedAt ? Math.min(wait, 1500) : wait;
@@ -4241,7 +4250,7 @@ function scheduleAuto() {
     const askDue = !!(interviewerAskText && sinceAsk >= 1500);
     if ((captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) && !askDue) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
     const themQuietMs = askDue ? Math.max(sinceAsk, 1500) : themQuietNow();
-    const gatedNow = pendingHeard().filter(t => isGatedQuestion(t.text) && utteranceWho(t.text) === "Them").filter(t => !isTabSmallTalk(t.text));
+    const gatedNow = pendingHeard().filter(t => t.who === "Them" && isRealInterviewerQuestion(t.text)).filter(t => !isTabSmallTalk(t.text));
     const tail = gatedNow.length ? gatedNow[gatedNow.length - 1].text : "";
     if (/right\?\s*$/i.test(tail) && (themQuietMs || 0) < 1400) { autoTimer = setTimeout(fire, 1400 - (themQuietMs || 0)); return; }
     if ((themQuietMs || 0) < QUESTION_PAUSE_MS) { autoTimer = setTimeout(fire, QUESTION_PAUSE_MS - (themQuietMs || 0)); return; }
@@ -4564,9 +4573,10 @@ function dedupeCaptionTokens(text) {
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
+  const fromMic = who === "You";
   const pieces = lookedAgain ? [text] : splitUtterances(text);
-  if (pieces.length > 1) { for (const piece of pieces) onTranscript(utteranceWho(piece), piece, true, spokenAt); return; }
-  who = utteranceWho(text);
+  if (pieces.length > 1) { for (const piece of pieces) onTranscript(fromMic ? "You" : who, piece, true, spokenAt); return; }
+  who = fromMic ? "You" : utteranceWho(text);
   lastTabRole = who;
   if (who === "Them" && isRealInterviewerQuestion(text)) { interviewerAskText = text; interviewerAskEndedAt = Date.now(); }
   if (captureStartedAt && spokenAt && spokenAt < captureStartedAt) { logDecision("drop-before-capture", who, text); return; }
@@ -4610,6 +4620,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
       if (ev.flush) applyInterruptionFlush(ev);
     } catch {}
   }
+  if (autoOn && who === "Them" && isRealInterviewerQuestion(text)) void confirmAutoAndAnswer(text);
   if (!flushing) scheduleAuto();
 }
 function applyInterruptionFlush(ev) {
@@ -5412,6 +5423,23 @@ function queueAnswerPlan(state, question) {
   if (!q || have.some((c) => same(c, q)) || queue.some((item) => same(item, q))) return { queue, start: false };
   if (state && (state.busy || state.inflight)) return { queue: queue.concat([q]), start: false };
   return { queue, start: true, question: q };
+}
+function secondQuestionPlan(state, turn) {
+  const who = String(turn && turn.who || "") === "You" ? "You" : (String(turn && turn.who || "") === "Them" ? "Them" : "");
+  const text = String(turn && turn.text || "").replace(/\s+/g, " ").trim();
+  const card = String(state && state.card || "");
+  const queue = Array.isArray(state && state.queue) ? state.queue.slice() : [];
+  const badge = Number(state && state.badge) || queue.length;
+  if (who === "You" || !text || !turn || !turn.ask) return { action: "ignore", card, queue, badge, stream: false, switchMs: 0, reason: who === "You" ? "candidate" : "not-ask" };
+  if (state && state.busy) return { action: "queue", card, queue: queue.concat([text]), badge: queue.length + 1, stream: false, switchMs: 0, reason: "busy" };
+  return { action: "switch", card: text, queue: [], badge: 0, stream: true, switchMs: 0, reason: "ready" };
+}
+function releaseQueuedAnswer(state) {
+  const queue = Array.isArray(state && state.queue) ? state.queue.slice() : [];
+  const card = String(state && state.card || "");
+  if (!queue.length) return { action: "idle", card, queue, badge: 0, stream: false, switchMs: 0 };
+  const next = queue.shift();
+  return { action: "switch", card: next, queue, badge: queue.length, stream: true, switchMs: 0 };
 }
 function labelFromHeard(cardQuestion, heard) {
   const q = String(cardQuestion || "").replace(/\s+/g, " ").trim();
@@ -8126,7 +8154,7 @@ function packSession(s) {
     documents: String(s.documents || "").slice(0, 2000), instructions: s.instructions || "",
     language: s.language || "en", interviewer: s.interviewer || "engineer", difficulty: s.difficulty || "standard",
     tone: sessionAnswerControls(s).tone, format: sessionAnswerControls(s).format, star: sessionAnswerControls(s).star, mode: s.mode || "technical", length: sessionAnswerControls(s).length,
-    autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
+    autoAnswer: s.autoMode !== false, autoMode: s.autoMode !== false, saveTranscript: s.saveTranscript !== false,
     createdAt: s.createdAt || Date.now(),
     token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated
     // The refresh token + expiry ride along so the desktop can renew the

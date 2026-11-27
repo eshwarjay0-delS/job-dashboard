@@ -229,14 +229,19 @@
     close.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); setOpen(false); });
     head.appendChild(close);
     panel.appendChild(head);
-    paintClarify(false);
   }
   function paintBridgeLines(lines) {
     paintBridgeShell();
     var panel = document.getElementById("answerAside");
+    var question = questionText().toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
     var kept = (lines || []).map(function (line) {
       return globalThis.KompasBridgeLines && KompasBridgeLines.acceptLine ? KompasBridgeLines.acceptLine(line) : "";
-    }).filter(Boolean);
+    }).filter(function (line) {
+      if (!line) return false;
+      var norm = line.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+      if (question && (norm === question || norm.indexOf(question) >= 0)) return false;
+      return true;
+    });
     if (!panel || !kept.length) return;
     if (!readOpen() && !bridgeDismissed) setOpen(true);
     var list = el("ul", "aside-questions");

@@ -12,8 +12,8 @@ import {
 
 const app = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
 
-test('Auto Answer is off by default and needs cue + 1.4s Them silence + confirm', () => {
-  assert.equal(AUTO_DEFAULT_ON, false)
+test('Auto Answer is on by default and needs cue + 1.4s Them silence + confirm', () => {
+  assert.equal(AUTO_DEFAULT_ON, true)
   assert.equal(AUTO_THEM_SILENCE_MS, 1400)
   assert.equal(shouldAutoAnswer({ autoOn: false, cue: true, themQuietMs: 2000, confirmed: true }).fire, false)
   assert.equal(shouldAutoAnswer({ autoOn: true, cue: false, themQuietMs: 2000, confirmed: true }).fire, false)
@@ -69,8 +69,8 @@ test('caption replay: Auto would fire on cued questions after 1.4s silence, not 
   assert.equal(skipped >= 1, true)
 })
 
-test('app.js keeps Auto off by default and gates fire with Them silence plus confirm', () => {
-  assert.match(app, /setAuto\(s\.autoMode === true\)/)
+test('app.js keeps Auto on by default and gates fire with Them silence plus confirm', () => {
+  assert.match(app, /setAuto\(s\.autoMode !== false\)/)
   assert.match(app, /AUTO_THEM_SILENCE_MS\s*=\s*1400/)
   assert.match(app, /confirmAutoQuestion\(/)
   assert.match(app, /shouldAutoAnswer\(|themQuiet/)
