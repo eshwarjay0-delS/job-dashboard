@@ -32,3 +32,8 @@ Add negative attribution cases for active subjects such as someone/anyone, contr
 ## Documentation-gate correction
 
 The run23 documentation PR initially failed the Plan/REA schema test because the first journal entry lacked its array comma and the Library search was recorded as a repository `path`. Both are corrected on PR #599; the exact-head schema workflow is pending. No code or user data was changed.
+
+
+## Exact validation refresh (00:51 CST)
+
+PR #598 exact head `0220196fa82205f3d2ee6642b55a321c692e822e`: focused `45954137715`, WhatsApp recovery `45954137850`, baseline `45954137753` and schema `45954137763` SUCCESS; full CI `45954137838` IN_PROGRESS. PR #599 docs schema `45954445120` and baseline `45954444868` SUCCESS after correcting the journal separator and Library path; full CI `45954444893` IN_PROGRESS. No merge, deployment, local tests, preview or real DOCX acceptance.
