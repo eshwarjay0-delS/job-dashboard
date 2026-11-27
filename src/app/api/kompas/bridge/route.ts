@@ -10,8 +10,8 @@ export const maxDuration = 20
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return NextResponse.json({ lines: [] }, { headers: { "Cache-Control": "no-store" } })
-  let body: { turns?: Array<{ who?: string; text?: string }>; question?: string } = {}
+  let body: { turns?: Array<{ who?: string; text?: string }>; question?: string; resume?: string } = {}
   try { body = await request.json() } catch { body = {} }
-  const lines = await speakableBridge(body, request.signal)
+  const lines = await speakableBridge(body)
   return NextResponse.json({ lines }, { headers: { "Cache-Control": "no-store" } })
 }
