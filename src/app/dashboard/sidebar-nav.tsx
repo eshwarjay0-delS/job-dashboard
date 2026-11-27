@@ -318,7 +318,9 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         authRevision += 1
         // Gmail cache and its listeners must reset before another account is displayed.
         resetGmailDataForAccountSwitch()
-        if (id) refreshGmailDataForCurrentAccount()
+        if (id) window.setTimeout(() => {
+          if (active && knownUserId === id) refreshGmailDataForCurrentAccount()
+        }, 0)
         else forgetGmailData()
         // Another account, or none: the link goes at once and comes back only if the server says this one is an admin too.
         const revision = authRevision
