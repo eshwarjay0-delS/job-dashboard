@@ -305,7 +305,7 @@ test('real library chooser produces fallback provenance only for the unique expl
     '@/lib/docx': { extractText: async bytes => Buffer.from(bytes).toString() },
     '@/lib/llm': { resolveKeys: () => ({}), keysFor: async () => ({}) },
     '@/lib/keywords': { extractKeywords: () => [] },
-    '@/lib/resumeOrganization': { resumeEmails: text => [...new Set((String(text || '').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g) || []).map(e => e.toLowerCase()))] },
+    '@/lib/resumeOrganization': { resumeEmails: text => [...new Set((String(text || '').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || []).map(e => e.toLowerCase()))] },
     '@/lib/resume-library': { jobKeyOf: jd => String(jd || '') },
     '@/lib/resume-library-store': { readShelf: async () => null, relOf: (root, abs) => abs.slice(root.length).replace(/^[/\\]/, '') },
     '@/lib/library-pick-store': { libraryOf: async () => ({ index: {}, counts: {} }), candidatesFor: async (_root, email) => candidates.filter(c => c.email === email) },
