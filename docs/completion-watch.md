@@ -1160,3 +1160,11 @@ PR #598 exact head `1b2a68fa` now has **all five remote gates SUCCESS**, includi
 
 
 **Continue:** add executable negative tests and fix the parser; rerun exact-head gates. Separate protected preview, independent review, and owner-authorized real resume/JD/confirmation/DOCX acceptance remain required. No local parser run or real resume was performed.
+
+## 27 November 2026 — run 22 PR #598 code/test follow-through (05:38 UTC)
+
+- **Implementation:** PR #598 branch now has source commit `583ed9ce5ac900eabce542b398fe26b9855706cb` expanding passive attribution to bare/compound actors and test commit `bfc35f6a637c101c0c19a3537ddaba57fe8d9745` adding nine negative cases. Isolated matcher simulation passed 9/9 negative cases and the normal AWS/GCP positive; this is not a local repository test.
+- **Exact head:** `bfc35f6a637c101c0c19a3537ddaba57fe8d9745`. Plan/REA schema `45946866769` and Kompas baseline `45946866741` SUCCESS; focused `45946866640`, full CI `45946866833`, WhatsApp recovery `45946866763` IN_PROGRESS. PR #598 was converted to DRAFT; do not reuse old-head checks.
+- **Acceptance:** no local parser test, protected preview, model call or exported-DOCX acceptance. Keep the branch unmerged until exact-head gates are terminal, review is independent, and owner-authorized real resume/JD/confirmation plus DOCX inspection pass.
+
+**Continue:** check exact-head remote gates; fix failures and retain candidate-evidence boundaries.
