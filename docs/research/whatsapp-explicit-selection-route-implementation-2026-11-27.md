@@ -67,3 +67,10 @@ The source/test head `4c772f54282b987ab65a8fd8735169038a5ad6ef` passed all four 
 - Plan/REA schema `46064385653` — SUCCESS.
 
 The source/test commit is `190815c83bddac5c7529ad9763450a131b905b56`. A docs-only `[ship]` commit will request a protected preview and trigger fresh exact-head checks. The PR remains DRAFT. No production deployment, live WhatsApp/Meta send or replay, source/output DOCX inspection, R2/DB mutation or owner-device acceptance occurred. The 17 October 17:28 Chicago incident remains unverified.
+
+
+## Run 27 documentation schema failure and preview boundary — 27 November 2026
+
+The source/test head `4c772f54282b987ab65a8fd8735169038a5ad6ef` remains green on full CI `46064385707`, WhatsApp recovery `46064385766`, Kompas baseline `46064385720`, and Plan/REA schema `46064385653`. A later docs-only `[ship]` commit `1e501ef31def82108cfc5e893684d9e057efc9af` failed exact-head type-check: `PlanJournalEntry.delivery` accepts only `blocked | planned | in progress | deployed | superseded`; `ReaSession.state` and step status also use declared unions. The follow-up restores valid `in progress`, `Implemented, verification pending`, and `Tested` values while retaining exact gate evidence.
+
+A protected preview is not currently available from this PR branch. Canonical `vercel.json` has `git.deploymentEnabled = {"**":false,"master":true}`; the `[ship]` commit marker does not override that branch allowlist. No manual Vercel deployment, project-setting change, SSO bypass, merge, or production alias change was attempted. A legitimate preview requires explicit owner-authorized Vercel deployment configuration, or the normal reviewed merge/production release path after independent review and owner DOCX acceptance.
