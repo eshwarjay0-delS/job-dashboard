@@ -6427,9 +6427,7 @@ async function aiAnswer(fromAuto, options = {}) {
             // One press, one request. A backlog does not each fire. The request is the
             // question that just finished (manual and Auto). An earlier card is re-asked
             // only when this press heard nothing new, further down.
-            const parts = formed.flatMap((g) => g.parts);
-            const joined = parts.join(" ");
-            const chosen = formed.length > 1 ? [{ parts, q: formQuestionFromHeard(joined) || joined }] : formed;
+            let chosen = formed.length > 1 ? [formed[formed.length - 1]] : formed;
             answeredSeq = heardSeq; updatePending();
             const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
             const earlierFormed = recentContext(cutSeq);

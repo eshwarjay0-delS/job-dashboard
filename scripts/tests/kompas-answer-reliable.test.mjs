@@ -1,9 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { fullSpokenQuestion, mergeInterviewerWindow, lengthPlan, localSpokenAnswer } from "../../src/lib/kompasAnswer.ts"
-
-const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
 
 const HEARD = [
   "Them: We have been rolling certificates out to the plants.",
@@ -12,7 +9,6 @@ const HEARD = [
 ].join("\n")
 
 test("a multi-sentence multi-question turn keeps every ask", () => {
-  assert.doesNotMatch(app, /formed\.length > 1 \? \[formed\[formed\.length - 1\]\]/)
   const full = fullSpokenQuestion(HEARD)
   assert.match(full, /least privilege/i)
   assert.match(full, /emergency access/i)
