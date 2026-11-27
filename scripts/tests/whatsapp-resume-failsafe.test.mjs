@@ -270,7 +270,7 @@ test('automatic and ambiguous library matches never earn fallback provenance', a
   assert.equal(docs.length, 0)
 
   await pickAndMake('15550101', { jdId: 'ambiguous-name', jd: 'EASM cybersecurity engineer' },
-    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, undefined, { hint: 'EASM' })
+    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, Date.now(), { hint: 'EASM' })
   assert.equal(queued[1].files.explicitSelection, false)
   assert.equal(docs.length, 0)
 })
