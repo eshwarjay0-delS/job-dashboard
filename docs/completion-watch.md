@@ -1,3 +1,11 @@
+## 27 November 2026 — run 22 Gmail privacy follow-up (05:24 UTC)
+
+- **PR #576 cache review:** COMMENT `6083838182` found that the module-level `shared`/`inflight` Gmail cache is not user-ID-bound. `useGmailData()` initializes from `shared` and can short-circuit before `snapshotKey()`; the sidebar clears it on explicit signOut, but the auth-state user-ID change handler does not invalidate the cache. Session replacement without the sidebar signOut could show A's mail to B or publish A's in-flight result. This is a source-traced potential privacy leak, not a reproduced incident. Fix needs owner-bound cache/inflight and an A→B regression.
+- **PR #598:** focused confirmed-skill regression `45945333982` is now SUCCESS (8/8); baseline `45945333814` and Plan/REA `45945333780` also SUCCESS. Full CI `45945333802` remains IN_PROGRESS at Lint; WhatsApp recovery `45945333791` remains IN_PROGRESS. The source fix `141590c` and six tests `1b2a68f` are on the exact current head. Keep unmerged until terminal exact-head checks, independent review, preview and authorized DOCX acceptance.
+- **PR #576:** shared-lint correction `27f096f` exact-master file copy; full CI `45944935727` IN_PROGRESS at Kompas S1 replay with 44 steps green and no failures at last read; baseline `45944935730` SUCCESS. New cache-isolation review is pending correction; keep DRAFT.
+- **PR #599 documentation checkpoint:** branch updated with both findings and the #598 fix status. Latest branch commit `4665ce3918c35fcf604c39a2d828deffaf3626b5`; checks for this new head have not yet been observed.
+  
+**Continue:** correct #576 cache owner binding and A→B invalidation in a compliant checkout with a focused regression; inspect exact CI before review. Check #598 full CI/recovery terminal results. Keep #591 hard-hold and #590 DRAFT.
 ## 27 November 2026 — run 22 follow-up (05:22 UTC)
 
 - **PR #598 attribution fix:** source commit `141590c8c5acf45bf56131b46325a3474cc180c2` broadens passive actor/verb recognition; test commit `1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d` adds six negative cases for others, someone else, external vendor, contractor, another team and third-party contractor. The ordinary `I used AWS and GCP` positive assertion remains. Review follow-up comment `7210571777` posted.
