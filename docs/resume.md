@@ -104,3 +104,8 @@ PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Libra
 ## 27 November 2026 — run 22 review status
 
 PR #598 exact head 58c10bad has all five remote gates green (focused regression 56/56). Static COMMENT review 6083779719 found a passive-attribution false positive for clauses such as `I used AWS and GCP was used by others`; add negative tests before merge. The PR remains unmerged/un-deployed pending correction, independent review, protected preview, owner-authorized resume/JD/confirmations and exported-DOCX inspection. No real bundle, model call, DOCX or live ATS percentage was produced.
+
+
+## 27 November 2026 — run 22 follow-up
+
+Static review comment 6083779719 found that passive attribution by `others` or external actors could bypass the candidate-confirmation splitter. Source commit 141590c8c5acf45bf56131b46325a3474cc180c broadens the passive actor matcher and commit 1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d adds six negative regressions, preserving the ordinary candidate AWS/GCP list. Exact-head focused/full/WhatsApp recovery runs are still in progress; baseline/schema checks passed. No local execution or real resume/JD/DOCX acceptance.
