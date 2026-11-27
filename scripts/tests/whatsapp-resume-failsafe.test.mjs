@@ -247,7 +247,7 @@ test('only a uniquely named same-account Files resume earns the exact NOT TAILOR
   }
   const { pickAndMake, docs, queued } = harness(async () => { throw new Error('provider down') }, async () => choice)
   await pickAndMake('15550101', { jdId: 'explicit-one', jd: 'EASM cybersecurity engineer' },
-    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, undefined, { hint: 'EASM' })
+    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, Date.now(), { hint: 'EASM' })
   assert.equal(queued[0].files.explicitSelection, true)
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
@@ -265,7 +265,7 @@ test('automatic and ambiguous library matches never earn fallback provenance', a
   }
   const { pickAndMake, docs, queued } = harness(async () => { throw new Error('provider down') }, async () => choice)
   await pickAndMake('15550101', { jdId: 'automatic-pick', jd: 'EASM cybersecurity engineer' },
-    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, undefined, {})
+    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, Date.now(), {})
   assert.equal(queued[0].files.explicitSelection, false)
   assert.equal(docs.length, 0)
 

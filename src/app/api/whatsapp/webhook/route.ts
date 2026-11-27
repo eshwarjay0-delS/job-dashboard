@@ -995,7 +995,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    if (await sendSelectedOriginal("The rewrite produced no changes, so this is the resume already chosen for this job, unchanged.")) return
+    if (await sendSelectedOriginal("The rewrite produced no changes, so the selected library resume is being sent unchanged.")) return
     await sayOutcome("The rewrite produced no changes. Your request is saved and will be retried automatically.")
     return;
   }
@@ -1067,7 +1067,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!file) {
     failureCode = "file_missing"
     if (await sendSelectedOriginal("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened. No eligible explicitly selected same-account Files/Library original was available, so your request is saved for another try.")
     return;
   }
 
@@ -1075,7 +1075,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
-    // The already-chosen resume is unchanged and is the file that goes out.
+    // Only a uniquely selected same-account Files/Library original may go out unchanged.
     if (await sendSelectedOriginal("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
     await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
     return;
