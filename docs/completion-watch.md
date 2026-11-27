@@ -1,3 +1,7 @@
+## 27 November 2026 — run 23 documentation-gate correction (00:49 CST)
+
+The new run23 checkpoint initially failed the Plan/REA schema workflow: the run23 journal replacement dropped the array comma, and the run22 Library source was incorrectly stored as a repository `path`. Restored the journal separator and removed the non-repository Library path. The schema workflow must rerun on this exact docs head; do not treat the correction as passed until its run is SUCCESS.
+
 ## 27 November 2026 — run 23 code continuation (00:46 CST)
 
 - **PR #598 source/test:** after COMMENT review `6084473225` found active non-candidate actor gaps, source commit `cd64bd3e` expanded the matcher and test commit `0220196f` added 17 negative actor cases plus candidate-list positive controls. Copied-regex simulation split 17/17 and preserved two positives; this is not local repository execution. Exact current PR head `0220196fa82205f3d2ee6642b55a321c692e822e`.
