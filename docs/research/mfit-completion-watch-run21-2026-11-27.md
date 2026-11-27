@@ -47,3 +47,8 @@ The available container has no canonical repository checkout and cannot resolve 
 ## Next action
 
 Continue: clean-restack #595 on current master, add the candidate-attribution regressions and bounded deterministic role-scoped placement of confirmed skills without inventing project facts, then rerun all exact-head gates. Keep #591 fail-closed until durable same-account Files/Library selection provenance and the exact **Original resume — NOT TAILORED** fallback are implemented in the actual route/session flow. Require protected preview, owner-authorized real source/JD/confirmation, exported-DOCX inspection, and authenticated acceptance before release.
+
+
+## Run 22 — Library source candidates for the 17 Oct WhatsApp incident (27 Nov 2026)
+
+A title-only Library DOCX search covering 17 Oct 20:00 UTC-18 Oct 04:00 UTC returned zero. Nearby Oct 16 files surfaced: `Eshwar_Resume(1).docx` (19:49:28 UTC, 18,283 bytes, seven-page cybersecurity resume) and `Eshwar_Resume(3).docx` (20:54:43 UTC, 40,609 bytes, Salesforce Development/CPQ content, not the incident resume). They are date-adjacent candidates only; neither is correlated to the exact WhatsApp upload. No original checksum, generated DOCX, R2 version, webhook correlation, Meta outbound ID or signed receipt. Do not replay the failed run; a re-upload is a new evidence bundle.
