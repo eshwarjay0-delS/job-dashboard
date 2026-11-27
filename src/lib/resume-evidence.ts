@@ -52,7 +52,9 @@ const confirmationTerms = (value: string) => (value.toLowerCase().match(/[a-z0-9
 
 const NON_CANDIDATE_SUBJECT = String.raw`(?:my|our|their)\s+(?:team|teams|colleague|colleagues|coworker|coworkers|manager|managers|client|clients|customer|customers|organization|organizations|company|companies|department|departments|group|groups|partner|partners|vendor|vendors|project|projects|staff|employees|employer|employers)\b|(?:the|a|an)\s+(?:team|teams|colleague|coworker|manager|client|customer|organization|company|department|group|partner|vendor|project|staff|employees|employer)\b|(?:we|they)\b|(?:client|customer|organization|company|team|colleague|coworker|manager|department|group|partner|vendor|project|staff|employees|employer)\b`
 const NON_CANDIDATE_PASSIVE = String.raw`(?:[a-z][a-z0-9.+#/-]*\s+)?(?:was|were|is|are|has been|have been|had been)\s+(?:used|managed|deployed|implemented|configured|maintained|operated|tested|built|developed|supported|administered|performed|conducted|provided|created|delivered)\s+(?:by|for|with)\s+(?:my|the|our|their)\s+(?:team|colleague|coworker|manager|client|customer|organization|company|department|group|partner|vendor|project|staff|employees|employer)\b`
-const splitNonCandidateAttribution = (line: string): string[] => line.split(new RegExp(String.raw`(?:,\s*|\b(?:and|or|while|whereas|along with)\s+)(?=${NON_CANDIDATE_SUBJECT}|${NON_CANDIDATE_PASSIVE})`, "i"))
+const splitNonCandidateAttribution = (line: string): string[] => line
+  .split(new RegExp(String.raw`(?:,\s*|\b(?:and|or|while|whereas|along with)\s+)(?=${NON_CANDIDATE_SUBJECT}|${NON_CANDIDATE_PASSIVE})`, "i"))
+  .map(part => part.replace(/[,s]+$/, "").trim())
 
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!](?=\s|$)/)).flatMap(raw => splitNonCandidateAttribution(raw)).flatMap(raw => {
