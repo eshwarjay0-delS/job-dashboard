@@ -1,3 +1,12 @@
+## 27 November 2026 — run 22 follow-up (05:22 UTC)
+
+- **PR #598 attribution fix:** source commit `141590c8c5acf45bf56131b46325a3474cc180c2` broadens passive actor/verb recognition; test commit `1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d` adds six negative cases for others, someone else, external vendor, contractor, another team and third-party contractor. The ordinary `I used AWS and GCP` positive assertion remains. Review follow-up comment `7210571777` posted.
+- **Exact-head validation:** PR #598 head `1b2a68fa` — Kompas baseline `45945333814` SUCCESS and Plan/REA schema `45945333780` SUCCESS; focused `45945333982`, full CI `45945333802`, and WhatsApp recovery `45945333791` still IN_PROGRESS at the last read. Do not claim the new cases passed until the focused run is terminal.
+- **Gmail:** PR #576 lint correction `27f096f` is the exact current-master `let`→`const` shared-file alignment. Full CI `45944935727` has lint/typecheck and 16 earlier steps green, but remains IN_PROGRESS at migration-asset closure. Kompas baseline passed. Keep DRAFT; two-inbox and narrow-phone acceptance still missing.
+- **Documentation:** run22 evidence is being consolidated in draft PR #599; its full CI `45945159417` remains IN_PROGRESS, with Kompas baseline `45945159333` and Plan/REA schema `45945159383` SUCCESS.
+  
+**Continue:** verify #598 exact-head focused/full/recovery checks to terminal; do not merge or deploy based on partial green. Check #576 full CI to terminal, then preserve clean restack/preview and real inbox/device gates. Keep #591 hard-hold and #590 DRAFT.
+
 ## 27 November 2026 — run 22 (23:13 CST)
 
 - **Production:** Canonical alias `job-dashboard-fawn.vercel.app` independently returns READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Current master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is documentation-only relative to this runtime; no redeploy.
