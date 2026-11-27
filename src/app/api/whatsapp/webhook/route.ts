@@ -919,9 +919,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // when they finish). The outer finally clears the timer on every path,
   // so a finished run never gets a stale progress note. No unref: the
   // function stays alive under after() up to maxDuration.
+  const progressFallbackEligible = explicitlySelectedSameAccountLibraryResume(files, userId, session.resumePath)
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, files?.explicitSelection
+      sendText(from, progressFallbackEligible
         ? "Still working on your resume — the rewrite has been running for a minute and is still going. I will send a tailored Word file only if it passes the checks. If not, I may send only the same-account Files/Library resume you explicitly selected, labeled \"Original resume — NOT TAILORED\"; otherwise I will explain and keep your request saved."
         : "Still working on your resume — the rewrite has been running for a minute and is still going. I will send a tailored Word file only if it passes the checks. If not, I will explain and keep your request saved; no original fallback is eligible without an explicit same-account Files/Library selection.").catch(() => {})
     }, 60_000)
