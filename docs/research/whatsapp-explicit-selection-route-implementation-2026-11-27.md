@@ -22,7 +22,7 @@ The exact installed Next.js 16.3.8 route-handler guide was retrieved from the su
 
 ## Change state
 
-Branch: `fix/whatsapp-explicit-library-fallback-20261127-run22`, based on current master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff`. Code and test commit is awaiting tree/commit creation; the PR will remain DRAFT until exact-head gates and independent review pass.
+Branch: `fix/whatsapp-explicit-library-fallback-20261127-run22`, based on `1eb604b33cfe58f3c0f6ad611d346d5921e184ff`. Source commit `422df8d59433251b8adba01a05e20e56054d159` and two test-only corrections `45d59b5cf2421ecc2503af96821bbb6c7c19ff75` / `c95c278ab2e4170283ff45865e40195927a11054` are now present. The initial full CI failed only the stale `resume-guards.test.mjs` assertion expecting `sendClosest`; recovery failed one stale contract assertion expecting the old unchanged-resume wording. The assertions now expect the guarded `sendSelectedOriginal` call and the current message. Exact-head full CI `45966667425` and WhatsApp recovery `45966667371` are running; baseline `45966667947` passed. Local checkout/tests remain unavailable because this runtime cannot resolve github.com. Keep the PR DRAFT pending exact-head gates, independent review, protected preview and owner acceptance.
 
 ## Historical 17 October incident — still unverified
 
