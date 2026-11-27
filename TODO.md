@@ -1,3 +1,9 @@
+## 2026-11-27 — OpenRouter 403 is model policy (server only; no new window)
+
+Production OPENROUTER_MODEL, OPENROUTER_MODEL_HEAVY, and GROQ_MODEL_HEAVY are openai/gpt-oss-120b. The OpenRouter key is a sensitive secret and was not decrypted. The live answer now starts on Llama 3.3 70B, then gpt-oss on Groq/Fireworks/Cerebras/Together, then Gemini. Direct Groq uses llama-3.1-8b-instant instead of repeating gpt-oss. A JSON answer still returns a sentence when every model fails. No page change, so the installed exe does not need a new build.
+
+**Checked by scripts/tests/kompas-answer-model-fallback.test.mjs and kompas-answer-reliable.test.mjs. One production call after the ship.**
+
 ## 2026-11-27 — Answer reliability (visible after ship; one desktop build)
 
 AI Answer falls through gpt-oss, Llama, Gemini, and Groq, then a resume sentence, so the pane is not empty. A multi-part interviewer turn is kept. Behavioral and technical answers floor at 150 words. Say this is resume lines only. Auto-answer starts on. Missing tab audio asks for a reshare, and a stuck Starting capture recovers. Questions queue. Skip-login was not turned off.

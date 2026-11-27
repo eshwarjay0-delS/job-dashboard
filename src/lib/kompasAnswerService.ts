@@ -76,16 +76,21 @@ const NO_STORE = { "Cache-Control": "no-store" }
 // account data policy or a guardrail has no allowed provider for that model.
 // Llama 3.3 70B has a zero-retention Groq endpoint, which this key can use.
 // A 403 tries the next model. The caller never sees that status.
-// Known-good primary from 01ceb1dc (13 Nov): openai/gpt-oss-120b. A 403 from
-// the account data policy tries the next allowed model, then direct Groq.
-const PAID_MODEL = "openai/gpt-oss-120b"
-const SECOND_MODEL = "meta-llama/llama-3.3-70b-instruct"
+// Production OPENROUTER_MODEL is openai/gpt-oss-120b. That model 403s when the
+// account data policy or a guardrail has no allowed provider, even with credits
+// left. Llama 3.3 70B has a zero-retention Groq endpoint, so it goes first.
+const PAID_MODEL = "meta-llama/llama-3.3-70b-instruct"
+const SECOND_MODEL = "openai/gpt-oss-120b"
 const CHEAP_MODEL = "google/gemini-2.5-flash"
 const ANSWER_MODELS = [PAID_MODEL, SECOND_MODEL, CHEAP_MODEL]
 // Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
 const LIVE_ROUTING = { allow_fallbacks: true, sort: "latency" }
+function routingFor(model: string) {
+  if (/gpt-oss/i.test(model)) return { ...LIVE_ROUTING, order: ["groq", "fireworks", "cerebras", "together"] }
+  return LIVE_ROUTING
+}
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
@@ -175,7 +180,7 @@ async function streamOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens), stream: true,
+      model, provider: routingFor(model), max_tokens: orCap(maxTokens), stream: true,
       stream_options: { include_usage: true },
       ...reasoningFor(model),
       messages: [
@@ -206,7 +211,7 @@ async function fetchOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens),
+      model, provider: routingFor(model), max_tokens: orCap(maxTokens),
       ...reasoningFor(model),
       messages: [
         { role: "system", content: system },
@@ -525,7 +530,8 @@ function settleRepair(job: AnswerJob, repair: RepairOutcome, finalText: string):
 }
 
 async function cheapGroqAnswer(key: string, system: string, user: string, signal: AbortSignal): Promise<string> {
-  const model = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+  const configured = process.env.GROQ_MODEL_HEAVY || ""
+  const model = /gpt-oss/i.test(configured) ? "llama-3.1-8b-instant" : (configured || "llama-3.1-8b-instant")
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
@@ -740,7 +746,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               if (groqText.trim()) {
                 raw = groqText.trim()
                 lastErr = ""
-                servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+                servedModel = /gpt-oss/i.test(process.env.GROQ_MODEL_HEAVY || "") ? "llama-3.1-8b-instant" : (process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant")
                 show(raw + " ")
               }
             } catch (e) {
@@ -982,7 +988,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
             if (groqText.trim()) {
               raw = groqText.trim()
               lastErr = ""
-              servedModel = process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant"
+              servedModel = /gpt-oss/i.test(process.env.GROQ_MODEL_HEAVY || "") ? "llama-3.1-8b-instant" : (process.env.GROQ_MODEL_HEAVY || "llama-3.1-8b-instant")
               servedProvider = "groq"
             }
           } catch (e) {
@@ -1033,10 +1039,14 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       }
     } else { lastErr = "openrouter 503 missing paid key" }
   } finally { cleanup() }
+  if (!raw.trim()) {
+    const local = localSpokenAnswer(job.question, `${job.resume || ""}\n${job.sourceText || ""}`)
+    if (local) { raw = local; lastErr = ""; servedModel = "local-resume"; servedProvider = "local" }
+  }
   const degraded = !raw.trim()
   if (degraded) {
     const failure = answerFailure(lastErr)
-    return NextResponse.json({ ...failure, provider: "openrouter", model: PAID_MODEL }, { status: failure.status, headers: NO_STORE })
+    return NextResponse.json({ ...failure, provider: "openrouter", model: PAID_MODEL }, { status: failure.status === 403 ? 503 : failure.status, headers: NO_STORE })
   }
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.

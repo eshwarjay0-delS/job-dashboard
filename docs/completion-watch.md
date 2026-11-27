@@ -1,3 +1,7 @@
+## 27 November 2026 — OpenRouter key and model
+
+Production model env values are openai/gpt-oss-120b for OPENROUTER_MODEL, OPENROUTER_MODEL_HEAVY, and GROQ_MODEL_HEAVY. OPENROUTER_API_KEY is sensitive and was not decrypted, so it was not matched to the eshwarjay0@gmail.com account that has $4.02. The answer lane now starts on Llama 3.3 70B. gpt-oss is second, pinned to Groq, Fireworks, Cerebras, and Together. Direct Groq uses llama-3.1-8b-instant. One production check follows the ship. No desktop rebuild. Skip-login stays on.
+
 ## 27 November 2026 — answer reliability
 
 The answer route keeps gpt-oss first and falls through to Llama, Gemini, Groq, then a resume sentence. Multi-part questions stay whole. Behavioral and technical length floors at 150 words. Say this is local resume lines. Auto-answer defaults on. A share with no tab audio asks for a reshare, and Starting capture recovers. One production check follows the ship. Skip-login stays on.

@@ -874,7 +874,11 @@ export function localSpokenAnswer(question: string, resume: string): string {
     line,
     n: line.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w)).length,
   })).filter((row) => row.n > 0).sort((a, b) => b.n - a.n).slice(0, 3)
-  if (!ranked.length) return ""
+  if (!ranked.length) {
+    const q = String(question || "").replace(/\s+/g, " ").trim().replace(/[?.!]+$/, "")
+    if (q.split(/\s+/).length < 3) return ""
+    return `Yeah, so on ${q}, I would start with the access that is actually required and take away anything extra.`
+  }
   const body = ranked.map((row) => /[.!?]$/.test(row.line) ? row.line : row.line + ".").join(" ")
   return `Yeah, so in my last role, ${body.charAt(0).toLowerCase()}${body.slice(1)}`
 }
