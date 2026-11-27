@@ -1,3 +1,8 @@
+## 27 November 2026 — run 23 exact-head validation refresh (00:51 CST)
+
+- #598 exact head `0220196fa82205f3d2ee6642b55a321c692e822e`: focused `45954137715`, WhatsApp recovery `45954137850`, Kompas baseline `45954137753`, Plan/REA `45954137763` SUCCESS; full CI `45954137838` remains IN_PROGRESS. 17/17 copied-regex simulation and two positive controls; no local repo execution.
+- #599 docs exact head `1b0c4d2d6db3fb0f5fb307d318971495fcae67d7`: after correcting the missing journal comma and non-repository Library path, schema `45954445120` and baseline `45954444868` SUCCESS; full CI `45954444893` IN_PROGRESS.
+- Both PRs remain DRAFT; no merge, preview, deployment or real resume/DOCX acceptance.
 ## 27 November 2026 — run 23 documentation-gate correction (00:49 CST)
 
 The new run23 checkpoint initially failed the Plan/REA schema workflow: the run23 journal replacement dropped the array comma, and the run22 Library source was incorrectly stored as a repository `path`. Restored the journal separator and removed the non-repository Library path. The schema workflow must rerun on this exact docs head; do not treat the correction as passed until its run is SUCCESS.
