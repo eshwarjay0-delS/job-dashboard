@@ -759,3 +759,13 @@ Continue: verify all required exact-head checks on the latest #381 branch head, 
 - **Execution wall:** canonical checkout/dependencies/installed Next.js 16.3.8 docs unavailable; sandbox restore remains quota-blocked until 1 Dec. No repository tests/build, crawl, portal request, production-row mutation, preview/deployment or application submission.
 
 **Continue:** fix the shared negative normalizer and Pyramid raw-text bypass, add the exact regressions, restack on current master, and rerun full CI/crawler/baseline/Plan-REA. Keep manual-only crawling and the draft/release gates.
+
+
+## Run 21 documentation commit provenance
+
+- Review note: `31a73b3e7e87c7cf31b7bac4f3d4d034e19107f5`
+- Plan & Vision: `6bd86577b6c944bc3a7ebbe79b773682ed8afb08`
+- REA: `ac94c7762995b471b73541733f2d7c22a78b35aa`
+- Plan Journal: `325ca46e61ab5ff9ebd7bc39f74a9dcfef194e54`
+- Completion Watch preceding checkpoint: `121709cc387ad6e661471dddf581bf0eb9781e4a`
+- The PR's latest head at this checkpoint is `121709cc387ad6e661471dddf581bf0eb9781e4a`; its full CI/Plan-REA workflow runs are not available on this documentation head. Green checks belong to the earlier code head `b0c1ffa99719857186f321bfb7a908afdc181d5e` only. No source fix was made.
