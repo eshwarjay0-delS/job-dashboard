@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { readFileSync } from "node:fs"
-import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail } from "../../src/lib/mail-digest.ts"
+import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail, limitGmailAccounts, enabledGmailAccounts } from "../../src/lib/mail-digest.ts"
 
 test("digest sender mute is scoped to the receiving inbox", () => {
   const rules = [
@@ -71,4 +71,41 @@ test("mobile account toggles preserve the four-account ceiling", () => {
   assert.match(page, /accounts\.map\(a =>/)
   assert.match(data, /const unique = \[\.\.\.new Set\(emails\)\]\.slice\(0, 4\)/)
   assert.match(data, /return unique\.map\(/)
+})
+
+
+
+test("the server account limit deduplicates inboxes and caps the first four connected accounts", () => {
+  const accounts = [
+    { id: "1", google_email: "primary@example.com", gmail_enabled: true, is_primary: true },
+    { id: "dup", google_email: "PRIMARY@example.com", gmail_enabled: true },
+    { id: "2", google_email: "two@example.com", gmail_enabled: true },
+    { id: "3", google_email: "three@example.com", gmail_enabled: true },
+    { id: "4", google_email: "four@example.com", gmail_enabled: true },
+    { id: "5", google_email: "five@example.com", gmail_enabled: true },
+  ]
+  assert.deepEqual(limitGmailAccounts(accounts), [accounts[0], accounts[2], accounts[3], accounts[4]])
+  assert.deepEqual(enabledGmailAccounts(accounts), [accounts[0], accounts[2], accounts[3], accounts[4]])
+  assert.deepEqual(limitGmailAccounts(accounts, 0), [])
+})
+
+test("Gmail data cache is account-scoped and cleared before an account switch", () => {
+  const data = readFileSync(new URL("../../src/lib/use-gmail-data.ts", import.meta.url), "utf8")
+  const sidebar = readFileSync(new URL("../../src/app/dashboard/sidebar-nav.tsx", import.meta.url), "utf8")
+  assert.match(data, /shared: \\{ userKey: string; data: Loaded; at: number \\}/)
+  assert.match(data, /expectedUserKey/)
+  assert.match(data, /currentUserKey === userKey/)
+  assert.match(data, /shared\\?\\.userKey === key/)
+  assert.match(sidebar, /resetGmailDataForAccountSwitch/)
+  assert.match(sidebar, /refreshGmailDataForCurrentAccount/)
+})
+
+test("Gmail routes enforce the four-account ceiling server-side, including requested account IDs", () => {
+  const server = readFileSync(new URL("../../src/app/api/gmail/_lib.ts", import.meta.url), "utf8")
+  const sync = readFileSync(new URL("../../src/app/api/gmail-sync/route.ts", import.meta.url), "utf8")
+  assert.match(server, /limitGmailAccounts/)
+  assert.match(server, /enabledGmailAccounts/)
+  assert.match(sync, /limitGmailAccounts\\(loaded\\.accounts\\)/)
+  assert.match(sync, /enabledGmailAccounts\\(loaded\\.accounts\\)/)
+  assert.match(sync, /requestedAccountId && !selectedAccount/)
 })
