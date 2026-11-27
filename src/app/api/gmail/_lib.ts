@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
 import { loadWorkspaceAccounts, snapshotThreads } from "@/lib/gmailSnapshot"
 import { classifyEmail, type EmailCategory } from "@/lib/email-classifier"
+import { limitGmailAccounts, enabledGmailAccounts } from "@/lib/mail-digest"
 import type { Mail, Stage, App, Interview } from "@/app/dashboard/_suite/sample"
 
 import { emailAddress, authoredText, submissionEvidence, calendarEvidence, linkReferencedThreads, type CalendarEvidence } from "@/lib/application-evidence"
@@ -31,7 +32,7 @@ export async function requireAuth(): Promise<AuthContext | { error: string; stat
   return {
     supabase,
     userId: user.id,
-    accounts: loaded.accounts,
+    accounts: enabledGmailAccounts(loaded.accounts),
     ...(loaded.source === "snapshot" ? { quotaFallback: { notice: loaded.notice, snapshotAt: loaded.snapshotAt } } : {}),
   }
 }
@@ -491,11 +492,13 @@ export async function fetchClassifiedThreads(
 
   const loaded = await loadWorkspaceAccounts(userId)
   if (loaded.source === "snapshot") {
+    const allowed = enabledGmailAccounts(loaded.accounts).map(a => a.google_email.toLowerCase())
     const page = await snapshotThreads(userId, { days, account: opts.account, offset: opts.offset ?? 0, limit: max })
-    return { threads: page.threads as unknown as ClassifiedThread[], issues: [], snapshotNotice: page.notice }
+    const threads = (page.threads as unknown as ClassifiedThread[]).filter(t => allowed.includes(t.accountEmail.toLowerCase()))
+    return { threads, issues: [], snapshotNotice: page.notice }
   }
-  const accounts = loaded.accounts
-  const enabled = accounts.filter(a => a.gmail_enabled && (!opts.account || a.google_email.toLowerCase() === opts.account.toLowerCase()))
+  const accounts = limitGmailAccounts(loaded.accounts)
+  const enabled = enabledGmailAccounts(accounts).filter(a => !opts.account || a.google_email.toLowerCase() === opts.account.toLowerCase())
   if (enabled.length === 0) return { threads: [], issues: [] }
 
   // A custom Gmail query bypasses the cache (direct live fetch, old behavior).
