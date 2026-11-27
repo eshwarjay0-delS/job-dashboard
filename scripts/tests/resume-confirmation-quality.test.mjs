@@ -604,3 +604,31 @@ test('ambiguous relative clauses attributed to non-candidate actors cannot confi
   for (const input of positives) assert.deepEqual(confirmedCandidateStatements([input]), [input], input)
 })
 
+
+test('bare and externally qualified SOC/security-operations attribution cannot confirm skills', () => {
+  const negatives = [
+    'I used AWS and GCP was used by external SOC',
+    'I used AWS and GCP was used by outside SOC',
+    'I used AWS and GCP was used by third-party SOC',
+    'I used AWS and GCP was used by security operations',
+    'I used AWS and GCP was used by the security operations team',
+    'I used AWS and external SOC deployed GCP',
+    'I used AWS and security operations configured GCP',
+    'I used AWS and SOC deployed GCP',
+  ]
+  for (const input of negatives) assert.deepEqual(confirmedCandidateStatements([input]), ['I used AWS'], input)
+
+  const relative = [
+    'I used AWS and GCP, which external SOC used',
+    'I used AWS and GCP that security operations configured',
+    'I used AWS and GCP which SOC used',
+  ]
+  for (const input of relative) assert.deepEqual(confirmedCandidateStatements([input]), [], input)
+
+  const positives = [
+    'I used AWS and GCP',
+    'I used AWS and I configured GCP',
+    'I used AWS and GCP, which I used',
+  ]
+  for (const input of positives) assert.deepEqual(confirmedCandidateStatements([input]), [input], input)
+})
