@@ -1153,3 +1153,10 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - **Release boundary:** PR #598 remains unmerged/un-deployed. Independent review, protected preview, owner-authorized resume/JD/confirmation and exported-DOCX inspection remain missing. Production alias is READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; no runtime change or deployment was made.
 
 **Continue:** add bare plural contractor/subcontractor attribution regressions to #598 and fix the matcher; keep it unmerged until exact-head full CI, focused/recovery gates, independent review and separate protected-preview/real-DOCX acceptance pass.
+
+## 27 November 2026 — run 22 terminal CI correction (05:33 UTC)
+
+PR #598 exact head `1b2a68fa` now has **all five remote gates SUCCESS**, including full CI `45945333802`, focused confirmed-skill `45945333982` (8/8), WhatsApp recovery `45945333791` (9/9), baseline `45945333814` and Plan/REA schema `45945333780`. The newly posted COMMENT `6083882072` identifies an uncovered bare-plural passive actor edge case (`contractors`/`subcontractors`) that is not included in the passing suite. Keep #598 unmerged; green CI is not a fix for the new finding.
+
+
+**Continue:** add executable negative tests and fix the parser; rerun exact-head gates. Separate protected preview, independent review, and owner-authorized real resume/JD/confirmation/DOCX acceptance remain required. No local parser run or real resume was performed.
