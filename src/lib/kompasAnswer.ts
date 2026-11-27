@@ -922,7 +922,7 @@ export function questionForAnswer(heard: string, asked: string, pinned: boolean,
   // was answered as a new question with no topic. With history, the pushback sentence is kept in front of the ask.
   const said = source.replace(/^\s*(?:Them|You)(?: \([a-z]+\))?:\s*/i, "").trim()
   const pushed = turns.length && q && PUSHBACK.test(said) && !PUSHBACK.test(q) && said.replace(/[?.!\s]+$/, "").toLowerCase().endsWith(q.replace(/[?.!\s]+$/, "").toLowerCase().slice(-20)) ? `${said.match(/^[^.?!]*[.?!]?/)?.[0] || ""} ${q}`.trim() : q
-  const full = fullSpokenQuestion(heard)
+  const full = /sorry|actually|scratch that|let me rephrase/i.test(String(heard || "")) ? "" : fullSpokenQuestion(heard)
   const base = full && pushed && full.length > pushed.length + 24 ? full : pushed
   return q ? resolveFollowUp(base, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
