@@ -26,3 +26,11 @@ No canonical checkout, installed dependencies or Next.js 16.3.8 route-handler gu
 
 ## Next
 After the compliant checkout/dependencies/guide are restored, fix #598's modifier-bearing attribution and relative-clause cases, add an integration regression proving the confirmed-skill final weave places only a context-fit skill in an existing bullet, and rerun exact-head gates. Then clean-restack the approved #595/#598 source onto current master, keep #591 fail-closed until durable same-account selection provenance is implemented, and preserve protected-preview/owner acceptance gates.
+
+## Run 24 code follow-up (27 Nov 2026, 06:44 CST)
+
+- On approved PR #598 branch `fix/resume-confirmed-skills-attribution-gap-20261127-run21`, commits `f41d654` add the modifier-bearing team actor/passive matcher and `f47f6f8` add six regressions plus the positive `I used AWS and GCP` control. Exact copied-regex simulation split all six team-only clauses and retained the positive control.
+- A direct `constructed-jd.ts` test import failed because Node's strip-types runner cannot resolve its extensionless `keyword-targets` dependency. The import/integration attempt was removed in `87ffa22`; existing helper-level role-gap/context and source-path assertions remain. Behavioral final-weave integration is still unverified.
+- The subsequent focused run `46000740516` failed due the resume-evidence import and first `for` loop being concatenated during GitHub Contents rewrite. Commit `ec7188a` restores the newline. Latest exact head `ec7188acc98eb4d12d516526bc9edf2712c1192d` has baseline `46001027351` SUCCESS and schema `46001027332` SUCCESS; focused `46001027426`, full CI `46001027344`, and WhatsApp recovery `46001027395` are still IN_PROGRESS. No local test. Do not merge unless all latest-head gates pass and review remains independent.
+- Public HTTP smoke was attempted through the web tool for `/kompas/version.json`, `/api/kompas/desktop-version`, `/api/kompas/account-sessions`, `/api/gmail-sync`, and `/api/crawl/jobs?limit=1`; every open returned an internal tool error. This is inconclusive and is not evidence the site is down.
+- A fresh scoped Library search and personal-context search did not recover the 17 Oct 17:28 WhatsApp incident's source resume, output DOCX or delivery trace; no conversation matched. This remains an exact evidence blocker.
