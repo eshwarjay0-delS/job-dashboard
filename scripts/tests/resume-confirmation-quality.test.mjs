@@ -568,3 +568,19 @@ test('temporal connectors preserve candidate attribution while rejecting team-ow
   ]
   for (const input of positive) assert.deepEqual(confirmedCandidateStatements([input]), [input], input)
 })
+
+
+test('progressive and negated passive attribution does not confirm non-candidate skills', () => {
+  const cases = [
+    'I used AWS and GCP is being used by my team',
+    'I used AWS and GCP were being used by contractors',
+    'I used AWS and GCP was not managed by my team',
+    'I used AWS and GCP was not being deployed by our team',
+    "I used AWS and GCP isn't being configured by a colleague",
+    'I used AWS and GCP has not been handled by vendors',
+    "I used AWS and GCP hasn't been deployed by a contractor",
+    'I used AWS and GCP had been handled by the SOC',
+  ]
+  for (const input of cases) assert.deepEqual(confirmedCandidateStatements([input]), ['I used AWS'], input)
+  assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
+})
