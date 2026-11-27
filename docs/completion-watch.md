@@ -749,3 +749,13 @@ PR #381 remains a documentation/comment/regression-only change. Current master a
 - No production deployment is required for this PR because it does not change the live scheduler or crawler runtime. No live crawl, portal request, production-row mutation or application submission occurred.
 
 Continue: verify all required exact-head checks on the latest #381 branch head, then let Safe Merge Gate sequence the merge. Do not run a live crawl without a separate owner request.
+
+
+## 27 November 2026 — run 21 contract-classifier negative-phrase review
+
+- **Approved slice continued:** reviewed PR #487 exact code head `b0c1ffa99719857186f321bfb7a908afdc181d5e`. The shared negation helper misses contractions and `not a requirement`: `Contract isn't required`, `Contract is not a requirement`, `Contract role isn't offered` still classify as Contract; `Permanent isn't required` and `Permanent is not a requirement` still classify permanent. The unchanged Pyramid `kindOf()` reads raw text, so `No contract` becomes Contract and `Not permanent` becomes Full Time.
+- **Evidence:** isolated Node 22.16.0 reproduction using copied PR helper/classifier/Pyramid code (not repository tests); PR #487 full CI, crawler classification, Kompas baseline and Plan/REA green at exact head; review COMMENT 6082323751. PR remains DRAFT/non-mergeable; no source fix or merge.
+- **Current production:** alias independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; this PR is not live and no deploy is warranted for a comment/documentation checkpoint.
+- **Execution wall:** canonical checkout/dependencies/installed Next.js 16.3.8 docs unavailable; sandbox restore remains quota-blocked until 1 Dec. No repository tests/build, crawl, portal request, production-row mutation, preview/deployment or application submission.
+
+**Continue:** fix the shared negative normalizer and Pyramid raw-text bypass, add the exact regressions, restack on current master, and rerun full CI/crawler/baseline/Plan-REA. Keep manual-only crawling and the draft/release gates.
