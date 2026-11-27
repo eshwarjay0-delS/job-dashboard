@@ -258,7 +258,7 @@
         method: "POST",
         headers: { "content-type": "application/json" },
         signal: bridgeCtl.signal,
-        body: JSON.stringify({ turns: turns, question: questionText() }),
+        body: JSON.stringify({ turns: turns, question: questionText(), resume: typeof pageResume === "function" ? pageResume() : "" }),
       }).then(function (res) { return res && res.ok ? res.json() : { lines: [] }; })
         .then(function (data) { paintBridgeLines(data && data.lines); })
         .catch(function () { paintBridgeShell(); });

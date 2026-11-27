@@ -717,7 +717,7 @@ function launchCopilot(s, opts = {}) {
   syncLiveAnswerControls(s);
   renderDepth();
   resetLiveState();
-  setAuto(s.autoMode === true);          // default OFF: nothing answers until you press AI Answer
+  setAuto(s.autoMode !== false);          // default ON: a detected question is answered when the speaker goes quiet
   setPersonaChip(s);
   renderConnect(s);                      // Parakeet-style connect step before listening
   renderDrawer();
@@ -982,7 +982,7 @@ async function preparePack(s) {
       if (current !== s) return;
       const ph = cards.findIndex(c => c.question === "Preparing…");
       if (ph >= 0) { cards[ph] = { question: "Ready", answer: ["Prep is retrying in the background — you can Start now; answers still generate live."] }; if (ph === idx) renderCard(); }
-      status("Prep failed: " + (e && e.message || e) + " — retrying…", "err");
+      status("Prep is still warming. You can Start. Answers still generate live.", "live");
       setTimeout(() => { if (current === s && !s.prep) preparePack(s); }, 4000);
       return;
     }
@@ -2102,6 +2102,14 @@ async function start() {
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
   document.querySelector(".rec").classList.add("live");
   status("Starting capture…", "live");
+  const startWatch = setTimeout(() => {
+    if (!starting || captures.length) return;
+    starting = false;
+    running = false;
+    const btn = $("startBtn");
+    if (btn) { btn.textContent = "Start"; btn.classList.remove("on"); }
+    status("No tab audio. Reshare the tab and turn on Share tab audio.", "err");
+  }, 12000);
   captureErrors = [];
   const opening = [];
   if (srcOn.sys) opening.push(startSys());
@@ -2110,8 +2118,10 @@ async function start() {
   // the pick on a laggy remote desktop and forced a re-press (the picker
   // loop). Wait for the captures to settle, however long the pick takes.
   await Promise.allSettled(opening);
+  clearTimeout(startWatch);
   if (!running || generation !== sourceGeneration.You) { starting = false; return; }
-  if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); starting = false; await stop(false); return; }
+  if (!captures.length) { status(captureErrors.join(" · ") || "No tab audio. Reshare the tab and turn on Share tab audio.", "err"); starting = false; await stop(false); return; }
+  if (srcOn.sys && !captures.some(c => c.who === "Them")) status("No tab audio. Reshare the tab and turn on Share tab audio.", "err");
   starting = false;
   markRun();
   reportSources();
@@ -3126,7 +3136,7 @@ function cleanTranscriptText(lines, typed) {
 }
 // Nothing is answered phrase-by-phrase. Everything heard piles up; AI Answer (or Auto, once the
 // speaker goes quiet) merges it, derives ONE big question from all of it, and answers that in full.
-let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer = null;
+let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = true, autoTimer = null;
 const AUTO_QUIET_MS = 2200;
 function pendingHeard() { return transcript.filter(t => t.seq > answeredSeq); }
 function updatePending() {

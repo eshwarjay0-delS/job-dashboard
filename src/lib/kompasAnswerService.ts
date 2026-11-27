@@ -10,7 +10,7 @@ import { createSentenceGate, sentenceCheck, sourcedOpenerFor, splitOpenerPassage
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, deriveByCode, questionForAnswer, DIRECTOR_OPENING,
+  classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, deriveByCode, questionForAnswer, localSpokenAnswer, DIRECTOR_OPENING,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
   answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, structureRepairSystem,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
@@ -819,6 +819,17 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // there is nothing to show. (The button was saying "Answered."
         // with an empty pane because replace "" cleared the delta.)
         const degraded = false
+        if (!raw.trim()) {
+          const local = localSpokenAnswer(job.question, `${job.resume || ""}\n${job.sourceText || ""}`)
+          if (local) {
+            const parts = local.split(/(?<=[.!?])\s+/)
+            show((parts[0] || local) + " ")
+            if (parts.length > 1) show(parts.slice(1).join(" ") + " ")
+            raw = local
+            lastErr = ""
+            servedModel = "local-resume"
+          }
+        }
         if (!raw.trim()) {
           const failure = answerFailure(lastErr)
           emit({ type: "replace", text: "" })
@@ -1729,27 +1740,11 @@ function keepBridgeLine(raw: string): string {
   return line.replace(/\s+/g, " ").trim()
 }
 
-/** One speakable sentence from the cleaned turns. Empty when every model is unreachable. */
-export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string }, signal?: AbortSignal): Promise<string[]> {
+/** Speakable lines from the resume only. No model call, so a blocked key cannot fill the panel with junk. */
+export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string; resume?: string }): Promise<string[]> {
   const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
-  const question = String(input?.question || "").replace(/^(?:INTERVIEWER|Interviewer|Them|You)\b[:\s]*/i, "").replace(/\s+/g, " ").trim()
-  if (!turns.length && question.split(/\s+/).length < 4) return []
-  const keys = await keysFor("kompas:answer", () => resolveKeys({})).catch(() => resolveKeys({}))
-  const system = "Write one natural sentence the candidate can say aloud. No speaker labels. No quotes from the transcript. No 'what you said'. Reply with the sentence only, or NONE."
-  const user = `TURNS:\n${turns.join("\n")}\n\nQUESTION:\n${question}`
-  const ac = signal || AbortSignal.timeout(12000)
-  let text = ""
-  if (keys.openrouter) {
-    for (const model of ANSWER_MODELS) {
-      try {
-        const got = await fetchOpenRouter(keys.openrouter, model, system, user, 160, ac)
-        text = keepBridgeLine(got.text)
-        if (text) break
-      } catch { /* the next allowed model */ }
-    }
-  }
-  if (!text && keys.groq) {
-    try { text = keepBridgeLine(await cheapGroqAnswer(keys.groq, system, user, ac)) } catch { text = "" }
-  }
-  return text ? [text] : []
+  const question = String(input?.question || turns[turns.length - 1] || "").replace(/\s+/g, " ").trim()
+  const spoken = localSpokenAnswer(question, String(input?.resume || ""))
+  return spoken.split(/(?<=[.!?])\s+/).map((line) => keepBridgeLine(line)).filter(Boolean).slice(0, 3)
 }
+

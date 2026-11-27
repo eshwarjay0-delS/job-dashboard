@@ -133,7 +133,7 @@ test("boot scripts share one page and do not throw before Start can render", asy
   sandbox.queueMicrotask = queueMicrotask
 
   const order = ["session-reauth.js", "output-audio.js", "account-sync.js", "app.js"]
-  const tags = order.map(name => html.indexOf('src="' + name + '?v=20261121-speak"'))
+  const tags = order.map(name => html.indexOf('src="' + name + '?v=20261127-reliable"'))
   assert.ok(tags.every((at, i) => at > (i === 0 ? 0 : tags[i - 1])))
   for (const name of order) vm.runInContext(read(name), sandbox, { filename: name })
 

@@ -1,3 +1,7 @@
+## 27 November 2026 — answer reliability
+
+The answer route keeps gpt-oss first and falls through to Llama, Gemini, Groq, then a resume sentence. Multi-part questions stay whole. Behavioral and technical length floors at 150 words. Say this is local resume lines. Auto-answer defaults on. A share with no tab audio asks for a reshare, and Starting capture recovers. One production check follows the ship. Skip-login stays on.
+
 ## 27 November 2026 — run 21 (20:36 CST)
 
 - **Canonical production:** `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Current master is `9c35c4c00be558aaac927df5ba5c1625c540d4ca`, six documentation commits ahead of that runtime SHA; the comparison shows docs-only changes. No runtime redeploy is needed for this checkpoint.
