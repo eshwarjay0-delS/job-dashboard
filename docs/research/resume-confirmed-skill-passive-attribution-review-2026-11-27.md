@@ -26,3 +26,16 @@ Source commit `141590c8c5acf45bf56131b46325a3474cc180c2` broadened the passive a
 ## Gmail privacy review follow-up (27 Nov 2026, 05:24 UTC)
 
 Static source review of PR #576 found a potential cross-account cache leak: `shared`/`inflight` are module globals without an owner ID; the hook uses cached data before checking `snapshotKey()`, and auth-state account changes do not invalidate them (only the explicit sidebar signOut does). COMMENT 6083838182 requests owner-bound cache/inflight and an A→B session-switch regression. This is not a reproduced incident. #576 full CI 45944935727 was in progress with 44 steps green; baseline 45944935730 passed. No local or live Gmail acceptance.
+
+
+## Additional edge case — bare plural passive actors (27 Nov 2026, 05:29 UTC)
+
+The latest matcher still fails to split these conjunction cases:
+- `I used AWS and GCP was used by contractors`
+- `I used AWS and GCP was handled by subcontractors`
+
+The actor alternatives cover `a contractor`, `other contractors` and related phrases, but not bare plural `contractors`/`subcontractors`. The conjunction splitter does not trigger, so the entire first-person statement may be retained and GCP incorrectly treated as candidate evidence. I reproduced the split behavior in an isolated matcher simulation copied from the source regex; no repository parser or test suite was run.
+
+COMMENT review `6083882072` requests negative regressions, safe split/rejection of the non-candidate clause, and retention of the preceding candidate assertion (`I used AWS`). Ordinary `I used AWS and GCP` must continue to pass.
+
+Exact-head status remains: focused `45945333982` (8/8), WhatsApp recovery `45945333791` (9/9), baseline `45945333814` and schema `45945333780` SUCCESS; full CI `45945333802` IN_PROGRESS. No local parser execution or real resume/JD/DOCX acceptance.
