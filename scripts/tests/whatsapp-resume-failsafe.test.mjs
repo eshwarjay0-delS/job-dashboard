@@ -321,5 +321,5 @@ test('real library chooser produces fallback provenance only for the unique expl
   assert.equal(queued[0].files.abs, HOUSTON_PATH)
   assert.equal(docs.length, 1)
   assert.equal(docs[0].body, HOUSTON)
-  assert.match(docs[0].caption, /^Original resume — NOT TAILORED\\n/)
+  assert.match(docs[0].caption, /^Original resume — NOT TAILORED\n/)
 })
