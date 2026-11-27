@@ -2,6 +2,8 @@
 
 ## Scope
 
+The first documentation validation caught an unsupported `commits` field in one Plan Journal entry. Removed it (the Journal schema supports only singular `commit`); remote schema CI is rerunning. This was a docs-only correction, not an application-code test.
+
 Continue the owner-approved canonical MFit/MarketFit backlog. This run performed remote GitHub source/CI review only because the local environment has no canonical checkout or installed dependencies/Next.js 16.3.8 route-handler guide. Prior-context retrieval was scoped; it does not claim access to every conversation.
 
 ## Production and master
