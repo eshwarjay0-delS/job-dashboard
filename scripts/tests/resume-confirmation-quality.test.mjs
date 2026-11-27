@@ -40,6 +40,19 @@ test('no and lack exceptions narrow a positive confirmation instead of confirmin
   }
 })
 
+test('team, colleague, client and organization attribution never confirms their tools', () => {
+  const cases = [
+    ['I used AWS, and my team used GCP', ['I used AWS']],
+    ['I used AWS and my colleague deployed GCP', ['I used AWS']],
+    ['I used AWS, while the client administered GCP', ['I used AWS']],
+    ['My experience includes AWS, but our organization used GCP', ['My experience includes AWS']],
+    ['I used AWS and GCP was used by my team', ['I used AWS']],
+    ['I used AWS, GCP was used by our client, and I used Splunk', ['I used AWS', 'I used Splunk']],
+  ]
+  for (const [statement, expected] of cases) assert.deepEqual(confirmedCandidateStatements([statement]), expected, statement)
+  assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
+})
+
 test('negative contractions narrow a mixed confirmation and repeated skills reject contradictions', () => {
   for (const statement of [
     "I used AWS and don't know GCP",
