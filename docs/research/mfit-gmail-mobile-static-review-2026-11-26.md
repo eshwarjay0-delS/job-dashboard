@@ -24,3 +24,8 @@ Static review COMMENT `6076244479` found no obvious defect in that narrow diff; 
 ## Next
 
 Clean-restack #576 onto current master only in the compliant environment, run exact-head full CI including the digest test, then protected preview and owner-consented two-inbox/narrow-phone acceptance. Preserve the four-account ceiling and keep proactive sending/scheduling off.
+
+
+## 27 November 2026 — run 22 exact-head follow-through
+
+PR #576 moved to head `28d67d66db298bae4bc71e12e377a7837cccbc0b`. The test-only regex correction was followed by exact-head full CI `45989032477` SUCCESS and Kompas baseline `45989032526` SUCCESS. Earlier CI `45986016579` failed two overescaped assertions; that failure is not reused as current. The branch remains DRAFT, 20 commits ahead/8 behind master. Protected preview, two-inbox collision, selected-From, reconnect and narrow-phone acceptance are still missing; no live Gmail access or inbox mutation occurred.
