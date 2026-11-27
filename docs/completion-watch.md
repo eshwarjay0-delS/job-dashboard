@@ -1176,3 +1176,7 @@ PR #598 head `bfc35f6a`: focused confirmed-skill regression `45946866640` and Wh
 ## 27 November 2026 — run 22 Oct 17 WhatsApp source search
 
 A title-only Library DOCX search for the incident window (17 Oct 20:00 UTC-18 Oct 04:00 UTC) returned zero files. Nearby Oct 16 candidates: `Eshwar_Resume(1).docx` (19:49 UTC, 18,283 bytes, 7-page cybersecurity resume) and `Eshwar_Resume(3).docx` (20:54 UTC, 40,609 bytes, Salesforce Development/CPQ; exclude). Neither is proven to be the exact WhatsApp upload. No historical output DOCX, per-run R2 version, webhook correlation, Meta outbound ID or signed receipt was recovered. Do not substitute or replay.
+
+## 27 November 2026 — run 22 iZap incident-history check
+
+Read-only iZap status for business eshwarjay0: disconnected, no WhatsApp numbers, no inbound history, no proven outbound; `search_messages` for `resume` on 17 Oct 2026 (America/Chicago) returned 0. The Library incident-window DOCX search also returned zero; two nearby Oct 16 files are unverified candidates (one Salesforce/CPQ file excluded). Exact original input/output, R2 version, webhook correlation, Meta outbound ID and signed receipt remain missing. Do not replay or substitute.
