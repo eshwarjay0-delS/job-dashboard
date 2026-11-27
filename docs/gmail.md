@@ -225,3 +225,8 @@ The cap does not replace account isolation: each inbox retains its own identity,
 ## 26 November 2026 — multi-account/mobile review checkpoint
 
 PR #576 (head `1757fb68715081525de0f8c7b8bd3bf531ebff20`) adds account-scoped sender mutes and waiting-radar identity, account+thread keys/actions, reply/draft account binding, a four-account cap, and normal-flow mobile navigation. Static review COMMENT `6076244479` found no obvious defect in this narrow diff. Its Kompas baseline passes, but full CI fails at stale-base shared lint `prefer-const` in `src/lib/kompasConsistency.ts:1059`; current master `e2a947` already has that correction. The Gmail account-isolation test is wired into CI but did not run because lint stopped first. PR remains DRAFT pending a current-master restack, exact-head full CI, protected preview, and owner-consented two-inbox/narrow-phone acceptance. No Gmail OAuth or inbox was accessed. Poke-style proactive workers/scheduler/notifications/sending remain disabled. See `docs/research/mfit-gmail-mobile-static-review-2026-11-26.md` for evidence.
+
+
+## 27 November 2026 — run 22 static review
+
+PR #576's shared-lint correction 27f096f is remote CI-in-progress. Static review COMMENT 6083838182 identified a potential cross-account leak: `shared` and `inflight` caches are not tied to a Supabase user ID; `useGmailData` may initialize/short-circuit with cached account A mail, while the sidebar clears only on explicit signOut and the auth-state change handler doesn't invalidate it. Add a user-bound cache and A→B session replacement regression before merge. No leak was reproduced, no local tests, no Gmail OAuth/inbox or phone acceptance. Four-account maximum and no proactive sending/workers/scheduler remain.
