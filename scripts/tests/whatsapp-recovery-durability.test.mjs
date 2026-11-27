@@ -246,3 +246,21 @@ test("authenticated recovery route checkpoints progress before long work and use
   assert.ok(worker.includes('stage: "attempt_started"'))
   assert.ok(worker.includes('stage: "attempt_finished"'))
 })
+
+
+test("explicit same-account Files selection provenance survives durable recovery", async () => {
+  const api = harness()
+  const files = {
+    userDir: "/data/user-resumes/user",
+    email: "candidate@example.test",
+    said: "the resume you named",
+    depth: 0,
+    rel: "candidate@example.test/GRC/resume.docx",
+    abs: "/data/user-resumes/user/candidate@example.test/GRC/resume.docx",
+    explicitSelection: true,
+  }
+  await api.enqueueResumeRecovery({ ...input(88), files })
+  const job = await api.readResumeRecovery(id(88))
+  assert.equal(job.files.explicitSelection, true)
+  assert.equal(job.files.abs, files.abs)
+})
