@@ -1132,3 +1132,18 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - PR #598 exact-head checks on the prior head `6fb23b1` were all green: focused `46045848247`, full CI `46045848277`, Plan/REA `46045848290`, Kompas baseline `46045848258`, WhatsApp recovery `46045848255`. **Those results do not carry forward to the new commit.**
 - No local build/test, protected preview, model call, authorized resume/JD/confirmation, exported DOCX, merge or production deployment. The PR remains unmerged and the live 95–100% factual-match claim is unsupported.
 
+
+
+
+## 27 November 2026 — run 28 cross-domain reconciliation
+
+- Master `1eb604b` is docs-only; production alias `job-dashboard-fawn.vercel.app` is READY at runtime SHA `a17b3267`. No runtime deployment in this run.
+- Resume PR #598: new code `c7e3939`, docs `487f1d6`; exact-head CI/focused/recovery IN_PROGRESS, schema/baseline SUCCESS. Source-derived 13-case simulation passed, but no local tests, preview or real DOCX acceptance.
+- WhatsApp PR #600: `c8a725726744c70de24d5fd962cbcd3c93ba8c83`; full CI `46069070101`, recovery `46069069947`, schema `46069069964`, baseline `46069069968` all SUCCESS. DRAFT; no preview or real send/replay/device acceptance.
+- Gmail/mobile PR #576: `e6ba204`; full CI `46039242535` and baseline `46039242543` SUCCESS. DRAFT, 20 ahead/8 behind, no clean restack, preview, OAuth/inbox read, two-inbox or mobile acceptance. Four-account cap; Poke worker/scheduler/notifications/sending remain disabled.
+- Contract crawler PR #605: `bc6c087`; full CI `46028682703`, manual-only `46028682513`, freshness/classification `46028682536`, baseline `46028682704` SUCCESS. DRAFT; no preview/API smoke/live crawl. Location/remote filters post-page (100 rows) and 60s route vs 230s runner underfill remain.
+- PR #580 owner merge tap remains; #591 fails route assertions 93/94/96/97/98. Do not weaken gates.
+- Read-only Supabase aggregate: 22 session rows (15 active/7 tombstones), 1 owner; 28 artifacts across 13 sessions, 1 owner; 0 active payload-ID mismatches. Rows are not proof of real two-device sync.
+- Issues #120 (50 real Kompas pairs/human/native acceptance), #147 (refresh-token family) and #148 (unified session discovery) remain open. 17 Oct incident still lacks exact source/output DOCX, R2 version, webhook correlation, Meta ID and signed receipt.
+- Blockers: no local checkout/dependencies (GitHub DNS), Vercel sandbox 402 until 1 Dec 00:00 UTC, installed Next.js 16.3.8 route guide unavailable, protected preview requires private `KOMPAS_VERCEL_API_TOKEN`. No real email/WhatsApp send, OAuth/inbox read, live crawl, model or device test.
+

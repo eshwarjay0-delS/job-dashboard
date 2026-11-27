@@ -85,3 +85,14 @@ The separate capture heuristics in PR #462 are **not directly owner-approved in 
 PR #462 exact-head CI, Kompas baseline, cross-device, Plan/REA and Windows package gates passed. It was merged by `cursor[bot]` as `4f5030938b6b13b7996fb215e35b8aebad2230b2` and is now behind the canonical production alias. The PR body said “No [ship] on this commit” while the resulting merge commit begins `[ship]`; the Git-linked pipeline deployed it. No PR review was recorded. Treat the new capture heuristics as proposed, not owner-accepted; do not extend or claim their acceptance without a direct owner decision. The JD-only evidence filter remains aligned with the approved Chief Relevance rule.
 
 Actual Windows Live Captions listen-through, complete-tail preservation and native acceptance remain unverified. A synthetic 20/20 suite and a READY deployment are not substitutes. Any rollback must be narrowly scoped to the unapproved capture heuristics and must preserve the JD-only evidence filter; do not change production behavior without a separate owner decision.
+
+
+
+## 27 November 2026 — run 28 current cross-platform checkpoint
+
+Production master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is docs-only and the canonical Vercel alias remains READY at runtime `a17b3267e271c77cd8887312445271b7fa172bd0`; no runtime release occurred. Production Supabase aggregate read-only: 22 session rows (15 active, 7 tombstones) for one owner; 28 artifacts across 13 sessions, one owner; 0 active payload-ID mismatches. This is persisted-data evidence only, not signed-in two-device or Windows/WhatsApp convergence.
+
+- PR #600 WhatsApp explicit same-account library fallback: exact head `c8a725`, all four CI/recovery/schema/baseline gates SUCCESS; still DRAFT with no protected preview, real Meta send/replay or owner-device acceptance.
+- PR #598 resume confirmed-skill alignment: new source commit `c7e3939` plus docs `487f1d6`; exact-head CI/focused/recovery IN_PROGRESS, schema/baseline SUCCESS. The source-derived actor attribution guard passes 13/13 isolated simulation cases. Keep unmerged pending remote CI, protected preview and real resume/JD/confirmation/DOCX acceptance.
+- Actual 50-pair Kompas/ChatGPT answer comparison, human 8-axis scoring, native Windows speech and WhatsApp latency/parity remain open (#120). Refresh-token family rotation (#147) and unified web/Windows/WhatsApp session discovery (#148) remain open. No private token, answer bundle, Windows/phone access or authenticated E2E was available.
+
