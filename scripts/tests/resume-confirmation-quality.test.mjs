@@ -36,6 +36,34 @@ test('coordinated non-candidate attribution does not confirm later skills', () =
   assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
 })
 
+test('active non-candidate actors do not confirm their skills', () => {
+  const cases = [
+    'I used AWS and someone used GCP',
+    'I used AWS and somebody deployed GCP',
+    'I used AWS and anyone configured GCP',
+    'I used AWS and contractors deployed GCP',
+    'I used AWS and a contractor deployed GCP',
+    'I used AWS and subcontractors managed GCP',
+    'I used AWS and consultants configured GCP',
+    'I used AWS and a consultant configured GCP',
+    'I used AWS and vendors operated GCP',
+    'I used AWS and employees used GCP',
+    'I used AWS and other people used GCP',
+    'I used AWS and another person deployed GCP',
+    'I used AWS and outside consultants deployed GCP',
+    'I used AWS and third-party contractors configured GCP',
+    'I used AWS, a vendor deployed GCP',
+    'I used AWS and my contractors deployed GCP',
+    'I used AWS and my team used GCP',
+  ]
+  for (const statement of cases) {
+    assert.deepEqual(confirmedCandidateStatements([statement]), ['I used AWS'], statement)
+  }
+  for (const statement of ['I used AWS and GCP', 'I have experience with AWS and Terraform']) {
+    assert.deepEqual(confirmedCandidateStatements([statement]), [statement], statement)
+  }
+})
+
 for (const input of [
   'I have maybe used AWS',
   'I used AWS, maybe',
