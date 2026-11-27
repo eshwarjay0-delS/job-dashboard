@@ -36,3 +36,9 @@ Remote GitHub source/check review and two review comments were performed. No can
 ## Continue
 
 Continue: implement the durable same-account WhatsApp Files/Library selection marker and exact `Original resume — NOT TAILORED` fallback with unsupported-JD hard hold in the actual webhook route once the compliant checkout and Next.js 16.3.8 guide are restored, while preserving #591's failing assertions. In parallel after environment recovery, add the SOC actor regressions to #598, require depth-0 original fallback in #600, clean-restack #576, and test #605's server-side location/remote filtering. Keep all drafts unmerged until exact-head gates, independent review, protected preview and their real acceptance gates pass.
+
+
+## Owner-approval provenance correction
+
+Accessible prior-conversation retrieval confirms a 27 Oct closest-match fallback request was **superseded** by the 20 Nov correction. The current approved fallback is only an explicitly selected, verified same-account Files/Library item, sent unchanged with the exact caption `Original resume — NOT TAILORED`. No closest-match, fresh/uploaded-original, cross-account, or silent substitution; if selection is unproven, explain, save the conversation and send no file. The selected source must preserve exact bytes. The depth-0 guard raised in comment 7226875770 is a review recommendation inferred from the caption/original designation, not a separate explicit owner instruction.
+
