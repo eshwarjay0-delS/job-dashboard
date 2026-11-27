@@ -44,3 +44,8 @@ Exact-head status remains: focused `45945333982` (8/8), WhatsApp recovery `45945
 ## Terminal gate status and new review hold (27 Nov 2026, 05:33 UTC)
 
 All five remote checks on PR #598 exact head `1b2a68fa` are SUCCESS: full CI `45945333802`, focused `45945333982` (8/8), WhatsApp recovery `45945333791`, Kompas baseline `45945333814`, and Plan/REA `45945333780`. However, these tests do not cover the new finding in COMMENT `6083882072`: bare passive actors `contractors`/`subcontractors` can leave the conjunction unsplit. Keep PR #598 unmerged until this edge is fixed and exact-head tests rerun. No local execution or real resume/JD/DOCX acceptance.
+
+
+## Implementation follow-through (27 Nov 2026, 05:38 UTC)
+
+Code commit `583ed9ce5ac900eabce542b398fe26b9855706cb` adds bare/compound passive actor alternatives; test commit `bfc35f6a637c101c0c19a3537ddaba57fe8d9745` adds nine negative inputs. Isolated matcher simulation passed 9/9 negatives plus the positive candidate AWS/GCP list. Exact head `bfc35f6a`: Plan/REA schema `45946866769` and Kompas baseline `45946866741` SUCCESS; focused `45946866640`, full CI `45946866833`, WhatsApp recovery `45946866763` IN_PROGRESS. PR #598 is DRAFT. No local repository test or real resume/JD/DOCX acceptance.
