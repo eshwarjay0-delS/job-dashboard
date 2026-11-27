@@ -39,3 +39,8 @@ The actor alternatives cover `a contractor`, `other contractors` and related phr
 COMMENT review `6083882072` requests negative regressions, safe split/rejection of the non-candidate clause, and retention of the preceding candidate assertion (`I used AWS`). Ordinary `I used AWS and GCP` must continue to pass.
 
 Exact-head status remains: focused `45945333982` (8/8), WhatsApp recovery `45945333791` (9/9), baseline `45945333814` and schema `45945333780` SUCCESS; full CI `45945333802` IN_PROGRESS. No local parser execution or real resume/JD/DOCX acceptance.
+
+
+## Terminal gate status and new review hold (27 Nov 2026, 05:33 UTC)
+
+All five remote checks on PR #598 exact head `1b2a68fa` are SUCCESS: full CI `45945333802`, focused `45945333982` (8/8), WhatsApp recovery `45945333791`, Kompas baseline `45945333814`, and Plan/REA `45945333780`. However, these tests do not cover the new finding in COMMENT `6083882072`: bare passive actors `contractors`/`subcontractors` can leave the conjunction unsplit. Keep PR #598 unmerged until this edge is fixed and exact-head tests rerun. No local execution or real resume/JD/DOCX acceptance.
