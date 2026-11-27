@@ -1,3 +1,10 @@
+## 27 November 2026 — run 22 validation checkpoint (05:26 UTC)
+
+- **PR #598:** exact head `1b2a68fa`; focused confirmed-skill run `45945333982` SUCCESS (8/8) and WhatsApp recovery `45945333791` SUCCESS (9/9), plus baseline `45945333814` and Plan/REA `45945333780` SUCCESS. Full CI `45945333802` remains IN_PROGRESS at Lint. No merge or live resume/DOCX acceptance.
+- **PR #576:** lint correction `27f096f`; full CI `45944935727` remains IN_PROGRESS at Kompas S1 replay with 44 steps green/no failures; baseline `45944935730` SUCCESS. Static privacy COMMENT `6083838182`: unbound Gmail shared/inflight cache and auth-change path may expose account A data to B if session replacement bypasses explicit sidebar signOut. No leak reproduced; fix and A→B test remain.
+- **PR #599:** docs branch latest `dc871b9` now records terminal #598 focused/recovery gates and the Gmail cache finding. Previous-head full CI `45945732173`, schema `45945731259`, baseline `45945731258` were IN_PROGRESS; the latest doc head has not yet been queried for checks.
+  
+**Continue:** await #598 full CI; #576 must fix cache ownership before merge/preview/two-inbox/phone acceptance. Check #599 exact-head checks after its latest documentation commits. Do not deploy or claim live acceptance.
 ## 27 November 2026 — run 22 Gmail privacy follow-up (05:24 UTC)
 
 - **PR #576 cache review:** COMMENT `6083838182` found that the module-level `shared`/`inflight` Gmail cache is not user-ID-bound. `useGmailData()` initializes from `shared` and can short-circuit before `snapshotKey()`; the sidebar clears it on explicit signOut, but the auth-state user-ID change handler does not invalidate the cache. Session replacement without the sidebar signOut could show A's mail to B or publish A's in-flight result. This is a source-traced potential privacy leak, not a reproduced incident. Fix needs owner-bound cache/inflight and an A→B regression.
