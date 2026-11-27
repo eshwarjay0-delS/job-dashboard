@@ -87,3 +87,8 @@ The source branch now shares a passive auxiliary matcher for `was/were/is/are`, 
 ## Exact-head validation status
 
 PR #598 head `10a621060626e3619445b55c59ce0270b0b9b06d`; source commits `38428a1d`, `0b206f3e`, `10a62106`, test commit `1befe183`. All five new exact-head remote gates are queued (full CI 46041706244, focused 46041706287, WhatsApp recovery 46041706854, baseline 46041706180, schema 46041706156). The PR is open/mergeable/non-draft but no independent APPROVED review exists. Do not merge or deploy before terminal CI, review, protected preview and owner-authorized resume/JD/confirmation plus exported-DOCX acceptance.
+
+
+### Run 28 correction (27 November 2026)
+
+The prior exact-head recovery run `46041706854` failed 1/60 on `I used AWS and GCP isn't being configured by a colleague`: GCP was retained. Although the passive matcher matched in isolation, the splitter lookahead interpolated regex constants with ungrouped alternatives, allowing alternation to escape the lookahead. Source commit `493ae6f` groups each alternative. Source-derived simulation now splits all eight progressive/negated passive cases to AWS-only and preserves the ordinary AWS+GCP positive control; this is not local test execution. Latest exact-head full/focused/recovery runs `46042179561`, `46042179568`, `46042179653` are IN_PROGRESS; baseline `46042179605` and schema `46042179617` are SUCCESS. PR #598 remains unmerged pending exact-head CI, independent review, protected preview and real DOCX acceptance.
