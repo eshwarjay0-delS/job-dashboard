@@ -1168,3 +1168,7 @@ PR #598 exact head `1b2a68fa` now has **all five remote gates SUCCESS**, includi
 - **Acceptance:** no local parser test, protected preview, model call or exported-DOCX acceptance. Keep the branch unmerged until exact-head gates are terminal, review is independent, and owner-authorized real resume/JD/confirmation plus DOCX inspection pass.
 
 **Continue:** check exact-head remote gates; fix failures and retain candidate-evidence boundaries.
+
+## 27 November 2026 — run 22 exact-head gate update (05:41 UTC)
+
+PR #598 head `bfc35f6a`: focused confirmed-skill regression `45946866640` and WhatsApp recovery `45946866763` have now completed SUCCESS, alongside baseline `45946866741` and Plan/REA schema `45946866769`. Full CI `45946866833` remains IN_PROGRESS. The PR is DRAFT; no local parser test or real resume/DOCX acceptance.
