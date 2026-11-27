@@ -1,3 +1,13 @@
+## 27 November 2026 — run 23 continuation (remote review and branch corrections)
+
+- **Master/production:** canonical master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` remains docs-only relative to READY production runtime `a17b3267e271c77cd8887312445271b7fa172bd0`; these branch changes do not affect production.
+- **WhatsApp fallback PR #600:** head `52ac8e8fb545d3ec47438494aaf75dd6709f4d5d`. Recovery `45983345565`, baseline `45983345643`, and Plan/REA schema `45983345579` are SUCCESS; full CI `45983345577` is IN_PROGRESS. The ambiguous-hint test timing was corrected in commit `52ac8e8f`. COMMENT review `6086800378` on prior head is not an approval. Protected preview `dpl_6DSJnRHCpYB32hVtZgYvjAkLgjKA` was CANCELED by Vercel's Ignored Build Step because the commit lacked `[ship]`; no override or bypass was attempted. Keep DRAFT; no live WhatsApp send/replay.
+- **Resume/JD confirmed-skill PR #595:** source commit `e3f53d1eb7e34f9ff0cbd96f112c8bb21115166e` and tests `db4322e0c293523e13b58af72da9617874d41fab` separate coordinated team/colleague/client/organization attribution and strip passive clauses. Regression cases preserve candidate AWS/Splunk while rejecting group-attributed GCP. New exact-head workflows/status are not visible; this code is **unvalidated**. #595 remains DRAFT/non-mergeable, stale base; deterministic role-scoped confirmed-skill placement is still unresolved.
+- **17 Oct WhatsApp incident:** still UNVERIFIED. Exact uploaded/source DOCX, generated DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed receipt are missing.
+- **Execution:** GitHub source and Actions metadata only. No local test/build, real DOCX/model, WhatsApp/Meta send or replay, DB/R2 mutation, production deploy, or authenticated device acceptance.
+
+**Continue:** check exact-head #600 CI; do not bypass the `[ship]` preview guard. Next resume task is deterministic role-scoped confirmed-skill placement, then clean restack and remote validation. Keep the incident unverified until evidence is correlated.
+
 ## 27 November 2026 — run 22 continuation (03:52 CST)
 
 - **Master/production:** canonical master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is docs-only beyond runtime. `job-dashboard-fawn.vercel.app` independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; no runtime deploy.
