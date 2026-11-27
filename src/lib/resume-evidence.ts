@@ -55,7 +55,7 @@ const NON_CANDIDATE_PASSIVE = String.raw`(?:[a-z][a-z0-9.+#/-]*\s+)?(?:was|were|
 const NON_CANDIDATE_TEAM_SUBJECT = String.raw`(?:(?:my|our|their|the|a|an)\s+)?(?:[a-z][a-z0-9.+#/-]*\s+){0,3}teams?\b`
 const NON_CANDIDATE_TEAM_PASSIVE = String.raw`(?:[a-z][a-z0-9.+#/-]*\s+)?(?:was|were|is|are|has been|have been|had been)\s+(?:used|managed|deployed|implemented|configured|maintained|operated|tested|built|developed|supported|administered|performed|conducted|provided|created|delivered|handled)\s+(?:by|for|with)\s+${NON_CANDIDATE_TEAM_SUBJECT}`
 
-const splitNonCandidateAttribution = (line: string): string[] => line
+  .split(new RegExp(String.raw`(?:,\\s*|\\b(?:and\\s+then|or\\s+then|and|or|while|whereas|along with|then)\\s+)(?=${NON_CANDIDATE_SUBJECT}|${NON_CANDIDATE_PASSIVE}`, "i"))
   .split(new RegExp(String.raw`(?:,\s*|\b(?:and|or|while|whereas|along with)\s+)(?=${NON_CANDIDATE_SUBJECT}|${NON_CANDIDATE_PASSIVE}|${NON_CANDIDATE_TEAM_SUBJECT}|${NON_CANDIDATE_TEAM_PASSIVE})`, "i"))
   .map(part => part.replace(/[ ,\s]+$/, "").trim())
 
