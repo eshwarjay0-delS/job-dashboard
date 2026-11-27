@@ -1172,3 +1172,7 @@ PR #598 exact head `1b2a68fa` now has **all five remote gates SUCCESS**, includi
 ## 27 November 2026 — run 22 exact-head gate update (05:41 UTC)
 
 PR #598 head `bfc35f6a`: focused confirmed-skill regression `45946866640` and WhatsApp recovery `45946866763` have now completed SUCCESS, alongside baseline `45946866741` and Plan/REA schema `45946866769`. Full CI `45946866833` remains IN_PROGRESS. The PR is DRAFT; no local parser test or real resume/DOCX acceptance.
+
+## 27 November 2026 — run 22 Oct 17 WhatsApp source search
+
+A title-only Library DOCX search for the incident window (17 Oct 20:00 UTC-18 Oct 04:00 UTC) returned zero files. Nearby Oct 16 candidates: `Eshwar_Resume(1).docx` (19:49 UTC, 18,283 bytes, 7-page cybersecurity resume) and `Eshwar_Resume(3).docx` (20:54 UTC, 40,609 bytes, Salesforce Development/CPQ; exclude). Neither is proven to be the exact WhatsApp upload. No historical output DOCX, per-run R2 version, webhook correlation, Meta outbound ID or signed receipt was recovered. Do not substitute or replay.
