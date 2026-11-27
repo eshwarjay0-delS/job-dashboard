@@ -1,0 +1,276 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 4 /Kids [5 0 R 7 0 R 9 0 R 11 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 3248 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(KOMPAS INTERVIEW PACK: CROWDSTRIKE) Tj
+T* () Tj
+T* (Tree: Endpoint branch, CrowdStrike leaf. Defender is the sibling leaf and is also absent.) Tj
+T* () Tj
+T* (Source: src/lib/kompas-houston-resume.txt, the eshwarjay05 Houston resume that Kompas's) Tj
+T* (honesty gate uses when no session resume is loaded. The gate's note says the full Fortinet) Tj
+T* (docx is not in this repo, so this pack uses only that summary. It does not use the Saint) Tj
+T* (Louis profile, jayeshwar44, eshwarjay06, jayeshwar24, or any other file in resumes/.) Tj
+T* () Tj
+T* (Coverage: CrowdStrike is not on the Houston resume. The honesty gate denies a first-person) Tj
+T* ("I used CrowdStrike". FortiAnalyzer supported the FortiGate-VM deployments. That is firewall) Tj
+T* (logging and management support, not endpoint detection and response.) Tj
+T* () Tj
+T* (1. MUST-MENTION) Tj
+T* () Tj
+T* (- Say in the first two sentences that he has not used CrowdStrike and has not run Falcon.) Tj
+T* (- If they hear "Analyzer" and try to treat it as EDR, correct it: FortiAnalyzer supported) Tj
+T* (the FortiGate-VM deployments. He will not quote detections, a mean time, or a host he) Tj
+T* (isolated.) Tj
+T* (- Ramp line, future tense only: he would learn the sensor, the detection queue, and) Tj
+T* (containment with the endpoint team. He would not invent a malware incident to practice the) Tj
+T* (story.) Tj
+T* () Tj
+T* (Resume facts he may use, and only these:) Tj
+T* () Tj
+T* (- Title on the summary: Fortinet AWS Cloud Networking Engineer.) Tj
+T* (- Nine-plus years designing, deploying, and migrating secure network infrastructures across) Tj
+T* (multi-region AWS environments.) Tj
+T* (- He led the end-to-end FortiGate-VM deployments.) Tj
+T* (- Those deployments include active/active and active/passive HA clusters integrated with AWS) Tj
+T* (Gateway Load Balancer and Transit Gateway.) Tj
+T* (- Cisco FTD to Fortinet migrations across six AWS regions. The summary says those) Tj
+T* (migrations, and the FortiGate-VM deployments, are the part he can speak to.) Tj
+T* (- FortiManager and FortiAnalyzer supported those FortiGate-VM deployments.) Tj
+T* (- NERC CIP applied to the network change and the zero-downtime cutovers.) Tj
+T* (- The wider cutover beyond the FortiGate-VM clusters was a team effort.) Tj
+T* (- The summary does not name an employer company, a customer, a date range, a certification,) Tj
+T* (a ticket count, or an outage. Say that before filling any of them in.) Tj
+T* () Tj
+T* (2. WHAT TO AVOID) Tj
+T* () Tj
+T* (- Do not say "I deployed CrowdStrike", "I tuned a Falcon policy", or "I isolated a host.") Tj
+T* (- Do not convert FortiAnalyzer into a SIEM story or an EDR story. Splunk and Sentinel are) Tj
+T* (also absent.) Tj
+T* (- Do not give a mean-time-to-detect, a sensor count, or a malware family.) Tj
+T* () Tj
+T* (On every pack:) Tj
+T* () Tj
+T* (- Do not start with "Having nine years" or any "Having [N] years" opener.) Tj
+T* (- Do not say he personally led the wider cutover. That cutover was a team effort. His part) Tj
+T* (is the FortiGate-VM clusters and the six-region Cisco FTD to Fortinet migration.) Tj
+T* (- Do not invent an outage, a Sev-1, data loss, or a failed cutover. The summary does not) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 3509 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(name one. Active/passive failover is a test condition on the HA clusters, not a production) Tj
+T* (incident.) Tj
+T* (- Do not invent an employer, a customer, a region name, a date, a certification, or a) Tj
+T* (metric. "Six AWS regions", "nine-plus years", and "zero-downtime" are the only scale lines) Tj
+T* (on the summary.) Tj
+T* (- Do not use Saint Louis, jayeshwar44, eshwarjay06, jayeshwar24, Cigna, Citi, McKesson,) Tj
+T* (Molina, or Valero.) Tj
+T* (- Do not claim Dragos, Qualys, Splunk, Burp, CyberArk, Industrial Defender, Sentinel, Wiz,) Tj
+T* (Zscaler, Fortify, Snyk, or OSCP. None of those are on this resume. The honesty gate treats a) Tj
+T* (first-person "I used" on that list as a false claim.) Tj
+T* (- Do not claim Security+, CISSP, AZ-500, PenTest+, CySA+, or any other certificate. None are) Tj
+T* (on this summary.) Tj
+T* (- Do not describe visa, pay, location, or work authorization.) Tj
+T* () Tj
+T* (3. IMPACT STORIES) Tj
+T* () Tj
+T* (These are set inside the Fortinet AWS Cloud Networking Engineer role on the Houston summary.) Tj
+T* (They are not new employers. Where the summary is silent, the story says so instead of) Tj
+T* (filling the gap.) Tj
+T* () Tj
+T* (STORY 1. DAILY PROGRESS ON THE FORTIGATE-VM CLUSTERS) Tj
+T* () Tj
+T* (In the Fortinet AWS Cloud Networking Engineer role, the daily progress I can stand behind is) Tj
+T* (the FortiGate-VM work. I led those deployments end to end. The concrete piece is the) Tj
+T* (clusters: active/active and active/passive HA, integrated with AWS Gateway Load Balancer and) Tj
+T* (Transit Gateway. FortiManager and FortiAnalyzer supported those deployments, so the) Tj
+T* (management and the logging I can talk about sit on that firewall path. The summary does not) Tj
+T* (give a ticket count, a standup roster, or a clock time, so I will not invent a queue or a) Tj
+T* (meeting that happened at 9. If someone asks what moved, I stay on whether the FortiGate-VM) Tj
+T* (cluster and its HA were in shape for the change.) Tj
+T* () Tj
+T* (FortiAnalyzer in that day is support for the FortiGate-VM deployments. It is not a) Tj
+T* (CrowdStrike console, and I will not narrate Falcon detections I did not work.) Tj
+T* () Tj
+T* (STORY 2. THE MEETING HE CAN HOLD: THE SIX-REGION MIGRATION) Tj
+T* () Tj
+T* (The meeting I can actually hold is a walkthrough of the Cisco FTD to Fortinet migrations) Tj
+T* (across six AWS regions, together with the FortiGate-VM deployments. The summary says those) Tj
+T* (two are the part I can speak to. I open with what I led, the FortiGate-VM deployments and) Tj
+T* (the HA clusters on Gateway Load Balancer and Transit Gateway, and I say the wider cutover) Tj
+T* (beyond those clusters was a team effort. I do not name attendees, a customer, or a region) Tj
+T* (code, because the summary does not. If the room is a change review, I can say NERC CIP) Tj
+T* (applied to the network change and the cutovers were zero-downtime. I cannot produce a) Tj
+T* (calendar invite or a decision log that was never written down here.) Tj
+T* () Tj
+T* (If the meeting asks for the endpoint agent on those migrations, I say CrowdStrike is not on) Tj
+T* (my resume. The walkthrough stays on FTD to Fortinet.) Tj
+T* () Tj
+T* (STORY 3. THE CONTROL-OWNER CONVERSATION, WITHOUT A CUSTOMER NAME) Tj
+T* () Tj
+T* (The closest thing on this resume to a customer or control-owner interaction is the network) Tj
+T* (change under NERC CIP, including the zero-downtime cutovers. I will not invent a utility) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+8 0 obj
+<< /Length 3141 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(name, a control owner's name, or a meeting where someone signed an evidence sheet. What I) Tj
+T* (can say is that NERC CIP applied to that network change and to those cutovers, and that my) Tj
+T* (part was the FortiGate-VM clusters, not the wider cutover. If a reviewer asks whether I can) Tj
+T* (explain the firewall path, I explain the HA design and the six-region FTD-to-Fortinet) Tj
+T* (migration. If they ask for a named account, I say that name is not on my resume and I will) Tj
+T* (not make it up.) Tj
+T* () Tj
+T* (I will not recast the NERC CIP network change as an endpoint policy I enforced in Falcon.) Tj
+T* () Tj
+T* (STORY 4. WHAT HE DOES WHEN THEY ASK WHAT WENT WRONG) Tj
+T* () Tj
+T* (The summary does not name an outage, a failed cutover, or hours of downtime, so I will not) Tj
+T* (tell one. The grounded situation is active/passive failover on the HA clusters during) Tj
+T* (cutovers that were zero-downtime. I do not turn that test into a story about production) Tj
+T* (breaking. If a check had failed, the method I will say out loud is to keep the old path up) Tj
+T* (and write down what the test showed. I do not have such a failure written on this resume, so) Tj
+T* (I will not claim one happened. The wider cutover stayed a team effort. I speak to the) Tj
+T* (FortiGate-VM deployments and the six-region migration.) Tj
+T* () Tj
+T* (I will not use a firewall failover test as proof that I contained a host in CrowdStrike. The) Tj
+T* (summary names no incident.) Tj
+T* () Tj
+T* (STORY 5. BRIDGE WHEN THEY ASK FOR A STORY THIS RESUME DOES NOT HAVE) Tj
+T* () Tj
+T* (This is a ramp, not a past CrowdStrike project. If they ask for a detection story, I say I) Tj
+T* (have not used CrowdStrike. What I would do is learn how that team deploys sensors and) Tj
+T* (triages detections, while my own examples stay on FortiAnalyzer as support for the) Tj
+T* (FortiGate-VM deployments, plus the HA cutovers. I would not invent malware, a host name, or) Tj
+T* (a containment action.) Tj
+T* () Tj
+T* (4. PROBE QUESTIONS) Tj
+T* () Tj
+T* (A big true claim still draws a scope test. A claim this resume cannot support has to be) Tj
+T* (declined.) Tj
+T* () Tj
+T* (IF HE MENTIONS FORTIANALYZER) Tj
+T* () Tj
+T* (That tool is on the summary, and it is the claim most likely to be inflated into EDR.) Tj
+T* () Tj
+T* (- Probe: "So FortiAnalyzer was your detection stack. What did you catch?") Tj
+T* (- Follow-up: "How fast did you isolate?") Tj
+T* (- Follow-up: "Was CrowdStrike feeding that, or was Falcon the console you lived in?") Tj
+T* (- Safe shape: FortiAnalyzer supported the FortiGate-VM deployments. No catch, no isolate) Tj
+T* (time, no Falcon. CrowdStrike is not on the resume.) Tj
+T* () Tj
+T* (IF HE IS PUSHED INTO CROWDSTRIKE) Tj
+T* () Tj
+T* (- Probe: "Walk me through a Falcon detection you closed.") Tj
+T* (- Follow-up: "Which prevention policy did you change after it?") Tj
+T* (- Follow-up: "Tell me about a host you network-contained during the cutover.") Tj
+T* (- Safe shape: he has not done that. No detection name, no policy, no host. Bridge to the) Tj
+T* (firewall path, then the ramp.) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+10 0 obj
+<< /Length 3711 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+() Tj
+T* (5. SPEAKABLE ANSWERS) Tj
+T* () Tj
+T* (First person. 120 to 180 words. The bridge is in the answer, not after it.) Tj
+T* () Tj
+T* (ANSWER A. HAVE YOU WORKED IN CROWDSTRIKE?) Tj
+T* () Tj
+T* (Spoken length: 168 words.) Tj
+T* () Tj
+T* (I have not used CrowdStrike, and I will not describe a Falcon detection, a prevention) Tj
+T* (policy, or a host I contained. My resume is the Fortinet AWS Cloud Networking Engineer) Tj
+T* (summary: nine-plus years designing, deploying, and migrating secure network infrastructure) Tj
+T* (across multi-region AWS. I led the FortiGate-VM deployments, including active/active and) Tj
+T* (active/passive HA clusters integrated with AWS Gateway Load Balancer and Transit Gateway.) Tj
+T* (The part I can walk is those deployments and the Cisco FTD to Fortinet migrations across six) Tj
+T* (AWS regions. FortiManager and FortiAnalyzer supported those FortiGate-VM deployments. That) Tj
+T* (is support for the firewall path, not an endpoint detection stack, and I will not pretend it) Tj
+T* (is CrowdStrike. NERC CIP applied to the network change and to the zero-downtime cutovers.) Tj
+T* (The wider cutover beyond the FortiGate-VM clusters was a team effort. The summary names no) Tj
+T* (incident and no malware. If the seat needs CrowdStrike, I would learn the sensor and the) Tj
+T* (detection queue with the endpoint team, and I would not invent an incident to sound fluent.) Tj
+T* () Tj
+T* (ANSWER B. FORTIANALYZER CAUGHT THE ENDPOINT THREATS DURING THOSE CUTOVERS, RIGHT?) Tj
+T* () Tj
+T* (Spoken length: 155 words.) Tj
+T* () Tj
+T* (No. I will not say FortiAnalyzer caught endpoint threats. The summary says FortiManager and) Tj
+T* (FortiAnalyzer supported the FortiGate-VM deployments, and that is as far as I can take those) Tj
+T* (two products. I led those deployments, with active/active and active/passive HA integrated) Tj
+T* (with AWS Gateway Load Balancer and Transit Gateway. I can also speak to the Cisco FTD to) Tj
+T* (Fortinet migrations across six AWS regions. CrowdStrike is not on the resume, so Falcon was) Tj
+T* (not the console I lived in, and I will not say it fed FortiAnalyzer. The cutovers I will) Tj
+T* (describe were zero-downtime, and NERC CIP applied to the network change. The summary does) Tj
+T* (not name a detection, a host, or an isolation, so I will not add them. The wider cutover was) Tj
+T* (a team effort. If they want endpoint detection and response, I would ramp with the team that) Tj
+T* (already runs it. I will not convert a firewall support tool into that story.) Tj
+T* () Tj
+T* (ANSWER C. TELL ME ABOUT A HOST YOU CONTAINED IN THE MIDDLE OF A CUTOVER.) Tj
+T* () Tj
+T* (Spoken length: 158 words.) Tj
+T* () Tj
+T* (I do not have a host containment to tell. CrowdStrike is not on my resume, and the summary) Tj
+T* (does not name an incident, so I will not invent a machine I pulled off the network during a) Tj
+T* (cutover. The cutover work I can talk about is the FortiGate-VM path. I led those) Tj
+T* (deployments, including active/active and active/passive HA on AWS Gateway Load Balancer and) Tj
+T* (Transit Gateway, and the cutovers were zero-downtime. NERC CIP applied to that network) Tj
+T* (change. If a failover check had failed, I would keep the old path up and write down what the) Tj
+T* (test showed. I have not recorded that failure here, and I will not replace it with a malware) Tj
+T* (story. FortiManager and FortiAnalyzer supported the FortiGate-VM deployments. I can also) Tj
+T* (speak to the Cisco FTD to Fortinet migrations across six AWS regions. The wider cutover was) Tj
+T* (a team effort. Containing a host in Falcon would be new work, learned with the endpoint) Tj
+T* (team.) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 10 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000134 00000 n 
+0000000204 00000 n 
+0000003504 00000 n 
+0000003630 00000 n 
+0000007191 00000 n 
+0000007317 00000 n 
+0000010510 00000 n 
+0000010636 00000 n 
+0000014400 00000 n 
+trailer << /Size 12 /Root 1 0 R >>
+startxref
+14528
+%%EOF

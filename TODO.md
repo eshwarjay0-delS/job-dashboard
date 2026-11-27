@@ -1,3 +1,7 @@
+## 2026-11-27 — Kompas category packs for eight leaves (docs only, not a UI change, not merged)
+
+Wrote interview packs for PeopleSoft, SailPoint, Okta, Entra, CrowdStrike, Defender, Offensive, and IT/Sec+ under `docs/kompas-packs/` on `ops/second-bot-packs`. Source is only `src/lib/kompas-houston-resume.txt` (eshwarjay05 Houston summary). The full Fortinet docx is not in the repo. None of those eight tools or Security+ are on that summary, so each pack is an honest bridge back to FortiGate-VM, the six-region Cisco FTD migration, HA, FortiManager/FortiAnalyzer, and NERC CIP on the zero-downtime cutovers. Saint Louis and jayeshwar44 were not used. `ops/chief-packs` does not exist. PDFs are local text renders; pandoc was not installed. No UI, no live session, no deploy. Chief integrates later.
+
 ## 2026-11-25 — Kompas overlay P0 (visible after ship; desktop exe needs a new build)
 
 Start is never blocked on the answer preflight. The probe is 1.8s with retry and backoff. Check again re-probes and clears the not-ready banner. Minimize stays down, and Close destroys the window. The clarifier popup shows the live question and is not inside the question or answer box. Opacity fades the paper only. B cycles 700 / 600 / 400, default 400, and is saved in localStorage and desktop settings. Skip-login was not edited. No Tauri project exists here; the window is the Electron shell.

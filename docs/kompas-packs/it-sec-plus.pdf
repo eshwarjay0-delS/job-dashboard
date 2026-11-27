@@ -1,0 +1,299 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 5 /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 3373 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(KOMPAS INTERVIEW PACK: IT / SEC+) Tj
+T* () Tj
+T* (Tree: IT/Sec+ branch. The role on the resume is network security engineering. The Security+) Tj
+T* (certificate is not on the resume.) Tj
+T* () Tj
+T* (Source: src/lib/kompas-houston-resume.txt, the eshwarjay05 Houston resume that Kompas's) Tj
+T* (honesty gate uses when no session resume is loaded. The gate's note says the full Fortinet) Tj
+T* (docx is not in this repo, so this pack uses only that summary. It does not use the Saint) Tj
+T* (Louis profile, jayeshwar44, eshwarjay06, jayeshwar24, or any other file in resumes/.) Tj
+T* () Tj
+T* (Coverage: Security+ is not on the Houston resume. Do not claim the cert, a CompTIA candidate) Tj
+T* (ID, or a helpdesk ticket history. The IT work he can claim is the Fortinet AWS Cloud) Tj
+T* (Networking Engineer role itself.) Tj
+T* () Tj
+T* (1. MUST-MENTION) Tj
+T* () Tj
+T* (- If they ask "do you have Security+", the answer is that it is not on this resume. Do not) Tj
+T* (guess that he sat the exam.) Tj
+T* (- Then move to the real IT security work: nine-plus years designing, deploying, and) Tj
+T* (migrating secure network infrastructure on multi-region AWS, the FortiGate-VM deployments,) Tj
+T* (HA, and NERC CIP on the network change.) Tj
+T* (- He may explain a basic control idea only by tying it to that work. Least privilege, change) Tj
+T* (control, and availability are fair as plain language for the HA cutovers and the NERC CIP) Tj
+T* (network change. They are not a claim that he holds Sec+ or that he ran a helpdesk.) Tj
+T* (- Ramp line, future tense only, and only if they insist on the cert: he would not put) Tj
+T* (Security+ on an answer or a form unless it is actually on the resume in front of him.) Tj
+T* () Tj
+T* (Resume facts he may use, and only these:) Tj
+T* () Tj
+T* (- Title on the summary: Fortinet AWS Cloud Networking Engineer.) Tj
+T* (- Nine-plus years designing, deploying, and migrating secure network infrastructures across) Tj
+T* (multi-region AWS environments.) Tj
+T* (- He led the end-to-end FortiGate-VM deployments.) Tj
+T* (- Those deployments include active/active and active/passive HA clusters integrated with AWS) Tj
+T* (Gateway Load Balancer and Transit Gateway.) Tj
+T* (- Cisco FTD to Fortinet migrations across six AWS regions. The summary says those) Tj
+T* (migrations, and the FortiGate-VM deployments, are the part he can speak to.) Tj
+T* (- FortiManager and FortiAnalyzer supported those FortiGate-VM deployments.) Tj
+T* (- NERC CIP applied to the network change and the zero-downtime cutovers.) Tj
+T* (- The wider cutover beyond the FortiGate-VM clusters was a team effort.) Tj
+T* (- The summary does not name an employer company, a customer, a date range, a certification,) Tj
+T* (a ticket count, or an outage. Say that before filling any of them in.) Tj
+T* () Tj
+T* (2. WHAT TO AVOID) Tj
+T* () Tj
+T* (- Do not say "I am Security+ certified" or "I passed Sec+ in [month].") Tj
+T* (- Do not invent a ticket volume, a first-call resolution rate, an Active Directory password) Tj
+T* (reset, or a Windows desktop image. None of that is on the summary.) Tj
+T* (- Do not recast FortiGate-VM work as a junior helpdesk story to sound "more IT." It was) Tj
+T* (deployment and migration work. Keep the level honest.) Tj
+T* (- Do not claim CISSP or the other certs in the avoid list above.) Tj
+T* () Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 3580 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(On every pack:) Tj
+T* () Tj
+T* (- Do not start with "Having nine years" or any "Having [N] years" opener.) Tj
+T* (- Do not say he personally led the wider cutover. That cutover was a team effort. His part) Tj
+T* (is the FortiGate-VM clusters and the six-region Cisco FTD to Fortinet migration.) Tj
+T* (- Do not invent an outage, a Sev-1, data loss, or a failed cutover. The summary does not) Tj
+T* (name one. Active/passive failover is a test condition on the HA clusters, not a production) Tj
+T* (incident.) Tj
+T* (- Do not invent an employer, a customer, a region name, a date, a certification, or a) Tj
+T* (metric. "Six AWS regions", "nine-plus years", and "zero-downtime" are the only scale lines) Tj
+T* (on the summary.) Tj
+T* (- Do not use Saint Louis, jayeshwar44, eshwarjay06, jayeshwar24, Cigna, Citi, McKesson,) Tj
+T* (Molina, or Valero.) Tj
+T* (- Do not claim Dragos, Qualys, Splunk, Burp, CyberArk, Industrial Defender, Sentinel, Wiz,) Tj
+T* (Zscaler, Fortify, Snyk, or OSCP. None of those are on this resume. The honesty gate treats a) Tj
+T* (first-person "I used" on that list as a false claim.) Tj
+T* (- Do not claim Security+, CISSP, AZ-500, PenTest+, CySA+, or any other certificate. None are) Tj
+T* (on this summary.) Tj
+T* (- Do not describe visa, pay, location, or work authorization.) Tj
+T* () Tj
+T* (3. IMPACT STORIES) Tj
+T* () Tj
+T* (These are set inside the Fortinet AWS Cloud Networking Engineer role on the Houston summary.) Tj
+T* (They are not new employers. Where the summary is silent, the story says so instead of) Tj
+T* (filling the gap.) Tj
+T* () Tj
+T* (STORY 1. DAILY PROGRESS ON THE FORTIGATE-VM CLUSTERS) Tj
+T* () Tj
+T* (In the Fortinet AWS Cloud Networking Engineer role, the daily progress I can stand behind is) Tj
+T* (the FortiGate-VM work. I led those deployments end to end. The concrete piece is the) Tj
+T* (clusters: active/active and active/passive HA, integrated with AWS Gateway Load Balancer and) Tj
+T* (Transit Gateway. FortiManager and FortiAnalyzer supported those deployments, so the) Tj
+T* (management and the logging I can talk about sit on that firewall path. The summary does not) Tj
+T* (give a ticket count, a standup roster, or a clock time, so I will not invent a queue or a) Tj
+T* (meeting that happened at 9. If someone asks what moved, I stay on whether the FortiGate-VM) Tj
+T* (cluster and its HA were in shape for the change.) Tj
+T* () Tj
+T* (That is the daily IT work on this resume: moving the FortiGate-VM clusters forward. It is) Tj
+T* (not a helpdesk queue, and I will not invent tickets to sound more hands-on at the desktop.) Tj
+T* () Tj
+T* (STORY 2. THE MEETING HE CAN HOLD: THE SIX-REGION MIGRATION) Tj
+T* () Tj
+T* (The meeting I can actually hold is a walkthrough of the Cisco FTD to Fortinet migrations) Tj
+T* (across six AWS regions, together with the FortiGate-VM deployments. The summary says those) Tj
+T* (two are the part I can speak to. I open with what I led, the FortiGate-VM deployments and) Tj
+T* (the HA clusters on Gateway Load Balancer and Transit Gateway, and I say the wider cutover) Tj
+T* (beyond those clusters was a team effort. I do not name attendees, a customer, or a region) Tj
+T* (code, because the summary does not. If the room is a change review, I can say NERC CIP) Tj
+T* (applied to the network change and the cutovers were zero-downtime. I cannot produce a) Tj
+T* (calendar invite or a decision log that was never written down here.) Tj
+T* () Tj
+T* (In that meeting I can explain the migration in plain operational language. I still will not) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+8 0 obj
+<< /Length 3329 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(claim Security+. The certificate is not on the summary.) Tj
+T* () Tj
+T* (STORY 3. THE CONTROL-OWNER CONVERSATION, WITHOUT A CUSTOMER NAME) Tj
+T* () Tj
+T* (The closest thing on this resume to a customer or control-owner interaction is the network) Tj
+T* (change under NERC CIP, including the zero-downtime cutovers. I will not invent a utility) Tj
+T* (name, a control owner's name, or a meeting where someone signed an evidence sheet. What I) Tj
+T* (can say is that NERC CIP applied to that network change and to those cutovers, and that my) Tj
+T* (part was the FortiGate-VM clusters, not the wider cutover. If a reviewer asks whether I can) Tj
+T* (explain the firewall path, I explain the HA design and the six-region FTD-to-Fortinet) Tj
+T* (migration. If they ask for a named account, I say that name is not on my resume and I will) Tj
+T* (not make it up.) Tj
+T* () Tj
+T* (NERC CIP on the network change is the control interaction I can describe. I will not turn it) Tj
+T* (into a Security+ domain lecture or a policy I wrote for a helpdesk.) Tj
+T* () Tj
+T* (STORY 4. WHAT HE DOES WHEN THEY ASK WHAT WENT WRONG) Tj
+T* () Tj
+T* (The summary does not name an outage, a failed cutover, or hours of downtime, so I will not) Tj
+T* (tell one. The grounded situation is active/passive failover on the HA clusters during) Tj
+T* (cutovers that were zero-downtime. I do not turn that test into a story about production) Tj
+T* (breaking. If a check had failed, the method I will say out loud is to keep the old path up) Tj
+T* (and write down what the test showed. I do not have such a failure written on this resume, so) Tj
+T* (I will not claim one happened. The wider cutover stayed a team effort. I speak to the) Tj
+T* (FortiGate-VM deployments and the six-region migration.) Tj
+T* () Tj
+T* (Failover on the HA clusters is the availability story. I talk about it as a cutover check,) Tj
+T* (not as an incident ticket I closed, and not as proof of a cert.) Tj
+T* () Tj
+T* (STORY 5. BRIDGE WHEN THEY ASK FOR A STORY THIS RESUME DOES NOT HAVE) Tj
+T* () Tj
+T* (This is a boundary, not a past helpdesk project and not a cert story. If they ask for) Tj
+T* (Security+ or for a week of password resets, I say neither is on my resume. The IT security) Tj
+T* (work I have is the Fortinet AWS Cloud Networking Engineer role: FortiGate-VM deployments, HA) Tj
+T* (on Gateway Load Balancer and Transit Gateway, the six-region FTD migration, and NERC CIP on) Tj
+T* (the zero-downtime network change. I would not add the cert to get through the screen.) Tj
+T* () Tj
+T* (4. PROBE QUESTIONS) Tj
+T* () Tj
+T* (A big true claim still draws a scope test. A claim this resume cannot support has to be) Tj
+T* (declined.) Tj
+T* () Tj
+T* (IF HE SAYS NINE-PLUS YEARS) Tj
+T* () Tj
+T* ("Nine-plus years" is on the summary and it has no employer list under it. That is the claim) Tj
+T* (that draws a career walk.) Tj
+T* () Tj
+T* (- Probe: "Walk me through the employers and the dates.") Tj
+T* (- Follow-up: "Where does the Security+ sit in that timeline?") Tj
+T* (- Follow-up: "What did the early years look like, helpdesk or network?") Tj
+T* (- Safe shape: the summary states nine-plus years and the Fortinet AWS Cloud Networking) Tj
+T* (Engineer work. It does not name employers, dates, a helpdesk era, or Security+. He does not) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+10 0 obj
+<< /Length 3286 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(invent them.) Tj
+T* () Tj
+T* (IF HE IS PUSHED INTO THE CERT OR THE QUEUE) Tj
+T* () Tj
+T* (- Probe: "You have Sec+, correct?") Tj
+T* (- Follow-up: "How many tickets a week, and what was your backlog?") Tj
+T* (- Follow-up: "Tell me about a user you walked through a password reset.") Tj
+T* (- Safe shape: Security+ is not on the resume. No ticket count and no password-reset story.) Tj
+T* (He returns to the network deployments he led.) Tj
+T* () Tj
+T* (5. SPEAKABLE ANSWERS) Tj
+T* () Tj
+T* (First person. 120 to 180 words. The bridge is in the answer, not after it.) Tj
+T* () Tj
+T* (ANSWER A. DO YOU HAVE COMPTIA SECURITY+, AND WHAT IT WORK SITS BEHIND IT?) Tj
+T* () Tj
+T* (Spoken length: 177 words.) Tj
+T* () Tj
+T* (Security+ is not on my resume, so I will not say I hold it or guess a date I passed it. The) Tj
+T* (IT security work I can speak to is the Fortinet AWS Cloud Networking Engineer role:) Tj
+T* (nine-plus years designing, deploying, and migrating secure network infrastructure across) Tj
+T* (multi-region AWS. I led the FortiGate-VM deployments, including active/active and) Tj
+T* (active/passive HA clusters integrated with AWS Gateway Load Balancer and Transit Gateway.) Tj
+T* (The part I can walk is those deployments and the Cisco FTD to Fortinet migrations across six) Tj
+T* (AWS regions. FortiManager and FortiAnalyzer supported those FortiGate-VM deployments. NERC) Tj
+T* (CIP applied to the network change and to the zero-downtime cutovers. The wider cutover) Tj
+T* (beyond the FortiGate-VM clusters was a team effort. The summary does not name employers,) Tj
+T* (dates, or a helpdesk queue, so I will not invent a ticket count or a password reset to sound) Tj
+T* (broader. Availability, in this work, is those zero-downtime cutovers and the HA design, not) Tj
+T* (a certificate domain I am reciting. I would not add Security+ on a form that this resume) Tj
+T* (does not support.) Tj
+T* () Tj
+T* (ANSWER B. WALK ME THROUGH THE NINE-PLUS YEARS, EMPLOYER BY EMPLOYER.) Tj
+T* () Tj
+T* (Spoken length: 157 words.) Tj
+T* () Tj
+T* (I cannot walk it employer by employer. The summary says nine-plus years designing,) Tj
+T* (deploying, and migrating secure network infrastructure across multi-region AWS, and the) Tj
+T* (title on it is Fortinet AWS Cloud Networking Engineer. It does not name the employers or the) Tj
+T* (dates, so I will not invent a company timeline, and I will not borrow one from a different) Tj
+T* (resume. What I can walk is the work inside that summary. I led the FortiGate-VM deployments,) Tj
+T* (with active/active and active/passive HA clusters integrated with AWS Gateway Load Balancer) Tj
+T* (and Transit Gateway. I can speak to the Cisco FTD to Fortinet migrations across six AWS) Tj
+T* (regions. FortiManager and FortiAnalyzer supported those FortiGate-VM deployments. NERC CIP) Tj
+T* (applied to the network change and the zero-downtime cutovers. The wider cutover was a team) Tj
+T* (effort. Security+ is not on the resume, so it does not sit anywhere in that timeline. I will) Tj
+T* (not split the years into a helpdesk chapter I cannot source.) Tj
+T* () Tj
+T* (ANSWER C. TELL ME ABOUT A BUSY HELPDESK WEEK AND HOW SEC+ CHANGED HOW YOU WORKED A TICKET.) Tj
+T* () Tj
+T* (Spoken length: 173 words.) Tj
+T* () Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 10 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+12 0 obj
+<< /Length 1087 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(I do not have a helpdesk week to tell, and Security+ is not on my resume, so I will not) Tj
+T* (describe a ticket, a backlog, or a way the cert changed my wording. The operational week I) Tj
+T* (can talk about is the FortiGate-VM work. I led those deployments end to end, including) Tj
+T* (active/active and active/passive HA integrated with AWS Gateway Load Balancer and Transit) Tj
+T* (Gateway. FortiManager and FortiAnalyzer supported those deployments. The cutovers were) Tj
+T* (zero-downtime, and NERC CIP applied to the network change. That is the change-control habit) Tj
+T* (I can actually describe: the network change had a control on it, and the path was supposed) Tj
+T* (to stay up. The summary does not name an outage, so I will not invent a ticket about one. If) Tj
+T* (a failover check had failed, I would keep the old path up and write down what the test) Tj
+T* (showed. I have not recorded that failure here. I can also speak to the Cisco FTD to Fortinet) Tj
+T* (migrations across six AWS regions. The wider cutover was a team effort.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 12 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000141 00000 n 
+0000000211 00000 n 
+0000003636 00000 n 
+0000003762 00000 n 
+0000007394 00000 n 
+0000007520 00000 n 
+0000010901 00000 n 
+0000011027 00000 n 
+0000014366 00000 n 
+0000014494 00000 n 
+0000015634 00000 n 
+trailer << /Size 14 /Root 1 0 R >>
+startxref
+15762
+%%EOF

@@ -1,0 +1,295 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 5 /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 3240 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(KOMPAS INTERVIEW PACK: OFFENSIVE) Tj
+T* () Tj
+T* (Tree: Offensive branch. The resume is build, migrate, and change control on FortiGate-VM. It) Tj
+T* (is not a penetration-test resume.) Tj
+T* () Tj
+T* (Source: src/lib/kompas-houston-resume.txt, the eshwarjay05 Houston resume that Kompas's) Tj
+T* (honesty gate uses when no session resume is loaded. The gate's note says the full Fortinet) Tj
+T* (docx is not in this repo, so this pack uses only that summary. It does not use the Saint) Tj
+T* (Louis profile, jayeshwar44, eshwarjay06, jayeshwar24, or any other file in resumes/.) Tj
+T* () Tj
+T* (Coverage: No offensive engagement is on the Houston resume. Do not claim a pen test, a red) Tj
+T* (team, Burp, an exploit, OSCP, or a finding he wrote.) Tj
+T* () Tj
+T* (1. MUST-MENTION) Tj
+T* () Tj
+T* (- Say in the first two sentences that he has not done offensive work and does not hold OSCP.) Tj
+T* (OSCP is on the honesty gate's deny list and is not in the summary.) Tj
+T* (- The adjacent work is the build and the migration on the summary: FortiGate-VM deployments,) Tj
+T* (HA, and the six-region FTD migration. NERC CIP applied to the network change. He did not) Tj
+T* (design a CIP program, and he did not run a test as an attacker.) Tj
+T* (- Active/passive failover testing is a resilience check on a zero-downtime cutover. It is) Tj
+T* (not a pen test. Say that when they blur the two.) Tj
+T* (- Ramp line, future tense only: he would not start an offensive test from a story he does) Tj
+T* (not have. He would first stay inside the system he can already explain, and he would not) Tj
+T* (claim a test he did not run.) Tj
+T* () Tj
+T* (Resume facts he may use, and only these:) Tj
+T* () Tj
+T* (- Title on the summary: Fortinet AWS Cloud Networking Engineer.) Tj
+T* (- Nine-plus years designing, deploying, and migrating secure network infrastructures across) Tj
+T* (multi-region AWS environments.) Tj
+T* (- He led the end-to-end FortiGate-VM deployments.) Tj
+T* (- Those deployments include active/active and active/passive HA clusters integrated with AWS) Tj
+T* (Gateway Load Balancer and Transit Gateway.) Tj
+T* (- Cisco FTD to Fortinet migrations across six AWS regions. The summary says those) Tj
+T* (migrations, and the FortiGate-VM deployments, are the part he can speak to.) Tj
+T* (- FortiManager and FortiAnalyzer supported those FortiGate-VM deployments.) Tj
+T* (- NERC CIP applied to the network change and the zero-downtime cutovers.) Tj
+T* (- The wider cutover beyond the FortiGate-VM clusters was a team effort.) Tj
+T* (- The summary does not name an employer company, a customer, a date range, a certification,) Tj
+T* (a ticket count, or an outage. Say that before filling any of them in.) Tj
+T* () Tj
+T* (2. WHAT TO AVOID) Tj
+T* () Tj
+T* (- Do not say "I popped a box", "I ran Burp", "I phished the user", or "I wrote the exploit.") Tj
+T* (- Do not turn the zero-downtime cutover into a story of something he broke on purpose.) Tj
+T* (- Do not invent a finding count, a severity, or a report name.) Tj
+T* (- Burp and OSCP are deny-list items. Do not claim them.) Tj
+T* () Tj
+T* (On every pack:) Tj
+T* () Tj
+T* (- Do not start with "Having nine years" or any "Having [N] years" opener.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 3591 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(- Do not say he personally led the wider cutover. That cutover was a team effort. His part) Tj
+T* (is the FortiGate-VM clusters and the six-region Cisco FTD to Fortinet migration.) Tj
+T* (- Do not invent an outage, a Sev-1, data loss, or a failed cutover. The summary does not) Tj
+T* (name one. Active/passive failover is a test condition on the HA clusters, not a production) Tj
+T* (incident.) Tj
+T* (- Do not invent an employer, a customer, a region name, a date, a certification, or a) Tj
+T* (metric. "Six AWS regions", "nine-plus years", and "zero-downtime" are the only scale lines) Tj
+T* (on the summary.) Tj
+T* (- Do not use Saint Louis, jayeshwar44, eshwarjay06, jayeshwar24, Cigna, Citi, McKesson,) Tj
+T* (Molina, or Valero.) Tj
+T* (- Do not claim Dragos, Qualys, Splunk, Burp, CyberArk, Industrial Defender, Sentinel, Wiz,) Tj
+T* (Zscaler, Fortify, Snyk, or OSCP. None of those are on this resume. The honesty gate treats a) Tj
+T* (first-person "I used" on that list as a false claim.) Tj
+T* (- Do not claim Security+, CISSP, AZ-500, PenTest+, CySA+, or any other certificate. None are) Tj
+T* (on this summary.) Tj
+T* (- Do not describe visa, pay, location, or work authorization.) Tj
+T* () Tj
+T* (3. IMPACT STORIES) Tj
+T* () Tj
+T* (These are set inside the Fortinet AWS Cloud Networking Engineer role on the Houston summary.) Tj
+T* (They are not new employers. Where the summary is silent, the story says so instead of) Tj
+T* (filling the gap.) Tj
+T* () Tj
+T* (STORY 1. DAILY PROGRESS ON THE FORTIGATE-VM CLUSTERS) Tj
+T* () Tj
+T* (In the Fortinet AWS Cloud Networking Engineer role, the daily progress I can stand behind is) Tj
+T* (the FortiGate-VM work. I led those deployments end to end. The concrete piece is the) Tj
+T* (clusters: active/active and active/passive HA, integrated with AWS Gateway Load Balancer and) Tj
+T* (Transit Gateway. FortiManager and FortiAnalyzer supported those deployments, so the) Tj
+T* (management and the logging I can talk about sit on that firewall path. The summary does not) Tj
+T* (give a ticket count, a standup roster, or a clock time, so I will not invent a queue or a) Tj
+T* (meeting that happened at 9. If someone asks what moved, I stay on whether the FortiGate-VM) Tj
+T* (cluster and its HA were in shape for the change.) Tj
+T* () Tj
+T* (That daily work is building and migrating the firewall path. It is not a test plan, and I) Tj
+T* (will not narrate an exploit against the clusters I was deploying.) Tj
+T* () Tj
+T* (STORY 2. THE MEETING HE CAN HOLD: THE SIX-REGION MIGRATION) Tj
+T* () Tj
+T* (The meeting I can actually hold is a walkthrough of the Cisco FTD to Fortinet migrations) Tj
+T* (across six AWS regions, together with the FortiGate-VM deployments. The summary says those) Tj
+T* (two are the part I can speak to. I open with what I led, the FortiGate-VM deployments and) Tj
+T* (the HA clusters on Gateway Load Balancer and Transit Gateway, and I say the wider cutover) Tj
+T* (beyond those clusters was a team effort. I do not name attendees, a customer, or a region) Tj
+T* (code, because the summary does not. If the room is a change review, I can say NERC CIP) Tj
+T* (applied to the network change and the cutovers were zero-downtime. I cannot produce a) Tj
+T* (calendar invite or a decision log that was never written down here.) Tj
+T* () Tj
+T* (If the meeting asks for the attack side of the six-region migration, I say I have not run an) Tj
+T* (offensive engagement. I can walk the migration I deployed.) Tj
+T* () Tj
+T* (STORY 3. THE CONTROL-OWNER CONVERSATION, WITHOUT A CUSTOMER NAME) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+8 0 obj
+<< /Length 3218 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+() Tj
+T* (The closest thing on this resume to a customer or control-owner interaction is the network) Tj
+T* (change under NERC CIP, including the zero-downtime cutovers. I will not invent a utility) Tj
+T* (name, a control owner's name, or a meeting where someone signed an evidence sheet. What I) Tj
+T* (can say is that NERC CIP applied to that network change and to those cutovers, and that my) Tj
+T* (part was the FortiGate-VM clusters, not the wider cutover. If a reviewer asks whether I can) Tj
+T* (explain the firewall path, I explain the HA design and the six-region FTD-to-Fortinet) Tj
+T* (migration. If they ask for a named account, I say that name is not on my resume and I will) Tj
+T* (not make it up.) Tj
+T* () Tj
+T* (NERC CIP on the network change is a control that applied to the change. It is not a pen-test) Tj
+T* (report I delivered to a customer.) Tj
+T* () Tj
+T* (STORY 4. WHAT HE DOES WHEN THEY ASK WHAT WENT WRONG) Tj
+T* () Tj
+T* (The summary does not name an outage, a failed cutover, or hours of downtime, so I will not) Tj
+T* (tell one. The grounded situation is active/passive failover on the HA clusters during) Tj
+T* (cutovers that were zero-downtime. I do not turn that test into a story about production) Tj
+T* (breaking. If a check had failed, the method I will say out loud is to keep the old path up) Tj
+T* (and write down what the test showed. I do not have such a failure written on this resume, so) Tj
+T* (I will not claim one happened. The wider cutover stayed a team effort. I speak to the) Tj
+T* (FortiGate-VM deployments and the six-region migration.) Tj
+T* () Tj
+T* (Failover testing on the active/passive clusters is how I talk about checking the cutover. I) Tj
+T* (will not rebadge it as offense, and I will not invent a failed check.) Tj
+T* () Tj
+T* (STORY 5. BRIDGE WHEN THEY ASK FOR A STORY THIS RESUME DOES NOT HAVE) Tj
+T* () Tj
+T* (This is a ramp, not a past offensive project. If they ask for a pen test, I say I have not) Tj
+T* (run one and I do not hold OSCP. What I would do, if I were ever asked to approach this same) Tj
+T* (system, is start from the FortiGate-VM path, the HA design, and the six-region migration) Tj
+T* (boundary I can already explain, and I would not claim I had tested it as an attacker. The) Tj
+T* (summary does not record that test.) Tj
+T* () Tj
+T* (4. PROBE QUESTIONS) Tj
+T* () Tj
+T* (A big true claim still draws a scope test. A claim this resume cannot support has to be) Tj
+T* (declined.) Tj
+T* () Tj
+T* (IF HE SAYS THE CUTOVERS WERE ZERO-DOWNTIME) Tj
+T* () Tj
+T* (That line is on the summary. Offensive interviewers use it to hunt for a break.) Tj
+T* () Tj
+T* (- Probe: "What did you break, and how did you get back?") Tj
+T* (- Follow-up: "Walk me through the exploit path you would use on that Gateway Load Balancer) Tj
+T* (design.") Tj
+T* (- Follow-up: "You tested it yourself, right? Burp, or a scanner?") Tj
+T* (- Safe shape: he does not invent a break. Failover is active/passive on the HA clusters. If) Tj
+T* (a check had failed he would keep the old path up. No failure is recorded. He has not run) Tj
+T* (Burp or an exploit against that design.) Tj
+T* () Tj
+T* (IF HE IS PUSHED INTO AN ENGAGEMENT) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+10 0 obj
+<< /Length 3537 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+() Tj
+T* (- Probe: "Tell me about a finding you got into the report.") Tj
+T* (- Follow-up: "What was the severity, and who owned the fix?") Tj
+T* (- Follow-up: "Was that an assumed-breach job or a black box?") Tj
+T* (- Safe shape: there is no engagement on the resume. No severity, no report, no customer. He) Tj
+T* (restates the build work, then the ramp, in future tense.) Tj
+T* () Tj
+T* (5. SPEAKABLE ANSWERS) Tj
+T* () Tj
+T* (First person. 120 to 180 words. The bridge is in the answer, not after it.) Tj
+T* () Tj
+T* (ANSWER A. TELL ME ABOUT AN OFFENSIVE ENGAGEMENT YOU LED.) Tj
+T* () Tj
+T* (Spoken length: 174 words.) Tj
+T* () Tj
+T* (I have not led an offensive engagement, and I will not invent a pen test, a finding, or an) Tj
+T* (exploit to fill the gap. I also have not used Burp, and I do not hold OSCP. My resume is the) Tj
+T* (Fortinet AWS Cloud Networking Engineer summary: nine-plus years designing, deploying, and) Tj
+T* (migrating secure network infrastructure across multi-region AWS. I led the FortiGate-VM) Tj
+T* (deployments, including active/active and active/passive HA clusters integrated with AWS) Tj
+T* (Gateway Load Balancer and Transit Gateway. The part I can walk is those deployments and the) Tj
+T* (Cisco FTD to Fortinet migrations across six AWS regions. FortiManager and FortiAnalyzer) Tj
+T* (supported those FortiGate-VM deployments. NERC CIP applied to the network change and to the) Tj
+T* (zero-downtime cutovers. That is build and change control, not an attack. The wider cutover) Tj
+T* (beyond the FortiGate-VM clusters was a team effort. The summary names no customer and no) Tj
+T* (report. If a role needs offense, I would have to ramp, and I would start from the firewall) Tj
+T* (path I can already explain rather than claim a test I never ran.) Tj
+T* () Tj
+T* (ANSWER B. SOMETHING MUST HAVE GONE WRONG ON A ZERO-DOWNTIME CUTOVER. WHAT DID YOU BREAK?) Tj
+T* () Tj
+T* (Spoken length: 161 words.) Tj
+T* () Tj
+T* (The resume does not name an outage, so I will not invent one, and I will not invent a break) Tj
+T* (I caused on purpose. The grounded situation is active/passive failover testing on the HA) Tj
+T* (clusters during those cutovers. I led the FortiGate-VM deployments, and those clusters were) Tj
+T* (active/active and active/passive, integrated with AWS Gateway Load Balancer and Transit) Tj
+T* (Gateway. The cutovers were zero-downtime. NERC CIP applied to the network change. If a check) Tj
+T* (had failed, I would keep the old path up and write down what the test showed. I have not) Tj
+T* (recorded a failed check on this resume, so I will not claim one. That test is a resilience) Tj
+T* (check, not a pen test, and I will not rebadge it. I can also speak to the Cisco FTD to) Tj
+T* (Fortinet migrations across six AWS regions. FortiManager and FortiAnalyzer supported the) Tj
+T* (FortiGate-VM deployments. The wider cutover was a team effort. I have not run Burp or an) Tj
+T* (exploit against that design.) Tj
+T* () Tj
+T* (ANSWER C. HOW WOULD YOU ATTACK THE GATEWAY LOAD BALANCER DESIGN YOU DEPLOYED?) Tj
+T* () Tj
+T* (Spoken length: 172 words.) Tj
+T* () Tj
+T* (I am not going to pretend I attacked it. I deployed it. I led the FortiGate-VM deployments,) Tj
+T* (and the HA clusters were integrated with AWS Gateway Load Balancer and Transit Gateway,) Tj
+T* (active/active and active/passive. I can speak to the Cisco FTD to Fortinet migrations across) Tj
+T* (six AWS regions. I have not run an offensive test against that design, I have not used Burp) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 10 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+12 0 obj
+<< /Length 650 >>
+stream
+BT /F1 10 Tf 13 TL 54 742 Td
+(on it, and I do not hold OSCP, so I will not walk an exploit path I did not execute. What I) Tj
+T* (can say about keeping it safe is the change record I do have: the cutovers were) Tj
+T* (zero-downtime, and NERC CIP applied to the network change. If a failover check had failed, I) Tj
+T* (would keep the old path up and write down what the test showed. No such failure is on the) Tj
+T* (resume. FortiManager and FortiAnalyzer supported those FortiGate-VM deployments. The wider) Tj
+T* (cutover was a team effort. If the job is offense, that is a ramp, and I would say so before) Tj
+T* (I described a test as mine.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 12 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000141 00000 n 
+0000000211 00000 n 
+0000003503 00000 n 
+0000003629 00000 n 
+0000007272 00000 n 
+0000007398 00000 n 
+0000010668 00000 n 
+0000010794 00000 n 
+0000014384 00000 n 
+0000014512 00000 n 
+0000015214 00000 n 
+trailer << /Size 14 /Root 1 0 R >>
+startxref
+15342
+%%EOF
