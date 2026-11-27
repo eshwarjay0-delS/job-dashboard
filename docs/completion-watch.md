@@ -1,3 +1,9 @@
+## 27 November 2026 — run 23 latest checks (00:53 CST)
+
+- #598 exact head `0220196fa82205f3d2ee6642b55a321c692e822e`: focused `45954137715`, WhatsApp recovery `45954137850`, baseline `45954137753`, Plan/REA schema `45954137763` SUCCESS; full CI `45954137838` IN_PROGRESS.
+- #599 docs current head `fa508f85ace1702cd238a3f74f77d12039aae2b3`: schema `45954727635` and baseline `45954727733` SUCCESS after two syntax/path corrections; full CI `45954727679` IN_PROGRESS.
+- Both remain DRAFT; no merge, preview, deployment or real resume/DOCX acceptance.
+
 ## 27 November 2026 — run 23 second schema correction (00:52 CST)
 
 The exact-head schema run `45954620650` failed again with TypeScript syntax errors after replacing the run23 JSON entries without preserving the trailing array commas in both `src/lib/plan-vision-journal.ts` and `src/lib/rea-register.ts`. Restored both separators. Rerun the schema gate on the new docs head; no claim of pass until terminal success.
