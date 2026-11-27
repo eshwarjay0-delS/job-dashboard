@@ -2,6 +2,8 @@
 
 ## Scope
 
+The first documentation validation caught an unsupported `commits` field in one Plan Journal entry. Removed it (the Journal schema supports only singular `commit`); the Plan/REA schema gate subsequently passed on the corrected head. A separate test-only correction was applied to #576 at commit `28d67d66db298bae4bc71e12e377a7837cccbc0b`: four source-regex assertions were changed from doubled to normal regex escapes. The corrected patterns matched nine fetched source assertions in an isolated JS check; exact-head project CI is pending. No application code was changed.
+
 The first documentation validation caught an unsupported `commits` field in one Plan Journal entry. Removed it (the Journal schema supports only singular `commit`); remote schema CI is rerunning. This was a docs-only correction, not an application-code test.
 
 Continue the owner-approved canonical MFit/MarketFit backlog. This run performed remote GitHub source/CI review only because the local environment has no canonical checkout or installed dependencies/Next.js 16.3.8 route-handler guide. Prior-context retrieval was scoped; it does not claim access to every conversation.
