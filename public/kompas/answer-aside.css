@@ -46,10 +46,21 @@
   background:var(--surface);color:var(--ink);font:700 16px/1 var(--sans);cursor:pointer;
 }
 .aside-close:hover{background:var(--surface-2)}
-#overlay.bridge-open .content,
+#overlay.bridge-open{max-width:1100px}
+#overlay.bridge-open .content{margin-right:260px}
 #overlay.bridge-open .card,
 #overlay.bridge-open .a,
-#overlay.bridge-open #answer{margin-right:252px}
+#overlay.bridge-open #answer{margin-right:0}
+#view-copilot #card,
+#view-copilot .a,
+#answer{
+  min-width:60%;
+  box-sizing:border-box;
+}
+#answer,#answer li{
+  overflow-wrap:break-word;
+  word-break:normal;
+}
 .answer-aside h3{
   margin:0 0 8px;
   font:700 12px/1.2 var(--sans);
@@ -148,18 +159,29 @@ html.kd #view-copilot #copyBtn{
   visibility:visible;
 }
 
-@media (max-width:900px){
+@media (max-width:1100px){
   .answer-aside,
   #view-copilot .answer-aside,
   html.kd #view-copilot .answer-aside{
-    top:56px;
-    right:8px;
+    position:static;
+    top:auto;
+    right:auto;
     left:auto;
-    bottom:12px;
-    width:200px;
-    max-width:42vw;
-    max-height:none;
+    bottom:auto;
+    width:auto;
+    max-width:none;
+    max-height:240px;
+    margin:8px 12px 12px;
     border-radius:12px;
   }
+  #overlay.bridge-open .content,
+  #overlay.bridge-open .card,
+  #overlay.bridge-open .a,
+  #overlay.bridge-open #answer{margin-right:0}
+  .view-copilot{padding-left:0;padding-right:0}
+  .content{padding-left:12px;padding-right:12px}
+  #view-copilot #card,
+  #view-copilot .a,
+  #answer{min-width:100%;width:auto}
   .aside-toggle{right:8px;top:148px}
 }

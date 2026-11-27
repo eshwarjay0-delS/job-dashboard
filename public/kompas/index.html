@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,600&display=swap" />
-<link rel="stylesheet" href="styles.css?v=20261127-reliable" />
+<link rel="stylesheet" href="styles.css?v=20261127-fold" />
 <link rel="stylesheet" href="mf-night.css" />
 <link rel="stylesheet" href="desktop-focus.css" />
-<link rel="stylesheet" href="answer-aside.css?v=20261127-reliable" />
+<link rel="stylesheet" href="answer-aside.css?v=20261127-fold" />
 <link rel="manifest" href="manifest.json" />
 <script src="theme-follow.js"></script>
 <script src="auth-flag.js"></script>
@@ -440,7 +440,7 @@
                 <option value="500">~500 pages</option>
                 <option value="1000">~1000 pages</option>
               </select></div>
-            <label class="pref-row"><div class="pref-t"><b>Answer automatically</b><span>When they stop talking</span></div><input type="checkbox" class="tgl" id="autoAnswer" /></label>
+            <label class="pref-row"><div class="pref-t"><b>Answer automatically</b><span>When they stop talking</span></div><input type="checkbox" class="tgl" id="autoAnswer" checked /></label>
             <label class="pref-row"><div class="pref-t"><b>Save the transcript</b><span>Stored locally; session metadata synchronizes to your account</span></div><input type="checkbox" class="tgl" id="saveTranscript" checked /></label>
             <div class="pref-row stack"><div class="pref-t"><b>AI instructions</b><span>Anything Kompas should always do</span></div>
               <textarea id="instructions" rows="8" placeholder="Paste complete interview instructions, technical rules, style requirements or other context here. Your text will not be silently shortened."></textarea>
@@ -552,7 +552,7 @@
       <button class="pill action big" id="answerBtn" title="Answer everything heard as one question (Ctrl+Enter)"><span class="star">★</span> AI Answer <span class="pend hidden" id="pendCount">0</span></button>
       <button class="pill action" id="screenAnalyzeBtn" type="button" title="Read one frame of the shared tab (Ctrl+Shift+Enter)">▣ Screen</button>
       <button class="pill action hidden" id="screenCaptureAnswerBtn" type="button" title="Caption Capture: read a selected Windows Live Captions window and answer with session context (Ctrl+Shift+S)">▣ Caption Capture</button>
-      <button class="pill action toggle" id="autoBtn" aria-pressed="false" title="Auto-answer is OFF: keeps gathering what's said — press AI Answer to turn all of it into one question and answer it"><span class="sw" aria-hidden="true"><i></i></span> Auto <b id="autoState">OFF</b></button>
+      <button class="pill action toggle on" id="autoBtn" aria-pressed="true" title="Auto-answer is ON: when the speaker goes quiet after a question, everything heard becomes one question and is answered"><span class="sw" aria-hidden="true"><i></i></span> Auto <b id="autoState">ON</b></button>
       <span class="follow" id="follow"><button class="pill action toggle follow-btn" id="followBtn" aria-pressed="false" title="Follow along: highlights the answer as you speak it and keeps your place in view (F)">▶ Follow along</button></span>
       <button class="pill action toggle" id="chatBtn" aria-pressed="false" title="Type a question. Click again to hide it.">Chat</button>
       <button class="pill action" id="prevBtn" aria-label="Previous response" title="Previous response (Left arrow)">‹ Prev</button>
@@ -771,18 +771,18 @@ window.addEventListener("load", function () {
 <script src="dossier-md.js"></script>
 <script src="correct.js"></script>
 <script src="anchor-flight.js"></script>
-<script>window.PERFACT_BUILD = "kompas-20261127-reliable";</script>
+<script>window.PERFACT_BUILD = "kompas-20261127-fold";</script>
 <script src="screen-core.js"></script>
 <script src="screen-review.js"></script>
-  <script src="session-reauth.js?v=20261127-reliable"></script>
+  <script src="session-reauth.js?v=20261127-fold"></script>
   <script src="readiness-probe.js?v=20261125-p0"></script>
-  <script src="output-audio.js?v=20261127-reliable"></script>
-  <script src="account-sync.js?v=20261127-reliable"></script>
+  <script src="output-audio.js?v=20261127-fold"></script>
+  <script src="account-sync.js?v=20261127-fold"></script>
 <script src="caption-focus.js?v=20261102-three-lines"></script>
   <script src="latest-ask.js?v=20261119-latest"></script>
-  <script src="app.js?v=20261127-reliable"></script>
-  <script src="bridge-lines.js?v=20261127-reliable"></script>
-  <script src="answer-aside.js?v=20261127-reliable"></script>
+  <script src="app.js?v=20261127-fold"></script>
+  <script src="bridge-lines.js?v=20261127-fold"></script>
+  <script src="answer-aside.js?v=20261127-fold"></script>
 <script src="caption-once.js?v=20261102-pinned-caption"></script>
 <script src="desktop-focus.js"></script>
 </body>

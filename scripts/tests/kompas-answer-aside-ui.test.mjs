@@ -114,11 +114,11 @@ test("section 2 toggles by hand and follows a new transcript line without a fetc
 })
 
 test("the panel sits on the right with a close button and does not cover the answer", () => {
-  assert.match(css, /@media \(max-width:900px\)/)
-  const narrow = css.slice(css.indexOf("@media (max-width:900px)"))
-  assert.match(narrow, /right:\s*8px/)
+  assert.match(css, /@media \(max-width:1100px\)/)
+  const narrow = css.slice(css.indexOf("@media (max-width:1100px)"))
+  assert.match(narrow, /position:\s*static/)
   assert.match(css, /\.aside-close\{/)
-  assert.match(css, /#overlay\.bridge-open #answer\{margin-right:252px\}/)
+  assert.match(css, /min-width:60%/)
   assert.match(css, /\.answer-aside\{[\s\S]*position:\s*absolute/)
   assert.doesNotMatch(css, /position:\s*fixed/)
   assert.doesNotMatch(css, /#startBtn\{display:\s*none|#answerBtn\{display:\s*none|#copyBtn\{display:\s*none/)

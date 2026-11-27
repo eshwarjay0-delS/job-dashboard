@@ -13,7 +13,7 @@ export const AUTO_THEM_SILENCE_MS = 1_400
 export const INTENT_COMPLETE_SILENCE_MS = 1_500
 export const MANUAL_INCOMPLETE_WAIT_MS = 1_500
 export const MAX_AUTO_DELAY_MS = 3_000
-export const AUTO_DEFAULT_ON = false
+export const AUTO_DEFAULT_ON = true
 
 const Q_CUE = /\?\s*$|^(so,? )?(what|how|why|when|where|which|who|whose|can|could|would|will|should|do|does|did|are|is|was|were|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|let's|lets|define)\b|\b(tell me|walk me|how would you|what would you|why did you|can you|could you|would you|have you|do you|are you|what is|what are|your experience|about yourself|introduce|imagine (?:you|that|this)|define like)\b/i
 const GREETING = /^(?:hi|hello|hey|thanks|thank you|good (?:morning|afternoon|evening)|yeah|yes|okay|ok|right|mm-?hmm|uh-?huh)\b[.!?]*$/i

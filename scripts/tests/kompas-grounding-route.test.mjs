@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { posix } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
-import { modeBand } from '../../src/lib/kompasDissection.ts'
+import { levelContract } from '../../src/lib/kompasLevelContract.ts'
 
 const require = createRequire(import.meta.url)
 const root = new URL('../../', import.meta.url)
@@ -174,7 +174,7 @@ test('introductions present the supported career with room for substance and no 
     } })
     const result = await response.json()
     assert.equal(result.meta.tier, 0)
-    assert.equal(result.meta.words, modeBand('intro', interviewer).targetWords)
+    assert.equal(result.meta.words, levelContract(interviewer, 'Tell me about yourself.').target)
     const system = h.calls[0].messages[0].content
     const prompt = h.calls[0].messages[1].content
     assert.match(system, /PERSONAL INTRODUCTION/)

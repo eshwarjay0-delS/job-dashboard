@@ -279,8 +279,9 @@ html.desktop-focus #view-copilot .card .q.live{max-height:calc(7em + 15px)}
 .mini:hover{border-color:var(--faint);color:var(--ink)}
 /* long answers scroll inside the card; the header, tools and status stay put */
 #answer{max-height:max(260px,min(56vh,560px));overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding-right:10px;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
-#answer>li{flex-shrink:0;min-width:0}
-.a li,.q{overflow-wrap:anywhere}
+#answer>li{flex-shrink:0;min-width:60%}
+#answer,#answer li{overflow-wrap:break-word;word-break:normal}
+.a li,.q{overflow-wrap:break-word}
 #answer::-webkit-scrollbar{width:6px}
 #answer::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
 .a li strong,.a strong .w{font-weight:800;color:var(--ink);background:transparent;padding:0;border-radius:0}

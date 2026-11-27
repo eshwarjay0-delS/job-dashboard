@@ -1,3 +1,15 @@
+## 2026-11-27 — Level contract, answer width, Say this, Auto on
+
+Architect answers land at 700–1000 words, Director at 300–450, and Technical HR / Engineer at 250–400. Quick facts scale down, and Architect stays at least 1.8 times Director. The prompt and max tokens follow that contract, and one post-check extends or trims. Say this uses resume lines and does not repeat the question. On a phone the answer stays wider than 250px and Say this sits below it. Auto starts on. A mic line labeled You does not become a question. A new interviewer question opens the next card. The page stamp changed, so the desktop exe needs the master build.
+
+**Checked by scripts/tests/kompas-level-contract.test.mjs against the real /api/answer route, kompas-second-question.test.mjs, and the Playwright layout test at 360, 900, and 1280. Production word counts come after the ship.**
+
+## 2026-11-27 — OpenRouter 403 is model policy (server only; no new window)
+
+Production OPENROUTER_MODEL, OPENROUTER_MODEL_HEAVY, and GROQ_MODEL_HEAVY are openai/gpt-oss-120b. The OpenRouter key is a sensitive secret and was not decrypted. The live answer now starts on Llama 3.3 70B, then gpt-oss on Groq/Fireworks/Cerebras/Together, then Gemini. Direct Groq uses llama-3.1-8b-instant instead of repeating gpt-oss. A JSON answer still returns a sentence when every model fails. No page change, so the installed exe does not need a new build.
+
+**Checked by scripts/tests/kompas-answer-model-fallback.test.mjs and kompas-answer-reliable.test.mjs. One production call after the ship.**
+
 ## 2026-11-27 — Answer reliability (visible after ship; one desktop build)
 
 AI Answer falls through gpt-oss, Llama, Gemini, and Groq, then a resume sentence, so the pane is not empty. A multi-part interviewer turn is kept. Behavioral and technical answers floor at 150 words. Say this is resume lines only. Auto-answer starts on. Missing tab audio asks for a reshare, and a stuck Starting capture recovers. Questions queue. Skip-login was not turned off.
