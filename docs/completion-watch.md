@@ -1,3 +1,7 @@
+## 27 November 2026 — level length scales
+
+Typical behavioral or scenario: Architect about 1040 words, Technical HR / Engineer about 780, Director about 520. Factors are 1.0, 0.75, and 0.5 of a complexity score. Quick facts use the same factors on a smaller score. Architect has no fixed ceiling. Production word counts follow this ship.
+
 ## 27 November 2026 — level contract
 
 Architect 700–1000 words, Director 300–450, Technical HR / Engineer 250–400. Quick facts scale down and Architect stays at least 1.8 times Director. The real /api/answer route test covers five questions at three levels. Say this does not echo the question. The answer stays wider than 250px at 360, 900, and 1280. Auto defaults on. A You line does not start a question. Production word counts follow the ship.

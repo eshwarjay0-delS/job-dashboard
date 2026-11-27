@@ -197,7 +197,10 @@ test('an explicit brief introduction still receives a shorter budget', async () 
   const response = await h.post({ question: 'Give me a brief introduction about yourself.', config: { resume: 'I maintain PKI.' } })
   const result = await response.json()
   assert.equal(result.meta.tier, 0)
-  assert.ok(result.meta.words < 180)
+  const brief = levelContract("engineer", "Give me a brief introduction about yourself.")
+  const full = levelContract("engineer", "Tell me about yourself.")
+  assert.equal(result.meta.words, brief.target)
+  assert.ok(brief.target < full.target)
 })
 
 

@@ -1,3 +1,9 @@
+## 2026-11-27 — Level length scales with the question
+
+A typical behavioral or scenario question is about 1040 words at Architect, about 780 at Technical HR / Engineer, and about 520 at Director. A bigger question raises all three. A quick fact scales them down together. Architect has no fixed ceiling. The token cap follows the target with headroom. Server only, so the installed exe does not need another build for this change.
+
+**Checked by scripts/tests/kompas-level-contract.test.mjs through the real /api/answer route. Production word counts follow the ship.**
+
 ## 2026-11-27 — Level contract, answer width, Say this, Auto on
 
 Architect answers land at 700–1000 words, Director at 300–450, and Technical HR / Engineer at 250–400. Quick facts scale down, and Architect stays at least 1.8 times Director. The prompt and max tokens follow that contract, and one post-check extends or trims. Say this uses resume lines and does not repeat the question. On a phone the answer stays wider than 250px and Say this sits below it. Auto starts on. A mic line labeled You does not become a question. A new interviewer question opens the next card. The page stamp changed, so the desktop exe needs the master build.

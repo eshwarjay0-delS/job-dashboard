@@ -95,7 +95,7 @@ function routingFor(model: string) {
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
-const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 4096)
+const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 8192)
 // A model on a long rate-limit block is skipped by later requests on this
 // warm instance instead of re-hitting the wall (perfACT's groqBlockedUntil).
 const blockedUntil = new Map<string, number>()
@@ -1444,10 +1444,6 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const levelBand = levelContract(level, question)
     plan.words = levelBand.target
     plan.maxTokens = levelBand.maxTokens
-    if (/\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question) && /\b(?:introduc|about yourself|who you are)\b/i.test(question)) {
-      plan.words = Math.min(150, Math.max(70, Math.round(levelBand.target * 0.35)))
-      plan.maxTokens = Math.min(levelBand.maxTokens, 900)
-    }
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
   }
   // Depth calibration inside the practice register: match the answer's focus
