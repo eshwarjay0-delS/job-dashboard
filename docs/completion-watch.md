@@ -1,5 +1,8 @@
 ## 27 November 2026 — run 22 (05:10 CST)
 
+### Documentation validation
+- The first remote Plan/REA schema run on PR #602 failed because one new Plan Journal entry used unsupported plural `commits`; the schema allows singular `commit`. Removed the field and reran the remote validation. No application code was changed.
+
 ### Production / master
 - Current master checkpoint: `1eb604b33cfe58f3c0f6ad611d346d5921e184ff`; GitHub Vercel status is SUCCESS. Canonical alias `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Compare with master shows seven documentation-only commits. No runtime redeploy was warranted. Public HTTP health/version smoke was not performed.
 
