@@ -2,6 +2,10 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { readFileSync } from "node:fs"
 import { isDigestSenderMuted, notifyRuleKey, toggleDigestSenderMute, waitingDaysForDigestMail, limitGmailAccounts, enabledGmailAccounts } from "../../src/lib/mail-digest.ts"
+import { createRequire } from "node:module"
+import { runInNewContext } from "node:vm"
+import ts from "typescript"
+const require = createRequire(import.meta.url)
 
 test("digest sender mute is scoped to the receiving inbox", () => {
   const rules = [
@@ -109,4 +113,73 @@ test("Gmail routes enforce the four-account ceiling server-side, including reque
   assert.match(sync, /limitGmailAccounts\(loaded\.accounts\)/)
   assert.match(sync, /enabledGmailAccounts\(loaded\.accounts\)/)
   assert.match(sync, /requestedAccountId && !selectedAccount/)
+})
+
+
+test("an account-A in-flight Gmail load cannot publish or snapshot after switching to account B", async () => {
+  let currentUser = "A"
+  const deferredA = []
+  let startedA
+  const started = new Promise(resolve => { startedA = resolve })
+  const snapshots = new Map()
+  const localStorage = {
+    getItem: key => snapshots.get(key) ?? null,
+    setItem: (key, value) => snapshots.set(key, value),
+    removeItem: key => snapshots.delete(key),
+    key: index => [...snapshots.keys()][index] ?? null,
+    get length() { return snapshots.size },
+  }
+  const response = data => ({ ok: true, json: async () => data })
+  const dataFor = (user, url) => {
+    if (url.includes("/api/gmail-sync")) return { connected: true }
+    if (url.includes("/api/gmail/threads")) return { mails: [{ id: user + "-thread", account: user + "@example.test" }], issues: [] }
+    if (url.includes("/api/gmail/tracker")) return { applications: [] }
+    if (url.includes("/api/gmail/interviews")) return { interviews: [] }
+    if (url.includes("/api/gmail/workflow-steps")) return { steps: [] }
+    if (url.includes("/api/gmail/unfollowed")) return { domains: [] }
+    if (url.includes("/api/gmail/drafts")) return { drafts: [] }
+    if (url.includes("/api/gmail/followup-radar")) return { radar: [] }
+    throw new Error("Unexpected Gmail request " + url)
+  }
+  const fetch = async url => {
+    const user = currentUser
+    if (user === "A" && !url.includes("/api/gmail-sync")) {
+      return new Promise(resolve => {
+        deferredA.push(() => resolve(response(dataFor(user, url))))
+        if (deferredA.length === 7) startedA()
+      })
+    }
+    return response(dataFor(user, url))
+  }
+  const react = { useState: value => [value, () => {}], useEffect: () => {}, useCallback: fn => fn }
+  const mocks = {
+    react,
+    "@/lib/supabase/client": {
+      createClient: () => ({ auth: { getSession: async () => ({ data: { session: { user: { id: currentUser } } } }) } }),
+    },
+  }
+  const module = { exports: {} }
+  const source = readFileSync(new URL("../../src/lib/use-gmail-data.ts", import.meta.url), "utf8") + "\nexport { loadShared, listeners, resetGmailDataForAccountSwitch };"
+  const compiled = ts.transpileModule(source, { compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  runInNewContext(compiled, {
+    module, exports: module.exports, process, console, Buffer, setTimeout, clearTimeout, setInterval, clearInterval,
+    fetch, localStorage, window: { addEventListener: () => {}, removeEventListener: () => {} },
+    document: { hidden: false, addEventListener: () => {}, removeEventListener: () => {} },
+    require: id => id in mocks ? mocks[id] : require(id),
+  })
+  const { loadShared, listeners, resetGmailDataForAccountSwitch } = module.exports
+  const observed = []
+  listeners.add(data => observed.push(data))
+  const loadA = loadShared(false)
+  await started
+  currentUser = "B"
+  resetGmailDataForAccountSwitch()
+  const loadB = loadShared(false)
+  const b = await loadB
+  assert.equal(b.mails[0].id, "B-thread")
+  deferredA.forEach(resolve => resolve())
+  await loadA
+  assert.equal(observed.some(data => data.mails.some(mail => mail.id === "A-thread")), false)
+  assert.equal(observed.filter(data => data.mails.some(mail => mail.id === "B-thread")).length, 1)
+  assert.deepEqual([...snapshots.keys()], ["mfit:gmail-snapshot:v2:B"])
 })
