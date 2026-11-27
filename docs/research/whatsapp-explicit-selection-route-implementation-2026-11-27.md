@@ -55,3 +55,15 @@ Static review of PR #600 exact head `71fb3a46c056b0826cde1b8f1547210f52410a2c` f
 The route now requires `files.depth === 0` in addition to all existing explicit-selection and identity checks. The route-level regression harness accepts a source-depth parameter and adds separate negative cases for unique depth-1 and depth-2 copies. The existing unique depth-0 positive case is retained. Code and test are committed together at `190815c83bddac5c7529ad9763450a131b905b56` on PR #600; exact-head remote checks are pending. Previous green checks on parent `71fb3a46` do not validate this commit.
 
 No local test/build, protected preview, deployment, real WhatsApp/Meta send or replay, private DOCX, R2/DB mutation or device acceptance occurred. Production remains READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; the branch is not deployed. The 17 Oct 17:28 Chicago incident remains unverified pending exact source/output, R2 object/version, webhook correlation, Meta outbound ID and signed delivery receipt.
+
+
+## Run 27 exact-head remote validation — 27 November 2026
+
+The source/test head `4c772f54282b987ab65a8fd8735169038a5ad6ef` passed all four remote gates:
+
+- Full CI `46064385707` — SUCCESS (51 steps).
+- WhatsApp resume recovery `46064385766` — SUCCESS.
+- Kompas baseline `46064385720` — SUCCESS.
+- Plan/REA schema `46064385653` — SUCCESS.
+
+The source/test commit is `190815c83bddac5c7529ad9763450a131b905b56`. A docs-only `[ship]` commit will request a protected preview and trigger fresh exact-head checks. The PR remains DRAFT. No production deployment, live WhatsApp/Meta send or replay, source/output DOCX inspection, R2/DB mutation or owner-device acceptance occurred. The 17 October 17:28 Chicago incident remains unverified.
