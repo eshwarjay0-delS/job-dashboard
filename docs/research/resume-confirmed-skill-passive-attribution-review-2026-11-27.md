@@ -16,3 +16,8 @@ PR #598 is not merged or deployed. Independent review, protected preview, owner-
 
 ## Next
 Continue: fix the attribution bypass with behavior-level negative tests in a compliant checkout, rerun exact-head CI, then require independent review and protected preview. Keep the candidate-evidence boundary strict and do not generate or export a real resume without the owner-authorized bundle.
+
+
+## Follow-up correction (27 Nov 2026, 05:22 UTC)
+
+Source commit `141590c8c5acf45bf56131b46325a3474cc180c2` broadened the passive actor matcher for `others`, `someone else`, `another/other team or vendor`, external/outside/third-party actors and `handled`. Test commit `1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d` adds six negative cases. Exact-head Kompas baseline and Plan/REA schema passed; focused, full CI and WhatsApp recovery are still in progress. No local execution. Keep the PR unmerged pending terminal checks, independent review, preview and real DOCX acceptance.
