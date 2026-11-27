@@ -122,3 +122,8 @@ The confirmed-skill evidence parser now recognizes bare and externally qualified
 
 Code/test commit: `c7e3939c781aee6755bc34e47a98aada580b5d43`. The isolated source-derived regex simulation passed 13/13 expected outcomes. This is not a local repository test; exact-head remote CI is pending. No model-generated resume, protected preview, real resume/JD/confirmation, DOCX inspection, merge, deployment or live ATS score was performed.
 
+
+
+## Confirmed-skill attribution — elliptical passive actor guard (27 November 2026)
+
+The parser must not treat a non-candidate's skill as candidate-confirmed merely because it shares a first-person sentence. A static source review found elliptical passive clauses such as “I used AWS and GCP handled by my team” were not split because the matcher required an auxiliary verb. PR #598 narrows the passive match to a known action participle plus an explicit non-candidate `by/for/with` actor, while allowing the auxiliary to be omitted. Nine regression inputs and ordinary candidate-positive controls were added. Source/test commits `aacd619` / `0ec4c7d`; exact-head remote validation is pending. No real resume/JD/confirmation or DOCX was used, and no match percentage is claimed.
