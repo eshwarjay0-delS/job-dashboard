@@ -25,3 +25,8 @@ PR #598 is ready for review but not independently approved, merged or deployed. 
 ## Next
 
 Continue: verify exact-head remote focused/full workflows, resolve failures with tests, then require independent review, legitimate protected preview and owner-authorized source/JD/confirmation plus exported-DOCX inspection.
+
+
+## Exact validation update
+
+Latest code commit c209bd2c631ad6e87bee3b0ddd5cb38a64d6d37e. Initial focused run 45932860471 failed 1/56; first correction a3e526 failed 2/56 because comma residue and Node.js punctuation stripping. Latest focused run 45933554666 passed 56/56; WhatsApp recovery 45933554510, Plan/REA schema 45933554488 and Kompas baseline 45933554535 passed. Full CI 45933554574 is still in progress. No local execution, protected preview, real resume/JD/confirmation, model or DOCX acceptance.
