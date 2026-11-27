@@ -54,7 +54,7 @@ const NON_CANDIDATE_SUBJECT = String.raw`(?:my|our|their)\s+(?:team|teams|collea
 const NON_CANDIDATE_PASSIVE = String.raw`(?:[a-z][a-z0-9.+#/-]*\s+)?(?:was|were|is|are|has been|have been|had been)\s+(?:used|managed|deployed|implemented|configured|maintained|operated|tested|built|developed|supported|administered|performed|conducted|provided|created|delivered)\s+(?:by|for|with)\s+(?:my|the|our|their)\s+(?:team|colleague|coworker|manager|client|customer|organization|company|department|group|partner|vendor|project|staff|employees|employer)\b`
 const splitNonCandidateAttribution = (line: string): string[] => line
   .split(new RegExp(String.raw`(?:,\s*|\b(?:and|or|while|whereas|along with)\s+)(?=${NON_CANDIDATE_SUBJECT}|${NON_CANDIDATE_PASSIVE})`, "i"))
-  .map(part => part.replace(/[,s]+$/, "").trim())
+  .map(part => part.replace(/[,\s]+$/, "").trim())
 
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!](?=\s|$)/)).flatMap(raw => splitNonCandidateAttribution(raw)).flatMap(raw => {
