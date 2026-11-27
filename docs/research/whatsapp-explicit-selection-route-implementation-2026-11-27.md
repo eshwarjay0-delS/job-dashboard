@@ -85,3 +85,12 @@ The route now computes `progressFallbackEligible` with the same `explicitlySelec
 The immediately preceding docs-repair head `fe7f9adb622c5de7b04690312515d0a876fc2bf8` passed Plan/REA schema, Kompas baseline and WhatsApp recovery; full CI was still running. These results do not transfer to `497482c`; no exact-head workflows were visible at the time of this note. No local test/build, protected preview, production deployment, private DOCX, R2/DB mutation, model call, Meta send/replay or owner-device acceptance occurred. Keep PR #600 DRAFT and require fresh exact-head gates, independent review, normal SSO-protected preview and owner-authorized source/JD/confirmation plus exported-DOCX acceptance.
 
 The 17 Oct 17:28 Chicago incident remains unverified: exact uploaded source DOCX, generated output DOCX, per-run R2 object/version, webhook correlation, Meta outbound message ID and signed delivered/read receipt are still missing. Do not replay or resend.
+
+
+## Run 29 — read-only recovery search for the 17 October incident (27 November 2026)
+
+A scoped Library search was run for the exact `Eshwar_Resume` source/output around the reported 17 Oct 17:28 Chicago event. It surfaced similarly named DOCX files, but none was correlated to that request; no DOCX was surfaced in the 17 Oct 21:00–18 Oct 02:00 UTC creation window. A similarly named file or later tailored version is not a substitute for the exact uploaded bytes.
+
+The connected iZap workspace lists one business with no WhatsApp number linked. Read-only message searches for `Eshwar_Resume` and `resume` on 17 Oct, plus `disaster recovery` on 16–18 Oct (America/Chicago), returned zero results. This is a connector-scope limitation, not evidence that no message exists elsewhere. No WhatsApp message was sent or replayed; no file was exported, and no R2/database state was changed.
+
+The incident remains **UNVERIFIED**. The exact source DOCX, generated output DOCX, request/webhook correlation, R2 object key/version, Meta outbound message ID and signed delivered/read callback remain missing. To unblock historical verification, read-only access to the actual webhook/R2 audit and Meta message-status history, or the exact original source/output artifacts and message ID, is required. Do not replay or resend.
