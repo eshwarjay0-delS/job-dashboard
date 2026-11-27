@@ -1121,3 +1121,14 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - The 17 Oct 17:28 incident remains unresolved until generated output DOCX, per-run R2 version, webhook correlation, Meta outbound ID and signed receipt are recovered.
 
 **Continue:** implement durable selection provenance and the exact fail-closed Original fallback in the actual route/session flow after environment recovery; keep #591's failing assertions intact and require exact-head CI, protected preview and owner acceptance.
+
+
+## 27 November 2026 — run 28: confirmed-skill attribution edge guard
+
+**Continue:** exact-head remote CI for PR #598's new attribution guard, then independent review/protected preview and owner-authorized DOCX acceptance.
+
+- Static review of exact #598 head `6fb23b1` found a bypass: bare or externally qualified SOC/security-operations actors (`external SOC`, `outside SOC`, `security operations`) were not recognized in passive, active or relative clauses, allowing GCP to remain in a candidate-confirmation sentence.
+- Source/test commit `c7e3939c781aee6755bc34e47a98aada580b5d43` broadens only the actor matcher and adds eight non-candidate negatives, three relative-clause rejects and three ordinary candidate positive controls. The isolated source-derived regex simulation passed 13/13 expected outcomes; it is not the repository test suite.
+- PR #598 exact-head checks on the prior head `6fb23b1` were all green: focused `46045848247`, full CI `46045848277`, Plan/REA `46045848290`, Kompas baseline `46045848258`, WhatsApp recovery `46045848255`. **Those results do not carry forward to the new commit.**
+- No local build/test, protected preview, model call, authorized resume/JD/confirmation, exported DOCX, merge or production deployment. The PR remains unmerged and the live 95–100% factual-match claim is unsupported.
+

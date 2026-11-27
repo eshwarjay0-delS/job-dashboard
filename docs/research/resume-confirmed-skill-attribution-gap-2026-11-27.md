@@ -34,3 +34,13 @@ Latest code commit c209bd2c631ad6e87bee3b0ddd5cb38a64d6d37e. Initial focused run
 ## Run 24 follow-up — possessive plural passive actors
 
 Static source review found a narrow remaining case in the passive actor regex: after a passive verb, possessive plural actors such as `by my contractors`, `by our subcontractors`, and `by their external vendors` were not recognized by the possessive branch. The splitter can therefore leave the candidate-prefixed sentence intact. Source commit `6960a0580321a2fa0872992e5f9c7568fbea2a3b` expands the possessive passive actor group to plural nouns and optional external/outside/third-party modifiers; test commit `6eeb44181ec9471011a1984f61c3961c186d6dfb` adds three negative inputs requiring only `I used AWS` to survive. This is a source/test change, not local execution. Prior five-green gates on `0220196f` are not reused. Exact-head checks are pending; keep DRAFT, with independent review, protected preview and real resume/JD/confirmation/exported-DOCX acceptance still missing.
+
+
+## Run 28 follow-up — bare and externally qualified SOC/security-operations actors
+
+Static source review on PR #598 head `6fb23b1` found a remaining candidate-attribution gap: passive `by external SOC`, `by outside SOC`, `by third-party SOC`, and `by security operations` were not recognized, as were active and relative clauses with these actors. A first-person sentence could retain GCP despite the later actor not being the candidate.
+
+Commit `c7e3939c781aee6755bc34e47a98aada580b5d43` expands the actor alternative to permit an optional article and optional external/outside/third-party modifier before SOC or security operations, including bare forms. Eight passive/active negative cases, three relative-clause hard rejects and three candidate-positive controls were added. An isolated source-derived regex simulation passed 13/13 expected outcomes; no repository test/build was run locally.
+
+**Validation boundary:** new exact-head GitHub workflows are pending; previous green runs at `6fb23b1` are not reused. No protected preview, authorized resume/JD/confirmation, model call or exported DOCX inspection. Continue exact-head CI and review; do not merge/deploy or claim a live 95–100% match without the separate acceptance gate.
+

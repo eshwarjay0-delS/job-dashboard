@@ -115,3 +115,10 @@ Code commits: initial 3b342abc9f199254007b5b925d529ea53310e6c7; correction a3e52
 ## 27 November 2026 — exact validation update
 
 Latest code commit c209bd2c631ad6e87bee3b0ddd5cb38a64d6d37e. Initial focused run 45932860471 failed 1/56; first correction a3e526 failed 2/56 because comma remained and Node.js punctuation was stripped. Latest focused run 45933554666 passed 56/56. WhatsApp recovery 45933554510, Plan/REA schema 45933554488 and Kompas baseline 45933554535 passed. Full CI 45933554574 remains in progress. Earlier test failures were corrected. No local test/build, real resume/JD/confirmation, protected preview, model generation or DOCX acceptance. The PR is not merged/deployed and no live ATS percentage is claimed.
+
+## Bare/external SOC attribution guard — 27 November 2026
+
+The confirmed-skill evidence parser now recognizes bare and externally qualified SOC/security-operations actors (`SOC`, `external SOC`, `outside SOC`, `third-party SOC`, `security operations`) in active/passive and relative clauses. These clauses cannot add team-owned skills as candidate confirmations. Ordinary candidate statements such as `I used AWS and GCP`, `I used AWS and I configured GCP`, and candidate-attributed relative clauses remain positive controls.
+
+Code/test commit: `c7e3939c781aee6755bc34e47a98aada580b5d43`. The isolated source-derived regex simulation passed 13/13 expected outcomes. This is not a local repository test; exact-head remote CI is pending. No model-generated resume, protected preview, real resume/JD/confirmation, DOCX inspection, merge, deployment or live ATS score was performed.
+
