@@ -37,6 +37,8 @@ test('coordinated non-candidate attribution does not confirm later skills', () =
     'I used AWS and GCP was used by outside consultants',
     'I used AWS and GCP was used by third-party vendors',
     'I used AWS and GCP was used by colleagues',
+    'I used AWS and GCP was used by people from a vendor',
+    'I used AWS and GCP was used by the SOC',
   ]
   for (const input of cases) assert.deepEqual(confirmedCandidateStatements([input]), ['I used AWS'], input)
   assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
@@ -61,6 +63,8 @@ test('active non-candidate actors do not confirm their skills', () => {
     'I used AWS, a vendor deployed GCP',
     'I used AWS and my contractors deployed GCP',
     'I used AWS and my team used GCP',
+    'I used AWS and people from a vendor used GCP',
+    'I used AWS and the SOC used GCP',
   ]
   for (const statement of cases) {
     assert.deepEqual(confirmedCandidateStatements([statement]), ['I used AWS'], statement)
