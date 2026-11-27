@@ -293,3 +293,33 @@ test('explicit marker cannot bypass account-root, selected-path or profile-email
   await generate('15550101', { jdId: 'missing-email', jd: 'EASM role', resumePath: HOUSTON_PATH }, TEST_USER_ID, 60_000, missingEmail)
   assert.equal(docs.length, 0)
 })
+
+test('real library chooser produces fallback provenance only for the unique explicit hint', async () => {
+  const candidates = [{
+    path: HOUSTON_PATH, email: 'candidate1@example.test', folder: 'GRC',
+    name: 'EASM Cybersecurity Engineer', title: 'EASM Cybersecurity Engineer',
+    depth: 0, keywords: ['easm'], at: 1,
+  }]
+  const chooser = load('src/lib/library-choose.ts', {
+    '@/lib/storage': { readPath: async p => p === HOUSTON_PATH ? Buffer.from(HOUSTON) : null },
+    '@/lib/docx': { extractText: async bytes => Buffer.from(bytes).toString() },
+    '@/lib/llm': { resolveKeys: () => ({}), keysFor: async () => ({}) },
+    '@/lib/keywords': { extractKeywords: () => [] },
+    '@/lib/resumeOrganization': { resumeEmails: text => [...new Set((String(text || '').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g) || []).map(e => e.toLowerCase()))] },
+    '@/lib/resume-library': { jobKeyOf: jd => String(jd || '') },
+    '@/lib/resume-library-store': { readShelf: async () => null, relOf: (root, abs) => abs.slice(root.length).replace(/^[/\\]/, '') },
+    '@/lib/library-pick-store': { libraryOf: async () => ({ index: {}, counts: {} }), candidatesFor: async (_root, email) => candidates.filter(c => c.email === email) },
+    '@/lib/library-pick': load('src/lib/library-pick.ts'),
+    '@/lib/library-agent': { agentPick: async () => null, logPick: async () => {} },
+    '@/lib/role-match': load('src/lib/role-match.ts'),
+  }).chooseResume
+  const { pickAndMake, docs, queued } = harness(async () => { throw new Error('provider down') }, chooser)
+  await pickAndMake('15550101', { jdId: 'real-chooser', jd: 'EASM Cybersecurity Engineer' },
+    'candidate1@example.test', TEST_USER_ID, TEST_USER_ROOT, false, Date.now(), { hint: 'EASM Cybersecurity Engineer' })
+  assert.equal(queued.length, 1)
+  assert.equal(queued[0].files.explicitSelection, true)
+  assert.equal(queued[0].files.abs, HOUSTON_PATH)
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].body, HOUSTON)
+  assert.match(docs[0].caption, /^Original resume — NOT TAILORED\\n/)
+})
