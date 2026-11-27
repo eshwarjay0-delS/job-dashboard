@@ -7,7 +7,7 @@
 - Current master checkpoint: `1eb604b33cfe58f3c0f6ad611d346d5921e184ff`; GitHub Vercel status is SUCCESS. Canonical alias `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Compare with master shows seven documentation-only commits. No runtime redeploy was warranted. Public HTTP health/version smoke was not performed.
 
 ### Poke-inspired Gmail/mobile
-- PR #576 current head `10f9203fbb73a12b69d5db911231aebea92b34bb` is DRAFT and diverged from master (20 ahead/8 behind). Full CI `45986016579` FAILS tests 28/29; Lint and Type-check passed. Kompas baseline `45986016719` SUCCESS. Corrective COMMENT `7216651849` posted; no code was changed.
+- PR #576 current head `10f9203fbb73a12b69d5db911231aebea92b34bb` is DRAFT and diverged from master (20 ahead/8 behind). Full CI `45986016579` FAILS tests 28/29; Lint and Type-check passed. Kompas baseline `45986016719` SUCCESS. Test-only commit `28d67d66` corrected four regex assertions; nine isolated source-pattern checks matched. Exact-head GitHub CI is pending; no application code was changed.
 - The current PR diff **does** cap `GET /api/gmail-sync`, validates `POST` account choice against the four-account enabled list, and caps `fetchClassifiedThreads` live/snapshot paths. This resolves the earlier server-side cap concern in the branch; the CI regression is still failing. The previous review comment `7213935218` is partially superseded by this diff.
 - Owner-approved scope remains four accounts maximum, account/sender identity and mobile behavior. No Poke worker, scheduler, notifications, sending, live OAuth, two-inbox, selected-From/reconnect or phone acceptance.
 
