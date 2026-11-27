@@ -1176,3 +1176,17 @@ Remote-only continuation of approved MFit/MarketFit work. This review reconciles
 - Plan Journal and REA area unions now include the existing `jobs` category to fix the reported TypeScript errors.
 - Plan revision refreshed with exact Run 28 statuses.
 - Commit SHAs: journal `514389ed5e321de238f0357aa2ead504dd6c7cdb`, REA `0cf9de717c70971c949f92cc701dbeaf1ca194f4`, Plan & Vision `a9b8b8311a010f8510b0d660fe226112d1949b68`.
+
+
+## 27 November 2026 — run 29 (13:43 CST)
+
+- **Production:** canonical alias `job-dashboard-fawn.vercel.app` is independently READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is docs-only. No redeploy.
+- **PR #598 resume evidence:** exact head `6fb23b1fe188980c58a447359ae8adad10010e35`, five gates SUCCESS (CI `46045848277`, focused `46045848247`, recovery `46045848255`, schema `46045848290`, baseline `46045848258`). Static source-derived simulation found unrecognized possessive/standalone SOC/security-operations-center actors; comment `7226849234`. No independent approval, protected preview, real resume/JD/confirmation or DOCX acceptance.
+- **PR #600 WhatsApp fallback:** exact head `71fb3a46c056b0826cde1b8f1547210f52410a2c`, CI `46046329337`, recovery `46046329310`, schema `46046329317`, baseline `46046329334` SUCCESS. Static review comment `7226875770` finds depth-1/2 tailored library files can pass the original fallback guard and be captioned `Original resume — NOT TAILORED`; require depth 0. Keep DRAFT; preview and owner acceptance absent.
+- **PR #576 Gmail/mobile:** exact head `e6ba204e4ff5079eb2933190f29c29c7674b5328`, full CI `46039242535` and baseline `46039242543` SUCCESS; stale 20 ahead/8 behind, DRAFT. Restack, protected preview, two-inbox/account-switch/selected-From/reconnect/mobile acceptance remain.
+- **PR #605 crawler:** exact head `bc6c0879cfa2a83cf6ce7cfd7706c1bda646eeaf`, four gates SUCCESS. Existing review `6091418603` documents server-side location/remote filtering, scan-limit accuracy and API smoke gaps. DRAFT; no crawl.
+- **WhatsApp #591:** five hard-hold assertions remain failing; no route implementation in this runtime. 17 Oct 17:28 Chicago incident remains unverified; exact input/output and R2/webhook/Meta receipt evidence missing.
+- **Kompas:** issue #120 actual 50-pair/human and native acceptance; #147 auth-refresh investigation; #148 shared session catalog remain open. Voice Delivery disabled; Bible-Keeper not found in accessible automation inventory.
+- **Environment:** no canonical checkout/dependencies/installed Next.js 16.3.8 guide; GitHub DNS unavailable locally; Vercel Sandbox restore quota until 1 Dec 00:00 UTC. No local tests/build, model, DOCX, external send, crawl, R2/DB/inbox mutation, deployment or device acceptance.
+
+**Continue:** after environment recovery implement the approved route-level WhatsApp explicit-selection hard hold; preserve #591 failing assertions. Add the SOC attribution regressions to #598, enforce depth-0 originals in #600, clean-restack #576, and test #605 server-side filters. Keep previews, independent review and real owner acceptance gates; do not merge or deploy drafts.
