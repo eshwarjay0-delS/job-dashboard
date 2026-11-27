@@ -1,3 +1,51 @@
+### Run24 final resume head (06:44 CST)
+
+- #598 latest `ec7188a`: focused regression `46001027426` SUCCESS (58/58); WhatsApp recovery `46001027395`, baseline `46001027351`, schema `46001027332` SUCCESS; full CI `46001027344` still IN_PROGRESS. The prior direct-weave import was removed after extensionless-module resolution failed; a newline serialization error in the next test commit was corrected by `ec7188a`. The final-weave integration is still unverified. PR branch 42 ahead/0 behind, DRAFT; no merge/deploy.
+
+### Run24 code follow-up (06:44 CST)
+
+- #598 commits `f41d654` and `f47f6f8` add team-modifier attribution guard and six cases; isolated regex simulation 6/6 with positive control. Direct `constructed-jd.ts` import was removed after module-resolution failure; existing helper/source-path tests remain. Focused run `46000740516` failed on missing newline in import/loop; corrected in `ec7188a`. Latest head `ec7188a`: baseline `46001027351` and schema `46001027332` PASS; focused `46001027426`, full CI `46001027344`, WhatsApp recovery `46001027395` IN_PROGRESS. Do not merge pending exact-head gates and review.
+- Public HTTP smoke via web tool returned internal errors for all five endpoints; inconclusive, not a site outage.
+- New scoped Library/personal-context searches did not recover exact incident source/output/provider trace for 17 Oct 17:28 Chicago.
+
+## 27 November 2026 — run 24 (06:23 CST)
+
+- **Production/master:** alias `job-dashboard-fawn.vercel.app` independently maps to READY `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is documentation-only; no redeploy or public HTTP smoke.
+- **Gmail/mobile #576:** source at PR head includes user-key-bound `shared`/`inflight` caches, generation reset and stale-load suppression. The prior comment claiming caches were unbound is stale/corrected. Full CI `45944935727` and Kompas baseline `45944935730` SUCCESS on shared-lint commit `27f096fbb9a687069e18ea389de67b0470682d96; compare 21 ahead/8 behind master, DRAFT. New COMMENT `7218246884` finds a race in `refreshGmailDataForCurrentAccount()`: a per-user local snapshot is published after `snapshotKey()` awaits without a current-user/generation recheck. Isolated async simulation reproduced stale B publication after B→C; not live OAuth/inbox behavior.
+- **Confirmed-skill resume #598:** exact head `e06e7b04b0722a32118d94c366e0a6331215f062` has all five gates SUCCESS (CI `45967988208`, focused `45967988274`, WhatsApp recovery `45967988296`, Plan/REA `45967988200`, Kompas baseline `45967988229`). PR is DRAFT, 38 ahead/0 behind master. `roleScopedConfirmedSkillTerms` is passed into final role-gap selection, apparently addressing #595 deterministic candidate gap; helper selection is tested but final weave integration is not. COMMENT `7218305032` finds modifier-bearing team subjects still false-confirm later skills (six copied-regex cases); relative-clause thread `4718073397` remains unresolved. No real resume/JD/confirmation, model, DOCX or 95–100%/98% acceptance.
+- **Predecessor #595:** still DRAFT/diverged (36 ahead/2 behind), source review comments unresolved; #598 is the current continuation.
+- **WhatsApp #591:** CI `45792574554` FAILS tests 93/94/96/97/98; recovery `45792574886`, baseline `45792574496`, schema `45792574863` PASS. Route still lacks durable explicit same-account Files/Library selection provenance; keep hard hold and exact Original resume label. 17 Oct 17:28 Chicago incident remains unverified; earlier scoped Library/iZap checks lacked exact source/output/provider trace. No send/replay.
+- **Crawler #590:** five gates green; DRAFT pending protected preview/API smoke. Location/remote filter can underfill after 100; route 60s vs runner 230s. Manual/on-demand only; no crawl.
+- **Gmail #580/Kompas:** owner merge tap still required for #580. Four Gmail accounts maximum; no Poke worker/scheduler/notifications/sending. Kompas issue #120 actual 50 pairs/human grading and #152 protected preview; native Windows/mobile/WhatsApp speech acceptance unverified. Continuous Voice Delivery is disabled.
+- **Execution:** no canonical checkout/dependencies/Next.js 16.3.8 guide; GitHub DNS unavailable; sandbox restore 402 until 1 Dec 00:00 UTC. Remote source/CI and docs branch only; no local test/build, DOCX/model, OAuth/inbox, WhatsApp send/replay, R2/DB write, crawl or device acceptance.
+
+**Continue:** after environment recovery, fix #598 modifier-bearing team/relative-clause attribution and add a final-weave integration regression; rerun exact-head gates. Then clean-restack approved resume work and implement #591 durable same-account selection provenance without weakening hard hold.
+
+## 27 November 2026 — run 22 (05:10 CST)
+
+### Documentation validation
+- The first remote Plan/REA schema run on PR #602 failed because one new Plan Journal entry used unsupported plural `commits`; the schema allows singular `commit`. Removed the field and reran the remote validation. No application code was changed.
+
+### Production / master
+- Current master checkpoint: `1eb604b33cfe58f3c0f6ad611d346d5921e184ff`; GitHub Vercel status is SUCCESS. Canonical alias `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Compare with master shows seven documentation-only commits. No runtime redeploy was warranted. Public HTTP health/version smoke was not performed.
+
+### Poke-inspired Gmail/mobile
+- PR #576 current head `10f9203fbb73a12b69d5db911231aebea92b34bb` is DRAFT and diverged from master (20 ahead/8 behind). Full CI `45986016579` FAILS tests 28/29; Lint and Type-check passed. Kompas baseline `45986016719` SUCCESS. Test-only commit `28d67d66` corrected four regex assertions; nine isolated source-pattern checks matched. Exact-head GitHub CI is pending; no application code was changed.
+- The current PR diff **does** cap `GET /api/gmail-sync`, validates `POST` account choice against the four-account enabled list, and caps `fetchClassifiedThreads` live/snapshot paths. This resolves the earlier server-side cap concern in the branch; the CI regression is still failing. The previous review comment `7213935218` is partially superseded by this diff.
+- Owner-approved scope remains four accounts maximum, account/sender identity and mobile behavior. No Poke worker, scheduler, notifications, sending, live OAuth, two-inbox, selected-From/reconnect or phone acceptance.
+
+### Resume/JD/confirmed experience
+- PR #595 current head `db4322e0c293523e13b58af72da9617874d41fab` is DRAFT and diverged 36 ahead/2 behind master; no exact-head workflow runs/status were returned. Earlier five green gates on `77ebbaac` are stale and not reused. Current source now adds attribution splitting/other-subject suppression plus team/colleague/client/organization regressions, appearing to address the previous AWS/GCP team-attribution bug; it is not validated until exact-head CI passes. COMMENT `7216778432` records this non-approval. The deterministic role-scoped placement gap remains. No authorized resume/JD/confirmation bundle or DOCX acceptance.
+- PR #591 exact head `b4b110c48da5d8f260bb183849f0ee27b5f99f18` full CI `45792574554` fails tests 93/94/96/97/98. WhatsApp recovery `45792574886`, Kompas baseline `45792574496`, and Plan/REA schema `45792574863` pass. Durable explicit same-account Files/Library selection provenance is missing; retain exact `Original resume — NOT TAILORED` fallback and hard hold. The 17 Oct 17:28 Chicago delivery remains unverified (output DOCX, R2 object/version, webhook correlation, Meta outbound ID, signed receipt missing); no replay/send.
+
+### Contract crawler and Kompas
+- PR #590 exact head `1de4a3e493380f009d2b14dd35d0451f27392d51`: five gates SUCCESS; DRAFT pending protected preview/public API smoke. Location/remote filters can underfill after 100 rows; POST duration 60s vs runner 230s. Contract crawler remains manual/on-demand only; no crawl. Last recorded 26 Nov freshness snapshot (not rechecked today): 0 fresh contract rows within 14 days, latest crawl 10 Nov.
+- Kompas #113/#114/#115 release ancestry remains verified. Issue #120 (50 actual same-question paired answers + independent human grading) and #152 (authenticated protected-preview gate) remain open. Native Windows/mobile/WhatsApp acceptance is unverified. Kompas Continuous Voice Delivery is disabled; no duplicate voice/caption edits.
+
+### Execution / next step
+- Remote GitHub source/CI review was available, but no canonical checkout, dependencies or installed Next.js 16.3.8 route guide were present; previous Git clone failed DNS. Last recorded Vercel sandbox restore 402 is quota-blocked until 1 Dec 2026 00:00 UTC; not retried in this run. No local test/build, real email/WhatsApp, crawl, model/DOCX, R2/DB mutation or device acceptance.
+- Continue: clean-restack #576, fix the two overescaped test regexes, and run exact-head full CI after a compliant checkout and installed guide are restored. P0 #591 route-level selection/fallback remains first implementation priority. #595 attribution source fix awaits CI; deterministic role-placement repair remains. Do not bypass preview, billing, owner merge taps or device acceptance.
+
 ## 27 November 2026 — run 21 (20:36 CST)
 
 - **Canonical production:** `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Current master is `9c35c4c00be558aaac927df5ba5c1625c540d4ca`, six documentation commits ahead of that runtime SHA; the comparison shows docs-only changes. No runtime redeploy is needed for this checkpoint.
@@ -1101,3 +1149,29 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - The 17 Oct 17:28 incident remains unresolved until generated output DOCX, per-run R2 version, webhook correlation, Meta outbound ID and signed receipt are recovered.
 
 **Continue:** implement durable selection provenance and the exact fail-closed Original fallback in the actual route/session flow after environment recovery; keep #591's failing assertions intact and require exact-head CI, protected preview and owner acceptance.
+
+
+## 27 November 2026 — run 28 (11:17 CST)
+
+- **Production/master:** the canonical alias independently maps to READY deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW` at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; current master tree `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is documentation-only relative to that runtime. No redeploy.
+- **Resume/JD confirmed skills #598:** new source-derived simulation exposed two passive attribution forms not split by the prior matcher: progressive `is/are being used` and negated passive `was/is not managed`. The approved branch adds shared passive auxiliary patterns, optional `being`, and singular passive actor coverage, plus eight regressions. Isolated simulation now passes 8/8 negatives and preserves `I used AWS and GCP`. This is not local parser execution.
+- **Review/validation:** new non-approval COMMENT `6091490432`. PR #598 remains open, mergeable and non-draft with no APPROVED review. Source commits `38428a1d`, `0b206f3e`, `10a62106`; tests commit `1befe183`. Exact-head checks are QUEUED: CI `46041706244`, focused `46041706287`, WhatsApp recovery `46041706854`, baseline `46041706180`, schema `46041706156`. Do not reuse prior-head green checks.
+- **Still open:** #591 route-level explicit same-account Files/Library selection and fail-closed Original resume — NOT TAILORED; 17 Oct 17:28 Chicago send/delivery remains unverified. #600 remains DRAFT (remote gates green) with protected preview canceled by ignored-build marker. #605 crawler remains DRAFT with client-side location/remote underfill, omitted API filters and possible scan-limit notice issues. #576 Gmail/mobile remains DRAFT with account-cache race review and no real OAuth/two-inbox/mobile acceptance. Kompas #120 actual 50-pair/human grading and native acceptance remain open.
+- **Execution wall:** no canonical local checkout/dependencies or installed Next.js 16.3.8 route guide; no local test/build or protected preview. Vercel sandbox restore quota is still blocked until 1 Dec 2026 00:00 UTC. No real resume/JD/model/DOCX, OAuth/inbox, WhatsApp send/replay, crawl, R2/DB mutation or device acceptance occurred.
+
+**Continue:** poll #598 exact-head CI and fix failures only with tests; keep unmerged pending terminal green, independent review, protected preview and owner-authorized resume/JD/confirmation plus exported-DOCX acceptance. For P0 #591, wait for a compliant checkout and installed route guide before implementing durable selection provenance; preserve failing assertions.
+
+
+## Run 28 correction — 27 Nov 2026 (11:17 CST)
+
+- Prior exact-head WhatsApp-recovery regression run `46041706854` failed 1/60: `I used AWS and GCP isn't being configured by a colleague` retained GCP. The passive regex itself matched in an isolated check, but the splitter lookahead had ungrouped interpolated alternations; this is the root cause of the bypass.
+- Source commit `493ae6f21898b74e5240204605f44e217bdb40dd` groups each of the six lookahead alternatives. Isolated source-derived splitter simulation now splits all eight progressive/negated passive cases to AWS-only and preserves `I used AWS and GCP`. Simulation only.
+- Exact latest head `493ae6f`: full CI `46042179561`, focused regression `46042179568`, WhatsApp recovery `46042179653` IN_PROGRESS; baseline `46042179605` and schema `46042179617` SUCCESS. Do not reuse the prior head's green checks.
+- Production remains READY at runtime `a17b3267`; master is documentation-only. PR #598 is open, mergeable, non-draft, with no independent approval. Protected preview and authorized real resume/JD/confirmation/DOCX acceptance are missing.
+
+**Continue:** poll the exact latest head; correct any failing test on that head. Keep unmerged pending all gates, independent approval, protected preview and real exported-DOCX acceptance. P0 WhatsApp #591 is still blocked on a compliant checkout/dependencies and installed Next.js 16.3.8 guide; do not weaken failing assertions.
+
+
+## Run 28 Gmail current-head refresh
+
+PR #576 current head `e6ba204e4ff5079eb2933190f29c29c7674b5328` has full CI and Kompas baseline SUCCESS, but remains DRAFT on base `794e8cfdbd3103409552857806bab89851d5bfcb` (21 ahead/8 behind master `1eb604b`). The account-bound shared/inflight caches and generation reset are present; COMMENT `7218246884` still identifies a snapshot publication race after async `snapshotKey` without a current-user/generation recheck. No protected preview, OAuth/inbox, two-account collision, selected-From/reconnect or mobile acceptance. Poke proactive worker/scheduler/notifications/sending remain disabled.
