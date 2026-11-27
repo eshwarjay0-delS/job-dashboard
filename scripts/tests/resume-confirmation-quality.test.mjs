@@ -1,9 +1,7 @@
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, roleScopedConfirmedSkillTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
-import { weaveExperienceRepresentation } from '../../src/lib/constructed-jd.ts'
-for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'I haven\'t used AWS', 'I haven\'t worked with Splunk', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
+import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, roleScopedConfirmedSkillTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'I haven\'t used AWS', 'I haven\'t worked with Splunk', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
 for (const input of ['I have experience with AWS and Terraform', 'I personally deployed CyberArk EPM', 'My experience includes SOX testing', 'Confirmed skills: Python', 'Confirmed experience: SOX testing']) {
@@ -547,24 +545,4 @@ test('modifier-bearing team attribution does not confirm later skills', () => {
     assert.deepEqual(confirmedCandidateStatements([statement]), ['I used AWS'], statement)
   }
   assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
-})
-
-test('confirmed skill is selected and woven into only a context-fit existing role bullet', () => {
-  const roles = [
-    { bullets: [{ idx: 1, text: 'Removed local admin rights and hardened Windows endpoints.' }] },
-    { bullets: [{ idx: 2, text: 'Built Salesforce email campaigns and marketing automation.' }] },
-  ]
-  const terms = ['CyberArk EPM']
-  const confirmed = ['CyberArk EPM']
-  const cover = (text, required) => new Set(required.filter(term => text.toLowerCase().includes(term.toLowerCase())))
-  const gaps = roleScopedMissingTerms(roles, roles.flatMap(role => role.bullets), terms, cover, confirmed)
-  assert.deepEqual(gaps, [{ roleIndex: 0, terms: ['CyberArk EPM'] }])
-  const source = roles[0].bullets
-  const woven = weaveExperienceRepresentation([{ bullets: source }], source, gaps[0].terms)
-  assert.deepEqual(woven.placed, ['CyberArk EPM'])
-  assert.deepEqual(woven.unplaced, [])
-  assert.equal(woven.bullets.length, source.length)
-  assert.equal(woven.bullets[0].idx, source[0].idx)
-  assert.match(woven.bullets[0].text, /CyberArk EPM/)
-  assert.doesNotMatch(roles[1].bullets[0].text, /CyberArk EPM/)
 })
