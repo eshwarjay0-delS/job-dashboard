@@ -1,3 +1,13 @@
+## 27 November 2026 — run 25 (08:03 CST)
+
+- **Master/production:** master `cbf64a7eade33eb59394b1803087cd5bf39c612c` (PR branch) remains separate from production; alias `job-dashboard-fawn.vercel.app` is READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. This is a messaging/test change only; no runtime deployment.
+- **WhatsApp #600:** all four exact-head gates were SUCCESS before this correction. Review comment `6086800378` identified that the 60-second timer still promised a Word file “either way,” contradicting the new fail-closed fallback. The timer now distinguishes durable explicit same-account library selection from uploads/automatic picks and no longer promises an ineligible original. A regression was added; post-change remote CI is pending.
+- **Preview/acceptance:** the earlier protected preview was canceled by Vercel's Ignored Build Step because the branch commit lacked `[ship]`. Keep DRAFT; do not bypass the guard. No send/replay, real DOCX, R2/Meta trace or authenticated acceptance.
+- **17 Oct 17:28 Chicago incident:** remains UNVERIFIED; exact source/output, R2 object/version, webhook correlation, Meta message ID and signed delivery/read receipt are missing.
+- **Execution:** remote source update only; local checkout/dependencies unavailable, so no local tests/build. No deployment, inbox/database/R2 mutation, model call, crawl or device test.
+
+**Continue:** wait for exact-head full CI, WhatsApp recovery, baseline and Plan/REA schema after this correction; then retain independent review, protected preview and owner acceptance gates.
+
 ## 27 November 2026 — run 23 continuation (remote review and branch corrections)
 
 - **Master/production:** canonical master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` remains docs-only relative to READY production runtime `a17b3267e271c77cd8887312445271b7fa172bd0`; these branch changes do not affect production.

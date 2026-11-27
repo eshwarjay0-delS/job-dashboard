@@ -921,7 +921,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // function stays alive under after() up to maxDuration.
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get a Word file here: the updated resume if the rewrite finishes, or the resume already chosen for this job if it does not.").catch(() => {})
+      sendText(from, files?.explicitSelection
+        ? "Still working on your resume — the rewrite has been running for a minute and is still going. I will send a tailored Word file only if it passes the checks. If not, I may send only the same-account Files/Library resume you explicitly selected, labeled \"Original resume — NOT TAILORED\"; otherwise I will explain and keep your request saved."
+        : "Still working on your resume — the rewrite has been running for a minute and is still going. I will send a tailored Word file only if it passes the checks. If not, I will explain and keep your request saved; no original fallback is eligible without an explicit same-account Files/Library selection.").catch(() => {})
     }, 60_000)
   }
 

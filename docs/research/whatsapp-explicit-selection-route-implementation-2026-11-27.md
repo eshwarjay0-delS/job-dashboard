@@ -35,3 +35,9 @@ No local checkout or local npm execution was available. GitHub's canonical Actio
 ## Next
 
 Wait for exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA schema checks. Keep the PR DRAFT; do not merge or deploy until the protected preview and owner acceptance gates are satisfied. If tests fail, fix the exact failure without weakening assertions. Recover the original 17 Oct artifact and delivery trace before claiming that incident resolved.
+
+## Run 25 — correct the 60-second progress promise
+
+Static review found that the initial progress message had been corrected, but the 60-second timer still promised a Word file “either way.” It now branches on the durable `explicitSelection` marker: an explicitly selected same-account Files/Library resume is described as a possible original with the exact `Original resume — NOT TAILORED` label; uploads and automatic picks are told no original fallback is eligible, and the request will remain saved if tailoring fails.
+
+A regression in `scripts/tests/resume-guards.test.mjs` asserts that the 60-second timer contains both policy branches and rejects the stale unconditional promise. Source commit is pending exact-head remote validation. No local test/build or real WhatsApp send/replay was performed.
