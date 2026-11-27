@@ -1,3 +1,16 @@
+## 27 November 2026 — run 22 continuation (03:38 CST)
+
+- **Master/production:** canonical master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is documentation-only beyond runtime. `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. No runtime redeploy.
+- **WhatsApp explicit same-account fallback — PR #600:** DRAFT, mergeable, exact head `5fbe652201a4e5d96cbc8c0490184884795af00a`. Static review confirms the server-derived unique-hint marker is stored in recovery; fallback revalidates owner-root, path, email folder, DOCX and single profile email and labels the original exactly. Added one test using the real library chooser/matchHint path (commit `00c39ef3a460826dc402a35b6371f4fda006c13b`; regex correction `5fbe6522`). Prior head `1077521` had CI `45966972307`, WhatsApp recovery `45966972291`, baseline `45966972066` SUCCESS; these do not transfer to new head. At exact head, baseline `45976215130` and recovery `45976215148` were IN PROGRESS; full CI was not yet visible. No Vercel preview (branch query count 0), no GitHub preview status or formal review. Keep DRAFT; protected preview and owner-consented real WhatsApp acceptance are missing. No send/replay.
+- **WhatsApp #591/17 Oct incident:** #591 remains failed/fail-closed; do not send/replay. The 17 Oct 17:28 Chicago incident remains UNVERIFIED; exact source/output DOCX, per-run R2/version, request/webhook correlation, Meta ID and signed delivery receipt are missing.
+- **Resume/JD confirmed-skill #595:** DRAFT stale/non-mergeable; all prior exact-head gates are green but role-gap deterministic placement and team-vs-candidate attribution fixes remain. No real resume/JD/model/exported-DOCX acceptance.
+- **Gmail/mobile #576:** stale-base shared `prefer-const` full-CI failure still prevents account-isolation gate from running; four-account cap remains. No OAuth, inbox mutation, email send or phone acceptance.
+- **Crawler #590:** five gates green but protected preview/API acceptance missing; location/remote filters can underfill and route timeout is shorter than runner. Manual/on-demand only; no crawl.
+- **Execution wall:** no canonical local checkout/dependencies and no local test/build. Vercel branch deployments returned zero; protected preview access is not available. No billing/access bypass, model/DOCX, Meta send/replay, R2/DB/inbox mutation, crawl or device acceptance.
+
+**Continue:** verify the new exact-head #600 CI/recovery/baseline and fix only test failures; keep it DRAFT until protected preview and independent review. Then continue the clean #595 confirmed-skill attribution/role-gap slice. Maintain #591 fail-closed and the historical incident evidence wall.
+
+
 ## 27 November 2026 — run 21 (20:36 CST)
 
 - **Canonical production:** `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Current master is `9c35c4c00be558aaac927df5ba5c1625c540d4ca`, six documentation commits ahead of that runtime SHA; the comparison shows docs-only changes. No runtime redeploy is needed for this checkpoint.
