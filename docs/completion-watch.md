@@ -1144,3 +1144,12 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - The 17 Oct 17:28 incident remains unresolved until generated output DOCX, per-run R2 version, webhook correlation, Meta outbound ID and signed receipt are recovered.
 
 **Continue:** implement durable selection provenance and the exact fail-closed Original fallback in the actual route/session flow after environment recovery; keep #591's failing assertions intact and require exact-head CI, protected preview and owner acceptance.
+
+
+## 27 November 2026 — run 22 passive-attribution follow-up (05:29 UTC)
+
+- **PR #598:** focused parser regression `45945333982` (8/8), WhatsApp recovery `45945333791` (9/9), Kompas baseline `45945333814`, and Plan/REA schema `45945333780` are SUCCESS; full CI `45945333802` was still IN_PROGRESS at the last check. Do not merge from focused gates alone.
+- **New static edge case:** isolated matcher simulation shows `I used AWS and GCP was used by contractors` and `I used AWS and GCP was handled by subcontractors` remain unsplit. The candidate parser can retain GCP as candidate evidence even though the passive actor is non-candidate. COMMENT `6083882072` asks for negative tests and fail-closed splitting while retaining `I used AWS`. This simulation is not a repository test.
+- **Release boundary:** PR #598 remains unmerged/un-deployed. Independent review, protected preview, owner-authorized resume/JD/confirmation and exported-DOCX inspection remain missing. Production alias is READY at runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`; no runtime change or deployment was made.
+
+**Continue:** add bare plural contractor/subcontractor attribution regressions to #598 and fix the matcher; keep it unmerged until exact-head full CI, focused/recovery gates, independent review and separate protected-preview/real-DOCX acceptance pass.
