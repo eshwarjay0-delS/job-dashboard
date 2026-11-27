@@ -109,3 +109,8 @@ PR #598 exact head 58c10bad has all five remote gates green (focused regression 
 ## 27 November 2026 — run 22 follow-up
 
 Static review comment 6083779719 found that passive attribution by `others` or external actors could bypass the candidate-confirmation splitter. Source commit 141590c8c5acf45bf56131b46325a3474cc180c broadens the passive actor matcher and commit 1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d adds six negative regressions, preserving the ordinary candidate AWS/GCP list. Exact-head focused/full/WhatsApp recovery runs are still in progress; baseline/schema checks passed. No local execution or real resume/JD/DOCX acceptance.
+
+
+## Run 22 follow-up — bare passive contractor attribution (27 November 2026)
+
+PR #598's new passive actor guard still has a narrow source-matcher gap. Isolated simulation shows `I used AWS and GCP was used by contractors` and `I used AWS and GCP was handled by subcontractors` remain unsplit, so GCP may be retained as candidate-confirmed experience. COMMENT review 6083882072 requests negative cases and fail-closed attribution splitting while preserving the preceding `I used AWS` claim and normal candidate lists such as `I used AWS and GCP`. This is not a repository test. PR #598's focused (8/8), WhatsApp recovery (9/9), baseline and schema checks passed, but full CI was still in progress; keep it unmerged pending terminal exact-head gates, independent review, protected preview and real exported-DOCX acceptance.
