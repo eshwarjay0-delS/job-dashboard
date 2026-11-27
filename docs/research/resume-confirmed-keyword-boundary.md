@@ -75,3 +75,15 @@ Final review found a pre-existing web fact-check fail-open: unreadable source/ex
 The current implementation separates candidate confirmations from employer requirements in `candidateEvidenceInput`. `confirmedCandidateStatements` accepts first-person experience assertions and rejects editing instructions, questions, negations and JD-only requirement lists. `explicitlyConfirmsAllRequirements` recognizes the owner's explicit statement, “I have experience with all of them evenly,” while rejecting exceptions and formatting requests.
 
 The focused regression now pins both sides: the explicit blanket statement is accepted, while “Add all keywords,” “Make this 98% match,” and a bare required-skills list are not blanket experience evidence. This is a source-level guard, not a live model generation, a 98% match claim, or employer verification. The exported DOCX still needs an authenticated baseline/JD/confirmation review before quality can be accepted.
+
+
+## 27 November 2026 — progressive and negated passive attribution
+
+Static source review of PR #598 found that the prior passive-actor patterns did not recognize progressive forms such as `GCP is being used by my team` or negated forms such as `GCP was not managed by my team`. Because the whole sentence still began with `I used AWS`, the candidate-evidence parser could retain GCP as a candidate-confirmed skill.
+
+The source branch now shares a passive auxiliary matcher for `was/were/is/are`, `has/have/had been`, common negated auxiliaries and contractions, and permits an optional `being` before the passive verb. Singular passive actors such as a colleague/coworker/manager/employee and staff/team member are also covered. Added eight regression inputs. An isolated source-derived simulation now splits all eight to `I used AWS` while preserving the ordinary positive `I used AWS and GCP`. This is a regex simulation only; the repository test suite has not run locally.
+
+
+## Exact-head validation status
+
+PR #598 head `10a621060626e3619445b55c59ce0270b0b9b06d`; source commits `38428a1d`, `0b206f3e`, `10a62106`, test commit `1befe183`. All five new exact-head remote gates are queued (full CI 46041706244, focused 46041706287, WhatsApp recovery 46041706854, baseline 46041706180, schema 46041706156). The PR is open/mergeable/non-draft but no independent APPROVED review exists. Do not merge or deploy before terminal CI, review, protected preview and owner-authorized resume/JD/confirmation plus exported-DOCX acceptance.
