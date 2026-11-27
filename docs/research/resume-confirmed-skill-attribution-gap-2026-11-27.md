@@ -55,3 +55,8 @@ Code commit `aacd619f9c16e384e7b71e4e6e00cd4862659606` makes the auxiliary phras
 
 
 **Validation boundary:** remote exact-head CI is pending; the earlier 56-case and five-gate results do not transfer. No local checkout/dependencies or repository test/build, protected preview, owner-authorized resume/JD/confirmation, model call or exported DOCX acceptance. Keep PR #598 unmerged until exact-head gates, independent review, protected preview and owner acceptance.
+
+
+### Run 29 test-fixture correction
+
+Source-derived simulation found one test phrase was not matched because `monitored` was absent from the passive participle list. The source now includes that common passive verb in all three passive actor matchers (commit `43d6052d3dfb83cb5ace8dcc02d46d6490e13370`). A repeat isolated splitter simulation of the nine negative cases plus two candidate-positive controls returned the expected split/retention for all 11; this is not repository test execution. The exact-head remote checks are still required.
