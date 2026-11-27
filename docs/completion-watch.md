@@ -1,3 +1,9 @@
+### Run24 code follow-up (06:44 CST)
+
+- #598 commits `f41d654` and `f47f6f8` add team-modifier attribution guard and six cases; isolated regex simulation 6/6 with positive control. Direct `constructed-jd.ts` import was removed after module-resolution failure; existing helper/source-path tests remain. Focused run `46000740516` failed on missing newline in import/loop; corrected in `ec7188a`. Latest head `ec7188a`: baseline `46001027351` and schema `46001027332` PASS; focused `46001027426`, full CI `46001027344`, WhatsApp recovery `46001027395` IN_PROGRESS. Do not merge pending exact-head gates and review.
+- Public HTTP smoke via web tool returned internal errors for all five endpoints; inconclusive, not a site outage.
+- New scoped Library/personal-context searches did not recover exact incident source/output/provider trace for 17 Oct 17:28 Chicago.
+
 ## 27 November 2026 — run 24 (06:23 CST)
 
 - **Production/master:** alias `job-dashboard-fawn.vercel.app` independently maps to READY `dpl_85tAXWKpsib5LKPh6LqZDiRhsYyW`, runtime SHA `a17b3267e271c77cd8887312445271b7fa172bd0`. Master `1eb604b33cfe58f3c0f6ad611d346d5921e184ff` is documentation-only; no redeploy or public HTTP smoke.
