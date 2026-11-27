@@ -1,3 +1,11 @@
+## 27 November 2026 — run22 validation update (03:22 UTC)
+
+PR #598 latest code commit c209bd2c631ad6e87bee3b0ddd5cb38a64d6d37e. Initial focused run 45932860471 failed 1/56; first correction a3e526 failed 2/56 because comma remained and Node.js punctuation was stripped. Latest focused run 45933554666 is SUCCESS, 56/56. WhatsApp recovery 45933554510, Plan/REA schema 45933554488 and Kompas baseline 45933554535 are SUCCESS. Full CI 45933554574 remains IN_PROGRESS.
+
+Previous run22 entry records the early failures; this update supersedes it. PR is ready for review but not independently approved, merged or deployed. No local test/build, real resume/JD, protected preview, model generation or DOCX acceptance.
+
+Continue: wait for full CI 45933554574; inspect failure if any. Keep independent-review, preview and real DOCX acceptance gates.
+
 ## 27 November 2026 — run 22 (03:16 UTC)
 
 - **Documentation:** PR #597 reviewed and merged docs-only as 1eb604b33cfe58f3c0f6ad611d346d5921e184ff. It preserves the run21 backlog; no runtime deployment.
