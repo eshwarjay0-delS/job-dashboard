@@ -106,3 +106,10 @@ PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Libra
 The current #598 matcher is being extended to distinguish candidate experience from passive progressive and negated clauses. Source-derived examples such as “I used AWS and GCP is being used by my team” and “I used AWS and GCP was not managed by my team” initially retained GCP as candidate evidence. The approved source/test branch now recognizes progressive/negated passive auxiliaries and singular actors; an isolated simulation passes eight negatives while preserving “I used AWS and GCP.” This is not local parser test execution.
 
 Latest exact-head PR #598 checks are queued. Keep it unmerged pending full CI, independent review, protected preview, and an owner-authorized real resume/JD/confirmation plus exported-DOCX review. The 95% floor remains; 98% is a target, not a live match claim.
+
+
+## Run 28 matcher-precedence correction — 27 November 2026
+
+The prior exact-head regression run failed one progressive passive case: “I used AWS and GCP isn't being configured by a colleague.” Source inspection showed the lookahead's regex alternatives were ungrouped, allowing alternation to escape the lookahead. Commit `493ae6f` groups all six matcher alternatives. Isolated source-derived splitter simulation passes eight passive negatives and keeps the ordinary AWS+GCP positive; local repository tests remain unavailable.
+
+Latest exact-head CI is pending (full/focused/WhatsApp recovery); schema and Kompas baseline passed. Keep #598 unmerged until terminal CI, independent review, protected preview, and owner-authorized real resume/JD/confirmation plus exported-DOCX inspection. No live 95–100%/98% match is claimed.
