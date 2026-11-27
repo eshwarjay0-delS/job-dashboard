@@ -21,3 +21,8 @@ Continue: fix the attribution bypass with behavior-level negative tests in a com
 ## Follow-up correction (27 Nov 2026, 05:22 UTC)
 
 Source commit `141590c8c5acf45bf56131b46325a3474cc180c2` broadened the passive actor matcher for `others`, `someone else`, `another/other team or vendor`, external/outside/third-party actors and `handled`. Test commit `1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d` adds six negative cases. Exact-head Kompas baseline and Plan/REA schema passed; focused, full CI and WhatsApp recovery are still in progress. No local execution. Keep the PR unmerged pending terminal checks, independent review, preview and real DOCX acceptance.
+
+
+## Gmail privacy review follow-up (27 Nov 2026, 05:24 UTC)
+
+Static source review of PR #576 found a potential cross-account cache leak: `shared`/`inflight` are module globals without an owner ID; the hook uses cached data before checking `snapshotKey()`, and auth-state account changes do not invalidate them (only the explicit sidebar signOut does). COMMENT 6083838182 requests owner-bound cache/inflight and an A→B session-switch regression. This is not a reproduced incident. #576 full CI 45944935727 was in progress with 44 steps green; baseline 45944935730 passed. No local or live Gmail acceptance.
