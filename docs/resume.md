@@ -99,3 +99,14 @@ The owner-approved rule remains narrow: an explicit candidate confirmation may s
 Master-based restack PR [#595](https://github.com/eshwarjay0-delS/job-dashboard/pull/595) has all five exact-head gates green, but remains DRAFT/non-mergeable pending a clean restack, protected preview, and owner-authorized resume/JD/confirmation plus exported-DOCX inspection. Static review COMMENT 6082791060 found that a sentence such as “I used AWS, and my team used GCP” can be retained as one candidate statement, incorrectly treating the team's GCP experience as the candidate's. The parser needs attribution regressions for team, colleague, client and organization clauses. Existing unresolved review thread 4713559321 also identifies a deterministic placement gap: a confirmed skill absent from original bullets can be allowed by the prompt/guard but is not a deterministic role-gap weave candidate.
 
 PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Library selection is still absent from the actual WhatsApp route/session fallback. The 17 Oct 17:28 Chicago delivery remains unverified. No candidate bundle, model call or exported DOCX was processed here. The web 95% floor remains; 98% is a target, not a claimed live match.
+
+
+## 27 November 2026 — confirmed-skill attribution and role repair continuation
+
+The approved rule remains: an explicit positive candidate confirmation supports only the named skill, and that skill may be mapped into relevant existing project bullets across roles. It cannot create an employer, project, action, result, title, date, location, contact, metric or credential. The JD is target context, never candidate experience.
+
+Clean current-master PR [#598](https://github.com/eshwarjay0-delS/job-dashboard/pull/598) transplants the reviewed #595 source and addresses two findings:
+- Coordinated team/colleague/client/organization/collective or passive-attribution clauses after a first-person statement are split, preventing later non-candidate skills from being confirmed; ordinary candidate lists such as “I used AWS and GCP” stay together
+- Context-fit confirmed skills now count as role-level requirements even if omitted by the first model pass and become bounded role-gap/final-weave candidates only for relevant existing projects
+
+Code commit: 3b342abc9f199254007b5b925d529ea53310e6c7. Remote full CI, Kompas baseline, focused resume regression and WhatsApp recovery were in progress on that initial code head; documentation commits change PR head and require fresh exact-head checks. No local test/build, real resume/JD/confirmation, model generation or DOCX inspection occurred. PR remains DRAFT. Protected preview, independent review and owner-authorized final DOCX acceptance are still required; no 95–100% or live 98% match is claimed
