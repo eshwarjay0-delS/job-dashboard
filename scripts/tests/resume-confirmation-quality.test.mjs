@@ -584,3 +584,23 @@ test('progressive and negated passive attribution does not confirm non-candidate
   for (const input of cases) assert.deepEqual(confirmedCandidateStatements([input]), ['I used AWS'], input)
   assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
 })
+
+test('ambiguous relative clauses attributed to non-candidate actors cannot confirm skills', () => {
+  const negatives = [
+    'I used AWS and GCP, which my team used',
+    'I used AWS and GCP, which the engineering team used',
+    'I used AWS and GCP, that my team used',
+    'I used AWS and GCP, which contractors deployed',
+    'I used AWS and GCP, which was used by my team',
+    'I used AWS and GCP, that was handled by a vendor',
+    'I used AWS and GCP that my team used',
+    'I used AWS and GCP which the SOC used',
+  ]
+  for (const input of negatives) assert.deepEqual(confirmedCandidateStatements([input]), [], input)
+  const positives = [
+    'I used AWS and GCP, which I used',
+    'I used AWS and GCP that I configured',
+  ]
+  for (const input of positives) assert.deepEqual(confirmedCandidateStatements([input]), [input], input)
+})
+

@@ -57,9 +57,17 @@ const NON_CANDIDATE_TEAM_SUBJECT = String.raw`(?:(?:my|our|their|the|a|an)\s+)?(
 const NON_CANDIDATE_TEAM_PASSIVE = String.raw`(?:[a-z][a-z0-9.+#/-]*\s+)?${NON_CANDIDATE_PASSIVE_AUX}\s+(?:being\s+)?(?:used|managed|deployed|implemented|configured|maintained|operated|tested|built|developed|supported|administered|performed|conducted|provided|created|delivered|handled)\s+(?:by|for|with)\s+${NON_CANDIDATE_TEAM_SUBJECT}`
 const NON_CANDIDATE_EXTRA_ACTOR = String.raw`people\s+(?:from|at|with)\s+(?:(?:a|an|the)\s+)?(?:(?:external|outside|third[-\s]?party)\s+)?(?:vendors?|contractors?|subcontractors?|consultants?|partners?|clients?|customers?|teams?|groups?|companies?|organizations?)\b|(?:a|an|the)\s+(?:soc|security\s+operations(?:\s+(?:center|centre|team))?)\b`
 const NON_CANDIDATE_EXTRA_PASSIVE = String.raw`(?:[a-z][a-z0-9.+#/-]*\s+)?${NON_CANDIDATE_PASSIVE_AUX}\s+(?:being\s+)?(?:used|managed|deployed|implemented|configured|maintained|operated|tested|built|developed|supported|administered|performed|conducted|provided|created|delivered|handled)\s+(?:by|for|with)\s+(?:${NON_CANDIDATE_EXTRA_ACTOR})`
-const splitNonCandidateAttribution = (line: string): string[] => line
+const NON_CANDIDATE_RELATIVE = new RegExp(
+  String.raw`\b(?:which|that)\s+(?:${NON_CANDIDATE_SUBJECT}|${NON_CANDIDATE_PASSIVE}|${NON_CANDIDATE_TEAM_SUBJECT}|${NON_CANDIDATE_TEAM_PASSIVE}|${NON_CANDIDATE_EXTRA_ACTOR}|${NON_CANDIDATE_EXTRA_PASSIVE})`,
+  "i",
+)
+
+const splitNonCandidateAttribution = (line: string): string[] => {
+  if (NON_CANDIDATE_RELATIVE.test(line)) return []
+  return line
   .split(new RegExp(String.raw`(?:,\s*|\b(?:and\s+then|or\s+then|and|or|while|whereas|along with|then)\s+)(?=(?:${NON_CANDIDATE_SUBJECT})|(?:${NON_CANDIDATE_PASSIVE})|(?:${NON_CANDIDATE_TEAM_SUBJECT})|(?:${NON_CANDIDATE_TEAM_PASSIVE})|(?:${NON_CANDIDATE_EXTRA_ACTOR})|(?:${NON_CANDIDATE_EXTRA_PASSIVE}))`, "i"))
   .map(part => part.replace(/[ ,\s]+$/, "").trim())
+}
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
   return statements.flatMap(statement => statement.split(/[\n;]+|[.!](?=\s|$)/)).flatMap(raw => splitNonCandidateAttribution(raw)).flatMap(raw => {
     const line = raw.trim()
