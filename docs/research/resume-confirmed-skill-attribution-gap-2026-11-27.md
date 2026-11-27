@@ -44,3 +44,14 @@ Commit `c7e3939c781aee6755bc34e47a98aada580b5d43` expands the actor alternative 
 
 **Validation boundary:** new exact-head GitHub workflows are pending; previous green runs at `6fb23b1` are not reused. No protected preview, authorized resume/JD/confirmation, model call or exported DOCX inspection. Continue exact-head CI and review; do not merge/deploy or claim a live 95–100% match without the separate acceptance gate.
 
+
+
+## Run 29 — elliptical passive attribution guard (27 November 2026)
+
+Static review of the current parser found a narrower form that still passed a candidate-prefixed line intact: `I used AWS and GCP managed by the SOC`, `...handled by my team`, and other elliptical passives omit `was/is`. The existing passive matchers require an auxiliary verb, so the second skill can remain in the candidate evidence. This is a source-derived finding; the previous synthetic green gates do not cover it.
+
+
+Code commit `aacd619f9c16e384e7b71e4e6e00cd4862659606` makes the auxiliary phrase optional only in the passive patterns, which still require a listed participle and explicit `by/for/with` actor. Test commit `0ec4c7d9598e98aff5aec639275723be0edb6498` adds nine negative cases (team, SOC, contractor, vendor, collective, company and other passive actors) while preserving candidate-positive controls.
+
+
+**Validation boundary:** remote exact-head CI is pending; the earlier 56-case and five-gate results do not transfer. No local checkout/dependencies or repository test/build, protected preview, owner-authorized resume/JD/confirmation, model call or exported DOCX acceptance. Keep PR #598 unmerged until exact-head gates, independent review, protected preview and owner acceptance.
