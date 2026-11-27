@@ -1,7 +1,8 @@
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
-import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, roleScopedConfirmedSkillTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'I haven\'t used AWS', 'I haven\'t worked with Splunk', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
+import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, roleScopedConfirmedSkillTerms, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
+for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'I haven\'t used AWS', 'I haven\'t worked with Splunk', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
 for (const input of ['I have experience with AWS and Terraform', 'I personally deployed CyberArk EPM', 'My experience includes SOX testing', 'Confirmed skills: Python', 'Confirmed experience: SOX testing']) {
