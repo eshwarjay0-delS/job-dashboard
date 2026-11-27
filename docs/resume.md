@@ -99,3 +99,22 @@ The owner-approved rule remains narrow: an explicit candidate confirmation may s
 Master-based restack PR [#595](https://github.com/eshwarjay0-delS/job-dashboard/pull/595) has all five exact-head gates green, but remains DRAFT/non-mergeable pending a clean restack, protected preview, and owner-authorized resume/JD/confirmation plus exported-DOCX inspection. Static review COMMENT 6082791060 found that a sentence such as “I used AWS, and my team used GCP” can be retained as one candidate statement, incorrectly treating the team's GCP experience as the candidate's. The parser needs attribution regressions for team, colleague, client and organization clauses. Existing unresolved review thread 4713559321 also identifies a deterministic placement gap: a confirmed skill absent from original bullets can be allowed by the prompt/guard but is not a deterministic role-gap weave candidate.
 
 PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Library selection is still absent from the actual WhatsApp route/session fallback. The 17 Oct 17:28 Chicago delivery remains unverified. No candidate bundle, model call or exported DOCX was processed here. The web 95% floor remains; 98% is a target, not a claimed live match.
+
+
+## 27 November 2026 — run 22 review status
+
+PR #598 exact head 58c10bad has all five remote gates green (focused regression 56/56). Static COMMENT review 6083779719 found a passive-attribution false positive for clauses such as `I used AWS and GCP was used by others`; add negative tests before merge. The PR remains unmerged/un-deployed pending correction, independent review, protected preview, owner-authorized resume/JD/confirmations and exported-DOCX inspection. No real bundle, model call, DOCX or live ATS percentage was produced.
+
+
+## 27 November 2026 — run 22 follow-up
+
+Static review comment 6083779719 found that passive attribution by `others` or external actors could bypass the candidate-confirmation splitter. Source commit 141590c8c5acf45bf56131b46325a3474cc180c broadens the passive actor matcher and commit 1b2a68fa8dfec01e226a68e6f9ed88f8b713a42d adds six negative regressions, preserving the ordinary candidate AWS/GCP list. Exact-head focused/full/WhatsApp recovery runs are still in progress; baseline/schema checks passed. No local execution or real resume/JD/DOCX acceptance.
+
+
+## Run 22 follow-up — bare passive contractor attribution (27 November 2026)
+
+PR #598's new passive actor guard still has a narrow source-matcher gap. Isolated simulation shows `I used AWS and GCP was used by contractors` and `I used AWS and GCP was handled by subcontractors` remain unsplit, so GCP may be retained as candidate-confirmed experience. COMMENT review 6083882072 requests negative cases and fail-closed attribution splitting while preserving the preceding `I used AWS` claim and normal candidate lists such as `I used AWS and GCP`. This is not a repository test. PR #598's all five exact-head gates, including full CI 45945333802, are now SUCCESS; the newly posted COMMENT 6083882072 identifies a bare plural passive actor bypass not covered by that suite. Keep it unmerged pending parser/test correction, fresh exact-head gates, independent review, protected preview and real exported-DOCX acceptance.
+
+## Run 22 implementation follow-through — passive attribution (27 November 2026)
+
+PR #598 branch code commit `583ed9ce5ac900eabce542b398fe26b9855706cb` expands passive actors; test commit `bfc35f6a637c101c0c19a3537ddaba57fe8d9745` adds nine negative cases for bare contractors/subcontractors, consultants, vendors, clients, colleagues and external/outside/third-party phrases. Isolated matcher simulation passed the nine negatives and ordinary AWS/GCP positive. Exact head `bfc35f6a` has Plan/REA schema and Kompas baseline SUCCESS; focused/full/WhatsApp recovery are still IN_PROGRESS. PR #598 is DRAFT. No local repository tests, real resume/JD, model call or DOCX export was performed. Keep unmerged pending exact-head CI, independent review, protected preview and authorized DOCX acceptance.
