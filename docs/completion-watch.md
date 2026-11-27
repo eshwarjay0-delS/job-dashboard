@@ -1160,3 +1160,13 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - **Execution wall:** no canonical local checkout/dependencies or installed Next.js 16.3.8 route guide; no local test/build or protected preview. Vercel sandbox restore quota is still blocked until 1 Dec 2026 00:00 UTC. No real resume/JD/model/DOCX, OAuth/inbox, WhatsApp send/replay, crawl, R2/DB mutation or device acceptance occurred.
 
 **Continue:** poll #598 exact-head CI and fix failures only with tests; keep unmerged pending terminal green, independent review, protected preview and owner-authorized resume/JD/confirmation plus exported-DOCX acceptance. For P0 #591, wait for a compliant checkout and installed route guide before implementing durable selection provenance; preserve failing assertions.
+
+
+## Run 28 correction — 27 Nov 2026 (11:17 CST)
+
+- Prior exact-head WhatsApp-recovery regression run `46041706854` failed 1/60: `I used AWS and GCP isn't being configured by a colleague` retained GCP. The passive regex itself matched in an isolated check, but the splitter lookahead had ungrouped interpolated alternations; this is the root cause of the bypass.
+- Source commit `493ae6f21898b74e5240204605f44e217bdb40dd` groups each of the six lookahead alternatives. Isolated source-derived splitter simulation now splits all eight progressive/negated passive cases to AWS-only and preserves `I used AWS and GCP`. Simulation only.
+- Exact latest head `493ae6f`: full CI `46042179561`, focused regression `46042179568`, WhatsApp recovery `46042179653` IN_PROGRESS; baseline `46042179605` and schema `46042179617` SUCCESS. Do not reuse the prior head's green checks.
+- Production remains READY at runtime `a17b3267`; master is documentation-only. PR #598 is open, mergeable, non-draft, with no independent approval. Protected preview and authorized real resume/JD/confirmation/DOCX acceptance are missing.
+
+**Continue:** poll the exact latest head; correct any failing test on that head. Keep unmerged pending all gates, independent approval, protected preview and real exported-DOCX acceptance. P0 WhatsApp #591 is still blocked on a compliant checkout/dependencies and installed Next.js 16.3.8 guide; do not weaken failing assertions.
