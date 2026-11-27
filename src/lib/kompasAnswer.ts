@@ -401,7 +401,10 @@ export function lengthPlan(
   // A concept question (a definition, a comparison) is answered abstractly at
   // every level — its word budget is capped no matter who is asking, so a
   // bigger level can never inflate it back into a tutorial.
-  const words = opts.register === "concept" ? Math.min(rawWords, 170) : rawWords
+  let words = opts.register === "concept" ? Math.min(rawWords, 170) : rawWords
+  if (kind === "story" || kind === "technical" || kind === "drill") words = Math.max(150, words)
+  if (kind === "technical") words = Math.max(words, 180)
+  if (kind === "story") words = Math.min(words, 250)
   return {
     kind, words,
     secs: [Math.round(words * 0.8 / 2.5), Math.round(words * 1.25 / 2.5)],
@@ -863,6 +866,51 @@ export function afterSelfCorrection(text: string): string {
     return String(text || "")
   }
 }
+/** A complete spoken answer from resume lines when every model is unreachable. */
+export function localSpokenAnswer(question: string, resume: string): string {
+  const words = new Set(String(question || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 4))
+  const lines = String(resume || "").split(/\n+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 8)
+  const ranked = lines.map((line) => ({
+    line,
+    n: line.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w)).length,
+  })).filter((row) => row.n > 0).sort((a, b) => b.n - a.n).slice(0, 3)
+  if (!ranked.length) return ""
+  const body = ranked.map((row) => /[.!?]$/.test(row.line) ? row.line : row.line + ".").join(" ")
+  return `Yeah, so in my last role, ${body.charAt(0).toLowerCase()}${body.slice(1)}`
+}
+
+/** Join the interviewer's recent sentences, including every ask, instead of keeping only the last phrase. */
+export function fullSpokenQuestion(heard: string): string {
+  const lines = String(heard || "").split("\n").map((line) => line.replace(/^(?:Them|Interviewer|You):\s*/i, "").trim()).filter(Boolean)
+  const blob = lines.join(" ").replace(/\s+/g, " ").trim()
+  const sentences = blob.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter((s) => s.split(/\s+/).length >= 3)
+  if (sentences.length < 2) return blob
+  const askAt = sentences
+    .map((s, i) => (/\?/.test(s) || /^(?:how|what|why|when|where|who|which|tell|walk|describe|explain|give|can|could|would|and how|and what)\b/i.test(s) ? i : -1))
+    .filter((i) => i >= 0)
+  if (askAt.length < 2) return blob
+  return sentences.join(" ")
+}
+
+/** Consecutive interviewer lines belong to one question until about 1.5s of silence. */
+export function mergeInterviewerWindow(lines: Array<{ who?: string; text?: string; at?: number }>, silenceMs = 1500): string {
+  const rows = (lines || []).map((line) => ({
+    who: /you/i.test(String(line?.who || "")) ? "You" : "Them",
+    text: String(line?.text || "").replace(/\s+/g, " ").trim(),
+    at: Number(line?.at) || 0,
+  })).filter((line) => line.text)
+  const kept: string[] = []
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const row = rows[i]
+    if (row.who === "You" && row.text.split(/\s+/).length > 8) break
+    if (row.who !== "Them") continue
+    const newer = kept.length ? rows[i + 1] : null
+    if (newer && newer.at && row.at && newer.at - row.at > silenceMs) break
+    kept.unshift(row.text)
+  }
+  return kept.join(" ").replace(/\s+/g, " ").trim()
+}
+
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
   const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns), again))
@@ -874,7 +922,9 @@ export function questionForAnswer(heard: string, asked: string, pinned: boolean,
   // was answered as a new question with no topic. With history, the pushback sentence is kept in front of the ask.
   const said = source.replace(/^\s*(?:Them|You)(?: \([a-z]+\))?:\s*/i, "").trim()
   const pushed = turns.length && q && PUSHBACK.test(said) && !PUSHBACK.test(q) && said.replace(/[?.!\s]+$/, "").toLowerCase().endsWith(q.replace(/[?.!\s]+$/, "").toLowerCase().slice(-20)) ? `${said.match(/^[^.?!]*[.?!]?/)?.[0] || ""} ${q}`.trim() : q
-  return q ? resolveFollowUp(pushed, turns.map((h) => {
+  const full = fullSpokenQuestion(heard)
+  const base = full && pushed && full.length > pushed.length + 24 ? full : pushed
+  return q ? resolveFollowUp(base, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return { q: String(o.q ?? o.question ?? "").slice(0, 300) }
   }), startedWithAnd) : ""

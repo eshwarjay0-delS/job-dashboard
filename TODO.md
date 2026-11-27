@@ -1,3 +1,9 @@
+## 2026-11-27 — Answer reliability (visible after ship; one desktop build)
+
+AI Answer falls through gpt-oss, Llama, Gemini, and Groq, then a resume sentence, so the pane is not empty. A multi-part interviewer turn is kept. Behavioral and technical answers floor at 150 words. Say this is resume lines only. Auto-answer starts on. Missing tab audio asks for a reshare, and a stuck Starting capture recovers. Questions queue. Skip-login was not turned off.
+
+**Checked by scripts/tests/kompas-answer-reliable.test.mjs. One production call after the ship.**
+
 ## 2026-11-25 — Kompas overlay P0 (visible after ship; desktop exe needs a new build)
 
 Start is never blocked on the answer preflight. The probe is 1.8s with retry and backoff. Check again re-probes and clears the not-ready banner. Minimize stays down, and Close destroys the window. The clarifier popup shows the live question and is not inside the question or answer box. Opacity fades the paper only. B cycles 700 / 600 / 400, default 400, and is saved in localStorage and desktop settings. Skip-login was not edited. No Tauri project exists here; the window is the Electron shell.
