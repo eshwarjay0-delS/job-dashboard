@@ -40,4 +40,4 @@ Wait for exact-head full CI, WhatsApp recovery, Kompas baseline and Plan/REA sch
 
 Static review found that the initial progress message had been corrected, but the 60-second timer still promised a Word file “either way.” It now branches on the durable `explicitSelection` marker: an explicitly selected same-account Files/Library resume is described as a possible original with the exact `Original resume — NOT TAILORED` label; uploads and automatic picks are told no original fallback is eligible, and the request will remain saved if tailoring fails.
 
-A regression in `scripts/tests/resume-guards.test.mjs` asserts that the 60-second timer contains both policy branches and rejects the stale unconditional promise. Source commit is pending exact-head remote validation. No local test/build or real WhatsApp send/replay was performed.
+A regression in `scripts/tests/resume-guards.test.mjs` asserts that the 60-second timer contains both policy branches and rejects the stale unconditional promise. Source commit `e4469bbbe8721c49cbf6adf37961caa03f342099` is pending exact-head remote validation. No local test/build or real WhatsApp send/replay was performed.
