@@ -783,7 +783,7 @@ type FromFiles = { userDir: string; email: string; said: string; depth: number; 
 
 /** Only a uniquely named, same-account Files/Library item may be used as an original fallback. */
 function explicitlySelectedSameAccountLibraryResume(files: FromFiles | undefined, userId: string, resumePath: string): boolean {
-  if (!files || files.explicitSelection !== true) return false
+  if (!files || files.explicitSelection !== true || files.depth !== 0) return false
   const email = String(files.email || "").trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false
   const root = filesOf(userId)

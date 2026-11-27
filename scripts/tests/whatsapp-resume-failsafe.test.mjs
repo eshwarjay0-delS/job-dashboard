@@ -91,11 +91,11 @@ function harness(runTailor, chooseResume = async () => ({ kind: 'none' })) {
     },
   }
   const { generate, pickAndMake } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, pickAndMake };')
-  const filesFor = (path, explicitSelection = false) => ({
+  const filesFor = (path, explicitSelection = false, depth = 0) => ({
     userDir: TEST_USER_ROOT,
     email: 'candidate1@example.test',
     said: 'your *EASM Cybersecurity Engineer* resume (in GRC and IT Risk). I chose it because its title matches',
-    depth: 0,
+    depth,
     rel: path === HOUSTON_PATH ? 'candidate1@example.test/GRC/easm.docx' : 'candidate2@example.test/GRC/grc.docx',
     abs: path,
     explicitSelection,
@@ -254,6 +254,19 @@ test('only a uniquely named same-account Files resume earns the exact NOT TAILOR
   assert.match(docs[0].caption, /^Original resume — NOT TAILORED\n/)
   assert.doesNotMatch(docs[0].caption, /closest matching resume/i)
 })
+
+for (const depth of [1, 2]) {
+  test(`a uniquely named depth-${depth} tailored library copy cannot use the original fallback`, async () => {
+    const { generate, docs, filesFor, queued } = harness(async () => { throw new Error('provider down') })
+    await generate('15550101', {
+      jdId: `tailored-depth-${depth}`, jd: 'EASM cybersecurity engineer',
+      resumePath: HOUSTON_PATH, resumeName: 'EASM Cybersecurity Engineer',
+    }, TEST_USER_ID, 60_000, filesFor(HOUSTON_PATH, true, depth))
+    assert.equal(queued[0].files.explicitSelection, true)
+    assert.equal(queued[0].files.depth, depth)
+    assert.equal(docs.length, 0)
+  })
+}
 
 test('automatic and ambiguous library matches never earn fallback provenance', async () => {
   const choice = {
