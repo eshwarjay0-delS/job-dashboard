@@ -110,3 +110,8 @@ Clean current-master PR #598 transplants the reviewed #595 source and addresses 
 - Context-fit confirmed skills now count as role-level requirements even if omitted by the first model pass and become bounded role-gap/final-weave candidates only for relevant existing projects
 
 Code commits: initial 3b342abc9f199254007b5b925d529ea53310e6c7; correction a3e526eda9cbe5aebba0cbd54c5b26f575d069aa. Remote focused run 45932860471 on the initial code commit failed 1/56 due to trailing comma in split output; the correction trims punctuation. Full CI 45932860433 is still in progress. Documentation commits change PR head; exact-head CI remains pending. No local tests/build, real resume/JD/confirmation, model generation or DOCX inspection occurred. PR is ready for review, not approved or merged. Protected preview and owner-authorized final DOCX acceptance are still required; no 95–100% or live 98% match is claimed.
+
+
+## 27 November 2026 — exact validation update
+
+Latest code commit c209bd2c631ad6e87bee3b0ddd5cb38a64d6d37e. Initial focused run 45932860471 failed 1/56; first correction a3e526 failed 2/56 because comma remained and Node.js punctuation was stripped. Latest focused run 45933554666 passed 56/56. WhatsApp recovery 45933554510, Plan/REA schema 45933554488 and Kompas baseline 45933554535 passed. Full CI 45933554574 remains in progress. Earlier test failures were corrected. No local test/build, real resume/JD/confirmation, protected preview, model generation or DOCX acceptance. The PR is not merged/deployed and no live ATS percentage is claimed.
