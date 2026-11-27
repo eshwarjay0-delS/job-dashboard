@@ -547,3 +547,20 @@ test('modifier-bearing team attribution does not confirm later skills', () => {
   }
   assert.deepEqual(confirmedCandidateStatements(['I used AWS and GCP']), ['I used AWS and GCP'])
 })
+
+
+test('temporal connectors preserve candidate attribution while rejecting team-owned later clauses', () => {
+  const negative = [
+    'I used AWS, then my team used GCP',
+    'I used AWS and then my team used GCP',
+    'I used AWS, and then our colleagues deployed GCP',
+    'I used AWS, then GCP was deployed by a vendor',
+    'I used AWS and then GCP was handled by our team',
+  ]
+  for (const input of negative) assert.deepEqual(confirmedCandidateStatements([input]), ['I used AWS'], input)
+  const positive = [
+    'I used AWS, then I deployed GCP',
+    'I used AWS and then I deployed GCP',
+  ]
+  for (const input of positive) assert.deepEqual(confirmedCandidateStatements([input]), [input], input)
+})
