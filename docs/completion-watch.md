@@ -1075,3 +1075,16 @@ MFit Safe Merge Gate is enabled and owns PR sequencing. Kompas Continuous Voice 
 
 
 **Continue:** after the compliant checkout and installed Next.js docs are available, implement durable same-account Files/Library selection provenance and exact `Original resume — NOT TAILORED` fallback with unsupported-JD hard hold. Meanwhile keep #475/#483 unmerged until candidate-evidence gates and exact-head checks are repaired, and preserve all independent acceptance gates.
+
+
+## 27 November 2026 — run 20: direct WhatsApp fallback approval correction
+
+Scoped prior-context retrieval recovered the direct 20 Nov 2026 01:47:17 UTC owner request: fallback only from an explicitly selected same-account Files/Library resume; label exactly **Original resume — NOT TAILORED**; no closest-match, uploaded-original or silent substitution; otherwise explain and preserve the conversation. This supersedes earlier 9 Oct closest-resume auto-selection and 14 Oct upload/reuse guidance for fallback. Retrieval was scoped, not every chat.
+
+The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only to relevant existing projects; JD is not candidate experience; no invented employers/projects/dates/metrics/credentials/results. Gemini automatic correction/re-export/recheck remains proposed, not approved. The 3 Nov score-only feedback prompt remains distinct.
+
+- Corrected PR #591 and #583 approval-provenance text and added COMMENT reviews (6081909237 / 6081909370). Neither PR is merged; #591 route/fallback assertions still fail, and #583 helper does not carry durable selection provenance through the webhook.
+- Exact route implementation is still blocked by missing canonical checkout/dependencies/installed Next.js 16.3.8 route guide and Vercel Sandbox quota until 1 Dec 00:00 UTC. No route edit, tests, real send/replay, DOCX/R2/Meta recovery or owner-device acceptance occurred.
+- The 17 Oct 17:28 incident remains unresolved until generated output DOCX, per-run R2 version, webhook correlation, Meta outbound ID and signed receipt are recovered.
+
+**Continue:** implement durable selection provenance and the exact fail-closed Original fallback in the actual route/session flow after environment recovery; keep #591's failing assertions intact and require exact-head CI, protected preview and owner acceptance.
