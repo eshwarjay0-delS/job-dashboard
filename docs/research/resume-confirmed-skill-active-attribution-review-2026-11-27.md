@@ -27,3 +27,8 @@ Add negative attribution cases for active subjects such as someone/anyone, contr
 - Test commit `0220196fa82205f3d2ee6642b55a321c692e822e` added 17 negative cases plus two candidate-list positive controls. Isolated copied-regex simulation passed 17/17 negatives and retained 2 positives; this is not repository execution.
 - Exact-head full CI `45954137838`, focused `45954137715`, WhatsApp recovery `45954137850` are IN_PROGRESS; baseline `45954137753` and Plan/REA `45954137763` SUCCESS. Current PR head `0220196fa82205f3d2ee6642b55a321c692e822e`.
 - No local test/build, merge, deploy, preview, real resume/JD/model/DOCX acceptance. Keep the PR DRAFT and wait for terminal exact-head checks.
+
+
+## Documentation-gate correction
+
+The run23 documentation PR initially failed the Plan/REA schema test because the first journal entry lacked its array comma and the Library search was recorded as a repository `path`. Both are corrected on PR #599; the exact-head schema workflow is pending. No code or user data was changed.
