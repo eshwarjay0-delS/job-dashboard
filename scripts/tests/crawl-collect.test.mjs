@@ -118,3 +118,70 @@ test('a non-cooperative timeout returns boundedly, quarantines the worker, and b
   })
   assert.equal(recovered[0].value, 'recovered', 'the portal becomes eligible after the old work actually settles')
 })
+
+
+test('politeFetcher distinguishes local timeout, portal cancellation, and upstream abort', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    await assert.rejects(
+      politeFetcher(0, 5)('https://crawler.test/jobs', { accept: 'text/html' }),
+      error => error.message === 'Request to crawler.test timed out after 5 ms',
+    )
+
+    const portalController = new AbortController()
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    const pending = politeFetcher(0, 5000, portalController.signal)('https://crawler.test/jobs', { accept: 'text/html' })
+    portalController.abort()
+    await assert.rejects(
+      pending,
+      error => error.message === 'Request to crawler.test was cancelled by the portal time limit',
+    )
+    globalThis.fetch = async () => { throw new DOMException('The operation was aborted.', 'AbortError') }
+    await assert.rejects(
+      politeFetcher(0, 100)('https://crawler.test/jobs', { accept: 'text/html' }),
+      error => error.message === 'Request to crawler.test was aborted before the local timeout',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('a malformed adapter URL still advances the request pacing clock', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  const originalNow = Date.now
+  const originalSetTimeout = globalThis.setTimeout
+  const gapMs = 137
+  const waits = []
+  try {
+    Date.now = () => 1000
+    globalThis.setTimeout = (callback, ms, ...args) => {
+      if (ms === gapMs) {
+        waits.push(ms)
+        return originalSetTimeout(callback, 0, ...args)
+      }
+      return originalSetTimeout(callback, ms, ...args)
+    }
+    globalThis.fetch = async () => ({ ok: true, text: async () => 'ok' })
+    const get = politeFetcher(gapMs, 5000)
+    await assert.rejects(get('not a valid URL'), /Invalid URL/)
+    assert.equal(await get('https://crawler.test/jobs'), 'ok')
+    assert.deepEqual(waits, [gapMs], 'the malformed URL must still advance the pacing timestamp')
+  } finally {
+    globalThis.fetch = originalFetch
+    Date.now = originalNow
+    globalThis.setTimeout = originalSetTimeout
+  }
+})
