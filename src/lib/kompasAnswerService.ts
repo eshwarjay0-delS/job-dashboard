@@ -239,7 +239,7 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
   // A part of the question the answer skipped is answered next, even when the word count is already in band.
   const skipped = () => contract.quick ? [] : relevanceReport(job.question, grounded).missing
   const needsMore = () => wordCount(grounded) < contract.min || (skipped().length > 0 && wordCount(grounded) < contract.max)
-  if (!needsMore() || signal.aborted) return expandToBand(grounded, contract, job.packText || "", job.question) || base
+  if (!needsMore() || signal.aborted) return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || "")) || base
   // A Role/Category drill continues from its pack (the next design detail or story not told yet), up to two passes.
   // A live session keeps its single resume-only continuation. A failed call still fills the level band.
   const passes = job.packText && !contract.quick ? 2 : 1
@@ -284,10 +284,10 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
       if (wordCount(next) <= wordCount(grounded) + 20) break
       grounded = next
     } catch {
-      return expandToBand(grounded, contract, job.packText || "", job.question) || base
+      return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || "")) || base
     }
   }
-  return expandToBand(grounded, contract, job.packText || "", job.question) || base
+  return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || "")) || base
 }
 
 // A light non-streaming call for the post-generation fact-check (perfACT's

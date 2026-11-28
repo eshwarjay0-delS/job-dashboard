@@ -111,14 +111,14 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-export const BANNED_HEDGE = /can(?:'|’)?t name a specific|cannot name a specific|i haven(?:'|’)t worked directly with|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
+export const BANNED_HEDGE = /i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume/i
 
 const RESUME_CATALOG = /i handle cybersecurity operations for the bank\b[^.]{0,600}\./i
 
 export const INTRO_HEADLINE = "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture."
 
 
-export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|the outcome i am responsible for is that the work keeps moving|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that/i
+export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|the outcome i am responsible for is that the work keeps moving|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that/i
 
 export function sentenceKey(sentence: string): string {
   return sentence.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()
@@ -212,7 +212,26 @@ export function repairIntroHeadline(question: string, text: string): string {
  * a stock closing line about the search paging once on 33 of 37 typed answers whenever the continuation call did not run.
  * With no pack, a short answer stays short rather than padded with unrelated sentences.
  */
-export function expandToBand(text: string, contract: LevelContract, source = "", question = ""): string {
+function claimIsOnResume(line: string, resume: string, question: string): boolean {
+  const source = `${resume}\n${question}`.toLowerCase()
+  if (!String(resume || "").trim()) return false
+  const places = line.match(/\b(?:at|with)\s+([A-Z][A-Za-z0-9&.'-]+(?:\s+[A-Z][A-Za-z0-9&.'-]+){0,3})/g) || []
+  for (const raw of places) {
+    const name = raw.replace(/^(?:at|with)\s+/i, "").trim()
+    if (name.length > 2 && !source.includes(name.toLowerCase())) return false
+  }
+  const nums = line.match(/\b\d+(?:\.\d+)?%?/g) || []
+  if (nums.some((n) => !source.includes(n.toLowerCase()))) return false
+  const skip = new Set("At The This That When Then After Before Citi Bank CVS Health City San Diego Charter Communications Accenture".split(" "))
+  const tools = line.match(/\b[A-Z][A-Za-z0-9+]{3,}(?:\s+[A-Z][A-Za-z0-9+]{3,})?/g) || []
+  for (const tool of tools) {
+    if (tool.split(" ").every((part) => skip.has(part))) continue
+    if (!source.includes(tool.toLowerCase())) return false
+  }
+  return true
+}
+
+export function expandToBand(text: string, contract: LevelContract, source = "", question = "", resume = ""): string {
   if (contract.quick || wordCount(text) >= contract.min || !String(source || "").trim()) return text
   const qWords = new Set(String(question || "").toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || [])
   const have = new Set(String(text || "").split(/(?<=[.!?])\s+/).map(sentenceKey))
@@ -226,7 +245,7 @@ export function expandToBand(text: string, contract: LevelContract, source = "",
   for (const line of lines) {
     if (wordCount(kept.join(" ")) >= contract.min) break
     const key = sentenceKey(line)
-    if (have.has(key)) continue
+    if (have.has(key) || !claimIsOnResume(line, resume, question)) continue
     const words = line.toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || []
     if (qWords.size && !words.some((w) => qWords.has(w))) continue
     have.add(key)

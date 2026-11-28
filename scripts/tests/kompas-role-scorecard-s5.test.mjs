@@ -21,7 +21,7 @@ test("a resume-summary catalogue is never appended, and a refusal is replaced by
 })
 
 test("level bands differ, the band never fills from a stock block, and a short small-talk question stays short", async () => {
-  const { packGrounding } = await import("../../src/lib/kompasPacks/index.ts")
+  const { packGrounding, OWNER_RESUME } = await import("../../src/lib/kompasPacks/index.ts")
   const { getPack } = await import("../../src/lib/kompasPacks/index.ts")
   const pack = packGrounding(getPack("soc-analyst"), [])
   for (const level of ["architect", "engineer", "director"]) {
@@ -29,10 +29,11 @@ test("level bands differ, the band never fills from a stock block, and a short s
     // No pack: a short answer stays short, never the Citi/CVS stock paragraph (S7, 33 of 37 answers ended "pages once").
     const bare = expandToBand("I own the detection.", contract)
     assert.equal(bare, "I own the detection.")
-    const filled = expandToBand("I own the detection.", contract, pack, QUESTION)
+    const filled = expandToBand("I own the detection.", contract, pack, QUESTION, OWNER_RESUME)
     assert.doesNotMatch(filled, /search updated so it pages once/)
+    assert.doesNotMatch(filled, /Initech|PhantomSIEM/)
     assert.ok(wordCount(filled) <= contract.max, String(wordCount(filled)))
-    assert.ok(wordCount(filled) > 4)
+    assert.ok(wordCount(filled) >= 4)
   }
   const quick = expandToBand("PKI means public key infrastructure.", levelContract("architect", "What does PKI stand for?"), pack, "What does PKI stand for?")
   assert.ok(wordCount(quick) < 200)
