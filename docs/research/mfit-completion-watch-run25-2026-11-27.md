@@ -74,3 +74,9 @@ Unblock requirements:
 5. For Gmail/mobile acceptance: authorized two-inbox test identities and a real phone/browser session; keep all sends and inbox mutations disabled unless separately authorized.
 
 No secrets were read or recorded. No real email/WhatsApp was sent, no Gmail mailbox was read or mutated, no crawler ran, no production database was changed, no model call was made and no user device was claimed as tested.
+
+
+## Additional source review — Gmail cap and Kompas claim filter
+
+- The four-account ceiling is enforced in the database, not only in the UI: `supabase/migrations/20261004_multi_google_workspace_accounts.sql` counts active accounts in `identity_attach_google_workspace_account` and raises when a fifth new account is added; the list RPC is also limited to four. These RPCs are revoked from public/anon/authenticated and granted to `service_role`. This confirms the cap in source; it does not replace two-inbox/mobile acceptance.
+- PR #620's latest green head still has a narrow unsupported-experience regex. A local Node probe using the exact pattern from the PR returned false for `I supported a customer through a Saviynt rollout.` and `I helped a client with a Sentinel deployment.`, while `I worked on a Saviynt incident.` was caught. This is a source-pattern probe, not a repo test or a live model response. Review comment 7232074504 records the false-negative examples. Keep PR #620 unmerged/unshipped; the direct owner-approval gate in comment 7232042567 remains independently blocking.
