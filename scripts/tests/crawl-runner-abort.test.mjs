@@ -1,0 +1,76 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { resolve } from 'node:path'
+import vm from 'node:vm'
+
+const require = createRequire(import.meta.url)
+const ts = require('typescript')
+const root = resolve(process.cwd())
+function loadTS(file, mocks, sandbox = {}) {
+  const source = readFileSync(resolve(root, file), 'utf8')
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText
+  const module = { exports: {} }
+  vm.runInNewContext(compiled, {
+    module, exports: module.exports, require: id => id in mocks ? mocks[id] : require(id),
+    AbortController, AbortSignal, setTimeout, clearTimeout, Date, URL, ...sandbox,
+  }, { filename: file })
+  return module.exports
+}
+
+test('runner forwards the portal signal to fetch and storage operations', async () => {
+  const fetchSignals = [], upsertSignals = [], retireSignals = []
+  const query = log => ({
+    abortSignal(signal) { log.push(signal); return this },
+    then(resolve, reject) { return Promise.resolve({ error: null }).then(resolve, reject) },
+  })
+  const service = {
+    from(table) {
+      if (table === 'mfit_crawl_runs') {
+        return {
+          insert() { return { select() { return { single: async () => ({ data: { id: 'run-1' }, error: null }) } } } },
+          update() { return { eq() { return this }, then(resolve, reject) { return Promise.resolve({ error: null }).then(resolve, reject) } } },
+        }
+      }
+      return {
+        upsert() { return query(upsertSignals) },
+        update() { return { eq() { return this }, lt() { return this }, abortSignal(signal) { retireSignals.push(signal); return this }, then(resolve, reject) { return Promise.resolve({ error: null }).then(resolve, reject) } } },
+      }
+    },
+  }
+  const fakeFetch = async (_url, init) => {
+    fetchSignals.push(init.signal)
+    return { ok: true, text: async () => 'synthetic listing' }
+  }
+  const collect = loadTS('src/lib/crawl/collect.ts', {}, { fetch: fakeFetch })
+  const adapter = {
+    portal: 'synthetic-run32', firm: 'Synthetic',
+    listUrls: ['https://jobs.example.test/list'],
+    parseList: () => [{ title: 'Contract Security Analyst', url: 'https://jobs.example.test/role/1', engagement: 'Contract' }],
+  }
+  const { runCrawl } = loadTS('src/lib/crawl/runner.ts', {
+    '@/lib/supabase/service': { createServiceClient: () => service },
+    './adapters': { ADAPTERS: [adapter] },
+    './classify': { classifyWorkType: () => 'contract', normalizeDate: () => null },
+    './collect': collect,
+    './text': { scrubContacts: text => text },
+  }, { fetch: fakeFetch })
+  const results = await runCrawl()
+  assert.equal(results.length, 1)
+  assert.equal(results[0].portal, 'synthetic-run32')
+  assert.equal(results[0].firm, 'Synthetic')
+  assert.equal(results[0].found, 1)
+  assert.equal(results[0].upserted, 1)
+  assert.equal(fetchSignals.length, 1)
+  assert.equal(upsertSignals.length, 1)
+  assert.equal(retireSignals.length, 1)
+  assert.equal(upsertSignals[0], retireSignals[0], 'the same portal signal is used for both write queries')
+  assert.ok(fetchSignals[0] instanceof AbortSignal, 'fetch receives a request-level signal')
+  assert.ok(upsertSignals[0] instanceof AbortSignal, 'write queries receive the portal signal')
+  assert.notEqual(fetchSignals[0], upsertSignals[0], 'fetch wraps the portal signal so its own request timeout remains available')
+  const runnerSource = readFileSync(resolve(root, 'src/lib/crawl/runner.ts'), 'utf8')
+  assert.match(runnerSource, /politeFetcher\(adapter\.gapMs \?\? 600,\s*25_000,\s*signal\)/, 'runner forwards the portal signal into the fetcher')
+})
