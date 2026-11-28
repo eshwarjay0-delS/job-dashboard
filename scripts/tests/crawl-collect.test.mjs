@@ -78,3 +78,43 @@ test('portals run several at a time, the order turns with the offset, nothing st
   const failing = await crawlEach([adapters[1]], async () => { throw new Error('HTTP 503 from b.test') }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 1_000 })
   assert.equal(failing[0].error, 'HTTP 503 from b.test')
 })
+
+
+test('a non-cooperative timeout returns boundedly, quarantines the worker, and blocks same-portal overlap until settlement', async () => {
+  const { crawlEach } = await import('../../src/lib/crawl/collect.ts')
+  const slow = { portal: 'noncooperative-run32', firm: 'Slow' }
+  const next = { portal: 'after-quarantine-run32', firm: 'Next' }
+  let releaseSlow
+  let slowSignal
+  let nextStarts = 0
+  const startedAt = Date.now()
+  const first = await crawlEach([slow, next], (adapter, signal) => {
+    if (adapter.portal === slow.portal) {
+      slowSignal = signal
+      return new Promise(resolve => { releaseSlow = resolve })
+    }
+    nextStarts++
+    return Promise.resolve(adapter.portal)
+  }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 20, timeoutDrainMs: 30 })
+  assert.ok(Date.now() - startedAt < 500, 'a non-cooperative portal must not hold the whole run indefinitely')
+  assert.match(first[0].error, /timed out/)
+  assert.equal(slowSignal.aborted, true)
+  assert.equal(first[1].skipped, true, 'the worker that still has live work is quarantined, not reused')
+  assert.equal(nextStarts, 0, 'the quarantined worker must not start another portal')
+
+  const second = await crawlEach([slow, next], adapter => {
+    if (adapter.portal === slow.portal) throw new Error('same portal must remain blocked')
+    nextStarts++
+    return Promise.resolve(adapter.portal)
+  }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 100 })
+  assert.match(second[0].error, /still settling/)
+  assert.equal(second[1].value, next.portal)
+  assert.equal(nextStarts, 1, 'a different portal may use a healthy worker while the timed-out portal remains reserved')
+
+  releaseSlow('late completion')
+  await new Promise(resolve => setTimeout(resolve, 0))
+  const recovered = await crawlEach([slow], () => Promise.resolve('recovered'), {
+    concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 100,
+  })
+  assert.equal(recovered[0].value, 'recovered', 'the portal becomes eligible after the old work actually settles')
+})
