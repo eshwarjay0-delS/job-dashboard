@@ -34,3 +34,10 @@ Verify the missing exact-head Plan/REA and confirmed-skill gates and obtain legi
 - The current test includes nine passive actor negatives (contractors, subcontractors, consultants, vendors, clients, external teams, outside consultants, third-party vendors, colleagues) while retaining the ordinary AWS+GCP positive. The corresponding source patterns are present. No local execution occurred.
 - PR #598 is closed unmerged; this is current master/source evidence, not a claim that #598 merged. The owner-approved 6 Nov cross-role rule remains narrow: a first-person-confirmed skill can be mapped to a relevant existing project bullet across roles, without inventing any other project fact.
 - The guard is deployed, but no actual baseline/JD/explicit confirmation, DOCX inspection, protected preview or live 98% ATS result was produced. Final-DOCX Gemini score/correction/re-export remains separately approved and pending.
+
+
+## Run 35 — WhatsApp read-only connection check
+
+- iZap lists one business with **no linked WhatsApp number**. Read-only connection status checked at `2026-11-28T11:38:11.321718Z`: disconnected/status_none; inbound webhook never; history backfill never; outbound delivery never proven. This is current status only, not evidence about 17 Oct.
+- PR #411 latest head `069707f9e7a48a698f80835bf6cf2a820ebe49b6` is documentation-only on stale base `17f8dada`, DRAFT/nonmergeable; no exact-head workflow/status. Prior four-gate green set was on predecessor `5b522ec` and is not reused.
+- No message was sent or replayed. Historical source/output DOCX, per-run R2 object/version, webhook/request correlation, Meta outbound ID, signed delivery/read receipt and owner fact reconciliation remain missing. Uploaded-original timeout fallback is unapproved; explicit same-account Files/Library original fallback remains permitted and must be labelled **Original resume — NOT TAILORED**.
