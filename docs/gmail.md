@@ -239,3 +239,8 @@ The four-connected-inbox maximum is owner-confirmed. Account identity, receiving
 The four-account account-scoped digest and normal-flow mobile navigation slice from the 6f3cdcb backlog commit is in production SHA 593dff. The four-account ceiling remains owner-approved. Each inbox retains its own identity, selected-From, reconnect and thread context. Proactive Poke workers, scheduler, notifications and automatic sending remain disabled.
 
 PR #577's account-scoped interview-board anchors remain a separate open draft; its earlier full CI failed on stale-base shared lint and it still needs a current-master restack, exact-head full CI, protected preview and two-inbox/narrow-phone acceptance. No Gmail OAuth, mailbox read, draft/send action or device test was performed.
+
+
+## 28 November 2026 — local snapshot account-switch race
+
+A source-level privacy risk is tracked in issue [#623](https://github.com/eshwarjay0-delS/job-dashboard/issues/623): `refreshGmailDataForCurrentAccount()` can await the identity lookup, then publish a local snapshot without rechecking the account/generation. A delayed account-A lookup may publish A's mail after the app has switched to B. Draft fix/coverage is in [PR #626](https://github.com/eshwarjay0-delS/job-dashboard/pull/626); it revalidates identity before reading/publishing and tests delayed A→B, sign-out and same-account restore. Exact-head remote CI is pending. No mailbox access or Gmail OAuth was performed.
