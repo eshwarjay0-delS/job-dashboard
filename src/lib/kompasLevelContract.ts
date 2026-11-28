@@ -116,7 +116,7 @@ export const BANNED_HEDGE = /can(?:'|’)?t (?:accurately |honestly )?(?:name|po
 
 const RESUME_CATALOG = /i handle cybersecurity operations for the bank\b[^.]{0,600}\./i
 
-export const INTRO_HEADLINE = "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture."
+export const INTRO_HEADLINE = "Your introduction"
 
 
 export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|the outcome i am responsible for is that the work keeps moving|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that/i
@@ -211,13 +211,13 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
 
 export function repairIntroHeadline(question: string, text: string): string {
   if (!/tell me about yourself|introduce yourself|your introduction|brief introduction|walk (?:me|us) through your (?:background|career|resume)/i.test(question)) return text
-  const cleaned = String(text || "")
-    .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
-    .replace(/\bSanG\s+Diego\b/g, "San Diego")
-    .replace(/\b(?:7|8)\+?\s+years\b/gi, "9+ years")
-    .replace(/\b9\s+years\b/gi, "9+ years")
-  const rest = cleaned.split(/(?<=[.!?])\s+/).slice(1).filter((s) => !/senior i engineer|senior cybersecurity engineer|\b[789]\s+years\b|sang diego/i.test(s))
-  return [INTRO_HEADLINE, ...rest].join(" ").replace(/\s+/g, " ").trim()
+  return String(text || "")
+    .replace(/Press Start — answers appear here\\.?/gi, "")
+    .replace(/\\bSenior I Engineer\\b/gi, "Senior Cybersecurity Engineer")
+    .replace(/\\bSanG\\s+Diego\\b/g, "San Diego")
+    .replace(/\\bCity of I Diego\\b/g, "the City of San Diego")
+    .replace(/\\s+/g, " ")
+    .trim()
 }
 
 /**
