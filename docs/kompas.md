@@ -119,3 +119,10 @@ The owner requires natural, technically defensible first-person experience and g
 ## Single-source BNY audio + written guide pipeline — 2 November 2026
 
 BNY NotebookLM audio recommendations and uploaded BNY PDF materials belong to ONE unified source-grounded dossier, not a "PDF finished / audio optional" split. The dossier source API now accepts attributed audio transcripts, requires matching original media identities when the client names required audio hashes, retains media provenance, and rejects incomplete audio coverage before generation. Source-content extraction is separate from evidence of personal achievement: a narrated example does not verify a candidate incident or metric. The actual two M4A recordings remain untranscribed in this execution environment, so no audio-complete PDF or live end-to-end transcription success is asserted. See docs/research/kompas-dual-dossier-intelligence.md.
+
+
+## 28 November 2026 — run 24 level-personality release review
+
+PR #620 is an approved but unshipped level-voice candidate. Its exact-head full CI run 46092594973 fails the brief-mode word ceiling in `scripts/tests/kompas-grounding-route.test.mjs:202`; the personality band currently overrides the shorter brief/quick-fact cap. Its copy also describes Saviynt/IAM and Microsoft Sentinel/SQL-injection customer incidents as personal history, while the Houston resume fixture only contains Fortinet/AWS network work. Review comment 7231687148 records both blockers. No live model key/sample was available; deterministic fallback rows are not live-model acceptance. Do not merge or deploy until the brief-mode cap and no-fabrication tests pass on the exact head.
+
+The current production alias remains READY at 593dff; master is dc4f82a, two commits ahead. The newer personality modules and live-session work are not in production. No deployment was attempted. The separate Kompas Continuous Voice Delivery automation is disabled; no duplicate capture/voice edits were made.
