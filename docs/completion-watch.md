@@ -1557,3 +1557,13 @@ No code commit or production change was made in this run.
 - **Execution wall:** no canonical checkout, installed dependencies or installed Next.js 16.3.8 docs are available, so no local code edit/test/build. Protected preview requires the private Vercel preview credential. No deploy, model call, WhatsApp/Gmail action, crawl, R2/DB mutation or device test occurred.
 
 
+
+
+## 28 November 2026 — run 35 Gmail privacy guard continuation
+
+- **Master/live:** current master `fdd4816e53b9156787993c384ac72759967ff6c3` is independently READY on production alias `job-dashboard-fawn.vercel.app`. No new production deployment was needed for this documentation run.
+- **Gmail account-switch guard:** PR #637 branch was reset to current master and reopened as DRAFT. Runtime commit `96f87aa22bb755b4e299a0c42c761208b0762024`; test commit/head `5740a5349a5c96f306c361cd3b73a7fa3668ec49`. Exact-head Kompas baseline `46137208960` is SUCCESS; full CI `46137208957` is IN_PROGRESS. Prior green checks on head `518e089` are not reused. Source race remains un-reproduced in browser.
+- **Gate:** PR #637 is mergeable but DRAFT; protected preview needs the private `KOMPAS_VERCEL_API_TOKEN`, not available. No local canonical checkout/dependencies (GitHub clone failed DNS). No Gmail OAuth, inbox read/write, email send, production deployment or device acceptance. Keep four-account limit; Poke workers/scheduler/notifications/sending disabled.
+- **WhatsApp:** the 17 Oct 17:28 Chicago quality-gate incident remains UNVERIFIED. Missing exact input/output DOCX, R2 object/version, webhook correlation, Meta message ID, signed receipt and source-fact reconciliation. Sending uploaded originals after provider timeout is not approved; closest-match same-account library fallback is approved only under its explicit selection/label guard.
+
+**Continue:** finish exact-head CI on #637, then independent review and protected-preview/two-inbox acceptance. Do not merge or deploy this source-only guard until those gates exist.
