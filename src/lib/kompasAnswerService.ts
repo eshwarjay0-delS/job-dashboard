@@ -248,7 +248,7 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
     }).join(" ")
     return expandToBand(repairIntroHeadline(job.question, dropUnknownEmployers(fitLevelAnswer(`${grounded} ${added}`, contract), String(job.resume || ""))), contract)
   } catch {
-    return grounded || base
+    return expandToBand(grounded, contract) || base
   }
 }
 

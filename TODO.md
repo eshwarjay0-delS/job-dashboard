@@ -1,3 +1,9 @@
+## 2026-11-28 — Live path S6, not shipped
+
+Video 2 questions (shifts, day-to-day, tools, Sentinel, dashboard, false positive, escalate, trending, SQL injection, XSS) each open one card. Candidate lines stay You. A manual press uses the latest question. A "Having 10+ years" ServiceNow line is not an answer. Auto defaults on. An empty Role or Category session loads the eshwarjay05 resume. Typed answers expand to the level band even when the continuation call fails, and the card control no longer tells the model to stop after two or four sentences. CI runs the replay before later steps. Not merged.
+
+**Checked by scripts/tests/kompas-live-replay-gate.test.mjs. Not a live click-through.**
+
 ## 2026-11-28 — Session continuity test sees the list refresh
 
 Continue and End refresh the open Roles, Categories, or Sessions list. The continuity test extracts those functions without the page around them, so it now provides the same refresh call. No screen change. The page behavior is unchanged.

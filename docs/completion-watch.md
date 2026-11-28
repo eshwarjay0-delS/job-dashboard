@@ -1,3 +1,7 @@
+## 28 November 2026 — Live S6 replay gate, not shipped
+
+Live retest S6 on 42659ae missed dashboard, false-positive, escalate, SQL injection, and XSS cards, labeled every line Interviewer, finalized SIEM onto "Having 10+ years", and left typed answers at 15-91 words. The video-2 fixture in scripts/fixtures/replay-fixtures.json is now a CI gate: one card per real question, questions unchanged, latest question on a manual press, You on candidate speech, stub answers on topic. Auto defaults on. Empty Role and Category sessions take the eshwarjay05 resume. The level band is applied when the continuation call fails, and the card prompt no longer caps the answer at two or four sentences. Not merged. Not a live click-through.
+
 ## 28 November 2026 — Seeded Role and Category cards
 
 The owner asked, before the ship of PR #630, for 20-30 Roles and 20-30 Categories already listed. The pages now render every seeded pack as a ready card. Start creates the session. In-progress sessions sort first. 26 roles and 26 categories. Topics from the owner's list, the Kompas question families, and the leaf names on origin/ops/second-bot-packs. That branch's Fortinet stories were not copied. ops/chief-packs is not on origin. docs/kompas-packs is not on this branch. Not a live click-through.

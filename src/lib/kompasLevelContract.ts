@@ -162,12 +162,12 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
   for (const sentence of String(text || "").replace(RESUME_CATALOG, " ").replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s+/)) {
     const key = sentenceKey(sentence)
     const open = openingWords(sentence)
-    if (!key || CANNED_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
+    if (!key || /^having\b/i.test(sentence) || CANNED_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
     seen.add(key)
     if (open.split(" ").length >= 6) openings.add(open)
     kept.push(sentence)
   }
-  let out = kept.join(" ").replace(/\s+/g, " ").trim()
+  let out = kept.join(" ").replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer").replace(/\s+/g, " ").trim()
   if (contract.level === "director") out = out.replace(JARGON_LIST, "the tools").replace(/\s+/g, " ").trim()
   if (contract.level !== "architect" && wordCount(out) > contract.max) out = trimWords(out, contract.max)
   return out
