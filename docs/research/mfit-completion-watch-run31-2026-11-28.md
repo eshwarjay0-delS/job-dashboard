@@ -4,7 +4,7 @@
 
 Read the current canonical GitHub master, `AGENTS.md`, Plan & Vision journal, `docs/completion-watch.md`, the Chief Relevance handoff, Gmail/Resume/Apply/WhatsApp product plans, and the current relevant PRs. Read-only production deployment/alias metadata and a scoped prior-context/Library search were also consulted. The prior-context search is scoped; it does not establish that every conversation was searched.
 
-No canonical checkout, dependencies, or installed Next.js 16.3.8 docs are present in this runtime. The earlier `git ls-remote`/checkout path failed DNS; sandbox restore was reported as HTTP 402 until 1 Dec. GitHub source reads work through the connector, but no local source execution, test, build, model call, authenticated browser, device, email, WhatsApp, R2/DB mutation, or crawl was performed.
+No canonical checkout, dependencies, or installed Next.js 16.3.8 docs are present in this runtime. The earlier `git ls-remote`/checkout path failed DNS; sandbox restore was reported as HTTP 402 until 1 Dec. GitHub source reads work through the connector. Plan/REA source data was updated remotely; the first REA insertion had an array-syntax error caught by CI and was corrected in commit `1d7a24f241a7613bba293338cae28809160ccd20`. No local source execution, test or build was performed.
 
 ## Current source and production
 
@@ -55,3 +55,12 @@ MFit Completion Watch is enabled. The Safe Merge Gate and Kompas Continuous Voic
 ## Exact execution wall
 
 This run could review remote source, checks, deployment metadata, and submit a static review comment, but it could not safely restack or execute code: no canonical repository checkout, dependencies, installed Next.js 16.3.8 docs, or local network checkout path. The protected preview also still requires the private `KOMPAS_VERCEL_API_TOKEN`. The safe unblock is a compliant local/cloud source environment with the repo and dependencies installed plus the authorized preview credential privately configured; no secrets should be pasted into chat or fetched from unrelated connectors.
+
+
+## Fresh crawler aggregate — 28 November 2026 13:35:51 UTC
+
+A read-only SQL query against the active production Supabase project reconfirmed the unchanged snapshot: 14,566 rows total; 12,407 active; 8,850 active rows labelled contract by `work_type` or `engagement`; 0 active contract rows seen in the last 14 days; latest `last_seen_at` is 10 November 2026 11:01:11.191 UTC. The latest crawl run remains 10 November 2026 11:00:24–11:01:11 UTC, 6,818 found/upserted, with one Inspyr abort. No crawl, row mutation, or portal request was performed.
+
+## Documentation source CI
+
+The first docs/Plan & Vision source commit `4c6458baa0cb1e693a64e12ebea4aeadf7e674e0` failed full CI because the run31 REA record was accidentally inserted as an `unshift()` statement inside the array. This was corrected in `1d7a24f241a7613bba293338cae28809160ccd20`; the exact correction commit's Plan/REA schema run `46149931539` succeeded. Full CI `46149931520` and Kompas baseline `46149931485` were still running when checked; the production alias remains on the prior verified runtime SHA `3400742ba97d2cbc68e2df3e1795ce5c76d9a147`. Do not ship the admin evidence source until full CI is terminal and a proper protected preview/release gate is satisfied.
