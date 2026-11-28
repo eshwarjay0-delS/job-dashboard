@@ -68,3 +68,13 @@ No code commit, deployment, real email/WhatsApp, model call, crawl, R2/DB/inbox 
 
 ### Hard blockers and next action
 No canonical checkout, installed dependencies or installed Next.js 16.3.8 docs under `node_modules/next/dist/docs` are available. Therefore no local code edit/test/build was performed. Protected preview requires the private Vercel preview credential. Next approved code slice: isolate the two-line JD + named-resume parser on current master while preserving ordinary short two-line chat, then run role-match/WhatsApp/full CI. No send, replay, crawl, Gmail action, DB/R2 mutation or deployment occurred.
+
+
+## Run 24 follow-up — 28 November 2026 01:45 UTC
+
+- Docs PR #621 merged as `997eaa3a4a93028be518ec3098fbd28173b58f37` after full CI, Kompas baseline, Plan/REA schema and confirmed-skill gates all SUCCESS. Documentation only; no ship/deploy.
+- PR #619 separate live-session/capture work merged as `dc4f82a2e21333152a5ad3cf7c0cb5e22e910421`; full CI 46091751541, baseline 46091751531 and Windows Caption Capture 46091751587 SUCCESS. Explicit no-ship; production still 593dff.
+- PR #620 head `6a66bcde4d1de929c12f78bb03c14081b3ce2d4d` fixes the previous short-budget and unsupported-story findings and adds filter-level tests. Plan/REA 46094400946, baseline 46094400935, confirmed-skill 46094400952 SUCCESS; full CI 46094400925 still running. The PR is mergeable=false against current master 997eaa3 because it is based on 35c1400 and overlaps the merged plan/completion-watch files. Comment 7231886809 records the required safe restack.
+- PR #566 retained two-line JD + named-resume parser; exact head 9465113 has WhatsApp recovery 45283495210 (133/133) and Plan/REA 45283495328 (15/15) SUCCESS. It is stacked on #554; independent reviewer still required, and current master parser remains >=3 lines. #550/#555 closed as superseded.
+- #567/#568/#565 closed with replacement references to the live 6f3cdcb source. #614 Brain/Feedback remains unapproved under the current Plan Journal decision; comment 7231845301 records this.
+- No local checkout/dependencies/Next 16.3.8 docs, so no code restack or local tests. No WhatsApp/Gmail actions, crawl, model call, R2/DB mutation, device test or deployment.
