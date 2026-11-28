@@ -247,6 +247,7 @@ test("a 402 on every OpenRouter call still yields the level band, and a timeout 
   const filled = await blocked.ask(architect)
   assert.equal(filled.status, 200)
   assert.ok(filled.words >= 1000, `architect ${filled.words} words after 402`)
+  assert.doesNotMatch(filled.text, /Story\s+\d+:|only when the question needs|pages once|\bby %\b|protects typed privileged accounts|Press Start — answers appear here/i)
   assert.doesNotMatch(filled.text, /Initech|PhantomSIEM|jayeshwar44/)
   const engineer = TYPED[0]
   const timed = loadRoute({ question: engineer.question, timeout: true })

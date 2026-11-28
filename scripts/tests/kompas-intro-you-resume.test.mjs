@@ -35,6 +35,7 @@ test("a guessed title is not replaced with I, and the intro stays Senior Cyberse
   assert.match(intro, /9\+ years/)
   assert.match(intro, /San Diego/)
   assert.doesNotMatch(intro, /Senior I Engineer|SanG|\b8\+?\s+years\b/)
+  assert.doesNotMatch(Correct.repairOwnerIntro(sample + " Press Start — answers appear here."), /Press Start/)
   const headline = repairIntroHeadline("Your introduction", "I am a Senior I Engineer with 8 years at SanG Diego. I work the queue.")
   assert.equal(headline.split(/(?<=[.!?])\s+/)[0], INTRO_HEADLINE)
   assert.match(headline, /9\+ years/)
@@ -76,6 +77,15 @@ test("a role session with resume text selects that resume instead of an empty ch
   assert.match(app, /Resume: " \+ resumeName/)
 })
 
+test("pack fill is first person and does not keep scaffold or an empty metric", () => {
+  const { expandToBand, spokenPackSentence } = require("../../src/lib/kompasLevelContract.ts")
+  assert.equal(spokenPackSentence("Tools: Name Fortify, SAST, owner, retest, ServiceNow only when the question needs them."), "")
+  assert.equal(spokenPackSentence("Story 2: I tuned the notable so it pages once."), "")
+  assert.match(spokenPackSentence("Story 2: At Citi Bank I assigned the ServiceNow ticket to the owner and closed it after the rescan."), /At Citi Bank I assigned/)
+  const filled = expandToBand("I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.", levelContract("engineer", "How do you use Splunk for detection?"), "At Citi Bank I searched the notable in Splunk and I assigned the ServiceNow ticket. Tools: Name Fortify only when the question needs them. I tuned it so it pages once.", "How do you use Splunk for detection?", "Citi Bank Splunk ServiceNow", true)
+  assert.doesNotMatch(filled, /Story\s+\d+:|only when the question needs|pages once|by %/)
+})
+
 test("a hedge about a specific risk is removed, and a repeated closing sentence is dropped", () => {
   const hedge = "I can't accurately name a specific OWASP Top 10 risk I personally remediated. At CVS Health I fixed broken access control on the portal."
   const cleaned = fitLevelAnswer(hedge + " At CVS Health I fixed broken access control on the portal.", levelContract("engineer", "How do you handle an OWASP finding?"))
@@ -91,13 +101,16 @@ test("Say this for an eshwarjay05 session does not speak the ServiceNow profile"
   const blob = JSON.stringify(aside)
   assert.doesNotMatch(blob, /jayeshwar44|Sr\. ServiceNow Development|ServiceNow FSO/i)
   assert.match(app, /current\.resume/)
+  assert.match(readFileSync(new URL("../../public/kompas/answer-aside.js", import.meta.url), "utf8"), /function sessionResumeText/)
 })
 
 test("a second half merges into the open card and candidate speech does not open one", () => {
-  const merged = Gate.mergeIntoOpenCard([{ question: "How do you detect SQL injection?", answer: "" }], "and how do you detect XSS?")
-  assert.equal(merged.merge, true)
-  assert.match(merged.question, /SQL injection/)
-  assert.match(merged.question, /XSS/)
+  const dangling = Gate.mergeIntoOpenCard([{ question: "Tell me about", answer: "" }], "SQL injection")
+  assert.equal(dangling.merge, true)
+  assert.match(dangling.question, /SQL injection/)
+  const separate = Gate.mergeIntoOpenCard([{ question: "How do you detect SQL injection?", answer: "" }], "How does Sentinel work?")
+  assert.equal(separate.merge, false)
+  assert.match(separate.question, /Sentinel/)
   const mine = Gate.mergeIntoOpenCard([], "I tuned the Splunk notable at Citi Bank.")
   assert.equal(mine.question, "")
   assert.equal(Gate.liveAutoDecision({ text: "I tuned the Splunk notable at Citi Bank.", finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS }).fire, false)

@@ -45,6 +45,7 @@ export function isQuickQuestion(question: string): boolean {
   if (/\b(?:explain|describe|tell me|talk me through|walk through|day[- ]?to[- ]?day|experience|how (?:does|do|did|is|are|would|will|can)\b[^?]{0,60}\b(?:works?|looks?|runs?|handle|set up|configure|investigate|detect))\b/i.test(t)) return false
   // "Do you know about SQL injection?" asks for the explanation, not a yes: S7 showed the 5-word "I know about SQL injection."
   if (/\b(?:do|did) you know (?:about|what|how)\b|\bwhat do you know about\b|\bat what (?:instant|point|stage|time)\b|\bwhen (?:do|would|will) you escalate\b/i.test(t)) return false
+  if (/\b(?:cyberark|splunk|sentinel|sailpoint|fortify|qualys|crowdstrike|owasp)\b/i.test(t) && !/\b(?:what does|stands? for)\b/i.test(t)) return false
   if (/\b(?:what does|stands? for|yes or no|what is a |what is an )\b/i.test(t) && t.split(/\s+/).length < 16) return true
   return t.split(/\s+/).length <= 8 && /\?\s*$/.test(t)
 }
@@ -111,7 +112,7 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-export const BANNED_HEDGE = /can(?:'|’)?t (?:accurately )?name a specific|cannot (?:accurately )?name a specific|can(?:'|’)?t accurately name|personally remediated|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|not directly measured|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
+export const BANNED_HEDGE = /can(?:'|’)?t (?:accurately |honestly )?(?:name|point to|give|recall)|cannot (?:accurately |honestly )?(?:name|point to|give|recall)|can(?:'|’)?t accurately name|personally remediated|do not have a specific|don(?:'|’)t have a specific|not able to name|unable to name|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|not directly measured|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
 
 const RESUME_CATALOG = /i handle cybersecurity operations for the bank\b[^.]{0,600}\./i
 
@@ -192,7 +193,7 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
       const shared = nowWords.filter((w) => prevSet.has(w)).length
       return shared / nowWords.length >= 0.85
     })
-    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || near || (open.split(" ").length >= 6 && openings.has(open))) continue
+    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || /\bpages once\b|\bstory\s+\d+\s*:|\bonly when the question needs\b|\bby\s*%|\bprotects typed privileged accounts\b/i.test(sentence) || seen.has(key) || near || (open.split(" ").length >= 6 && openings.has(open))) continue
     seen.add(key)
     if (open.split(" ").length >= 6) openings.add(open)
     kept.push(sentence)
@@ -249,19 +250,37 @@ function claimIsOnResume(line: string, resume: string, question: string, pack = 
   return true
 }
 
+const PACK_SCAFFOLD = /\b(?:story\s+\d+\s*:|tools\s*:|playbook\s*:|checklist\s*:|probe\s+\d+\s*:|must mention\s*:|pack drill|only when the question needs|never answer with this line|do not pretend|expand it into|pick the one that fits|pages once|protects typed privileged accounts|by\s+%|the tools i use are)\b/i
+
+/** A pack line the candidate can say. Labels, instructions, and empty metrics stay out. */
+export function spokenPackSentence(line: string): string {
+  let s = String(line || "")
+    .replace(/^(?:[-•*]\s*)?(?:story\s+\d+|tools|playbook|metrics|checklist|probe\s+\d+|must mention|avoid|frame|director view|subject|citi story|cvs story)\s*:\s*/i, "")
+    .replace(/\bmetrics\s*(?:i report)?\s*:\s*/gi, "")
+    .replace(/\bby\s+\d+(?:\.\d+)?\s*%/gi, "")
+    .replace(/\b\d+(?:\.\d+)?\s*%/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+  if (!s || PACK_SCAFFOLD.test(s) || !/\b(?:I|we|my|our)\b/.test(s)) return ""
+  if (s.split(/\s+/).length < 8) return ""
+  if (!/[.!?]$/.test(s)) s += "."
+  return s
+}
+
 export function expandToBand(text: string, contract: LevelContract, source = "", question = "", resume = "", failure = false): string {
-  if (contract.quick || wordCount(text) >= contract.min || !String(source || "").trim()) return text
+  if (contract.quick || !String(source || "").trim()) return text
+  const goal = Math.min(contract.max, Math.max(contract.min, Math.round(contract.min * 1.1)))
+  if (wordCount(text) >= goal) return text
   const qWords = new Set(String(question || "").toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || [])
   const have = new Set(String(text || "").split(/(?<=[.!?])\s+/).map(sentenceKey))
   const kept = [String(text || "").trim()].filter(Boolean)
   const lines = String(source || "")
     .replace(/^[ \t]*(?:[A-Z][A-Za-z /&-]{1,40}):[ \t]*/gm, "")
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
-    .map((x) => x.trim())
-    .filter((x) => x.split(/\s+/).length >= 8 && /[.!?]$/.test(x) && !/[{}<>|=]|\(expand it/i.test(x))
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((x) => spokenPackSentence(x))
+    .filter(Boolean)
   const take = (line: string, needOverlap: boolean) => {
-    if (wordCount(kept.join(" ")) >= contract.min) return
+    if (wordCount(kept.join(" ")) >= goal) return
     const key = sentenceKey(line)
     if (have.has(key) || !claimIsOnResume(line, resume, question, source, failure)) return
     const words = line.toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || []

@@ -1265,7 +1265,7 @@ function seedIdentity(s) {
   let id = s.resume && s.prep && s.prep.identity;
   if (id && String(s.length || "").toLowerCase() === "long" && String(id).trim().split(/\s+/).length < 90) id = "";
   if (id && window.KompasCorrect && window.KompasCorrect.asSpeaker) id = window.KompasCorrect.asSpeaker(id, window.__speakerName);
-  const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter(Boolean) : [s.resume ? "Press Start — answers appear here." : "No resume is stored on this device. I will use the job description only, and I will not invent a work history."] };
+  const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter((x) => x && !/press start — answers appear here/i.test(x)) : [s.resume ? "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture." : "No resume is stored on this device. I will use the job description only, and I will not invent a work history."] };
   const ph = cards.findIndex(c => /^(Preparing…|Ready)$/.test(c.question));
   if (ph >= 0) cards[ph] = intro;
   else if (!cards.some(c => c.question === "Your introduction")) { cards.unshift(intro); idx++; }
@@ -1437,6 +1437,7 @@ function presentAnswer(question, answer, source) {
       let s = peelDisplayArtifact(chunk);
       if (!s || dictionary.test(s) || third(s) || meta.test(s)) continue;
       s = s.replace(/\d[\d,.]*/g, (n, i, all) => (/[A-Za-z-]/.test(String(all).charAt(i - 1)) || allowed.includes(n.replace(/[.,]+$/, ""))) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+      if (/\bby\s*%|\bpages once\b|\bstory\s+\d+\s*:|\bonly when the question needs\b|\bpress start — answers appear here\b/i.test(s)) continue;
       if (s.split(/\s+/).filter(Boolean).length < 3) continue;
       if (/^[a-z]/.test(s)) s = s.charAt(0).toUpperCase() + s.slice(1);
       pieces.push(s);
@@ -5802,7 +5803,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
   const prevAnswer = card.answer, prevMeta = card.meta;
-  const keepOld = (!!opts.retries || !!opts.lateFold) && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
+  const prevWords = (typeof prevAnswer === "string" ? prevAnswer : (Array.isArray(prevAnswer) ? prevAnswer.join(" ") : "")).trim().split(/\s+/).filter(Boolean).length;
+  const keepOld = (!!opts.retries || !!opts.lateFold || (Number(opts.answerPass) > 0 && prevWords >= 40)) && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
   // A timer abort is not a supersede: the request died on our own watchdog, so

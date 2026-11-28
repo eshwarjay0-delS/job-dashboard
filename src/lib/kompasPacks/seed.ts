@@ -162,7 +162,7 @@ const ROLES: Spec[] = [
     blurb: "Searches, data models, and tuning that still catches the real case.",
     focus: "I design the detection. I own the correlation search, the CIM fields it needs, and the ingestion path from the WAF, identity, and EDR.",
     tools: ["Splunk", "RBA", "CIM", "correlation", "Sentinel"],
-    playbook: "I write the search, I name the entity and the threshold, I test it against a known-good admin, and I tune the notable so it pages once.",
+    playbook: "I write the search, I name the entity and the threshold, I test it against a known-good admin, and I tune the notable so the same admin no longer wakes the queue.",
     metrics: "true pages, noise pages, and detections I retired because they never named an entity.",
     beats: [
       "At Citi Bank I built the notable for a CyberArk session outside the window and I tuned it after a week of admin noise.",
@@ -534,7 +534,7 @@ const CATEGORIES: Spec[] = [
     blurb: "Searches, CIM, notables, and the ingestion path.",
     focus: "Splunk ES is the detection system I run. I own correlation searches, CIM data models, RBA notables, and the ingestion from identity, WAF, and EDR.",
     tools: ["Splunk", "RBA", "CIM", "correlation", "notables"],
-    playbook: "I write the search against CIM fields, I test it on a known admin, and I tune the notable so it pages once.",
+    playbook: "I write the search against CIM fields, I test it on a known admin, and I tune the notable so the same admin no longer wakes the queue.",
     metrics: "pages that were real, pages that were noise, and searches with no entity field.",
     beats: [
       "At Citi Bank I wrote the notable for a CyberArk session outside the window and I dropped the duplicate page.",
@@ -547,7 +547,7 @@ const CATEGORIES: Spec[] = [
   {
     id: "sentinel-kql", kind: "category", title: "Sentinel/KQL",
     blurb: "KQL that names an entity, and an incident with an owner.",
-    focus: "Microsoft Sentinel is the other detection plane. I write KQL that names the account or the host, and I group the incident so it pages once.",
+    focus: "Microsoft Sentinel is the other detection plane. I write KQL that names the account or the host, and I group the incident so the same admin no longer wakes the queue.",
     tools: ["Sentinel", "KQL", "incident", "Entra ID", "Defender"],
     playbook: "I query the entity, I check Defender on the host, I set the incident owner, and I close it with the evidence.",
     metrics: "incidents with an entity, incidents I merged, and rules that paged on a known admin.",
