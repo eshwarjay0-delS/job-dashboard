@@ -29,6 +29,7 @@ import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, 
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { fitLevelAnswer, levelContract, wordCount } from "@/lib/kompasLevelContract"
 import { HOUSTON_RESUME } from "@/lib/kompasHonestyGate"
+import { getPack, ownerResumeForPack, packGrounding, sanitizePackNotes } from "@/lib/kompasPacks"
 import { dropUnknownEmployers } from "@/lib/kompasResume"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -1352,9 +1353,15 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // The active sources take precedence over an older profile or generated Q&A.
   // Never make a grounded live turn wait for three remote dossier reads.
   const suppliedResume = str(config.resume, 60000) || str(body.resume, 60000)
-  const resumeSrc = !suppliedResume || /jayeshwar44/i.test(suppliedResume) ? HOUSTON_RESUME : suppliedResume
+  const packId = str(body.packId, 80)
+  const pack = getPack(packId)
+  let resumeSrc = !suppliedResume || /jayeshwar44/i.test(suppliedResume) ? HOUSTON_RESUME : suppliedResume
+  resumeSrc = ownerResumeForPack(resumeSrc, packId)
   const jdSrc = str(config.jd, 8000)
   const docsSrc = str(config.documents, 8000)
+  const packAudio = /^https?:\/\/\S+$/i.test(str(body.notebookLmUrl, 500)) ? str(body.notebookLmUrl, 500) : ""
+  const packText = pack ? packGrounding(pack, sanitizePackNotes(body.packNotes), packAudio) : ""
+  const docsForPack = packText ? `${docsSrc}\n\n${packText}`.slice(0, 24000) : docsSrc
   let grounding = ""
   // A timed-out dossier read used to collapse to "" exactly like a genuinely
   // empty dossier, so the answer proceeded as if no dossier existed and
@@ -1557,7 +1564,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // Source-grounded retrieval: the resume stays whole above; the most relevant labelled passages from all the user's
   // own sources are listed with fact IDs, or an honest "not in your sources" line with the closest real example.
   // Failsafe: any failure or no sources gives "" and the prompt is exactly as before.
-  const groundingDocs: SourceDoc[] = sourceDocs({ resume: resumeSrc, jd: jdSrc, documents: docsSrc, dossier: grounding, savedQA: str(config.savedQA, 8000) })
+  const groundingDocs: SourceDoc[] = sourceDocs({ resume: resumeSrc, jd: jdSrc, documents: docsForPack, dossier: grounding, savedQA: str(config.savedQA, 8000) })
   // Behavior 8 (r2): passages the last two answers already used are demoted unless the ask goes back to them.
   const recentAnswers = historyArr.slice(-2).map((h: unknown) => (h && typeof h === "object" ? String((h as Record<string, unknown>).a ?? (h as Record<string, unknown>).answer ?? "") : "")).filter(Boolean)
   const sourceRetrieval = retrievePassages(question, groundingDocs, answerPassageCount(), { recent: recentAnswers })
@@ -1654,6 +1661,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}${resumeSrc ? "" : "\nNO RESUME: use these tools when they answer the question. Do not invent an employer, a project, or a personal incident."}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
+    packText ? `SUBJECT PACK (extra grounding for this role or category drill; sample lines show the speakable first person; personal claims still have to match the resume):\n${packText}` : "",
     sourceBlock,
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. DOCUMENTS FIRST: when the attached documents cover the question (question banks, guides), their passages lead: frame the answer from that material, use dossier notes only as support, and shape delivery with the session preferences and the level/mode structure. Document material proves the material itself, never personal experience you do not have: claim personal experience only from the resume or dossier. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome — so never invent an incident, a metric, or a date from a bullet. But when the resume shows the capability or experience (tools, frameworks, responsibilities), answer from it in the first person: say what you do and how you do it, grounded in those bullets. SCENARIO AND EXPERIENCE QUESTIONS: when asked "tell me about a time", "give me an example", "describe a time", or "how did you handle", NEVER refuse and NEVER say "I can't claim a specific example", "I don't have a documented example", "I haven't worked on a migration/audit/incident", or "I haven't supported a specific audit" when the resume shows the work. The work itself IS the example: describe the closest real work from the resume — the project, the tools, what you did, how you did it — in the first person, as something you did. FORM VS WORK: when the question names a specific form — a migration, an audit, an incident, a rollout — and the resume shows the underlying work but not that exact form, do NOT open with a refusal or a disclaimer about the form ("I haven't worked on an IAM migration", "I haven't supported a specific compliance audit"). The form is a label; the work is the answer. Describe the underlying IAM work, the compliance monitoring work, the incident work you did, as the example. A capability bullet (e.g. implementing Zero Trust controls, running an IAM migration, supporting compliance monitoring) is a real example of that work; describe it, don't disclaim it. Only when the resume has nothing on the topic at all should you explain the proposed approach conditionally, and say plainly that it is an approach, not experience you have. NEVER PASTE A RESUME BULLET: write the answer in your own first-person prose. Never copy a resume bullet verbatim into the answer, and never append a bullet from a different project or role after the answer. Stay on the single experience the question asks about — one project, one thread — and develop it with the relevant detail. A pasted bullet from another area reads as a fragment, not an answer. FIRST PERSON ALWAYS: every answer is in the first person, all the time — including a definition or concept question. A definition is never a third-person textbook entry ("Responsibilities are the duties..."); it is what the thing means in your own role and what you do with it ("My responsibilities include..."), grounded in the resume. Never write "the person", "a security architect", or "one" when you mean yourself. STRAIGHT TO THE POINT: sentence one IS the relevant answer — no preamble, no throat-clearing, no restating the question, no "let me explain", no "I would answer this directly". Jump directly to the substance that answers what was asked, in the first person, and stay on the relevant point throughout. LENGTHY ALWAYS: every answer is substantial and complete — never a stub, never two sentences when the question deserves more. Develop the answer with the relevant detail from the resume: what you did, how you did it, and what it covered.`,

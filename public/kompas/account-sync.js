@@ -12,6 +12,7 @@
     "docIds","resumeId","model","language","length","tone","mode","instructions",
     "autoAnswer","autoMode","saveTranscript","interviewer","difficulty","dossierSize",
     "runAt","pausedAt","endedAt","endedBy","transcripts","bibleSyncedAt","note","site",
+    "lane","packId","notebookLmUrl","mustMention",
   ]);
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
   const POLL_MS = 60_000;
