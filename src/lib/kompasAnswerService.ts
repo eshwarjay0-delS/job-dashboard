@@ -25,7 +25,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
-import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
+import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, keepSpokenOpening, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { fitLevelAnswer, levelContract, wordCount } from "@/lib/kompasLevelContract"
 import { HOUSTON_RESUME } from "@/lib/kompasHonestyGate"
@@ -910,7 +910,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // the user's own experience sources, so it adds no claim the guards have not already accepted.
         if (opener) finalText = withOpener(finalText, opener)
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
-        finalText = dropOffTopicResume(job.question, job.jd || "", keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || ""))
+        finalText = dropOffTopicResume(job.question, job.jd || "", keepSpokenOpening(onScreen, keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || "")))
         finalText = await extendLevelOnce(job, finalText, signal)
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,

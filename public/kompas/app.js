@@ -2638,6 +2638,8 @@ async function startSys() {
 // (vadStep already resets zeroWarned when sound returns), one message per track.
 function silenceWarningFor(cap, now) {
   if (!cap || cap.zeroWarned) return null;
+  // A phrase still being transcribed, or sound on this track, is not silence.
+  if (cap.inflight > 0 || cap.voiced || cap.hearing) return null;
   if (now - (cap.lastAudibleAt || now) <= 20000) return null;
   if (cap.who === "You") return "Kompas is hearing silence from the microphone. Check the input device in your system sound settings, then keep talking.";
   if (cap.who === "Them") return "Kompas is hearing silence from the shared audio. Check the shared tab is playing sound and tab audio is shared, then keep playing.";
@@ -2712,6 +2714,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
       const buf = new Float32Array(cap.an.fftSize);
       cap.timer = setInterval(() => { cap.an.getFloatTimeDomainData(buf); let s = 0; for (let k = 0; k < buf.length; k++) s += buf[k] * buf[k]; vadStep(cap, Math.sqrt(s / buf.length)); }, 30);
     }
+    cap.hearing = (typeof finals !== "undefined" && finals.size > 0) || captures.some((c) => c && c !== cap && (c.inflight > 0 || c.voiced));
     const warn = silenceWarningFor(cap, now);
     if (warn) {
       cap.zeroWarned = true;
@@ -3067,7 +3070,7 @@ function whisperPrompt(opt) {
   const bare = !!(opt && opt.bare);
   const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").replace(/[,;]/g, " ").trim().slice(-110);
   // Active-profile terms only — never mix a second candidate's employers or tools.
-  return [...new Set([...profileTerms, ...(prev ? [prev] : []), ...learned])].join(", ").slice(0, 550);
+  return [...new Set(["SIEM", "SOC", "XSS", "KQL", "SQL", "Splunk", "Sentinel", "SQL injection", ...profileTerms, ...(prev ? [prev] : []), ...learned])].join(", ").slice(0, 550);
 }
 // Level 4: a phrase with real speech and no words is decoded once more, without the previous line in the prompt.
 function dictationRetry(clean, speechMs, attempt) {
@@ -4541,6 +4544,7 @@ const PHRASE_FIXES = [
   [/\b(?:kerberose|curberos|kerbraus)\b/gi, "Kerberos"],
   [/\bsock (analyst|team|center|centre|manager|lead)\b/gi, "SOC $1"],
   [/\b(?:seem|seam|sim) (tool|platform|solution|system|logs?|integration|implementation|deployment|monitoring|dashboard|alerts?|correlation|engine|instance|rules?)\b/gi, "SIEM $1"],
+  [/\bsam\b(?=\s+tools?\b)/gi, "SIEM"],
   [/(?<=\b(?:with|using|used|use|via|into|on|in|our|their|about|from|for|migrated\s+to|migrating\s+to|experience\s+with|worked\s+with|worked\s+on)\s+(?:the\s+)?)(?:seem|seam|sim)\b/gi, "SIEM"],
   [/\boh auth\b/gi, "OAuth"],
   [/\bcrowd strike\b/gi, "CrowdStrike"],

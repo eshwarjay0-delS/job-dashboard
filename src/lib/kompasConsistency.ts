@@ -137,6 +137,21 @@ export function autoMayAnswer(input: { speaker?: string; text?: string; recentQu
   return { fire: true, reason: "ask" }
 }
 
+/** The streamed opening sentence stays when a later settle drops it. */
+export function keepSpokenOpening(streamed: string, settled: string): string {
+  const prior = String(streamed || "").trim()
+  const next = String(settled || "").trim()
+  if (!prior) return next
+  if (!next) return prior
+  const open = prior.split(/(?<=[.!?])\s+/)[0]?.trim() || ""
+  if (!open || open.split(/\s+/).filter(Boolean).length < 4) return next
+  if (/^(?:I (?:can ?not|cannot|can't|haven't|have not|don't|do not)|Having |So,|Well,)\b/i.test(open)) return next
+  const key = open.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  const body = next.toLowerCase().replace(/[^a-z0-9]+/g, " ")
+  if (key.slice(0, 32) && body.includes(key.slice(0, 32))) return next
+  return `${open} ${next}`.trim()
+}
+
 /** A late settle must not replace a longer streamed answer with a shorter one, or with the confirm stub. */
 export function keepLongerAnswer(streamed: string, next: string, question = "", jd = ""): string {
   const stub = (value: string) => /^I would want to confirm that\.?$/i.test(String(value || "").trim())
@@ -165,10 +180,21 @@ export function resumeFitsQuestion(question: string, jd: string, answer: string)
   return OFF_PLATFORM.test(role) && !SECURITY_ROLE.test(role)
 }
 
-/** Drop sentences that import an unrelated platform. If nothing on-topic remains, say so plainly. */
+const UNRELATED_TAIL = /\b(?:ITBM|PPM|KYC|know your customer|fraud(?:ulent)?|anti-fraud|jayeshwar44)\b/i
+
+/** Drop sentences that import an unrelated platform or another resume's work. If nothing on-topic remains, say so plainly. */
 export function dropOffTopicResume(question: string, jd: string, answer: string): string {
-  const text = String(answer || "").trim()
-  if (!text || resumeFitsQuestion(question, jd, text)) return text
+  const raw = String(answer || "").trim()
+  if (!raw) return raw
+  const asked = `${question}\n${jd}`
+  const withoutTail = raw.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => {
+    if (!sentence) return false
+    if (UNRELATED_TAIL.test(sentence) && !UNRELATED_TAIL.test(asked)) return false
+    return true
+  }).join(" ").trim()
+  if (!withoutTail) return jdGapBridge(question, "", jd)
+  const text = withoutTail
+  if (resumeFitsQuestion(question, jd, text)) return text
   const kept = text.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !OFF_PLATFORM.test(sentence))
   return kept.join(" ").trim() || jdGapBridge(question, "", jd)
 }
@@ -254,6 +280,7 @@ function factRelevant(fact: string, tokens: Set<string>): boolean {
 }
 
 function factRelevantTo(fact: string, questionTokens: Set<string>, _answerTokens: Set<string>): boolean {
+  if (/\b(?:ITBM|PPM|KYC|fraud|jayeshwar44)\b/i.test(fact) && !/\b(?:itbm|ppm|kyc|fraud)\b/i.test([...questionTokens].join(" "))) return false
   const content = (w: string) => w.length > 2 && !GENERIC_RELEVANCE.has(w.toLowerCase())
   const factTokens = askTokens(fact).filter(content)
   return factTokens.some((w) => [...questionTokens].some((t) => content(t) && tokenMatch(w, t)))

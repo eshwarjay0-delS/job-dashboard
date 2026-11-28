@@ -4,6 +4,12 @@ Interview now lists Roles and Categories under Sessions, on the desktop sidebar 
 
 **Checked by scripts/tests/kompas-packs.test.mjs. Production version.json is commit 11bf120 (full 11bf120b81ef7b5a45da3db1bcca07c97dff59ac). Not a live listen.**
 
+## 2026-11-28 — Live auto-answer restored after 11bf120
+
+Auto cards were created and left on "Press Start — answers appear here" because the PR #619 installer vetoed confirmAutoAndAnswer whenever Silero's quiet clock was 0. A finished transcript now answers. SAM tools repairs to SIEM on the STT request and after the decode. The streamed first sentence stays on finalize. ITBM, PPM, fraud, KYC, and jayeshwar44 tails are removed. can-you logistics and intro lines do not open cards. A first-person line stays You. End and Stop show the session summary. The silence warning stays off while a phrase is transcribing. No new screen beyond the summary dialog that was already specified. Skip-login unchanged.
+
+**Checked by scripts/tests/kompas-live-regression-20261128.test.mjs. Not a live video click-through. One production version.json read follows the ship.**
+
 ## 2026-11-28 — Full confidence, no hedge, You never opens an answer
 
 Answers stay first person. The hands-on transfer stub and the stock Director closer are stripped. A tool that is not on the resume is answered from a real role line, without a gap sentence. A mic line tagged You does not start a card and does not fill Say this. The page stamp is kompas-20261128-hedge, so the desktop exe needs the master build.

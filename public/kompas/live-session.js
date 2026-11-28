@@ -35,8 +35,11 @@
     if (!t) return "";
     t = t.replace(/\bsee\s*em\b/gi, "SIEM");
     t = t.replace(/\b(?:seem|seam|sim)\b(?=\s+(?:tool|platform|solution|system|logs?|alerts?|rules?|dashboard|correlation|monitoring|engine)\b)/gi, "SIEM");
-    if (/\bsam\b/i.test(t) && /\b(?:alerts?|logs?|sentinel|splunk|correlation|monitoring|dashboard|rules?|detections?)\b/i.test(t) && !/\b(?:account|manager|saml)\b/i.test(t)) {
+    if (/\bsam\b/i.test(t) && /\b(?:alerts?|logs?|sentinel|splunk|correlation|monitoring|dashboard|rules?|detections?|tools?)\b/i.test(t) && !/\b(?:account|manager|saml|software asset)\b/i.test(t)) {
       t = t.replace(/\bsam\b/gi, "SIEM");
+    }
+    if (/\bsam\b(?=\s+tools?\b)/i.test(t) && !/\b(?:account|manager|saml|software asset)\b/i.test(t)) {
+      t = t.replace(/\bsam\b(?=\s+tools?\b)/gi, "SIEM");
     }
     if (/\b(?:what(?:'s| is)|explain|describe|define)\s+(?:a\s+|an\s+|the\s+)?sam\b/i.test(t) && !/\b(?:account|manager|saml)\b/i.test(t)) {
       t = t.replace(/\bsam\b/i, "SIEM");
@@ -102,13 +105,23 @@
     /^that sounds (?:great|good|optimistic|interesting)\b/i,
     /^nice one\b/i,
     /^sounds good\b/i,
+    /^can you (?:hear|see|hold|wait|give me|repeat|say that|speak up|check|mute|unmute|turn)\b/i,
+    /^let me introduce\b/i,
+    /^i(?:'ll| will) introduce\b/i,
+    /^welcome (?:everyone|to the|to this|back)\b/i,
+    /^before we (?:begin|start|get started|jump|dive)\b/i,
+    /^in this (?:video|mock interview|interview|session)\b/i,
+    /^today (?:we(?:'ll| will)|i(?:'ll| will))\b/i,
   ];
 
   function sentenceIsSmallTalk(s) {
     var t = clean(s).replace(/[.!?]+$/g, "").trim();
     if (!t) return true;
     if (t.split(/\s+/).length > 18 && /\b(?:tell me|how (?:do|would|did) you|what (?:is|are)|walk me|can you tell)\b/i.test(t)) return false;
-    return SMALL.some(function (re) { return re.test(t); });
+    if (SMALL.some(function (re) { return re.test(t); })) return true;
+    // A short "can you …" that never names the work is logistics, not a question card.
+    if (/^can you\b/i.test(t) && t.split(/\s+/).length <= 8 && !/\b(?:tell|explain|describe|walk|design|prevent|handle|implement|write|build|compare|sql|siem|soc|xss|kql)\b/i.test(t)) return true;
+    return false;
   }
 
   function isSmallTalk(text) {
@@ -174,7 +187,7 @@
     if (!text) return { fire: false, reason: "empty", text: "" };
     if (isSmallTalk(text)) return { fire: false, reason: "small-talk", text: text };
     var words = contentWords(text);
-    if (words.length < MIN_CONTENT && !isStrongShort(text)) return { fire: false, reason: "too-short", text: text };
+    if (words.length < MIN_CONTENT && !isStrongShort(text) && !(isQuestionShape(text) && words.length >= 2)) return { fire: false, reason: "too-short", text: text };
     if (isFollowUp(text, opts.previous)) return { fire: false, reason: "follow-up", text: text };
     if (duplicateOf(text, opts.recent, opts.now)) return { fire: false, reason: "duplicate", text: text };
     if (!isQuestionShape(text) || dangling(text)) return { fire: false, reason: "not-a-question", text: text };
@@ -189,6 +202,22 @@
       };
     }
     return { fire: true, reason: opts.speakerTurn ? "speaker-turn" : "pause", text: text };
+  }
+
+  // A finished transcript line has already ended, even when the VAD clock was
+  // reset to 0 because the next utterance in a continuous video started.
+  function liveAutoDecision(opts) {
+    opts = opts || {};
+    var pause = Number(opts.pauseMs);
+    if (opts.finalLine === true && !(pause >= FIRE_PAUSE_MS)) pause = FIRE_PAUSE_MS;
+    return shouldFire({
+      text: opts.text,
+      pauseMs: pause,
+      speakerTurn: opts.speakerTurn === true,
+      previous: opts.previous,
+      recent: opts.recent,
+      now: opts.now,
+    });
   }
 
   function latestQuestion(text) {
@@ -214,7 +243,7 @@
     var t = correctSecurityAsr(stripSpeakerLabels(text));
     if (!t) return false;
     if (/\b(?:tell me|walk me|can you tell me|how (?:do|would|did) you|what (?:is|are) your|why (?:do|did|would) you|may i (?:know|note))\b/i.test(t)) return false;
-    if (/\b(?:i(?:'m| am| have| had| was| used| work| got| feel| can| will| don't| didn't)|my |we have|ma'am|sir)\b/i.test(t)) return true;
+    if (/\b(?:i(?:'m| am| have| had| was| used| work| got| feel| can| will| would| don't| didn't)|i'd |i've |my |we have|ma'am|sir)\b/i.test(t)) return true;
     if (/^(?:yes|yeah|okay|ok|sure|thank you|thanks)\b/i.test(t) && !ASK.test(t)) return true;
     return false;
   }
@@ -284,7 +313,8 @@
     (opts.cards || []).forEach(function (card) {
       var answer = card && card.answer;
       var body = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
-      push(card && card.question, body.trim() && body.trim() !== "…");
+      var shown = body.trim();
+      push(card && card.question, !!shown && shown !== "…" && !/Press Start — answers appear here/.test(shown) && shown.length > 8);
     });
     (opts.turns || []).forEach(function (turn) {
       var role = attributeSpeaker({ text: turn && turn.text, source: turn && turn.source, previousRole: turn && turn.who === "You" ? "You" : "Interviewer" });
@@ -311,6 +341,7 @@
     isQuestionShape: isQuestionShape,
     isFollowUp: isFollowUp,
     shouldFire: shouldFire,
+    liveAutoDecision: liveAutoDecision,
     latestQuestion: latestQuestion,
     attributeSpeaker: attributeSpeaker,
     joinSplitQuestion: joinSplitQuestion,
