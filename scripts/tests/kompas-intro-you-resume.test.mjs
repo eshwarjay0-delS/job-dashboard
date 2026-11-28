@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs"
 import test from "node:test"
 import vm from "node:vm"
 import { createRequire } from "node:module"
-import { repairIntroHeadline, INTRO_HEADLINE } from "../../src/lib/kompasLevelContract.ts"
+import { repairIntroHeadline, INTRO_HEADLINE, fitLevelAnswer, levelContract } from "../../src/lib/kompasLevelContract.ts"
+import { answerAside } from "../../src/lib/kompasAnswerAside.ts"
+import { OWNER_RESUME } from "../../src/lib/kompasPacks/owner.ts"
 
 const require = createRequire(import.meta.url)
 
@@ -72,6 +74,33 @@ test("a role session with resume text selects that resume instead of an empty ch
   assert.match(app, /return "eshwarjay05"/)
   assert.match(app, /function storedResumeId/)
   assert.match(app, /Resume: " \+ resumeName/)
+})
+
+test("a hedge about a specific risk is removed, and a repeated closing sentence is dropped", () => {
+  const hedge = "I can't accurately name a specific OWASP Top 10 risk I personally remediated. At CVS Health I fixed broken access control on the portal."
+  const cleaned = fitLevelAnswer(hedge + " At CVS Health I fixed broken access control on the portal.", levelContract("engineer", "How do you handle an OWASP finding?"))
+  assert.doesNotMatch(cleaned, /can't accurately name|personally remediated/i)
+  assert.match(cleaned, /CVS Health/)
+  const repeated = fitLevelAnswer("I open the SailPoint queue and assign the owner. I check the CyberArk vault next. I open the SailPoint queue and assign the owner.", levelContract("engineer", "How do you review access?"))
+  assert.equal(repeated.split(/SailPoint queue/i).length - 1, 1)
+})
+
+test("Say this for an eshwarjay05 session does not speak the ServiceNow profile", () => {
+  const mixed = OWNER_RESUME + "\nHaving 10+ years of experience in Sr. ServiceNow Development and FSO and CSM.\njayeshwar44@gmail.com"
+  const aside = answerAside({ question: "How do you handle an AppSec finding?", resume: mixed })
+  const blob = JSON.stringify(aside)
+  assert.doesNotMatch(blob, /jayeshwar44|Sr\. ServiceNow Development|ServiceNow FSO/i)
+  assert.match(app, /current\.resume/)
+})
+
+test("a second half merges into the open card and candidate speech does not open one", () => {
+  const merged = Gate.mergeIntoOpenCard([{ question: "How do you detect SQL injection?", answer: "" }], "and how do you detect XSS?")
+  assert.equal(merged.merge, true)
+  assert.match(merged.question, /SQL injection/)
+  assert.match(merged.question, /XSS/)
+  const mine = Gate.mergeIntoOpenCard([], "I tuned the Splunk notable at Citi Bank.")
+  assert.equal(mine.question, "")
+  assert.equal(Gate.liveAutoDecision({ text: "I tuned the Splunk notable at Citi Bank.", finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS }).fire, false)
 })
 
 test("skip-login session sync stays on this device when the account store is unavailable", async () => {

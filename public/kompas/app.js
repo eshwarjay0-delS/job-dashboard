@@ -4739,6 +4739,7 @@ const PHRASE_FIXES = [
   [/\bokta\b/gi, "Okta"],
   [/\bsail\s*point\b/gi, "SailPoint"],
   [/\bentra\b/gi, "Entra"],
+  [/(?<=\b(?:what is|what's|explain|using|use|with|in)\s+)(?:the\s+)?same tools\b/gi, "Sentinel"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");

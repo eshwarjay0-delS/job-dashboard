@@ -191,6 +191,7 @@
     var text = correctSecurityAsr(stripSpeakerLabels(opts.text));
     if (!text) return { fire: false, reason: "empty", text: "" };
     if (isSmallTalk(text)) return { fire: false, reason: "small-talk", text: text };
+    if (isCandidateNarrative(text) && !interviewerAsk(text)) return { fire: false, reason: "candidate", text: text };
     var words = contentWords(text);
     if (words.length < MIN_CONTENT && !isStrongShort(text) && !(isQuestionShape(text) && words.length >= 2)) return { fire: false, reason: "too-short", text: text };
     if (isFollowUp(text, opts.previous)) return { fire: false, reason: "follow-up", text: text };
@@ -320,8 +321,20 @@
     return clean(kept.join(" "));
   }
 
+  function mergeIntoOpenCard(cards, text) {
+    var q = questionWithoutCandidate(text) || "";
+    if (!q || (isCandidateNarrative(q) && !interviewerAsk(q))) return { merge: false, question: "" };
+    var last = cards && cards.length ? cards[cards.length - 1] : null;
+    if (!last || answerIsReal(last.answer)) return { merge: false, question: q };
+    var prev = String(last.question || "").trim();
+    if (!prev || /^(?:Preparing|Ready|Your introduction|No question)/i.test(prev)) return { merge: false, question: q };
+    if (/^(?:and|also|plus|then)\b/i.test(q) || isFollowUp(q, prev)) return { merge: true, question: clean(prev.replace(/[?]?\s*$/, "") + ". " + q) };
+    return { merge: false, question: q };
+  }
+
   function nextQuestionCard(cards, question) {
     var q = questionWithoutCandidate(question) || correctSecurityAsr(stripSpeakerLabels(question));
+    if (!q || (isCandidateNarrative(q) && !interviewerAsk(q))) return { cards: (cards || []).slice(), opened: "", reused: false };
     var list = (cards || []).map(function (card) {
       return { question: card.question, answer: card.answer, locked: true };
     });
@@ -442,6 +455,7 @@
       var q = questionWithoutCandidate(decision.text || text) || decision.text;
       var before = cards.map(function (card) { return card.question; });
       var opened = nextQuestionCard(cards, q);
+      if (!opened.opened) return;
       var unchanged = before.every(function (question, i) { return opened.cards[i] && opened.cards[i].question === question; });
       if (!unchanged) return;
       var card = opened.cards[opened.cards.length - 1];
@@ -468,6 +482,7 @@
     shouldFire: shouldFire,
     liveAutoDecision: liveAutoDecision,
     questionWithoutCandidate: questionWithoutCandidate,
+    mergeIntoOpenCard: mergeIntoOpenCard,
     nextQuestionCard: nextQuestionCard,
     manualAnswerPlan: manualAnswerPlan,
     answerIsReal: answerIsReal,

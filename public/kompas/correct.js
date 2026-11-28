@@ -43,7 +43,7 @@
       const re = new RegExp("\\b" + who.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g");
       t = t.replace(re, "I");
     }
-    t = t.replace(/\bSenior I Engineer\b/g, "Senior Cybersecurity Engineer").replace(/\bSanG\s+Diego\b/g, "San Diego");
+    t = t.replace(/\bSenior I Engineer\b/g, "Senior Cybersecurity Engineer").replace(/\bI Engineer at\b/g, "Cybersecurity Engineer at").replace(/\bSanG\s+Diego\b/g, "San Diego");
     t = t.replace(/\bI(?:\s+currently)?\s+([A-Za-z]+)/g, (m, v) => m.slice(0, m.length - v.length) + dropPerson(v));
     t = t.replace(/\b(I\b[^.!?]{0,500}?)\band\s+([a-z]{4,}s)\b/g, (m, left, v) => {
       const next = dropPerson(v);

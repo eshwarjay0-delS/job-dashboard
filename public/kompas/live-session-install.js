@@ -112,7 +112,17 @@
       var decision = gateDecision(tail, true, { finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS });
       if (!decision.fire) return;
       var q = (typeof Gate.questionWithoutCandidate === "function" ? Gate.questionWithoutCandidate(decision.text || tail) : "") || Gate.stripSpeakerLabels(decision.text || tail);
-      if (!q) return;
+      if (!q || (typeof Gate.isCandidateNarrative === "function" && Gate.isCandidateNarrative(q) && (typeof Gate.interviewerAsk !== "function" || !Gate.interviewerAsk(q)))) return;
+      var merged = typeof Gate.mergeIntoOpenCard === "function" ? Gate.mergeIntoOpenCard(typeof cards !== "undefined" ? cards : [], q) : { merge: false, question: q };
+      if (!merged.question) return;
+      if (merged.merge && typeof cards !== "undefined" && cards.length) {
+        var open = cards[cards.length - 1];
+        open.question = merged.question;
+        open.questionLocked = true;
+        if (typeof renderCard === "function") renderCard();
+        return;
+      }
+      q = merged.question;
       if (typeof noteAsked === "function") noteAsked(q);
       if (typeof showQueuedAnswer === "function") {
         showQueuedAnswer(q);
