@@ -126,3 +126,12 @@ BNY NotebookLM audio recommendations and uploaded BNY PDF materials belong to ON
 PR #620 is an approved but unshipped level-voice candidate. Its exact-head full CI run 46092594973 fails the brief-mode word ceiling in `scripts/tests/kompas-grounding-route.test.mjs:202`; the personality band currently overrides the shorter brief/quick-fact cap. Its copy also describes Saviynt/IAM and Microsoft Sentinel/SQL-injection customer incidents as personal history, while the Houston resume fixture only contains Fortinet/AWS network work. Review comment 7231687148 records both blockers. No live model key/sample was available; deterministic fallback rows are not live-model acceptance. Do not merge or deploy until the brief-mode cap and no-fabrication tests pass on the exact head.
 
 The current production alias remains READY at 593dff; master is dc4f82a, two commits ahead. The newer personality modules and live-session work are not in production. No deployment was attempted. The separate Kompas Continuous Voice Delivery automation is disabled; no duplicate capture/voice edits were made.
+
+
+## 28 November 2026 — run 24 follow-up
+
+PR #619 (separate live-session/speaker/capture task) merged to master as `dc4f82a` after full CI, Kompas baseline and Windows one-click Caption Capture gates all passed. It explicitly merged without `[ship]`, so production remains at `593dff`; no duplicate capture work was performed.
+
+PR #620's latest head is `6a66bcde`. It now applies the question-specific short budget through assessment and cleaning, rejects unsupported experience for every question kind, removes the customer/partner-story rewrite instruction, and adds filter-level short-question and adversarial story tests. Plan/REA, baseline and confirmed-skill gates pass; full CI `46094400925` is still in progress. The PR is now nonmergeable against current master `997eaa3` because its base is `35c1400` and it overlaps the merged run-24 Plan/Completion Watch docs. Restack/resolve safely before merge; preserve run-24 docs. No production deployment.
+
+PR #614's Brain/Feedback UI remains unapproved under the explicit Plan Journal decision to leave that tab untouched. Do not merge or ship it without a new explicit approval. The separate Voice Delivery automation is disabled; #619 is already merged to master, so no duplicate work is needed.
