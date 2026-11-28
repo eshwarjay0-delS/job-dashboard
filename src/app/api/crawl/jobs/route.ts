@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
-import { CRAWL_FRESHNESS_DAYS, collectFilteredSnapshot, crawlFreshnessCutoff, crawlSearchOrFilter } from "@/lib/crawl/search"
+import { CRAWL_FRESHNESS_DAYS, collectFilteredSnapshot, crawlFreshnessCutoff, crawlSearchOrFilter, crawlLocationTerms, applyCrawlerLocationFilters } from "@/lib/crawl/search"
 import { requiresSecurityClearance } from "@/lib/contract-jobs"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -21,6 +21,9 @@ export async function GET(req: NextRequest) {
   const portal = (searchParams.get("portal") ?? "").trim().slice(0, 40)
   const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 20, 1), 100)
   const excludeClearance = searchParams.get("clearance") !== "include"
+  const locationInput = (searchParams.get("location") ?? "").trim().slice(0, 80)
+  const locationTerms = crawlLocationTerms(locationInput)
+  const remoteOnly = searchParams.get("remote") === "true"
 
   const service = createServiceClient()
   let query = service.from("mfit_crawl_jobs")
@@ -32,6 +35,9 @@ export async function GET(req: NextRequest) {
 
   if (workType !== "all") query = query.eq("work_type", workType)
   if (portal) query = query.eq("portal", portal)
+  // Apply location/remote before the bounded scan so client filters cannot discard
+  // eligible rows that were outside the first 100/1,000 results.
+  query = applyCrawlerLocationFilters(query, locationTerms, remoteOnly)
   const searchFilter = crawlSearchOrFilter(q)
   if (searchFilter) query = query.or(searchFilter)
 
@@ -72,6 +78,8 @@ export async function GET(req: NextRequest) {
     clearance: excludeClearance ? "excluded" : "included",
     excluded_clearance: excludedClearance,
     clearance_scan_limited: clearanceScanLimited,
+    location_filter: locationTerms.join(" "),
+    remote_only: remoteOnly,
   })
 }
 
