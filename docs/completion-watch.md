@@ -1,3 +1,20 @@
+## 28 November 2026 — unmerged backlog landed
+
+Owner Eshwar, 27 Nov 2026 6:11 PM CT, asked to land Kompas/MFit work that was started and never merged. This branch keeps master's newer Kompas answer and journal text and brings in the newest green product code that was still missing:
+
+- PR #605 clearance-safe crawl snapshot (bounded in-memory filter, scan cap 1000, scan-limited note).
+- PR #488 plus the short-token word boundary from PR #574 (PR #574's own full CI failed on stale unused locals, so only the search helper and its test were taken).
+- PR #576 account-scoped Gmail digest and mobile nav. Four-inbox ceiling stays.
+- PR #580 synthetic skip-login session uses the publishable anon key. Skip-login stays on.
+- PR #598 confirmed-skill attribution and role-gap repair.
+- PR #600 explicit same-account Files/Library original, labeled Original resume — NOT TAILORED. Unverified JD-only terms stay a hard hold.
+
+Left untouched: `fix/google-only-login-production-auth-20261113`, PR #610 and the other `cursor/*-4bde` Kompas branches, the Brain and Feedback tab (`bc-c61ea0bb`, PR #473), and PR #461 (`cursor/kompas-length-clarify-d579`). PR #475's 30-fold branch changes one line of `chosenResumeMatchesProfile` in the same direction this ship already takes (`return false` when no email is supplied).
+
+Local tests: 296 focused cases passed, `tsc` passed, eslint reported warnings and no errors. Webpack dev returned HTTP 200 for `/dashboard/contracts`, `/dashboard/mail`, and `/dashboard/apply` as eshwarjay05. The contract search box was still behind "Checking account setup" in that browser pass, so match-any search is proven by `scripts/tests/contract-search.test.mjs` and not by a click. No live crawl, inbox change, model call, or WhatsApp send.
+
+This merge has no `[ship]` marker. Three production deploys already landed today. Vercel will ignore this push. It is on master and not live until a later `[ship]` commit includes it. Tonight's deploy is the answer-filler fix, not this one.
+
 ## 27 November 2026 — level length scales
 
 Typical behavioral or scenario: Architect about 1040 words, Technical HR / Engineer about 780, Director about 520. Factors are 1.0, 0.75, and 0.5 of a complexity score. Quick facts use the same factors on a smaller score. Architect has no fixed ceiling. Production word counts follow this ship.

@@ -779,14 +779,35 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
 // Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
-type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
+type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; explicitSelection?: boolean; redo?: boolean }
+
+/** Only a uniquely named, same-account Files/Library item may be used as an original fallback. */
+function explicitlySelectedSameAccountLibraryResume(files: FromFiles | undefined, userId: string, resumePath: string): boolean {
+  if (!files || files.explicitSelection !== true || files.depth !== 0) return false
+  const email = String(files.email || "").trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false
+  const root = filesOf(userId)
+  if (!root || !path.isAbsolute(root) || !path.isAbsolute(files.userDir) ||
+      !path.isAbsolute(files.abs) || !path.isAbsolute(resumePath)) return false
+  const rootPath = path.resolve(root)
+  if (path.resolve(files.userDir) !== rootPath) return false
+  const selected = path.resolve(files.abs)
+  if (selected !== path.resolve(resumePath) || path.extname(selected).toLowerCase() !== ".docx") return false
+  const rel = String(files.rel || "").replace(/\\/g, "/")
+  if (!rel || rel.startsWith("/") || rel.split("/").some(part => !part || part === "." || part === "..")) return false
+  const parts = rel.split("/")
+  if (parts.length < 2 || parts[0].toLowerCase() !== email) return false
+  if (path.resolve(rootPath, ...parts) !== selected) return false
+  const inside = path.relative(rootPath, selected)
+  return !!inside && !inside.startsWith("..") && !path.isAbsolute(inside)
+}
 
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
   if (!session.jd || !session.resumePath) return quiet ? undefined : sendText(from, HELP)
   console.info("[whatsapp] run source", { via: files ? "library" : "upload", name: session.resumeName ?? null, rel: files?.rel ?? null, ageMin: session.resumeAt ? Math.round((Date.now() - session.resumeAt) / 60000) : null })
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
-  // Persist input before clearing the interactive session. Retries use the exact chosen original.
+  // Persist the exact source and its selection provenance before clearing the interactive session. Legacy jobs without proof remain fail-closed.
   const queued = await enqueueResumeRecovery({
     id: job, from, userId, jd: session.jd, jdId: session.jdId || "",
     resumePath: session.resumePath, resumeName: session.resumeName, resumeFiled: session.resumeFiled, files,
@@ -840,23 +861,23 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, text).catch(() => undefined)
   }
   let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
-  // Assigned inside the run, after the job text is known. The outer catch can
-  // still send the already-chosen resume if the run throws before a file goes out.
+  // A fallback is allowed only when the route carries server-created proof that
+  // this exact DOCX was uniquely named from this verified account's Files/Library.
   let metaPromise: Promise<Meta> = Promise.resolve({ role: "", company: "", location: "" })
-  const sendClosest = async (why: string): Promise<boolean> => {
+  const sendSelectedOriginal = async (why: string): Promise<boolean> => {
     if (finished || sending) return false
     const resumePath = session.resumePath
     const jd = session.jd
-    if (!resumePath || !jd) return false
+    if (!resumePath || !jd || !explicitlySelectedSameAccountLibraryResume(files, userId, resumePath)) return false
     const source = await readPath(resumePath).catch(() => null)
     if (!source) return false
     let text = ""
     try { text = await extractText(source) } catch { text = "" }
-    // Never substitute a resume from the other email. The path was chosen for this run.
+    // The selected path is account-bound above; the DOCX must also contain only that profile's email.
     if (!chosenResumeMatchesProfile(text, files?.email)) return false
     const meta = await metaPromise
     const name = await outputNameFor(source)
-    const caption = closestResumeCaption(name, chosenLabel(files, session.resumeName), why)
+    const caption = ["Original resume — NOT TAILORED", "*" + name + "*", why].join("\n")
     await patchResumeRecovery(job, { status: "sending" })
     sending = true
     try {
@@ -888,8 +909,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   await saveSession(from, cur)
 
   if (!quiet) await sendText(from, files
-    ? `Updating ${files.said}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`
-    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. You will get a Word file either way: the updated resume if the rewrite finishes, or this same resume if it does not.`)
+    ? `Updating ${files.said}. I will send the tailored Word file only if it passes the checks. If it does not, I will use an original only when it is the exact same-account Files/Library resume you explicitly selected, labeled "Original resume — NOT TAILORED"; otherwise I will explain and keep your request saved.`
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. I will send the tailored Word file only if it passes the checks. I will not send an uploaded original as a fallback; if the checks fail, I will explain and keep your request saved.`)
 
   // Fail-fast notice (Nov 4 baseline doctrine): a run used to burn the whole
   // 240s budget in silence and then fail. At 60s, if the run is still going,
@@ -898,9 +919,12 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // when they finish). The outer finally clears the timer on every path,
   // so a finished run never gets a stale progress note. No unref: the
   // function stays alive under after() up to maxDuration.
+  const progressFallbackEligible = explicitlySelectedSameAccountLibraryResume(files, userId, session.resumePath)
   if (!quiet) {
     progressTimer = setTimeout(() => {
-      sendText(from, "Still working on your resume — the rewrite has been running for a minute and is still going. You will get a Word file here: the updated resume if the rewrite finishes, or the resume already chosen for this job if it does not.").catch(() => {})
+      sendText(from, progressFallbackEligible
+        ? "Still working on your resume — the rewrite has been running for a minute and is still going. I will send a tailored Word file only if it passes the checks. If not, I may send only the same-account Files/Library resume you explicitly selected, labeled \"Original resume — NOT TAILORED\"; otherwise I will explain and keep your request saved."
+        : "Still working on your resume — the rewrite has been running for a minute and is still going. I will send a tailored Word file only if it passes the checks. If not, I will explain and keep your request saved; no original fallback is eligible without an explicit same-account Files/Library selection.").catch(() => {})
     }, 60_000)
   }
 
@@ -962,7 +986,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     failureCode = timedOut ? "timeout" : "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
     const why = timedOut ? "The rewrite ran out of time just now." : "The rewrite stopped before it finished."
-    if (await sendClosest(why)) return
+    if (await sendSelectedOriginal(why)) return
     await sayOutcome(timedOut
       ? "The rewrite ran out of time just now. Your resume and this job are saved, and MarketFit will try again."
       : "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
@@ -974,7 +998,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    if (await sendClosest("The rewrite produced no changes, so this is the resume already chosen for this job, unchanged.")) return
+    if (await sendSelectedOriginal("The rewrite produced no changes, so the selected library resume is being sent unchanged.")) return
     await sayOutcome("The rewrite produced no changes. Your request is saved and will be retried automatically.")
     return;
   }
@@ -1017,9 +1041,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     }
   }
 
-  // A usable rewrite goes out even under 95% coverage, with the gaps named in the caption.
-  // An incomplete, failed, or identity-unsafe rewrite does not. The already-chosen
-  // resume for this profile goes out instead. It is not saved as a new tailored file.
+  // A usable rewrite goes out under the approved WhatsApp shortfall rules, with gaps named.
+  // An incomplete, failed, or identity-unsafe rewrite may use only an explicitly
+  // selected same-account library DOCX, labeled NOT TAILORED; otherwise no file goes out.
   const coverage = result.coverage ?? result.score
   if (!whatsappRewriteUsable(result)) {
     failureCode = "quality_rejected"
@@ -1037,7 +1061,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       bulletsReverted: result.bullets_reverted_for_jd_terms ?? 0,
       cached: !!result.cached,
     })
-    if (await sendClosest(unfinishedRewriteWhy(result))) return
+    if (await sendSelectedOriginal(unfinishedRewriteWhy(result))) return
     // No chosen file could be sent (missing, or it belongs to another profile).
     await sayOutcome(qualityStop(result))
     return;
@@ -1045,8 +1069,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) {
     failureCode = "file_missing"
-    if (await sendClosest("The updated Word file could not be opened.")) return
-    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened, and the resume already chosen for this job could not be opened either. Your resume and this job are saved for another try.")
+    if (await sendSelectedOriginal("The updated Word file could not be opened.")) return
+    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened. No eligible explicitly selected same-account Files/Library original was available, so your request is saved for another try.")
     return;
   }
 
@@ -1054,8 +1078,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     // The rewritten bytes changed name, contact details, or dates. Do not send them.
-    // The already-chosen resume is unchanged and is the file that goes out.
-    if (await sendClosest("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
+    // Only a uniquely selected same-account Files/Library original may go out unchanged.
+    if (await sendSelectedOriginal("The update failed identity/contact/date verification, so I sent your original resume instead.")) return
     await sayOutcome("The update failed identity/contact/date verification, so the rewritten file was not sent. Your original resume and job description are saved for automatic recovery.")
     return;
   }
@@ -1107,8 +1131,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       await patchResumeRecovery(job, { status: "pending" })
       sending = false
       failureCode = "whatsapp_http_rejected"
-      // Meta rejected this upload, so nothing was accepted. The already-chosen resume can still go out.
-      if (await sendClosest("WhatsApp refused the updated file.")) return
+      // Meta rejected this upload, so nothing was accepted. Only the explicitly selected same-account original may go out.
+      if (await sendSelectedOriginal("WhatsApp refused the updated file.")) return
     } else failureCode = "delivery_unconfirmed"
     await sayOutcome(refused
       ? "I did not send a file. WhatsApp refused it. Your resume and this job are saved for another try."
@@ -1139,7 +1163,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (error) {
     console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
     if (!finished && !sending) {
-      const sent = await sendClosest("The rewrite did not finish cleanly.").catch(() => false)
+      const sent = await sendSelectedOriginal("The rewrite did not finish cleanly.").catch(() => false)
       if (!sent && !told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
     } else if (!told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
   } finally {
@@ -1434,7 +1458,10 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   const budget = TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began)
   if (budget < 20_000) return sendText(from, "I did not send a file. Choosing the resume used the time I have. Send the job once more and I will start again.")
   return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
-    { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
+    { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path,
+      // A hint is explicit only when it resolves to one unique library item; automatic or ambiguous picks are not proof.
+      explicitSelection: Boolean(prefer?.hint?.trim() && choice.pool.length === 1),
+      ...(redo ? { redo } : {}) })
 }
 
 // The resume made for this job before, sent again as it is: the outcome is already known (owner, 13 Oct 2026).
@@ -1684,11 +1711,6 @@ function unplacedTermsLine(terms: string[] | undefined, reason: string | undefin
   return `Not added to the file because ${why}: ${shown}. Add any you can speak to.`
 }
 
-function chosenLabel(files: FromFiles | undefined, resumeName?: string): string {
-  if (files?.said) return files.said.split(". I chose")[0]
-  if (resumeName) return `*${resumeName}*`
-  return "the resume already chosen for this job"
-}
 
 function unfinishedRewriteWhy(result: TailorResult): string {
   if (result.partial || result.quality?.incomplete || result.skills_only) return "The rewrite was marked incomplete."

@@ -11,7 +11,13 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
 
-  const [{ data: profile, error: profileError }, loaded, { data: services, error: servicesError }] = await Promise.all([
+  // The accounts load is the one the page cannot render without; the
+  // profile/services reads only fill WhatsApp details, so a failure there
+  // must degrade to defaults instead of taking the whole page down. (A
+  // single flaky query used to 503 the accounts list too, and the cause
+  // was swallowed with no server log — see the PGRST301 skip-login token
+  // failure, Nov 2026.)
+  const [profileRes, loadedRes, servicesRes] = await Promise.allSettled([
     supabase
       .from("profiles")
       .select("phone_verified,phone_last4,whatsapp_opt_in")
@@ -23,13 +29,33 @@ export async function GET() {
       .select("service,status,connected_account_label,connected_at")
       .eq("user_id", user.id),
   ])
+  if (loadedRes.status === "rejected") {
+    console.error("connections status: workspace accounts load failed", loadedRes.reason)
+    return NextResponse.json({ error: "Could not load your saved Google accounts. Please retry." }, { status: 503 })
+  }
+  const loaded = loadedRes.value
   const accounts = loaded.accounts
 
-  if ((profileError || servicesError) && !isGmailQuotaError(profileError) && !isGmailQuotaError(servicesError)) {
-    return NextResponse.json({ error: "Could not verify your saved connections. Please retry." }, { status: 503 })
+  let profile: { phone_verified?: boolean | null; phone_last4?: string | null; whatsapp_opt_in?: boolean | null } | null = null
+  if (profileRes.status === "fulfilled") {
+    profile = profileRes.value.data
+    if (profileRes.value.error && !isGmailQuotaError(profileRes.value.error)) {
+      console.error("connections status: profiles read failed", profileRes.value.error)
+    }
+  } else {
+    console.error("connections status: profiles read threw", profileRes.reason)
+  }
+  let services: { service: string; status: string; connected_account_label: string | null; connected_at: string }[] = []
+  if (servicesRes.status === "fulfilled") {
+    services = servicesRes.value.data || []
+    if (servicesRes.value.error && !isGmailQuotaError(servicesRes.value.error)) {
+      console.error("connections status: connected_services read failed", servicesRes.value.error)
+    }
+  } else {
+    console.error("connections status: connected_services read threw", servicesRes.reason)
   }
 
-  const whatsappRow = (services || []).find((row: any) => row.service === "whatsapp")
+  const whatsappRow = services.find((row) => row.service === "whatsapp")
   const phoneVerified = Boolean(profile?.phone_verified)
   const optedIn = Boolean(profile?.whatsapp_opt_in)
   const provider = await waStatus()

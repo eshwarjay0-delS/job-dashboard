@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { getGoogleWorkspaceAccessToken } from "@/lib/googleWorkspace"
 import { loadWorkspaceAccounts } from "@/lib/gmailSnapshot"
+import { limitGmailAccounts, enabledGmailAccounts } from "@/lib/mail-digest"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gmail Sync — uses the Google OAuth provider_token stored in the Supabase
@@ -198,7 +199,7 @@ export async function GET() {
     if (!user || user.is_anonymous) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
 
     const loaded = await loadWorkspaceAccounts(user.id)
-    const accounts = loaded.accounts
+    const accounts = limitGmailAccounts(loaded.accounts)
     return NextResponse.json({
       connected: accounts.some(a => a.gmail_enabled),
       accounts,
@@ -243,7 +244,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, count: 0, applications: [], snapshotNotice: loaded.notice })
     }
 
-    const accountId = typeof body.accountId === "string" && body.accountId ? body.accountId : null
+    const requestedAccountId = typeof body.accountId === "string" && body.accountId.trim() ? body.accountId.trim() : null
+    const allowedAccounts = enabledGmailAccounts(loaded.accounts)
+    const selectedAccount = requestedAccountId
+      ? allowedAccounts.find(a => a.id === requestedAccountId || a.google_email.toLowerCase() === requestedAccountId.toLowerCase())
+      : allowedAccounts.find(a => a.is_primary) || allowedAccounts[0]
+    if (requestedAccountId && !selectedAccount) {
+      return NextResponse.json({ ok: false, error: "Account not connected or outside the four-account limit." }, { status: 403 })
+    }
+    if (!selectedAccount) {
+      return NextResponse.json({ ok: false, error: "Gmail not connected. Please connect Gmail first." }, { status: 403 })
+    }
+    const accountId = selectedAccount.id
     const accessToken = await getGoogleWorkspaceAccessToken(user.id, accountId)
 
     if (!accessToken) {
