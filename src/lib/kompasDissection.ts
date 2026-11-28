@@ -795,8 +795,9 @@ export function settleSpokenAnswer(
 ): SpokenAssessment {
   const cut = dissectQuestion(question, sources)
   const mode = cut.modes[level] || cut.modes.engineer
-  // A caller may pass a larger plan. The spoken answer still stops at this mode's ceiling.
-  const cap = ceiling && ceiling > 0 ? Math.min(ceiling, mode.maxWords) : mode.maxWords
+  // The level contract passes its own word target. That target wins when it is
+  // larger than the old mode ceiling, so a full Architect answer is not cut back.
+  const cap = ceiling && ceiling > 0 ? ceiling : mode.maxWords
   if (isProviderErrorAnswer(answer)) {
     return { text: "", words: 0, providerError: true, banned: [], missingEcho: false, repeated: false, thirdPerson: false, inBand: false }
   }

@@ -344,12 +344,11 @@ test("the stand-in puts one fenced block first for a code question", () => {
   assert.equal(draftSpokenAnswer("What does residual risk mean?", "engineer", RESUME).includes("```"), false)
 })
 
-test("a larger plan cannot leave a spoken answer past the mode ceiling", () => {
+test("a level target can run longer than the old mode ceiling", () => {
   const q = "What does residual risk mean?"
   const long = "Residual risk is what remains after the planned control. ".repeat(20)
-  const band = dissectQuestion(q, RESUME).modes.engineer.maxWords
   const out = settleSpokenAnswer(q, long, "engineer", RESUME, "", 400)
-  assert.ok(wordCount(out.text) <= band, `${wordCount(out.text)} > ${band}`)
+  assert.ok(wordCount(out.text) <= 400, `${wordCount(out.text)} > 400`)
   assert.match(out.text, /residual risk/i)
 })
 

@@ -1,3 +1,9 @@
+## 2026-11-28 — No filler padding; level and Houston resume on a bare request
+
+A short answer is not filled with repeated stock sentences. One more model call can add new text. A top-level level is architect, director, or engineer and shows in the response. No session resume uses the Houston eshwarjay05 summary, and the answer does not say the resume is not loaded. Server only.
+
+**Checked by scripts/tests/kompas-level-contract.test.mjs. One production CyberArk check at three levels follows the ship.**
+
 ## 2026-11-28 — Upload timeout does not send the original (no new screen)
 
 The explicit library fallback is already on master in `explicitlySelectedSameAccountLibraryResume`. This change only locks the test: a timeout or an unfinished rewrite does not send the uploaded original. No `[ship]`. Not a live WhatsApp send.

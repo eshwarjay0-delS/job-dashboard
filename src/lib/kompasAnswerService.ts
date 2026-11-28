@@ -27,7 +27,8 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
-import { fitLevelAnswer, levelContract } from "@/lib/kompasLevelContract"
+import { fitLevelAnswer, levelContract, wordCount } from "@/lib/kompasLevelContract"
+import { HOUSTON_RESUME } from "@/lib/kompasHonestyGate"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
@@ -226,6 +227,22 @@ async function fetchOpenRouter(
   if (!data.choices?.[0]?.message?.content?.trim()) throw new Error("openrouter 502 empty response")
   const u = data.usage || {}
   return { text: data.choices?.[0]?.message?.content || "", usage: { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 } }
+}
+
+/** One real continuation. Never stock sentences. If the model adds nothing new, the short answer stands. */
+async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal): Promise<string> {
+  const contract = levelContract(job.level, job.question)
+  const base = fitLevelAnswer(text, contract)
+  if (wordCount(base) >= contract.min || !job.orKey || signal.aborted) return base
+  try {
+    const missing = Math.max(60, contract.target - wordCount(base))
+    const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
+      `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${base.slice(-2400)}`,
+      Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
+    return fitLevelAnswer(`${base} ${more.text}`, contract)
+  } catch {
+    return base
+  }
 }
 
 // A light non-streaming call for the post-generation fact-check (perfACT's
@@ -886,7 +903,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         if (opener) finalText = withOpener(finalText, opener)
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
         finalText = dropOffTopicResume(job.question, job.jd || "", keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || ""))
-        finalText = fitLevelAnswer(finalText, levelContract(job.level, job.question))
+        finalText = await extendLevelOnce(job, finalText, signal)
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
@@ -1094,7 +1111,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     const gated = gateDisplayedAnswer({ question: job.question, raw: out, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) out = gated.text
   } catch { /* the settled answer stands */ }
-  out = fitLevelAnswer(out, levelContract(job.level, job.question))
+  out = await extendLevelOnce(job, out, signal)
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
@@ -1116,7 +1133,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     ledger: job.ledger,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
-      interviewer: job.interviewer, tier: job.tier, kind: job.plan.kind, words: job.plan.words,
+      interviewer: job.level, level: job.level, tier: job.tier, kind: job.plan.kind, words: wordCount(out),
       routed: job.projectId,
       timing: { total_ms: Date.now() - job.startedAt },
     },
@@ -1327,7 +1344,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
   // The active sources take precedence over an older profile or generated Q&A.
   // Never make a grounded live turn wait for three remote dossier reads.
-  const resumeSrc = str(config.resume, 60000)
+  const resumeSrc = str(config.resume, 60000) || str(body.resume, 60000) || HOUSTON_RESUME
   const jdSrc = str(config.jd, 8000)
   const docsSrc = str(config.documents, 8000)
   let grounding = ""
@@ -1351,13 +1368,12 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     } catch { /* optional historical context must not block a live turn */ }
     finally { if (timer) clearTimeout(timer) }
   }
-  const interviewer = str(config.interviewer, 40) || "engineer"
+  const interviewer = str(body.level, 80) || str(config.level, 80) || str(body.interviewer, 40) || str(config.interviewer, 40) || "engineer"
   // The answering LEVEL (owner, 22 Oct 2026: exactly three levels). The client
   // sends the level the user has selected RIGHT NOW on every request, so a
   // level switch changes the very next answer — nothing is pinned at session
-  // start. `interviewer` above stays the anchor voice (engineer/director) the
-  // prose is written under; the level controls register and depth.
-  const level = answerLevel(config.level, interviewer)
+  // start. A top-level level field is the same control as config.level.
+  const level = answerLevel(body.level ?? config.level ?? body.interviewer ?? config.interviewer, interviewer)
   const prep = (body.prep && typeof body.prep === "object" ? body.prep : {}) as Record<string, unknown>
   if (!resumeSrc) { prep.identity = ""; prep.projects = ""; }
   // The 90 s window is kept from its newest end; the old head-first 4,000-character clip dropped the newest speech.
@@ -1684,7 +1700,7 @@ ${INTERVIEW}`
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${memoryPrompt(sessionMemory) ? `${memoryPrompt(sessionMemory)}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question.split("\n")[0]}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}\n\n${TITLE_INSTRUCTION}`,
     plan,
-    interviewer,
+    interviewer: level,
     level,
     register,
     shape: shape || "",
