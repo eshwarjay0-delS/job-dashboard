@@ -120,9 +120,14 @@ export function resetGmailDataForAccountSwitch(): void {
 
 /** Reload for the account that Supabase currently confirms. */
 export function refreshGmailDataForCurrentAccount(): void {
+  const gen = generation
   void (async () => {
     const key = await snapshotKey()
+    if (gen !== generation) return
+    const currentKey = await snapshotKey()
+    if (gen !== generation || currentKey !== key) return
     const snap = key ? readSnapshot(key) : null
+    if (gen !== generation) return
     if (key && snap && snap.mails.length) {
       listeners.forEach(hear => hear({
         ...EMPTY, connected: true,
@@ -131,7 +136,7 @@ export function refreshGmailDataForCurrentAccount(): void {
         radar: snap.radar || [], issues: snap.issues || [],
       }))
     }
-    void loadShared(false)
+    if (gen === generation && currentKey === key) void loadShared(false)
   })()
 }
 
