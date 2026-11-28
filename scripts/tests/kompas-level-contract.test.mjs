@@ -70,39 +70,59 @@ function loadRoute() {
   }
 }
 
-const QUESTIONS = [
+const TYPICAL = [
   "Tell me about yourself.",
   "Tell me about a time you handled an incident.",
   "How would you design certificate issuance and revocation?",
   "Walk me through how you rolled out a security control.",
-  "What does PKI stand for?",
+  "Describe a time you had to explain a risk to someone outside the security team.",
 ]
+const QUICK = "What does PKI stand for?"
 
-test("five questions at three levels stay in band through /api/answer", { timeout: 180000 }, async () => {
+async function ask(route, question, level) {
+  const response = await route.post({
+    question,
+    config: { interviewer: level, level, length: "balanced", resume: "Senior security engineer. Certificate issuance, revocation, and incident response." },
+  })
+  const body = await response.json()
+  assert.equal(response.status, 200, question + " " + level + " " + JSON.stringify(body).slice(0, 180))
+  const text = String(body.text || "")
+  const n = wordCount(text)
+  const band = levelContract(level, question)
+  assert.ok(Math.abs(n - band.target) / band.target <= 0.2, `${level} ${question} ${n} is not within 20% of ${band.target}`)
+  assert.ok(n >= band.min && n <= band.max, `${level} ${question} ${n} not in ${band.min}-${band.max}`)
+  if (level === "director") assert.equal(hasJargonList(text), false, question)
+  if (level === "engineer") assert.equal(hasPlainReasoning(text), true, question)
+  assert.doesNotMatch(text, /^#{1,3}\s|^\s*(?:Design|Components|Trade-offs|Risks):/m)
+  assert.ok(route.models.some((call) => call.maxTokens >= band.target * 2), `${level} max_tokens ${JSON.stringify(route.models.slice(-4))}`)
+  route.models.length = 0
+  return n
+}
+
+test("five typical questions keep Architect above Engineer above Director", { timeout: 180000 }, async () => {
   const route = loadRoute()
-  const counts = {}
-  for (const question of QUESTIONS) {
-    counts[question] = {}
-    for (const level of ["architect", "director", "engineer"]) {
-      const response = await route.post({
-        question,
-        config: { interviewer: level, level, length: "balanced", resume: "Senior security engineer. Certificate issuance, revocation, and incident response." },
-      })
-      const body = await response.json()
-      assert.equal(response.status, 200, question + " " + level + " " + JSON.stringify(body).slice(0, 180))
-      const text = String(body.text || "")
-      const n = wordCount(text)
-      const band = levelContract(level, question)
-      assert.equal(band.quick, isQuickQuestion(question))
-      assert.ok(n >= band.min && n <= band.max, `${level} ${question} ${n} not in ${band.min}-${band.max}`)
-      counts[question][level] = { n, text }
-      if (level === "director") assert.equal(hasJargonList(text), false, question)
-      if (level === "engineer") assert.equal(hasPlainReasoning(text), true, question)
-      assert.doesNotMatch(text, /^#{1,3}\s|^\s*(?:Design|Components|Trade-offs|Risks):/m)
-      assert.ok(route.models.some((call) => call.maxTokens === band.maxTokens), `${level} max_tokens ${JSON.stringify(route.models.slice(-4))}`)
-      route.models.length = 0
-    }
-    const ratio = counts[question].architect.n / counts[question].director.n
-    assert.ok(ratio >= 1.8, `${question} architect/director ${ratio}`)
+  for (const question of TYPICAL) {
+    assert.equal(isQuickQuestion(question), false, question)
+    const architect = await ask(route, question, "architect")
+    const engineer = await ask(route, question, "engineer")
+    const director = await ask(route, question, "director")
+    assert.ok(architect > engineer && engineer > director, `${question} ${architect} ${engineer} ${director}`)
+    const engineerRatio = engineer / architect
+    const directorRatio = director / architect
+    assert.ok(engineerRatio >= 0.6 && engineerRatio <= 0.9, `${question} engineer/architect ${engineerRatio}`)
+    assert.ok(directorRatio >= 0.4 && directorRatio <= 0.65, `${question} director/architect ${directorRatio}`)
+    const architectTarget = levelContract("architect", question).target
+    const engineerTarget = levelContract("engineer", question).target
+    const directorTarget = levelContract("director", question).target
+    assert.ok(architectTarget >= 1000, `${question} architect target ${architectTarget}`)
+    assert.ok(engineerTarget >= 700 && engineerTarget <= 800, `${question} engineer target ${engineerTarget}`)
+    assert.ok(directorTarget >= 400 && directorTarget <= 600, `${question} director target ${directorTarget}`)
   }
+  const architect = await ask(route, QUICK, "architect")
+  const engineer = await ask(route, QUICK, "engineer")
+  const director = await ask(route, QUICK, "director")
+  assert.ok(architect > engineer && engineer > director)
+  assert.ok(engineer / architect >= 0.6 && engineer / architect <= 0.9)
+  assert.ok(director / architect >= 0.4 && director / architect <= 0.65)
+  assert.ok(architect < 1000, "a quick fact stays shorter than a typical Architect answer")
 })
