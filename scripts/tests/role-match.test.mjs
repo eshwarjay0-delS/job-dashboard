@@ -127,11 +127,11 @@ test('a short question about the bot\'s own work is read as one; a job post or a
 test('a one-line job post followed by a named resume is split only with a JD signature', () => {
   const oneLinePost = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
   const expected = { jd: oneLinePost, hint: 'SOC' }
-  const message = oneLinePost + "\\nuse the SOC resume"
+  const message = oneLinePost + "\nuse the SOC resume"
   // Repeated calls guard against state leaking from the global JD_SIGNS regex.
   for (let i = 0; i < 50; i++) assert.deepEqual(R.splitTailInstruction(message), expected)
-  const shortChat = 'Please use the SOC resume\\nuse the SOC resume'
+  const shortChat = 'Please use the SOC resume\nuse the SOC resume'
   assert.deepEqual(R.splitTailInstruction(shortChat), { jd: shortChat, hint: '' })
-  const noSignature = 'We need a security person\\nuse the SOC resume'
+  const noSignature = 'We need a security person\nuse the SOC resume'
   assert.deepEqual(R.splitTailInstruction(noSignature), { jd: noSignature, hint: '' })
 })
