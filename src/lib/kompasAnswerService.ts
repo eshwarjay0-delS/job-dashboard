@@ -237,11 +237,11 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
   const grounded = dropUnknownEmployers(base, String(job.resume || ""))
   if (wordCount(grounded) >= contract.min || !job.orKey || signal.aborted) return grounded || base
   try {
-    const missing = Math.max(60, contract.target - wordCount(base))
+    const missing = Math.max(60, contract.target - wordCount(grounded))
     const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
-      `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${base.slice(-2400)}`,
+      `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${grounded.slice(-2400)}`,
       Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
-    return dropUnknownEmployers(fitLevelAnswer(`${base} ${more.text}`, contract), String(job.resume || ""))
+    return dropUnknownEmployers(fitLevelAnswer(`${grounded} ${more.text}`, contract), String(job.resume || ""))
   } catch {
     return grounded || base
   }
