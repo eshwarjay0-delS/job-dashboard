@@ -32,6 +32,10 @@ The existing deferred A→B test in `scripts/tests/mail-digest-account-isolation
 
 This is a source-derived privacy risk, not a reproduced browser incident. No OAuth, inbox read, local code edit or test run occurred.
 
+## Resume/JD confirmed-experience source audit
+
+Current source `src/lib/resume-evidence.ts` (57a6dada) and `scripts/tests/resume-confirmation-quality.test.mjs` (decddd07) include candidate-vs-team attribution splitting and role-scoped confirmed-skill mapping. Compare `6f3cdcb` → production `593dff` is ahead by 2 and behind by 0, so the source is in the live lineage. PR #595/#598/#600 are closed with `merged_at=null`; their branch status is not merge evidence. No owner-authorized original resume/JD/confirmation bundle or exported DOCX was used. The 95–100%/98% match targets remain unmeasured.
+
 ## 17 October WhatsApp resume delivery incident
 
 Read-only iZap `list_businesses` still returns one business named `eshwarjay0` with no linked WhatsApp number. This scope is not established as the incident account. Do not treat empty search as proof of absence. A targeted Files Library search did not recover the incident's exact input/output DOCX; results were general resume research and unrelated content.
