@@ -1290,3 +1290,12 @@ Continue: release the validated merged Gmail guard through the documented [ship]
 ### Run 30 Gmail release attempt correction
 
 The [ship] production build for merged Gmail PR #646 (deployment dpl_HbCneuBY2BdLdfPyoNEDStbbyghw) failed TypeScript at src/lib/plan-vision-journal.ts:648 because delivery="deploying" is outside the allowed enum. This is a documentation-schema error, not a Gmail source/test failure. The release entry is being corrected to the allowed "in progress" value; quality gates remain unchanged. Live alias is still the previous READY SHA fefaaf1. A single corrected [ship] commit will retrigger the normal production gate.
+
+
+## 28 November 2026 15:08 UTC — Run32 prebuild-test correction
+
+- PR #649 exact pre-correction head `3cb2bf37cc92f975155bbfe6bf61d28f8111450`: crawler freshness (8 collector tests and 25 portal-registry tests), Kompas baseline, confirmed-skill resume and Plan/REA checks all SUCCESS.
+- Full CI `46152439807` failed at `scripts/tests/kompas-deploy-build.test.mjs:12`. The assertion hard-coded the prior `package.json` prebuild string. PR #649 adds two crawler regression suites to prebuild, so the assertion failed even though the crawler tests themselves passed; full CI reported 62/63 tests.
+- **Reviewable correction:** commit `2f1e6d251ed082da60c259494339cf6445ca3708` changes the deploy-build test to require the Kompas baseline first, retain all original suites, include both crawler suites and enforce their order rather than pinning the full prebuild string. The build command and Webpack assertions remain unchanged.
+- Remote full CI is triggered by the correction; final-head status still must be checked. No local test/build was run because the runtime has no checkout and outbound GitHub DNS is unavailable. No crawl, portal request, DB write, preview or deployment occurred.
+- **Next:** require exact-final-head full CI success, review, protected preview and release gates. Keep PR draft; manual crawl still requires a separate authorized admin action.
