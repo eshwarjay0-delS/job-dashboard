@@ -207,3 +207,10 @@ Read-only production smoke now confirms `/api/health` returns 200 and `/api/craw
 
 
 The crawler remains **manual/on-demand only** per the 12 Nov owner correction. No crawl was triggered because this run has no admin session. The exact unblock is an owner/admin-authorized manual run; do not restore a cron or loosen the freshness filter. PR #590's clean bounded clearance-filter restack is five-gate green but DRAFT pending protected preview and public API acceptance. Remaining design gaps: client location/remote filtering can underfill after the 100-row page, and the 60-second POST route is shorter than the runner's 230-second budget. See `docs/research/mfit-crawler-live-freshness-2026-11-26.md` for evidence and official public ATS-source notes.
+
+
+## 27 November 2026 — run 23 server-side location/remote filter status
+
+PR #617 is the current approved crawler-filter slice at exact head d3b4d899249e0b4cca282dedecf05f0fe8b354c2. Its full CI, Plan/REA, Kompas baseline, crawler freshness, manual-only and confirmed-skill gates all passed (runs 46088479438, 46088479513, 46088479463, 46088479447, 46088479424 and 46088479478). The branch is stale/nonmergeable against 6f3cdcb261aa6aca19c82a743ab6efb55af01531; no protected preview or public API smoke exists.
+
+The implementation remains unmerged and not production. No local source execution is possible here because the canonical checkout/dependencies and installed Next.js 16.3.8 route guide are unavailable. Restack only in a compliant source environment, rerun all gates, obtain the legitimate protected preview, and smoke the API without running a live crawl. The owner correction from 12 Nov remains binding: contract crawler manual/on-demand only, no daily cron, Robert Half manual-only, and no production row mutation from this watch.
