@@ -253,10 +253,10 @@
   function repairOwnerIntro(text) {
     return String(text || "")
       .replace(/Press Start — answers appear here\\.?/gi, "")
-      .replace(/\\bSenior I Engineer\\b/gi, "Senior Cybersecurity Engineer")
-      .replace(/\\bSanG\\s+Diego\\b/g, "San Diego")
-      .replace(/\\bCity of I Diego\\b/g, "the City of San Diego")
-      .replace(/\\s+/g, " ")
+      .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
+      .replace(/\bSanG\s+Diego\b/g, "San Diego")
+      .replace(/\bCity of I Diego\b/g, "the City of San Diego")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
