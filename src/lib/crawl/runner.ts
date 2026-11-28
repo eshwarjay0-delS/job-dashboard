@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service"
+import { randomUUID } from "node:crypto"
 import { ADAPTERS } from "./adapters"
 import { classifyWorkType, normalizeDate } from "./classify"
 import { collectJobs, crawlEach, politeFetcher } from "./collect"
@@ -35,39 +36,71 @@ function toRow(portal: string, firm: string, j: RawJob): JobRow {
  * upsert into mfit_crawl_jobs, deactivate listings that vanished, log the run.
  * Throws when the service client isn't configured (loud, not silent).
  */
+export class CrawlAlreadyRunningError extends Error {
+  constructor() {
+    super("A contract crawl is already running or a timed-out portal is still draining. Retry later.")
+    this.name = "CrawlAlreadyRunningError"
+  }
+}
+
 export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
   const service = createServiceClient()
   const adapters = onlyPortals?.length
     ? ADAPTERS.filter(a => onlyPortals.includes(a.portal))
     : ADAPTERS
 
-  const runId: string = (await service.from("mfit_crawl_runs").insert({
-    portals: adapters.map(a => a.portal),
-  }).select("id").single()).data?.id ?? ""
-
-  // Several firms at once (each firm still one request at a time, 600 ms apart), the order turning by the day, and
-  // nothing started after 230 s nor running past 60 s, so the run ends inside the function's 300 s.
-  const started = Date.now()
-  const outcomes = await crawlEach(adapters, (adapter, signal) => crawlOne(service, adapter, signal), {
-    concurrency: 6, deadline: started + 230_000, perPortalMs: 60_000, offset: Math.floor(started / 86_400_000),
+  // This lease is shared by every serverless instance, unlike the local quarantine Map.
+  // Its 15-minute expiry is longer than either route's 300-second maximum duration.
+  const leaseToken = randomUUID()
+  const { data: acquired, error: acquireError } = await service.rpc("acquire_mfit_crawl_run_lease", {
+    p_lease_token: leaseToken,
   })
-  const results: CrawlResult[] = outcomes.map(o => o.value ?? {
-    portal: o.adapter.portal, firm: o.adapter.firm, found: 0, upserted: 0,
-    error: o.error || (o.skipped ? "not reached in this run's time (the order turns daily)" : "failed"),
-  })
-  const totalFound = results.reduce((n, r) => n + r.found, 0)
-  const totalUpserted = results.reduce((n, r) => n + r.upserted, 0)
-  const errors = results.filter(r => r.error).map(r => ({ portal: r.portal, error: r.error as string }))
+  if (acquireError) throw new Error(`Unable to acquire the contract crawler lease: ${acquireError.message}`)
+  if (acquired !== true) throw new CrawlAlreadyRunningError()
 
-  if (runId) {
-    await service.from("mfit_crawl_runs").update({
-      finished_at: new Date().toISOString(),
-      jobs_found: totalFound,
-      jobs_upserted: totalUpserted,
-      errors,
-    }).eq("id", runId)
+  // Release only after crawlEach has definitely drained every worker. If a worker is
+  // quarantined or crawlEach throws after starting work, leave the DB lease to expire.
+  let safeToRelease = true
+  try {
+    const runId: string = (await service.from("mfit_crawl_runs").insert({
+      portals: adapters.map(a => a.portal),
+    }).select("id").single()).data?.id ?? ""
+
+    // Several firms at once (each firm still one request at a time, 600 ms apart), the order turning by the day, and
+    // nothing started after 230 s nor running past 60 s, so the run ends inside the function's 300 s.
+    const started = Date.now()
+    safeToRelease = false
+    const outcomes = await crawlEach(adapters, (adapter, signal) => crawlOne(service, adapter, signal), {
+      concurrency: 6, deadline: started + 230_000, perPortalMs: 60_000, offset: Math.floor(started / 86_400_000),
+    })
+    safeToRelease = !outcomes.some(o => o.quarantined)
+    const results: CrawlResult[] = outcomes.map(o => o.value ?? {
+      portal: o.adapter.portal, firm: o.adapter.firm, found: 0, upserted: 0,
+      error: o.error || (o.skipped ? "not reached in this run's time (the order turns daily)" : "failed"),
+    })
+    const totalFound = results.reduce((n, r) => n + r.found, 0)
+    const totalUpserted = results.reduce((n, r) => n + r.upserted, 0)
+    const errors = results.filter(r => r.error).map(r => ({ portal: r.portal, error: r.error as string }))
+
+    if (runId) {
+      await service.from("mfit_crawl_runs").update({
+        finished_at: new Date().toISOString(),
+        jobs_found: totalFound,
+        jobs_upserted: totalUpserted,
+        errors,
+      }).eq("id", runId)
+    }
+    return results
+  } finally {
+    if (safeToRelease) {
+      try {
+        const { error } = await service.rpc("release_mfit_crawl_run_lease", { p_lease_token: leaseToken })
+        if (error) console.error("Unable to release the contract crawler lease; it will expire automatically.", error.message)
+      } catch (error) {
+        console.error("Unable to release the contract crawler lease; it will expire automatically.", error instanceof Error ? error.message : "unknown error")
+      }
+    }
   }
-  return results
 }
 
 /** One portal: read its jobs, store them, and retire those not seen for 14 days. Throws on a storage failure. */
