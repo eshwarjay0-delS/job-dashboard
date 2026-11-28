@@ -88,3 +88,14 @@ Reviewable test correction commit `2f1e6d251ed082da60c259494339cf6445ca3708` rep
 ## Run32 lock-scope review — 28 Nov 2026 15:18 UTC
 
 Static review of PR #649 found `pendingPortalWork` is a module-level Map; it only reserves a portal within a warm process. It cannot guarantee no overlap across Vercel serverless instances or cold starts. The repeated-call regression is same-process. Review comment 7241370206 records this. Before crawl acceptance, require durable single-run/portal lease with expiry/fencing/cleanup or a storage-level runner guard and cross-worker tests. No crawl, portal request, DB write, preview or deployment.
+
+
+## Run32 cross-instance crawler lease follow-up — 28 November 2026
+
+Review of PR #649 found a second-instance gap: `pendingPortalWork` is process-local, so a concurrent or cold-start Vercel function cannot see a quarantined portal from another instance (review comments 7241370206 and 7242164409). The local Map remains useful within one process but is not the cross-instance safety boundary.
+
+The draft branch now adds a service-role-only PostgreSQL global crawler lease in `supabase/migrations/20261128194000_mfit_crawl_run_lease.sql`. Acquisition is atomic and token-bound; a second invocation fails closed and the two manual route handlers map the conflict to HTTP 409. A fully drained run releases its own token. A run that reports quarantined non-cooperative work deliberately retains the global lease until its 15-minute expiry, longer than the routes' 300-second maximum duration. This trades up to 15 minutes of crawler availability for avoiding another instance starting while the previous serverless invocation may still be alive. It serializes the whole crawler, not only the timed-out portal.
+
+Regression additions cover busy-lock rejection before any run row/portal work, RPC failure, token-bound release, lease retention on quarantine, service-only grants, expiry versus maximum route duration and HTTP 409 mapping. Existing timeout, worker-quarantine and signal-forwarding tests remain.
+
+This is source implementation only. The migration has not been applied, exact-head remote CI is pending, and the protected preview credential remains unavailable. No local test/build, crawl, portal request, production database mutation, preview, deployment or application submission occurred. Preserve manual/on-demand only, 600 ms pacing, 25-second request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded. Next: exact-head CI, independent review, legitimate protected preview, controlled migration application, production READY+alias, then a separate authorized lock-only smoke. No live crawl without separate authorization.
