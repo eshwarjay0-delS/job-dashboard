@@ -48,12 +48,12 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
   // Several firms at once (each firm still one request at a time, 600 ms apart), the order turning by the day, and
   // nothing started after 230 s nor running past 60 s, so the run ends inside the function's 300 s.
   const started = Date.now()
-  const outcomes = await crawlEach(adapters, adapter => crawlOne(service, adapter), {
+  const outcomes = await crawlEach(adapters, (adapter, signal) => crawlOne(service, adapter, signal), {
     concurrency: 6, deadline: started + 230_000, perPortalMs: 60_000, offset: Math.floor(started / 86_400_000),
   })
   const results: CrawlResult[] = outcomes.map(o => o.value ?? {
     portal: o.adapter.portal, firm: o.adapter.firm, found: 0, upserted: 0,
-    error: o.skipped ? "not reached in this run's time (the order turns daily)" : o.error || "failed",
+    error: o.error || (o.skipped ? "not reached in this run's time (the order turns daily)" : "failed"),
   })
   const totalFound = results.reduce((n, r) => n + r.found, 0)
   const totalUpserted = results.reduce((n, r) => n + r.upserted, 0)
@@ -71,24 +71,28 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
 }
 
 /** One portal: read its jobs, store them, and retire those not seen for 14 days. Throws on a storage failure. */
-async function crawlOne(service: ReturnType<typeof createServiceClient>, adapter: PortalAdapter): Promise<CrawlResult> {
+async function crawlOne(service: ReturnType<typeof createServiceClient>, adapter: PortalAdapter, signal: AbortSignal): Promise<CrawlResult> {
   const result: CrawlResult = { portal: adapter.portal, firm: adapter.firm, found: 0, upserted: 0 }
   // Listing pages, a JSON API or a sitemap, whichever the portal has; one request at a time, 600 ms apart unless the portal asks for slower.
   const seen = new Map<string, JobRow>()
-  for (const raw of await collectJobs(adapter, politeFetcher(adapter.gapMs ?? 600))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
+  for (const raw of await collectJobs(adapter, politeFetcher(adapter.gapMs ?? 600, 25_000, signal))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
+  if (signal.aborted) throw new Error("Portal time limit reached before job storage")
   result.found = seen.size
   if (seen.size > 0) {
     const rows = [...seen.values()]
     // Upsert in batches of 100.
     for (let i = 0; i < rows.length; i += 100) {
-      const { error } = await service.from("mfit_crawl_jobs").upsert(rows.slice(i, i + 100), { onConflict: "portal,url" })
+      const { error } = await service.from("mfit_crawl_jobs").upsert(rows.slice(i, i + 100), { onConflict: "portal,url" }).abortSignal(signal)
       if (error) throw new Error(`upsert: ${error.message}`)
     }
     result.upserted = seen.size
     // A run reads the newest listings only. Absence from them is not proof a job closed: retire after 14 days unseen.
-    await service.from("mfit_crawl_jobs").update({ active: false })
+    if (signal.aborted) throw new Error("Portal time limit reached before stale-job retirement")
+    const { error: retireError } = await service.from("mfit_crawl_jobs").update({ active: false })
       .eq("portal", adapter.portal).eq("active", true)
       .lt("last_seen_at", new Date(Date.now() - 14 * 86400000).toISOString())
+      .abortSignal(signal)
+    if (retireError) throw new Error(`retire: ${retireError.message}`)
   }
   return result
 }
