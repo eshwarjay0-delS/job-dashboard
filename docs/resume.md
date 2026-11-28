@@ -108,3 +108,10 @@ PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Libra
 - The 17 Oct 17:28 Chicago incident is still unverified. The exact uploaded source DOCX, generated output DOCX, per-run R2 object/version, webhook/request correlation, Meta message ID, signed delivery/read receipt and owner fact reconciliation remain missing. No replay/send was attempted; no 98% live match is claimed.
 
 **Continue:** restack the current approved resume/WhatsApp slice in the compliant canonical checkout, preserve source attribution and the explicit same-account Library fallback, run route-level CI and protected preview, then obtain owner-authorized DOCX acceptance. Do not enable uploaded-original fallback without direct approval.
+
+
+## 28 November 2026 — run 24 confirmed-skill source and live status
+
+The approved confirmed-skill attribution/role-gap source slice is present in the live lineage through 6f3cdcb and production SHA 593dff. Current source splits candidate clauses from team, colleague, client and organization clauses, and the deterministic final weave considers only relevant existing role bullets where the candidate explicitly confirmed the skill. The focused test source covers team attribution, temporal connectors and role-scoped placement. The JD remains target context, never candidate experience.
+
+No owner-authorized resume/JD/explicit-confirmation bundle or exported DOCX was processed in this run. The web 95% floor remains; 98% is a target, not a verified live match. No automatic final-DOCX correction/re-export/recheck was enabled. The next review still requires a real source bundle and inspection of the exported DOCX before any factual acceptance claim.
