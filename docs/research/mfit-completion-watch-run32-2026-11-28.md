@@ -33,6 +33,8 @@ Production snapshot at the prior 13:35 UTC check: 14,566 total jobs; 12,407 acti
 
 ## Execution boundary
 
+A public read-only GET `/api/crawl/jobs?limit=3` was attempted through the web retrieval interface but returned inaccessible; no public API smoke result is available.
+
 GitHub reads and documentation commits are available. No canonical checkout, dependencies or installed Next.js 16.3.8 docs are available for local test/build. No protected preview, live crawl/portal request, model call, OAuth, real email/WhatsApp action, R2/DB mutation or device acceptance occurred.
 
 ## Next specific continuation
