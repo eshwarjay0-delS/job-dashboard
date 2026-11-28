@@ -88,7 +88,7 @@ export async function collectJobs(adapter: PortalAdapter, get: Fetcher): Promise
   return [...seen.values()]
 }
 
-export type PortalOutcome<T> = { adapter: PortalAdapter; value?: T; error?: string; skipped?: boolean }
+export type PortalOutcome<T> = { adapter: PortalAdapter; value?: T; error?: string; skipped?: boolean; quarantined?: boolean }
 
 /**
  * `work` for every portal, `concurrency` at a time (different firms, so one firm still gets one request at a time),
@@ -155,7 +155,7 @@ export async function crawlEach<T>(
             workPromise.then(() => true, () => true),
             new Promise<boolean>(resolve => setTimeout(() => resolve(false), drainMs)),
           ])
-          out[i] = { adapter, error: timeoutMessage }
+          out[i] = { adapter, error: timeoutMessage, quarantined: !settled }
           quarantined = !settled
         } else {
           out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
