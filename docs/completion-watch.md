@@ -2,10 +2,10 @@
 
 - iZap inventory: one business, no linked number. Status at `2026-11-28T11:38:11.321718Z` is disconnected/status_none; inbound webhook/history backfill never; outbound delivery never proven. This is current state only.
 - Supabase confirms one model-use event at `2026-10-17T22:28:27.372685Z` (17:28:27 CDT): WhatsApp `resume_tailor`, score 87, 34 calls, 205546 input tokens, 25331 output tokens, $0.020949 estimated cost, `source_event_key` NULL. `resume_documents` and `resume_import_jobs` have zero rows in 22:20–22:40 UTC. This is not proof of export/delivery or absence of R2/Meta artifacts.
-- PR #411 latest head `069707f` is documentation-only on stale base `17f8dada`, DRAFT/nonmergeable, with no current-head workflow/status; predecessor gates are stale. Approval correction: the 27 Oct owner instruction approves only the narrow offline closest-Library-resume failsafe with exact verified same-account bytes, account/profile/path, fail-closed and **Original resume — NOT TAILORED**. It does not approve uploaded-original timeout fallback, cross-account/partial fallback, swipe-refinement baseline delivery, outbound tests or replay.
-- Historical source/output DOCX, R2 object/version, webhook/request correlation, Meta outbound ID, signed receipt and owner fact reconciliation remain missing. No send/replay.
+- Current production/master fdd4816 has the explicit-selected same-account original guard and regression. The 27 Oct owner approval is the narrow offline closest-Library failsafe, constrained to verified same-account bytes/account/profile/path, fail-closed and **Original resume — NOT TAILORED**. Uploaded-original timeout fallback, cross-account/partial fallback, swipe-refinement baseline, outbound tests and replay remain unapproved.
+- PR #411 code predecessor `32a4f958` is stale and 137 commits behind current master; it uses `sendClosest`. Latest `069707f` is docs-only on stale base `17f8dada`, DRAFT/nonmergeable and no current-head workflows/status. Do not merge this branch. Historical source/output DOCX, R2 object/version, webhook/request correlation, Meta ID, signed receipt and owner fact reconciliation remain missing. No send/replay.
 
-**Continue:** obtain authorized artifacts and reconcile the 87% hold. Preserve the approved narrow fallback; seek explicit approval before uploaded-original timeout behavior. No outbound test.
+**Continue:** obtain authorized artifacts and reconcile the 87% hold. Preserve the live selected-original guard; keep the narrow approved failsafe bounded; seek explicit approval before uploaded-original timeout behavior. No outbound test.
 
 ## 28 November 2026 — run 35 confirmed-skill resume guard
 
