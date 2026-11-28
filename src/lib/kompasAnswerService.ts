@@ -29,6 +29,7 @@ import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, 
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { fitLevelAnswer, levelContract, wordCount } from "@/lib/kompasLevelContract"
 import { HOUSTON_RESUME } from "@/lib/kompasHonestyGate"
+import { dropUnknownEmployers } from "@/lib/kompasResume"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
@@ -233,15 +234,16 @@ async function fetchOpenRouter(
 async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal): Promise<string> {
   const contract = levelContract(job.level, job.question)
   const base = fitLevelAnswer(text, contract)
-  if (wordCount(base) >= contract.min || !job.orKey || signal.aborted) return base
+  const grounded = dropUnknownEmployers(base, String(job.resume || ""))
+  if (wordCount(grounded) >= contract.min || !job.orKey || signal.aborted) return grounded || base
   try {
     const missing = Math.max(60, contract.target - wordCount(base))
     const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
       `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${base.slice(-2400)}`,
       Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
-    return fitLevelAnswer(`${base} ${more.text}`, contract)
+    return dropUnknownEmployers(fitLevelAnswer(`${base} ${more.text}`, contract), String(job.resume || ""))
   } catch {
-    return base
+    return grounded || base
   }
 }
 
@@ -1344,7 +1346,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
   // The active sources take precedence over an older profile or generated Q&A.
   // Never make a grounded live turn wait for three remote dossier reads.
-  const resumeSrc = str(config.resume, 60000) || str(body.resume, 60000) || HOUSTON_RESUME
+  const suppliedResume = str(config.resume, 60000) || str(body.resume, 60000)
+  const resumeSrc = !suppliedResume || /jayeshwar44/i.test(suppliedResume) ? HOUSTON_RESUME : suppliedResume
   const jdSrc = str(config.jd, 8000)
   const docsSrc = str(config.documents, 8000)
   let grounding = ""
@@ -1790,13 +1793,16 @@ export async function speakableBridge(input: { turns?: Array<{ who?: string; tex
   const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
   const question = String(input?.question || turns.filter((t) => t).slice(-1)[0] || "").replace(/\s+/g, " ").trim()
   const words = new Set(question.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 4 && !/^(about|would|could|should|there|their|where|yourself)$/.test(w)))
-  const lines = String(input?.resume || "").split(/\n+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 8)
+  const resumeText = String(input?.resume || "").trim()
+  const resume = !resumeText || /jayeshwar44/i.test(resumeText) ? HOUSTON_RESUME : resumeText
+  const lines = resume.split(/\n+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 8)
   const ranked = lines.map((line) => ({
     line,
     n: line.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w)).length,
   })).filter((row) => row.n > 0).sort((a, b) => b.n - a.n).slice(0, 2)
   const body = ranked.map((row) => (/[.!?]$/.test(row.line) ? row.line : row.line + ".")).filter((line) => !echoesQuestion(line, question))
-  if (!body.length) return []
-  return ["Yeah, so in my last role.", ...body].map((line) => keepBridgeLine(line)).filter((line) => line && !echoesQuestion(line, question)).slice(0, 3)
+  const picked = body.length ? body : lines.filter((line) => !/@/.test(line)).slice(0, 2).map((line) => (/[.!?]$/.test(line) ? line : `${line}.`))
+  if (!picked.length) return []
+  return ["Yeah, so in my last role.", ...picked].map((line) => keepBridgeLine(line)).filter((line) => line && !echoesQuestion(line, question)).slice(0, 3)
 }
 

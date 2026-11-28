@@ -92,7 +92,7 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|i don't have my resume loaded/i
+export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded/i
 
 export function sentenceKey(sentence: string): string {
   return sentence.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()

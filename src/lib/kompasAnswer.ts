@@ -317,7 +317,7 @@ function levelToken(raw: unknown): AnswerLevel | undefined {
   const t = String(raw || "").toLowerCase().replace(/level\s*[123]\s*[—:-]?\s*/g, " ").replace(/[_/]+/g, " ").replace(/\s+/g, " ").trim()
   if (!t) return undefined
   if (/\barchitect\b|\bdeveloper\b/.test(t)) return "architect"
-  if (/\bdirector\b|\bsupervisor\b/.test(t) || /\blead\b/.test(t) && !/\bengineer\b/.test(t)) return "director"
+  if (/\bdirector\b|\bsupervisor\b/.test(t) || (/\blead\b/.test(t) && !/\bengineer\b/.test(t))) return "director"
   if (/\bengineer\b|\bhr\b|\banalyst\b|\bpeer\b/.test(t)) return "engineer"
   return LEVEL_OF[t]
 }

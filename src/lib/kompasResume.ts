@@ -157,6 +157,26 @@ export type ResumeRoles = {
   list: ResumeRole[]
 }
 
+const EMPLOYER_AT = /\b(?:at|with|joined|from|then)\s+([A-Z][A-Za-z0-9&.'-]+(?:\s+[A-Z][A-Za-z0-9&.'-]+){0,3})/g
+
+/** Drop a sentence that names an employer the loaded resume does not contain. */
+export function dropUnknownEmployers(answer: string, resume: string): string {
+  const source = String(resume || "")
+  const low = source.toLowerCase()
+  const sentences = String(answer || "").split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+  const allowed = (name: string) => {
+    const org = name.replace(/\b(?:as|a|an|the|where|and)\b.*$/i, "").trim()
+    return org.length < 3 || low.includes(org.toLowerCase())
+  }
+  const kept = sentences.filter((sentence) => {
+    const names = [...sentence.matchAll(EMPLOYER_AT)].map((m) => m[1])
+    return names.every(allowed)
+  })
+  if (kept.length) return kept.join(" ")
+  const line = source.split(/\n/).map((s) => s.trim()).find((s) => s.split(/\s+/).length >= 8 && !/@/.test(s))
+  return line ? (/[.!?]$/.test(line) ? line : `${line}.`) : ""
+}
+
 /** The resume's roles: current title + employer names, and how the call says them. */
 export function resumeRoles(resume: string): ResumeRoles {
   const list = parseRoles(cleanLines(resume))

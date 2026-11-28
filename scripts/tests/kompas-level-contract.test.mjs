@@ -132,6 +132,22 @@ test("a top-level level is kept and a missing resume does not claim it is unload
   }
 })
 
+test("an introduction cannot name an employer that is not on the loaded resume", async () => {
+  const { dropUnknownEmployers } = await import("../../src/lib/kompasResume.ts")
+  const { HOUSTON_RESUME } = await import("../../src/lib/kompasHonestyGate.ts")
+  const invented = "I am a Senior IAM Engineer at Saviynt. I started at Accenture as a Junior IAM Engineer, then Charter Communications. I lead FortiGate-VM deployments across AWS."
+  const out = dropUnknownEmployers(invented, HOUSTON_RESUME)
+  assert.doesNotMatch(out, /Saviynt|Accenture|Charter/)
+  assert.match(out, /FortiGate|Fortinet/)
+  assert.doesNotMatch(out, /jayeshwar44/i)
+})
+
+test("director padding is removed", () => {
+  const text = fitLevelAnswer("I own the cutover. I do not walk the build. I say what I chose and why. The point is the result, said once.", levelContract("director", "Tell me about yourself."))
+  assert.doesNotMatch(text, /I do not walk the build|The point is the result|I say what I chose/)
+  assert.match(text, /cutover/)
+})
+
 test("a short answer is not padded with a repeated filler sentence", () => {
   const filler = "In plain terms, the reason I work it this way is that the person listening should be able to follow the thought without a manual. "
   const text = fitLevelAnswer(filler.repeat(5), levelContract("architect", "Describe a time you set up CyberArk PAM from scratch. What were your responsibilities?"))
