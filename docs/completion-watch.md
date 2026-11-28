@@ -1244,3 +1244,8 @@ No code commit or production change was made in this run.
 - **Kompas:** #642 S9 is already production at fefaaf1. Actual authenticated 50-pair answer comparison, independent human scores, native Windows/phone/WhatsApp latency and session acceptance remain open. The separate Kompas Continuous Voice Delivery automation is disabled; no voice work duplicated.
 
 Continue: release the validated merged Gmail guard through the documented [ship] gate, verify READY and canonical alias on the exact release SHA, then continue exact-head CI for #648. Keep #645 and #570/#317 unapproved drafts. Do not claim the backlog complete.
+
+
+### Run 30 Gmail release attempt correction
+
+The [ship] production build for merged Gmail PR #646 (deployment dpl_HbCneuBY2BdLdfPyoNEDStbbyghw) failed TypeScript at src/lib/plan-vision-journal.ts:648 because delivery="deploying" is outside the allowed enum. This is a documentation-schema error, not a Gmail source/test failure. The release entry is being corrected to the allowed "in progress" value; quality gates remain unchanged. Live alias is still the previous READY SHA fefaaf1. A single corrected [ship] commit will retrigger the normal production gate.
