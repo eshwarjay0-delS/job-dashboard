@@ -232,3 +232,10 @@ PR #576 (head `1757fb68715081525de0f8c7b8bd3bf531ebff20`) adds account-scoped se
 PR #401 exact head a34e16e24059551aae823544e9ac60ab2974e8c0 remains DRAFT/nonmergeable on stale base 46043ec6ca926b2ab82424d255367426685f294d. Full CI 43661189814, Plan/REA 43661189821, and Kompas baseline 43661189754 are SUCCESS. PR #576 is closed unmerged and does not ship.
 
 The four-connected-inbox maximum is owner-confirmed. Account identity, receiving inbox, selected-From, reconnect and thread keys must remain isolated; mobile menu expands in normal document flow below the sticky header. Protected preview, two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain open. No Gmail OAuth/inbox read, email send, phone test or account mutation occurred. Proactive Poke worker, scheduler, notifications and sending stay disabled.
+
+
+## 28 November 2026 — run 24 Poke-inspired Gmail/mobile status
+
+The four-account account-scoped digest and normal-flow mobile navigation slice from the 6f3cdcb backlog commit is in production SHA 593dff. The four-account ceiling remains owner-approved. Each inbox retains its own identity, selected-From, reconnect and thread context. Proactive Poke workers, scheduler, notifications and automatic sending remain disabled.
+
+PR #577's account-scoped interview-board anchors remain a separate open draft; its earlier full CI failed on stale-base shared lint and it still needs a current-master restack, exact-head full CI, protected preview and two-inbox/narrow-phone acceptance. No Gmail OAuth, mailbox read, draft/send action or device test was performed.
