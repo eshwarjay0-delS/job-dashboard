@@ -2,7 +2,7 @@
 
 Interview now lists Roles and Categories under Sessions, on the desktop sidebar and the scrolling phone bar. New opens a subject, and the card matches Sessions: Start or Continue, End, Transcript, Edit setup. The live copilot is the same path, with the pack sent as extra grounding. Categories: IAM, SOC, Incident Response, Endpoint, Cloud Security (Azure), AppSec, Vulnerability Mgmt, GRC, Network Security, Leadership. Roles: Senior Cybersecurity Engineer, SOC Analyst, IAM Engineer, Security Architect, Cloud Security Engineer, Security Director. NotebookLM audio starts empty and is saved in Edit setup. After an answer, a note is stored for that pack and shown on the Feedback tab, which stays off for a regular live session. No auth change. This is visible UI.
 
-**Checked by scripts/tests/kompas-packs.test.mjs. Not a live listen. One production version.json check follows the ship.**
+**Checked by scripts/tests/kompas-packs.test.mjs. Production version.json is commit 11bf120 (full 11bf120b81ef7b5a45da3db1bcca07c97dff59ac). Not a live listen.**
 
 ## 2026-11-28 — Full confidence, no hedge, You never opens an answer
 

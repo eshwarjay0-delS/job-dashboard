@@ -1,6 +1,6 @@
 ## 28 November 2026 — Roles and Categories
 
-The Kompas sidebar under Interview now has Roles and Categories under Sessions, including the scrolling phone bar. Each is a live session bound to a seeded pack. Learned notes stay in perfact.packNotes. The live Feedback tab is only on those sessions. Skip-login stays on. One production version.json fetch follows the [ship] merge. Not a live listen.
+The Kompas sidebar under Interview now has Roles and Categories under Sessions, including the scrolling phone bar. Each is a live session bound to a seeded pack. Learned notes stay in perfact.packNotes. The live Feedback tab is only on those sessions. Skip-login stays on. Production https://marketfit-app.vercel.app/version.json returned commit 11bf120, commitFull 11bf120b81ef7b5a45da3db1bcca07c97dff59ac, builtAt 2026-11-28T04:29:38.219Z. Not a live listen.
 
 ## 28 November 2026 — Kompas approval provenance correction
 
