@@ -1,3 +1,11 @@
+## 28 November 2026 13:35 UTC — run31 source-data validation correction
+
+- The first Plan/REA source update `4c6458baa0cb1e693a64e12ebea4aeadf7e674e0` failed full CI `46149755499`: a run31 REA record was inserted as an `unshift()` statement inside the array, causing a parser error at `src/lib/rea-register.ts:10:3959`. It was corrected in commit `1d7a24f241a7613bba293338cae28809160ccd20`; exact-head Plan/REA schema run `46149931539` is SUCCESS.
+- Exact correction full CI `46149931520` and Kompas baseline `46149931485` were still running; full CI was at “Verify Kompas migration asset closure and lossless import.” Do not claim full CI is green. Vercel status is skipped by the ignored build step; no new production deployment was created.
+- Fresh read-only SQL at `2026-11-28 13:35:51 UTC` confirms unchanged crawler data: 14,566 total; 12,407 active; 8,850 active contract-labelled; 0 active contract rows seen in 14 days; latest `last_seen_at` 10 Nov 11:01:11 UTC; latest run 10 Nov, 6,818 found/upserted, one Inspyr abort. No crawl or row mutation.
+- The run31 research note was updated in commit `38d124e06ace3fbb4e51b869c5222acaa5a913ee`. Current production remains the verified runtime SHA `3400742ba97d2cbc68e2df3e1795ce5c76d9a147`; the Plan/REA source-data changes are not live.
+- Local checkout/dependencies/Next docs are still missing. No local test/build or authenticated/device acceptance occurred.
+
 ## 28 November 2026 13:18 UTC — Run 31 source/release reconciliation
 
 **Continue:** Restack the approved WhatsApp timeout/fallback slice from PR #411 onto current master in a compliant local checkout; preserve current explicit-selection provenance and hard holds. Do not wait for another owner prompt.
