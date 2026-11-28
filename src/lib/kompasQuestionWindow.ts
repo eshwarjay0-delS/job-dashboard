@@ -120,8 +120,13 @@ export function dependentQuestionPiece(value: string): boolean {
   const t = raw.replace(/^(?:(?:and|but|so|then|now|well)[, ]+)/i, "")
   if (/^(?:what|how|why)\b/i.test(t) && wordsOf(t).length <= 6 && !hasOwnNoun(t)) return true
   if (/\b(?:it|that|this|them|those)\b/i.test(t) && wordsOf(t).length <= 12 && !/^what (?:is|are)\b/i.test(t)) return true
+  // A narrowing follow-on in the same breath ("Can you explain how you hunt? What specific indicators do you look for?")
+  // has no topic of its own. Answering it alone dropped the first ask and shrank the answer to a short-fact band.
+  if (FOLLOW_ON.test(t) && wordsOf(t).length <= 16) return true
   return false
 }
+
+const FOLLOW_ON = /^(?:(?:what|which)\s+(?:specific|particular|key|main|other|exact|kinds? of|types? of)\b|what (?:metrics|tools|criteria|factors|steps|indicators|data points|fields|signals|controls|challenges|lessons|was the (?:outcome|result|impact)|were the (?:outcomes?|results?))\b|(?:can|could) you (?:provide|give|share|walk)\b[^?]{0,40}\b(?:examples?|instance|case|story)\b|(?:can|could) you (?:provide|give|share) (?:an? |some )?(?:specific )?examples?\b|how (?:do|did) you (?:determine|decide|measure|ensure|address|handle|resolve|prioriti[sz]e|validate|verify|know|track|report)\b|how (?:did|do) (?:you|they|the team) (?:respond|react)\b|what (?:did|do) you (?:learn|change|do next|do differently)\b)/i
 
 function logisticsAsk(value: string): boolean {
   return /\b(?:where (?:do|are) you|visa|salary|notice period|relocat|address|work authorization|citizen|green card|h-?1b)\b/i.test(value)
@@ -132,8 +137,13 @@ function parallelAsk(value: string): boolean {
 }
 
 /** Whether `next` continues the same interviewer ask as the pieces already in the window. */
+const STORY_PROMPT = /^(?:(?:so|and|okay|now)[, ]+)?(?:describe (?:a|an|the) (?:time|situation|scenario|case|incident|instance|experience)|tell me about (?:a|an|the) (?:time|situation|case|incident)|walk me through (?:the last time|a time|an? (?:incident|situation|case))|(?:can|could) you (?:share|describe|tell me about|walk me through) (?:a|an|the)|share (?:a|an) (?:time|experience|example|situation))\b/i
+
 export function questionPieceContinues(prevSpan: string[], next: string): boolean {
   if (!next || !prevSpan.length) return false
+  // "Describe a time you ... What trade-offs did you make, and how did you tell them?" is one story ask.
+  // The later pieces ask about the same story, so the whole prompt is answered, not only its last clause.
+  if (STORY_PROMPT.test(prevSpan[0]) && /\b(?:you|your)\b/i.test(next) && !logisticsAsk(next) && !whatIsHead(next)) return true
   if (dependentQuestionPiece(next)) {
     const head = whatIsHead(next)
     if (head && !prevSpan.join(" ").toLowerCase().includes(head)) return false
