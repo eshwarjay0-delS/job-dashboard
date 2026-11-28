@@ -1,3 +1,13 @@
+## Run 29 exact-head status — 28 Nov
+
+ Run 29 latest (28 Nov): clean draft PR #632 head 88c92b58385cadf5f24cbdd6270606d87b7a7565. Full CI 46116408019 IN PROGRESS; confirmed-skill 46116408021 IN PROGRESS; baseline 46116408031 IN PROGRESS; Plan/REA 46116408028 FAILED on the existing remote source path. Earlier full CI 46115954313 failed lint due a malformed Plan Vision PR #635 link; corrected at commit 54888a89741ffc7e31c7ac7291ec21685db8a992. Test-only #635 has Plan/REA and baseline SUCCESS, full CI IN PROGRESS. Gmail fix is not live; no OAuth/inbox/send/browser acceptance.
+
+ Run 29 latest (28 Nov): approved clean draft PR #633 head 81e839acfeb9d546a22f70ab3c765d6d147ae346. Full CI 46115683036 SUCCESS; baseline 46115683096 SUCCESS; Plan/REA and confirmed-skill gates not yet observed. 50-fold parser tests are synthetic; no WhatsApp connection, real delivery, model call or production deployment.
+
+ Run 29 latest (28 Nov): test-only draft PR #635 head 148ee42d1989c8b8c77000500672ddcc153bfb1f. Plan/REA 46115832293 SUCCESS; baseline 46115832310 SUCCESS; full CI 46115832393 IN PROGRESS. Local isolated path probe 4/4, not canonical CI. Do not merge before full CI/review.
+
+ Run 29 latest (28 Nov): clean draft PR #636 head aa1f51e29b385410aef3799e498c76483317fc14. Crawler freshness/classification 46116253117 SUCCESS, manual-only 46116253016 SUCCESS, baseline 46116253018 SUCCESS, full CI 46116253076 IN PROGRESS. Previous gate 46116179748 failed because its source assertion expected raw query.ilike after helper extraction; test assertion was corrected and the current gate passed. Plan/REA and confirmed-skill not yet observed. Local isolated query probe 3/3 is not canonical CI. No live crawler or portal request.
+
 ## Run 29 contract-crawler continuation — PR #636
 
 Approved PR #617 was stale/non-mergeable. Clean restack #636 head `aa1f51e29b385410aef3799e498c76483317fc14` is mergeable and has crawler freshness/classification SUCCESS (`46116253117`), manual-only SUCCESS (`46116253016`) and baseline SUCCESS (`46116253018`); full CI `46116253076` is IN PROGRESS. A previous crawler gate at `bfe9410` failed because the source assertion expected raw `query.ilike` after helper extraction; assertion was corrected and current gate passed. Isolated local query probe: 3/3 (not canonical CI). Plan/REA and confirmed-skill gates not yet observed. No live crawl, portal request, application or DB write.
