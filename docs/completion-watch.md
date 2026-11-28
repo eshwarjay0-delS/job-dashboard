@@ -1254,3 +1254,10 @@ No code commit or production change was made in this run.
 - **Execution boundary:** this scheduled runtime has no canonical checkout, dependencies or installed Next.js 16.3.8 docs; no local code edit/test/build. No credentials, private resumes/JDs, inbox, R2/DB, model, crawl, deployment or user-device interaction were used.
 
 **Continue:** check #639 exact-head CI until terminal. Do not merge its source until the truth-preserving disclosure and pack-provenance risks are corrected. Keep #633 proposed/DRAFT and #636 DRAFT. Continue independent read-only backlog/status work; protected preview, local execution and the correct WhatsApp incident evidence remain the exact blockers.
+
+## 28 November 2026 — run 33 PR639 head moved after CI
+
+PR #639 now has head f3c6f03d3d3616cdb2896649107a7660a52d386, a follow-up commit explicitly strips truthful-gap lines and deletes the prior assertion that a truthful gap stays. Five supplemental gates are SUCCESS; full CI 46130245413 is IN_PROGRESS. The previous full CI 46129231306 (51/51) passed on older head 4e4ab7, so it is not current-head validation. Corrected source review comment 7237158494: the employer/tool/number guard is helpful but includes question terms as evidence and does not validate actions (the test permits a “tuned” claim when resume says only “use Splunk”). Keep PR #639 unmerged until the truthfulness regression is corrected and current CI is terminal. Live production remains 3362f20; no deploy.
+
+
+**Continue:** monitor exact head f3c6f03 CI; do not merge or deploy the suppression of truthful gaps. If the owner accepts the factuality correction, preserve the improved answer bands, removal of stock filler, and every green gate, then re-run full CI on the final head.
