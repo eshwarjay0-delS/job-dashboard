@@ -1,3 +1,9 @@
+## 2026-11-28 — Roles and Categories on the Kompas sidebar
+
+Interview now lists Roles and Categories under Sessions, on the desktop sidebar and the scrolling phone bar. New opens a subject, and the card matches Sessions: Start or Continue, End, Transcript, Edit setup. The live copilot is the same path, with the pack sent as extra grounding. Categories: IAM, SOC, Incident Response, Endpoint, Cloud Security (Azure), AppSec, Vulnerability Mgmt, GRC, Network Security, Leadership. Roles: Senior Cybersecurity Engineer, SOC Analyst, IAM Engineer, Security Architect, Cloud Security Engineer, Security Director. NotebookLM audio starts empty and is saved in Edit setup. After an answer, a note is stored for that pack and shown on the Feedback tab, which stays off for a regular live session. No auth change. This is visible UI.
+
+**Checked by scripts/tests/kompas-packs.test.mjs. Not a live listen. One production version.json check follows the ship.**
+
 ## 2026-11-28 — Full confidence, no hedge, You never opens an answer
 
 Answers stay first person. The hands-on transfer stub and the stock Director closer are stripped. A tool that is not on the resume is answered from a real role line, without a gap sentence. A mic line tagged You does not start a card and does not fill Say this. The page stamp is kompas-20261128-hedge, so the desktop exe needs the master build.

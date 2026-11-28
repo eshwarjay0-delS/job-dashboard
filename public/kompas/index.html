@@ -36,6 +36,8 @@
   <nav class="side-nav">
     <div class="side-group">Interview</div>
     <button class="side-item" id="navSessions" data-view="dashboard"><span class="si-ico">◎</span><span>Sessions</span></button>
+    <button class="side-item" id="navRoles" data-view="roles"><span class="si-ico">▣</span><span>Roles</span></button>
+    <button class="side-item" id="navCategories" data-view="categories"><span class="si-ico">▦</span><span>Categories</span></button>
     <button class="side-item" id="navTranscripts" data-view="transcripts"><span class="si-ico">☰</span><span>Transcripts</span></button>
     <div class="side-group">Prepare</div>
     <button class="side-item" id="navQbank" data-view="qbank"><span class="si-ico">?</span><span>Question Bank</span></button>
@@ -80,6 +82,40 @@
     <div class="empty-sessions hidden" id="emptySessions">
       <p>Your sessions will appear here.</p>
       <button class="hidden" id="newSessionBtn2" tabindex="-1" aria-hidden="true"></button>
+    </div>
+  </main>
+</section>
+
+<!-- ========================= ROLES ========================= -->
+<section class="view view-dash with-side hidden" id="view-roles">
+  <main class="dash-body">
+    <div class="dash-head">
+      <div>
+        <h2>Roles</h2>
+        <p class="muted">A live session grounded in one role pack. Same copilot, same levels.</p>
+      </div>
+      <button class="btn primary" id="newRoleBtn">＋ New</button>
+    </div>
+    <div class="session-list" id="roleList"></div>
+    <div class="empty-sessions hidden" id="emptyRoles">
+      <p>Your role sessions will appear here.</p>
+    </div>
+  </main>
+</section>
+
+<!-- ========================= CATEGORIES ========================= -->
+<section class="view view-dash with-side hidden" id="view-categories">
+  <main class="dash-body">
+    <div class="dash-head">
+      <div>
+        <h2>Categories</h2>
+        <p class="muted">A live session grounded in one category pack. Same copilot, same levels.</p>
+      </div>
+      <button class="btn primary" id="newCategoryBtn">＋ New</button>
+    </div>
+    <div class="session-list" id="categoryList"></div>
+    <div class="empty-sessions hidden" id="emptyCategories">
+      <p>Your category sessions will appear here.</p>
     </div>
   </main>
 </section>
@@ -444,6 +480,7 @@
             <label class="pref-row"><div class="pref-t"><b>Save the transcript</b><span>Stored locally; session metadata synchronizes to your account</span></div><input type="checkbox" class="tgl" id="saveTranscript" checked /></label>
             <div class="pref-row stack"><div class="pref-t"><b>AI instructions</b><span>Anything Kompas should always do</span></div>
               <textarea id="instructions" rows="8" placeholder="Paste complete interview instructions, technical rules, style requirements or other context here. Your text will not be silently shortened."></textarea>
+              <label class="field hidden" id="packAudioField"><span>NotebookLM audio</span><input id="packAudioUrl" type="url" placeholder="https://… (optional)" /></label>
               <span class="muted small">Full instructions are saved with this interview and synced to your signed-in devices. Model context limits may still affect how much the AI can use in a single answer.</span></div>
           </div>
         </details>
@@ -593,12 +630,17 @@
     <div class="tip hidden" id="phoneTip"><span><b>Phone mic hears both sides:</b> put the call on speaker and keep the phone near you — phones have no separate call-audio capture.</span><button class="icon-btn" id="phoneTipClose" title="Got it">✕</button></div>
     <main class="content">
       <div class="card" id="card">
+        <div class="live-tabs hidden" id="liveTabs">
+          <button type="button" class="live-tab on" id="liveTabAnswer">Answer</button>
+          <button type="button" class="live-tab" id="liveTabFeedback">Feedback</button>
+        </div>
         <div class="q"><span class="q-ico">💬</span><span class="q-body"><b>Question:</b> <span id="question">Waiting for the interview to start…</span><span class="caption hidden" id="caption"><span class="cap-who" id="capWho">Interviewer</span><span class="cap-text" id="capText"></span></span></span></div>
         <div class="a">
           <div class="a-head"><span class="star">★</span> Answer <span class="follow-heard" id="followHeard" hidden></span>
             <span class="a-tools"><button type="button" class="mini" id="boldBtn" title="Normal weight" aria-label="Answer weight">B</button><button type="button" class="mini" id="textMinus" title="Smaller text">−</button><span class="type-n" id="textSizeN">16</span><button type="button" class="mini" id="textPlus" title="Larger text">+</button><button class="mini" id="copyBtn" title="Copy answer">Copy</button></span>
           </div>
           <ul id="answer"><li>Press Start — both your mic and the call audio are on by default.</li></ul>
+          <div class="live-feedback hidden" id="liveFeedback"></div>
         </div>
       </div>
     </main>
@@ -735,6 +777,16 @@
 </div>
 
 <!-- Preview modal: view an uploaded file on-screen -->
+<div class="modal hidden" id="packPickModal" role="dialog" aria-modal="true" aria-labelledby="packPickTitle">
+  <div class="modal-card">
+    <header class="modal-head">
+      <div class="modal-title" id="packPickTitle">New</div>
+      <button class="icon-btn" id="packPickClose" title="Close">✕</button>
+    </header>
+    <div class="modal-body" id="packPickList"></div>
+  </div>
+</div>
+
 <div class="modal hidden" id="previewModal">
   <div class="modal-card">
     <header class="modal-head">
@@ -780,7 +832,8 @@ window.addEventListener("load", function () {
   <script src="account-sync.js?v=20261128-hedge"></script>
 <script src="caption-focus.js?v=20261102-three-lines"></script>
   <script src="latest-ask.js?v=20261119-latest"></script>
-  <script src="app.js?v=20261128-hedge"></script>
+  <script src="pack-notes.js?v=20261128-packs"></script>
+<script src="app.js?v=20261128-hedge"></script>
   <script src="bridge-lines.js?v=20261128-hedge"></script>
   <script src="answer-aside.js?v=20261128-hedge"></script>
 <script src="caption-once.js?v=20261102-pinned-caption"></script>

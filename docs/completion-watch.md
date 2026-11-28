@@ -1,3 +1,7 @@
+## 28 November 2026 — Roles and Categories
+
+The Kompas sidebar under Interview now has Roles and Categories under Sessions, including the scrolling phone bar. Each is a live session bound to a seeded pack. Learned notes stay in perfact.packNotes. The live Feedback tab is only on those sessions. Skip-login stays on. One production version.json fetch follows the [ship] merge. Not a live listen.
+
 ## 28 November 2026 — Kompas approval provenance correction
 
 - The “Owner task, 28 Nov” and same-day add-on in `docs/research/kompas-level-personalities-2026-11-28.md` are branch/PR documentation, not verified direct owner messages. Scoped prior-context retrieval did not recover the corresponding user-authored approval. Keep the personality modules unconnected and PR #620 unmerged/unshipped. The proposed “real customer story for a tool absent from the resume” conflicts with Chief Relevance's source boundary and is not approved. See PR #618 comment 7232103912.
