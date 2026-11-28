@@ -1,3 +1,10 @@
+## Run 29 follow-up — exact gate failure and clean restacks
+
+- Gmail clean PR #632 current-head gates: Kompas baseline SUCCESS; confirmed-skill SUCCESS; full CI still in progress; Plan/REA run 46115504464 FAILED test 7. The failure is unrelated to Gmail: existing REA entry #630 uses remote source `origin/ops/second-bot-packs:docs/kompas-packs/second-bot-INDEX.md`, while `rea-register.test.mjs` requires every path to exist locally.
+- Test-only PR #635 opened from current master to validate remote branch locators separately (branch/path required, traversal rejected) while preserving local existence checks. Isolated probe: 4/4; remote CI not yet observed.
+- Approved WhatsApp parser clean restack #633: baseline SUCCESS, full CI in progress; draft only. PR #628 stale head `784aa5df` has no observed workflow run.
+- Do not merge #632 until #635's test fix is independently green/reviewed and #632 exact-head Plan/REA/full CI rerun succeeds. Do not merge #633 until all required gates and review pass. No production release from either branch.
+
 ## 28 November 2026 — Run 29: Gmail account-switch privacy guard and WhatsApp CI repair
 
 **Continue:** Verify exact-head remote gates for clean restack `fix/gmail-snapshot-account-switch-race-20261128-watch11`, then review before any merge.
