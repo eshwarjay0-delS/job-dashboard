@@ -1299,3 +1299,10 @@ The [ship] production build for merged Gmail PR #646 (deployment dpl_HbCneuBY2Bd
 - **Reviewable correction:** commit `2f1e6d251ed082da60c259494339cf6445ca3708` changes the deploy-build test to require the Kompas baseline first, retain all original suites, include both crawler suites and enforce their order rather than pinning the full prebuild string. The build command and Webpack assertions remain unchanged.
 - Remote full CI is triggered by the correction; final-head status still must be checked. No local test/build was run because the runtime has no checkout and outbound GitHub DNS is unavailable. No crawl, portal request, DB write, preview or deployment occurred.
 - **Next:** require exact-final-head full CI success, review, protected preview and release gates. Keep PR draft; manual crawl still requires a separate authorized admin action.
+
+
+## 28 November 2026 15:18 UTC — Run32 lock-scope review
+
+Static source review of PR #649 found a safety boundary: `pendingPortalWork` is a module-level `Map`, so it protects only a warm process. It cannot prevent the same portal from being started by a different serverless instance or cold start. The repeated-call regression is same-process and does not test distributed overlap. Review comment 7241370206 records the finding.
+
+**Release blocker:** before a crawl, use a durable single-run/portal lease with expiry/fencing and cleanup, or otherwise guarantee one runner at the storage layer; do not describe the current map as a cross-instance lock. Keep manual/on-demand policy. No crawl, portal request, DB write, preview or deployment.
