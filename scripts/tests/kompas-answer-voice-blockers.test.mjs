@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs"
 import {
   BANDS,
   EVAL_CASES,
+  applyPersonalityFilter,
   assessAnswer,
   employmentViolations,
   fallbackAnswer,
@@ -85,6 +86,47 @@ test("brief introductions and quick facts stay inside the smaller budget", () =>
     assert.ok(short.max < full.min, `${question} max ${short.max} vs full min ${full.min}`)
     const text = fallbackAnswer("engineer", question)
     assert.ok(wordCount(text) <= short.max, `${question} produced ${wordCount(text)}`)
+  }
+})
+
+test("the filter judges brief intros and quick facts on the short budget at every level", async () => {
+  const long = fallbackAnswer("architect", INTRO)
+  for (const level of ["architect", "director", "engineer"]) {
+    for (const question of ["Give me a brief introduction about yourself.", "What does PKI stand for?"]) {
+      const spec = personalityContract(level, question)
+      const result = await applyPersonalityFilter({ level, question, text: long })
+      assert.equal(result.assessment.min, spec.min)
+      assert.equal(result.assessment.max, spec.max)
+      assert.ok(result.assessment.words <= spec.max, `${level} ${question} ${result.assessment.words} > ${spec.max}`)
+      assert.ok(result.assessment.words >= spec.min, `${level} ${question} ${result.assessment.words} < ${spec.min}`)
+      assert.equal(result.assessment.wordBand, true)
+      assert.deepEqual(unsupportedExperienceClaims(result.text), [])
+    }
+  }
+})
+
+test("unsupported Saviynt, Sentinel, and SQL injection stories are stripped for every question kind", async () => {
+  const attacks = [
+    "Last year I handled their Saviynt outage and I fixed the connector myself.",
+    "We closed a Sentinel incident after the customer called about the breach.",
+    "I once troubleshot the customer's SQLi ticket in Microsoft Sentinel.",
+    "There was a Saviynt issue I owned for that partner.",
+    "A customer had a terrible IAM experience and I dealt with the Saviynt issue.",
+    "SQL injection alert fired in production and I worked the alert until it was quiet.",
+  ]
+  const questions = [
+    "How would you design a multi-region AWS inspection path for firewall traffic?",
+    "Tell me about a time you led a cutover that had to stay up.",
+    "How does a FortiGate-VM high availability cluster hold up during a cutover?",
+  ]
+  for (const level of ["architect", "director", "engineer"]) {
+    for (const question of questions) {
+      const dirty = `${attacks.join(" ")} ${fallbackAnswer(level, question)}`
+      const result = await applyPersonalityFilter({ level, question, text: dirty })
+      assert.deepEqual(unsupportedExperienceClaims(result.text), [], `${level} ${question}`)
+      assert.equal(result.assessment.styleHits.includes("unsupported experience"), false)
+      for (const attack of attacks) assert.equal(unsupportedExperienceClaims(attack).length > 0, true, attack)
+    }
   }
 })
 

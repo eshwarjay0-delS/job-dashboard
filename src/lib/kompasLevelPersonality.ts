@@ -137,17 +137,20 @@ export function personalityContract(level: string, question: string): Personalit
   return { level: name, kind, ...BANDS[name] }
 }
 
+const UNSUPPORTED_TOOL = "saviynt|sentinel|sql injection|sqli"
+const UNSUPPORTED_VERB = "dealt with|fixed|troubleshot|handled|closed|owned|ran|worked"
+
 /** Past-tense stories the Houston resume does not record. Naming the asked tool is allowed. Claiming the event happened is not. */
 export const UNSUPPORTED_EXPERIENCE = [
+  new RegExp(`(?:${UNSUPPORTED_TOOL})[^.!?]{0,120}\\b(?:i|we)\\s+(?:${UNSUPPORTED_VERB})\\b`, "i"),
+  new RegExp(`\\b(?:i|we)\\s+(?:${UNSUPPORTED_VERB})\\b[^.!?]{0,120}(?:${UNSUPPORTED_TOOL})`, "i"),
+  new RegExp(`\\b(?:a|the)\\s+customer(?:'s|s)?\\s+(?:${UNSUPPORTED_TOOL}|terrible iam)`, "i"),
+  new RegExp(`\\btheir\\s+(?:${UNSUPPORTED_TOOL})`, "i"),
+  new RegExp(`(?:${UNSUPPORTED_TOOL})\\s+(?:alert|incident|ticket|outage|issue i)`, "i"),
   /a customer had a terrible iam experience/i,
-  /the saviynt issue i dealt with/i,
   /they (?:already )?ran saviynt/i,
-  /i troubleshot (?:it|that|the saviynt|a saviynt)/i,
-  /sql injection alert/i,
-  /sentinel was already showing/i,
-  /a customer (?:raised|brought|called)/i,
-  /i (?:closed|worked) the alert/i,
-  /i sat down with their security partner/i,
+  /i sat down with their/i,
+  /the customer called/i,
 ]
 
 export function unsupportedExperienceClaims(text: string): string[] {
@@ -320,6 +323,7 @@ export function addressesQuestion(question: string, text: string): boolean {
 }
 
 function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string, question = ""): boolean {
+  if (unsupportedExperienceClaims(text).length) return false
   const t = text.toLowerCase()
   if (kind === "intro") {
     const years = /(?:9\+|more than nine|nine years)/.test(t)
@@ -341,10 +345,10 @@ function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string,
   if (kind === "behavioral") return /\bled\b|\bi lead\b/.test(t) && /cutover|zero[- ]downtime/.test(t)
   if (kind === "security") {
     const grounded = level === "director" ? /six|zero[- ]downtime|network/.test(t) : /fortigate|cutover|fortianalyzer/.test(t)
-    return /sql injection/.test(t) && grounded && unsupportedExperienceClaims(text).length === 0
+    return /sql injection/.test(t) && grounded
   }
   if (kind === "iam") {
-    return (/\biam\b/.test(t) || /identity/.test(t)) && /implement/.test(t) && unsupportedExperienceClaims(text).length === 0
+    return (/\biam\b/.test(t) || /identity/.test(t)) && /implement/.test(t)
   }
   return false
 }
@@ -369,12 +373,14 @@ export type Assessment = {
 export function assessAnswer(question: string, level: string, text: string): Assessment {
   const name = asLevel(level)
   const kind = questionKind(question)
-  const band = BANDS[name]
+  const band = personalityContract(name, question)
   const words = wordCount(text)
   const bannedList = bannedHits(text)
   const hedgeList = hedgeHits(text)
   const employerList = employmentViolations(text)
+  const claimList = unsupportedExperienceClaims(text)
   const styleHits: string[] = []
+  if (claimList.length) styleHits.push("unsupported experience")
   const iCount = (text.match(/\bI\b/g) || []).length
   if (iCount < 5) styleHits.push("first person")
   if (/\bthe candidate\b/i.test(text)) styleHits.push("third person")
@@ -434,12 +440,13 @@ export function composeLevelAnswer(level: string, question: string, draft = ""):
 function sentenceRejected(sentence: string, level: PersonalityLevel): boolean {
   if (/^\s*(?:[-*•]|\d+[.)])\s+\S/.test(sentence)) return true
   if (bannedHits(sentence).length || hedgeHits(sentence).length || employmentViolations(sentence).length) return true
+  if (unsupportedExperienceClaims(sentence).length) return true
   if (level === "director" && BUILD_DETAIL.test(sentence)) return true
   return false
 }
 
-function cleanDraft(text: string, level: PersonalityLevel): string {
-  const band = BANDS[level]
+function cleanDraft(text: string, level: PersonalityLevel, question: string): string {
+  const band = personalityContract(level, question)
   const lines = String(text || "").split(/\n/).filter((line) => !/^\s*(?:[-*•]|\d+[.)])\s+\S/.test(line))
   let sentences = sentencesOf(lines.join(" ")).filter((sentence) => !sentenceRejected(sentence, level))
   while (wordCount(sentences.join(" ")) > band.max && sentences.length > 1) sentences = sentences.slice(0, -1)
@@ -460,7 +467,8 @@ export function rewriteInstruction(assessment: Assessment): string {
     "First person, confident, and decisive. You did this work.",
     "No hedging and no gap admission.",
     `Stay between ${assessment.min} and ${assessment.max} words.`,
-    "Use only the Houston resume. A tool that resume does not name is a customer or partner story inside that real work.",
+    "Use only the Houston resume. If a tool is not recorded there, explain a general approach from the Fortinet AWS network role.",
+    "Do not claim a past customer, partner, Saviynt, Sentinel, or SQL injection event.",
     "Do not claim employment, a title, or a role the Houston resume does not show.",
     problems.length ? `Fix these problems: ${problems.join("; ")}.` : "",
   ].filter(Boolean).join(" ")
@@ -475,12 +483,12 @@ export async function applyPersonalityFilter(input: {
   const level = asLevel(input.level)
   const question = String(input.question || "")
   const reasons: string[] = []
-  let text = cleanDraft(input.text, level)
+  let text = cleanDraft(input.text, level, question)
   let assessment = assessAnswer(question, level, text)
   if (!assessment.ok && input.regenerate) {
     reasons.push("regenerated")
     try {
-      text = cleanDraft(await input.regenerate(rewriteInstruction(assessment)), level)
+      text = cleanDraft(await input.regenerate(rewriteInstruction(assessment)), level, question)
       assessment = assessAnswer(question, level, text)
     } catch {
       reasons.push("regenerate-failed")
@@ -488,7 +496,7 @@ export async function applyPersonalityFilter(input: {
   }
   if (!assessment.ok) {
     reasons.push("fallback")
-    text = composeLevelAnswer(level, question, cleanDraft(input.text, level))
+    text = composeLevelAnswer(level, question, cleanDraft(input.text, level, question))
     assessment = assessAnswer(question, level, text)
   }
   const rewritten = reasons.length > 0 || text.replace(/\s+/g, " ").trim() !== String(input.text || "").replace(/\s+/g, " ").trim()
