@@ -1,3 +1,9 @@
+## 2026-11-28 — Production level bands, every part answered
+
+Taskmaster S7 on 3362f20: a typed level switch painted a cached answer with no model call, a failed continuation padded with the canned Citi/CVS paragraph, short spoken questions got the 40-160 word quick band, and a two-part live question lost its first half. The prod-band-relevance patch (git am on f36d90b) fixes those. A skipped question part gets its own continuation. Manual presses do not rewrite an answered card. Auto starts on. Server-side answer path, so the page looks the same until the next answer.
+
+**Checked by scripts/tests/kompas-prod-band-relevance.test.mjs and the replay gate. Typecheck passed. Not a live Taskmaster retest. CI must go green before the squash-merge.**
+
 ## 2026-11-28 — Quality patch on the live replay gate
 
 The 10-fold patch (d7e3505) is on the video-2 replay branch. Two-part questions stay together. Every pack grounding includes design, stories, a director view, terms, and metrics. A failed continuation still fills the level band. Having lines, "I believe", and "I would" closers are stripped. The live-path card, You label, and Auto-on fixes stay. Ships with the replay gate.
