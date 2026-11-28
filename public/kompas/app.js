@@ -1265,7 +1265,7 @@ function seedIdentity(s) {
   let id = s.resume && s.prep && s.prep.identity;
   if (id && String(s.length || "").toLowerCase() === "long" && String(id).trim().split(/\s+/).length < 90) id = "";
   if (id && window.KompasCorrect && window.KompasCorrect.asSpeaker) id = window.KompasCorrect.asSpeaker(id, window.__speakerName);
-  const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter((x) => x && !/press start — answers appear here/i.test(x)) : [s.resume ? "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture." : "No resume is stored on this device. I will use the job description only, and I will not invent a work history."] };
+  const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter((x) => x && !/press start — answers appear here/i.test(x)) : [s.resume ? "I can walk you through the experience and projects listed in the resume loaded for this interview." : "No resume is stored on this device. I will use the job description only, and I will not invent a work history."] };
   const ph = cards.findIndex(c => /^(Preparing…|Ready)$/.test(c.question));
   if (ph >= 0) cards[ph] = intro;
   else if (!cards.some(c => c.question === "Your introduction")) { cards.unshift(intro); idx++; }

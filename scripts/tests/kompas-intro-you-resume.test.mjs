@@ -23,7 +23,7 @@ function load(file, name) {
 const Correct = load("../../public/kompas/correct.js", "KompasCorrect")
 const Gate = load("../../public/kompas/live-session.js", "KompasLiveSession")
 
-test("a guessed title is not replaced with I, and the intro stays Senior Cybersecurity Engineer", () => {
+test("intro repairs transcription only and never invents biography", () => {
   const sample = "I am a Senior Cybersecurity Engineer with 8 years of experience at the City of SanG Diego."
   const spoken = Correct.asSpeaker(sample, "Cybersecurity")
   assert.match(spoken, /Senior Cybersecurity Engineer/)
@@ -32,17 +32,15 @@ test("a guessed title is not replaced with I, and the intro stays Senior Cyberse
   assert.doesNotMatch(spoken, /SanG/)
   const intro = Correct.repairOwnerIntro(sample)
   assert.match(intro, /Senior Cybersecurity Engineer/)
-  assert.match(intro, /9\+ years/)
-  assert.match(intro, /San Diego/)
-  assert.doesNotMatch(intro, /Senior I Engineer|SanG|\b8\+?\s+years\b/)
+  assert.match(intro, /8 years/)
+  assert.match(intro, /City of San Diego/)
+  assert.doesNotMatch(intro, /9\+ years|Citi Bank|CVS Health|Charter Communications|Accenture/)
   assert.doesNotMatch(Correct.repairOwnerIntro(sample + " Press Start — answers appear here."), /Press Start/)
-  const headline = repairIntroHeadline("Your introduction", "I am a Senior I Engineer with 8 years at SanG Diego. I work the queue.")
-  assert.equal(headline.split(/(?<=[.!?])\s+/)[0], INTRO_HEADLINE)
-  assert.match(headline, /9\+ years/)
-  assert.match(headline, /San Diego/)
-  assert.doesNotMatch(headline, /Senior I Engineer|SanG|\b8 years\b/)
-  assert.match(app, /Cybersecurity\|Digital/)
-  assert.match(app, /repairOwnerIntro/)
+  const headline = repairIntroHeadline("Tell me about yourself.", "I am a Senior I Engineer with 8 years at SanG Diego. I work the queue.")
+  assert.equal(headline, "I am a Senior Cybersecurity Engineer with 8 years at San Diego. I work the queue.")
+  assert.doesNotMatch(headline, /9\+ years|Citi Bank|CVS Health|Charter Communications|Accenture|Press Start/)
+  assert.match(app, /I can walk you through the experience and projects listed in the resume loaded for this interview/)
+  assert.doesNotMatch(app, /Citi Bank since November 2024|CVS Health, the City of San Diego, Charter Communications, and Accenture/)
 })
 
 test("candidate speech is labeled You and is dropped from the question on the answer card", () => {

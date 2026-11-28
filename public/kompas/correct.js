@@ -251,16 +251,13 @@
   // The introduction he reads. April 2017 through the current Citi role is 9+ years,
   // and the city is San Diego. A guessed name must not turn either of those into something else.
   function repairOwnerIntro(text) {
-    let t = String(text || "")
-      .replace(/Press Start — answers appear here\.?/gi, "")
+    return String(text || "")
+      .replace(/Press Start — answers appear here\\.?/gi, "")
       .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
       .replace(/\bSanG\s+Diego\b/g, "San Diego")
       .replace(/\bCity of I Diego\b/g, "the City of San Diego")
-      .replace(/\b(?:7|8)\+?\s+years\b/gi, "9+ years")
-      .replace(/\b9\s+years\b/gi, "9+ years");
-    const headline = "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture.";
-    if (!/Senior Cybersecurity Engineer/.test(t) || !/9\+ years/.test(t) || !/\bSan Diego\b/.test(t)) t = headline + " " + t;
-    return t.replace(/\s+/g, " ").trim();
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   globalThis.KompasCorrect = { correct: aroundCode(correct), speak: aroundCode(speak), applyCritic: aroundCode(applyCritic), asSpeaker, asDesign, dropRuleBreaks, review, criticNote, repairOwnerIntro };
