@@ -239,3 +239,12 @@ The four-connected-inbox maximum is owner-confirmed. Account identity, receiving
 The four-account account-scoped digest and normal-flow mobile navigation slice from the 6f3cdcb backlog commit is in production SHA 593dff. The four-account ceiling remains owner-approved. Each inbox retains its own identity, selected-From, reconnect and thread context. Proactive Poke workers, scheduler, notifications and automatic sending remain disabled.
 
 PR #577's account-scoped interview-board anchors remain a separate open draft; its earlier full CI failed on stale-base shared lint and it still needs a current-master restack, exact-head full CI, protected preview and two-inbox/narrow-phone acceptance. No Gmail OAuth, mailbox read, draft/send action or device test was performed.
+
+## 28 November 2026 — Run 31 account-switch guard
+
+PR #637's delayed A→B and sign-out local-snapshot race is source-reviewed. Exact-head full CI 46118344354, Plan/REA 46118344368, Kompas baseline 46118344383, and confirmed-skill 46118344353 all passed. The generation guard, second verified-account lookup, and checks before snapshot publication/shared load are present; deferred A→B, sign-out and same-account restore tests exercise the race. Favorable COMMENT review 6096552394 was posted. The PR remains DRAFT because protected preview is unavailable without the private `KOMPAS_VERCEL_API_TOKEN`; no browser/two-inbox/mobile acceptance, Gmail OAuth or inbox action was performed. Four-account cap and disabled Poke worker/scheduler/notifications/sending remain unchanged.
+
+
+## 28 November 2026 — Run 34 Gmail/mobile status
+
+PR #637 (`518e08999e4206dbb7b71bcf37d522e32d9a7ace`) passes full CI, Plan/REA, Kompas baseline and confirmed-skill checks. It remains draft/nonmergeable against stale base; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`, which is unavailable. No OAuth, inbox access, two-inbox/account-switch or phone acceptance. The 4-account ceiling is unchanged. Poke proactive workers, scheduler, notifications and automatic sending remain disabled.
