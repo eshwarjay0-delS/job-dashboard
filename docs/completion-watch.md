@@ -1,3 +1,15 @@
+## 28 November 2026 13:57 UTC — Run32 crawler timeout quarantine (draft PR #649)
+
+**Continue:** Fix the approved manual crawler's non-cooperative timeout without releasing a worker that still has live work.
+
+- Clean branch `fix/crawler-bounded-noncooperative-timeout-run32-20261128` was created from current master `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`; draft PR #649 is reviewable at https://github.com/eshwarjay0-delS/job-dashboard/pull/649.
+- Source commit `ecd0879b86f4238292e19217f6f2afd48694eb9b` adds abort-aware pacing/fetch timeout, signal propagation to fetch and Supabase writes, and a bounded 1-second drain after a portal timeout. If work remains alive, its worker is quarantined and that portal's promise remains reserved until it settles; subsequent runs skip that portal to avoid overlap. Other healthy workers continue.
+- The non-cooperative regression checks bounded return, worker quarantine, same-portal skip across runs, recovery after settlement, and abort-signal forwarding. The tests are registered in build preflight.
+- PR #648 is not copied/merged; its timeout branch remains stale. This is a clean current-master restack.
+- **No local test/build ran:** this runtime has no canonical checkout, dependencies, or installed Next.js 16.3.8 docs. GitHub CI is the validation gate and is pending. No crawl, portal request, DB write, protected preview, deployment, or application submission occurred.
+- Manual/on-demand only remains: 600 ms pacing, 25 s request timeout, clearance/freshness/scan bounds; Robert Half manual-only and eTeam excluded. No schedule changes.
+
+**Release state:** source/test changes are in draft PR #649; not merged or deployed. Current production remains READY at `3400742ba97d2cbc68e2df3e1795ce5c76d9a147` on `job-dashboard-fawn.vercel.app`. Next: exact-head CI, review, protected preview and production READY+alias only after all gates; then separately authorize a manual crawl.
 ## 28 November 2026 13:35 UTC — run31 source-data validation correction
 
 - The first Plan/REA source update `4c6458baa0cb1e693a64e12ebea4aeadf7e674e0` failed full CI `46149755499`: a run31 REA record was inserted as an `unshift()` statement inside the array, causing a parser error at `src/lib/rea-register.ts:10:3959`. It was corrected in commit `1d7a24f241a7613bba293338cae28809160ccd20`; exact-head Plan/REA schema run `46149931539` is SUCCESS.
