@@ -1,3 +1,7 @@
+## 28 November 2026 — level voice on the answer route
+
+The Sr Cybersecurity Engineer file `Eshwar_Resume_Sr_Cybersecurity_Engineer` is not in the repo, so the empty-session default stays `src/lib/kompas-houston-resume.txt`. The answer route now applies the personality band after the older length caps. Architect, Director, and Technical HR no longer share one short draft. A multi-part IAM question stays on the recorded Fortinet work. Saviynt, Sentinel, and SQL injection are not told as events the resume does not record. Server only. One production check follows the ship.
+
 ## 28 November 2026 — full confidence, You never opens a card
 
 Hedge lines are stripped, including less hands-on, transfers because, and the resume-is-unloaded sentence. A missing tool is answered from a real role. A mic line tagged You does not start an answer or Say this. Page stamp is kompas-20261128-hedge. One production check follows the ship.

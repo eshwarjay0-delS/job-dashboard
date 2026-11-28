@@ -11,8 +11,9 @@
 // This file does not edit the answer route. PR 613 owns that route and the
 // older length contract in kompasLevelContract.ts.
 
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
+import { isQuickQuestion, levelContract } from "./kompasLevelContract.ts"
 import { openingSentences, poolSentences, type PersonalityKind, type PersonalityLevel } from "./kompasLevelPersonalityCopy.ts"
 
 export { openingSentences, poolSentences }
@@ -38,6 +39,36 @@ NERC CIP applied to the network change and the zero-downtime cutovers.
 The wider cutover beyond the FortiGate-VM clusters was a team effort.
 Those FortiGate-VM deployments and the Cisco FTD to Fortinet migrations across six AWS regions were the part I can speak to.
 `
+
+/** The named Houston file. It is not in this repo. Do not invent its text. */
+export const SR_CYBER_RESUME_NAME = "Eshwar_Resume_Sr_Cybersecurity_Engineer"
+
+const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "dist", "coverage"])
+
+function walkForSrCyber(root: string): string | null {
+  const stack = [root]
+  while (stack.length) {
+    const dir = stack.pop() as string
+    let names: string[] = []
+    try { names = readdirSync(dir) } catch { continue }
+    for (const name of names) {
+      if (SKIP_DIRS.has(name)) continue
+      const full = join(dir, name)
+      if (/^Eshwar_Resume_Sr_Cybersecurity_Engineer(?:\.(?:docx|txt|md|json))?$/i.test(name)) return full
+      try { if (statSync(full).isDirectory()) stack.push(full) } catch { /* skip */ }
+    }
+  }
+  return null
+}
+
+let srCyberCache: { found: boolean; path: string | null; missingName: string } | null = null
+
+export function srCyberResumeLookup(root = typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ""): { found: boolean; path: string | null; missingName: string } {
+  if (srCyberCache && srCyberCache.missingName === SR_CYBER_RESUME_NAME) return srCyberCache
+  const path = root ? walkForSrCyber(root) : null
+  srCyberCache = { found: Boolean(path), path, missingName: SR_CYBER_RESUME_NAME }
+  return srCyberCache
+}
 
 export function houstonResume(): string {
   try {
@@ -78,9 +109,53 @@ export type PersonalityContract = {
   maxTokens: number
 }
 
+/** An interviewer who asks for a brief introduction keeps the shorter budget. */
+export function isBriefIntroduction(question: string): boolean {
+  const t = String(question || "")
+  return /\b(?:brief|briefly|30 seconds|one minute)\b/i.test(t) && /\b(?:introduc|about yourself|who you are)\b/i.test(t)
+}
+
+/** Brief introductions and quick facts stay on the smaller level-contract budget. */
+export function usesShortBudget(question: string): boolean {
+  return isBriefIntroduction(question) || isQuickQuestion(question)
+}
+
 export function personalityContract(level: string, question: string): PersonalityContract {
   const name = asLevel(level)
-  return { level: name, kind: questionKind(question), ...BANDS[name] }
+  const kind = questionKind(question)
+  if (usesShortBudget(question)) {
+    const brief = levelContract(name, question)
+    return {
+      level: name,
+      kind,
+      min: Math.max(24, Math.round(brief.target * 0.55)),
+      max: brief.max,
+      target: brief.target,
+      maxTokens: brief.maxTokens,
+    }
+  }
+  return { level: name, kind, ...BANDS[name] }
+}
+
+const UNSUPPORTED_TOOL = "saviynt|sentinel|sql injection|sqli"
+const UNSUPPORTED_VERB = "dealt with|fixed|troubleshot|handled|closed|owned|ran|worked"
+
+/** Past-tense stories the Houston resume does not record. Naming the asked tool is allowed. Claiming the event happened is not. */
+export const UNSUPPORTED_EXPERIENCE = [
+  new RegExp(`(?:${UNSUPPORTED_TOOL})[^.!?]{0,120}\\b(?:i|we)\\s+(?:${UNSUPPORTED_VERB})\\b`, "i"),
+  new RegExp(`\\b(?:i|we)\\s+(?:${UNSUPPORTED_VERB})\\b[^.!?]{0,120}(?:${UNSUPPORTED_TOOL})`, "i"),
+  new RegExp(`\\b(?:a|the)\\s+customer(?:'s|s)?\\s+(?:${UNSUPPORTED_TOOL}|terrible iam)`, "i"),
+  new RegExp(`\\btheir\\s+(?:${UNSUPPORTED_TOOL})`, "i"),
+  new RegExp(`(?:${UNSUPPORTED_TOOL})\\s+(?:alert|incident|ticket|outage|issue i)`, "i"),
+  /a customer had a terrible iam experience/i,
+  /they (?:already )?ran saviynt/i,
+  /i sat down with their/i,
+  /the customer called/i,
+]
+
+export function unsupportedExperienceClaims(text: string): string[] {
+  const hay = String(text || "")
+  return UNSUPPORTED_EXPERIENCE.filter((pattern) => pattern.test(hay)).map((pattern) => pattern.source)
 }
 
 export const BANNED_PHRASES = [
@@ -233,7 +308,22 @@ function hasSteps(text: string): boolean {
   return /\bfirst\b/.test(t) && /\bthen\b/.test(t) && /\bnext\b/.test(t) && /\bafter that\b/.test(t)
 }
 
-function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string): boolean {
+const QUESTION_STOP = new Set(["about", "does", "what", "how", "the", "and", "your", "you", "with", "that", "this", "from", "have", "tell", "give", "would", "when", "where", "which", "into", "them", "they", "their", "were", "been", "will", "just", "like", "then", "work", "time", "does"])
+
+export function questionTerms(question: string): string[] {
+  return [...new Set(String(question || "").toLowerCase().match(/[a-z][a-z0-9+]{4,}/g) || [])].filter((word) => !QUESTION_STOP.has(word))
+}
+
+export function addressesQuestion(question: string, text: string): boolean {
+  const terms = questionTerms(question)
+  if (!terms.length) return true
+  const hay = text.toLowerCase()
+  const hits = terms.filter((term) => hay.includes(term))
+  return hits.length >= Math.min(2, terms.length)
+}
+
+function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string, question = ""): boolean {
+  if (unsupportedExperienceClaims(text).length) return false
   const t = text.toLowerCase()
   if (kind === "intro") {
     const years = /(?:9\+|more than nine|nine years)/.test(t)
@@ -241,6 +331,8 @@ function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string)
     return years && /fortinet|fortigate|networking/.test(t)
   }
   if (kind === "technical") {
+    const asksNetwork = /fortigate|cutover|failover|high[- ]availability|migration/i.test(question)
+    if (!asksNetwork) return addressesQuestion(question, text)
     if (level === "director") return /cutover|zero[- ]downtime/.test(t) && /six/.test(t)
     return /fortigate|high[- ]availability|failover/.test(t) && /cutover/.test(t)
   }
@@ -251,8 +343,13 @@ function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string)
     return /fortigate|inspection|gateway/.test(t) && /region/.test(t)
   }
   if (kind === "behavioral") return /\bled\b|\bi lead\b/.test(t) && /cutover|zero[- ]downtime/.test(t)
-  if (kind === "security") return /sql injection/.test(t) && /sentinel/.test(t)
-  if (kind === "iam") return (/\biam\b/.test(t) || /identity/.test(t)) && /saviynt/.test(t) && /implement|integrated|troubleshoot/.test(t)
+  if (kind === "security") {
+    const grounded = level === "director" ? /six|zero[- ]downtime|network/.test(t) : /fortigate|cutover|fortianalyzer/.test(t)
+    return /sql injection/.test(t) && grounded
+  }
+  if (kind === "iam") {
+    return (/\biam\b/.test(t) || /identity/.test(t)) && /implement/.test(t)
+  }
   return false
 }
 
@@ -276,12 +373,14 @@ export type Assessment = {
 export function assessAnswer(question: string, level: string, text: string): Assessment {
   const name = asLevel(level)
   const kind = questionKind(question)
-  const band = BANDS[name]
+  const band = personalityContract(name, question)
   const words = wordCount(text)
   const bannedList = bannedHits(text)
   const hedgeList = hedgeHits(text)
   const employerList = employmentViolations(text)
+  const claimList = unsupportedExperienceClaims(text)
   const styleHits: string[] = []
+  if (claimList.length) styleHits.push("unsupported experience")
   const iCount = (text.match(/\bI\b/g) || []).length
   if (iCount < 5) styleHits.push("first person")
   if (/\bthe candidate\b/i.test(text)) styleHits.push("third person")
@@ -291,7 +390,7 @@ export function assessAnswer(question: string, level: string, text: string): Ass
   const wordBand = words >= band.min && words <= band.max
   const employer = employerList.length === 0
   const banned = bannedList.length === 0
-  const topic = topicPass(name, kind, text)
+  const topic = topicPass(name, kind, text, question)
   const hedges = hedgeList.length === 0
   const style = styleHits.length === 0
   return {
@@ -302,16 +401,38 @@ export function assessAnswer(question: string, level: string, text: string): Ass
 }
 
 export function fallbackAnswer(level: string, question: string): string {
+  return composeLevelAnswer(level, question, "")
+}
+
+/** Keep an on-topic draft, then fill the level band. A draft that misses the question uses the level opening. */
+export function composeLevelAnswer(level: string, question: string, draft = ""): string {
   const name = asLevel(level)
   const kind = questionKind(question)
-  const band = BANDS[name]
-  const kept = [...openingSentences(name, kind)]
+  const band = personalityContract(level, question)
+  const clean = sentencesOf(draft).filter((sentence) => !sentenceRejected(sentence, name))
+  const draftText = clean.join(" ")
+  const useDraft = clean.length > 0 && addressesQuestion(question, draftText)
+  const kept = useDraft ? [...clean] : [...openingSentences(name, kind)]
+  const seen = new Set(kept.map((sentence) => sentence.toLowerCase()))
   const count = () => wordCount(kept.join(" "))
+  const push = (sentence: string) => {
+    const key = sentence.toLowerCase()
+    if (seen.has(key)) return false
+    const next = wordCount(`${kept.join(" ")} ${sentence}`)
+    if (next > band.max) return false
+    kept.push(sentence)
+    seen.add(key)
+    return true
+  }
   for (const sentence of poolSentences(name)) {
     if (count() >= band.target) break
-    const next = wordCount(`${kept.join(" ")} ${sentence}`)
-    if (next > band.max) break
-    kept.push(sentence)
+    push(sentence)
+  }
+  if (count() < band.min) {
+    for (const sentence of openingSentences(name, kind)) {
+      if (count() >= band.min) break
+      push(sentence)
+    }
   }
   return kept.join(" ").replace(/\s+/g, " ").trim()
 }
@@ -319,12 +440,13 @@ export function fallbackAnswer(level: string, question: string): string {
 function sentenceRejected(sentence: string, level: PersonalityLevel): boolean {
   if (/^\s*(?:[-*•]|\d+[.)])\s+\S/.test(sentence)) return true
   if (bannedHits(sentence).length || hedgeHits(sentence).length || employmentViolations(sentence).length) return true
+  if (unsupportedExperienceClaims(sentence).length) return true
   if (level === "director" && BUILD_DETAIL.test(sentence)) return true
   return false
 }
 
-function cleanDraft(text: string, level: PersonalityLevel): string {
-  const band = BANDS[level]
+function cleanDraft(text: string, level: PersonalityLevel, question: string): string {
+  const band = personalityContract(level, question)
   const lines = String(text || "").split(/\n/).filter((line) => !/^\s*(?:[-*•]|\d+[.)])\s+\S/.test(line))
   let sentences = sentencesOf(lines.join(" ")).filter((sentence) => !sentenceRejected(sentence, level))
   while (wordCount(sentences.join(" ")) > band.max && sentences.length > 1) sentences = sentences.slice(0, -1)
@@ -345,7 +467,8 @@ export function rewriteInstruction(assessment: Assessment): string {
     "First person, confident, and decisive. You did this work.",
     "No hedging and no gap admission.",
     `Stay between ${assessment.min} and ${assessment.max} words.`,
-    "Use only the Houston resume. A tool that resume does not name is a customer or partner story inside that real work.",
+    "Use only the Houston resume. If a tool is not recorded there, explain a general approach from the Fortinet AWS network role.",
+    "Do not claim a past customer, partner, Saviynt, Sentinel, or SQL injection event.",
     "Do not claim employment, a title, or a role the Houston resume does not show.",
     problems.length ? `Fix these problems: ${problems.join("; ")}.` : "",
   ].filter(Boolean).join(" ")
@@ -360,12 +483,12 @@ export async function applyPersonalityFilter(input: {
   const level = asLevel(input.level)
   const question = String(input.question || "")
   const reasons: string[] = []
-  let text = cleanDraft(input.text, level)
+  let text = cleanDraft(input.text, level, question)
   let assessment = assessAnswer(question, level, text)
   if (!assessment.ok && input.regenerate) {
     reasons.push("regenerated")
     try {
-      text = cleanDraft(await input.regenerate(rewriteInstruction(assessment)), level)
+      text = cleanDraft(await input.regenerate(rewriteInstruction(assessment)), level, question)
       assessment = assessAnswer(question, level, text)
     } catch {
       reasons.push("regenerate-failed")
@@ -373,7 +496,7 @@ export async function applyPersonalityFilter(input: {
   }
   if (!assessment.ok) {
     reasons.push("fallback")
-    text = fallbackAnswer(level, question)
+    text = composeLevelAnswer(level, question, cleanDraft(input.text, level, question))
     assessment = assessAnswer(question, level, text)
   }
   const rewritten = reasons.length > 0 || text.replace(/\s+/g, " ").trim() !== String(input.text || "").replace(/\s+/g, " ").trim()

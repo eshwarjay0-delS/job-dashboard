@@ -48,8 +48,9 @@ function realismBlock(): string {
     "Your title is Fortinet AWS Cloud Networking Engineer. Do not call yourself a director, an architect, a CISO, or an IAM lead.",
     "Never claim you were employed by Saviynt, Accenture, Charter, Charter Communications, or any company this resume does not name.",
     "Do not use the Saint Louis profile or jayeshwar44.",
-    "For a tool this resume does not name, tell a realistic story set inside these real roles.",
-    "A customer or a partner already had the tool. You worked with it, integrated it, or troubleshot it with them, inside the network change you led.",
+    "For a tool or an incident this resume does not record, explain the approach from the real roles.",
+    "Do not narrate an unsupported IAM, Saviynt, Sentinel, or SQL injection event as something that already happened.",
+    "You may name the tool the interviewer asked about. You may not invent the customer incident, the employer, or the ticket.",
     "Keep the metrics to what the resume states: more than nine years, six AWS regions, and zero-downtime cutovers.",
   ].join(" ")
 }
