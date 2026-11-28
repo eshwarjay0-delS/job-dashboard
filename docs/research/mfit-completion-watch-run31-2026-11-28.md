@@ -64,3 +64,15 @@ A read-only SQL query against the active production Supabase project reconfirmed
 ## Documentation source CI
 
 The first docs/Plan & Vision source commit `4c6458baa0cb1e693a64e12ebea4aeadf7e674e0` failed full CI because the run31 REA record was accidentally inserted as an `unshift()` statement inside the array. This was corrected in `1d7a24f241a7613bba293338cae28809160ccd20`; the exact correction commit's Plan/REA schema run `46149931539` succeeded. Full CI `46149931520` and Kompas baseline `46149931485` were still running when checked; the production alias remains on the prior verified runtime SHA `3400742ba97d2cbc68e2df3e1795ce5c76d9a147`. Do not ship the admin evidence source until full CI is terminal and a proper protected preview/release gate is satisfied.
+
+
+## Run32 — bounded non-cooperative timeout quarantine (28 Nov 2026)
+
+PR #649 is a clean draft on current master `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`, branch `fix/crawler-bounded-noncooperative-timeout-run32-20261128`. Code commit `ecd0879b86f4238292e19217f6f2afd48694eb9b`:
+
+- abort-aware pacing/fetch timeout and cleanup;
+- signals passed through crawl runner to fetch/upsert/stale-retirement, with checks before storage;
+- timeout abort plus a bounded 1-second drain; if work remains live, its worker is quarantined and the portal stays reserved until settlement, preventing same-portal overlap in later runs; other healthy workers can proceed;
+- synthetic regressions for bounded non-cooperative timeout, worker quarantine, cross-run same-portal exclusion, recovery after settlement, and signal forwarding; registered in build preflight.
+
+Remote CI is the next gate. No local tests/build were run because the scheduled runtime lacks the checkout, dependencies and installed Next.js 16.3.8 docs. No portal request, crawl, production DB write, protected preview or deployment occurred. Manual/on-demand only; pacing, request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded are unchanged. This PR is not merged or live.
