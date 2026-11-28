@@ -26,3 +26,11 @@ Verify the missing exact-head Plan/REA and confirmed-skill gates and obtain legi
 - Approval correction: scoped prior-context retrieval did not find direct owner-authored approval for the exact S8 behavior batch, and PR #640 has no comments. Mark it **unapproved/deployed**, not approved or accepted; do not automatically roll back or extend it without an owner decision.
 - Earlier full CI `46134823553` failed 106/107 on head `21972ceb` because the generic provider-error string was kept. The final merge SHA's CI was not surfaced by the available workflow-run query. No real Taskmaster S8 retest occurred.
 - Next: obtain explicit owner decision, verify final SHA CI and real live behavior before acceptance.
+
+
+## Run 35 — confirmed-skill attribution guard in current master
+
+- Current master `fdd4816` (the READY production alias) contains `confirmedCandidateStatements` and the non-candidate attribution split patterns. Current `src/lib/resume-evidence.ts` blob `57a6dada57e122c28094ab5a8ffba8731773e249` and regression file blob `decddd07400ed2f001a57f7536a313899a058838` were read from master.
+- The current test includes nine passive actor negatives (contractors, subcontractors, consultants, vendors, clients, external teams, outside consultants, third-party vendors, colleagues) while retaining the ordinary AWS+GCP positive. The corresponding source patterns are present. No local execution occurred.
+- PR #598 is closed unmerged; this is current master/source evidence, not a claim that #598 merged. The owner-approved 6 Nov cross-role rule remains narrow: a first-person-confirmed skill can be mapped to a relevant existing project bullet across roles, without inventing any other project fact.
+- The guard is deployed, but no actual baseline/JD/explicit confirmation, DOCX inspection, protected preview or live 98% ATS result was produced. Final-DOCX Gemini score/correction/re-export remains separately approved and pending.
