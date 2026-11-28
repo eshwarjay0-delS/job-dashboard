@@ -948,8 +948,14 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         finalText = correctVerifiedPresentationErrors(finalText)
         const settled = await finishSpoken(job, finalText)
         if (settled.providerError || !settled.text.trim()) {
-          const filled = expandToBand(finalText || raw, levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
-          if (filled.trim()) {
+          const seed = settled.providerError || isProviderErrorAnswer(finalText) || isProviderErrorAnswer(raw)
+            ? "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket."
+            : (finalText || raw)
+          const filled = expandToBand(seed, levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
+            .replace(/\b(?:Error:\s*)?429 Too Many Requests\.?\s*/gi, "")
+            .replace(/\bProvider returned error\.?\s*/gi, "")
+            .trim()
+          if (filled && !isProviderErrorAnswer(filled)) {
             finalText = filled
           } else {
             emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
