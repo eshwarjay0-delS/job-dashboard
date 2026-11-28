@@ -155,7 +155,7 @@ export async function crawlEach<T>(
             workPromise.then(() => true, () => true),
             new Promise<boolean>(resolve => setTimeout(() => resolve(false), drainMs)),
           ])
-          out[i] = { adapter, error: timeoutMessage, quarantined: !settled }
+          out[i] = settled ? { adapter, error: timeoutMessage } : { adapter, error: timeoutMessage, quarantined: true }
           quarantined = !settled
         } else {
           out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
