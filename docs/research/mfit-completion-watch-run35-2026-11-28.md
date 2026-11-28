@@ -18,3 +18,11 @@ No canonical checkout/dependencies or local tests/build. No Gmail OAuth, mailbox
 
 ## Continue
 Verify the missing exact-head Plan/REA and confirmed-skill gates and obtain legitimate protected-preview access. Then perform owner-consented two-inbox A→B/sign-out and same-account restore plus narrow-phone acceptance. Merge/deploy only after all required gates.
+
+## Run 35 — Kompas PR #640 release/provenance correction
+
+
+- PR #640 closed/merged at 2026-11-28T10:40:58Z; master commit `fdd4816e53b9156787993c384ac72759967ff6c3` is independently READY at Vercel production deployment `dpl_9Kvhj6NKALcsucVniGoqgpy9NPKJ`, with `job-dashboard-fawn.vercel.app` alias exact. This supersedes run34's pre-merge status.
+- Approval correction: scoped prior-context retrieval did not find direct owner-authored approval for the exact S8 behavior batch, and PR #640 has no comments. Mark it **unapproved/deployed**, not approved or accepted; do not automatically roll back or extend it without an owner decision.
+- Earlier full CI `46134823553` failed 106/107 on head `21972ceb` because the generic provider-error string was kept. The final merge SHA's CI was not surfaced by the available workflow-run query. No real Taskmaster S8 retest occurred.
+- Next: obtain explicit owner decision, verify final SHA CI and real live behavior before acceptance.
