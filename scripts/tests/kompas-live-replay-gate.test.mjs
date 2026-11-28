@@ -90,3 +90,47 @@ test("production length and resume defaults are not the test-only path", () => {
   const level = readFileSync(new URL("src/lib/kompasLevelContract.ts", root), "utf8")
   assert.match(level, /\^having\\b/)
 })
+
+// S7 on 3362f20 (28 Nov 2026): the summary said 30 questions for ten and listed escalate twice, manual presses rewrote
+// answered cards, and Auto started OFF.
+test("the session summary counts each video-2 question once", () => {
+  const replay = Gate.replayLive(turns)
+  const transcript = turns.map((turn) => ({ text: turn.text, who: turn.speaker === "candidate" ? "You" : "Them", source: "system" }))
+  const summary = Gate.sessionSummary({ cards: replay.cards, turns: transcript })
+  const n = summary.questions.length
+  assert.ok(n >= 10 && n <= 12, `${n} questions: ${summary.questions.map((row) => row.question).join(" | ")}`)
+  assert.equal(summary.questions.filter((row) => /escalate/i.test(row.question)).length, 1)
+  assert.equal(summary.questions.filter((row) => /sql injection/i.test(row.question)).length, 1)
+  assert.match(summary.text, new RegExp(`^${n} questions$`, "m"))
+})
+
+test("a manual press never rewrites a card that already has a real answer", () => {
+  const cards = [{ question: "Can you tell me how your day-to-day life looks like as a SOC analyst?", answer: "I start the day in the Splunk queue at Citi Bank and I work the overnight notables first.", locked: true }]
+  const same = Gate.manualAnswerPlan(cards, 0, "Can you tell me how your day-to-day life looks like as a SOC analyst?")
+  assert.equal(same.reuse, false)
+  assert.equal(same.keep, true)
+  const other = Gate.manualAnswerPlan(cards, 0, "What are the tools that you have worked on?")
+  assert.equal(other.reuse, false)
+  assert.equal(other.keep, false)
+  assert.match(other.question, /tools/i)
+  const install = readFileSync(new URL("public/kompas/live-session-install.js", root), "utf8")
+  assert.match(install, /if \(plan && plan\.keep\)/)
+})
+
+test("Auto is ON when a session opens unless it was pressed off in that session", () => {
+  const app = readFileSync(new URL("public/kompas/app.js", root), "utf8")
+  assert.match(app, /setAuto\(true\);\s+\/\/ default ON/)
+  assert.doesNotMatch(app, /if \(s\.autoMode === false\) setAuto\(false\)/)
+  assert.match(app, /if \(s\.autoUserOff === true\) setAuto\(false\)/)
+  assert.match(app, /autoOn = true/)
+})
+
+test("a typed level switch is generated at its own band, never derived with no model call", () => {
+  const app = readFileSync(new URL("public/kompas/app.js", root), "utf8")
+  const regen = app.slice(app.indexOf("function regenerateForAudience"), app.indexOf("function audienceChanged"))
+  assert.doesNotMatch(regen, /if \(paintFromAnchors\(c\)\)/)
+  assert.match(app, /if \(!window\.KompasDiamond\.ANCHORS\.includes\(level\)\) return false;/)
+  assert.match(app, /if \(shown && askingLevel\(\) === writeAnchor && repaired\)/)
+  const level = readFileSync(new URL("src/lib/kompasLevelContract.ts", root), "utf8")
+  assert.doesNotMatch(level, /search updated so it pages once/)
+})

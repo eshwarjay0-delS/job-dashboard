@@ -39,7 +39,13 @@ export function hasPlainReasoning(text: string): boolean {
 export function isQuickQuestion(question: string): boolean {
   const t = String(question || "").replace(/\s+/g, " ").trim()
   if (/\b(?:tell me about yourself|tell me about a time|walk me through|how would you|describe a time|design|rolled out|scenario)\b/i.test(t)) return false
-  if (/\b(?:what does|stands? for|yes or no|do you know|what is a |what is an )\b/i.test(t) && t.split(/\s+/).length < 16) return true
+  // A spoken "explain how X works", "tell me how", or a two-part ask is a full answer at every level, never a 40-160 word fact.
+  // "Can you explain to me how Sentinel works?" is eight words and was getting the quick band in production (28 Nov 2026).
+  if ((t.match(/\?/g) || []).length >= 2) return false
+  if (/\b(?:explain|describe|tell me|talk me through|walk through|day[- ]?to[- ]?day|experience|how (?:does|do|did|is|are|would|will|can)\b[^?]{0,60}\b(?:works?|looks?|runs?|handle|set up|configure|investigate|detect))\b/i.test(t)) return false
+  // "Do you know about SQL injection?" asks for the explanation, not a yes: S7 showed the 5-word "I know about SQL injection."
+  if (/\b(?:do|did) you know (?:about|what|how)\b|\bwhat do you know about\b|\bat what (?:instant|point|stage|time)\b|\bwhen (?:do|would|will) you escalate\b/i.test(t)) return false
+  if (/\b(?:what does|stands? for|yes or no|what is a |what is an )\b/i.test(t) && t.split(/\s+/).length < 16) return true
   return t.split(/\s+/).length <= 8 && /\?\s*$/.test(t)
 }
 
@@ -105,26 +111,14 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-export const BANNED_HEDGE = /i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
+export const BANNED_HEDGE = /can(?:'|’)?t name a specific|cannot name a specific|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|not directly measured|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
 
 const RESUME_CATALOG = /i handle cybersecurity operations for the bank\b[^.]{0,600}\./i
 
 export const INTRO_HEADLINE = "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture."
 
-const STORY = [
-  "At Citi I caught a privileged sign-in in Splunk that did not match the change window.",
-  "The evidence was the CyberArk session, the Entra ID sign-in, and the CrowdStrike process on the host.",
-  "I decided it was a real escalation, not a false positive, and I assigned the ServiceNow ticket to the identity owner.",
-  "The SOC lead took the host, I stayed on the account, and we contained it before the session was reused.",
-  "At CVS Health I worked the same pattern from the queue: a Qualys finding, a Tanium check, and a ServiceNow owner.",
-  "I wrote the detection note so the next analyst could see what I opened, what I ruled out, and who got the ticket.",
-  "For a web alert I search the WAF, the web logs, and the database audit in Splunk, then I confirm the host in EDR.",
-  "I do not describe a pentest. I describe the search, the evidence, and the person who had to fix the control.",
-  "I own the on-call hour. I design the correlation, I tune the notable, and I say when the alert is noise.",
-  "The outcome I report is the account contained, the ticket closed with the evidence, and the search updated so it pages once.",
-]
 
-export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|the outcome i am responsible for is that the work keeps moving|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that/i
+export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|the outcome i am responsible for is that the work keeps moving|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that/i
 
 export function sentenceKey(sentence: string): string {
   return sentence.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()
@@ -190,7 +184,7 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
   for (const sentence of speakable(String(text || "").replace(RESUME_CATALOG, " ")).split(/(?<=[.!?])\s+/)) {
     const key = sentenceKey(sentence)
     const open = openingWords(sentence)
-    if (!key || /^having\b/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
+    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
     seen.add(key)
     if (open.split(" ").length >= 6) openings.add(open)
     kept.push(sentence)
@@ -212,14 +206,50 @@ export function repairIntroHeadline(question: string, text: string): string {
  * 10-fold test, 28 Nov 2026: the old loop re-told every beat as "On pass 2 of the same case I add one more check...",
  * which read as a stuck record. A beat is never repeated; the model continuation is what reaches the band.
  */
-export function expandToBand(text: string, contract: LevelContract): string {
-  if (contract.quick || wordCount(text) >= contract.min) return text
-  const kept = [text].filter(Boolean)
+/**
+ * Fill toward the band only from the Role/Category pack, and only with pack sentences that share a word with the question.
+ * Never a fixed stock block: production S7 (3362f20) showed the same ~180-word Citi/CVS paragraph ending
+ * a stock closing line about the search paging once on 33 of 37 typed answers whenever the continuation call did not run.
+ * With no pack, a short answer stays short rather than padded with unrelated sentences.
+ */
+function claimIsOnResume(line: string, resume: string, question: string): boolean {
+  const source = `${resume}\n${question}`.toLowerCase()
+  if (!String(resume || "").trim()) return false
+  const places = line.match(/\b(?:at|with)\s+([A-Z][A-Za-z0-9&.'-]+(?:\s+[A-Z][A-Za-z0-9&.'-]+){0,3})/g) || []
+  for (const raw of places) {
+    const name = raw.replace(/^(?:at|with)\s+/i, "").trim()
+    if (name.length > 2 && !source.includes(name.toLowerCase())) return false
+  }
+  const nums = line.match(/\b\d+(?:\.\d+)?%?/g) || []
+  if (nums.some((n) => !source.includes(n.toLowerCase()))) return false
+  const skip = new Set("At The This That When Then After Before Citi Bank CVS Health City San Diego Charter Communications Accenture".split(" "))
+  const tools = line.match(/\b[A-Z][A-Za-z0-9+]{3,}(?:\s+[A-Z][A-Za-z0-9+]{3,})?/g) || []
+  for (const tool of tools) {
+    if (tool.split(" ").every((part) => skip.has(part))) continue
+    if (!source.includes(tool.toLowerCase())) return false
+  }
+  return true
+}
+
+export function expandToBand(text: string, contract: LevelContract, source = "", question = "", resume = ""): string {
+  if (contract.quick || wordCount(text) >= contract.min || !String(source || "").trim()) return text
+  const qWords = new Set(String(question || "").toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || [])
   const have = new Set(String(text || "").split(/(?<=[.!?])\s+/).map(sentenceKey))
-  for (const beat of STORY) {
+  const kept = [String(text || "").trim()].filter(Boolean)
+  const lines = String(source || "")
+    .replace(/^[ \t]*(?:[A-Z][A-Za-z /&-]{1,40}):[ \t]*/gm, "")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x.split(/\s+/).length >= 8 && /[.!?]$/.test(x) && !/[{}<>|=]|\(expand it/i.test(x))
+  for (const line of lines) {
     if (wordCount(kept.join(" ")) >= contract.min) break
-    if (have.has(sentenceKey(beat))) continue
-    kept.push(beat)
+    const key = sentenceKey(line)
+    if (have.has(key) || !claimIsOnResume(line, resume, question)) continue
+    const words = line.toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || []
+    if (qWords.size && !words.some((w) => qWords.has(w))) continue
+    have.add(key)
+    kept.push(line)
   }
   const out = kept.join(" ").replace(/\s+/g, " ").trim()
   return wordCount(out) > contract.max ? trimWords(out, contract.max) : out

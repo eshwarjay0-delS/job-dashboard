@@ -20,19 +20,22 @@ test("a resume-summary catalogue is never appended, and a refusal is replaced by
   assert.doesNotMatch(spoken, /I handle cybersecurity operations for the bank/i)
 })
 
-test("level bands differ, and a short small-talk question stays short", () => {
-  const architect = expandToBand("I own the detection.", levelContract("architect", QUESTION))
-  const engineer = expandToBand("I own the detection.", levelContract("engineer", QUESTION))
-  const director = expandToBand("I own the detection.", levelContract("director", QUESTION))
-  // The stock beats are used once each; the model continuation reaches the band (10-fold test, 28 Nov 2026).
-  for (const text of [architect, engineer, director]) {
-    assert.doesNotMatch(text, /On pass \d+ of the same case/)
-    assert.ok(wordCount(text) > 150 && wordCount(text) <= 1400, String(wordCount(text)))
+test("level bands differ, the band never fills from a stock block, and a short small-talk question stays short", async () => {
+  const { packGrounding, OWNER_RESUME } = await import("../../src/lib/kompasPacks/index.ts")
+  const { getPack } = await import("../../src/lib/kompasPacks/index.ts")
+  const pack = packGrounding(getPack("soc-analyst"), [])
+  for (const level of ["architect", "engineer", "director"]) {
+    const contract = levelContract(level, QUESTION)
+    // No pack: a short answer stays short, never the Citi/CVS stock paragraph (S7, 33 of 37 answers ended "pages once").
+    const bare = expandToBand("I own the detection.", contract)
+    assert.equal(bare, "I own the detection.")
+    const filled = expandToBand("I own the detection.", contract, pack, QUESTION, OWNER_RESUME)
+    assert.doesNotMatch(filled, /search updated so it pages once/)
+    assert.doesNotMatch(filled, /Initech|PhantomSIEM/)
+    assert.ok(wordCount(filled) <= contract.max, String(wordCount(filled)))
+    assert.ok(wordCount(filled) >= 4)
   }
-  assert.ok(wordCount(director) <= 600, String(wordCount(director)))
-  assert.match(architect, /I designed|I own|on-call|correlation|CyberArk/i)
-  assert.match(architect, /Citi|CVS Health/)
-  const quick = expandToBand("PKI means public key infrastructure.", levelContract("architect", "What does PKI stand for?"))
+  const quick = expandToBand("PKI means public key infrastructure.", levelContract("architect", "What does PKI stand for?"), pack, "What does PKI stand for?")
   assert.ok(wordCount(quick) < 200)
 })
 

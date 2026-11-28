@@ -7,7 +7,7 @@ import { createRequire } from "node:module"
 import { posix } from "node:path"
 import { runInNewContext } from "node:vm"
 import ts from "typescript"
-import { BANNED_HEDGE, CANNED_FILLER, fitLevelAnswer, hasJargonList, hasRepeatedSentence, isQuickQuestion, levelContract, wordCount } from "../../src/lib/kompasLevelContract.ts"
+import { BANNED_HEDGE, CANNED_FILLER, expandToBand, fitLevelAnswer, hasJargonList, hasRepeatedSentence, isQuickQuestion, levelContract, wordCount } from "../../src/lib/kompasLevelContract.ts"
 
 const require = createRequire(import.meta.url)
 const root = new URL("../../", import.meta.url)
@@ -165,6 +165,19 @@ test("director padding is removed", () => {
   const text = fitLevelAnswer("I own the cutover. I do not walk the build. I say what I chose and why. The point is the result, said once.", levelContract("director", "Tell me about yourself."))
   assert.doesNotMatch(text, /I do not walk the build|The point is the result|I say what I chose/)
   assert.match(text, /cutover/)
+})
+
+test("hedges are removed, and a pack story that is not on the resume is not spoken as fact", () => {
+  const gap = "I cannot name a specific outage. The resume does not show one, so I will not invent it. The control was not directly measured. I won't invent a number."
+  const kept = fitLevelAnswer(`I rotated the key in the vault. ${gap}`, levelContract("engineer", "Tell me about a time you handled an incident."))
+  assert.match(kept, /rotated the key/)
+  assert.doesNotMatch(kept, /cannot name a specific|resume does not show|will not invent|won'?t invent|not directly measured/)
+  const resume = "Senior Cybersecurity Engineer at Citi Bank. I use Splunk."
+  const pack = "At Initech I cut false positives by 40% with PhantomSIEM across 12 sites. At Citi Bank I tuned the Splunk notable for the privileged session."
+  const question = "How do you tune a Splunk notable when the same alert keeps paging the queue?"
+  const filled = expandToBand("I own the detection.", levelContract("engineer", question), pack, question, resume)
+  assert.doesNotMatch(filled, /Initech|PhantomSIEM|40%|12 sites/)
+  assert.match(filled, /At Citi Bank I tuned the Splunk notable/)
 })
 
 test("a short answer is not padded with a repeated filler sentence", () => {

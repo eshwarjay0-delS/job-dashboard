@@ -139,8 +139,18 @@ function parallelAsk(value: string): boolean {
 /** Whether `next` continues the same interviewer ask as the pieces already in the window. */
 const STORY_PROMPT = /^(?:(?:so|and|okay|now)[, ]+)?(?:describe (?:a|an|the) (?:time|situation|scenario|case|incident|instance|experience)|tell me about (?:a|an|the) (?:time|situation|case|incident)|walk me through (?:the last time|a time|an? (?:incident|situation|case))|(?:can|could) you (?:share|describe|tell me about|walk me through) (?:a|an|the)|share (?:a|an) (?:time|experience|example|situation))\b/i
 
+// An open "tell me / explain / describe" ask followed in the same breath by a short you-question
+// ("Can you tell me how your day-to-day looks as a SOC analyst? What do you start with on a day?") is one ask.
+// Answering only the short tail dropped the first part and shrank the answer to a short-fact band (prod, 28 Nov 2026).
+const OPEN_ASK = /^(?:(?:so|and|okay|now|uh|um)[, ]+)*(?:(?:can|could|would) you (?:please )?(?:tell me|explain|describe|walk me through|talk (?:me )?through)|tell me|explain|describe|walk me through)\b/i
+
 export function questionPieceContinues(prevSpan: string[], next: string): boolean {
   if (!next || !prevSpan.length) return false
+  const prevLast = prevSpan[prevSpan.length - 1] || ""
+  if (OPEN_ASK.test(prevLast) && /\b(?:you|your)\b/i.test(next) && wordsOf(next).length <= 10 && !logisticsAsk(next) && !whatIsHead(next)) {
+    const prevProper = new Set(prevSpan.flatMap(properNouns))
+    if (!properNouns(next).some((n) => !prevProper.has(n))) return true
+  }
   // "Describe a time you ... What trade-offs did you make, and how did you tell them?" is one story ask.
   // The later pieces ask about the same story, so the whole prompt is answered, not only its last clause.
   if (STORY_PROMPT.test(prevSpan[0]) && /\b(?:you|your)\b/i.test(next) && !logisticsAsk(next) && !whatIsHead(next)) return true

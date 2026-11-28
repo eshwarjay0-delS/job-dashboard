@@ -186,6 +186,10 @@
       var latest = latestHeardQuestion();
       var cur = (typeof cards !== "undefined" && cards.length) ? cards[idx] : null;
       var plan = cur && latest && typeof Gate.manualAnswerPlan === "function" ? Gate.manualAnswerPlan(cards, cards.indexOf(cur), latest) : null;
+      if (plan && plan.keep) {                                    // the card already answers this ask: never rewrite it (S7)
+        if (typeof status === "function") status("Already answered on this card.", "live");
+        return;
+      }
       if (plan && !plan.reuse && typeof showQueuedAnswer === "function") {
         showQueuedAnswer(plan.question || latest);
         try {
