@@ -30,6 +30,9 @@ A new read-only iZap check of the currently connected business scope found:
 
 The current iZap business is **not established as the incident business**. These results do not prove the historical delivery did not occur. Still missing: correct authorized business/phone, original input/output DOCX, per-run R2 object/version, webhook/request correlation, Meta outbound ID, signed delivery/read receipt or failure, and source-fact reconciliation. No replay/send/media download or database/R2 mutation occurred.
 
+**Live source safeguard verified:** production SHA `593dff29044a4ec57284d7829ab951c2d499f193` and current master `bf9a0d4` contain `explicitlySelectedSameAccountLibraryResume` plus `sendSelectedOriginal`. The fallback requires durable explicit-selection proof, depth 0, the verified user's Files root/path, a DOCX and profile-email match; the route has no `sendClosest` call. This confirms source guardrails are live, not the historical send or current real delivery.
+
+
 ## Other approved backlog and gates
 
 - **PR #554 (Kompas S5/current-resume + first-press Listening hold):** latest head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI, baseline, cross-device, Plan/REA and Windows gates previously SUCCESS. GitHub requires an independent authorized reviewer; the connected owner identity cannot self-approve. Keep unmerged.
