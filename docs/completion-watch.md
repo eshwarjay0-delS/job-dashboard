@@ -1134,3 +1134,10 @@ The 20 Nov 03:33:26 UTC correction separately says confirmed skills can map only
 - The 17 Oct 17:28 incident remains unresolved until generated output DOCX, per-run R2 version, webhook correlation, Meta outbound ID and signed receipt are recovered.
 
 **Continue:** implement durable selection provenance and the exact fail-closed Original fallback in the actual route/session flow after environment recovery; keep #591's failing assertions intact and require exact-head CI, protected preview and owner acceptance.
+
+## 27 November 2026 — run 22 crawler server-side filter continuation
+
+- PR #617 (ready for review) applies normalized location terms and remote-only filtering in the crawler query **before** the bounded clearance scan; the Apply page no longer post-filters the first 100 crawler rows. Live aggregator results retain their separate filters.
+- Manual-only crawler regression and freshness/classification gates passed (46087986331, 46087986314); Kompas baseline passed (46087986360). Full CI 46087986350 is in progress on head 4d54b4.
+- A prior apply-clearance focused test failed on an old head because the assertion matched a later live-lane filter. The test was narrowed to the indexed snapshot segment at 4d54b4; exact-head full CI must validate this correction.
+- No protected preview/API smoke, live crawl, portal request, DB write, submission or production deployment. Vercel check success is not a READY release: master 6f3cd deployment was CANCELED, and canonical production alias still maps to 2dcc1bb. Route 60s vs runner 230s remains open.
