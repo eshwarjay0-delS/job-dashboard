@@ -36,7 +36,7 @@ test('Apply passes location and remote filters to the crawler instead of post-fi
  assert.match(applyPage,/crawlParams\.set\('location',location\)/)
  assert.match(applyPage,/crawlParams\.set\('remote','true'\)/)
  assert.match(applyPage,/const liveFiltered=/)
- assert.doesNotMatch(applyPage,/indexed[\s\S]*\.filter\(\(j:Job\)=\>/)
+ assert.doesNotMatch(applyPage,/contractTypes:contractTypes[\s\S]{0,160}\.filter\(\(j:Job\)=\>/)
 })
 
 test('Apply surfaces a bounded clearance-scan notice to the user',()=>{
