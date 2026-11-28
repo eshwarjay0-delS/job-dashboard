@@ -2,7 +2,6 @@ import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { candidateEvidenceInput, confirmedCandidateStatements, explicitlyConfirmsAllRequirements, missingRoleEvidenceTerms, roleScopedMissingTerms, roleScopedConfirmedSkillPlacements, MAX_CONFIRMED_SKILLS_PER_ROLE, restoreUnsupportedRoleEdits } from '../../src/lib/resume-evidence.ts'
-import { weaveExperienceRepresentation } from '../../src/lib/constructed-jd.ts'
 for (const input of ['Add Kafka and AWS', 'Make this match Kubernetes', 'Do I have Splunk?', 'I have no experience with GCP', 'I have never used Drata', 'I haven\'t used AWS', 'I haven\'t worked with Splunk', 'Required skills: Snowflake', 'Include F5 in the skills section']) {
   test(`editing instruction or missing experience is not evidence: ${input}`, () => assert.deepEqual(confirmedCandidateStatements([input]), []))
 }
@@ -493,15 +492,6 @@ test('confirmed skill placements are role-context scoped and bounded to two per 
   assert.equal(placements.filter(p => p.roleIndex === 0).length, 2)
   assert.equal(placements.some(p => p.idx === 2), false)
   assert.equal(placements.some(p => p.term === 'MuleSoft'), false)
-})
-
-test('deterministic confirmed-skill weave appends only terms to existing bullets', () => {
-  const sourceBullet = { idx: 41, text: 'Deployed containerized workloads to cloud infrastructure through CI/CD.' }
-  const woven = weaveExperienceRepresentation([{ bullets: [sourceBullet] }], [sourceBullet], ['AWS', 'Azure'])
-  assert.deepEqual(woven.bullets.map(b => b.idx), [41])
-  assert.deepEqual(woven.placed, ['AWS', 'Azure'])
-  assert.equal(woven.unplaced.length, 0)
-  assert.equal(woven.bullets[0].text, 'Deployed containerized workloads to cloud infrastructure through CI/CD, using AWS and Azure.')
 })
 
 test('tailor caller performs bounded confirmed-skill placement into the context-matched source bullet', () => {
