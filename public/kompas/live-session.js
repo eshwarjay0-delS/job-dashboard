@@ -332,8 +332,10 @@
     var latest = questionWithoutCandidate(question) || correctSecurityAsr(stripSpeakerLabels(question));
     if (!cur) return { reuse: false, replaceQuestion: true, index: -1, question: latest };
     if (!answerIsReal(cur.answer)) return { reuse: true, replaceQuestion: !sameAsk(cur.question, latest), index: index, question: latest };
-    if (sameAsk(cur.question, latest)) return { reuse: true, replaceQuestion: false, index: index, question: latest };
-    return { reuse: false, replaceQuestion: false, index: index, question: latest };
+    // A card that already holds a real answer is never rewritten by a manual press (S7: presses at 393 and 486 rewrote
+    // the day-to-day and Sentinel cards). The same ask keeps the card as it is; a different ask opens a new card.
+    if (sameAsk(cur.question, latest)) return { reuse: false, keep: true, replaceQuestion: false, index: index, question: latest };
+    return { reuse: false, keep: false, replaceQuestion: false, index: index, question: latest };
   }
 
   function onTopic(question, answer) {
@@ -380,6 +382,9 @@
       if (!q || /^(?:preparing|ready|cleared|no question|deriving|waiting)/i.test(q)) return;
       var key = normKey(q) || q.toLowerCase();
       if (seen.has(key)) return;
+      // The same question heard as a card and again as a transcript line, or split across two lines, is one question
+      // (S7: the summary said 30 questions for 10 and listed escalate twice).
+      if (questions.some(function (row) { return similar(row.question, q) || sameAsk(row.question, q); })) return;
       seen.add(key);
       questions.push({ question: q, answered: !!answered });
     }
@@ -391,7 +396,8 @@
     (opts.turns || []).forEach(function (turn) {
       var role = attributeSpeaker({ text: turn && turn.text, source: turn && turn.source, previousRole: turn && turn.who === "You" ? "You" : "Interviewer" });
       if ((turn && turn.who === "You") || role !== "Interviewer") return;
-      if (isQuestionShape(turn.text)) push(turn.text, false);
+      // A transcript line counts only as a full question of its own, never a fragment, small talk, or candidate speech.
+      if (isQuestionShape(turn.text) && !isSmallTalk(turn.text) && !isIncompleteQuestion(turn.text) && !isCandidateNarrative(turn.text) && contentWords(latestQuestion(turn.text) || turn.text).length >= 2) push(turn.text, false);
     });
     var lines = ["Session summary", questions.length + (questions.length === 1 ? " question" : " questions")];
     questions.forEach(function (q, i) {

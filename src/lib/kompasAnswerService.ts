@@ -23,6 +23,7 @@ import { emptyMemory, expandFollowUp, groundToProfile, memoryPrompt, readSession
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
+import { relevanceReport } from "@/lib/kompasAnswerParts"
 import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, keepSpokenOpening, NARRATIVE_LINE } from "@/lib/kompasConsistency"
@@ -235,22 +236,45 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
   const contract = levelContract(job.level, job.question)
   const base = fitLevelAnswer(job.packText ? confidentVoice(dropUnaskedCerts(text, job.question)) : text, contract)
   let grounded = repairIntroHeadline(job.question, dropUnknownEmployers(base, String(job.resume || "")))
-  if (wordCount(grounded) >= contract.min || !job.orKey || signal.aborted) return expandToBand(grounded, contract) || base
+  // A part of the question the answer skipped is answered next, even when the word count is already in band.
+  const skipped = () => contract.quick ? [] : relevanceReport(job.question, grounded).missing
+  const needsMore = () => wordCount(grounded) < contract.min || (skipped().length > 0 && wordCount(grounded) < contract.max)
+  if (!needsMore() || signal.aborted) return expandToBand(grounded, contract, job.packText || "", job.question) || base
   // A Role/Category drill continues from its pack (the next design detail or story not told yet), up to two passes.
   // A live session keeps its single resume-only continuation. A failed call still fills the level band.
   const passes = job.packText && !contract.quick ? 2 : 1
-  for (let pass = 0; pass < passes && wordCount(grounded) < contract.min && !signal.aborted; pass++) {
+  // Production 28 Nov 2026: the continuation went only to PAID_MODEL, so a 402/429/5xx there left a one-pass answer
+  // (300 words at Engineer, 17 on the live path) on screen. A failed continuation now tries the second model once.
+  const models = [PAID_MODEL, SECOND_MODEL]
+  let lane = 0
+  // S7 (3362f20): with no OpenRouter key or a dead OpenRouter lane, no continuation ran and the stock block filled the band.
+  // The direct providers (callLLM: Gemini, Groq, OpenAI/Anthropic on the deployment) are the last continuation lane.
+  if (!job.orKey) lane = models.length
+  const continueWith = async (user: string, maxTokens: number): Promise<{ text: string }> => {
+    for (;;) {
+      if (lane >= models.length) {
+        const direct = await callLLM({ keys: resolveKeys({}), purpose: "kompas:answer", tier: "light", system: job.system, user, maxTokens, timeoutMs: 15000 })
+        return { text: direct.text }
+      }
+      try { return await fetchOpenRouter(job.orKey as string, models[lane], job.system, user, maxTokens, signal) }
+      catch (e) { if (signal.aborted) throw e; lane += 1 }
+    }
+  }
+  for (let pass = 0; pass < passes && needsMore() && !signal.aborted; pass++) {
     try {
-      const missing = Math.max(60, contract.target - wordCount(grounded))
+      const gaps = skipped()
+      // Ask past the target: repairs, de-duplication and the employer/number guards drop part of what comes back,
+      // and fitLevelAnswer trims anything over the band. Asking for exactly the gap left answers under the floor.
+      const missing = Math.max(gaps.length ? 90 : 60, Math.round((contract.target - wordCount(grounded)) * 1.3))
       const source = job.packText
         ? `SUBJECT PACK (use the design, stories, metrics, and terms not yet in the answer):\n${job.packText.slice(0, 9000)}\n\n${job.packRules || ""}`
         : `RESUME:\n${String(job.resume || "").slice(0, 4000)}`
       const ask = job.packText
-        ? `Continue this spoken answer with about ${missing} more words. Add the next concrete thing from the pack that the answer has not covered yet: ${job.level === "architect" ? "a design detail, an integration, a tuning or on-call practice, a trade-off, or a full story" : job.level === "director" ? "the business risk, the people and teams I lead, the leadership metric, or a decision story" : "a term defined in plain words, or a full story walked step by step"}. A story opens with the employer (At Citi Bank, At CVS Health, ...) and has the situation, evidence, decision, owner, and the outcome with its number. Never retell a story or a point already in the answer. Cover any part of the question the answer skipped first. Past tense, first person, fully confident. No summary, no opinions, no I believe, no Overall, no staying up to date. Do not repeat a sentence. Name only Citi Bank, CVS Health, the City of San Diego, Charter Communications, or Accenture.`
-        : `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Do not add a number that is not in the resume. Stay on the question and the resume. Write about ${missing} more words.`
-      const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
+        ? `Continue this spoken answer with about ${missing} more words. Add the next concrete thing from the pack that the answer has not covered yet: ${job.level === "architect" ? "a design detail, an integration, a tuning or on-call practice, a trade-off, or a full story" : job.level === "director" ? "the business risk, the people and teams I lead, the leadership metric, or a decision story" : "a term defined in plain words, or a full story walked step by step"}. A story opens with the employer (At Citi Bank, At CVS Health, ...) and has the situation, evidence, decision, owner, and the outcome with its number. Never retell a story or a point already in the answer. Cover any part of the question the answer skipped first.${gaps.length ? ` The answer has not yet answered: ${gaps.map((g) => `"${g}"`).join(" and ")}. Answer that directly in the first sentence you add.` : ""} Past tense, first person, fully confident. No summary, no opinions, no I believe, no Overall, no staying up to date. Do not repeat a sentence. Name only Citi Bank, CVS Health, the City of San Diego, Charter Communications, or Accenture.`
+        : `Add new spoken sentences that continue this answer.${gaps.length ? ` First answer directly what it has not answered yet: ${gaps.map((g) => `"${g}"`).join(" and ")}.` : ""} Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Do not add a number that is not in the resume. Stay on the question and the resume. Write about ${missing} more words.`
+      const more = await continueWith(
         `${ask}\n\nQUESTION: ${job.question}\n\n${source}\n\nANSWER SO FAR:\n${grounded.slice(-2400)}`,
-        Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
+        Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400))
       const bag = `${job.resume || ""} ${job.packText || ""} ${grounded}`.toLowerCase()
       const added = String(more.text || "").split(/(?<=[.!?])\s+/).filter((sentence) => {
         const nums = sentence.match(/\d+(?:\.\d+)?/g) || []
@@ -260,10 +284,10 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
       if (wordCount(next) <= wordCount(grounded) + 20) break
       grounded = next
     } catch {
-      return expandToBand(grounded, contract) || base
+      return expandToBand(grounded, contract, job.packText || "", job.question) || base
     }
   }
-  return expandToBand(grounded, contract) || base
+  return expandToBand(grounded, contract, job.packText || "", job.question) || base
 }
 
 // A light non-streaming call for the post-generation fact-check (perfACT's

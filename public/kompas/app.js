@@ -968,7 +968,7 @@ function launchCopilot(s, opts = {}) {
     }).catch(() => {});
   }
   setAuto(true);          // default ON: a detected question is answered when the speaker goes quiet
-  if (s.autoMode === false) setAuto(false);
+  if (s.autoUserOff === true) setAuto(false);   // only a press of Auto in a session turns it off; an old saved autoMode:false no longer starts OFF (S7)
   setPersonaChip(s);
   renderConnect(s);                      // Parakeet-style connect step before listening
   renderDrawer();
@@ -1465,6 +1465,9 @@ function answerLines(answer, question) {
   if (typeof question === "string") {
     let source = "";
     try { source = (typeof docsGet === "function" ? docsGet() : []).filter(d => d && d.kind === "resume" && d.text).map(d => d.text).join("\n"); } catch { source = ""; }
+    // A Role/Category session carries its resume on the session, not as a resume document. Without it every figure was
+    // stripped on screen ("November to present", "+ years" — S7).
+    try { if (typeof current !== "undefined" && current) source += "\n" + String(current.resume || "") + "\n" + String(current.jd || ""); } catch {}
     answer = presentAnswer(question, answer, source);
   }
   if (Array.isArray(answer)) return answer.map(t => ({ t: String(t).trim().replace(/^(?:[-•]|\*(?!\*))\s*/, "").trim(), kind: "bullet" })).filter(x => x.t);
@@ -2036,7 +2039,8 @@ function regenerateForAudience() {
     return;
   }
   if (showCachedLevel(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
-  if (paintFromAnchors(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
+  // S7 (3362f20): a level switch painted a level made in code from the other anchor ("Shown for ... — no model call"), so
+  // no level ever got its own band. A level that has not been generated for this card is generated now, at its band.
   const need = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), c.anchors || {}, window.__peerOf);
   const out = window.KompasFlight && need && window.KompasFlight.pending(c, need.from);
   if (out) {                                                      // that anchor is already being written: wait for it, never a second call
@@ -3432,7 +3436,7 @@ function setAuto(on) {
 }
 $("autoBtn").onclick = () => {
   setAuto(!autoOn);
-  if (current) { current.autoMode = autoOn; current.autoAnswer = autoOn; saveSession(current); }
+  if (current) { current.autoMode = autoOn; current.autoAnswer = autoOn; current.autoUserOff = !autoOn; saveSession(current); }
   if ($("autoAnswer")) $("autoAnswer").checked = autoOn;
   status(autoOn ? "Auto on — answers once the speaker goes quiet after a question." : "Auto off — gathering everything said. Press AI Answer to turn it into one question and answer it.", "live");
   if (autoOn) scheduleAuto();
@@ -5571,6 +5575,7 @@ function paintFromAnchors(card) {
   if (card.anchorEpoch != null && card.liveEpoch != null && card.anchorEpoch !== card.liveEpoch) return false;
   if (personalLogistics(card.anchorQ || "") || personalLogistics(card.question || "")) return false;   // never a cached answer for personal logistics
   const level = askingLevel();
+  if (!window.KompasDiamond.ANCHORS.includes(level)) return false;   // Architect and the other derived levels are generated at their own band (S7)
   const plan = window.KompasDiamond.plan(level, card.anchors, window.__peerOf);
   if (!plan.ready) return false;
   const shown = sayAnswer(window.KompasLevels.textFor(card.anchors, level, window.__peerOf, liveConfig().mode));
@@ -5763,7 +5768,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const hit = bookMatch(question, depthKey);
     if (hit && answerFitsQuestion(question, hit.text)) { serveBook(card, hit, depthKey); return; }
   }
-  if (opts.regen && paintFromAnchors(card)) {                              // the two anchors already hold this level
+  if (opts.regen && false && paintFromAnchors(card)) {                     // a level switch is generated at its own band (S7), never derived
     if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
     status("Answered.", "live");
     return;
@@ -5821,7 +5826,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       return;
     }
     const planNow = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), card.anchors || {}, window.__peerOf);
-    if (planNow) writeAnchor = planNow.from;
+    if (planNow && planNow.level === askingLevel() && window.KompasDiamond.ANCHORS.includes(askingLevel())) writeAnchor = planNow.from;
   }
   if (!directDesktop && window.KompasJev && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
     if (answerCtl === ctl) answerCtl = null;
@@ -6044,7 +6049,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (window.KompasAnchors) window.KompasAnchors.save(card.anchorQ || qText, facts.role, facts.resume, card.anchors, current && current.id);
         const shown = sayAnswer(window.KompasLevels.textFor(card.anchors, askingLevel(), window.__peerOf, liveConfig().mode));
         const repaired = !!window.KompasCorrect && fixed !== window.KompasCorrect.correct(text);
-        if (shown && (askingLevel() !== writeAnchor || repaired)) {
+        if (shown && askingLevel() === writeAnchor && repaired) {          // never replace the generated level with one derived from another anchor (S7)
           card.answer = shown;
           if (card.byDepth && card.byDepth[depthKey]) card.byDepth[depthKey].answer = shown;
           if (cards[idx] === card) renderCard();
