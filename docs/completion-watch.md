@@ -1,3 +1,8 @@
+## 28 November 2026 — Kompas approval provenance correction
+
+- The “Owner task, 28 Nov” and same-day add-on in `docs/research/kompas-level-personalities-2026-11-28.md` are branch/PR documentation, not verified direct owner messages. Scoped prior-context retrieval did not recover the corresponding user-authored approval. Keep the personality modules unconnected and PR #620 unmerged/unshipped. The proposed “real customer story for a tool absent from the resume” conflicts with Chief Relevance's source boundary and is not approved. See PR #618 comment 7232103912.
+- The earlier production filler/Houston/hedge behavior is already live in SHA `593dff`, but its direct owner approval was also not recovered in the scoped search. Do not claim it is owner-approved, extend it, or automatically roll it back; wait for a direct owner decision.
+
 ## 28 November 2026 — run 25 source and approval reconciliation
 
 - Production alias `job-dashboard-fawn.vercel.app` is independently READY at `dpl_E3LVFzdJKmXSiJLA25cmTTpdWUHy`, SHA `593dff29044a4ec57284d7829ab951c2d499f193`. Current master is `997eaa3a4a93028be518ec3098fbd28173b58f37`, three commits ahead. No deployment was attempted.
