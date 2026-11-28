@@ -183,3 +183,123 @@ test("an account-A in-flight Gmail load cannot publish or snapshot after switchi
   assert.equal(observed.filter(data => data.mails.some(mail => mail.id === "B-thread")).length, 1)
   assert.deepEqual([...snapshots.keys()], ["mfit:gmail-snapshot:v2:B"])
 })
+
+
+function makeGmailRefreshHarness(getSession, seeded = []) {
+  const snapshots = new Map(seeded)
+  const localStorage = {
+    getItem: key => snapshots.get(key) ?? null,
+    setItem: (key, value) => snapshots.set(key, value),
+    removeItem: key => snapshots.delete(key),
+    key: index => [...snapshots.keys()][index] ?? null,
+    get length() { return snapshots.size },
+  }
+  const response = data => ({ ok: true, json: async () => data })
+  const fetch = async () => response({ connected: false, reason: "not_logged_in" })
+  const react = { useState: value => [value, () => {}], useEffect: () => {}, useCallback: fn => fn }
+  const mocks = {
+    react,
+    "@/lib/supabase/client": { createClient: () => ({ auth: { getSession } }) },
+  }
+  const module = { exports: {} }
+  const source = readFileSync(new URL("../../src/lib/use-gmail-data.ts", import.meta.url), "utf8") +
+    "\nexport { refreshGmailDataForCurrentAccount, resetGmailDataForAccountSwitch, listeners };"
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText
+  runInNewContext(compiled, {
+    module, exports: module.exports, process, console, Buffer, setTimeout, clearTimeout, setInterval, clearInterval,
+    fetch, localStorage, window: { addEventListener: () => {}, removeEventListener: () => {} },
+    document: { hidden: false, addEventListener: () => {}, removeEventListener: () => {} },
+    require: id => id in mocks ? mocks[id] : require(id),
+  })
+  return { ...module.exports, snapshots }
+}
+
+function gmailLocalSnapshot(user) {
+  return JSON.stringify({
+    mails: [{ id: user + "-local", account: user + "@example.test" }],
+    applications: [], interviews: [], steps: [], unfollowed: [], drafts: [], radar: [], issues: [], savedAt: 1,
+  })
+}
+
+function waitForSnapshot(listeners, id) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Timed out waiting for " + id + " local snapshot")), 3000)
+    listeners.add(data => {
+      if (data.mails.some(mail => mail.id === id)) {
+        clearTimeout(timeout)
+        resolve(data)
+      }
+    })
+  })
+}
+
+test("refresh never publishes account A's local snapshot after switching to B", async () => {
+  let currentUser = "A"
+  let releaseA
+  let delayA = true
+  const pendingA = new Promise(resolve => { releaseA = resolve })
+  const getSession = async () => {
+    if (currentUser === "A" && delayA) {
+      delayA = false
+      return pendingA
+    }
+    return { data: { session: currentUser ? { user: { id: currentUser } } : null } }
+  }
+  const harness = makeGmailRefreshHarness(getSession, [
+    ["mfit:gmail-snapshot:v2:A", gmailLocalSnapshot("A")],
+    ["mfit:gmail-snapshot:v2:B", gmailLocalSnapshot("B")],
+  ])
+  const observed = []
+  harness.listeners.add(data => observed.push(data))
+  const bSnapshot = waitForSnapshot(harness.listeners, "B-local")
+
+  harness.refreshGmailDataForCurrentAccount()
+  currentUser = "B"
+  harness.resetGmailDataForAccountSwitch()
+  harness.refreshGmailDataForCurrentAccount()
+  await bSnapshot
+
+  releaseA({ data: { session: { user: { id: "A" } } } })
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(observed.some(data => data.mails.some(mail => mail.id === "A-local")), false)
+  assert.equal(observed.some(data => data.mails.some(mail => mail.id === "B-local")), true)
+  assert.deepEqual([...harness.snapshots.keys()].sort(), [
+    "mfit:gmail-snapshot:v2:A", "mfit:gmail-snapshot:v2:B",
+  ])
+})
+
+test("refresh cannot republish a local snapshot after sign-out, and same-account restore remains available", async () => {
+  let currentUser = "A"
+  let releaseA
+  let delayA = true
+  const pendingA = new Promise(resolve => { releaseA = resolve })
+  const getSession = async () => {
+    if (currentUser === "A" && delayA) {
+      delayA = false
+      return pendingA
+    }
+    return { data: { session: currentUser ? { user: { id: currentUser } } : null } }
+  }
+  const harness = makeGmailRefreshHarness(getSession, [
+    ["mfit:gmail-snapshot:v2:A", gmailLocalSnapshot("A")],
+  ])
+  const observed = []
+  harness.listeners.add(data => observed.push(data))
+  harness.refreshGmailDataForCurrentAccount()
+  currentUser = null
+  harness.resetGmailDataForAccountSwitch()
+  releaseA({ data: { session: { user: { id: "A" } } } })
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(observed.some(data => data.mails.some(mail => mail.id === "A-local")), false)
+
+  let activeUser = "A"
+  const positive = makeGmailRefreshHarness(async () => ({
+    data: { session: { user: { id: activeUser } } },
+  }), [["mfit:gmail-snapshot:v2:A", gmailLocalSnapshot("A")]])
+  const sameAccountRestore = waitForSnapshot(positive.listeners, "A-local")
+  positive.refreshGmailDataForCurrentAccount()
+  await sameAccountRestore
+  assert.equal(positive.snapshots.has("mfit:gmail-snapshot:v2:A"), true)
+})
