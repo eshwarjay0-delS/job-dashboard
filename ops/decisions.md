@@ -4,6 +4,7 @@ Append-only. Do not edit or delete past rows. If a decision changes, add a new r
 
 | Date | Decision | Rejected alternatives | Why |
 | --- | --- | --- | --- |
+| 2026-11-27 | One Kompas brain, Markdown chunks. Feedback tab and mic only on category and role sessions. | Five separate stores as the answer source; a feedback mic on a live interview; appending BRAIN_POLICY as a coaching tail | Owner, 6:01 PM CT, then 6:05 PM CT. Live interviews stay clear of the mic. |
 | 2026-11-13 | Skip-login stays default-on. Never merge branch `fix/google-only-login-production-auth-20261113`. | Turning skip-login off; merging that Google-only production auth branch | Owner requires skip-login. Only the value `off-confirmed-by-eshwar` turns it off. That branch is not in force. |
 | 2026-11-12 | Stay on Vercel Hobby. Batch production deploys; only `[ship]` commits build. About 3 `[ship]` deploys a day. | A paid Vercel plan; unbatched master deploys; using repo `ignoreCommand` to filter branches | Hobby caps. `git.deploymentEnabled` already blocks non-master deploys. The `[ship]` Ignored Build Step keeps docs and chore commits on master from building. |
 | 2026-11-19 | Test with saved local video replay, not live YouTube. | Live YouTube as the default test path | Live runs were unreliable and burned sessions. The same local video, resume, job description, and 10 questions let builds compare fairly. |

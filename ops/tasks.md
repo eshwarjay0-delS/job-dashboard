@@ -4,6 +4,7 @@ Update only your own rows. Leave other accounts' rows untouched.
 
 | ID | Task | Owner account | Bot | Status | Updated |
 | --- | --- | --- | --- | --- | --- |
+| T7 | Living brain: one Markdown document, Brain page, feedback only on category and role sessions | This session | Living brain | In progress | 2026-11-28 12:20 AM CT |
 | T1 | Ship PR #467 Kompas answer quality at 8 AM CT Nov 20, then verify once | Account A (Chief) | Chief | Scheduled | 2026-11-19 11:27 PM CT |
 | T2 | Test the clarifier box thoroughly and land the code fixes | Account A (Chief) | Chief | In progress | 2026-11-19 11:27 PM CT |
 | T3 | Run the Parakeet comparison loop on the same local videos and 10 questions | Account A (Chief) | Brain | In progress | 2026-11-19 11:27 PM CT |

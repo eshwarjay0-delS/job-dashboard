@@ -105,8 +105,8 @@ const LS = {
 };
 
 /* ------------------------------- router ---------------------------------- */
-const VIEWS = ["login", "dashboard", "transcripts", "qbank", "feedback", "resume", "documents", "wizard", "copilot"];
-const SIDE_VIEWS = ["dashboard", "transcripts", "qbank", "feedback", "resume", "documents"];   // pages framed by the sidebar
+const VIEWS = ["login", "dashboard", "brain", "transcripts", "qbank", "feedback", "resume", "documents", "wizard", "copilot"];
+const SIDE_VIEWS = ["dashboard", "brain", "transcripts", "qbank", "feedback", "resume", "documents"];   // pages framed by the sidebar
 function show(name) {
   for (const v of VIEWS) $("view-" + v)?.classList.toggle("hidden", v !== name);
   $("sideNav")?.classList.toggle("hidden", !!window.kompasDesktop || !SIDE_VIEWS.includes(name));
@@ -333,6 +333,7 @@ function endSession(s) {
   if (x && sessionOpen(x) && !liveElsewhere(x)) {
     closeRun(x, Date.now(), "you"); LS.set("sessions", sessions);
     void syncMiniDossier(x);
+    if (window.KompasBrainPage) void window.KompasBrainPage.writeBack(x);
   }
   renderSessions();
 }
@@ -414,7 +415,7 @@ function saveWizardDraft() {
   if (!draft || !wizardOpen() || !$("company")) return;
   if (draft.editId) return;   // an edit writes the session on Save & continue, never the new-session draft cache
   LS.set(DRAFT_KEY, {
-    jobLink: $("jobLink")?.value || "", company: $("company").value, role: $("role").value, jd: $("jd").value,
+    jobLink: $("jobLink")?.value || "", company: $("company").value, role: $("role").value, category: ($("sessionCategory") && $("sessionCategory").value) || "", jd: $("jd").value,
     instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode, format: draft.format, star: draft.star,
     interviewer: $("interviewerSelect")?.value, difficulty: $("difficultySelect")?.value, dossierSize: $("dossierSize")?.value,
     autoAnswer: $("autoAnswer")?.checked, saveTranscript: $("saveTranscript")?.checked,
@@ -426,7 +427,7 @@ function applyWizardDraft() {
   const s = LS.get(DRAFT_KEY, null);
   if (!s || !(s.company || s.role || s.jd || s.jobLink || s.instructions || s.resumeId || (s.docIds || []).length)) return;
   if ($("jobLink")) $("jobLink").value = s.jobLink || "";
-  $("company").value = s.company || ""; $("role").value = s.role || ""; $("jd").value = s.jd || "";
+  $("company").value = s.company || ""; $("role").value = s.role || ""; if ($("sessionCategory")) $("sessionCategory").value = s.category || ""; $("jd").value = s.jd || "";
   if ($("instructions")) $("instructions").value = s.instructions || "";
   if (s.type) { draft.type = s.type; document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === s.type)); }
   if (s.length) { draft.length = s.length; segSet("lengthSeg", s.length); }
@@ -477,7 +478,7 @@ function openEditWizard(s) {
   draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
   step = 0;
   if ($("jobLink")) $("jobLink").value = stored.jobLink || "";
-  $("company").value = stored.company || ""; $("role").value = stored.role || ""; $("jd").value = stored.jd || "";
+  $("company").value = stored.company || ""; $("role").value = stored.role || ""; if ($("sessionCategory")) $("sessionCategory").value = stored.category || ""; $("jd").value = stored.jd || "";
   if ($("instructions")) $("instructions").value = stored.instructions || "";
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === draft.type));
   segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("formatSeg", draft.format || "script_bullets"); segSet("starSeg", draft.star ? "on" : "off"); segSet("modeSeg", stored.mode || "technical");
@@ -508,6 +509,7 @@ function finishEditWizard() {
   x.jobLink = $("jobLink").value.trim();
   x.company = $("company").value.trim();
   x.role = $("role").value.trim();
+  x.category = ($("sessionCategory") && $("sessionCategory").value || "").trim();
   x.jd = $("jd").value.trim();
   x.resume = resolveResumeText();
   x.documents = resolveDocumentsText();
@@ -559,6 +561,7 @@ function finishWizard() {
     id: "s" + Date.now() + "_" + Math.random().toString(36).slice(2, 10),
     createdAt: Date.now(),
     type: draft.type,
+    category: ($("sessionCategory") && $("sessionCategory").value || "").trim(),
     jobLink: $("jobLink").value.trim(),
     company: $("company").value.trim(),
     role: $("role").value.trim(),
@@ -699,6 +702,9 @@ function launchCopilot(s, opts = {}) {
   transcriptionEpoch++;
   transcriptionOrder = Promise.resolve();
   current = s;
+  window.__kompasLiveSession = s;
+  if (window.KompasBrainGate) window.KompasBrainGate.applyFeedbackVisibility(document, s);
+  if (window.KompasBrainPage) void window.KompasBrainPage.prefetch(s);
   if (s.resumeId) {                        // a session saved before the 12,000-character cut was lifted: take the full resume
     const d = docsGet().find(x => x.id === s.resumeId);
     if (d && d.text && d.text.length > (s.resume || "").length) { s.resume = d.text.slice(0, RESUME_MAX); saveSession(s); }
@@ -1329,7 +1335,8 @@ function renderCard() {
     if (qEl) qEl.textContent = c.screenBody;
   } else {
     if (qEl && qEl.classList) qEl.classList.remove("screen-full");
-    if (qEl) qEl.textContent = qLabel + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
+    const askTag = c.askSource && qLabel && !/^(?:Preparing|Ready|Deriving|Answering|No question|Cleared|Your introduction)/.test(qLabel) ? " [" + c.askSource + "]" : "";
+    if (qEl) qEl.textContent = qLabel + askTag + (c.askedAt || startedAt ? "  ·  " + formatElapsedShort(elapsedMs) : "");
   }
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const qBox = $("question").closest(".q"); if (qBox) qBox.scrollTop = 0;
@@ -1427,7 +1434,26 @@ function animateCard() { const card = $("card"); card.style.animation = "none"; 
 const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c = $("card"); if (c) c.classList.remove("q-away"); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
-function addCard(question, answer) { const c = { question, answer, qid: "q" + (cardSeq++), askedAt: Date.now() }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
+let typedAskLive = false;
+function askTagOf(channel) { return window.KompasQuestionSource ? KompasQuestionSource.questionAskTag(channel) : ""; }
+function inferAskTag(question) {
+  const q = String(question || "").replace(/\s+/g, " ").trim().toLowerCase();
+  if (!q || /^(?:preparing|ready|deriving|answering|no question|cleared|your introduction)/.test(q)) return "";
+  const lines = (typeof transcript !== "undefined" && transcript) ? transcript : [];
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const text = String(lines[i] && lines[i].text || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (!text) continue;
+    const bite = text.slice(0, 32);
+    if (bite && (q.includes(bite) || text.includes(q.slice(0, 32)))) return askTagOf(lines[i].source) || (lines[i].who === "You" ? "mic" : "computer-audio");
+  }
+  return "";
+}
+function addCard(question, answer, askSource) {
+  const tag = askTagOf(askSource) || (typedAskLive ? "typed" : "") || inferAskTag(question);
+  const c = { question, answer, qid: "q" + (cardSeq++), askedAt: Date.now() };
+  if (tag) c.askSource = tag;
+  cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c;
+}
 // A page holds a finished answer: not streaming, and more than the "…" placeholder.
 function hasAnswer(c) { const t = (typeof c.answer === "string" ? c.answer : (c.answer || []).join("\n")).trim(); return !c.streaming && t.length > 8 && !/^[.…\s]+$/.test(t); }
 // Takes an empty page out of the book. The only page stays (the live view always shows one); returns whether it went.
@@ -2977,7 +3003,7 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(opt.forceYou ? "You" : who, clean, false, opt.spokenAt); }
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(opt.forceYou ? "You" : who, clean, false, opt.spokenAt, (opt.forceYou || who === "You") ? "mic" : "computer-audio"); }
     else if (running) showCaption(who, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
@@ -4555,7 +4581,7 @@ function onCaptionText(text) {
     lastCaption = r.next;
     if (!r.part) return;
     if (!captionAnnounced) { captionAnnounced = true; status("Caption capture connected — captions flow into the question box.", "live"); }
-    onTranscript("Them", r.part, false, Date.now());
+    onTranscript("Them", r.part, false, Date.now(), "captions");
   } catch {}
 }
 function dedupeCaptionTokens(text) {
@@ -4571,11 +4597,12 @@ function dedupeCaptionTokens(text) {
   }
   return out.join("").replace(/[,\s]{2,}/g, (gap) => gap.includes("\n") ? gap : (gap.includes(",") ? ", " : " ")).replace(/,\s*(?=,|$)/g, "").replace(/\s{2,}/g, " ").trim();
 }
-function onTranscript(who, text, lookedAgain, spokenAt) {
+function onTranscript(who, text, lookedAgain, spokenAt, channel) {
   text = dedupeCaptionTokens(applySttCorrections(fixTerms(fixPhrases(text))));
   const fromMic = who === "You";
+  const lineSource = askTagOf(channel) || (fromMic ? "mic" : "computer-audio");
   const pieces = lookedAgain ? [text] : splitUtterances(text);
-  if (pieces.length > 1) { for (const piece of pieces) onTranscript(fromMic ? "You" : who, piece, true, spokenAt); return; }
+  if (pieces.length > 1) { for (const piece of pieces) onTranscript(fromMic ? "You" : who, piece, true, spokenAt, lineSource); return; }
   who = fromMic ? "You" : utteranceWho(text);
   lastTabRole = who;
   if (who === "Them" && isRealInterviewerQuestion(text)) { interviewerAskText = text; interviewerAskEndedAt = Date.now(); }
@@ -4586,7 +4613,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   else if (who === "You" && captures.some(c => c.who === "Them")) {
     if (micBleed(text, Date.now(), themLines, spokenAt)) { logDecision("drop-mic-bleed", who, text); logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
     if (echoOfThem(text) >= 0.5) { logDecision("drop-mic-echo", who, text); logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
-    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true, spokenAt); }, 2000); return; }   // their words may still be on the way: look again
+    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true, spokenAt, lineSource); }, 2000); return; }   // their words may still be on the way: look again
   }
   if (who === "Them" && soundsLikeCandidate(text)) who = "You";
   logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
@@ -4596,10 +4623,10 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   if (!stitched.part) return;
   text = stitched.part;
   const heardAt = Date.now();
-  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text), source: who === "You" ? "mic" : "computer" });
+  transcript.push({ who, text, at: heardAt, seq: ++heardSeq, tag: utteranceTag(text), source: lineSource });
   if (who === "Them" && cards[idx]) {
     const nextLabel = labelFromHeard(cards[idx].question, text);
-    if (nextLabel && nextLabel !== cards[idx].question) { cards[idx].question = nextLabel; cards[idx].askedAt = cards[idx].askedAt || Date.now(); if (!cards[idx].streaming) renderCard(); }
+    if (nextLabel && nextLabel !== cards[idx].question) { cards[idx].question = nextLabel; cards[idx].askSource = lineSource; cards[idx].askedAt = cards[idx].askedAt || Date.now(); if (!cards[idx].streaming) renderCard(); }
   }
   try { if (window.KompasAnswerAside && typeof window.KompasAnswerAside.hear === "function") window.KompasAnswerAside.hear(who, text, who === "You" ? "mic" : "computer"); } catch (e) {}
   if (!answerCtl) {
@@ -5356,7 +5383,7 @@ function serveBook(card, hit, depthKey) {
   card.answer = hit.text; card.streaming = false; card.meta = "cached";
   card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta };
   if (cards[idx] === card) renderCard();
-  logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
+  logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey, askSource: card.askSource || "" });
   status("Answered.", "live");
   if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   if (window.KompasDiamond) {
@@ -5467,7 +5494,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   if (card === follow.card) { follow.pos = 0; follow.livePos = 0; }
   const t0 = performance.now(); let first = 0, text = "", meta = {};
   const depthLabel = () => { const o = $("liveInterviewer").selectedOptions[0]; return o ? o.textContent : ""; };
-  const logAnswer = (extra) => logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n"), meta: card.meta || "", original: card.original || undefined, ...extra });
+  const logAnswer = (extra) => logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n"), meta: card.meta || "", original: card.original || undefined, askSource: card.askSource || "", ...extra });
   const consolidated = !!opts.consolidated;
   const epoch = ++answerEpoch;
   const directDesktop = desktopResponses(); let responseKey = "";
@@ -5662,6 +5689,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       else if (ev.type === "wait") { if (card.req === ctl) status(ev.ms ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.round(ev.ms / 1000)) + "s.") : "Still working.", "live"); }
       else if (ev.type === "done") {
         meta = { ...meta, ...ev };
+        if (ev.brainTrace && window.KompasBrainPage) window.KompasBrainPage.paintTrace(card, ev.brainTrace);
         if (applied.kind === "done-card" && applied.card) paintLayout(applied.card);
       }
       return "";
@@ -5675,6 +5703,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
+      if (data.brainTrace && window.KompasBrainPage) window.KompasBrainPage.paintTrace(card, data.brainTrace);
       if (data.derived && (consolidated || opts.pinned) && !opts.derived) { if (paintTitle(data.derived, true)) { /* book served */ } }
       if (data.title) paintTitle(data.title, false);
       if (data.card) paintLayout({ title: data.card.title || data.title || "", script: data.card.script || "", bullets: data.card.bullets || [], format: data.card.format || "script_bullets", partial: false });
@@ -6205,7 +6234,7 @@ async function aiAnswer(fromAuto, options = {}) {
       const completeCaption = String(field.dataset?.captionRaw || frozen).trim();
       field.value = "";
       if (field.dataset) field.dataset.captionRaw = "";
-      const page = addCard(frozen, ["…"]);
+      const page = addCard(frozen, ["…"], "captions");
       page.heard = "Them (Windows Live Captions): " + completeCaption;
       page.formed = page.heard;
       logEvent({ t: "line", who: "Them (Windows caption)", text: completeCaption });
@@ -6315,6 +6344,7 @@ async function aiAnswer(fromAuto, options = {}) {
       return;
     }
     if (pending.length || typedText) {
+      typedAskLive = !!typedText;
       const cur = cards[idx];
       const answerText = [cur, cards[idx - 1]].filter(Boolean).map(c => typeof c.answer === "string" ? plainAnswer(c.answer) : "").join(" ");
       // Re-press rule (owner, 21 Oct 2026): pressing AI Answer again after an
@@ -6536,7 +6566,7 @@ async function aiAnswer(fromAuto, options = {}) {
     setChat(true);
   } catch (error) {
     status(error.message || "Could not prepare an answer. Please retry.", "err");
-  } finally { aiBusy = false; pumpDetectedQueue(); }
+  } finally { typedAskLive = false; aiBusy = false; pumpDetectedQueue(); }
 }
 $("screenBtn").onclick = analyseScreen;
 if ($("screenAnalyzeBtn")) $("screenAnalyzeBtn").onclick = analyzeSharedTab;
@@ -7386,6 +7416,7 @@ const DossierDB = {
     if (!onlyLocal && cloudArchive) cloudArchive.queue(id);
   },
 };
+window.DossierDB = DossierDB;
 // Keep a synced copy of completed transcripts and paused-run cards. The
 // browser's IndexedDB remains the offline fallback; uploads retry after login
 // and never mix recordings between different verified MarketFit accounts.
