@@ -13,6 +13,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
+import { levelContract } from "./kompasLevelContract.ts"
 import { openingSentences, poolSentences, type PersonalityKind, type PersonalityLevel } from "./kompasLevelPersonalityCopy.ts"
 
 export { openingSentences, poolSentences }
@@ -108,9 +109,27 @@ export type PersonalityContract = {
   maxTokens: number
 }
 
+/** An interviewer who asks for a brief introduction keeps the shorter budget. */
+export function isBriefIntroduction(question: string): boolean {
+  const t = String(question || "")
+  return /\b(?:brief|briefly|30 seconds|one minute)\b/i.test(t) && /\b(?:introduc|about yourself|who you are)\b/i.test(t)
+}
+
 export function personalityContract(level: string, question: string): PersonalityContract {
   const name = asLevel(level)
-  return { level: name, kind: questionKind(question), ...BANDS[name] }
+  const kind = questionKind(question)
+  if (isBriefIntroduction(question)) {
+    const brief = levelContract(name, question)
+    return {
+      level: name,
+      kind,
+      min: Math.max(40, Math.round(brief.target * 0.55)),
+      max: brief.max,
+      target: brief.target,
+      maxTokens: brief.maxTokens,
+    }
+  }
+  return { level: name, kind, ...BANDS[name] }
 }
 
 export const BANNED_PHRASES = [
@@ -355,7 +374,7 @@ export function fallbackAnswer(level: string, question: string): string {
 export function composeLevelAnswer(level: string, question: string, draft = ""): string {
   const name = asLevel(level)
   const kind = questionKind(question)
-  const band = BANDS[name]
+  const band = personalityContract(level, question)
   const clean = sentencesOf(draft).filter((sentence) => !sentenceRejected(sentence, name))
   const draftText = clean.join(" ")
   const useDraft = clean.length > 0 && addressesQuestion(question, draftText)
