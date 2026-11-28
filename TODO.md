@@ -1,8 +1,26 @@
+## 2026-11-28 — Roles and Categories list every seeded subject
+
+The Roles page and the Categories page now show the full seeded catalog as ready cards (Start, End, Transcript, Edit setup) before anyone presses New. Starting a card creates the session. An in-progress session stays first. There are 26 roles and 26 categories, including SOC L1/L2/L3, the identity tools, PeopleSoft, Splunk, Sentinel, and the behavioral set. Stories stay on Citi Bank, CVS Health, the City of San Diego, Charter Communications, and Accenture. The Fortinet copy on ops/second-bot-packs was not imported. ops/chief-packs is not on origin. This is visible on the Roles and Categories pages.
+
+**Checked by scripts/tests/kompas-packs.test.mjs. Not a live click-through.**
+
+## 2026-11-28 — Role and Category scorecard S5
+
+The catalogue sentence "I handle cybersecurity operations for the bank..." is no longer appended. Refusal lines are removed and a short story is filled with a Citi or CVS case. Architect, director, and engineer prompts ask for 1000+, 400-600, and 700-800 words. Every pack prompt includes a playbook, and a SOC SQL injection or XSS question is detection, not a pentest. Repeated triage sentences drop. With no resume attached, the intro is Senior Cybersecurity Engineer with 9+ years at Citi Bank, CVS Health, the City of San Diego, Charter Communications, and Accenture. Server-side, so the page looks the same until an answer is generated. Ships on PR #630 with the one-card work.
+
+**Checked by scripts/tests/kompas-role-scorecard-s5.test.mjs. The word counts are the local band filler, not a live model. One version.json read follows the ship.**
+
 ## 2026-11-28 — Roles and Categories on the Kompas sidebar
 
 Interview now lists Roles and Categories under Sessions, on the desktop sidebar and the scrolling phone bar. New opens a subject, and the card matches Sessions: Start or Continue, End, Transcript, Edit setup. The live copilot is the same path, with the pack sent as extra grounding. Categories: IAM, SOC, Incident Response, Endpoint, Cloud Security (Azure), AppSec, Vulnerability Mgmt, GRC, Network Security, Leadership. Roles: Senior Cybersecurity Engineer, SOC Analyst, IAM Engineer, Security Architect, Cloud Security Engineer, Security Director. NotebookLM audio starts empty and is saved in Edit setup. After an answer, a note is stored for that pack and shown on the Feedback tab, which stays off for a regular live session. No auth change. This is visible UI.
 
 **Checked by scripts/tests/kompas-packs.test.mjs. Production version.json is commit 11bf120 (full 11bf120b81ef7b5a45da3db1bcca07c97dff59ac). Not a live listen.**
+
+## 2026-11-28 — One card per question, no quiet wait
+
+Live retest of f5b12b1: auto answers are back, but the next question rewrote an unanswered card (escalate became trending, SQLi became XSS). A finished question now opens its own card and starts generation immediately. The question text is locked. Candidate speech stays You and is kept out of the question. Trailing onboarding, ITSM, and budget sentences drop when the question did not ask for them. The silence warning clears when sound returns. An empty card is heard, not answered. Manual AI Answer fills the open card. Not shipped. No live video click-through.
+
+**Checked by scripts/tests/kompas-live-regression-20261128.test.mjs.**
 
 ## 2026-11-28 — Live auto-answer restored after 11bf120
 

@@ -86,49 +86,39 @@
   }
 
   if (typeof shouldAutoAnswer === "function") {
-    var origShould = shouldAutoAnswer;
     shouldAutoAnswer = function (opts) {
-      var pause = opts && Number(opts.themQuietMs);
-      var decision = gateDecision(opts && opts.text, false, {
-        pauseMs: Number.isFinite(pause) ? pause : quietMs(),
-        finalLine: Number.isFinite(pause) && pause >= Gate.FIRE_PAUSE_MS,
-      });
+      // A finished question starts now. The quiet clock is not a gate: the next
+      // question arrives while the previous answer is still generating.
+      var decision = gateDecision(opts && opts.text, false, { finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS });
       if (!decision.fire) return { fire: false, reason: decision.reason === "not-ended" ? "not-quiet" : decision.reason };
-      opts = Object.assign({}, opts, { text: decision.text });
-      return origShould(opts);
+      return { fire: true, reason: "ready" };
     };
   }
 
-  function cardBody(card) {
-    if (!card) return "";
-    return typeof card.answer === "string" ? card.answer : (Array.isArray(card.answer) ? card.answer.join(" ") : "");
-  }
-  function emptyAutoCard(card) {
-    var body = String(cardBody(card) || "").trim();
-    if (!body || /^[.…\s]+$/.test(body)) return true;
-    return false;
+  if (typeof labelFromHeard === "function") {
+    var origLabel = labelFromHeard;
+    labelFromHeard = function (cardQuestion, heard) {
+      var q = String(cardQuestion || "").trim();
+      if (q && !/^(?:Your introduction|Intro|Preparing…|Ready|No question yet|Deriving…)$/i.test(q)) return q;
+      return origLabel(cardQuestion, heard);
+    };
   }
 
   if (typeof confirmAutoAndAnswer === "function") {
-    var origConfirm = confirmAutoAndAnswer;
     confirmAutoAndAnswer = async function (tail) {
-      // finalLine: the caller already has a finished phrase. Silero sets the
-      // quiet clock back to 0 as soon as the next word in a video starts, so
-      // measuring themQuietNow() here dropped every auto answer (0 of 4).
-      var decision = gateDecision(tail, true, { finalLine: true, pauseMs: quietMs() });
+      var decision = gateDecision(tail, true, { finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS });
       if (!decision.fire) return;
-      var q = decision.text || tail;
-      try {
-        var card = (typeof cards !== "undefined" && cards.length) ? cards[idx] : null;
-        if (card && emptyAutoCard(card) && typeof generateAnswer === "function") {
-          card.question = Gate.stripSpeakerLabels(q);
-          card.answer = ["…"];
-          card.streaming = true;
-          if (typeof renderCard === "function") renderCard();
-          return generateAnswer(q, card, { pinned: true, derived: q, queued: true });
-        }
-      } catch (e) {}
-      return origConfirm(q);
+      var q = (typeof Gate.questionWithoutCandidate === "function" ? Gate.questionWithoutCandidate(decision.text || tail) : "") || Gate.stripSpeakerLabels(decision.text || tail);
+      if (!q) return;
+      if (typeof noteAsked === "function") noteAsked(q);
+      if (typeof showQueuedAnswer === "function") {
+        showQueuedAnswer(q);
+        try {
+          var opened = cards[cards.length - 1];
+          if (opened) opened.questionLocked = true;
+        } catch (e) {}
+        return;
+      }
     };
   }
 
@@ -140,12 +130,12 @@
         for (var i = transcript.length - 1; i >= 0; i--) {
           if (transcript[i] && transcript[i].who === "Them") { prevRow = transcript[i]; break; }
         }
-        if (prevRow && prevRow.text) {
+        if (prevRow && prevRow.text && Gate.attributeSpeaker({ text: text, previousRole: "Interviewer", source: "system" }) !== "You") {
           var joined = Gate.joinSplitQuestion([
             { role: "Interviewer", text: prevRow.text, source: "system" },
             { text: text, source: "system" },
           ]);
-          if (joined.length === 1 && joined[0].joined) text = joined[0].text;
+          if (joined.length === 1 && joined[0].joined && joined[0].role === "Interviewer") text = joined[0].text;
         }
       }
       var out = origOn.call(this, who, text, lookedAgain, spokenAt);
@@ -165,24 +155,43 @@
   if (typeof generateAnswer === "function") {
     var origGenerate = generateAnswer;
     generateAnswer = function (question, card, opts) {
-      var latest = Gate.latestQuestion(question) || question;
-      if (card && latest) card.question = Gate.stripSpeakerLabels(latest);
-      var next = Object.assign({}, opts || {}, { derived: latest });
-      return origGenerate(latest, card, next);
+      var locked = card && card.questionLocked && card.question;
+      var latest = locked ? card.question : (Gate.questionWithoutCandidate(Gate.latestQuestion(question) || question) || question);
+      if (card && !locked) {
+        card.question = Gate.stripSpeakerLabels(latest);
+        card.questionLocked = true;
+      }
+      var ask = locked || (card && card.question) || latest;
+      var next = Object.assign({}, opts || {}, { derived: ask, pinned: true });
+      return origGenerate(ask, card, next);
     };
   }
 
   if (typeof aiAnswer === "function") {
     var origAi = aiAnswer;
-    aiAnswer = async function () {
-      var result = await origAi.apply(this, arguments);
-      try {
-        if (typeof cards !== "undefined" && cards.length) {
-          idx = cards.length - 1;
-          if (typeof renderCard === "function") renderCard();
-        }
-      } catch (e) {}
-      return result;
+    aiAnswer = async function (fromAuto) {
+      if (fromAuto) return origAi.apply(this, arguments);
+      var cur = (typeof cards !== "undefined" && cards.length) ? cards[idx] : null;
+      var origAdd = typeof addCard === "function" ? addCard : null;
+      if (origAdd && cur && typeof Gate.manualAnswerPlan === "function") {
+        addCard = function (question, answer) {
+          var plan = Gate.manualAnswerPlan(cards, cards.indexOf(cur), question);
+          var placeholder = /^(?:Deriving|Answering|Preparing|…|\.{3})/i.test(String(question || "").trim());
+          if (plan.reuse || placeholder) {
+            cur.answer = answer;
+            cur.streaming = true;
+            cur.questionLocked = true;
+            idx = cards.indexOf(cur);
+            if (typeof renderCard === "function") renderCard();
+            return cur;
+          }
+          var created = origAdd.apply(this, arguments);
+          if (created) created.questionLocked = true;
+          return created;
+        };
+      }
+      try { return await origAi.apply(this, arguments); }
+      finally { if (origAdd) addCard = origAdd; }
     };
   }
 

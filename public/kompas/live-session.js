@@ -243,7 +243,7 @@
     var t = correctSecurityAsr(stripSpeakerLabels(text));
     if (!t) return false;
     if (/\b(?:tell me|walk me|can you tell me|how (?:do|would|did) you|what (?:is|are) your|why (?:do|did|would) you|may i (?:know|note))\b/i.test(t)) return false;
-    if (/\b(?:i(?:'m| am| have| had| was| used| work| got| feel| can| will| would| don't| didn't)|i'd |i've |my |we have|ma'am|sir)\b/i.test(t)) return true;
+    if (/\b(?:i|i'm|i've|i'd|we|my|our)\b/i.test(t) || /\b(?:ma'am|sir)\b/i.test(t)) return true;
     if (/^(?:yes|yeah|okay|ok|sure|thank you|thanks)\b/i.test(t) && !ASK.test(t)) return true;
     return false;
   }
@@ -258,7 +258,7 @@
       return "You";
     }
     if (isCandidateNarrative(t)) return "You";
-    if (isQuestionShape(t) && !isSmallTalk(t)) return "Interviewer";
+    if (interviewerAsk(t)) return "Interviewer";
     if (prev === "Interviewer") return "You";
     if (prev === "You") return "You";
     return "Interviewer";
@@ -271,12 +271,62 @@
     return dangling(t) || contentWords(t).length < MIN_CONTENT;
   }
 
+  function interviewerAsk(text) {
+    var t = correctSecurityAsr(stripSpeakerLabels(text));
+    if (!t || isSmallTalk(t)) return false;
+    if (/^(?:which|who)\b/i.test(t)) return true;
+    return /(?:^|\b)(?:how (?:do|would|did|can|could) you|what (?:is|are|was|were|do|does)|why (?:do|did|would)|when (?:do|did) you|where (?:do|did) you|can you|could you|would you|tell me|walk me|describe\b|explain\b|define\b)\b/i.test(t);
+  }
+
   function continuesQuestion(text) {
     var t = correctSecurityAsr(stripSpeakerLabels(text));
     if (!t) return false;
-    if (isCandidateNarrative(t) && t.split(/\s+/).length > 14) return false;
+    if (isCandidateNarrative(t)) return false;
     if (ASK.test(t) && contentWords(t).length >= MIN_CONTENT && !dangling(t)) return false;
     return true;
+  }
+
+  function questionWithoutCandidate(text) {
+    var parts = sentences(text);
+    if (!parts.length) return correctSecurityAsr(stripSpeakerLabels(text));
+    var prev = "Interviewer";
+    var kept = [];
+    parts.forEach(function (part) {
+      var role = attributeSpeaker({ text: part, previousRole: prev, source: "system" });
+      prev = role;
+      if (role === "You" || isCandidateNarrative(part)) return;
+      kept.push(part);
+    });
+    return clean(kept.join(" "));
+  }
+
+  function nextQuestionCard(cards, question) {
+    var q = questionWithoutCandidate(question) || correctSecurityAsr(stripSpeakerLabels(question));
+    var list = (cards || []).map(function (card) {
+      return { question: card.question, answer: card.answer, locked: true };
+    });
+    list.push({ question: q, answer: "", locked: true, started: true });
+    return { cards: list, opened: q, reused: false };
+  }
+
+  function manualAnswerPlan(cards, index, question) {
+    var cur = cards && cards[index];
+    if (!cur) return { reuse: false, index: -1 };
+    var norm = function (s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); };
+    var a = norm(cur.question);
+    var b = norm(questionWithoutCandidate(question) || question);
+    if (!a || !b) return { reuse: false, index: index };
+    var head = function (s) { return s.slice(0, 32); };
+    if (a === b || a.indexOf(head(b)) === 0 || b.indexOf(head(a)) === 0) return { reuse: true, index: index };
+    return { reuse: false, index: index };
+  }
+
+  function answerIsReal(answer) {
+    var body = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
+    body = body.replace(/[…]/g, " ").replace(/\.{3,}/g, " ").replace(/\s+/g, " ").trim();
+    if (!body) return false;
+    if (/^(?:press start|answering|preparing|no question|deriving|the answer could not finish|press ai answer)\b/i.test(body)) return false;
+    return body.split(/\s+/).filter(Boolean).length >= 4;
   }
 
   function joinSplitQuestion(turns) {
@@ -313,8 +363,7 @@
     (opts.cards || []).forEach(function (card) {
       var answer = card && card.answer;
       var body = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
-      var shown = body.trim();
-      push(card && card.question, !!shown && shown !== "…" && !/Press Start — answers appear here/.test(shown) && shown.length > 8);
+      push(card && card.question, answerIsReal(answer));
     });
     (opts.turns || []).forEach(function (turn) {
       var role = attributeSpeaker({ text: turn && turn.text, source: turn && turn.source, previousRole: turn && turn.who === "You" ? "You" : "Interviewer" });
@@ -342,6 +391,10 @@
     isFollowUp: isFollowUp,
     shouldFire: shouldFire,
     liveAutoDecision: liveAutoDecision,
+    questionWithoutCandidate: questionWithoutCandidate,
+    nextQuestionCard: nextQuestionCard,
+    manualAnswerPlan: manualAnswerPlan,
+    answerIsReal: answerIsReal,
     latestQuestion: latestQuestion,
     attributeSpeaker: attributeSpeaker,
     joinSplitQuestion: joinSplitQuestion,

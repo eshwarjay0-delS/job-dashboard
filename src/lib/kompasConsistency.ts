@@ -180,7 +180,29 @@ export function resumeFitsQuestion(question: string, jd: string, answer: string)
   return OFF_PLATFORM.test(role) && !SECURITY_ROLE.test(role)
 }
 
-const UNRELATED_TAIL = /\b(?:ITBM|PPM|KYC|know your customer|fraud(?:ulent)?|anti-fraud|jayeshwar44)\b/i
+const UNRELATED_TAIL = /\b(?:ITBM|PPM|KYC|know your customer|fraud(?:ulent)?|anti-fraud|jayeshwar44|onboarding|itsm|budget)\b/i
+const TAIL_GENERIC = new Set("the and for with your you how what when where which dashboard dashboards security system systems team work using used that this from have has been were into about also just more most some over after before while because there their them then than each very really still make made like only other across through".split(" "))
+
+function tailTokens(text: string): string[] {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").split(/\s+/).filter((word) => word.length > 3 && !TAIL_GENERIC.has(word))
+}
+
+/** Drop trailing sentences that do not share the question's topic. */
+export function dropIrrelevantTail(question: string, answer: string): string {
+  const parts = String(answer || "").split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter(Boolean)
+  if (parts.length < 2) return String(answer || "").trim()
+  const asked = new Set(tailTokens(question))
+  let end = parts.length
+  while (end > 1) {
+    const sentence = parts[end - 1]
+    const tokens = tailTokens(sentence)
+    const extra = UNRELATED_TAIL.test(sentence) && !UNRELATED_TAIL.test(question)
+    const overlap = tokens.some((token) => asked.has(token) || [...asked].some((topic) => token.startsWith(topic.slice(0, 5)) || topic.startsWith(token.slice(0, 5))))
+    if (extra || !overlap) end -= 1
+    else break
+  }
+  return parts.slice(0, end).join(" ").trim()
+}
 
 /** Drop sentences that import an unrelated platform or another resume's work. If nothing on-topic remains, say so plainly. */
 export function dropOffTopicResume(question: string, jd: string, answer: string): string {
@@ -194,9 +216,10 @@ export function dropOffTopicResume(question: string, jd: string, answer: string)
   }).join(" ").trim()
   if (!withoutTail) return jdGapBridge(question, "", jd)
   const text = withoutTail
-  if (resumeFitsQuestion(question, jd, text)) return text
-  const kept = text.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !OFF_PLATFORM.test(sentence))
-  return kept.join(" ").trim() || jdGapBridge(question, "", jd)
+  const base = resumeFitsQuestion(question, jd, text)
+    ? text
+    : (text.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence && !OFF_PLATFORM.test(sentence)).join(" ").trim() || jdGapBridge(question, "", jd))
+  return dropIrrelevantTail(question, base)
 }
 
 export function levelAfterInterviewType(mode: string, currentLevel: string): string {
