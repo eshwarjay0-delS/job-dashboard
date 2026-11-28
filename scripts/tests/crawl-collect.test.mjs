@@ -78,3 +78,110 @@ test('portals run several at a time, the order turns with the offset, nothing st
   const failing = await crawlEach([adapters[1]], async () => { throw new Error('HTTP 503 from b.test') }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 1_000 })
   assert.equal(failing[0].error, 'HTTP 503 from b.test')
 })
+
+
+test('a non-cooperative timeout returns boundedly, quarantines the worker, and blocks same-portal overlap until settlement', async () => {
+  const { crawlEach } = await import('../../src/lib/crawl/collect.ts')
+  const slow = { portal: 'noncooperative-run32', firm: 'Slow' }
+  const next = { portal: 'after-quarantine-run32', firm: 'Next' }
+  let releaseSlow
+  let slowSignal
+  let nextStarts = 0
+  const startedAt = Date.now()
+  const first = await crawlEach([slow, next], (adapter, signal) => {
+    if (adapter.portal === slow.portal) {
+      slowSignal = signal
+      return new Promise(resolve => { releaseSlow = resolve })
+    }
+    nextStarts++
+    return Promise.resolve(adapter.portal)
+  }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 20, timeoutDrainMs: 30 })
+  assert.ok(Date.now() - startedAt < 500, 'a non-cooperative portal must not hold the whole run indefinitely')
+  assert.match(first[0].error, /timed out/)
+  assert.equal(slowSignal.aborted, true)
+  assert.equal(first[1].skipped, true, 'the worker that still has live work is quarantined, not reused')
+  assert.equal(nextStarts, 0, 'the quarantined worker must not start another portal')
+
+  const second = await crawlEach([slow, next], adapter => {
+    if (adapter.portal === slow.portal) throw new Error('same portal must remain blocked')
+    nextStarts++
+    return Promise.resolve(adapter.portal)
+  }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 100 })
+  assert.match(second[0].error, /still settling/)
+  assert.equal(second[1].value, next.portal)
+  assert.equal(nextStarts, 1, 'a different portal may use a healthy worker while the timed-out portal remains reserved')
+
+  releaseSlow('late completion')
+  await new Promise(resolve => setTimeout(resolve, 0))
+  const recovered = await crawlEach([slow], () => Promise.resolve('recovered'), {
+    concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 100,
+  })
+  assert.equal(recovered[0].value, 'recovered', 'the portal becomes eligible after the old work actually settles')
+})
+
+
+test('politeFetcher distinguishes local timeout, portal cancellation, and upstream abort', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    await assert.rejects(
+      politeFetcher(0, 5)('https://crawler.test/jobs', { accept: 'text/html' }),
+      error => error.message === 'Request to crawler.test timed out after 5 ms',
+    )
+
+    const portalController = new AbortController()
+    globalThis.fetch = async (_input, init = {}) => new Promise((_, reject) => {
+      const signal = init.signal
+      const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (signal.aborted) aborted()
+      else signal.addEventListener('abort', aborted, { once: true })
+    })
+    const pending = politeFetcher(0, 5000, portalController.signal)('https://crawler.test/jobs', { accept: 'text/html' })
+    portalController.abort()
+    await assert.rejects(
+      pending,
+      error => error.message === 'Request to crawler.test was cancelled by the portal time limit',
+    )
+    globalThis.fetch = async () => { throw new DOMException('The operation was aborted.', 'AbortError') }
+    await assert.rejects(
+      politeFetcher(0, 100)('https://crawler.test/jobs', { accept: 'text/html' }),
+      error => error.message === 'Request to crawler.test was aborted before the local timeout',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('a malformed adapter URL still advances the request pacing clock', async () => {
+  const { politeFetcher } = await import('../../src/lib/crawl/collect.ts')
+  const originalFetch = globalThis.fetch
+  const originalNow = Date.now
+  const originalSetTimeout = globalThis.setTimeout
+  const gapMs = 137
+  const waits = []
+  try {
+    Date.now = () => 1000
+    globalThis.setTimeout = (callback, ms, ...args) => {
+      if (ms === gapMs) {
+        waits.push(ms)
+        return originalSetTimeout(callback, 0, ...args)
+      }
+      return originalSetTimeout(callback, ms, ...args)
+    }
+    globalThis.fetch = async () => ({ ok: true, text: async () => 'ok' })
+    const get = politeFetcher(gapMs, 5000)
+    await assert.rejects(get('not a valid URL'), /Invalid URL/)
+    assert.equal(await get('https://crawler.test/jobs'), 'ok')
+    assert.deepEqual(waits, [gapMs], 'the malformed URL must still advance the pacing timestamp')
+  } finally {
+    globalThis.fetch = originalFetch
+    Date.now = originalNow
+    globalThis.setTimeout = originalSetTimeout
+  }
+})

@@ -64,3 +64,38 @@ A read-only SQL query against the active production Supabase project reconfirmed
 ## Documentation source CI
 
 The first docs/Plan & Vision source commit `4c6458baa0cb1e693a64e12ebea4aeadf7e674e0` failed full CI because the run31 REA record was accidentally inserted as an `unshift()` statement inside the array. This was corrected in `1d7a24f241a7613bba293338cae28809160ccd20`; the exact correction commit's Plan/REA schema run `46149931539` succeeded. Full CI `46149931520` and Kompas baseline `46149931485` were still running when checked; the production alias remains on the prior verified runtime SHA `3400742ba97d2cbc68e2df3e1795ce5c76d9a147`. Do not ship the admin evidence source until full CI is terminal and a proper protected preview/release gate is satisfied.
+
+
+## Run32 — bounded non-cooperative timeout quarantine (28 Nov 2026)
+
+PR #649 is a clean draft on current master `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`, branch `fix/crawler-bounded-noncooperative-timeout-run32-20261128`. Code commit `ecd0879b86f4238292e19217f6f2afd48694eb9b`:
+
+- abort-aware pacing/fetch timeout and cleanup;
+- signals passed through crawl runner to fetch/upsert/stale-retirement, with checks before storage;
+- timeout abort plus a bounded 1-second drain; if work remains live, its worker is quarantined and the portal stays reserved until settlement, preventing same-portal overlap in later runs; other healthy workers can proceed;
+- synthetic regressions for bounded non-cooperative timeout, worker quarantine, cross-run same-portal exclusion, recovery after settlement, and signal forwarding; registered in build preflight.
+
+Remote CI is the next gate. No local tests/build were run because the scheduled runtime lacks the checkout, dependencies and installed Next.js 16.3.8 docs. No portal request, crawl, production DB write, protected preview or deployment occurred. Manual/on-demand only; pacing, request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded are unchanged. This PR is not merged or live.
+
+
+## Run32 CI correction follow-up — 28 Nov 2026 15:08 UTC
+
+PR #649 exact head before correction `3cb2bf37cc92f975155bbfe6bf61d28f8111450` passed crawler freshness (8 collector tests, 25 portal-registry tests), Kompas baseline, confirmed-skill resume and Plan/REA. Full CI `46152439807` failed at `scripts/tests/kompas-deploy-build.test.mjs:12` because the test pinned the old prebuild string and PR #649 intentionally added the two crawler test suites. The run reported 62/63 tests.
+
+Reviewable test correction commit `2f1e6d251ed082da60c259494339cf6445ca3708` replaces the brittle string equality with checks that the Kompas baseline runs first, all prior required suites remain, both crawler tests are included, and ordering is retained. Build/Webpack assertions are unchanged. Exact-final-head remote CI is pending. No local tests/build (no checkout and GitHub DNS unavailable), no crawl/portal request/DB write/preview/deployment.
+
+
+## Run32 lock-scope review — 28 Nov 2026 15:18 UTC
+
+Static review of PR #649 found `pendingPortalWork` is a module-level Map; it only reserves a portal within a warm process. It cannot guarantee no overlap across Vercel serverless instances or cold starts. The repeated-call regression is same-process. Review comment 7241370206 records this. Before crawl acceptance, require durable single-run/portal lease with expiry/fencing/cleanup or a storage-level runner guard and cross-worker tests. No crawl, portal request, DB write, preview or deployment.
+
+
+## Run32 cross-instance crawler lease follow-up — 28 November 2026
+
+Review of PR #649 found a second-instance gap: `pendingPortalWork` is process-local, so a concurrent or cold-start Vercel function cannot see a quarantined portal from another instance (review comments 7241370206 and 7242164409). The local Map remains useful within one process but is not the cross-instance safety boundary.
+
+The draft branch now adds a service-role-only PostgreSQL global crawler lease in `supabase/migrations/20261128194000_mfit_crawl_run_lease.sql`. Acquisition is atomic and token-bound; a second invocation fails closed and the two manual route handlers map the conflict to HTTP 409. A fully drained run releases its own token. A run that reports quarantined non-cooperative work deliberately retains the global lease until its 15-minute expiry, longer than the routes' 300-second maximum duration. This trades up to 15 minutes of crawler availability for avoiding another instance starting while the previous serverless invocation may still be alive. It serializes the whole crawler, not only the timed-out portal.
+
+Regression additions cover busy-lock rejection before any run row/portal work, RPC failure, token-bound release, lease retention on quarantine, service-only grants, expiry versus maximum route duration and HTTP 409 mapping. Existing timeout, worker-quarantine and signal-forwarding tests remain.
+
+This is source implementation only. The migration has not been applied, exact-head remote CI is pending, and the protected preview credential remains unavailable. No local test/build, crawl, portal request, production database mutation, preview, deployment or application submission occurred. Preserve manual/on-demand only, 600 ms pacing, 25-second request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded. Next: exact-head CI, independent review, legitimate protected preview, controlled migration application, production READY+alias, then a separate authorized lock-only smoke. No live crawl without separate authorization.

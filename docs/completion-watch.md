@@ -1,3 +1,27 @@
+## 28 November 2026 19:35 UTC — Run32 cross-instance crawler lease follow-up
+
+**Continue:** Close the cross-instance gap in the approved manual crawler timeout fix without allowing duplicate portal work.
+
+- PR #649 review found that `pendingPortalWork` is a process-local Map; it cannot coordinate cold starts or simultaneous Vercel instances. The earlier one-process test did not prove production-wide exclusion.
+- Added a service-role-only PostgreSQL global run lease. It is acquired before creating the run row or starting a portal. A second invocation fails closed and both manual routes return HTTP 409. Fully drained runs release only with their own random token. If a portal is quarantined after the bounded 1-second drain, the global lease is retained until its 15-minute expiry, longer than either route's 300-second maximum. This deliberately blocks all portal runs while an orphan may still be alive.
+- Added regression coverage for busy-lock rejection, RPC failure, token-bound release, quarantined lease retention, service-only grants, expiry/max-duration relationship and HTTP 409 handling. Existing non-cooperative timeout and abort-propagation coverage remains.
+- Migration `supabase/migrations/20261128194000_mfit_crawl_run_lease.sql` is source only; it has **not** been applied to production. The branch remains draft. Exact-head CI is pending; local checkout/dependencies are still unavailable.
+- No crawl, portal request, production DB mutation, preview, deployment or application submission occurred. Manual/on-demand only; 600 ms pacing, 25 s request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded.
+
+**Release gates:** exact-head full CI + crawler freshness/classification + manual-only + Kompas baseline + Plan/REA; independent review; legitimate protected preview; controlled application of the service-only lease migration; production READY exact SHA + alias. Do not run a manual crawl until separately authorized.
+
+## 28 November 2026 13:57 UTC — Run32 crawler timeout quarantine (draft PR #649)
+
+**Continue:** Fix the approved manual crawler's non-cooperative timeout without releasing a worker that still has live work.
+
+- Clean branch `fix/crawler-bounded-noncooperative-timeout-run32-20261128` was created from current master `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`; draft PR #649 is reviewable at https://github.com/eshwarjay0-delS/job-dashboard/pull/649.
+- Source commit `ecd0879b86f4238292e19217f6f2afd48694eb9b` adds abort-aware pacing/fetch timeout, signal propagation to fetch and Supabase writes, and a bounded 1-second drain after a portal timeout. If work remains alive, its worker is quarantined and that portal's promise remains reserved until it settles; subsequent runs skip that portal to avoid overlap. Other healthy workers continue.
+- The non-cooperative regression checks bounded return, worker quarantine, same-portal skip across runs, recovery after settlement, and abort-signal forwarding. Additional collector regressions now distinguish request timeout, portal cancellation, upstream abort and malformed-URL pacing cleanup. The tests are registered in build preflight.
+- PR #648 is not copied/merged; its timeout branch remains stale. This is a clean current-master restack.
+- **No local test/build ran:** this runtime has no canonical checkout, dependencies, or installed Next.js 16.3.8 docs. GitHub CI is the validation gate and is pending. No crawl, portal request, DB write, protected preview, deployment, or application submission occurred.
+- Manual/on-demand only remains: 600 ms pacing, 25 s request timeout, clearance/freshness/scan bounds; Robert Half manual-only and eTeam excluded. No schedule changes.
+
+**Release state:** source/test changes are in draft PR #649; not merged or deployed. Current production remains READY at `3400742ba97d2cbc68e2df3e1795ce5c76d9a147` on `job-dashboard-fawn.vercel.app`. Next: exact-head CI, review, protected preview and production READY+alias only after all gates; then separately authorize a manual crawl.
 ## 28 November 2026 13:35 UTC — run31 source-data validation correction
 
 - The first Plan/REA source update `4c6458baa0cb1e693a64e12ebea4aeadf7e674e0` failed full CI `46149755499`: a run31 REA record was inserted as an `unshift()` statement inside the array, causing a parser error at `src/lib/rea-register.ts:10:3959`. It was corrected in commit `1d7a24f241a7613bba293338cae28809160ccd20`; exact-head Plan/REA schema run `46149931539` is SUCCESS.
@@ -1278,3 +1302,19 @@ Continue: release the validated merged Gmail guard through the documented [ship]
 ### Run 30 Gmail release attempt correction
 
 The [ship] production build for merged Gmail PR #646 (deployment dpl_HbCneuBY2BdLdfPyoNEDStbbyghw) failed TypeScript at src/lib/plan-vision-journal.ts:648 because delivery="deploying" is outside the allowed enum. This is a documentation-schema error, not a Gmail source/test failure. The release entry is being corrected to the allowed "in progress" value; quality gates remain unchanged. Live alias is still the previous READY SHA fefaaf1. A single corrected [ship] commit will retrigger the normal production gate.
+
+
+## 28 November 2026 15:08 UTC — Run32 prebuild-test correction
+
+- PR #649 exact pre-correction head `3cb2bf37cc92f975155bbfe6bf61d28f8111450`: crawler freshness (8 collector tests and 25 portal-registry tests), Kompas baseline, confirmed-skill resume and Plan/REA checks all SUCCESS.
+- Full CI `46152439807` failed at `scripts/tests/kompas-deploy-build.test.mjs:12`. The assertion hard-coded the prior `package.json` prebuild string. PR #649 adds two crawler regression suites to prebuild, so the assertion failed even though the crawler tests themselves passed; full CI reported 62/63 tests.
+- **Reviewable correction:** commit `2f1e6d251ed082da60c259494339cf6445ca3708` changes the deploy-build test to require the Kompas baseline first, retain all original suites, include both crawler suites and enforce their order rather than pinning the full prebuild string. The build command and Webpack assertions remain unchanged.
+- Remote full CI is triggered by the correction; final-head status still must be checked. No local test/build was run because the runtime has no checkout and outbound GitHub DNS is unavailable. No crawl, portal request, DB write, preview or deployment occurred.
+- **Next:** require exact-final-head full CI success, review, protected preview and release gates. Keep PR draft; manual crawl still requires a separate authorized admin action.
+
+
+## 28 November 2026 15:18 UTC — Run32 lock-scope review
+
+Static source review of PR #649 found a safety boundary: `pendingPortalWork` is a module-level `Map`, so it protects only a warm process. It cannot prevent the same portal from being started by a different serverless instance or cold start. The repeated-call regression is same-process and does not test distributed overlap. Review comment 7241370206 records the finding.
+
+**Release blocker:** before a crawl, use a durable single-run/portal lease with expiry/fencing and cleanup, or otherwise guarantee one runner at the storage layer; do not describe the current map as a cross-instance lock. Keep manual/on-demand policy. No crawl, portal request, DB write, preview or deployment.
