@@ -27,7 +27,9 @@ test('runner forwards the portal signal to fetch and storage operations', async 
     abortSignal(signal) { log.push(signal); return this },
     then(resolve, reject) { return Promise.resolve({ error: null }).then(resolve, reject) },
   })
+  const rpcCalls = []
   const service = {
+    async rpc(name, args) { rpcCalls.push({ name, args }); return { data: true, error: null } },
     from(table) {
       if (table === 'mfit_crawl_runs') {
         return {
@@ -71,6 +73,87 @@ test('runner forwards the portal signal to fetch and storage operations', async 
   assert.ok(fetchSignals[0] instanceof AbortSignal, 'fetch receives a request-level signal')
   assert.ok(upsertSignals[0] instanceof AbortSignal, 'write queries receive the portal signal')
   assert.notEqual(fetchSignals[0], upsertSignals[0], 'fetch wraps the portal signal so its own request timeout remains available')
+  assert.deepEqual(rpcCalls.map(call => call.name), ['acquire_mfit_crawl_run_lease', 'release_mfit_crawl_run_lease'])
+  assert.equal(rpcCalls[0].args.p_lease_token, rpcCalls[1].args.p_lease_token, 'only the acquiring invocation can release its lease')
   const runnerSource = readFileSync(resolve(root, 'src/lib/crawl/runner.ts'), 'utf8')
   assert.match(runnerSource, /politeFetcher\(adapter\.gapMs \?\? 600,\s*25_000,\s*signal\)/, 'runner forwards the portal signal into the fetcher')
+})
+
+
+function leaseRunner({ acquired = true, acquireError = null, quarantined = false } = {}) {
+  const calls = []
+  let fromCalls = 0
+  let crawlCalls = 0
+  const adapter = { portal: 'synthetic-lease', firm: 'Synthetic' }
+  const service = {
+    async rpc(name, args) {
+      calls.push({ name, args })
+      if (name === 'acquire_mfit_crawl_run_lease') return { data: acquired, error: acquireError }
+      if (name === 'release_mfit_crawl_run_lease') return { data: true, error: null }
+      throw new Error('unexpected RPC')
+    },
+    from(table) {
+      fromCalls++
+      assert.equal(table, 'mfit_crawl_runs')
+      return {
+        insert() { return { select() { return { single: async () => ({ data: { id: 'lease-run' }, error: null }) } } } },
+        update() { return { eq() { return { then(resolve, reject) { return Promise.resolve({ error: null }).then(resolve, reject) } } } } },
+      }
+    },
+  }
+  const collect = {
+    collectJobs: async () => [],
+    politeFetcher: () => async () => '',
+    async crawlEach(adapters) {
+      crawlCalls++
+      return adapters.map(item => quarantined
+        ? { adapter: item, error: 'timed out', quarantined: true }
+        : { adapter: item, value: { portal: item.portal, firm: item.firm, found: 0, upserted: 0 } })
+    },
+  }
+  const mod = loadTS('src/lib/crawl/runner.ts', {
+    '@/lib/supabase/service': { createServiceClient: () => service },
+    './adapters': { ADAPTERS: [adapter] },
+    './classify': { classifyWorkType: () => 'contract', normalizeDate: () => null },
+    './collect': collect,
+    './text': { scrubContacts: value => value },
+  })
+  return { ...mod, calls, get fromCalls() { return fromCalls }, get crawlCalls() { return crawlCalls } }
+}
+
+test('a second serverless invocation fails closed while the global crawler lease is held', async () => {
+  const runner = leaseRunner({ acquired: false })
+  await assert.rejects(runner.runCrawl(), error => error?.name === 'CrawlAlreadyRunningError')
+  assert.equal(runner.fromCalls, 0, 'a rejected lease must not create a run row')
+  assert.equal(runner.crawlCalls, 0, 'a rejected lease must not start any portal')
+  assert.deepEqual(runner.calls.map(call => call.name), ['acquire_mfit_crawl_run_lease'])
+})
+
+test('a quarantined non-cooperative portal keeps the cross-instance lease until expiry', async () => {
+  const runner = leaseRunner({ quarantined: true })
+  const results = await runner.runCrawl()
+  assert.match(results[0].error, /timed out/)
+  assert.deepEqual(runner.calls.map(call => call.name), ['acquire_mfit_crawl_run_lease'])
+  assert.equal(runner.fromCalls, 2, 'the run is recorded but its lease is intentionally retained')
+})
+
+test('a lease RPC failure prevents the crawler from starting', async () => {
+  const runner = leaseRunner({ acquireError: { message: 'RPC unavailable' } })
+  await assert.rejects(runner.runCrawl(), /Unable to acquire the contract crawler lease/)
+  assert.equal(runner.fromCalls, 0)
+  assert.equal(runner.crawlCalls, 0)
+})
+
+test('the cross-instance lease migration is service-only and outlives the maximum route duration', () => {
+  const migration = readFileSync(resolve(root, 'supabase/migrations/20261128194000_mfit_crawl_run_lease.sql'), 'utf8')
+  assert.match(migration, /enable row level security/i)
+  assert.match(migration, /revoke all on public\.mfit_crawl_run_leases from public, anon, authenticated, service_role/i)
+  assert.match(migration, /interval '15 minutes'/i)
+  assert.match(migration, /grant execute on function public\.acquire_mfit_crawl_run_lease\(uuid\) to service_role/i)
+  assert.match(migration, /grant execute on function public\.release_mfit_crawl_run_lease\(uuid\) to service_role/i)
+  const runRoute = readFileSync(resolve(root, 'src/app/api/crawl/run/route.ts'), 'utf8')
+  assert.match(runRoute, /export const maxDuration = 300/)
+  const jobsRoute = readFileSync(resolve(root, 'src/app/api/crawl/jobs/route.ts'), 'utf8')
+  assert.match(jobsRoute, /export const maxDuration = 60/)
+  assert.match(jobsRoute, /status: 409/)
 })
