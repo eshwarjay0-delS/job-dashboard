@@ -39,3 +39,32 @@ Read current canonical MFit master files (AGENTS.md, Plan & Vision journal, REA 
 4. Actual Windows/phone/WhatsApp acceptance and 50-pair model benchmark need owner-authorized data/device access.
 
 No code commit, deployment, real email/WhatsApp, model call, crawl, R2/DB/inbox mutation or owner-device action occurred.
+
+
+## Run 24 addendum — 28 November 2026 01:22 UTC
+
+### Production and current master
+- Production alias `job-dashboard-fawn.vercel.app`: READY deployment `dpl_E3LVFzdJKmXSiJLA25cmTTpdWUHy`, SHA `593dff29044a4ec57284d7829ab951c2d499f193`.
+- Canonical master: `dc4f82a2e21333152a5ad3cf7c0cb5e22e910421`. GitHub compare shows the live SHA is two commits behind master; the 6f3cdcb backlog commit is an ancestor of live.
+- The newer level-personality source at 35c1400 and live-session work at dc4f82a are not in production. No redeploy was attempted.
+
+### WhatsApp and 17 October incident
+- Current webhook blob `ce58e6f9fc5ae3c1eb4b390fc689731bbcf84d0f` contains `explicitlySelectedSameAccountLibraryResume` and `sendSelectedOriginal`; no `sendClosest` path was found.
+- The helper requires explicit selection, depth zero, a valid same-account email, root-bound absolute paths, the exact selected DOCX path, and a safe relative path. The resume acceptance blob `265c8ffe056f3d9331bda6981b30d0ac5acc3373` excludes `unverified_jd_terms` from shortfall delivery and rejects unverified additions.
+- This source is in the live lineage via 6f3cdcb -> 593dff. Uploaded DOCX fallback remains fail-closed. The 17 Oct 17:28 Chicago event is still unverified because exact input/output bytes, per-run R2 version, webhook correlation, Meta message ID, signed delivery/read receipt and source-fact reconciliation are not present. A Library search for DOCX files created between 2026-10-17 22:28Z and 2026-10-18 05:00Z returned no result; this is not proof that R2 has no object. No replay/send.
+
+### Resume/JD evidence
+- Current `resume-evidence.ts` blob `57a6dada57e122c28094ab5a8ffba8731773e249` splits team, colleague, client and organization clauses from candidate-authored clauses. The test blob `decddd07400ed2f001a57f7536a313899a058838` covers modifier-bearing team attribution, temporal connectors, and role-scoped deterministic placement of explicitly confirmed skills into relevant existing bullets.
+- The landed 6f3cdcb slice is in production. No real owner-authorized resume/JD/confirmation bundle or exported DOCX was run; 95% web floor and 98% target are not live acceptance claims.
+
+### Gmail/mobile and contracts
+- Four-account account-scoped digest/mobile changes and bounded clearance/match-any contract search are in the live lineage. Proactive Gmail workers, scheduler, notifications and automatic sending remain disabled. No Gmail OAuth or inbox was accessed.
+- PR #617 server-side location/remote filter exact head d3b4d899 has six SUCCESS gates but is stale/nonmergeable, with no protected preview/API smoke. Contract crawl remains manual-only; no portal was called.
+
+### Kompas review
+- PR #620 head 5cb2a46 full CI run 46092594973 fails the brief-mode word ceiling at `scripts/tests/kompas-grounding-route.test.mjs:202`. The new personality maximum overrides a smaller brief cap.
+- Its copy also narrates Saviynt/IAM and Microsoft Sentinel/SQL-injection customer incidents as the candidate's personal history, but the repository's Houston resume fixture only states Fortinet/AWS network work. Review comment 7231687148 records the blockers. No model key/live model sample was available, so deterministic fallback tables are not live-model acceptance.
+- PR #621 full CI 46092460893 failed TypeScript because the run-23 REA entry lacked required `commits`. The documentation branch now repairs that schema field and adds this run-24 entry; exact-head CI must be rerun.
+
+### Hard blockers and next action
+No canonical checkout, installed dependencies or installed Next.js 16.3.8 docs under `node_modules/next/dist/docs` are available. Therefore no local code edit/test/build was performed. Protected preview requires the private Vercel preview credential. Next approved code slice: isolate the two-line JD + named-resume parser on current master while preserving ordinary short two-line chat, then run role-match/WhatsApp/full CI. No send, replay, crawl, Gmail action, DB/R2 mutation or deployment occurred.
