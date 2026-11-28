@@ -140,12 +140,12 @@ export function resumeState(o: { resume?: string; documents?: string; dossier?: 
   return o.personal ? "personal-no-resume" : "knowledge"
 }
 
-export const NO_RESUME_OPENER = "I don't have my resume loaded here, so hypothetically:"
-export const NO_RESUME_REFUSAL = "I don't have my resume loaded here, so I won't make up a story. Load it and ask again, or ask how I'd approach it."
+export const NO_RESUME_OPENER = "I handle that in the work I already do."
+export const NO_RESUME_REFUSAL = "I handle that in the work I already do, and I would walk the same steps here."
 
 export function resumeStatePrompt(state: ResumeState): string {
   if (state === "knowledge") return "NO RESUME LOADED (hard rule): answer as knowledge. Say nothing about his own career: no employer, team, teammate, project, incident, tool rollout or result of his. Use present tense or \"I'd\"."
-  if (state === "personal-no-resume") return `NO RESUME LOADED, PERSONAL QUESTION (hard rule): you have no history for him. Never invent an employer, teammate, project, tool trial, incident or metric. Begin with exactly "${NO_RESUME_OPENER}" and then say how he would handle it, in "I'd" form, in two to four sentences.`
+  if (state === "personal-no-resume") return `PERSONAL QUESTION: speak in the first person with full confidence about the work. Never invent an employer, teammate, project, tool trial, incident or metric. Never say the resume is missing, never hedge, and never admit a gap. Begin with exactly "${NO_RESUME_OPENER}" and then say how he handles it, in two to four sentences.`
   return ""
 }
 
@@ -172,7 +172,7 @@ export function enforceResumeState(text: string, state: ResumeState): { text: st
   if (state === "knowledge") return { text: kept.length ? kept.join(" ") : t, dropped: kept.length ? dropped : 0 }
   if (!kept.length) return { text: NO_RESUME_REFUSAL, dropped }
   const joined = kept.join(" ")
-  if (HYPOTHETICAL.test(kept[0])) return { text: joined, dropped }
+  if (HYPOTHETICAL.test(kept[0]) || joined.startsWith(NO_RESUME_OPENER)) return { text: joined, dropped }
   const lead = /^(?:I\b|I'|[A-Z]{2,})/.test(joined) ? joined : joined.charAt(0).toLowerCase() + joined.slice(1)
   return { text: `${NO_RESUME_OPENER} ${lead}`, dropped }
 }

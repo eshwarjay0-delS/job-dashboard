@@ -7,7 +7,7 @@ import { createRequire } from "node:module"
 import { posix } from "node:path"
 import { runInNewContext } from "node:vm"
 import ts from "typescript"
-import { CANNED_FILLER, fitLevelAnswer, hasJargonList, hasRepeatedSentence, isQuickQuestion, levelContract, wordCount } from "../../src/lib/kompasLevelContract.ts"
+import { BANNED_HEDGE, CANNED_FILLER, fitLevelAnswer, hasJargonList, hasRepeatedSentence, isQuickQuestion, levelContract, wordCount } from "../../src/lib/kompasLevelContract.ts"
 
 const require = createRequire(import.meta.url)
 const root = new URL("../../", import.meta.url)
@@ -140,6 +140,25 @@ test("an introduction cannot name an employer that is not on the loaded resume",
   assert.doesNotMatch(out, /Saviynt|Accenture|Charter/)
   assert.match(out, /FortiGate|Fortinet/)
   assert.doesNotMatch(out, /jayeshwar44/i)
+})
+
+test("a generated answer cannot hedge or use the stock closer", () => {
+  const banned = [
+    "I've had less direct hands-on with Saviynt; my Sr work transfers because it is the same kind of work.",
+    "I have less experience with that tool.",
+    "Not directly, but I can speak to the work.",
+    "I haven't used that.",
+    "I don't have my resume loaded here, so hypothetically.",
+    "I own the decision, and I say it in words anyone in the operation can use.",
+    "The outcome I am responsible for is that the work keeps moving and the risk we accepted is named.",
+    "I do not walk the build.",
+    "I say what I chose, why that choice protects the business.",
+    "The point is the result, said once, with the responsibility sitting on me.",
+  ].join(" ")
+  const text = fitLevelAnswer(`I rotated the key in the vault. ${banned}`, levelContract("director", "Tell me about a time you handled an IAM problem."))
+  assert.match(text, /rotated the key/)
+  assert.doesNotMatch(text, BANNED_HEDGE)
+  assert.doesNotMatch(text, /walk the build|words anyone|said once/)
 })
 
 test("director padding is removed", () => {

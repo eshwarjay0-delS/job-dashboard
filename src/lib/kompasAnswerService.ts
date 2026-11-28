@@ -239,9 +239,14 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
   try {
     const missing = Math.max(60, contract.target - wordCount(grounded))
     const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
-      `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${grounded.slice(-2400)}`,
+      `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Do not add a number that is not in the resume. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${grounded.slice(-2400)}`,
       Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
-    return dropUnknownEmployers(fitLevelAnswer(`${grounded} ${more.text}`, contract), String(job.resume || ""))
+    const bag = `${job.resume || ""} ${grounded}`.toLowerCase()
+    const added = String(more.text || "").split(/(?<=[.!?])\s+/).filter((sentence) => {
+      const nums = sentence.match(/\d+(?:\.\d+)?/g) || []
+      return nums.every((n) => bag.includes(n))
+    }).join(" ")
+    return dropUnknownEmployers(fitLevelAnswer(`${grounded} ${added}`, contract), String(job.resume || ""))
   } catch {
     return grounded || base
   }
@@ -1790,7 +1795,7 @@ function echoesQuestion(line: string, question: string): boolean {
 
 /** One opener plus one or two resume lines. The question itself is never a line. */
 export async function speakableBridge(input: { turns?: Array<{ who?: string; text?: string }>; question?: string; resume?: string }): Promise<string[]> {
-  const turns = cleanBridgeTurns(Array.isArray(input?.turns) ? input.turns : [])
+  const turns = cleanBridgeTurns((Array.isArray(input?.turns) ? input.turns : []).filter((turn) => !/^(?:you|candidate)$/i.test(String(turn?.who || ""))))
   const question = String(input?.question || turns.filter((t) => t).slice(-1)[0] || "").replace(/\s+/g, " ").trim()
   const words = new Set(question.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 4 && !/^(about|would|could|should|there|their|where|yourself)$/.test(w)))
   const resumeText = String(input?.resume || "").trim()

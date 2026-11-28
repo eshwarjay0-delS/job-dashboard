@@ -1195,7 +1195,7 @@ function presentAnswer(question, answer, source) {
     seenLine.add(key);
     ordered.push(s);
   }
-  if (!ordered.length) return /I would want to confirm that/i.test(raw) ? "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work." : "";
+  if (!ordered.length) return "";
   if (intro) return ordered.join(" ");
   const q = String(asked || "");
   const band = (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /^(?:what is|what does|what's|define)\b/i.test(q))
@@ -4002,6 +4002,8 @@ function pumpDetectedQueue() {
   showQueuedAnswer(next);
 }
 async function confirmAutoAndAnswer(tail) {
+  const said = String(tail || "").replace(/\s+/g, " ").trim();
+  if (!said || transcript.some((row) => row && row.who === "You" && row.text === said) && !transcript.some((row) => row && row.who === "Them" && row.text === said)) return;
   if (isTabSmallTalk(tail) || isCandidateTabTurn(tail)) return;
   const local = isRealInterviewerQuestion(tail) || confirmAutoQuestion(tail).ok;
   if (!local) return;
@@ -4493,7 +4495,7 @@ function heardDraft(lines, screen, answerText) {
     if (!text || noise.test(text)) continue;
     if (/\b(?:i(?:'m| am) going to (?:take that one|start with the first one)|i(?:'m| am) a newbie)\b/i.test(text)) continue;
     if (/^(?:you\s+)?i\s+i\b/i.test(text)) continue;
-    if (interviewerOn && t.who === "You") continue;   // the candidate's mic is not the interviewer question
+    if (t.who === "You") continue;   // mic speech never becomes the question
     if (t.who === "You" && bag.size) {
       const words = text.toLowerCase().split(/[^a-z0-9+#]+/).filter(w => w.length >= 3);
       if (words.length && words.filter(w => bag.has(w)).length / words.length >= 0.5) continue;
@@ -5559,7 +5561,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const show = (t) => {
     if (card.qid !== qid || card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
     let spoken = sayAloud(t).trim();
-    if (/^I would want to confirm that\.?$/i.test(spoken)) spoken = "I've had less direct hands-on with that; my closest work transfers because it is the same kind of work.";
+    if (/^I would want to confirm that\.?$/i.test(spoken) || /less direct hands-on|transfers because|don't have my resume|haven't used/i.test(spoken)) spoken = "";
     if (!writeAnswer(card, qid, spoken ? spoken : ["…"])) return;
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
@@ -6231,7 +6233,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // — framing, setup and pausing fillers included — not from the last
     // eight lines. Older turns stay in the transcript and reach the answer
     // as earlier context; they are not re-formed into questions.
-    let pending = turnWindow(pendingHeard(), liveInterviewer(), t => t.who === liveInterviewer() && !soundsLikeCandidate(t.text) && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+    let pending = turnWindow(pendingHeard(), "Them", t => t.who === "Them" && !soundsLikeCandidate(t.text) && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
     // Answer anyway (slice 2): a press right after "Nothing question-like" or
@@ -6305,7 +6307,7 @@ async function aiAnswer(fromAuto, options = {}) {
           status("Waiting for the question to finish…", "live");
           await new Promise((r) => setTimeout(r, gate.waitMs || MANUAL_INCOMPLETE_WAIT_MS));
           try { await flushHeard(400); } catch {}
-          pending = turnWindow(pendingHeard(), liveInterviewer(), t => t.who === liveInterviewer() && !soundsLikeCandidate(t.text) && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+          pending = turnWindow(pendingHeard(), "Them", t => t.who === "Them" && !soundsLikeCandidate(t.text) && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
         }
       } catch {}
     }

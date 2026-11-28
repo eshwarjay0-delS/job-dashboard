@@ -179,8 +179,9 @@
     String(transcriptText() || "").split("\n").forEach(function (line) {
       var raw = line.trim();
       if (!raw) return;
-      var who = /^You:/i.test(raw) ? "You" : "Them";
-      var text = raw.replace(/^(?:Them|You):\s*/i, "").trim();
+      var you = /^(?:you|candidate)\s*(?:·|:|\()/i.test(raw);
+      var who = you ? "You" : "Them";
+      var text = raw.replace(/^(?:you|candidate|interviewer|them)\s*·\s*\d{1,2}:\d{2}\s*(?:AM|PM)\s*/i, "").replace(/^(?:you|candidate|interviewer|them)\s*:\s*/i, "").trim();
       if (text) turns.push({ who: who, text: text });
     });
     var q = questionText();
@@ -258,7 +259,8 @@
       if (typeof fetch !== "function") return;
       if (bridgeCtl) { try { bridgeCtl.abort(); } catch (e) {} }
       bridgeCtl = new AbortController();
-      var turns = globalThis.KompasBridgeLines && KompasBridgeLines.cleanTurns ? KompasBridgeLines.cleanTurns(currentTurns()) : [];
+      var interviewerTurns = currentTurns().filter(function (turn) { return turn && !/^(?:you|candidate)$/i.test(String(turn.who || "")); });
+      var turns = globalThis.KompasBridgeLines && KompasBridgeLines.cleanTurns ? KompasBridgeLines.cleanTurns(interviewerTurns) : [];
       fetch("/api/kompas/bridge", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -558,7 +560,7 @@
     var heard = String(transcript || "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
     var lastRaw = heard.length ? heard[heard.length - 1] : "";
     var last = lastRaw.replace(/^(?:Them|You):\s*/i, "");
-    if (/^You:/i.test(lastRaw) || chitChat(last) || chitChat(question)) return emptyAside(question);
+    if (/^(?:you|candidate)\s*(?:·|:|\()/i.test(lastRaw) || chitChat(last) || chitChat(question)) return emptyAside(question);
     var bag = (question + " " + last).toLowerCase();
     lines.sort(function (a, b) {
       var score = function (line) { return line.toLowerCase().split(/\s+/).filter(function (w) { return w.length > 4 && bag.indexOf(w) >= 0; }).length; };

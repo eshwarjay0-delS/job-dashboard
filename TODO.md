@@ -1,3 +1,9 @@
+## 2026-11-28 — Full confidence, no hedge, You never opens an answer
+
+Answers stay first person. The hands-on transfer stub and the stock Director closer are stripped. A tool that is not on the resume is answered from a real role line, without a gap sentence. A mic line tagged You does not start a card and does not fill Say this. The page stamp is kompas-20261128-hedge, so the desktop exe needs the master build.
+
+**Checked by the banned-hedge test in scripts/tests/kompas-level-contract.test.mjs. One production check follows the ship.**
+
 ## 2026-11-28 — Intro stays on the Houston resume; unknown employers are dropped
 
 Tell me about yourself no longer keeps a sentence that names Saviynt, Accenture, Charter, or any employer the loaded resume does not contain. An empty session uses the Houston eshwarjay05 summary. A jayeshwar44 resume is not mixed in. Director stock closers are stripped. Say this fills from that resume even when the question shares no words. Server only, so the installed exe does not need another build.

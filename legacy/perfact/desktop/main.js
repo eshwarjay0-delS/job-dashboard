@@ -208,7 +208,7 @@ function beginChromeSignIn({ interactive = false } = {}) {
 }
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
-const PAGE_BUILD = "kompas-20261127-fold";
+const PAGE_BUILD = "kompas-20261128-hedge";
 const appPathFor = () => (activeSite === "marketfit" ? "/kompas/index.html" : "/index.html") + "?v=" + PAGE_BUILD;
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
