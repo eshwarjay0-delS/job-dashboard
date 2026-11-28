@@ -41,3 +41,9 @@ Verify the missing exact-head Plan/REA and confirmed-skill gates and obtain legi
 - iZap lists one business with **no linked WhatsApp number**. Read-only connection status checked at `2026-11-28T11:38:11.321718Z`: disconnected/status_none; inbound webhook never; history backfill never; outbound delivery never proven. This is current status only, not evidence about 17 Oct.
 - PR #411 latest head `069707f9e7a48a698f80835bf6cf2a820ebe49b6` is documentation-only on stale base `17f8dada`, DRAFT/nonmergeable; no exact-head workflow/status. Prior four-gate green set was on predecessor `5b522ec` and is not reused.
 - No message was sent or replayed. Historical source/output DOCX, per-run R2 object/version, webhook/request correlation, Meta outbound ID, signed delivery/read receipt and owner fact reconciliation remain missing. Uploaded-original timeout fallback is unapproved; explicit same-account Files/Library original fallback remains permitted and must be labelled **Original resume — NOT TAILORED**.
+
+
+## Run 35 approval and incident-event correction
+
+- Supabase read-only event confirms the 17 Oct 17:28:27 CDT model-use event (score 87, 34 calls, 205,546 input tokens, 25,331 output tokens, $0.020949 estimated cost, source_event_key NULL). Zero `resume_documents` and `resume_import_jobs` rows were created in 22:20–22:40 UTC. This is not evidence of DOCX export/delivery and does not prove R2/Meta artifacts absent.
+- Correct approval boundary from PR #411 comments 6891669872/6891926333: the owner approved the **narrow offline closest-Library-resume failsafe** on 27 Oct, only with exact verified same-account original bytes, authenticated account/profile and source path, fail-closed behavior, and `Original resume — NOT TAILORED`. That does **not** approve uploaded-original timeout fallback, cross-account/partial fallback, swipe-refinement baseline delivery, real outbound testing or replay.
