@@ -5697,12 +5697,11 @@ async function generateAnswer(question, card, opts = {}) {
 function ensureFinishedAnswer(card) {
   if (!card) return;
   const q = String(card.question || "").trim();
-  if (!q || /^(Preparing…|Ready|No question yet|No question on screen|Your introduction)$/i.test(q)) return;
+  if (/^(Preparing…|Ready|No question yet|No question on screen|Your introduction)$/i.test(q)) return;
   if (/logistics/i.test(String(card.meta || ""))) return;
   const retry = "The answer could not finish. Your question is saved on this card. Press AI Answer to retry.";
-  const next = window.KompasLiveSession && typeof window.KompasLiveSession.finishedAnswerText === "function"
-    ? window.KompasLiveSession.finishedAnswerText(card.answer)
-    : retry;
+  const live = typeof window !== "undefined" ? window.KompasLiveSession : null;
+  const next = live && typeof live.finishedAnswerText === "function" ? live.finishedAnswerText(card.answer) : retry;
   if (next !== retry) return;
   const current = typeof card.answer === "string" ? card.answer : (Array.isArray(card.answer) ? card.answer.join(" ") : "");
   if (current.replace(/\s+/g, " ").trim() === retry) return;
