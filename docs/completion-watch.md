@@ -1,3 +1,24 @@
+## 28 November 2026 13:18 UTC — Run 31 source/release reconciliation
+
+**Continue:** Restack the approved WhatsApp timeout/fallback slice from PR #411 onto current master in a compliant local checkout; preserve current explicit-selection provenance and hard holds. Do not wait for another owner prompt.
+
+### Current production
+- Master at audit: `3400742ba97d2cbc68e2df3e1795ce5c76d9a147`.
+- Production deployment `dpl_8j7tKfUvAVRXJsqHrXZvK3v13Aky` is READY on that exact SHA; independent `job-dashboard-fawn.vercel.app` alias lookup agrees. This is verified release metadata, not user/device acceptance.
+- PR #646 Gmail account-switch guard merged `5d5f287fa3393b7f2e5d233cc455869a50a3e4ae`; current production includes it. Four-account scope stays; no proactive workers/scheduler/notifications/sending.
+
+### Priority backlog
+- **WhatsApp incident/#411:** 17 Oct 17:28 Chicago screenshot and matching JD remain recovered, but exact source bytes, generated DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID, signed receipt and source-fact reconciliation are missing. No replay/send. #411 head `069707f9e7a48a698f80835bf6cf2a820ebe49b6` is DRAFT/non-mergeable, has no exact-head checks, and diverged from its old base (141 ahead/156 behind current master). Its timeout fallback branch is older than the live hard-hold/selection-proof route; no wholesale copy/merge.
+- **Resume/JD/confirmed experience:** #466 is DRAFT/non-mergeable with no checks and stale base; the owner-confirmed 6 Nov mapping exception applies only to the named confirmed skill in relevant existing project context. #400 is closed unmerged; #423 is an older stale restack. #417 is score-only Gemini feedback; automated correction/re-export/recheck remains proposed. No final-DOCX/live 95–100%/98% acceptance.
+- **Poke/Gmail/mobile:** #646 guard is deployed; owner-consented OAuth/account-switch/two-inbox/narrow-phone acceptance is absent. Preserve account/thread and selected-From isolation; proactive features remain off.
+- **Crawler:** #648 head `f8a136d97e938e7246f5d3cbd72668aac6cb40a4` is DRAFT/non-mergeable, 18 ahead/6 behind and has no checks. Static review comment **6098016292** found the timeout path awaits `workPromise` without a bound; a non-cooperative adapter can hang the run. Add a non-cooperative fixture and bounded policy without reusing a worker while it can continue. #617 server filters remain stale; no protected preview/API smoke. Latest read-only snapshot is stale (last run 10 Nov; 14,566 rows, 12,407 active, 8,850 contract-labelled, zero active contract rows inside the 14-day window). Manual/on-demand only; no cron, Robert Half automation or eTeam.
+- **Kompas:** #647 S10 has seven exact-head checks SUCCESS but owner-gates the first deploy until **29 Nov CT**; do not deploy on 28 Nov. S9 real-model run remains blocked. Issue #120 (50 actual paired answers + independent human grading + native Windows/WhatsApp acceptance) and #168 remain open. No real model/device acceptance.
+
+### Exact wall and independent continuation
+GitHub reads and Vercel metadata work, but no canonical checkout/dependencies or installed Next.js 16.3.8 docs are available; the prior checkout failed DNS. The protected preview requires private `KOMPAS_VERCEL_API_TOKEN`. No local test/build, model, OAuth/inbox, real email/WhatsApp, crawl, R2/DB mutation or device test was performed.
+
+The current-master crawler review is a useful independent action, but its unbounded timeout wait must be fixed and tested before restack/CI. Next, continue #411's safe current-master restack in the compliant checkout, run focused tests/full CI and protected preview, then recover the original incident artifacts before any replay. If still blocked, fix #648's non-cooperative cancellation next. Keep #645 parser **proposed** (direct approval not recovered) and #647 held to 29 Nov CT. Run31 evidence is in `docs/research/mfit-completion-watch-run31-2026-11-28.md` (research commit `4ac5cab9b50753ec21674ce9bf88d5a6e7b0fb97`); REA commit `0d5ae089ed60bb37e80c16842ee2a5b88ef3f75c`; Plan Journal commit `9eeb06dbc96e5823031a47cd9caa94c03a90e67d`.
+
 ## 28 November 2026 — S9 real-model gate is blocked
 
 Taskmaster S9 on fdd4816. The pack fill now uses clean first-person sentences and aims about 10 percent above the band floor. A pack draft is shown before the model so an Architect call that dies at the 55-second lane does not leave an empty pane. The model text replaces that draft when the model returns. A complete Sentinel, escalate, or SQL injection question is not swallowed into the previous card. Candidate speech is labeled You. Empty cards are not counted as answered. The live Say this panel uses the session resume and drops the Sr. ServiceNow Development line. Press Start is removed from the intro. The page changes are the answer text, the You label, the Say this panel, and whether an empty card is marked answered.
