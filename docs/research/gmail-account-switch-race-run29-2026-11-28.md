@@ -27,3 +27,7 @@ A clean branch was created from current master `be063d6977760f902c1ced3a3078d932
 
 ## Next
 Inspect the clean branch's exact-head full CI, Plan/REA and Kompas baseline. Review the source/test scope and merge only after all required checks pass. Keep the real two-account browser acceptance separate. Do not deploy or claim the fix live until the exact production SHA and alias are verified.
+
+
+## Run 29 follow-up
+PR #632's Plan/REA run 46115504464 failed on the existing remote branch source locator, not on the Gmail code. Test-only PR #635 validates remote references while retaining local path checks; its local probe is 4/4, remote CI is pending. Keep #632 draft until #635 is validated/merged and its exact-head gates rerun.
