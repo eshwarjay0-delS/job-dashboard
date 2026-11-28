@@ -205,7 +205,7 @@ function makeGmailRefreshHarness(getSession, seeded = []) {
   const source = readFileSync(new URL("../../src/lib/use-gmail-data.ts", import.meta.url), "utf8") +
     "\nexport { refreshGmailDataForCurrentAccount, resetGmailDataForAccountSwitch, listeners };"
   const compiled = ts.transpileModule(source, {
-    compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptKind.TS },
+    compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText
   runInNewContext(compiled, {
     module, exports: module.exports, process, console, Buffer, setTimeout, clearTimeout, setInterval, clearInterval,
