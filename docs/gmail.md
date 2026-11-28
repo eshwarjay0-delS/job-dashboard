@@ -1,14 +1,14 @@
-# Gmail — Master Vision
-
-*Owner's vision, captured 2026-10-17. The north star for MarketFit's mail experience. Build toward it in phases; never against it.*
-
 ## The one-liner
 
 Everything Gmail does, plus the intelligence Gmail never built — a mail app that knows who people are, what they want, and what you should do next.
 
+
+
 ## Why Gmail is the target (and the anti-pattern)
 
 Gmail had to stay lightweight for billions of users. That tradeoff is why the inbox is just raw mail: no smarts, no agent underneath, no understanding. "Dull-minded." We don't have that constraint — our users get the full capabilities *and* the intelligence.
+
+
 
 ## Pillar 1 — Full Gmail parity
 
@@ -21,6 +21,8 @@ The app must do everything regular Gmail does, no excuses:
 
 If a user can do it in Gmail, they can do it here. Parity is the floor, not the ceiling.
 
+
+
 ## Pillar 2 — The intelligence Gmail doesn't have
 
 A real-time agent lives beneath the inbox:
@@ -29,6 +31,8 @@ A real-time agent lives beneath the inbox:
 - **Follow-up engine** that drafts and escalates on the user's own cadence (already exists; keep it).
 - **Watchdogs** watching for double-submits, rate drift, vendor silence, stale interviews (already exist; keep them).
 - **Smart triage**: the inbox explains itself — why this thread matters, what stage it's at, what the next action is. No raw piles.
+
+
 
 ## Pillar 3 — Multi-account, without the mess
 
@@ -39,6 +43,8 @@ The owner has 3–4 Gmail accounts connected. Gmail's "all inboxes" view is conf
 - **Per-account everything**: reply profiles, signatures, and compose identities are per account. The wrong "from" address is a bug, not a papercut.
 - **Simplify, don't duplicate**: if a view doesn't make multi-account life clearer than Gmail does, it doesn't ship.
 
+
+
 ## Pillar 4 — Contact intelligence on every email (the skeleton rule)
 
 Whenever you open an email, a contact card for the sender appears alongside it — automatically:
@@ -48,6 +54,8 @@ Whenever you open an email, a contact card for the sender appears alongside it �
 - **The skeleton rule**: the card layout is fixed and renders *everywhere* the pattern applies (mail view, overview, tracker, anywhere a person appears). Fields with no data show **empty by default** — never hidden, never invented. The skeleton is the system.
 - Empty is honest. A missing phone number is a blank line, not a guess.
 
+
+
 ## What exists today (keep and extend)
 
 - `/dashboard/mail` — the mail experience home.
@@ -56,9 +64,13 @@ Whenever you open an email, a contact card for the sender appears alongside it �
 - Smart Reply (3 chips, per-account reply profiles, approve-before-send).
 - Agent chat (`/dashboard/agent`) answering from mail.
 
+
+
 ## Form factor (current assumption)
 
 Desktop-only for now. The mail experience is designed around a wide desktop canvas — described below as a folding layout (Samsung-trifold style). It collapses gracefully to fewer panels on narrow screens, but the desktop arrangement is the reference design.
+
+
 
 ## Pillar 5 — The folding layout (4 regions)
 
@@ -83,15 +95,21 @@ Every thread gets a three-dots menu: **Mark as important**, **Send to automation
 
 **Definition (standing): important = tracked.** Marking a thread important means everything from that sender is actively tracked from then on. That is what "important" means in this app — always.
 
+
+
 ## Pillar 6 — Important section on Home
 
 On the Home page, right *before* the Overview section, an **Important** section lists every email the user marked as important — the tracked set, at a glance.
+
+
 
 ## Pillar 7 — Automation: the agent side of the inbox
 
 - **Send to automation.** The user selects messages and sends them to automation. Those messages keep feeding the agent: the agent learns *these are the replies, this is the data the user always wants sent* — and starts auto-replying on the user's behalf. The app tells the user this capability exists; it's presented, not hidden.
 - **Conversational automation bots.** Chatbots live on the automation side. The user talks to them like they talk to an assistant: *"track emails like this"*, *"after I submit an RTR, send a follow-up twice a week"*, *"if they reply, tell me"* — and the agent just does it.
 - **Inbox digest.** A dedicated section that always shows what's happening in Gmail: new important mail, follow-ups sent, replies received, what's waiting. The overview of the inbox, live.
+
+
 
 ## Poke lessons (researched 2026-10-17, public sources)
 
@@ -106,6 +124,8 @@ Rebuildable capabilities for Mfit Gmail:
 6. **Draft-on-behalf** — Gmail drafts in the user's voice; nothing sends without approval.
 7. **Brain** — every dismissed/acted-on nudge retunes triage. Fewer false nudges over time.
 
+
+
 ## What's new from this vision
 
 1. Compose parity audit — subject/CC/BCC/attachments/sender picker, all working.
@@ -115,11 +135,15 @@ Rebuildable capabilities for Mfit Gmail:
 5. Important = tracked: definition, per-thread marking, Home section.
 6. Send-to-automation + pattern-learned auto-replies + conversational automation bots + inbox digest.
 
+
+
 ## Non-goals
 
 - Rebuilding Gmail's entire settings surface. Parity covers daily workflows, not every toggle.
 - Hiding which account a thread belongs to, ever.
 - Inventing contact details. Empty beats wrong.
+
+
 
 ## Owner clarification — 17 October 2026
 
@@ -152,6 +176,8 @@ An inbox digest should report incoming messages, replies awaiting review, upcomi
 Implemented in the current change: folding reader/composer/contact panels; account-aware selection and deep links; CC/BCC and bounded attachments; verified sender/thread on send; blank unknown contact fields; persisted important-sender rules and Home/Overview listing; persisted automation instructions and reply-example reuse.
 
 Still required: fully general Gmail inbox/folder coverage (existing data scan is job-oriented), Gmail draft autosave, full attachment parity, durable recurring send worker, conversational rule interpretation and digest of executed automation. Saved instructions are not advertised as an active automatic sender. Current follow-up suggestions remain manual review/send.
+
+
 
 
 ## Inbox update feed checkpoint — 17 October 2026
@@ -206,6 +232,8 @@ Provider acceptance is not handset delivery. A public callback can only upgrade 
 The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
 
 
+
+
 ## Background worker security boundary — 13 November 2026
 
 The unattended worker remains disabled. The tick route now fails closed with HTTP 503 before scanning users or delivering anything unless both GMAIL_UPDATES_SCHEDULER_ENABLED=true and an approved WHATSAPP_GMAIL_UPDATE_TEMPLATE are configured. It still requires a constant-time CRON_SECRET bearer check. This code change does not set any environment variable, create a scheduler, approve a Meta template, or send a notification.
@@ -215,6 +243,8 @@ The legacy /api/gmail/notify-rules/export endpoint is no longer a public aggrega
 Regression coverage checks owner/account identity, the constant-time bearer validator, and that the disabled tick gate precedes storage scans and delivery. Tests are mocked/source-level only; no Gmail API, email, WhatsApp or mobile delivery was exercised.
 
 
+
+
 ## Owner clarification — 20 November 2026
 
 The owner confirmed in [PR #452 comment 7033546581](https://github.com/eshwarjay0-delS/job-dashboard/pull/452#issuecomment-7033546581) that four connected Gmail accounts is the maximum. Keep the existing server-side `LIMIT 4`; PR #440's no-cap migration remains unapproved. This direct 20 November instruction supersedes the earlier 13 November note that the 3–4 range was only a target. The same owner comment reiterates that the mobile menu must expand in normal document flow below the sticky header, and that the proactive Poke worker, notifications and sending remain disabled.
@@ -222,9 +252,13 @@ The owner confirmed in [PR #452 comment 7033546581](https://github.com/eshwarjay
 The cap does not replace account isolation: each inbox retains its own identity, selected-From address, reconnect state and thread identity. Two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain open; no live Gmail API or outbound email test is implied.
 
 
+
+
 ## 26 November 2026 — multi-account/mobile review checkpoint
 
 PR #576 (head `1757fb68715081525de0f8c7b8bd3bf531ebff20`) adds account-scoped sender mutes and waiting-radar identity, account+thread keys/actions, reply/draft account binding, a four-account cap, and normal-flow mobile navigation. Static review COMMENT `6076244479` found no obvious defect in this narrow diff. Its Kompas baseline passes, but full CI fails at stale-base shared lint `prefer-const` in `src/lib/kompasConsistency.ts:1059`; current master `e2a947` already has that correction. The Gmail account-isolation test is wired into CI but did not run because lint stopped first. PR remains DRAFT pending a current-master restack, exact-head full CI, protected preview, and owner-consented two-inbox/narrow-phone acceptance. No Gmail OAuth or inbox was accessed. Poke-style proactive workers/scheduler/notifications/sending remain disabled. See `docs/research/mfit-gmail-mobile-static-review-2026-11-26.md` for evidence.
+
+
 
 
 ## 27 November 2026 — run 23 Poke/mobile restack status
@@ -234,8 +268,23 @@ PR #401 exact head a34e16e24059551aae823544e9ac60ab2974e8c0 remains DRAFT/nonmer
 The four-connected-inbox maximum is owner-confirmed. Account identity, receiving inbox, selected-From, reconnect and thread keys must remain isolated; mobile menu expands in normal document flow below the sticky header. Protected preview, two-inbox collision/selected-From/reconnect and narrow-phone acceptance remain open. No Gmail OAuth/inbox read, email send, phone test or account mutation occurred. Proactive Poke worker, scheduler, notifications and sending stay disabled.
 
 
+
+
 ## 28 November 2026 — run 24 Poke-inspired Gmail/mobile status
 
 The four-account account-scoped digest and normal-flow mobile navigation slice from the 6f3cdcb backlog commit is in production SHA 593dff. The four-account ceiling remains owner-approved. Each inbox retains its own identity, selected-From, reconnect and thread context. Proactive Poke workers, scheduler, notifications and automatic sending remain disabled.
 
 PR #577's account-scoped interview-board anchors remain a separate open draft; its earlier full CI failed on stale-base shared lint and it still needs a current-master restack, exact-head full CI, protected preview and two-inbox/narrow-phone acceptance. No Gmail OAuth, mailbox read, draft/send action or device test was performed.
+
+
+
+## 28 November 2026 — Run 31 account-switch guard
+
+PR #637's delayed A→B and sign-out local-snapshot race is source-reviewed. Exact-head full CI 46118344354, Plan/REA 46118344368, Kompas baseline 46118344383, and confirmed-skill 46118344353 all passed. The generation guard, second verified-account lookup, and checks before snapshot publication/shared load are present; deferred A→B, sign-out and same-account restore tests exercise the race. Favorable COMMENT review 6096552394 was posted. The PR remains DRAFT because protected preview is unavailable without the private `KOMPAS_VERCEL_API_TOKEN`; no browser/two-inbox/mobile acceptance, Gmail OAuth or inbox action was performed. Four-account cap and disabled Poke worker/scheduler/notifications/sending remain unchanged.
+
+
+
+
+## 28 November 2026 — Run 34 Gmail/mobile status
+
+PR #637 (`518e08999e4206dbb7b71bcf37d522e32d9a7ace`) passes full CI, Plan/REA, Kompas baseline and confirmed-skill checks. It remains draft/nonmergeable against stale base; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`, which is unavailable. No OAuth, inbox access, two-inbox/account-switch or phone acceptance. The 4-account ceiling is unchanged. Poke proactive workers, scheduler, notifications and automatic sending remain disabled.
