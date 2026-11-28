@@ -33,6 +33,14 @@ The current iZap business is **not established as the incident business**. These
 **Live source safeguard verified:** production SHA `593dff29044a4ec57284d7829ab951c2d499f193` and current master `bf9a0d4` contain `explicitlySelectedSameAccountLibraryResume` plus `sendSelectedOriginal`. The fallback requires durable explicit-selection proof, depth 0, the verified user's Files root/path, a DOCX and profile-email match; the route has no `sendClosest` call. This confirms source guardrails are live, not the historical send or current real delivery.
 
 
+## Kompas answer, session-sync and Windows release check
+
+- Production alias is READY at `593dff29044a4ec57284d7829ab951c2d499f193`. Production and master answer route/service/client source blobs match. The service uses Llama 3.3 70B → gpt-oss → Gemini 2.5 Flash with retry/rate-limit handling. Selected 24-hour route error aggregation and 30-minute warning/error logs returned no entries; this does **not** prove answer functionality.
+- PR #619 is merged no-ship at `dc4f82a2e21333152a5ad3cf7c0cb5e22e910421`. Exact-head CI `46091751541`, baseline `46091751531`, and Windows build `46091751587` all SUCCESS. Official release asset metadata updated 2026-11-28 01:20:03 UTC: 162,266,502 bytes, SHA-256 `e6179fbfa71aa447dc2d9c89ba2717ded4c647024fbe6b19b7a4350a8a88214f`. Vercel project env `KOMPAS_DESKTOP_VERSION` is 0.8.8, but public manifest endpoint could not be accessed; installed Windows file/version is not verified.
+- Read-only production Supabase aggregate is unchanged/stale: 22 account sessions (15 active, 7 tombstones), 1 owner; 28 artifacts, 1 owner. Latest update 9 Nov 2026. No session/artifact payload or IDs read. No authenticated browser→Windows→WhatsApp convergence evidence.
+- P0 issues #179 (AI Answer 10/10), #192 (repeated UAC), #193 (Chrome desktop sign-in), #147 (refresh-token family), #148 (session catalog), #120 (50-pair/human/native acceptance), and #152 (voice preview/live acceptance) remain open. No model/device acceptance. PR #619 belongs to the separate live-capture task; no duplicate edits were made.
+
+
 ## Other approved backlog and gates
 
 - **PR #554 (Kompas S5/current-resume + first-press Listening hold):** latest head `4fafd56663bb5ddce064dcebea8802d758bb8259`; full CI, baseline, cross-device, Plan/REA and Windows gates previously SUCCESS. GitHub requires an independent authorized reviewer; the connected owner identity cannot self-approve. Keep unmerged.
