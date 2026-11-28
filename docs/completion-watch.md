@@ -1,3 +1,7 @@
+## 28 November 2026 — #461 keeps the upload-hold test
+
+Master `6f3cdcb2` already sends a WhatsApp original only for an explicit same-account Files/Library file. #461 does not add a second gate. It updates `scripts/tests/whatsapp-tailor-rounds.test.mjs` so a timeout or unfinished rewrite does not expect the uploaded original. Merge without `[ship]`. The answer-filler fix from bc-27fe7160 is the batched ship. Item 9 source tags stay with the Brain build. No live Meta send.
+
 ## 28 November 2026 — unmerged backlog landed
 
 Owner Eshwar, 27 Nov 2026 6:11 PM CT, asked to land Kompas/MFit work that was started and never merged. This branch keeps master's newer Kompas answer and journal text and brings in the newest green product code that was still missing:

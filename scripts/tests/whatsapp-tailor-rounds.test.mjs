@@ -197,7 +197,7 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
     '@/lib/plain-failure': { plainFailure: () => 'plain failure' },
     '@/lib/resume-identity': { sameResumeIdentity },
-    '@/lib/resume-round-trip-guard': { docxIdentityText: async bytes => Buffer.from(bytes).toString() },
+    '@/lib/resume-round-trip-guard': { docxIdentityText: async () => IDENTITY },
     '@/lib/docx': { extractText: async () => IDENTITY },
     '@/lib/supabase/service': { serviceClientAvailable: () => false, createServiceClient: () => { throw new Error('no service') } },
     '@/lib/keyword-targets': load('src/lib/keyword-targets.ts'),
@@ -286,17 +286,15 @@ test('simulated webhook covers a file, a bad link, a timeout, a duplicate, and a
     mode = 'timeout'
     const timeBody = payload('wamid.time', JD)
     await call(timeBody, { 'x-hub-signature-256': sign(timeBody) })
-    assert.equal(docs.length, 2, 'a timeout still sends the already chosen resume')
-    assert.match(docs[1].caption, /ran out of time/)
-    assert.ok(docs[1].caption.split('\n').length <= 5, docs[1].caption)
+    assert.equal(docs.length, 1, 'a timeout does not send the uploaded original')
+    assert.match(said.at(-1), /ran out of time/)
 
     seed()
     mode = 'partial'
     const partialBody = payload('wamid.partial', JD)
     await call(partialBody, { 'x-hub-signature-256': sign(partialBody) })
-    assert.equal(docs.length, 3, 'an unfinished rewrite sends the already chosen resume')
-    assert.match(docs[2].caption, /did not finish cleanly/)
-    assert.ok(docs[2].caption.split('\n').length <= 5)
+    assert.equal(docs.length, 1, 'an unfinished rewrite does not send the uploaded original')
+    assert.match(said.at(-1), /did not send a file|saved/)
   } finally {
     for (const [key, value] of Object.entries(keys)) {
       if (value === undefined) delete process.env[key]
