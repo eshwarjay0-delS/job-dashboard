@@ -88,8 +88,13 @@ const ANSWER_MODELS = [PAID_MODEL, SECOND_MODEL, CHEAP_MODEL]
 // super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
 // OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
 const LIVE_ROUTING = { allow_fallbacks: true, sort: "latency" }
+// gpt-oss is limited to hosts that can satisfy a zero-retention data policy.
+// OpenRouter treats `order` as a preference and `only` as the allow-list, so
+// providers outside this list are not tried.
 function routingFor(model: string) {
-  if (/gpt-oss/i.test(model)) return { ...LIVE_ROUTING, order: ["groq", "fireworks", "cerebras", "together"] }
+  if (/gpt-oss/i.test(model)) {
+    return { allow_fallbacks: true, sort: "latency", only: ["groq", "fireworks", "cerebras", "together"] }
+  }
   return LIVE_ROUTING
 }
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"

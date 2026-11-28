@@ -16,6 +16,7 @@ const GROQ = 'Revocation is the list I check before I trust a certificate.'
 
 function loadRoute(mode) {
   const models = []
+  const providers = []
   const mocks = {
     '@/lib/llm': {
       keysFor: async () => ({ openrouter: 'test-key', groq: 'groq-test' }),
@@ -42,6 +43,7 @@ function loadRoute(mode) {
           return Response.json({ choices: [{ message: { content: GROQ } }] })
         }
         models.push(body.model)
+        if (body.provider) providers.push({ model: body.model, provider: body.provider })
         const blocked = mode === 'groq' || (mode === 'third' && body.model !== 'google/gemini-2.5-flash')
         if (blocked) {
           return new Response(JSON.stringify({ error: { message: 'No endpoints available matching your data policy', code: 403 } }), { status: 403, headers: { 'content-type': 'application/json' } })
@@ -67,6 +69,7 @@ function loadRoute(mode) {
   const { NextRequest } = require('next/server')
   return {
     models,
+    providers,
     post(body) {
       return route.POST(new NextRequest('https://job-dashboard-fawn.vercel.app/api/answer', {
         method: 'POST',
@@ -87,6 +90,10 @@ test('a 403 on the first models falls through and the caller gets answer text', 
   const response = await third.post(ask)
   const body = await response.json()
   assert.equal(response.status, 200)
+  const oss = third.providers.find((row) => row.model === 'openai/gpt-oss-120b')
+  assert.ok(oss, 'gpt-oss was requested')
+  assert.deepEqual(oss.provider.only, ['groq', 'fireworks', 'cerebras', 'together'])
+  assert.equal(oss.provider.order, undefined)
   assert.deepEqual(third.models.slice(0, 3), [
     'meta-llama/llama-3.3-70b-instruct',
     'openai/gpt-oss-120b',
