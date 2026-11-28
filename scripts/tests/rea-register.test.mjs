@@ -6,7 +6,15 @@ import path from 'node:path'
 const root=path.resolve(import.meta.dirname,'../..')
 test('each REA session retains source, ordered findings, boundaries and next action',()=>{
  assert.equal(new Set(REA_SESSIONS.map(s=>s.id)).size,REA_SESSIONS.length)
- for(const s of REA_SESSIONS){assert.ok(s.request&&s.limits&&s.next&&s.sources.length&&s.steps.length);for(const step of s.steps)assert.ok(step.label&&step.finding&&step.evidence);for(const source of s.sources)if(source.path)assert.ok(existsSync(path.join(root,source.path)),source.path)}
+ for(const s of REA_SESSIONS){assert.ok(s.request&&s.limits&&s.next&&s.sources.length&&s.steps.length);for(const step of s.steps)assert.ok(step.label&&step.finding&&step.evidence);for(const source of s.sources)if(source.path){
+  if(source.path.startsWith("origin/")){
+    const remote=/^origin\/([A-Za-z0-9._/-]+):([A-Za-z0-9._/-]+)$/.exec(source.path)
+    assert.ok(remote&&!remote[1].split("/").includes("..")&&!remote[2].split("/").includes(".."),source.path)
+  }else{
+    const local=path.resolve(root,source.path)
+    assert.ok(local.startsWith(root+path.sep)&&existsSync(local),source.path)
+  }
+}}
 })
 test('filters find Parakeet and keep tool failures distinct from public reviews',()=>{
  assert.ok(filterReaSessions('Parakeet','kompas','all').some(s=>s.id==='parakeet-kompas'))  // later sessions may cite Parakeet too
