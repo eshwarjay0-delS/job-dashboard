@@ -26,8 +26,9 @@ test('crawler fills the requested limit with bounded clearance-safe pagination',
 
 test('crawler applies location and remote filters before the bounded clearance scan',()=>{
  assert.match(crawler,/crawlLocationTerms/)
- assert.match(crawler,/query\.ilike\("location",/)
- assert.match(crawler,/if \(remoteOnly\) query = query\.ilike\("location", "%remote%"/)
+ assert.match(crawler,/applyCrawlerLocationFilters\(query, locationTerms, remoteOnly\)/)
+ assert.doesNotMatch(crawler,/query\.ilike\("location",/)
+ assert.doesNotMatch(crawler,/if \(remoteOnly\) query = query\.ilike\("location", "%remote%"/)
  assert.match(crawler,/location_filter: locationTerms\.join\(" "\)/)
  assert.match(crawler,/remote_only: remoteOnly/)
   const filterAt=crawler.indexOf('applyCrawlerLocationFilters(query, locationTerms, remoteOnly)')
