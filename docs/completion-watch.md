@@ -1207,3 +1207,8 @@ No code commit or production change was made in this run.
 - The correct WhatsApp business/phone for 17 Oct 17:28 remains unavailable: current iZap lists one business with no number; no send/replay. No local execution environment, model call, OAuth/mailbox action, device acceptance or production data write.
 
 **Continue:** run the compatibility-shim branch's exact-head CI. Merge only if the full suite passes. Then restack/revalidate #626 without merging stale/conflicted code; retain #617's findings and the historical WhatsApp incident blocker.
+
+
+## 28 November 2026 — direct approval correction for the two-line parser
+
+Scoped prior-context retrieval recovered direct user-authored approval from 22 Nov 2026 12:02:21 UTC: require a job-post signature; preserve short chat; preserve the named resume; ask for the account email when ambiguous; never guess the account. This supersedes run25/run26's earlier “approval not recovered” note, without erasing the history. Closed draft PR #558 head 6cf4d3cdcffe3e1e21bbef41a70fd10a7e261975 contains the narrow parser patch and 50-repeat/negative tests, but exact-head full CI 45126602150 failed; baseline 45126602159 and Plan/REA 45126602143 passed. Current master role-match blob b23eefb61a2f28bbd6b40910d64227743b88d165 still has the three-line minimum. Next: after #628 resolver CI/merge, restack #558's patch on latest master and rerun full CI plus WhatsApp recovery, Kompas baseline and Plan/REA. No merge/live acceptance, DOCX, send or replay.
