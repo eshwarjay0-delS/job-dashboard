@@ -333,7 +333,7 @@ function endSession(s) {
   if (x && sessionOpen(x) && !liveElsewhere(x)) {
     closeRun(x, Date.now(), "you"); LS.set("sessions", sessions);
     void syncMiniDossier(x);
-    if (window.KompasBrainPage) void window.KompasBrainPage.writeBack(x);
+    if (typeof window !== "undefined" && window.KompasBrainPage) void window.KompasBrainPage.writeBack(x);
   }
   renderSessions();
 }
