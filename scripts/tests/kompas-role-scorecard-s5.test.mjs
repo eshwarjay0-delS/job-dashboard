@@ -64,18 +64,12 @@ test("a repeated triage sentence is dropped", () => {
   assert.match(text, /assign the ticket/)
 })
 
-test("the no-resume intro is Senior Cybersecurity Engineer with 9+ years", () => {
+test("intro repair preserves supplied facts and does not fabricate a biography", () => {
   const bad = "I am a Senior I Engineer with 7 years of experience. I work in a SOC."
   const intro = repairIntroHeadline("Tell me about yourself.", bad)
-  assert.equal(intro.split(/(?<=[.!?])\s+/)[0], INTRO_HEADLINE)
-  assert.match(intro, /Senior Cybersecurity Engineer/)
-  assert.match(intro, /9\+ years/)
-  assert.match(intro, /Citi Bank/)
-  assert.match(intro, /CVS Health/)
-  assert.match(intro, /City of San Diego/)
-  assert.match(intro, /Charter Communications/)
-  assert.match(intro, /Accenture/)
-  assert.doesNotMatch(intro, /Senior I Engineer|7 years/)
+  assert.equal(intro, "I am a Senior Cybersecurity Engineer with 7 years of experience. I work in a SOC.")
+  assert.equal(INTRO_HEADLINE, "Your introduction")
+  assert.doesNotMatch(intro, /9\\+ years|Citi Bank|CVS Health|City of San Diego|Charter Communications|Accenture/)
   assert.match(OWNER_RESUME, /Senior Cybersecurity Engineer/)
   assert.doesNotMatch(OWNER_RESUME, /Fortinet|jayeshwar44/i)
 })
