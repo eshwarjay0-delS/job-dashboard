@@ -52,33 +52,72 @@ export type PortalOutcome<T> = { adapter: PortalAdapter; value?: T; error?: stri
  * reported as timed out. Outcomes come back in the portals' own order. Until 20 Oct 2026 portals were crawled one
  * after another inside a 60 s function: fine for two portals, cut off partway for thirty.
  */
+/**
+ * Portal work that outlives a timeout is quarantined. Its portal key stays reserved
+ * until the promise settles, so a later run cannot start the same portal twice.
+ */
+const pendingPortalWork = new Map<string, Promise<unknown>>()
+
 export async function crawlEach<T>(
   adapters: PortalAdapter[],
-  work: (adapter: PortalAdapter) => Promise<T>,
-  opts: { concurrency: number; deadline: number; perPortalMs: number; offset?: number; now?: () => number },
+  work: (adapter: PortalAdapter, signal: AbortSignal) => Promise<T>,
+  opts: { concurrency: number; deadline: number; perPortalMs: number; offset?: number; now?: () => number; timeoutDrainMs?: number },
 ): Promise<PortalOutcome<T>[]> {
   const now = opts.now || Date.now
   const n = adapters.length
-  const start = n ? (((opts.offset || 0) % n) + n) % n : 0
-  const order = adapters.map((_, i) => (start + i) % n)
+  const startIndex = n ? (((opts.offset || 0) % n) + n) % n : 0
+  const order = adapters.map((_, i) => (startIndex + i) % n)
   const out: PortalOutcome<T>[] = adapters.map(adapter => ({ adapter, skipped: true }))
   let next = 0
   const worker = async () => {
     while (next < order.length) {
       const i = order[next++]
       const adapter = adapters[i]
+      if (pendingPortalWork.has(adapter.portal)) {
+        out[i] = { adapter, error: "previous timed-out portal work is still settling; skipped to prevent overlap" }
+        continue
+      }
       const limit = adapter.budgetMs ?? opts.perPortalMs
       // Nor is one started whose own time would run past the run's end (the deadline plus the usual time a portal gets).
       if (now() >= opts.deadline || now() + limit > opts.deadline + opts.perPortalMs) { out[i] = { adapter, skipped: true }; continue }
       let timer: ReturnType<typeof setTimeout> | undefined
+      const controller = new AbortController()
+      const timeoutMessage = `timed out after ${Math.round(limit / 1000)} s`
+      let timedOut = false
+      let quarantined = false
+      const workPromise = Promise.resolve().then(() => work(adapter, controller.signal))
+      pendingPortalWork.set(adapter.portal, workPromise)
+      const clearPending = () => {
+        if (pendingPortalWork.get(adapter.portal) === workPromise) pendingPortalWork.delete(adapter.portal)
+      }
+      void workPromise.then(clearPending, clearPending)
       try {
-        const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(limit / 1000)} s`)), limit) })
-        out[i] = { adapter, value: await Promise.race([work(adapter), late]) }
+        const late = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            timedOut = true
+            controller.abort()
+            reject(new Error(timeoutMessage))
+          }, limit)
+        })
+        out[i] = { adapter, value: await Promise.race([workPromise, late]) }
       } catch (e) {
-        out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
+        if (timedOut) {
+          // Give abort-aware work a short drain window. If it ignores abort, quarantine
+          // this worker instead of awaiting forever or reusing its concurrency slot.
+          const drainMs = Math.max(0, opts.timeoutDrainMs ?? 1000)
+          const settled = await Promise.race([
+            workPromise.then(() => true, () => true),
+            new Promise<boolean>(resolve => setTimeout(() => resolve(false), drainMs)),
+          ])
+          out[i] = { adapter, error: timeoutMessage }
+          quarantined = !settled
+        } else {
+          out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
+        }
       } finally {
         clearTimeout(timer)
       }
+      if (quarantined) return
     }
   }
   await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.concurrency, n)) }, worker))
