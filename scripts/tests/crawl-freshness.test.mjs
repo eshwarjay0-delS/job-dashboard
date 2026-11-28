@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import test from "node:test"
-import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, collectFilteredSnapshot } from "../../src/lib/crawl/search.ts"
+import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, collectFilteredSnapshot, crawlLocationTerms } from "../../src/lib/crawl/search.ts"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 
@@ -117,4 +117,10 @@ test("reaching the scan cap is not reported as limited after the visible limit i
   assert.equal(result.scanned, 10)
   assert.equal(result.excluded, 0)
   assert.equal(result.scanLimited, false)
+})
+
+test('location terms are safely normalized and capped at four tokens',()=>{
+ assert.deepEqual(crawlLocationTerms('Kansas City, MO'),['Kansas','City','MO'])
+ assert.deepEqual(crawlLocationTerms('   '),[])
+ assert.deepEqual(crawlLocationTerms('A B C D E F G H I'),['A','B','C','D'])
 })
