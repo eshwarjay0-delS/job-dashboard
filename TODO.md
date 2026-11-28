@@ -1,3 +1,9 @@
+## 2026-11-28 — Level voice wired into the answer route
+
+`Eshwar_Resume_Sr_Cybersecurity_Engineer` is not in the repo. The default empty-session resume stays the Houston Fortinet summary at `src/lib/kompas-houston-resume.txt`. The answer route calls `personalityPrompt`, `personalityContract`, and `applyPersonalityFilter` after the older word caps. Architect, Director, and Technical HR get different lengths and voices. The IAM question must cover all three parts, with Saviynt as a customer or partner tool. No new screen. One production check follows the ship.
+
+**Checked by scripts/tests/kompas-answer-voice-blockers.test.mjs and the route test in scripts/tests/kompas-level-contract.test.mjs.**
+
 ## 2026-11-28 — Full confidence, no hedge, You never opens an answer
 
 Answers stay first person. The hands-on transfer stub and the stock Director closer are stripped. A tool that is not on the resume is answered from a real role line, without a gap sentence. A mic line tagged You does not start a card and does not fill Say this. The page stamp is kompas-20261128-hedge, so the desktop exe needs the master build.

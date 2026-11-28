@@ -37,4 +37,8 @@ PR #613 (`cursor/kompas-live-level-4bde`, cloud agent bc-27fe7160) is still open
 
 ## Verification
 
-No UI change. The answer route does not call these modules yet, so the live interview panel is unchanged until the hook lands. Local test, typecheck, and the eval script are the checks. No deploy.
+No UI change in the first pass. The answer route did not call these modules yet.
+
+## 28 November 2026 — wired into the answer route
+
+PR #613 merged as 593dff29 and deployed. PR #618 merged as 35c1400e without a deploy. The file `Eshwar_Resume_Sr_Cybersecurity_Engineer` is not in the repo, so the empty-session default remains `src/lib/kompas-houston-resume.txt`. The answer route now calls `personalityPrompt`, `personalityContract`, and `applyPersonalityFilter` after the older length caps. A multi-part IAM question has to cover the customer experience, the implementation, and Saviynt as a customer or partner tool. Server only.

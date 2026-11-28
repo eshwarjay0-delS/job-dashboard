@@ -28,6 +28,8 @@ import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
 import { fitLevelAnswer, levelContract, wordCount } from "@/lib/kompasLevelContract"
+import { applyPersonalityFilter, personalityContract } from "@/lib/kompasLevelPersonality"
+import { personalityPrompt } from "@/lib/kompasLevelPersonalityPrompt"
 import { HOUSTON_RESUME } from "@/lib/kompasHonestyGate"
 import { dropUnknownEmployers } from "@/lib/kompasResume"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
@@ -250,6 +252,22 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
   } catch {
     return grounded || base
   }
+}
+
+/** Last step. A short or same-voice draft is replaced by the level's own answer. */
+async function withPersonality(job: AnswerJob, text: string, signal: AbortSignal): Promise<string> {
+  const spec = personalityContract(job.level, job.question)
+  const near = wordCount(text) >= Math.round(spec.min * 0.45)
+  const voiced = await applyPersonalityFilter({
+    level: job.level,
+    question: job.question,
+    text,
+    regenerate: near && job.orKey ? async (instruction) => {
+      const more = await fetchOpenRouter(job.orKey as string, PAID_MODEL, personalityPrompt(job.level, job.question), instruction, spec.maxTokens, signal)
+      return more.text
+    } : undefined,
+  })
+  return voiced.text.trim() || text
 }
 
 // A light non-streaming call for the post-generation fact-check (perfACT's
@@ -910,7 +928,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         if (opener) finalText = withOpener(finalText, opener)
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
         finalText = dropOffTopicResume(job.question, job.jd || "", keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || ""))
-        finalText = await extendLevelOnce(job, finalText, signal)
+        finalText = await withPersonality(job, await extendLevelOnce(job, finalText, signal), signal)
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
@@ -1118,7 +1136,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     const gated = gateDisplayedAnswer({ question: job.question, raw: out, source: job.sourceText || "", resume: job.resume || "", jd: job.jd || "", previous: job.previousAnswer || "" })
     if (gated.text.trim()) out = gated.text
   } catch { /* the settled answer stands */ }
-  out = await extendLevelOnce(job, out, signal)
+  out = await withPersonality(job, await extendLevelOnce(job, out, signal), signal)
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
@@ -1466,8 +1484,10 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
     const levelBand = levelContract(level, question)
-    plan.words = levelBand.target
-    plan.maxTokens = levelBand.maxTokens
+    const voice = personalityContract(level, question)
+    // The personality band is the ceiling. Older 150-word and mode caps do not cut it back.
+    plan.words = voice.max
+    plan.maxTokens = Math.max(levelBand.maxTokens, voice.maxTokens)
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
   }
   // Depth calibration inside the practice register: match the answer's focus
@@ -1619,6 +1639,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   }
 
   const context = [
+    personalityPrompt(level, question),
     // A code question must not inherit the level compression that collapsed a
     // Director answer into one inline line: the level block is crowned the
     // controlling spec, the Director guidance compresses the mechanism to one

@@ -11,7 +11,7 @@
 // This file does not edit the answer route. PR 613 owns that route and the
 // older length contract in kompasLevelContract.ts.
 
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
 import { openingSentences, poolSentences, type PersonalityKind, type PersonalityLevel } from "./kompasLevelPersonalityCopy.ts"
 
@@ -38,6 +38,36 @@ NERC CIP applied to the network change and the zero-downtime cutovers.
 The wider cutover beyond the FortiGate-VM clusters was a team effort.
 Those FortiGate-VM deployments and the Cisco FTD to Fortinet migrations across six AWS regions were the part I can speak to.
 `
+
+/** The named Houston file. It is not in this repo. Do not invent its text. */
+export const SR_CYBER_RESUME_NAME = "Eshwar_Resume_Sr_Cybersecurity_Engineer"
+
+const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "dist", "coverage"])
+
+function walkForSrCyber(root: string): string | null {
+  const stack = [root]
+  while (stack.length) {
+    const dir = stack.pop() as string
+    let names: string[] = []
+    try { names = readdirSync(dir) } catch { continue }
+    for (const name of names) {
+      if (SKIP_DIRS.has(name)) continue
+      const full = join(dir, name)
+      if (/^Eshwar_Resume_Sr_Cybersecurity_Engineer(?:\.(?:docx|txt|md|json))?$/i.test(name)) return full
+      try { if (statSync(full).isDirectory()) stack.push(full) } catch { /* skip */ }
+    }
+  }
+  return null
+}
+
+let srCyberCache: { found: boolean; path: string | null; missingName: string } | null = null
+
+export function srCyberResumeLookup(root = typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ""): { found: boolean; path: string | null; missingName: string } {
+  if (srCyberCache && srCyberCache.missingName === SR_CYBER_RESUME_NAME) return srCyberCache
+  const path = root ? walkForSrCyber(root) : null
+  srCyberCache = { found: Boolean(path), path, missingName: SR_CYBER_RESUME_NAME }
+  return srCyberCache
+}
 
 export function houstonResume(): string {
   try {

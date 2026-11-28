@@ -54,6 +54,9 @@ jobs:
       - name: Verify Kompas level personalities and hedge filter
         run: node --experimental-strip-types --test scripts/tests/kompas-level-personality.test.mjs
 
+      - name: Verify Kompas answer voice blockers
+        run: node --experimental-strip-types --test scripts/tests/kompas-answer-voice-blockers.test.mjs scripts/tests/kompas-level-contract.test.mjs
+
       - name: Verify 20 full interviewer questions, silent desktop auth and exact release stamp
         run: node --test scripts/tests/kompas-full-question-desktop-reopen-20fold.test.mjs scripts/tests/kompas-desktop-auth-live-continuity.test.mjs scripts/tests/kompas-desktop-release-stamp.test.mjs
 
