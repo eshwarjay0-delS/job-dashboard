@@ -248,3 +248,7 @@ PR #637's delayed A→B and sign-out local-snapshot race is source-reviewed. Exa
 ## 28 November 2026 — Run 34 Gmail/mobile status
 
 PR #637 (`518e08999e4206dbb7b71bcf37d522e32d9a7ace`) passes full CI, Plan/REA, Kompas baseline and confirmed-skill checks. It remains draft/nonmergeable against stale base; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`, which is unavailable. No OAuth, inbox access, two-inbox/account-switch or phone acceptance. The 4-account ceiling is unchanged. Poke proactive workers, scheduler, notifications and automatic sending remain disabled.
+
+## 28 November 2026 — Run 34 Gmail/mobile status
+
+PR #637 (`518e08999e4206dbb7b71bcf37d522e32d9a7ace`) passes full CI, Plan/REA, Kompas baseline and confirmed-skill checks. It remains draft/nonmergeable against stale base; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`, which is unavailable. No OAuth, inbox access, two-inbox/account-switch or phone acceptance. The 4-account ceiling is unchanged. Poke proactive workers, scheduler, notifications and automatic sending remain disabled.
