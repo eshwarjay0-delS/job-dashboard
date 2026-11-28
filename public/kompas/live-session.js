@@ -169,10 +169,11 @@
     var p = correctSecurityAsr(stripSpeakerLabels(previous));
     if (!t || !p) return false;
     if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+)[.,]?\s+)*(?:how come|how so|why not|and why|and how|go deeper|say that again|same (?:thing|question))\b/i.test(t)) return true;
+    if (interviewerAsk(t) && !dangling(t) && contentWords(t).length >= 3) return false;
+    if (/\bat what (?:instant|point|stage|time)\b|\bwhen (?:do|would|will) you escalate\b|\bhow sentinel works\b/i.test(t)) return false;
     var tw = contentWords(t);
     var pw = contentWords(p);
     if (tw.length && tw.length <= 4 && tw.some(function (w) { return w.length > 5 && pw.indexOf(w) >= 0; })) return true;
-    if (/^(?:ok(?:ay)?[.,]?\s+)?so your experience (?:lies|is) more with\b/i.test(t)) return true;
     return similar(t, p);
   }
 
@@ -423,8 +424,9 @@
       var answer = card && card.answer;
       var body = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
       var words = body.split(/\s+/).filter(Boolean).length;
-      var seedOnly = /^i do this at citi bank\b/i.test(body) && words < 40;
-      push(card && card.question, answerIsReal(answer) && !seedOnly && !/^(?:having\b|i handle cybersecurity operations for the bank\b)/i.test(body) && !/10\+ years of experience in servicenow/i.test(body) && !/\bstory\s+\d+\s*:|\bpages once\b|\bpress start\b/i.test(body) && words >= 12);
+      var seedOnly = /^i do this at citi bank\b/i.test(body) || /\bi pull the evidence, decide, and assign the servicenow ticket\b/i.test(body) && words < 40;
+      var foreign = /having 10\+\s*years|sr\.?\s*servicenow development/i.test(body);
+      push(card && card.question, answerIsReal(answer) && !seedOnly && !foreign && !/^(?:having\b|i handle cybersecurity operations for the bank\b)/i.test(body) && !/\bstory\s*:|\bpages once\b|\bpress start\b|\btools and controls\b|\bprobe habit\b/i.test(body) && words >= 12);
     });
     (opts.turns || []).forEach(function (turn) {
       var role = attributeSpeaker({ text: turn && turn.text, source: turn && turn.source, previousRole: turn && turn.who === "You" ? "You" : "Interviewer" });
@@ -500,6 +502,7 @@
     latestQuestion: latestQuestion,
     attributeSpeaker: attributeSpeaker,
     isCandidateNarrative: isCandidateNarrative,
+    isCandidateSpeech: isCandidateSpeech,
     interviewerAsk: interviewerAsk,
     finishedAnswerText: finishedAnswerText,
     joinSplitQuestion: joinSplitQuestion,

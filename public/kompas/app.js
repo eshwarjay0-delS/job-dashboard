@@ -1437,7 +1437,8 @@ function presentAnswer(question, answer, source) {
       let s = peelDisplayArtifact(chunk);
       if (!s || dictionary.test(s) || third(s) || meta.test(s)) continue;
       s = s.replace(/\d[\d,.]*/g, (n, i, all) => (/[A-Za-z-]/.test(String(all).charAt(i - 1)) || allowed.includes(n.replace(/[.,]+$/, ""))) ? n : "").replace(/\bby percent\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
-      if (/\bby\s*%|\bpages once\b|\bstory\s+\d+\s*:|\bonly when the question needs\b|\bpress start — answers appear here\b/i.test(s)) continue;
+      if (/\bby\s*%|\bpages once\b|\bstory\s*:|\btools and controls\b|\bprobe habit\b|\bonly when the question needs\b|\bpress start — answers appear here\b|\bhaving 10\+\s*years\b|\bsr\.?\s*servicenow development\b|\bservicenow development\b|\bi do this at citi bank\b/i.test(s)) continue;
+      if (/\([^)]*$/.test(s) || /^[A-Za-z][^:]{0,48}:/.test(s)) continue;
       if (s.split(/\s+/).filter(Boolean).length < 3) continue;
       if (/^[a-z]/.test(s)) s = s.charAt(0).toUpperCase() + s.slice(1);
       pieces.push(s);
@@ -1571,6 +1572,20 @@ function absorbScreen(card, text) {
   if (body) { card.screenFull = true; card.screenBody = body; }
   return answer || raw;
 }
+// A recorded stream: deltas append, a real replace overwrites, an empty replace never clears a long Architect body.
+function applyStreamFrame(state, ev) {
+  state = state || { text: "" };
+  state.text = String(state.text || "");
+  if (!ev) return state;
+  if (ev.type === "delta") state.text += ev.text || "";
+  else if (ev.type === "replace") {
+    const next = String(ev.text || "");
+    const nextWords = next.trim() ? next.trim().split(/\s+/).filter(Boolean).length : 0;
+    const prevWords = state.text.trim() ? state.text.trim().split(/\s+/).filter(Boolean).length : 0;
+    if (!(nextWords === 0 && prevWords >= 40)) state.text = next;
+  }
+  return state;
+}
 function renderCard() {
   const c = cards[idx]; if (!c) return;
   // Where you are in the book, and ends that look like ends (owner, 27 Oct 2026: Prev/Next "aren't working" at the first
@@ -1641,7 +1656,8 @@ function renderCard() {
     }
   } else /* bullets fallback */ if (false) {}
   const answerWords = String(typeof shownAnswer === "string" ? shownAnswer : "").trim().split(/\s+/).filter(Boolean);
-  if (!hasAnchorFields(c) && !(c.pivot && answerWords.length < 20)) {
+  // A long Architect body must stay on the pane. Anchor clips are a few words and used to hide the rest.
+  if ((answerWords.length >= 40 || !hasAnchorFields(c)) && !(c.pivot && answerWords.length < 20)) {
   lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
     if (kind === "code") {
@@ -5858,7 +5874,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const planNow = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), card.anchors || {}, window.__peerOf);
     if (planNow && planNow.level === askingLevel() && window.KompasDiamond.ANCHORS.includes(askingLevel())) writeAnchor = planNow.from;
   }
-  if (!directDesktop && window.KompasJev && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
+  // Architect is not an Engineer/Director anchor. Refusing the model there marked the card Answered and never sent /api/answer (S10: blank 9/9).
+  if (!directDesktop && window.KompasJev && askingLevel() !== "architect" && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
     if (answerCtl === ctl) answerCtl = null;
     status("Answered.", "live");
     return;
@@ -5980,7 +5997,15 @@ async function generateAnswerRequest(question, card, opts = {}) {
       } else if (ev.type === "card") {
         if (applied.card) paintLayout(applied.card);
       }       else if (ev.type === "delta") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text += ev.text; text = absorbScreen(card, text); if (!card.cardLayout) show(text); }
-      else if (ev.type === "replace") { if (!first) { first = performance.now() - t0; clearTimeout(firstTokenTimer); } text = absorbScreen(card, ev.text); card.cardLayout = null; show(text); }
+      else if (ev.type === "replace") {
+        const framed = applyStreamFrame({ text: text }, ev);
+        if (framed.text !== text || String(ev.text || "").trim()) {
+          if (!first && String(framed.text || "").trim()) { first = performance.now() - t0; clearTimeout(firstTokenTimer); }
+          text = absorbScreen(card, framed.text);
+          card.cardLayout = null;
+          show(text);
+        }
+      }
       else if (ev.type === "wait") { if (card.req === ctl) status(ev.ms ? ("Answer lane cooling down. Retrying in " + Math.max(1, Math.round(ev.ms / 1000)) + "s.") : "Still working.", "live"); }
       else if (ev.type === "done") {
         meta = { ...meta, ...ev };

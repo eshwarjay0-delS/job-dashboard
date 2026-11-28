@@ -59,11 +59,17 @@ function norm(text: string): string {
   return String(text || "").toLowerCase().replace(/[^a-z0-9+#./ -]+/g, " ").replace(/\s+/g, " ").trim()
 }
 
+function foreignEvidence(line: string): string {
+  return /having\s+10\+\s*years|sr\.?\s*servicenow development|jayeshwar44|jayeshwar24|eshwarjay06/i.test(line) ? "" : line
+}
+
 /** One hash lookup. A miss is unknown, not a guess. */
 export function lookupTerm(profile: string, term: string): LexiconEntry | null {
   const key = norm(term)
   if (!key) return null
-  return table(profile).get(key) || null
+  const entry = table(profile).get(key) || null
+  if (!entry) return null
+  return { ...entry, evidence: entry.evidence.map((line) => foreignEvidence(line)).filter(Boolean) }
 }
 
 /** Match known terms in one line. Multi-word forms are hash lookups of 2–6 grams. */
@@ -77,7 +83,7 @@ export function matchKnownTerms(profile: string, text: string): KnownTerms {
     const entry = map.get(key)
     if (!entry || seen.has(entry.term)) return
     seen.add(entry.term)
-    known.push({ term: entry.term, surface: entry.surface, evidence: entry.evidence[0] || "" })
+    known.push({ term: entry.term, surface: entry.surface, evidence: foreignEvidence(entry.evidence[0] || "") })
   }
   for (let size = Math.min(6, words.length); size >= 2; size--) {
     for (let i = 0; i + size <= words.length; i++) take(words.slice(i, i + size).join(" "))

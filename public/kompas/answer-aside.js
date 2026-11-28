@@ -560,7 +560,7 @@
       return line.replace(/^[\s•▪●\-*]+/, "").trim();
     }).filter(function (line) {
       if (!line || line.split(/\s+/).length < 6) return false;
-      if (/jayeshwar44|jayeshwar24|eshwarjay06|10\+\s*years[\s\S]{0,80}servicenow|sr\.?\s*servicenow development|servicenow fso|servicenow csm/i.test(line)) return false;
+      if (/jayeshwar44|jayeshwar24|eshwarjay06|10\+\s*years[\s\S]{0,80}servicenow|sr\.?\s*servicenow development|servicenow development|servicenow fso|servicenow csm/i.test(line)) return false;
       if (/^[^:]{0,56}:\s+\S/.test(line)) return false;
       if (/\b(?:using|via|with|for|and|to|of|the|a|an)\.?$/i.test(line)) return false;
       if (/\b(?:19|20)\d{2}\b/.test(line)) return false;

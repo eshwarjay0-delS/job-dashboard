@@ -1,3 +1,9 @@
+## 2026-11-28 — S10 fixes, not shipped
+
+Taskmaster S10 on fefaaf1. Architect stayed blank because the client treats Architect as a derived level, sets the status to Answered, and never sends /api/answer. That gate now lets Architect call the model, an empty replace cannot clear a long pane, and a long answer is still rendered when anchor clips are present. Say this and answers drop the Sr. ServiceNow Development bio, including the lexicon evidence line. Pack fill keeps only full first-person sentences. The stock Citi opener is gone. A finished Sentinel or escalate question opens its own card. Empty and six-word cards are not marked answered. OWASP Broken Access Control and Injection, and CyberArk vault, rotation, and session recording, are in the packs. Visible on the page: the Architect pane, Say this, the You label, and whether a card is answered.
+
+**Checked by scripts/tests/kompas-s10.test.mjs. Not merged. This is the first deploy for 29 Nov CT, and only after that say-so.**
+
 ## 2026-11-28 — S9: clean pack fill and live cards, real models not run
 
 Taskmaster S9 on fdd4816. CI was passing on the stand-in model while production Architect answers stayed blank and the live path dropped Sentinel, escalate, and SQL injection. The pack fill now keeps first-person sentences and drops Story labels, Tools instructions, pages once, and by %. The fill target sits about 10 percent above the band floor. CyberArk is not the short quick band. A pack draft is placed on the card before the model call, and the model text replaces it when the model returns. A finished question is not merged into the previous card. Candidate speech is labeled You. An empty card is not marked answered. The live Say this panel uses the session resume. Press Start is removed from the intro. Visible on the page: answer text, the You label, the Say this line, and the summary.

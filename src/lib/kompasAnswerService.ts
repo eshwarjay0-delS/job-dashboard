@@ -704,7 +704,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
         if (!levelContract(job.level, job.question).quick && (job.packText || job.resume)) {
           const draft = expandToBand(
-            "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.",
+            "",
             levelContract(job.level, job.question),
             job.packText || String(job.resume || ""),
             job.question,
@@ -923,7 +923,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           }
         }
         if (!raw.trim()) {
-          const filled = expandToBand(localSpokenAnswer(job.question, `${job.resume || ""}\n${job.packText || ""}`) || "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.", levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
+          const filled = expandToBand(localSpokenAnswer(job.question, `${job.resume || ""}\n${job.packText || ""}`) || "", levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
           if (filled.trim()) {
             raw = filled
             lastErr = ""
@@ -968,9 +968,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         finalText = correctVerifiedPresentationErrors(finalText)
         const settled = await finishSpoken(job, finalText)
         if (settled.providerError || !settled.text.trim()) {
-          const seed = settled.providerError || isProviderErrorAnswer(finalText) || isProviderErrorAnswer(raw)
-            ? "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket."
-            : (finalText || raw)
+          const seed = settled.providerError || isProviderErrorAnswer(finalText) || isProviderErrorAnswer(raw) ? "" : (finalText || raw)
           const filled = expandToBand(seed, levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
             .replace(/\b(?:Error:\s*)?429 Too Many Requests\.?\s*/gi, "")
             .replace(/\bProvider returned error\.?\s*/gi, "")
@@ -1150,7 +1148,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     if (local) { raw = local; lastErr = ""; servedModel = "local-resume"; servedProvider = "local" }
   }
   if (!raw.trim()) {
-    raw = expandToBand("I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.", levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
+    raw = expandToBand("", levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
     if (raw.trim()) { lastErr = ""; servedModel = "pack-fill"; servedProvider = "local" }
   }
   const degraded = !raw.trim()
@@ -1438,7 +1436,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const suppliedResume = str(config.resume, 60000) || str(body.resume, 60000)
   const packId = str(body.packId, 80)
   const pack = getPack(packId)
-  let resumeSrc = !suppliedResume || /jayeshwar44|fortinet|fortigate/i.test(suppliedResume) ? OWNER_RESUME : suppliedResume
+  let resumeSrc = !suppliedResume || /jayeshwar44|fortinet|fortigate|having 10\+\s*years|sr\.?\s*servicenow development/i.test(suppliedResume) ? OWNER_RESUME : suppliedResume
   resumeSrc = ownerResumeForPack(resumeSrc, packId)
   const jdSrc = str(config.jd, 8000)
   const docsSrc = str(config.documents, 8000)
