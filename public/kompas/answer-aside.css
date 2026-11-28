@@ -202,7 +202,7 @@ html.kd #view-copilot #copyBtn{
   overflow-wrap:break-word !important;
 }
 .live-clarifier,.session-summary{
-  position:fixed;
+  position:absolute;
   z-index:70;
   top:108px;
   right:16px;

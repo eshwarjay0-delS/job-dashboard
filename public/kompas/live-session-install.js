@@ -158,6 +158,9 @@
     };
   }
 
+  function popupHost() {
+    return document.getElementById("overlay") || document.body;
+  }
   function paintSummary(summary) {
     if (!summary || !document.body) return;
     var box = document.getElementById("sessionSummary");
@@ -167,7 +170,7 @@
       box.className = "session-summary";
       box.setAttribute("role", "dialog");
       box.innerHTML = '<div class="session-summary-card"><h2>Session summary</h2><pre id="sessionSummaryBody"></pre><button type="button" id="sessionSummaryClose">Close</button></div>';
-      document.body.appendChild(box);
+      popupHost().appendChild(box);
       box.querySelector("#sessionSummaryClose").onclick = function () { box.hidden = true; };
     }
     var body = document.getElementById("sessionSummaryBody");
@@ -201,7 +204,7 @@
       pop.hidden = true;
       pop.setAttribute("role", "dialog");
       pop.innerHTML = '<div class="live-clarifier-head"><b>Clarify</b><button type="button" id="liveClarifierClose" aria-label="Close clarifier">×</button></div><p id="liveClarifierText"></p>';
-      document.body.appendChild(pop);
+      popupHost().appendChild(pop);
       pop.querySelector("#liveClarifierClose").onclick = function () { pop.hidden = true; pop.dataset.dismissed = "1"; };
     }
     if (!q) return;
