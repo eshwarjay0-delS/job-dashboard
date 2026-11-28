@@ -39,8 +39,8 @@ export const ROLE_PACKS: KompasPack[] = [
     kind: "role",
     title: "SOC Analyst",
     blurb: "The queue at Citi and CVS: detect, decide, hand off.",
-    dossier: "A SOC analyst interview is the hour I spend in the queue. At Citi that queue is Splunk and Sentinel, with CrowdStrike and Defender on the host. At CVS it was the same pattern tracked in ServiceNow. I am not applying as someone who has only watched a dashboard. I triage, I write the ticket a responder can use, and I tune the detection that is paging on a pattern I can explain. The analyst answer is short on architecture and specific on the entity.",
-    mustMention: ["queue", "Splunk", "host", "ServiceNow", "escalation"],
+    dossier: "A SOC analyst interview is the hour I spend in the queue. At Citi that queue is Splunk ES and Sentinel, with CrowdStrike and Defender on the host, and CyberArk on the privileged account. At CVS it was the same pattern tracked in ServiceNow. I own the notables, the correlation search, and the CIM fields the search depends on. I triage, I write the ticket a responder can use, and I tune the detection that is paging on a pattern I can explain. A web alert is a detection: WAF, web logs, database audit, then EDR. I do not describe exploiting it.",
+    mustMention: ["queue", "Splunk", "RBA", "CIM", "host", "ServiceNow", "escalation"],
     avoid: ["Architect language about operating models", "An invented major incident", "Closing alerts with no entity", "Tool tourism"],
     probes: [
       {

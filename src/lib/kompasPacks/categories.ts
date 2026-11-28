@@ -40,8 +40,8 @@ export const CATEGORY_PACKS: KompasPack[] = [
     kind: "category",
     title: "SOC",
     blurb: "Queue, detection, and the handoff out of the SOC.",
-    dossier: "SOC work is the queue and the decision to escalate. At Citi I live in Splunk and Microsoft Sentinel for detection, with CrowdStrike and Defender feeding the endpoint side. At CVS the same tools sat next to a ServiceNow queue. A useful answer names the detection, the evidence I opened, the decision I made, and who received the ticket. I do not narrate a dashboard. I say what the alert was, what I checked first, and what I handed to incident response or to the system owner when it was real.",
-    mustMention: ["Splunk", "Sentinel", "ServiceNow", "triage", "escalation"],
+    dossier: "SOC work is the queue and the decision to escalate. At Citi I live in Splunk ES and Microsoft Sentinel for detection, with CrowdStrike and Defender feeding the endpoint side. At CVS the same tools sat next to a ServiceNow queue. I designed the RBA notables, the correlation searches, the CIM data models, and the ingestion pipeline from the WAF, the proxy, identity, and EDR. I tune the search that pages on a known admin. A useful answer names the detection, the evidence I opened, the decision I made, and who received the ticket. SQL injection and XSS are detection questions: I search the WAF, the web logs, and the database audit, then I confirm the host in EDR. I do not narrate a pentest.",
+    mustMention: ["Splunk", "Sentinel", "RBA", "CIM", "WAF", "ServiceNow", "triage", "escalation"],
     avoid: ["Reading a list of SIEM features", "Closing an alert with no evidence named", "Inventing a Sev-1", "Handing every alert to the same team"],
     probes: [
       {

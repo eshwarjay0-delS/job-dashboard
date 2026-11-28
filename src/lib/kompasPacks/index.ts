@@ -79,6 +79,38 @@ export function sanitizePackNotes(raw: unknown): PackNote[] {
   return notes
 }
 
+const SOC_PLAYBOOK = [
+  "Playbook: I run the SOC queue at Citi Bank and I ran the same queue at CVS Health. I design the detections, I own the notables, and I take the on-call hour.",
+  "Tools: Splunk ES with RBA and notables, correlation searches, CIM data models, an ingestion pipeline from the WAF, proxy, identity, and EDR, plus Microsoft Sentinel, CrowdStrike, CyberArk, and Qualys.",
+  "Tuning: I cut a noisy notable by naming the entity, the risk score, and the one condition that was paging on a known admin. I keep the search and I drop the duplicate.",
+  "Metrics: mean time to detect, mean time to contain, and the share of notables I closed as noise.",
+  "Story: At Citi a privileged account opened a remote session outside the change window. The evidence was the CyberArk session, the Entra sign-in, and the CrowdStrike process tree. I decided it was real, I assigned the ServiceNow ticket to the identity owner, and the SOC lead took the host. We contained it and I tuned the notable so it pages once.",
+  "Story: At CVS Health a Qualys finding on a public host lined up with a Tanium process. I opened the ticket for the system owner, I confirmed the patch, and I closed it with the evidence attached.",
+  "Story: A web alert looked like SQL injection and a second one looked like XSS. I treated both as detection. I searched the WAF, the web logs, and the database audit in Splunk, then I confirmed the host in EDR. I did not describe a pentest. The ticket went to the application owner.",
+].join(" ")
+
+function playbook(pack: KompasPack): string {
+  if (pack.id === "soc" || pack.id === "soc-analyst") return SOC_PLAYBOOK
+  const tools = pack.mustMention.slice(0, 8).join(", ")
+  return [
+    `Playbook: I do ${pack.title} at Citi Bank, and I did the same class of work at CVS Health, the City of San Diego, Charter Communications, and Accenture.`,
+    `Tools and controls I use: ${tools}.`,
+    "Metrics I report: time to detect, time to contain, and how many items I closed as noise versus how many I handed to an owner.",
+    "Story: At Citi I opened the case from a real alert, I named the evidence, I decided it was in scope, I assigned the ServiceNow ticket to the owner, and I closed it after the control changed.",
+    "Story: At CVS Health I walked the same case with the people who report into the security lead. I kept the business risk in one sentence and I left the technical proof in the ticket.",
+    "Probe habit: I answer the question, then I add the detection or the decision, who got the ticket, and the outcome. I never stop at a single product name.",
+  ].join(" ")
+}
+
+export function packFrame(pack: KompasPack | null | undefined, question: string): string {
+  if (!pack) return ""
+  const soc = pack.id === "soc" || pack.id === "soc-analyst"
+  if (soc && /sql injection|\bxss\b|cross-site scripting/i.test(question)) {
+    return "FRAME: This is a SOC detection answer, not a pentest. Use the WAF, the web logs, the database audit, a Splunk search, and EDR. Do not describe exploiting the flaw."
+  }
+  return `FRAME: Answer as ${pack.title}. Use the tools, the playbook, the metrics, and the stories in this pack. Do not drift into a different specialty.`
+}
+
 export function packGrounding(pack: KompasPack, notes: PackNote[], audioUrl = ""): string {
   const audio = /^https?:\/\/\S+$/i.test(audioUrl) ? audioUrl : ""
   const probes = pack.probes.map((probe, index) => `Probe ${index + 1}: ${probe.question}\nSample answer: ${probe.answer}`).join("\n\n")
@@ -90,13 +122,14 @@ export function packGrounding(pack: KompasPack, notes: PackNote[], audioUrl = ""
   return [
     `Subject: ${pack.title} (${pack.kind}).`,
     pack.dossier,
+    playbook(pack),
     `Must mention: ${pack.mustMention.join("; ")}.`,
     `Avoid: ${pack.avoid.join("; ")}.`,
     probes,
     `Checklist:\n${checks}`,
     `NotebookLM audio slot: ${audio || "empty"}. Do not pretend the audio was played.`,
     learned ? `Learned from earlier drills on this subject:\n${learned}` : "Learned from earlier drills on this subject: none yet.",
-    "Speak in the first person. Be fully confident. Do not hedge. Do not add a canned closer. Use only the employers and tools in the resume.",
+    "Speak in the first person and be fully confident. A realistic story inside Citi Bank or CVS Health is allowed. Never hedge, never refuse, and never append a resume summary.",
   ].filter(Boolean).join("\n\n").slice(0, 14000)
 }
 

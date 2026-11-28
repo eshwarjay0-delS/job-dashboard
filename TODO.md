@@ -1,3 +1,9 @@
+## 2026-11-28 — Role and Category scorecard S5
+
+The catalogue sentence "I handle cybersecurity operations for the bank..." is no longer appended. Refusal lines are removed and a short story is filled with a Citi or CVS case. Architect, director, and engineer prompts ask for 1000+, 400-600, and 700-800 words. Every pack prompt includes a playbook, and a SOC SQL injection or XSS question is detection, not a pentest. Repeated triage sentences drop. With no resume attached, the intro is Senior Cybersecurity Engineer with 9+ years at Citi Bank, CVS Health, the City of San Diego, Charter Communications, and Accenture. Server-side, so the page looks the same until an answer is generated. Ships on PR #630 with the one-card work.
+
+**Checked by scripts/tests/kompas-role-scorecard-s5.test.mjs. The word counts are the local band filler, not a live model. One version.json read follows the ship.**
+
 ## 2026-11-28 — Roles and Categories on the Kompas sidebar
 
 Interview now lists Roles and Categories under Sessions, on the desktop sidebar and the scrolling phone bar. New opens a subject, and the card matches Sessions: Start or Continue, End, Transcript, Edit setup. The live copilot is the same path, with the pack sent as extra grounding. Categories: IAM, SOC, Incident Response, Endpoint, Cloud Security (Azure), AppSec, Vulnerability Mgmt, GRC, Network Security, Leadership. Roles: Senior Cybersecurity Engineer, SOC Analyst, IAM Engineer, Security Architect, Cloud Security Engineer, Security Director. NotebookLM audio starts empty and is saved in Edit setup. After an answer, a note is stored for that pack and shown on the Feedback tab, which stays off for a regular live session. No auth change. This is visible UI.

@@ -1,3 +1,7 @@
+## 28 November 2026 — Role and Category scorecard S5
+
+Scorecard S5 on f5b12b1 scored Role SOC Analyst 1.3/3.6/1.8 and Category SOC 1.7/3.2/2.0. The same PR #630 now strips the cybersecurity-operations catalogue, strips refusals, fills a short story with a Citi or CVS case, sets architect / director / engineer token budgets at 1000+, 400-600, and 700-800 words, injects a playbook for every pack, frames SOC SQL injection and XSS as detection, drops a repeated triage sentence, and opens an empty session as Senior Cybersecurity Engineer with 9+ years. Skip-login stays on. The Fortinet personality module stays unimported. One version.json read follows the squash-merge. Not a live listen.
+
 ## 28 November 2026 — One card per question
 
 Live retest S4 on f5b12b1 kept auto-answer, SIEM, the opening sentence, and the summary. An unanswered card was still rewritten by the next question, so escalate and SQLi were lost. This branch opens a new card at question end with no quiet wait, locks the question, keeps candidate speech out of it, drops off-topic resume tails, clears the silence warning when sound returns, counts only real answer text in the summary, and answers a manual press in place. Not merged. The Role/Category test fixes will share the later deploy.

@@ -875,7 +875,7 @@ export function afterSelfCorrection(text: string): string {
 /** A complete spoken answer from resume lines when every model is unreachable. */
 export function localSpokenAnswer(question: string, resume: string): string {
   const words = new Set(String(question || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 4))
-  const lines = String(resume || "").split(/\n+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 8)
+  const lines = String(resume || "").split(/\n+/).map((line) => line.replace(/^[\s•▪●\-*]+/, "").trim()).filter((line) => line.split(/\s+/).length >= 8 && !/i handle cybersecurity operations for the bank/i.test(line))
   const ranked = lines.map((line) => ({
     line,
     n: line.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w)).length,
