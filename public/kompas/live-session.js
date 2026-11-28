@@ -297,6 +297,15 @@
     return true;
   }
 
+  function finishedAnswerText(answer) {
+    var text = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
+    text = text.replace(/\s+/g, " ").trim();
+    if (!text || text === "…" || text === "..." || /^Answering…?$/.test(text) || text.split(/\s+/).filter(Boolean).length < 4) {
+      return "The answer could not finish. Your question is saved on this card. Press AI Answer to retry.";
+    }
+    return text;
+  }
+
   function questionWithoutCandidate(text) {
     var parts = sentences(text);
     if (!parts.length) return correctSecurityAsr(stripSpeakerLabels(text));
@@ -464,6 +473,9 @@
     answerIsReal: answerIsReal,
     latestQuestion: latestQuestion,
     attributeSpeaker: attributeSpeaker,
+    isCandidateNarrative: isCandidateNarrative,
+    interviewerAsk: interviewerAsk,
+    finishedAnswerText: finishedAnswerText,
     joinSplitQuestion: joinSplitQuestion,
     sessionSummary: sessionSummary,
     replayLive: replayLive,

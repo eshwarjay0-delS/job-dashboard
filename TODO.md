@@ -1,3 +1,9 @@
+## 2026-11-28 — Intro, You label, resume selector, empty card, session sync
+
+Follow-up after the level-band ship, not a ship. The intro said "Senior I Engineer" because speakerFirst treated "Cybersecurity" as a person's name and asSpeaker replaced that word with "I". "SanG Diego" is repaired back to San Diego, and an introduction says 9+ years. Candidate speech shows the You label, and that speech is left off the question on the answer card. A Role or Category session whose resume text is already set shows eshwarjay05 in the resume selector instead of an empty choice. A finished question card that would stay on "…" gets the retry line. When skip-login cannot reach the account session store, sync stays on this device instead of reporting 503. The page changes are visible: the intro sentence, the You label, the resume menu, and the retry line. The sync change is the banner text.
+
+**Checked by scripts/tests/kompas-intro-you-resume.test.mjs. Not a live click-through. Not merged.**
+
 ## 2026-11-28 — Hedge lines are failures again
 
 S7 flagged "will not invent", "cannot name a specific", "the resume does not show", and "not directly measured". Those sentences are stripped again. A pack sentence that names a foreign employer, tool, or number still is not spoken as fact. A Citi Bank and Splunk sentence that is on the resume can stay. Server-side, so the page looks the same until the next answer.

@@ -49,8 +49,11 @@
     showCaption = function (who, text) {
       // who is already You or Them. Re-scoring every Them line against a
       // forced Interviewer previous-role labeled the candidate as Interviewer.
+      // A line that is his own speech still shows You.
+      var spoken = Gate.correctSecurityAsr(text);
+      if (who !== "You" && typeof Gate.isCandidateNarrative === "function" && Gate.isCandidateNarrative(spoken) && (typeof Gate.interviewerAsk !== "function" || !Gate.interviewerAsk(spoken))) who = "You";
       if (who === "You") lastSpeaker = "You";
-      return origCaption(who === "You" ? "You" : "Them", Gate.correctSecurityAsr(text), arguments[2]);
+      return origCaption(who === "You" ? "You" : "Them", spoken, arguments[2]);
     };
   }
 

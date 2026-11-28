@@ -638,7 +638,7 @@ function saveWizardDraft() {
     instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode, format: draft.format, star: draft.star,
     interviewer: $("interviewerSelect")?.value, difficulty: $("difficultySelect")?.value, dossierSize: $("dossierSize")?.value,
     autoAnswer: $("autoAnswer")?.checked, saveTranscript: $("saveTranscript")?.checked,
-    resumeId: selectedResumeId, docIds: [...selectedDocIds], at: Date.now(),
+    resumeId: storedResumeId(), docIds: [...selectedDocIds], at: Date.now(),
   });
 }
 function clearWizardDraft() { LS.set(DRAFT_KEY, null); }
@@ -738,7 +738,7 @@ function finishEditWizard() {
   const documentText = resolveDocumentsText();
   if (!(lane && !documentText)) x.documents = documentText;
   x.docIds = [...selectedDocIds];
-  x.resumeId = selectedResumeId;
+  x.resumeId = storedResumeId();
   x.model = $("model").value;
   x.language = "en";
   x.length = draft.length;
@@ -806,7 +806,7 @@ function finishWizard() {
     resume: resolveResumeText(),
     documents: resolveDocumentsText(),
     docIds: [...selectedDocIds],
-    resumeId: selectedResumeId,
+    resumeId: storedResumeId(),
     model: $("model").value,
     language: "en",
     length: draft.length,
@@ -994,7 +994,8 @@ function setPersonaChip(s) {
   if ((!label || /servicenow developer/i.test(label)) && /\b(?:soc|security|cyber)\b/i.test(String(s && s.jd || ""))) label = "Security operations";
   if (!label) label = p && (p.role || p.seniority) ? personaLabel(p.seniority, p.role) : "";
   chip.textContent = label; chip.classList.toggle("hidden", !label);
-  chip.title = p && p.voice ? "Voice: " + p.voice : "";
+  const resumeName = /eshwarjay05@gmail\.com/i.test(String(s.resume || "")) ? "eshwarjay05" : "Session resume";
+  chip.title = ["Resume: " + resumeName, p && p.voice ? "Voice: " + p.voice : ""].filter(Boolean).join(". ");
 }
 // Deterministic reuse (owner, 2026-09-30: cut AI wherever it isn't needed). The same resume, JD, documents and
 // instructions produce the same prep; with the same interviewer, the same persona file. Reused, never regenerated.
@@ -1249,10 +1250,13 @@ async function preparePack(s) {
 // finish after the interview has started).
 function speakerFirst(s) {
   const lines = String((s && s.resume) || "").split(/\n/).map(l => l.trim()).filter(Boolean).slice(0, 8);
-  const title = /^(Senior|Junior|Staff|Lead|Principal|Security|Cyber|Software|Network|Cloud|Data|Director|Manager|Engineer|Analyst|Developer|Architect|Associate|Internal)$/;
+  const title = /^(Senior|Junior|Staff|Lead|Principal|Security|Cyber|Cybersecurity|Digital|Software|Network|Cloud|Data|Director|Manager|Engineer|Analyst|Developer|Architect|Associate|Internal|Specialist|Endpoint|San|Diego|Citi|Bank|City|York|Irving|Stamford|Microsoft|Active|Palo|Charter|Accenture|Health|Communications)$/;
   for (const line of lines) {
-    const m = line.match(/\b([A-Z][a-z]{2,})\s+[A-Z][a-z]{2,}\b/);
-    if (m && !title.test(m[1])) return m[1];
+    const re = /\b([A-Z][a-z]{2,})\s+[A-Z][a-z]{2,}\b/g;
+    let m;
+    while ((m = re.exec(line))) {
+      if (!title.test(m[1])) return m[1];
+    }
   }
   return "";
 }
@@ -1419,7 +1423,7 @@ function presentAnswer(question, answer, source) {
   const asked = cleanHeardQuestion(question);
   const raw = String(answer || "").trim();
   if (!raw) return raw;
-  const intro = /^(?:introduce yourself|tell me about yourself|walk me through your (?:background|career|resume))\.$/i.test(asked);
+  const intro = /^(?:your introduction|introduce yourself|tell me about yourself|brief introduction|walk me through your (?:background|career|resume))\.?$/i.test(asked);
   const allowed = String(source || "") + "\n" + asked;
   const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(raw);
   const meta = /\b(?:that (?:part|detail) is not in the sources|not in the (?:sources|resume)|no evidence for|sources or evidence)\b/i;
@@ -1448,6 +1452,7 @@ function presentAnswer(question, answer, source) {
     ordered.push(s);
   }
   if (!ordered.length) return "";
+  if (intro && window.KompasCorrect && window.KompasCorrect.repairOwnerIntro) return window.KompasCorrect.repairOwnerIntro(ordered.join(" "));
   if (intro) return ordered.join(" ");
   const q = String(asked || "");
   const band = (/^(?:do|does|did|are|is|was|were|have|has|can|could|would|will|should) you\b/i.test(q) || /^(?:what is|what does|what's|define)\b/i.test(q))
@@ -1575,7 +1580,11 @@ function renderCard() {
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   const shownAnswer = answerForCard(c);
   const elapsedMs = Date.now() - (c.askedAt || startedAt || Date.now());
-  const heardQ = interviewerOnly(cleanHeardQuestion(draft || c.question));
+  let heardQ = interviewerOnly(cleanHeardQuestion(draft || c.question));
+  if (window.KompasLiveSession && typeof window.KompasLiveSession.questionWithoutCandidate === "function") {
+    const stripped = window.KompasLiveSession.questionWithoutCandidate(heardQ);
+    if (stripped) heardQ = stripped;
+  }
   const lined = oneQuestionLine(heardQ);
   const qLabel = (!heardQ || /^(?:Preparing…|Ready|Deriving…|Your introduction|No question yet|Answering)/.test(heardQ)) ? heardQ : String(lined || "").replace(/^(?:Question:\s*)+/, "");
   const qEl = $("question");
@@ -3339,6 +3348,7 @@ function showCaption(who, text, isInterim) {
   if (who === "Them") noteThem(text);
   else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
+  if (who !== "You" && window.KompasLiveSession && typeof window.KompasLiveSession.isCandidateNarrative === "function" && window.KompasLiveSession.isCandidateNarrative(text) && (typeof window.KompasLiveSession.interviewerAsk !== "function" || !window.KompasLiveSession.interviewerAsk(text))) who = "You";
   $("capWho").textContent = who === "You" ? "You" : "Interviewer";
   const captionText = $("capText");
   captionText.textContent = text;
@@ -3382,6 +3392,7 @@ function appendDrawer(who, text, at) {
   const body = $("drawerBody"); if (!body) return;
   const first = body.firstElementChild; if (first && first.classList.contains("muted")) body.innerHTML = "";
   const words = String(text || "").replace(/\s+/g, " ").trim(); if (!words) return;
+  if (who !== "You" && window.KompasLiveSession && typeof window.KompasLiveSession.isCandidateNarrative === "function" && window.KompasLiveSession.isCandidateNarrative(words) && (typeof window.KompasLiveSession.interviewerAsk !== "function" || !window.KompasLiveSession.interviewerAsk(words))) who = "You";
   const side = who === "You" ? "you" : "them", when = Number(at) || Date.now(), last = body.lastElementChild;
   const tagOf = (node, line) => { const tag = node.querySelector(".qtag"); if (tag) tag.textContent = lineStatus(line); };
   if (last && last.classList.contains("tl") && last.classList.contains(side) && DRAWER_FILLER.test(words) && when >= Number(last.dataset.at || 0)) {
@@ -5674,7 +5685,7 @@ async function generateAnswer(question, card, opts = {}) {
     // wrapper is the last stop: do not schedule another generateAnswer here.
     card.streaming = false;
     const partial = typeof card.answer === "string" && card.answer.trim() && card.answer.trim() !== "…";
-    if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
+    if (!partial) ensureFinishedAnswer(card);
     card.meta = partial ? "" : "Answer interrupted. Retry available.";
     if (cards[idx] === card) renderCard();
     status(partial ? "Answered." : (error && error.message || "Press AI Answer to try again."), partial ? "live" : "err");
@@ -5682,6 +5693,22 @@ async function generateAnswer(question, card, opts = {}) {
     clearTimeout(timer);
     if (answerCtl === ctl) answerCtl = null;
   }
+}
+function ensureFinishedAnswer(card) {
+  if (!card) return;
+  const q = String(card.question || "").trim();
+  if (!q || /^(Preparing…|Ready|No question yet|No question on screen|Your introduction)$/i.test(q)) return;
+  if (/logistics/i.test(String(card.meta || ""))) return;
+  const retry = "The answer could not finish. Your question is saved on this card. Press AI Answer to retry.";
+  const next = window.KompasLiveSession && typeof window.KompasLiveSession.finishedAnswerText === "function"
+    ? window.KompasLiveSession.finishedAnswerText(card.answer)
+    : retry;
+  if (next !== retry) return;
+  const current = typeof card.answer === "string" ? card.answer : (Array.isArray(card.answer) ? card.answer.join(" ") : "");
+  if (current.replace(/\s+/g, " ").trim() === retry) return;
+  card.answer = [retry];
+  card.streaming = false;
+  card.meta = card.meta || "Answer interrupted. Retry available.";
 }
 function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
 function firstTokenDecision(elapsedMs, hasToken, alreadyRetried) {
@@ -5786,6 +5813,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
       const prevReal = (typeof prevAnswer === "string" && prevAnswer.trim().length > 8 && prevAnswer.trim() !== "…") || (Array.isArray(prevAnswer) && prevAnswer.join("\n").trim().length > 8 && !/^(…|Preparing…)$/.test(String(prevAnswer[0] || "").trim()));
       if (!partial && prevReal) card.answer = prevAnswer; else if (!partial && keepOld) card.answer = prevAnswer;
+      else if (!partial) ensureFinishedAnswer(card);
       card.streaming = false; if (cards[idx] === card) renderCard();
       status("Answer stalled — press AI Answer to try again.", "live"); return;
     }
@@ -6013,6 +6041,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
         card.meta = "Personal logistics, not answered";   // owner rule 29 Oct: a quiet card says why, with no answer text
         if (cards[idx] === card) renderCard();
         status("Personal logistics, not answered. Still listening.", "live");
+        return;
+      }
+      if (card.questionLocked && kept && !isPlaceholderTitle(kept)) {
+        ensureFinishedAnswer(card);
+        if (cards[idx] === card) renderCard();
         return;
       }
       // Nothing to answer: take the empty page out of the book, or leave a single live "No question yet" card.
@@ -8227,13 +8260,32 @@ $("docsBackBtn").onclick = backFromMaterials;
 function backFromMaterials() { if (docsReturn === "wizard") { renderResumeSelect(); renderDocPicker(); show("wizard"); saveWizardDraft(); } else openDashboard(); }
 
 /* ---- wizard: resume select (①) + attached-documents picker (③) ---- */
+const SESSION_RESUME = "__session__";
+function storedResumeId() { return !selectedResumeId || selectedResumeId === SESSION_RESUME ? "" : selectedResumeId; }
+function resumeChoiceLabel(text) {
+  const raw = String(text || "");
+  if (/eshwarjay05@gmail\.com/i.test(raw)) return "eshwarjay05";
+  const line = raw.split(/\n/).map((s) => s.trim()).find((s) => s && !/@/.test(s)) || "Session resume";
+  return line.slice(0, 72);
+}
 function renderResumeSelect() {
   const sel = $("resumeSelect"); if (!sel) return;
   const docs = docsGet().filter(d => d.kind === "resume" && d.text && !d.error);
+  const pasted = ($("resume") && $("resume").value || "").trim();
+  if (pasted && !selectedResumeId) selectedResumeId = SESSION_RESUME;
   sel.innerHTML = `<option value="">Choose a resume</option>`;
+  if (selectedResumeId === SESSION_RESUME && pasted) {
+    const sessionOpt = document.createElement("option");
+    sessionOpt.value = SESSION_RESUME;
+    sessionOpt.textContent = resumeChoiceLabel(pasted);
+    sel.append(sessionOpt);
+  }
   for (const d of docs) { const o = document.createElement("option"); o.value = d.id; o.textContent = d.name + (d.primary ? " (active)" : ""); sel.append(o); }
   sel.value = selectedResumeId || "";
-  sel.onchange = () => { selectedResumeId = sel.value; };
+  sel.onchange = () => {
+    selectedResumeId = sel.value;
+    if (sel.value && sel.value !== SESSION_RESUME && $("resume")) { $("resume").value = ""; $("resume").classList.add("hidden"); }
+  };
 }
 function renderDocPicker() {
   const box = $("docPicker"); if (!box) return;

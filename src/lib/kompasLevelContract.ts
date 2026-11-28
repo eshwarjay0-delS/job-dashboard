@@ -196,8 +196,13 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
 }
 
 export function repairIntroHeadline(question: string, text: string): string {
-  if (!/tell me about yourself|introduce yourself|walk (?:me|us) through your (?:background|career|resume)/i.test(question)) return text
-  const rest = String(text || "").split(/(?<=[.!?])\s+/).slice(1).filter((s) => !/senior i engineer|\b7\s+years\b/i.test(s))
+  if (!/tell me about yourself|introduce yourself|your introduction|brief introduction|walk (?:me|us) through your (?:background|career|resume)/i.test(question)) return text
+  const cleaned = String(text || "")
+    .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
+    .replace(/\bSanG\s+Diego\b/g, "San Diego")
+    .replace(/\b(?:7|8)\+?\s+years\b/gi, "9+ years")
+    .replace(/\b9\s+years\b/gi, "9+ years")
+  const rest = cleaned.split(/(?<=[.!?])\s+/).slice(1).filter((s) => !/senior i engineer|senior cybersecurity engineer|\b[789]\s+years\b|sang diego/i.test(s))
   return [INTRO_HEADLINE, ...rest].join(" ").replace(/\s+/g, " ").trim()
 }
 

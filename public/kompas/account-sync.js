@@ -136,6 +136,7 @@
       if(response.status===401 && await reviveAuth()) response=await request();
       if(!response.ok) throw new Error("Session synchronization unavailable ("+response.status+").");
       const parsed=await response.json();
+      if(parsed && parsed.localOnly && parsed.userId) return parsed;
       if(!parsed || !parsed.ok || !parsed.userId) throw new Error("Account session response unavailable.");
       if(method==="GET" && !cursor){
         const tag=(response.headers && typeof response.headers.get==="function" && response.headers.get("etag")) || "";
@@ -147,6 +148,15 @@
       if(requesting) return requesting;
       requesting=(async()=>{
         const data=await api("GET",null,"",conditional===true);
+        if(data && data.localOnly){
+          const nextOwner=data.userId||owner;
+          if(nextOwner){ owner=nextOwner; storage.setItem(prefix+"owner", owner); }
+          local=read();
+          lastCheck=Date.now();
+          lastPollKind="local";
+          syncStatus({state:"local", message: data.error || "Sessions stay on this device. Account sync is not configured.", owner, legacy:getJSON(prefix+"legacy",[]).length});
+          return true;
+        }
         if(data && data.throttled){
           lastCheck=Date.now();
           lastPollKind="throttled";
@@ -266,6 +276,10 @@
           if(!group.length) break;
           const snapshot=Object.fromEntries(group.map(x=>[x.id,JSON.stringify(x)]));
           const data=await api("POST",{operations:group});
+          if(data && data.localOnly){
+            syncStatus({state:"local", message: data.error || "Sessions stay on this device. Account sync is not configured.", owner, legacy:getJSON(prefix+"legacy",[]).length});
+            return false;
+          }
           if(data.userId!==owner)throw new Error("Account changed during synchronization.");
           for (const op of group) if (snapshot[op.id]===JSON.stringify(pending[op.id])) delete pending[op.id];
           persist();

@@ -32,14 +32,18 @@
     if (/s$/i.test(v) && !/ss$/i.test(v) && v.length > 3) return v.slice(0, -1);
     return v;
   }
+  // A job title, employer, or city is not his name. Guessing "Cybersecurity" and
+  // replacing it with "I" turned the intro into "Senior I Engineer" (S7).
+  const NOT_A_NAME = new Set("cybersecurity security engineer digital senior specialist network endpoint analyst architect director manager citi bank cvs health charter communications accenture diego city york irving stamford microsoft active directory palo alto splunk sentinel defender crowdstrike cyberark qualys nessus fortify tanium sailpoint okta python powershell servicenow azure".split(" "));
   function asSpeaker(text, name) {
     let t = String(text || "");
     const hinted = (t.match(/\b([A-Z][a-z]{2,})\s+currently\b/) || [])[1];
     const who = String(name || globalThis.__speakerName || hinted || "").trim();
-    if (who && who !== "I") {
+    if (who && who !== "I" && who.length <= 16 && !NOT_A_NAME.has(who.toLowerCase())) {
       const re = new RegExp("\\b" + who.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g");
       t = t.replace(re, "I");
     }
+    t = t.replace(/\bSenior I Engineer\b/g, "Senior Cybersecurity Engineer").replace(/\bSanG\s+Diego\b/g, "San Diego");
     t = t.replace(/\bI(?:\s+currently)?\s+([A-Za-z]+)/g, (m, v) => m.slice(0, m.length - v.length) + dropPerson(v));
     t = t.replace(/\b(I\b[^.!?]{0,500}?)\band\s+([a-z]{4,}s)\b/g, (m, left, v) => {
       const next = dropPerson(v);
@@ -244,5 +248,19 @@
     return said.length ? `(What went wrong on the other depth for this question: ${said.join("; ")}.)` : "";
   }
 
-  globalThis.KompasCorrect = { correct: aroundCode(correct), speak: aroundCode(speak), applyCritic: aroundCode(applyCritic), asSpeaker, asDesign, dropRuleBreaks, review, criticNote };
+  // The introduction he reads. April 2017 through the current Citi role is 9+ years,
+  // and the city is San Diego. A guessed name must not turn either of those into something else.
+  function repairOwnerIntro(text) {
+    let t = String(text || "")
+      .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
+      .replace(/\bSanG\s+Diego\b/g, "San Diego")
+      .replace(/\bCity of I Diego\b/g, "the City of San Diego")
+      .replace(/\b(?:7|8)\+?\s+years\b/gi, "9+ years")
+      .replace(/\b9\s+years\b/gi, "9+ years");
+    const headline = "I am a Senior Cybersecurity Engineer with 9+ years of experience, at Citi Bank since November 2024, after CVS Health, the City of San Diego, Charter Communications, and Accenture.";
+    if (!/Senior Cybersecurity Engineer/.test(t) || !/9\+ years/.test(t) || !/\bSan Diego\b/.test(t)) t = headline + " " + t;
+    return t.replace(/\s+/g, " ").trim();
+  }
+
+  globalThis.KompasCorrect = { correct: aroundCode(correct), speak: aroundCode(speak), applyCritic: aroundCode(applyCritic), asSpeaker, asDesign, dropRuleBreaks, review, criticNote, repairOwnerIntro };
 })();

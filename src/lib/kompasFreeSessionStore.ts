@@ -114,14 +114,20 @@ async function streamToText(stream: ReadableStream<Uint8Array>): Promise<string>
 function createBlobBackend(): FreeStoreBackend {
   return {
     async readCatalog(userId) {
-      const { get } = await import("@vercel/blob")
-      const result = await get(catalogPath(userId), { access: "private", useCache: false })
-      if (!result || result.statusCode !== 200 || !result.stream) return null
-      const parsed = JSON.parse(await streamToText(result.stream)) as Catalog
-      if (!parsed || parsed.version !== CATALOG_VERSION || parsed.userId !== userId || !Array.isArray(parsed.rows)) {
-        return null
+      try {
+        const { get } = await import("@vercel/blob")
+        const result = await get(catalogPath(userId), { access: "private", useCache: false })
+        if (!result || result.statusCode !== 200 || !result.stream) return null
+        const parsed = JSON.parse(await streamToText(result.stream)) as Catalog
+        if (!parsed || parsed.version !== CATALOG_VERSION || parsed.userId !== userId || !Array.isArray(parsed.rows)) {
+          return null
+        }
+        return parsed
+      } catch (error) {
+        const name = error && typeof error === "object" && "name" in error ? String((error as { name?: string }).name) : ""
+        if (name === "BlobNotFoundError") return null
+        throw error
       }
-      return parsed
     },
     async writeCatalog(userId, catalog) {
       const { put } = await import("@vercel/blob")
