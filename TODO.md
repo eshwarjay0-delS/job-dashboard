@@ -1,3 +1,21 @@
+## 2026-11-28 — Full confidence, no hedge, You never opens an answer
+
+Answers stay first person. The hands-on transfer stub and the stock Director closer are stripped. A tool that is not on the resume is answered from a real role line, without a gap sentence. A mic line tagged You does not start a card and does not fill Say this. The page stamp is kompas-20261128-hedge, so the desktop exe needs the master build.
+
+**Checked by the banned-hedge test in scripts/tests/kompas-level-contract.test.mjs. One production check follows the ship.**
+
+## 2026-11-28 — Intro stays on the Houston resume; unknown employers are dropped
+
+Tell me about yourself no longer keeps a sentence that names Saviynt, Accenture, Charter, or any employer the loaded resume does not contain. An empty session uses the Houston eshwarjay05 summary. A jayeshwar44 resume is not mixed in. Director stock closers are stripped. Say this fills from that resume even when the question shares no words. Server only, so the installed exe does not need another build.
+
+**Checked by the intro employer test in scripts/tests/kompas-level-contract.test.mjs. One production Tell me about yourself check at three levels follows the ship.**
+
+## 2026-11-28 — No filler padding; level and Houston resume on a bare request
+
+A short answer is not filled with repeated stock sentences. One more model call can add new text. A top-level level is architect, director, or engineer and shows in the response. No session resume uses the Houston eshwarjay05 summary, and the answer does not say the resume is not loaded. Server only.
+
+**Checked by scripts/tests/kompas-level-contract.test.mjs. One production CyberArk check at three levels follows the ship.**
+
 ## 2026-11-28 — Upload timeout does not send the original (no new screen)
 
 The explicit library fallback is already on master in `explicitlySelectedSameAccountLibraryResume`. This change only locks the test: a timeout or an unfinished rewrite does not send the uploaded original. No `[ship]`. Not a live WhatsApp send.

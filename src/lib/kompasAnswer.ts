@@ -313,11 +313,17 @@ const LEVEL_OF: Record<string, AnswerLevel> = {
 
 /** The answering level for a request: an explicit level wins; otherwise the
  *  interviewer/anchor key the client sent maps onto its level. */
+function levelToken(raw: unknown): AnswerLevel | undefined {
+  const t = String(raw || "").toLowerCase().replace(/level\s*[123]\s*[—:-]?\s*/g, " ").replace(/[_/]+/g, " ").replace(/\s+/g, " ").trim()
+  if (!t) return undefined
+  if (/\barchitect\b|\bdeveloper\b/.test(t)) return "architect"
+  if (/\bdirector\b|\bsupervisor\b/.test(t) || (/\blead\b/.test(t) && !/\bengineer\b/.test(t))) return "director"
+  if (/\bengineer\b|\bhr\b|\banalyst\b|\bpeer\b/.test(t)) return "engineer"
+  return LEVEL_OF[t]
+}
+
 export function answerLevel(raw: unknown, fallbackInterviewer?: string): AnswerLevel {
-  const fromRaw = typeof raw === "string" ? LEVEL_OF[raw.trim().toLowerCase()] : undefined
-  if (fromRaw) return fromRaw
-  const fromFallback = typeof fallbackInterviewer === "string" ? LEVEL_OF[fallbackInterviewer.trim().toLowerCase()] : undefined
-  return fromFallback || "engineer"
+  return levelToken(raw) || levelToken(fallbackInterviewer) || "engineer"
 }
 
 // ---- Question register: what kind of depth the QUESTION itself asks for ----

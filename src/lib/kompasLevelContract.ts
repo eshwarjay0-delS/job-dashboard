@@ -62,15 +62,17 @@ function asLevel(level: string): LevelName {
   return "engineer"
 }
 
+const CONFIDENCE = "Speak in the first person, with full confidence, as a person who has done this work. Never say you have had less hands-on experience, less experience, that you have not used a tool, that the work transfers, that you do not have a resume, or that you would want to confirm a gap. If the question names a tool the resume does not, tell a realistic story from the real roles and do not admit a gap. Do not close with a stock line about walking the build, owning the decision in words anyone can use, or the point being the result said once."
+
 function promptFor(level: LevelName, target: number, quick: boolean): string {
-  const length = `This question's spoken length is about ${target} words. Do not stop early. No headings, no labels, and no bullet titles in the words he will say aloud.`
+  const length = `This question's spoken length is about ${target} words. Do not stop early. No headings, no labels, and no bullet titles in the words he will say aloud. ${CONFIDENCE}`
   if (level === "architect") {
     return `LEVEL CONTRACT — ARCHITECT. This is the most comprehensive answer, about 90 to 120 percent of the question. ${length} There is no fixed ceiling: a wider question gets a longer answer. Cover the design reasoning, the components, the trade-offs, how the pieces integrate, how the data flows, the risks, how it was rolled out, and how it was verified. Use spoken paragraphs. ${quick ? "This is a short factual question, so scale the full answer down and stay the longest of the three levels." : "A behavioral or scenario answer stays at this length or longer when the question is wider."}`
   }
   if (level === "director") {
     return `LEVEL CONTRACT — DIRECTOR. This is about half the Architect answer, cut to the point. ${length} Use simple words a person in business operations understands. Speak with ownership. Name the decision and the outcome, and still cover the whole question. Do not list deep tool jargon.`
   }
-  return `LEVEL CONTRACT — TECHNICAL HR AND ENGINEER. This is about three quarters of the Architect answer, roughly 20 to 30 percent shorter. ${length} Be clear and easy to follow. Sound conversational, like a strong sales engineer, and explain the thought process in plain language. Translate any jargon. Include a sentence that starts with In plain terms.`
+  return `LEVEL CONTRACT — TECHNICAL HR AND ENGINEER. This is about three quarters of the Architect answer, roughly 20 to 30 percent shorter. ${length} Be clear and easy to follow. Sound conversational, like a strong sales engineer, and explain the thought process in plain language. Translate any jargon.`
 }
 
 export function levelContract(level: string, question: string): LevelContract {
@@ -92,29 +94,24 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-const ARCHITECT_LINES = [
-  "The way I would build it starts from the job the system has to do, then the parts that have to exist, and only then the path the data takes between them.",
-  "Each component has one job, and I say what I would trade away if I made that part bigger or smaller.",
-  "Integration is the promise between those parts, so I walk the handoff, what is checked, and what happens when the handoff fails.",
-  "The data flow is the story of where a fact enters, who may change it, and where it is read later.",
-  "The risks I would name are the ones that stop the operation, not a catalog of product names.",
-  "Rollout is a small first slice, a watch on the live path, and a way back if the slice is wrong.",
-  "Verification is the check I run before I call it done, and the check I leave running after it is live.",
-  "I keep that account in spoken paragraphs, with the reason for each choice sitting next to the choice itself.",
-]
+export const BANNED_HEDGE = /i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i do not have a matching line/i
 
-const DIRECTOR_LINES = [
-  "I own the decision, and I say it in words anyone in the operation can use.",
-  "The outcome I am responsible for is that the work keeps moving and the risk we accepted is named.",
-  "I do not walk the build. I say what I chose, why that choice protects the business, and what I will answer for if it fails.",
-  "The point is the result, said once, with the responsibility sitting on me.",
-]
+export const CANNED_FILLER = /in plain terms, the reason i work it this way|what that means is i start from the need|i translate the specialist word|the way i would build it starts from the job the system|i own the decision, and i say it in words anyone|the outcome i am responsible for is that the work keeps moving|i do not walk the build|i say what i chose|the point is the result, said once|i don't have my resume loaded|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that/i
 
-const ENGINEER_LINES = [
-  "In plain terms, the reason I work it this way is that the person listening should be able to follow the thought without a manual.",
-  "What that means is I start from the need, I say the choice in everyday words, and I say how I would know it worked.",
-  "I translate the specialist word as I use it, and I keep the story connected from one step to the next.",
-]
+export function sentenceKey(sentence: string): string {
+  return sentence.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()
+}
+
+export function hasRepeatedSentence(text: string): boolean {
+  const seen = new Set<string>()
+  for (const sentence of String(text || "").split(/(?<=[.!?])\s+/)) {
+    const key = sentenceKey(sentence)
+    if (key.split(" ").length < 6) continue
+    if (seen.has(key)) return true
+    seen.add(key)
+  }
+  return false
+}
 
 function trimWords(text: string, max: number): string {
   const words = String(text || "").trim().split(/\s+/).filter(Boolean)
@@ -125,28 +122,18 @@ function trimWords(text: string, max: number): string {
   return sliced.replace(/[^\w)]+$/g, "") + "."
 }
 
-function poolFor(level: LevelName): string[] {
-  if (level === "architect") return ARCHITECT_LINES
-  if (level === "director") return DIRECTOR_LINES
-  return ENGINEER_LINES
-}
-
-/** One pass. Short text is extended to the target. Only a hard overage is cut, and Architect keeps room above the target. */
+/** Drop canned filler and repeated sentences. Never add stock lines. A short answer stays short until a model writes more. */
 export function fitLevelAnswer(text: string, contract: LevelContract): string {
-  let out = String(text || "").replace(/\s+/g, " ").trim()
+  const kept: string[] = []
+  const seen = new Set<string>()
+  for (const sentence of String(text || "").replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s+/)) {
+    const key = sentenceKey(sentence)
+    if (!key || CANNED_FILLER.test(sentence) || seen.has(key)) continue
+    seen.add(key)
+    kept.push(sentence)
+  }
+  let out = kept.join(" ").replace(/\s+/g, " ").trim()
   if (contract.level === "director") out = out.replace(JARGON_LIST, "the tools").replace(/\s+/g, " ").trim()
-  if (contract.level === "engineer" && !hasPlainReasoning(out)) {
-    out = `${ENGINEER_LINES[0]} ${out}`.trim()
-  }
-  if (wordCount(out) > contract.max) out = trimWords(out, contract.max)
-  if (wordCount(out) < contract.min) {
-    const pool = poolFor(contract.level)
-    let i = 0
-    while (wordCount(out) < contract.target && i < pool.length * 24) {
-      out = `${out} ${pool[i % pool.length]}`.replace(/\s+/g, " ").trim()
-      i += 1
-    }
-  }
-  if (wordCount(out) > contract.max) out = trimWords(out, contract.max)
+  if (contract.level !== "architect" && wordCount(out) > contract.max) out = trimWords(out, contract.max)
   return out
 }

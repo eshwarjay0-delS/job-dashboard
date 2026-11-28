@@ -1,3 +1,11 @@
+## 28 November 2026 — full confidence, You never opens a card
+
+Hedge lines are stripped, including less hands-on, transfers because, and the resume-is-unloaded sentence. A missing tool is answered from a real role. A mic line tagged You does not start an answer or Say this. Page stamp is kompas-20261128-hedge. One production check follows the ship.
+
+## 28 November 2026 — Houston employers only
+
+An empty session uses the Houston eshwarjay05 summary. A sentence that names an employer the loaded resume does not contain is dropped, including Saviynt, Accenture, and Charter on that summary. Director stock closers are stripped. Say this fills from the resume. One production Tell me about yourself check at three levels follows the ship. Server only.
+
 ## 28 November 2026 — #461 keeps the upload-hold test
 
 Master `6f3cdcb2` already sends a WhatsApp original only for an explicit same-account Files/Library file. #461 does not add a second gate. It updates `scripts/tests/whatsapp-tailor-rounds.test.mjs` so a timeout or unfinished rewrite does not expect the uploaded original. Merge without `[ship]`. The answer-filler fix from bc-27fe7160 is the batched ship. Item 9 source tags stay with the Brain build. No live Meta send.

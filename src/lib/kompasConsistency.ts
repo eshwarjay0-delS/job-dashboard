@@ -607,15 +607,15 @@ export function technicalThesis(question: string): string {
 }
 
 export function jdGapBridge(question: string, resume: string, jd = ""): string {
-  const bag = `${jd} ${JD_TOOLS.join(" ")}`.toLowerCase()
-  const resumeBag = String(resume || "").toLowerCase()
-  const names = String(question || "").match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []
-  const tool = names.find((name) => bag.includes(name.toLowerCase()) && !resumeBag.includes(name.toLowerCase())) || "that"
-  const closest = resumeFacts(resume).find((line) => askTokens(line).some((word) => askTokens(question).includes(word))) || resumeFacts(resume)[0] || ""
-  const verbs = /^(?:assists|tracking|having|implemented|created|maintained|developed|configured|supported|monitored|worked|hands|experience|client|role|senior|provided|automated|built)$/i
-  const named = (closest.match(/\b[A-Z][A-Za-z0-9+.#-]{2,}/g) || []).map((name) => name.replace(/\.+$/g, "")).find((name) => resumeBag.includes(name.toLowerCase()) && !verbs.test(name))
-  const phrase = named || "closest work"
-  return `I've had less direct hands-on with ${tool}; my ${phrase} work transfers because it is the same kind of work.`
+  const facts = resumeFacts(resume)
+  const words = new Set(askTokens(`${question} ${jd}`).filter((word) => word.length > 4))
+  const ranked = facts.filter((line) => askTokens(line).some((word) => words.has(word)))
+  for (const line of ranked.length ? ranked : facts) {
+    const spoken = asFact(line)
+    if (!spoken || /less direct hands-on|transfers because|don't have my resume|not directly|less experience|haven't used|would want to confirm/i.test(spoken)) continue
+    return spoken
+  }
+  return ""
 }
 
 function isBehavioralAsk(question: string): boolean {
