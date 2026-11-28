@@ -535,7 +535,13 @@
   function pageResume() {
     if (resumeText) return resumeText;
     try {
-      if (typeof docsGet === "function") return docsGet().filter(function (d) { return d && d.kind === "resume" && d.text; }).map(function (d) { return d.text; }).join("\n");
+      if (typeof current !== "undefined" && current && String(current.resume || "").trim()) return String(current.resume);
+    } catch (e) {}
+    try {
+      if (typeof docsGet === "function" && typeof selectedResumeId !== "undefined" && selectedResumeId) {
+        var one = docsGet().find(function (d) { return d && d.id === selectedResumeId && d.text; });
+        if (one) return one.text;
+      }
     } catch (e) {}
     return "";
   }

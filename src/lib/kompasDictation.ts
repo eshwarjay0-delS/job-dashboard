@@ -191,6 +191,7 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bokta\b/gi, "Okta"],
   [/\bsail\s*point\b/gi, "SailPoint"],
   [/\bentra\b/gi, "Entra"],
+  [/(?<=\b(?:what is|what's|explain|using|use|with|in)\s+)(?:the\s+)?same tools\b/gi, "Sentinel"],
 ]
 
 /** The repair list, exported for the parity test. Read only. */

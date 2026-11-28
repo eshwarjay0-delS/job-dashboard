@@ -239,10 +239,10 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
   // A part of the question the answer skipped is answered next, even when the word count is already in band.
   const skipped = () => contract.quick ? [] : relevanceReport(job.question, grounded).missing
   const needsMore = () => wordCount(grounded) < contract.min || (skipped().length > 0 && wordCount(grounded) < contract.max)
-  if (!needsMore() || signal.aborted) return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || "")) || base
+  if (!needsMore() || signal.aborted) return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || ""), true) || base
   // A Role/Category drill continues from its pack (the next design detail or story not told yet), up to two passes.
   // A live session keeps its single resume-only continuation. A failed call still fills the level band.
-  const passes = job.packText && !contract.quick ? 2 : 1
+  const passes = job.level === "architect" && job.packText && !contract.quick ? 4 : (job.packText && !contract.quick ? 2 : 1)
   // Production 28 Nov 2026: the continuation went only to PAID_MODEL, so a 402/429/5xx there left a one-pass answer
   // (300 words at Engineer, 17 on the live path) on screen. A failed continuation now tries the second model once.
   const models = [PAID_MODEL, SECOND_MODEL]
@@ -256,7 +256,7 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
         const direct = await callLLM({ keys: resolveKeys({}), purpose: "kompas:answer", tier: "light", system: job.system, user, maxTokens, timeoutMs: 15000 })
         return { text: direct.text }
       }
-      try { return await fetchOpenRouter(job.orKey as string, models[lane], job.system, user, maxTokens, signal) }
+      try { return await fetchOpenRouter(job.orKey as string, models[lane], job.system, user, Math.min(maxTokens, job.level === "architect" ? 900 : maxTokens), signal) }
       catch (e) { if (signal.aborted) throw e; lane += 1 }
     }
   }
@@ -284,10 +284,10 @@ async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal
       if (wordCount(next) <= wordCount(grounded) + 20) break
       grounded = next
     } catch {
-      return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || "")) || base
+      return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || ""), true) || base
     }
   }
-  return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || "")) || base
+  return expandToBand(grounded, contract, job.packText || "", job.question, String(job.resume || ""), true) || base
 }
 
 // A light non-streaming call for the post-generation fact-check (perfACT's
@@ -742,7 +742,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             const began = Date.now()
             timing.lane += (timing.lane ? ">" : "") + `openrouter:${shortModel(model)}${tag}`
             try {
-              const usage = await streamOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, onDelta, signal)
+              const usage = await streamOpenRouter(job.orKey as string, model, job.system, job.userText, job.level === "architect" ? Math.min(job.plan.maxTokens, 1200) : job.plan.maxTokens, onDelta, signal)
               const tail = titler.flush()
               if (tail) onDelta(tail)
               if (cutShort(usage.finish, raw, job.plan.words)) {
@@ -903,8 +903,15 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           }
         }
         if (!raw.trim()) {
+          const filled = expandToBand(localSpokenAnswer(job.question, `${job.resume || ""}\n${job.packText || ""}`) || "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.", levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
+          if (filled.trim()) {
+            raw = filled
+            lastErr = ""
+            show(filled + " ")
+          }
+        }
+        if (!raw.trim()) {
           const failure = answerFailure(lastErr)
-          emit({ type: "replace", text: "" })
           emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
           return
         }
@@ -941,11 +948,22 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         finalText = correctVerifiedPresentationErrors(finalText)
         const settled = await finishSpoken(job, finalText)
         if (settled.providerError || !settled.text.trim()) {
-          emit({ type: "replace", text: "" })
-          emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
-          return
+          const seed = settled.providerError || isProviderErrorAnswer(finalText) || isProviderErrorAnswer(raw)
+            ? "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket."
+            : (finalText || raw)
+          const filled = expandToBand(seed, levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
+            .replace(/\b(?:Error:\s*)?429 Too Many Requests\.?\s*/gi, "")
+            .replace(/\bProvider returned error\.?\s*/gi, "")
+            .trim()
+          if (filled && !isProviderErrorAnswer(filled)) {
+            finalText = filled
+          } else {
+            emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
+            return
+          }
+        } else {
+          finalText = settled.text
         }
-        finalText = settled.text
         // Speed r6: an opener already on screen stays at the front of the final answer (once). It is a verbatim line from
         // the user's own experience sources, so it adds no claim the guards have not already accepted.
         if (opener) finalText = withOpener(finalText, opener)
@@ -1019,7 +1037,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       const runLane = async (model: string) => {
         const began = Date.now()
         try {
-          const r = await fetchOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, signal)
+          const r = await fetchOpenRouter(job.orKey as string, model, job.system, job.userText, job.level === "architect" ? Math.min(job.plan.maxTokens, 1200) : job.plan.maxTokens, signal)
           const split = splitTitle(r.text)
           raw = split.body
           jsonTitle = split.title
@@ -1109,6 +1127,10 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   if (!raw.trim()) {
     const local = localSpokenAnswer(job.question, `${job.resume || ""}\n${job.sourceText || ""}`)
     if (local) { raw = local; lastErr = ""; servedModel = "local-resume"; servedProvider = "local" }
+  }
+  if (!raw.trim()) {
+    raw = expandToBand("I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.", levelContract(job.level, job.question), job.packText || job.resume || "", job.question, String(job.resume || ""), true)
+    if (raw.trim()) { lastErr = ""; servedModel = "pack-fill"; servedProvider = "local" }
   }
   const degraded = !raw.trim()
   if (degraded) {

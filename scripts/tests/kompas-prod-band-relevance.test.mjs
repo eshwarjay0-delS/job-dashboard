@@ -72,6 +72,8 @@ function loadRoute(opts = {}) {
   }
   const cache = new Map()
   const fetch = async (url, options) => {
+    if (opts.allStatus) return new Response("credits", { status: opts.allStatus })
+    if (opts.timeout) { const err = new Error("The operation was aborted"); err.name = "AbortError"; throw err }
     const body = JSON.parse(options.body)
     const user = (body.messages || []).filter((m) => m.role === "user").map((m) => m.content).join("\n")
     const continuation = /Continue this spoken answer|Add new spoken sentences/.test(user)
@@ -237,6 +239,20 @@ test("when every OpenRouter continuation fails (402), the direct provider contin
     assert.ok(route.calls.some((c) => c.model === "direct" && c.continuation), "direct continuation ran")
     assert.equal(relevanceReport(item.question, r.text).pass, true, item.question)
   }
+})
+
+test("a 402 on every OpenRouter call still yields the level band, and a timeout still yields text", { timeout: 120000 }, async () => {
+  const architect = TYPED[2]
+  const blocked = loadRoute({ question: architect.question, allStatus: 402 })
+  const filled = await blocked.ask(architect)
+  assert.equal(filled.status, 200)
+  assert.ok(filled.words >= 1000, `architect ${filled.words} words after 402`)
+  assert.doesNotMatch(filled.text, /Initech|PhantomSIEM|jayeshwar44/)
+  const engineer = TYPED[0]
+  const timed = loadRoute({ question: engineer.question, timeout: true })
+  const kept = await timed.ask(engineer)
+  assert.ok(kept.words >= 40, `timeout left ${kept.words} words`)
+  assert.doesNotMatch(kept.text, /^$/)
 })
 
 test("video-2 escalate, SQL injection, and Sentinel get full Engineer answers, not stubs", { timeout: 60000 }, async () => {

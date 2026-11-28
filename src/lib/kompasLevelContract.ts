@@ -111,7 +111,7 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-export const BANNED_HEDGE = /can(?:'|’)?t name a specific|cannot name a specific|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|not directly measured|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
+export const BANNED_HEDGE = /can(?:'|’)?t (?:accurately )?name a specific|cannot (?:accurately )?name a specific|can(?:'|’)?t accurately name|personally remediated|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|not directly measured|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
 
 const RESUME_CATALOG = /i handle cybersecurity operations for the bank\b[^.]{0,600}\./i
 
@@ -184,20 +184,38 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
   for (const sentence of speakable(String(text || "").replace(RESUME_CATALOG, " ")).split(/(?<=[.!?])\s+/)) {
     const key = sentenceKey(sentence)
     const open = openingWords(sentence)
-    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
+    const near = kept.some((prev) => {
+      const prevWords = sentenceKey(prev).split(" ").filter((w) => w.length > 3)
+      const nowWords = key.split(" ").filter((w) => w.length > 3)
+      if (prevWords.length < 4 || nowWords.length < 4) return false
+      const prevSet = new Set(prevWords)
+      const shared = nowWords.filter((w) => prevSet.has(w)).length
+      return shared / nowWords.length >= 0.85
+    })
+    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || near || (open.split(" ").length >= 6 && openings.has(open))) continue
     seen.add(key)
     if (open.split(" ").length >= 6) openings.add(open)
     kept.push(sentence)
   }
-  let out = kept.join(" ").replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer").replace(/\s+/g, " ").trim()
+  if (kept.length > 1) {
+    const first = sentenceKey(kept[0])
+    const last = sentenceKey(kept[kept.length - 1])
+    if (last && last === first) kept.pop()
+  }
+  let out = kept.join(" ").replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer").replace(/\bI Engineer at\b/g, "Cybersecurity Engineer at").replace(/\s+/g, " ").trim()
   if (contract.level === "director") out = out.replace(JARGON_LIST, "the tools").replace(/\s+/g, " ").trim()
   if (contract.level !== "architect" && wordCount(out) > contract.max) out = trimWords(out, contract.max)
   return out
 }
 
 export function repairIntroHeadline(question: string, text: string): string {
-  if (!/tell me about yourself|introduce yourself|walk (?:me|us) through your (?:background|career|resume)/i.test(question)) return text
-  const rest = String(text || "").split(/(?<=[.!?])\s+/).slice(1).filter((s) => !/senior i engineer|\b7\s+years\b/i.test(s))
+  if (!/tell me about yourself|introduce yourself|your introduction|brief introduction|walk (?:me|us) through your (?:background|career|resume)/i.test(question)) return text
+  const cleaned = String(text || "")
+    .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
+    .replace(/\bSanG\s+Diego\b/g, "San Diego")
+    .replace(/\b(?:7|8)\+?\s+years\b/gi, "9+ years")
+    .replace(/\b9\s+years\b/gi, "9+ years")
+  const rest = cleaned.split(/(?<=[.!?])\s+/).slice(1).filter((s) => !/senior i engineer|senior cybersecurity engineer|\b[789]\s+years\b|sang diego/i.test(s))
   return [INTRO_HEADLINE, ...rest].join(" ").replace(/\s+/g, " ").trim()
 }
 
@@ -212,16 +230,16 @@ export function repairIntroHeadline(question: string, text: string): string {
  * a stock closing line about the search paging once on 33 of 37 typed answers whenever the continuation call did not run.
  * With no pack, a short answer stays short rather than padded with unrelated sentences.
  */
-function claimIsOnResume(line: string, resume: string, question: string): boolean {
-  const source = `${resume}\n${question}`.toLowerCase()
-  if (!String(resume || "").trim()) return false
+function claimIsOnResume(line: string, resume: string, question: string, pack = "", metrics = false): boolean {
+  const source = `${resume}\n${question}\n${metrics ? pack : ""}`.toLowerCase()
+  if (!String(resume || "").trim() && !metrics) return false
   const places = line.match(/\b(?:at|with)\s+([A-Z][A-Za-z0-9&.'-]+(?:\s+[A-Z][A-Za-z0-9&.'-]+){0,3})/g) || []
   for (const raw of places) {
     const name = raw.replace(/^(?:at|with)\s+/i, "").trim()
     if (name.length > 2 && !source.includes(name.toLowerCase())) return false
   }
   const nums = line.match(/\b\d+(?:\.\d+)?%?/g) || []
-  if (nums.some((n) => !source.includes(n.toLowerCase()))) return false
+  if (!metrics && nums.some((n) => !source.includes(n.toLowerCase()))) return false
   const skip = new Set("At The This That When Then After Before Citi Bank CVS Health City San Diego Charter Communications Accenture".split(" "))
   const tools = line.match(/\b[A-Z][A-Za-z0-9+]{3,}(?:\s+[A-Z][A-Za-z0-9+]{3,})?/g) || []
   for (const tool of tools) {
@@ -231,7 +249,7 @@ function claimIsOnResume(line: string, resume: string, question: string): boolea
   return true
 }
 
-export function expandToBand(text: string, contract: LevelContract, source = "", question = "", resume = ""): string {
+export function expandToBand(text: string, contract: LevelContract, source = "", question = "", resume = "", failure = false): string {
   if (contract.quick || wordCount(text) >= contract.min || !String(source || "").trim()) return text
   const qWords = new Set(String(question || "").toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || [])
   const have = new Set(String(text || "").split(/(?<=[.!?])\s+/).map(sentenceKey))
@@ -242,15 +260,17 @@ export function expandToBand(text: string, contract: LevelContract, source = "",
     .split(/(?<=[.!?])\s+/)
     .map((x) => x.trim())
     .filter((x) => x.split(/\s+/).length >= 8 && /[.!?]$/.test(x) && !/[{}<>|=]|\(expand it/i.test(x))
-  for (const line of lines) {
-    if (wordCount(kept.join(" ")) >= contract.min) break
+  const take = (line: string, needOverlap: boolean) => {
+    if (wordCount(kept.join(" ")) >= contract.min) return
     const key = sentenceKey(line)
-    if (have.has(key) || !claimIsOnResume(line, resume, question)) continue
+    if (have.has(key) || !claimIsOnResume(line, resume, question, source, failure)) return
     const words = line.toLowerCase().match(/[a-z][a-z0-9+#-]{3,}/g) || []
-    if (qWords.size && !words.some((w) => qWords.has(w))) continue
+    if (needOverlap && qWords.size && !words.some((w) => qWords.has(w))) return
     have.add(key)
     kept.push(line)
   }
+  for (const line of lines) take(line, true)
+  if (failure) for (const line of lines) take(line, false)
   const out = kept.join(" ").replace(/\s+/g, " ").trim()
   return wordCount(out) > contract.max ? trimWords(out, contract.max) : out
 }

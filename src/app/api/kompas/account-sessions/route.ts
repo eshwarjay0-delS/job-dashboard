@@ -63,7 +63,12 @@ async function getFromFreeStore(
   user: { id: string; email: string | null; synthetic?: true },
 ) {
   if (!isFreeSessionStoreConfigured()) {
-    return json({ ok: false, error: "Could not read the account's Kompas sessions. Local sessions were preserved." }, 503)
+    return json({
+      ok: true, localOnly: true, userId: user.id, email: user.email,
+      ...authDisabledFlag(),
+      records: [], nextCursor: null,
+      error: "Sessions stay on this device. Account sync is not configured.",
+    })
   }
   const pageSize = syntheticReadPageSize(req, user, 100)
   const cursor = req.nextUrl.searchParams.get("after") || ""
@@ -127,7 +132,12 @@ async function postToFreeStore(
   validated: { id: string; patch: Record<string, unknown>; deleted: boolean }[],
 ) {
   if (!isFreeSessionStoreConfigured()) {
-    return json({ ok: false, error: "Could not save sessions to the account. Updates remain queued locally." }, 503)
+    return json({
+      ok: true, localOnly: true, deferred: true, userId: user.id,
+      ...authDisabledFlag(),
+      records: [],
+      error: "Sessions stay on this device. Account sync is not configured.",
+    })
   }
   const records = await mergeSessionOperations(user.id, validated)
   invalidateCatalogTag(user.id)
@@ -241,6 +251,14 @@ export async function GET(req: NextRequest) {
       })),
     }, { status: 200, headers: etag ? { ...HEADERS, ETag: etag } : HEADERS })
   } catch {
+    if (shouldUseFreeSessionStore()) {
+      return json({
+        ok: true, localOnly: true, userId: user.id, email: user.email,
+        ...authDisabledFlag(),
+        records: [], nextCursor: null,
+        error: "Sessions stay on this device. Account sync could not be reached.",
+      })
+    }
     return json({ ok: false, error: "Could not read the account's Kompas sessions. Local sessions were preserved." }, 503)
   }
 }
@@ -291,6 +309,14 @@ export async function POST(req: NextRequest) {
     invalidateCatalogTag(user.id)
     return json({ ok: true, userId: user.id, records })
   } catch {
+    if (shouldUseFreeSessionStore()) {
+      return json({
+        ok: true, localOnly: true, deferred: true, userId: user.id,
+        ...authDisabledFlag(),
+        records: [],
+        error: "Sessions stay on this device. Account sync could not be reached.",
+      })
+    }
     return json({ ok: false, error: "Could not save sessions to the account. Updates remain queued locally." }, 503)
   }
 }

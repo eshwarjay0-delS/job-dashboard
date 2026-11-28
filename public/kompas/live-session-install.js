@@ -49,8 +49,11 @@
     showCaption = function (who, text) {
       // who is already You or Them. Re-scoring every Them line against a
       // forced Interviewer previous-role labeled the candidate as Interviewer.
+      // A line that is his own speech still shows You.
+      var spoken = Gate.correctSecurityAsr(text);
+      if (who !== "You" && typeof Gate.isCandidateNarrative === "function" && Gate.isCandidateNarrative(spoken) && (typeof Gate.interviewerAsk !== "function" || !Gate.interviewerAsk(spoken))) who = "You";
       if (who === "You") lastSpeaker = "You";
-      return origCaption(who === "You" ? "You" : "Them", Gate.correctSecurityAsr(text), arguments[2]);
+      return origCaption(who === "You" ? "You" : "Them", spoken, arguments[2]);
     };
   }
 
@@ -109,7 +112,17 @@
       var decision = gateDecision(tail, true, { finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS });
       if (!decision.fire) return;
       var q = (typeof Gate.questionWithoutCandidate === "function" ? Gate.questionWithoutCandidate(decision.text || tail) : "") || Gate.stripSpeakerLabels(decision.text || tail);
-      if (!q) return;
+      if (!q || (typeof Gate.isCandidateNarrative === "function" && Gate.isCandidateNarrative(q) && (typeof Gate.interviewerAsk !== "function" || !Gate.interviewerAsk(q)))) return;
+      var merged = typeof Gate.mergeIntoOpenCard === "function" ? Gate.mergeIntoOpenCard(typeof cards !== "undefined" ? cards : [], q) : { merge: false, question: q };
+      if (!merged.question) return;
+      if (merged.merge && typeof cards !== "undefined" && cards.length) {
+        var open = cards[cards.length - 1];
+        open.question = merged.question;
+        open.questionLocked = true;
+        if (typeof renderCard === "function") renderCard();
+        return;
+      }
+      q = merged.question;
       if (typeof noteAsked === "function") noteAsked(q);
       if (typeof showQueuedAnswer === "function") {
         showQueuedAnswer(q);
