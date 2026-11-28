@@ -180,3 +180,10 @@ The 17 October 2026 17:28 Chicago incident remains unverified. The generated out
 The current iZap account inventory shows one business but no linked WhatsApp number. Read-only connection status reports disconnected, with no live inbound webhook, history backfill or outbound delivery ever proven. A message search for `resume` on 17 October 2026 in `America/Chicago` returned zero results. This only describes the current iZap business/search; it does **not** prove that the incident's R2 object or Meta records are absent. The 17 Oct 17:28 incident remains unverified. Required evidence is still the source and generated DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt, plus owner fact reconciliation. No message was sent or replayed.
 
 Approval corrections: PR #633's two-line JD/named-resume parser is not directly owner-approved (comment 7235500274); keep DRAFT/unmerged. PR #636's specific server-side location/remote filters likewise lack recovered direct approval (comment 7235500545); do not merge or crawl. The broad contract crawler remains manual/on-demand only.
+
+
+## 28 November 2026 — run 32 parser and answer-band review
+
+PR #633 exact head `81e839acfeb9d546a22f70ab3c765d6d147ae346` has full CI 46115683036 and Kompas baseline 46115683096 SUCCESS, but Plan/REA and confirmed-skill gates are not observed. Approval correction comment 7235500274 states direct owner-authored approval was not recovered; the PR remains proposed/DRAFT, and no route-level WhatsApp test, protected preview or live send/replay occurred. Its body was corrected to match that provenance. The parser must preserve ordinary short chat; do not ship it until direct approval and required gates are recovered.
+
+PR #639's answer-band patch is separate from WhatsApp. Source review comment 7237158494 notes the expanded hedge filter can remove truthful limitations and the pack-based fallback can append persona stories as first-person experience on keyword overlap alone. It is not live; full CI 46129231306 is still pending at the last check. Preserve the factuality boundary.
