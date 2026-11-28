@@ -36,6 +36,22 @@ export function crawlSearchTerms(input: string): string[] {
  * Broad category search: any distinct term may match any searchable field.
  * This mirrors `/api/jobs` instead of requiring a literal multi-word phrase.
  */
+/** Safe, bounded location tokens applied as AND filters to the location column. */
+export function crawlLocationTerms(input: string): string[] {
+  return crawlSearchTerms(input).slice(0, 4)
+}
+/** Apply safe location AND tokens and remote-only as server-side filters before the bounded snapshot. */
+export function applyCrawlerLocationFilters<T extends { ilike(column: string, pattern: string): T }>(
+  query: T,
+  terms: readonly string[],
+  remoteOnly: boolean,
+): T {
+  let filtered = query
+  for (const term of terms) filtered = filtered.ilike("location", `%${term}%`)
+  if (remoteOnly) filtered = filtered.ilike("location", "%remote%")
+  return filtered
+}
+
 export function crawlSearchOrFilter(input: string): string | null {
   const terms = crawlSearchTerms(input)
   if (!terms.length) return null

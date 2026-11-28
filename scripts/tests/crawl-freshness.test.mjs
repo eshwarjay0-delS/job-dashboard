@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import test from "node:test"
-import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, collectFilteredSnapshot } from "../../src/lib/crawl/search.ts"
+import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, collectFilteredSnapshot, crawlLocationTerms, applyCrawlerLocationFilters } from "../../src/lib/crawl/search.ts"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 
@@ -117,4 +117,36 @@ test("reaching the scan cap is not reported as limited after the visible limit i
   assert.equal(result.scanned, 10)
   assert.equal(result.excluded, 0)
   assert.equal(result.scanLimited, false)
+})
+
+test('location terms are safely normalized and capped at four tokens',()=>{
+ assert.deepEqual(crawlLocationTerms('Kansas City, MO'),['Kansas','City','MO'])
+ assert.deepEqual(crawlLocationTerms('   '),[])
+ assert.deepEqual(crawlLocationTerms('A B C D E F G H I'),['A','B','C','D'])
+})
+
+test('server-side location and remote filters compose before the bounded scan',()=>{
+  const rows=[
+    {id:'unrelated',location:'New York, NY'},
+    {id:'local',location:'Kansas City, MO'},
+    {id:'remote1',location:'Remote Kansas City, MO'},
+    {id:'remote2',location:'Remote Kansas City, MO'},
+  ]
+  const query={rows:[...rows],calls:[],ilike(column,pattern){
+    this.calls.push([column,pattern])
+    const term=pattern.slice(1,-1).toLowerCase()
+    this.rows=this.rows.filter(row=>String(row[column]||'').toLowerCase().includes(term))
+    return this
+  }}
+  const filtered=applyCrawlerLocationFilters(query,crawlLocationTerms('Kansas City, MO'),true)
+  assert.deepEqual(filtered.calls,[['location','%Kansas%'],['location','%City%'],['location','%MO%'],['location','%remote%']])
+  const snapshot=collectFilteredSnapshot(filtered.rows,2,()=>false,2)
+  assert.deepEqual(snapshot.items.map(row=>row.id),['remote1','remote2'])
+  assert.equal(snapshot.scanLimited,false,'server filtering prevents unrelated rows from underfilling the bounded scan')
+})
+
+test('missing location does not add location terms while remote-only still applies',()=>{
+  const query={calls:[],ilike(column,pattern){this.calls.push([column,pattern]);return this}}
+  applyCrawlerLocationFilters(query,[],true)
+  assert.deepEqual(query.calls,[['location','%remote%']])
 })
