@@ -1278,3 +1278,17 @@ Continue: release the validated merged Gmail guard through the documented [ship]
 ### Run 30 Gmail release attempt correction
 
 The [ship] production build for merged Gmail PR #646 (deployment dpl_HbCneuBY2BdLdfPyoNEDStbbyghw) failed TypeScript at src/lib/plan-vision-journal.ts:648 because delivery="deploying" is outside the allowed enum. This is a documentation-schema error, not a Gmail source/test failure. The release entry is being corrected to the allowed "in progress" value; quality gates remain unchanged. Live alias is still the previous READY SHA fefaaf1. A single corrected [ship] commit will retrigger the normal production gate.
+
+
+## 28 November 2026 17:58 UTC — Run32 exact source/CI and blockers
+
+- Master `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`; production alias remains READY at `3400742ba97d2cbc68e2df3e1795ce5c76d9a147`. Latest master deployment was canceled by the Ignored Build Step. No runtime release was attempted.
+- PR #649 latest head `09a598322c3996fc7ecfc77e3f3aceb0721b47a4` passes full CI `46159253022`, crawler freshness `46159253124`, Kompas baseline `46159253057`, Plan/REA `46159253079` and confirmed-skill `46159253049`. It remains DRAFT with no protected preview. Static review found its portal reservation is only a process-local Map; comments `7241370206` and `7242164409` require durable lease/fencing or cross-instance invocation guard plus tests before acceptance. No crawl was run.
+- #411 is still DRAFT/non-mergeable with no exact-head checks; current master compare shows 141 ahead/165 behind. No safe restack/transplant is possible without a compliant checkout and local dependencies/Next 16.3.8 docs. The 17 Oct 17:28 Chicago incident still lacks exact source/output DOCX, R2 object/version, webhook correlation, Meta ID and signed receipt; scoped Library search did not find the incident files. No replay/send.
+- Gmail #637 account-switch guard source blob matches current master and production; its CI `46137208957` and baseline `46137208960` passed. Live OAuth, two inboxes and narrow-phone acceptance remain unverified. Four-account maximum; proactive workers/scheduler/notifications/sending remain off.
+- Read-only crawler data remains stale (14,566 total, 12,407 active, 8,850 active contract-labelled; zero active contract rows in 14 days; latest run 10 Nov). No crawl, portal request, model, OAuth, mail/WhatsApp, R2/DB write or device test.
+
+- Vercel Sandbox creation for the compliant checkout was rejected with HTTP 402 `payment_required` on the Hobby plan; the provider says the limit resets at 2026-12-01T00:00:00.000Z. No billing or plan change was attempted. Local `git ls-remote` also failed because the container cannot resolve github.com. Protected preview additionally requires the private `KOMPAS_VERCEL_API_TOKEN`.
+- A public read-only GET `/api/crawl/jobs?limit=3` was attempted through the web retrieval interface but returned inaccessible; public API smoke remains unverified.
+
+**Next:** Continue #411 safe restack in a compliant checkout. If blocked, continue #649 cross-instance lease/fencing review and tests. Do not merge/deploy #649 or run a crawl while the process-local-only lock is unresolved. #647 remains owner-held until 29 Nov CT; coordinate with the separate voice task.
