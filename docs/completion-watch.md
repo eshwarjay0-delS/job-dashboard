@@ -1,3 +1,15 @@
+## 28 November 2026 19:35 UTC — Run32 cross-instance crawler lease follow-up
+
+**Continue:** Close the cross-instance gap in the approved manual crawler timeout fix without allowing duplicate portal work.
+
+- PR #649 review found that `pendingPortalWork` is a process-local Map; it cannot coordinate cold starts or simultaneous Vercel instances. The earlier one-process test did not prove production-wide exclusion.
+- Added a service-role-only PostgreSQL global run lease. It is acquired before creating the run row or starting a portal. A second invocation fails closed and both manual routes return HTTP 409. Fully drained runs release only with their own random token. If a portal is quarantined after the bounded 1-second drain, the global lease is retained until its 15-minute expiry, longer than either route's 300-second maximum. This deliberately blocks all portal runs while an orphan may still be alive.
+- Added regression coverage for busy-lock rejection, RPC failure, token-bound release, quarantined lease retention, service-only grants, expiry/max-duration relationship and HTTP 409 handling. Existing non-cooperative timeout and abort-propagation coverage remains.
+- Migration `supabase/migrations/20261128194000_mfit_crawl_run_lease.sql` is source only; it has **not** been applied to production. The branch remains draft. Exact-head CI is pending; local checkout/dependencies are still unavailable.
+- No crawl, portal request, production DB mutation, preview, deployment or application submission occurred. Manual/on-demand only; 600 ms pacing, 25 s request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded.
+
+**Release gates:** exact-head full CI + crawler freshness/classification + manual-only + Kompas baseline + Plan/REA; independent review; legitimate protected preview; controlled application of the service-only lease migration; production READY exact SHA + alias. Do not run a manual crawl until separately authorized.
+
 ## 28 November 2026 13:57 UTC — Run32 crawler timeout quarantine (draft PR #649)
 
 **Continue:** Fix the approved manual crawler's non-cooperative timeout without releasing a worker that still has live work.
