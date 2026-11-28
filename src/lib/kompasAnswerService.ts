@@ -45,6 +45,7 @@ import {
   type SpeakFacts,
 } from "@/lib/kompasGuards"
 import { applyHonestyGate } from "@/lib/kompasHonestyGate"
+import { ensureAnswerBrain, reviseLivingAnswer, type BrainTrace } from "@/lib/kompasLivingBrain"
 import { SCREEN_FALLBACK_UNAVAILABLE, SCREEN_FALLBACK_UNREADABLE, correctTerraform, screenReadPrompt } from "@/lib/kompasS5Screen"
 import { screenImage } from "@/lib/kompasScreen"
 
@@ -394,6 +395,8 @@ type AnswerJob = {
   // the prompt carries a DOSSIER NOTE for it and the response flags it,
   // so a silently ungrounded answer is never mistaken for a grounded one.
   groundingTimedOut: boolean
+  brainText?: string
+  brainTrace?: BrainTrace[]
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -451,10 +454,12 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
       const kept = dropUnknownToolSentences(gated.text.split(/(?<=[.!?])\s+/).filter((sentence) => !jdOnlyExperience(sentence, job.resume || "", job.jd || "")).join(" "), job.resume || "")
       const base = kept.trim() || bridgeFromResume(job.question, job.resume || "") || HONEST_LINE
       const honest = applyHonestyGate({ question: job.question, answer: base, resume: job.resume || "" })
-      return { text: correctTerraform(honest.text, job.question), providerError: false }
+      const revised = reviseLivingAnswer(job.question, correctTerraform(honest.text, job.question), { earlier: job.previousAnswer || "", brain: job.brainText || "" })
+      return { text: revised.text, providerError: false }
     }
   } catch { /* the settled answer stands */ }
-  return { text: settled.text, providerError: false }
+  const revised = reviseLivingAnswer(job.question, settled.text, { earlier: job.previousAnswer || "", brain: job.brainText || "" })
+  return { text: revised.text, providerError: false }
 }
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
@@ -895,7 +900,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           emit({ type: "replace", text: finalText })
         }
         emit({
-          type: "done", degraded, guarded: g.guarded, verified, repaired, repair, groundingTimedOut: job.groundingTimedOut,
+          type: "done", degraded, guarded: g.guarded, verified, repaired, repair, groundingTimedOut: job.groundingTimedOut, brainTrace: job.brainTrace,
           card: { ...toCard(finalText, job.format || "script_bullets", job.lengthPref), title: titler.title || fallbackTitle(job.question) },
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...notebookCausalFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
@@ -1109,6 +1114,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...notebookCausalFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, out).map(t => `missing-named-term:${t}`)] },
     degraded,
     groundingTimedOut: job.groundingTimedOut,
+    brainTrace: job.brainTrace,
     guarded: g.guarded,
     verified,
     repaired,
@@ -1594,7 +1600,18 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     }
   }
 
+  let livingBrainPrompt = ""
+  let livingBrainText = ""
+  let livingBrainTrace: BrainTrace[] = []
+  try {
+    const living = await ensureAnswerBrain(hashUserId(user.id), { question })
+    livingBrainPrompt = living.prompt
+    livingBrainText = living.text
+    livingBrainTrace = living.trace
+  } catch { /* a store miss still leaves the seeded brain; it is not dropped on a timer */ }
+
   const context = [
+    livingBrainPrompt,
     // A code question must not inherit the level compression that collapsed a
     // Director answer into one inline line: the level block is crowned the
     // controlling spec, the Director guidance compresses the mechanism to one
@@ -1718,6 +1735,8 @@ ${INTERVIEW}`
     previousAnswer,
     previousTurns,
     groundingTimedOut: generalDossierTimedOut || bibleTimedOut,
+    brainText: livingBrainText,
+    brainTrace: livingBrainTrace,
   }
   // Empty resume + personal question: nothing streams before the post-gate has removed invented history.
   if (noResumeState === "personal-no-resume") job.streamPolicy = "guarded-final"

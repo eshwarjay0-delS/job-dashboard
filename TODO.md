@@ -16,6 +16,12 @@ Production OPENROUTER_MODEL, OPENROUTER_MODEL_HEAVY, and GROQ_MODEL_HEAVY are op
 
 **Checked by scripts/tests/kompas-answer-model-fallback.test.mjs and kompas-answer-reliable.test.mjs. One production call after the ship.**
 
+## 2026-11-28 — Living brain (visible after ship)
+
+The Brain page is after Sessions. One Markdown document holds the nine sections as tagged chunks. Edits, off switches, and weights apply to every answer path. The page is the visible change. The answer service also loads that document from memory and does not drop it when the dossier timers fire. That part has no new control of its own. The Feedback tab and its mic are in the answer panel and stay hidden on a live interview. They show on a category session and a role session. A detected question is tagged mic, captions, computer-audio, or typed on the question line, and that tag is stored with Learned From Sessions. Session end writes learnings and feedback with no review queue. Skip-login was not edited.
+
+**Checked by scripts/tests/kompas-living-brain.test.mjs and scripts/tests/kompas-question-source.test.mjs. The live-session hide and the four question tags passed. Not a production click until the one check after the ship.**
+
 ## 2026-11-27 — Answer reliability (visible after ship; one desktop build)
 
 AI Answer falls through gpt-oss, Llama, Gemini, and Groq, then a resume sentence, so the pane is not empty. A multi-part interviewer turn is kept. Behavioral and technical answers floor at 150 words. Say this is resume lines only. Auto-answer starts on. Missing tab audio asks for a reshare, and a stuck Starting capture recovers. Questions queue. Skip-login was not turned off.

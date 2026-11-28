@@ -10,6 +10,10 @@ Architect 700–1000 words, Director 300–450, Technical HR / Engineer 250–40
 
 Production model env values are openai/gpt-oss-120b for OPENROUTER_MODEL, OPENROUTER_MODEL_HEAVY, and GROQ_MODEL_HEAVY. OPENROUTER_API_KEY is sensitive and was not decrypted, so it was not matched to the eshwarjay0@gmail.com account that has $4.02. The answer lane now starts on Llama 3.3 70B. gpt-oss is second, pinned to Groq, Fireworks, Cerebras, and Together. Direct Groq uses llama-3.1-8b-instant. One production check follows the ship. No desktop rebuild. Skip-login stays on.
 
+## 28 November 2026 — living brain
+
+One Markdown brain is projected from the five existing stores. The Brain page is after Sessions. The answer path keeps the brain in memory and does not drop it on the dossier timeouts. The BRAIN_POLICY coaching tail is not appended. Feedback's tab and mic show on category and role sessions only. A live interview hides both. Skip-login was not edited. The answer route file was not edited. Local gate test passed. One production check of the Brain page, and of a live session with the Feedback tab hidden, follows the ship.
+
 ## 27 November 2026 — answer reliability
 
 The answer route keeps gpt-oss first and falls through to Llama, Gemini, Groq, then a resume sentence. Multi-part questions stay whole. Behavioral and technical length floors at 150 words. Say this is local resume lines. Auto-answer defaults on. A share with no tab audio asks for a reshare, and Starting capture recovers. One production check follows the ship. Skip-login stays on.
