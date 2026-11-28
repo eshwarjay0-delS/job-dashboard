@@ -263,7 +263,21 @@ function hasSteps(text: string): boolean {
   return /\bfirst\b/.test(t) && /\bthen\b/.test(t) && /\bnext\b/.test(t) && /\bafter that\b/.test(t)
 }
 
-function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string): boolean {
+const QUESTION_STOP = new Set(["about", "does", "what", "how", "the", "and", "your", "you", "with", "that", "this", "from", "have", "tell", "give", "would", "when", "where", "which", "into", "them", "they", "their", "were", "been", "will", "just", "like", "then", "work", "time", "does"])
+
+export function questionTerms(question: string): string[] {
+  return [...new Set(String(question || "").toLowerCase().match(/[a-z][a-z0-9+]{4,}/g) || [])].filter((word) => !QUESTION_STOP.has(word))
+}
+
+export function addressesQuestion(question: string, text: string): boolean {
+  const terms = questionTerms(question)
+  if (!terms.length) return true
+  const hay = text.toLowerCase()
+  const hits = terms.filter((term) => hay.includes(term))
+  return hits.length >= Math.min(2, terms.length)
+}
+
+function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string, question = ""): boolean {
   const t = text.toLowerCase()
   if (kind === "intro") {
     const years = /(?:9\+|more than nine|nine years)/.test(t)
@@ -271,6 +285,8 @@ function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string)
     return years && /fortinet|fortigate|networking/.test(t)
   }
   if (kind === "technical") {
+    const asksNetwork = /fortigate|cutover|failover|high[- ]availability|migration/i.test(question)
+    if (!asksNetwork) return addressesQuestion(question, text)
     if (level === "director") return /cutover|zero[- ]downtime/.test(t) && /six/.test(t)
     return /fortigate|high[- ]availability|failover/.test(t) && /cutover/.test(t)
   }
@@ -321,7 +337,7 @@ export function assessAnswer(question: string, level: string, text: string): Ass
   const wordBand = words >= band.min && words <= band.max
   const employer = employerList.length === 0
   const banned = bannedList.length === 0
-  const topic = topicPass(name, kind, text)
+  const topic = topicPass(name, kind, text, question)
   const hedges = hedgeList.length === 0
   const style = styleHits.length === 0
   return {
@@ -332,16 +348,38 @@ export function assessAnswer(question: string, level: string, text: string): Ass
 }
 
 export function fallbackAnswer(level: string, question: string): string {
+  return composeLevelAnswer(level, question, "")
+}
+
+/** Keep an on-topic draft, then fill the level band. A draft that misses the question uses the level opening. */
+export function composeLevelAnswer(level: string, question: string, draft = ""): string {
   const name = asLevel(level)
   const kind = questionKind(question)
   const band = BANDS[name]
-  const kept = [...openingSentences(name, kind)]
+  const clean = sentencesOf(draft).filter((sentence) => !sentenceRejected(sentence, name))
+  const draftText = clean.join(" ")
+  const useDraft = clean.length > 0 && addressesQuestion(question, draftText)
+  const kept = useDraft ? [...clean] : [...openingSentences(name, kind)]
+  const seen = new Set(kept.map((sentence) => sentence.toLowerCase()))
   const count = () => wordCount(kept.join(" "))
+  const push = (sentence: string) => {
+    const key = sentence.toLowerCase()
+    if (seen.has(key)) return false
+    const next = wordCount(`${kept.join(" ")} ${sentence}`)
+    if (next > band.max) return false
+    kept.push(sentence)
+    seen.add(key)
+    return true
+  }
   for (const sentence of poolSentences(name)) {
     if (count() >= band.target) break
-    const next = wordCount(`${kept.join(" ")} ${sentence}`)
-    if (next > band.max) break
-    kept.push(sentence)
+    push(sentence)
+  }
+  if (count() < band.min) {
+    for (const sentence of openingSentences(name, kind)) {
+      if (count() >= band.min) break
+      push(sentence)
+    }
   }
   return kept.join(" ").replace(/\s+/g, " ").trim()
 }
@@ -403,7 +441,7 @@ export async function applyPersonalityFilter(input: {
   }
   if (!assessment.ok) {
     reasons.push("fallback")
-    text = fallbackAnswer(level, question)
+    text = composeLevelAnswer(level, question, cleanDraft(input.text, level))
     assessment = assessAnswer(question, level, text)
   }
   const rewritten = reasons.length > 0 || text.replace(/\s+/g, " ").trim() !== String(input.text || "").replace(/\s+/g, " ").trim()
