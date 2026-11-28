@@ -2636,6 +2636,10 @@ async function startSys() {
 // silence, but the shared-audio track warned never, so a quiet or wrongly shared tab failed silently with no
 // on-screen word. The helper is pure so the rule is testable: same 20 s threshold, same once-per-silence flag
 // (vadStep already resets zeroWarned when sound returns), one message per track.
+function silenceClearsOnSound(status, rms) {
+  if (!(Number(rms) > 0.004)) return false;
+  return /hearing silence/i.test(String(status || ""));
+}
 function silenceWarningFor(cap, now) {
   if (!cap || cap.zeroWarned) return null;
   // A phrase still being transcribed, or sound on this track, is not silence.
@@ -2714,11 +2718,17 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
       const buf = new Float32Array(cap.an.fftSize);
       cap.timer = setInterval(() => { cap.an.getFloatTimeDomainData(buf); let s = 0; for (let k = 0; k < buf.length; k++) s += buf[k] * buf[k]; vadStep(cap, Math.sqrt(s / buf.length)); }, 30);
     }
-    cap.hearing = (typeof finals !== "undefined" && finals.size > 0) || captures.some((c) => c && c !== cap && (c.inflight > 0 || c.voiced));
+    cap.hearing = (typeof finals !== "undefined" && finals.size > 0) || captures.some((c) => c && (c.inflight > 0 || c.voiced || (now - (c.lastAudibleAt || 0) < 20000)));
     const warn = silenceWarningFor(cap, now);
     if (warn) {
       cap.zeroWarned = true;
       status(warn, "err");
+    } else if (cap.hearing) {
+      cap.zeroWarned = false;
+      try {
+        var shown = $("statusText");
+        if (shown && silenceClearsOnSound(shown.textContent, 1)) status("Listening", "live");
+      } catch (e) {}
     }
   }, 1000);
   const tracks = owner ? owner.getTracks() : stream.getAudioTracks();
@@ -3034,7 +3044,16 @@ function vadStep(cap, rms) {
   try { kompasLevelTap(cap.who, rms); } catch {}   // slice 5d: watchdog level, read only
   const now = performance.now();
   cap.lastVadAt = now;
-  if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; if (cap.who === "You") micRecoveries = 0; }
+  if (rms > 0.004) {
+    cap.lastAudibleAt = now;
+    cap.zeroWarned = false;
+    cap.hearing = true;
+    if (cap.who === "You") micRecoveries = 0;
+    try {
+      var silenceLine = $("statusText");
+      if (silenceLine && silenceClearsOnSound(silenceLine.textContent, rms)) status("Listening", "live");
+    } catch (e) {}
+  }
   const step = dictateStep(cap, rms, now, VAD);
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;

@@ -4,6 +4,12 @@ Interview now lists Roles and Categories under Sessions, on the desktop sidebar 
 
 **Checked by scripts/tests/kompas-packs.test.mjs. Production version.json is commit 11bf120 (full 11bf120b81ef7b5a45da3db1bcca07c97dff59ac). Not a live listen.**
 
+## 2026-11-28 — One card per question, no quiet wait
+
+Live retest of f5b12b1: auto answers are back, but the next question rewrote an unanswered card (escalate became trending, SQLi became XSS). A finished question now opens its own card and starts generation immediately. The question text is locked. Candidate speech stays You and is kept out of the question. Trailing onboarding, ITSM, and budget sentences drop when the question did not ask for them. The silence warning clears when sound returns. An empty card is heard, not answered. Manual AI Answer fills the open card. Not shipped. No live video click-through.
+
+**Checked by scripts/tests/kompas-live-regression-20261128.test.mjs.**
+
 ## 2026-11-28 — Live auto-answer restored after 11bf120
 
 Auto cards were created and left on "Press Start — answers appear here" because the PR #619 installer vetoed confirmAutoAndAnswer whenever Silero's quiet clock was 0. A finished transcript now answers. SAM tools repairs to SIEM on the STT request and after the decode. The streamed first sentence stays on finalize. ITBM, PPM, fraud, KYC, and jayeshwar44 tails are removed. can-you logistics and intro lines do not open cards. A first-person line stays You. End and Stop show the session summary. The silence warning stays off while a phrase is transcribing. No new screen beyond the summary dialog that was already specified. Skip-login unchanged.

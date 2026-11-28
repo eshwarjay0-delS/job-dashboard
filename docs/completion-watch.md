@@ -1,3 +1,7 @@
+## 28 November 2026 — One card per question
+
+Live retest S4 on f5b12b1 kept auto-answer, SIEM, the opening sentence, and the summary. An unanswered card was still rewritten by the next question, so escalate and SQLi were lost. This branch opens a new card at question end with no quiet wait, locks the question, keeps candidate speech out of it, drops off-topic resume tails, clears the silence warning when sound returns, counts only real answer text in the summary, and answers a manual press in place. Not merged. The Role/Category test fixes will share the later deploy.
+
 ## 28 November 2026 — Roles and Categories
 
 The Kompas sidebar under Interview now has Roles and Categories under Sessions, including the scrolling phone bar. Each is a live session bound to a seeded pack. Learned notes stay in perfact.packNotes. The live Feedback tab is only on those sessions. Skip-login stays on. Production https://marketfit-app.vercel.app/version.json returned commit 11bf120, commitFull 11bf120b81ef7b5a45da3db1bcca07c97dff59ac, builtAt 2026-11-28T04:29:38.219Z. Not a live listen.

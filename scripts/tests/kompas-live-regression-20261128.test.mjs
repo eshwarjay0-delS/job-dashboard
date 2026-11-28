@@ -4,7 +4,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import vm from "node:vm"
 import { repairDictation } from "../../src/lib/kompasDictation.ts"
-import { dropOffTopicResume, keepSpokenOpening } from "../../src/lib/kompasConsistency.ts"
+import { dropIrrelevantTail, dropOffTopicResume, keepSpokenOpening } from "../../src/lib/kompasConsistency.ts"
 
 const root = new URL("../../", import.meta.url)
 const src = readFileSync(new URL("public/kompas/live-session.js", root), "utf8")
@@ -24,7 +24,8 @@ test("auto-answer fires on a finished auto card even when the VAD clock is 0", (
   const install = readFileSync(new URL("public/kompas/live-session-install.js", root), "utf8")
   assert.match(install, /finalLine:\s*true/)
   assert.match(install, /liveAutoDecision/)
-  assert.match(install, /emptyAutoCard/)
+  assert.match(install, /showQueuedAnswer/)
+  assert.doesNotMatch(install, /emptyAutoCard/)
 })
 
 test("the first streamed sentence is kept when finalize drops it", () => {
@@ -102,6 +103,88 @@ test("a hearing-silence warning stays quiet while audio is transcribing", () => 
   assert.equal(box.silenceWarningFor({ who: "Them", zeroWarned: false, lastAudibleAt: 1000, voiced: true }, now), null)
   assert.equal(box.silenceWarningFor({ who: "You", zeroWarned: false, lastAudibleAt: 1000, hearing: true }, now), null)
   assert.match(box.silenceWarningFor({ who: "You", zeroWarned: false, lastAudibleAt: 1000 }, now), /hearing silence/)
+})
+
+test("a new question opens its own card and does not rewrite the one still answering", () => {
+  const first = Gate.nextQuestionCard([], "How do you escalate an alert?")
+  const second = Gate.nextQuestionCard(first.cards, "What is trending in the SIEM?")
+  assert.equal(second.cards.length, 2)
+  assert.match(second.cards[0].question, /escalate/)
+  assert.match(second.cards[1].question, /trending/)
+  assert.equal(second.reused, false)
+  const quiet = Gate.liveAutoDecision({ text: "How would you prevent SQL injection in a login form?", pauseMs: 0, finalLine: true })
+  assert.equal(quiet.fire, true, quiet.reason)
+  const install = readFileSync(new URL("public/kompas/live-session-install.js", root), "utf8")
+  assert.match(install, /pauseMs: Gate\.FIRE_PAUSE_MS/)
+  assert.match(install, /questionLocked/)
+  assert.match(install, /labelFromHeard/)
+})
+
+test("candidate speech is You and stays out of the question text", () => {
+  assert.equal(Gate.attributeSpeaker({
+    text: "I tuned the correlation rules after the false positive.",
+    previousRole: "Interviewer",
+    source: "system",
+  }), "You")
+  const mixed = "How do you handle a false positive? I tuned the correlation rules after the false positive."
+  const only = Gate.questionWithoutCandidate(mixed)
+  assert.match(only, /false positive/i)
+  assert.doesNotMatch(only, /I tuned/)
+  const joined = Gate.joinSplitQuestion([
+    { role: "Interviewer", text: "How do you handle a false positive" },
+    { text: "I tuned the correlation rules after the false positive.", source: "system" },
+  ])
+  assert.equal(joined.length, 2)
+  assert.equal(joined[1].role, "You")
+})
+
+test("trailing resume sentences that miss the question topic are dropped", () => {
+  const fp = "I tune the rule until the false positive stops firing. I also owned the onboarding workflows for new hires."
+  const fpClean = dropIrrelevantTail("How do you handle a false positive?", fp)
+  assert.match(fpClean, /false positive/)
+  assert.doesNotMatch(fpClean, /onboarding/)
+  const dash = "I put the detections on one screen. I also tracked the dashboards and the ITSM budget."
+  const dashClean = dropIrrelevantTail("How do you design a security dashboard?", dash)
+  assert.match(dashClean, /detections/)
+  assert.doesNotMatch(dashClean, /ITSM|budget/)
+  assert.doesNotMatch(dropOffTopicResume("How do you handle a false positive?", "", fp), /onboarding/)
+})
+
+test("an empty or placeholder card is heard, not answered", () => {
+  for (const answer of ["", "…", ["…"], "Answering…", "Press Start — answers appear here."]) {
+    assert.equal(Gate.answerIsReal(answer), false, JSON.stringify(answer))
+  }
+  assert.equal(Gate.answerIsReal("I parameterize every query in the login form."), true)
+  const summary = Gate.sessionSummary({
+    cards: [
+      { question: "How do you escalate an alert?", answer: ["…"] },
+      { question: "How would you prevent SQL injection?", answer: "I parameterize every query in the login form." },
+    ],
+  })
+  assert.match(summary.text, /escalate an alert\? - heard/)
+  assert.match(summary.text, /SQL injection\? - answered/)
+})
+
+test("manual AI Answer reuses the open card instead of cloning it", () => {
+  const cards = [{ question: "How would you prevent SQL injection in a login form?", answer: "" }]
+  assert.equal(Gate.manualAnswerPlan(cards, 0, cards[0].question).reuse, true)
+  assert.equal(Gate.manualAnswerPlan(cards, 0, "What is XSS?").reuse, false)
+  const install = readFileSync(new URL("public/kompas/live-session-install.js", root), "utf8")
+  assert.match(install, /manualAnswerPlan/)
+  assert.match(install, /plan\.reuse \|\| placeholder/)
+})
+
+test("the silence warning clears while sound is coming in", () => {
+  const app = readFileSync(new URL("public/kompas/app.js", root), "utf8")
+  const m = app.match(/function silenceClearsOnSound\(status, rms\) \{[\s\S]*?\n\}/)
+  assert.ok(m)
+  const box = {}
+  vm.createContext(box)
+  vm.runInContext(m[0] + "\nthis.silenceClearsOnSound = silenceClearsOnSound;", box)
+  assert.equal(box.silenceClearsOnSound("Kompas is hearing silence from the microphone. Check the input device.", 0.02), true)
+  assert.equal(box.silenceClearsOnSound("Listening", 0.02), false)
+  assert.equal(box.silenceClearsOnSound("Kompas is hearing silence from the shared audio.", 0), false)
+  assert.match(app, /silenceClearsOnSound\(silenceLine\.textContent, rms\)/)
 })
 
 test("End paints the session summary on the page, not inside a hidden overlay", () => {
