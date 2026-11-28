@@ -1,13 +1,12 @@
-## 28 November 2026 19:14 UTC — Run32 current-master location/remote filter continuation
+## 28 November 2026 19:14 UTC — Run32 proposed current-master location/remote filter continuation
 
-**Continue:** Restack the approved contract-search location/remote filters on current master. PR [#651](https://github.com/eshwarjay0-delS/job-dashboard/pull/651) is a draft reviewable implementation.
+**Continue:** Prepare a reviewable current-master restack for contract-search location/remote filters. The exact filter semantics are proposed because scoped prior-context retrieval did not recover direct owner approval.
 
 - Master restack base: `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`. A content comparison found the five source/test files were unchanged between PR #636's base and current master; the intended changes were transplanted into a new branch without copying stale commits.
 - Changes: cap location input and four safe tokens; apply location AND and remote-only predicates in the crawler database query before its bounded snapshot; pass those filters from Apply; remove client-side filtering of indexed rows after the first 100 results. Live aggregator filtering remains unchanged.
-- PR #651 head `ab07e6991fa99f4add672abb4476603c5efeb8f5`, with source/test commits: `3f18e0576d2cc75c3408eb644b58a9a46d52c35b`, `535258b0f3f8c0d5543cef8c910f4abe876e7622`, `f012bb85389cbd957a76a6b4eae6d6a4956e38be`, `8776e9d10a201fec2e2e591ec1daae8b1fb9c0fc`, `ab07e6991fa99f4add672abb4476603c5efeb8f5`. Exact-head remote CI is pending. PR #636's earlier green checks are not reused. No local test/build because the scheduled environment lacks a compliant checkout, dependencies and installed Next.js 16.3.8 docs.
+- PR #651 head `4035a285c92aa6fbc0a9332d9df3f35570b1b156`, source/test commits `3f18e0576d2cc75c3408eb644b58a9a46d52c35b`, `535258b0f3f8c0d5543cef8c910f4abe876e7622`, `f012bb85389cbd957a76a6b4eae6d6a4956e38be`, `8776e9d10a201fec2e2e591ec1daae8b1fb9c0fc`, `ab07e6991fa99f4add672abb4476603c5efeb8f5`. Exact-head remote CI is pending. PR #636's earlier green checks are not reused. No local test/build because the scheduled environment lacks a compliant checkout, dependencies and installed Next.js 16.3.8 docs.
 - No protected preview, API smoke, crawl, portal request, Supabase write, application submission or deployment. Keep manual/on-demand only, 600 ms pacing, 25 s timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded.
-- Release gate: exact-head CI, independent review, protected preview, production READY on intended SHA plus canonical alias, public API smoke and separate real search acceptance. PR stays DRAFT.
-
+- Release gate: direct owner confirmation of the exact filter semantics, exact-head CI, independent review, protected preview, production READY on intended SHA plus canonical alias, public API smoke and separate real search acceptance. PR stays DRAFT.
 ### Reconciled blockers
 - #649 bounded non-cooperative timeout: current exact head has CI, baseline, freshness, Plan/REA and confirmed-skill gates green; two review comments still flag process-local portal reservation (cross-instance overlap risk). Protected preview is still missing. Do not merge/deploy or run a crawl until durable cross-instance reservation/fencing or an approved concurrency boundary is demonstrated.
 - #411 WhatsApp: stale/non-mergeable; no safe restack without a compliant checkout. The 27 Oct closest-library fallback approval does not authorize uploaded-original timeout sends. The 17 Oct 17:28 event remains unverified; no replay.
