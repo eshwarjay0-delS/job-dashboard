@@ -160,3 +160,10 @@ The 27 October journal entry that said no runnable environment was available, an
 ## Public test-fixture privacy — 15 November 2026
 
 WhatsApp regression fixtures are synthetic only. Use `example.test` email identities and reserved fictional 555-0100 through 555-0199 phone numbers; never commit private resume bodies, real account contacts, user-specific library paths, or private document fingerprints. Keep distinct test identities distinct so account-isolation assertions remain meaningful. See `docs/research/whatsapp-test-fixture-privacy-2026-11-15.md`.
+
+
+## 27 November 2026 — run 23 WhatsApp fallback scope audit
+
+The current PR #411 is DRAFT/nonmergeable at head 069707f9e7a48a698f80835bf6cf2a820ebe49b6; no exact-head workflows are present. Its diff adds workflow/test wiring and documentation, not runtime code. In canonical master, the timeout/provider catch attempts sendSelectedOriginal, but that helper requires explicit same-account Files/Library selection. An ordinary uploaded DOCX has no such selection proof and is not eligible for original-file fallback. This remains fail-closed and is consistent with the recovered approval boundary; direct approval for uploaded-original timeout fallback is not available. A review comment asks to correct the PR scope and keep it DRAFT.
+
+The 17 Oct 17:28 Chicago incident remains unverified: exact input/output DOCX, per-run R2 version, webhook correlation, Meta message ID, signed delivery/read receipt and source-fact reconciliation are missing. No real send or replay was performed.
