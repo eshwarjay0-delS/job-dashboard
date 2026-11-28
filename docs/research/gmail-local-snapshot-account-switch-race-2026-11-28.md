@@ -23,7 +23,7 @@ Code commits:
 
 ## Validation and limits
 
-The local checkout/dependencies and installed Next.js 16.3.8 docs are unavailable. The Vercel sandbox restore quota remains blocked until the previously recorded 1 Dec 2026 cooldown; it was not bypassed. Local tests/build were not run. Exact-head GitHub CI is the next remote validation and must be inspected before any merge. No production deployment, mailbox access, OAuth, inbox mutation or send occurred.
+The local checkout/dependencies and installed Next.js 16.3.8 docs are unavailable. The Vercel sandbox restore quota remains blocked until the previously recorded 1 Dec 2026 cooldown; it was not bypassed. Local tests/build were not run. Exact-head GitHub checks: Plan/REA schema 46105652267 and Kompas baseline 46105652265 passed; a separate resume-confirmation-quality regression 46105652280 passed (63 tests, not the Gmail test); full CI 46105652279 remains in progress at typecheck, with the Gmail account-isolation test pending. Inspect its terminal result before any merge. No production deployment, mailbox access, OAuth, inbox mutation or send occurred.
 
 ## Next action
 
