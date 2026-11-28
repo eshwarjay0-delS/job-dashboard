@@ -198,13 +198,17 @@ function openSessionHome(s) {
 }
 function openRoles() {
   sessions = LS.get("sessions", []);
-  renderSessions({ lane: "role", list: "roleList", empty: "emptyRoles" });
   show("roles");
+  const paint = () => renderSessions({ lane: "role", list: "roleList", empty: "emptyRoles" });
+  paint();
+  loadPackCatalog().then(paint).catch(() => {});
 }
 function openCategories() {
   sessions = LS.get("sessions", []);
-  renderSessions({ lane: "category", list: "categoryList", empty: "emptyCategories" });
   show("categories");
+  const paint = () => renderSessions({ lane: "category", list: "categoryList", empty: "emptyCategories" });
+  paint();
+  loadPackCatalog().then(paint).catch(() => {});
 }
 function paintOpenSessionList() {
   if ($("view-roles") && !$("view-roles").classList.contains("hidden")) renderSessions({ lane: "role", list: "roleList", empty: "emptyRoles" });
@@ -370,7 +374,9 @@ function renderSessions() {
   const opts = arguments[0];
   sweepSessions();
   const lane = opts && opts.lane;
-  const rows = sessions.filter(s => lane ? s.lane === lane : !sessionLane(s));
+  const rows = lane && window.KompasPackBoard
+    ? window.KompasPackBoard.order(sessions, (packCatalog && packCatalog.packs) || [], lane)
+    : sessions.filter(s => lane ? s.lane === lane : !sessionLane(s));
   const list = $(opts && opts.list || "sessionList");
   const empty = $(opts && opts.empty || "emptySessions");
   if (!list || !empty) return;
@@ -394,8 +400,25 @@ function renderSessions() {
       </div>`;
     card.querySelector(".sc-role").textContent = s.role || "Untitled role";
     card.querySelector(".sc-co").textContent = s.company || (s.type === "mock" ? "Mock practice" : "Live interview");
-    card.querySelector(".sc-meta").textContent = new Date(s.createdAt).toLocaleString() + " · " + (s.interviewer || "engineer").replace("_", " ") + " · " + (s.difficulty || "standard");
+    card.querySelector(".sc-meta").textContent = s.seeded
+      ? "Ready · engineer · standard"
+      : new Date(s.createdAt).toLocaleString() + " · " + (s.interviewer || "engineer").replace("_", " ") + " · " + (s.difficulty || "standard");
     const startBtn = card.querySelector(".sc-start"), state = card.querySelector(".sc-state");
+    if (s.seeded) {
+      startBtn.onclick = () => startSeededCard(s);
+      const edit = card.querySelector(".sc-edit");
+      edit.classList.remove("hidden");
+      edit.onclick = () => editSeededCard(s);
+      const end = card.querySelector(".sc-end");
+      end.classList.remove("hidden");
+      end.disabled = true;
+      const txSeed = card.querySelector(".sc-tx");
+      txSeed.classList.remove("hidden");
+      txSeed.disabled = true;
+      card.querySelector(".sc-del").classList.add("hidden");
+      list.append(card);
+      continue;
+    }
     if (sessionOpen(s) && !s.pausedAt && liveElsewhere(s)) {               // running in another window of Kompas: nothing to press here
       startBtn.classList.add("hidden"); card.querySelector(".sc-del").classList.add("hidden");
       state.textContent = "Open in another window."; state.classList.remove("hidden"); card.classList.add("open");
@@ -544,7 +567,7 @@ function openPackPicker(kind) {
     list.append(err);
   });
 }
-function createPackSession(pack, ownerResume) {
+function materializePack(pack, ownerResume) {
   const s = {
     id: "s" + Date.now() + "_" + Math.random().toString(36).slice(2, 10),
     createdAt: Date.now(),
@@ -578,8 +601,24 @@ function createPackSession(pack, ownerResume) {
   sessions = LS.get("sessions", []);
   sessions.unshift(s);
   LS.set("sessions", sessions);
+  return s;
+}
+function createPackSession(pack, ownerResume) {
+  materializePack(pack, ownerResume);
   if (pack.kind === "role") openRoles();
   else openCategories();
+}
+function startSeededCard(card) {
+  const pack = ((packCatalog && packCatalog.packs) || []).find((p) => p.id === card.packId) || card.pack;
+  if (!pack) return;
+  const s = materializePack(pack, (packCatalog && packCatalog.ownerResume) || "");
+  launchCopilot(s);
+}
+function editSeededCard(card) {
+  const pack = ((packCatalog && packCatalog.packs) || []).find((p) => p.id === card.packId) || card.pack;
+  if (!pack) return;
+  const s = materializePack(pack, (packCatalog && packCatalog.ownerResume) || "");
+  openEditWizard(s);
 }
 if ($("packPickClose")) $("packPickClose").onclick = () => $("packPickModal").classList.add("hidden");
 

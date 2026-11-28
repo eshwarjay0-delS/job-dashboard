@@ -89,8 +89,10 @@ const SOC_PLAYBOOK = [
   "Story: A web alert looked like SQL injection and a second one looked like XSS. I treated both as detection. I searched the WAF, the web logs, and the database audit in Splunk, then I confirmed the host in EDR. I did not describe a pentest. The ticket went to the application owner.",
 ].join(" ")
 
+const SOC_IDS = new Set(["soc", "soc-analyst", "soc-analyst-l1", "soc-analyst-l3", "soc-manager", "siem-splunk", "sentinel-kql", "detection-engineer", "detection-engineering", "threat-hunter", "threat-hunting", "incident-responder", "incident-response", "security-operations-lead", "endpoint", "defender"])
+
 function playbook(pack: KompasPack): string {
-  if (pack.id === "soc" || pack.id === "soc-analyst") return SOC_PLAYBOOK
+  if (SOC_IDS.has(pack.id)) return SOC_PLAYBOOK
   const tools = pack.mustMention.slice(0, 8).join(", ")
   return [
     `Playbook: I do ${pack.title} at Citi Bank, and I did the same class of work at CVS Health, the City of San Diego, Charter Communications, and Accenture.`,
@@ -104,7 +106,7 @@ function playbook(pack: KompasPack): string {
 
 export function packFrame(pack: KompasPack | null | undefined, question: string): string {
   if (!pack) return ""
-  const soc = pack.id === "soc" || pack.id === "soc-analyst"
+  const soc = SOC_IDS.has(pack.id) || pack.id === "offensive" || pack.id === "appsec" || pack.id === "appsec-engineer"
   if (soc && /sql injection|\bxss\b|cross-site scripting/i.test(question)) {
     return "FRAME: This is a SOC detection answer, not a pentest. Use the WAF, the web logs, the database audit, a Splunk search, and EDR. Do not describe exploiting the flaw."
   }

@@ -1,3 +1,9 @@
+## 2026-11-28 — Roles and Categories list every seeded subject
+
+The Roles page and the Categories page now show the full seeded catalog as ready cards (Start, End, Transcript, Edit setup) before anyone presses New. Starting a card creates the session. An in-progress session stays first. There are 26 roles and 26 categories, including SOC L1/L2/L3, the identity tools, PeopleSoft, Splunk, Sentinel, and the behavioral set. Stories stay on Citi Bank, CVS Health, the City of San Diego, Charter Communications, and Accenture. The Fortinet copy on ops/second-bot-packs was not imported. ops/chief-packs is not on origin. This is visible on the Roles and Categories pages.
+
+**Checked by scripts/tests/kompas-packs.test.mjs. Not a live click-through.**
+
 ## 2026-11-28 — Role and Category scorecard S5
 
 The catalogue sentence "I handle cybersecurity operations for the bank..." is no longer appended. Refusal lines are removed and a short story is filled with a Citi or CVS case. Architect, director, and engineer prompts ask for 1000+, 400-600, and 700-800 words. Every pack prompt includes a playbook, and a SOC SQL injection or XSS question is detection, not a pentest. Repeated triage sentences drop. With no resume attached, the intro is Senior Cybersecurity Engineer with 9+ years at Citi Bank, CVS Health, the City of San Diego, Charter Communications, and Accenture. Server-side, so the page looks the same until an answer is generated. Ships on PR #630 with the one-card work.

@@ -1,3 +1,7 @@
+## 28 November 2026 — Seeded Role and Category cards
+
+The owner asked, before the ship of PR #630, for 20-30 Roles and 20-30 Categories already listed. The pages now render every seeded pack as a ready card. Start creates the session. In-progress sessions sort first. 26 roles and 26 categories. Topics from the owner's list, the Kompas question families, and the leaf names on origin/ops/second-bot-packs. That branch's Fortinet stories were not copied. ops/chief-packs is not on origin. docs/kompas-packs is not on this branch. Not a live click-through.
+
 ## 28 November 2026 — Role and Category scorecard S5
 
 Scorecard S5 on f5b12b1 scored Role SOC Analyst 1.3/3.6/1.8 and Category SOC 1.7/3.2/2.0. The same PR #630 now strips the cybersecurity-operations catalogue, strips refusals, fills a short story with a Citi or CVS case, sets architect / director / engineer token budgets at 1000+, 400-600, and 700-800 words, injects a playbook for every pack, frames SOC SQL injection and XSS as detection, drops a repeated triage sentence, and opens an empty session as Senior Cybersecurity Engineer with 9+ years. Skip-login stays on. The Fortinet personality module stays unimported. One version.json read follows the squash-merge. Not a live listen.

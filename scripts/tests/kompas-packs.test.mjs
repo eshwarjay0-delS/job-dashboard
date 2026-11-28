@@ -6,32 +6,73 @@ import { getPack, learnFromAnswer, listPacks, ownerResumeForPack, packGrounding,
 
 const ROLE_TITLES = [
   "Senior Cybersecurity Engineer",
-  "SOC Analyst",
+  "SOC Analyst L1",
+  "SOC Analyst L2",
+  "SOC Analyst L3",
+  "SOC Manager",
+  "Incident Responder",
+  "Threat Hunter",
+  "Detection Engineer",
   "IAM Engineer",
+  "PAM/CyberArk Engineer",
+  "SailPoint IGA Engineer",
+  "Okta Engineer",
+  "Entra ID Engineer",
+  "IAM Solutions Engineer",
   "Security Architect",
-  "Cloud Security Engineer",
+  "Enterprise Security Architect",
+  "Cloud Security Engineer (Azure)",
+  "AppSec Engineer",
+  "Vulnerability Management Engineer",
+  "GRC Analyst",
+  "Network Security Engineer",
+  "Endpoint Security Engineer",
+  "Security Operations Lead",
   "Security Director",
+  "CISO-track Security Manager",
+  "PeopleSoft Security Analyst",
 ]
 const CATEGORY_TITLES = [
-  "IAM (PAM/CyberArk, SailPoint, Okta, Entra ID)",
-  "SOC",
+  "IAM",
+  "PAM/CyberArk",
+  "SailPoint",
+  "Okta",
+  "Entra ID/AD",
+  "PeopleSoft security",
+  "SOC operations",
+  "SIEM/Splunk",
+  "Sentinel/KQL",
   "Incident Response",
-  "Endpoint (CrowdStrike, Defender)",
-  "Cloud Security (Azure)",
-  "AppSec (Fortify)",
-  "Vulnerability Mgmt (Qualys, Nessus, Tanium)",
-  "GRC",
-  "Network Security (Palo Alto)",
-  "Leadership",
+  "Threat Hunting",
+  "Detection Engineering",
+  "Endpoint/CrowdStrike",
+  "Defender",
+  "Cloud Security Azure",
+  "AppSec/Fortify",
+  "Vulnerability Mgmt Qualys/Nessus/Tanium",
+  "GRC/compliance",
+  "Risk/TPRM",
+  "Network Security/Palo Alto",
+  "Zero Trust",
+  "Offensive/Pentest basics",
+  "Scripting Python/PowerShell",
+  "ServiceNow SecOps",
+  "Leadership/people management",
+  "Behavioral/STAR stories",
 ]
 
 test("seeded roles and categories load with an empty audio slot", () => {
   assert.deepEqual(listPacks("role").map((pack) => pack.title), ROLE_TITLES)
   assert.deepEqual(listPacks("category").map((pack) => pack.title), CATEGORY_TITLES)
+  assert.ok(listPacks("role").length >= 25 && listPacks("role").length <= 30)
+  assert.ok(listPacks("category").length >= 25 && listPacks("category").length <= 30)
   for (const pack of listPacks()) {
     assert.equal(getPack(pack.id)?.id, pack.id)
     assert.equal(pack.notebookLmUrl, "")
     assert.ok(pack.dossier.length > 80, pack.id)
+    assert.match(pack.dossier, /Playbook/, pack.id)
+    const employers = ["Citi Bank", "CVS Health", "City of San Diego", "Charter Communications", "Accenture"].filter((name) => pack.dossier.includes(name))
+    assert.ok(employers.length >= 2, pack.id + " " + employers.join(","))
     assert.ok(pack.mustMention.length >= 4, pack.id)
     assert.ok(pack.avoid.length >= 3, pack.id)
     assert.ok(pack.probes.length >= 3, pack.id)
@@ -122,4 +163,22 @@ test("sidebar puts Roles and Categories under Sessions and the feedback tab is p
   assert.match(app, /packId: current\.packId/)
   assert.match(app, /Continue/)
   assert.match(app, /Edit setup/)
+  assert.match(app, /KompasPackBoard\.order/)
+  assert.match(app, /startSeededCard/)
+  assert.match(html, /pack-board\.js/)
+})
+
+test("ready cards list every seed, with an in-progress session first", () => {
+  const code = readFileSync(new URL("../../public/kompas/pack-board.js", import.meta.url), "utf8")
+  const context = {}
+  vm.runInNewContext(code, context)
+  const packs = listPacks("role").map((pack) => ({ id: pack.id, kind: pack.kind, title: pack.title, dossier: pack.dossier, mustMention: pack.mustMention }))
+  const open = { id: "live", lane: "role", packId: "soc-analyst", role: "SOC Analyst L2", runAt: 50, createdAt: 50 }
+  const ended = { id: "old", lane: "role", packId: "iam-engineer", role: "IAM Engineer", endedAt: 10, createdAt: 10 }
+  const rows = context.KompasPackBoard.order([open, ended], packs, "role")
+  assert.equal(rows[0].id, "live")
+  assert.equal(rows.filter((row) => row.seeded).length, packs.length - 2)
+  assert.equal(rows.some((row) => row.seeded && row.packId === "soc-analyst"), false)
+  assert.equal(rows.at(-1).id, "old")
+  assert.equal(rows.filter((row) => row.seeded)[0].packId, packs.find((pack) => pack.id !== "soc-analyst" && pack.id !== "iam-engineer").id)
 })
