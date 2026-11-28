@@ -174,3 +174,28 @@ The 17 Oct 17:28 Chicago incident remains unverified: exact input/output DOCX, p
 The live production lineage now contains the explicit same-account Files/Library fallback guard: only a user-explicit, depth-zero, root-bound DOCX selection with a valid account email and exact selected path can be sent unchanged, with the exact label **Original resume — NOT TAILORED**. The ordinary WhatsApp-uploaded DOCX is not eligible for this fallback. Unverified JD-only additions are a hard hold, not a deliverable shortfall. This is live through master commit 6f3cdcb and production SHA 593dff.
 
 The 17 October 2026 17:28 Chicago incident remains unverified. The generated output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID, signed delivery/read receipt and source-fact reconciliation remain missing. A Library DOCX search for 2026-10-17 22:28Z–2026-10-18 05:00Z found no matching output, which does not prove R2 absence. No replay or send was performed. The approved next WhatsApp code slice is the two-line JD + named-resume parser; current parser still requires at least three lines, so a two-line JD followed by “use the SOC resume” is not yet split. Keep ordinary two-line chat intact. Local implementation is blocked by the absent canonical checkout, installed dependencies and installed Next.js 16.3.8 docs; no code was changed here.
+
+## 28 November 2026 — Run 31 read-only incident check
+
+The current iZap account inventory shows one business but no linked WhatsApp number. Read-only connection status reports disconnected, with no live inbound webhook, history backfill or outbound delivery ever proven. A message search for `resume` on 17 October 2026 in `America/Chicago` returned zero results. This only describes the current iZap business/search; it does **not** prove that the incident's R2 object or Meta records are absent. The 17 Oct 17:28 incident remains unverified. Required evidence is still the source and generated DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID and signed delivery/read receipt, plus owner fact reconciliation. No message was sent or replayed.
+
+Approval corrections: PR #633's two-line JD/named-resume parser is not directly owner-approved (comment 7235500274); keep DRAFT/unmerged. PR #636's specific server-side location/remote filters likewise lack recovered direct approval (comment 7235500545); do not merge or crawl. The broad contract crawler remains manual/on-demand only.
+
+
+## 28 November 2026 — run 32 parser and answer-band review
+
+PR #633 exact head `81e839acfeb9d546a22f70ab3c765d6d147ae346` has full CI 46115683036 and Kompas baseline 46115683096 SUCCESS, but Plan/REA and confirmed-skill gates are not observed. Approval correction comment 7235500274 states direct owner-authored approval was not recovered; the PR remains proposed/DRAFT, and no route-level WhatsApp test, protected preview or live send/replay occurred. Its body was corrected to match that provenance. The parser must preserve ordinary short chat; do not ship it until direct approval and required gates are recovered.
+
+PR #639's answer-band patch is separate from WhatsApp. Source review comment 7237158494 notes the expanded hedge filter can remove truthful limitations and the pack-based fallback can append persona stories as first-person experience on keyword overlap alone. It is not live; full CI 46129231306 completed SUCCESS (all 51 numbered steps). Preserve the factuality boundary.
+
+
+## 28 November 2026 — run 32 parser and answer-band review
+
+PR #633 exact head `81e839acfeb9d546a22f70ab3c765d6d147ae346` has full CI 46115683036 and Kompas baseline 46115683096 SUCCESS, but Plan/REA and confirmed-skill gates are not observed. Approval correction comment 7235500274 states direct owner-authored approval was not recovered; the PR remains proposed/DRAFT, and no route-level WhatsApp test, protected preview or live send/replay occurred. Its body was corrected to match that provenance. The parser must preserve ordinary short chat; do not ship it until direct approval and required gates are recovered.
+
+PR #639's answer-band patch is separate from WhatsApp. Source review comment 7237158494 notes the expanded hedge filter can remove truthful limitations and the pack-based fallback can append persona stories as first-person experience on keyword overlap. It is not live; full CI 46129231306 is still pending at the last check. Preserve the factuality boundary.
+
+
+## 28 November 2026 — run 33 exact PR639 head
+
+PR #639 head moved to f3c6f03d3d3616cdb2896649107a7660a52d386 after its prior full CI passed on 4e4ab7. Five supplemental gates are green, but current full CI 46130245413 is IN_PROGRESS. The follow-up commit explicitly removes truthful-gap disclosures and deletes the prior “a truthful gap stays” assertion; the resume guard checks employer/tool/number but includes the question in its evidence and does not verify action verbs. Corrected review comment 7237158494 records this. The PR remains unmerged/unreleased; the live alias is still 3362f20.
