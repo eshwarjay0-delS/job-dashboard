@@ -1,0 +1,49 @@
+{
+  "pauseMs": 1200,
+  "dedupeMs": 45000,
+  "minContentWords": 4,
+  "offTopic": {
+    "heard": "Them: walk me through your KYC workflows for identity proofing\nThem: how would you prevent SQL injection in a login form?",
+    "latest": "how would you prevent SQL injection in a login form?"
+  },
+  "asr": [
+    { "heard": "how do you use SAM for alerts", "expect": "SIEM" },
+    { "heard": "what is SAM", "expect": "SIEM" },
+    { "heard": "what is a SAM account", "keep": "SAM account" },
+    { "heard": "what are the same tools as a sock analyst", "expect": "SOC" },
+    { "heard": "how do you stop cross sight scripting", "expect": "XSS" },
+    { "heard": "write a k q l query for sign-in logs", "expect": "KQL" }
+  ],
+  "fires": [
+    { "id": "small-talk", "text": "How are you doing today?", "pauseMs": 2000, "fire": false, "reason": "small-talk" },
+    { "id": "breakfast", "text": "Did you have your breakfast?", "pauseMs": 2000, "fire": false, "reason": "small-talk" },
+    { "id": "too-short", "text": "Okay got it", "pauseMs": 2000, "fire": false, "reason": "too-short" },
+    { "id": "early", "text": "How would you prevent SQL injection in a login form?", "pauseMs": 0, "fire": false, "reason": "not-ended" },
+    { "id": "sql", "text": "How would you prevent SQL injection in a login form?", "pauseMs": 1200, "fire": true },
+    { "id": "short-term", "text": "What is XSS?", "pauseMs": 1200, "fire": true },
+    { "id": "speaker-turn", "text": "How would you prevent SQL injection in a login form?", "pauseMs": 0, "speakerTurn": true, "fire": true }
+  ],
+  "duplicates": [
+    "What tools have you worked on in Microsoft Sentinel?",
+    "Which Sentinel tools have you worked on?",
+    "Tell me the Sentinel tools you have worked on"
+  ],
+  "followUp": {
+    "previous": "What tools have you worked on in Microsoft Sentinel?",
+    "text": "Okay. So your experience lies more with Sentinel."
+  },
+  "speakers": [
+    { "text": "I'm doing great. Did you have your breakfast?", "previousRole": "Interviewer", "role": "You" },
+    { "text": "It's definitely risky because a small ignorance can lead to a very big loss.", "previousRole": "Interviewer", "role": "You" },
+    { "text": "Okay. Why do you say it's risky?", "previousRole": "You", "role": "Interviewer" },
+    { "text": "How do you manage doing rotational shifts working all week?", "previousRole": "You", "role": "Interviewer" }
+  ],
+  "headers": [
+    { "text": "Them: How would you prevent SQL injection?", "header": "Question: How would you prevent SQL injection?" },
+    { "text": "INTERVIEWER: What is XSS?", "header": "Question: What is XSS?" }
+  ],
+  "v2-1": [
+    { "speaker": "interviewer", "text": "Okay. As a mother uh how do you uh manage doing", "q_id": "v2-1" },
+    { "speaker": "candidate", "text": "rotational shifts working 24/7?" }
+  ]
+}
