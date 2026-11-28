@@ -115,3 +115,7 @@ PR #591 remains fail-closed and DRAFT; durable explicit same-account Files/Libra
 The approved confirmed-skill attribution/role-gap source slice is present in the live lineage through 6f3cdcb and production SHA 593dff. Current source splits candidate clauses from team, colleague, client and organization clauses, and the deterministic final weave considers only relevant existing role bullets where the candidate explicitly confirmed the skill. The focused test source covers team attribution, temporal connectors and role-scoped placement. The JD remains target context, never candidate experience.
 
 No owner-authorized resume/JD/explicit-confirmation bundle or exported DOCX was processed in this run. The web 95% floor remains; 98% is a target, not a verified live match. No automatic final-DOCX correction/re-export/recheck was enabled. The next review still requires a real source bundle and inspection of the exported DOCX before any factual acceptance claim.
+
+## 28 November 2026 — Run 34 resume/JD alignment
+
+The current target remains 95–100% factual JD coverage with a 95% web raw-overlap floor and 98% target—not a live result. Confirmed skills may be placed into relevant existing project bullets only; JD-only tools, certifications, employers, dates, metrics or actions do not become experience. The 6 Nov WhatsApp policy supersedes the historical 98% hard hold. No source resume/JD/explicit-confirmation bundle or exported DOCX was processed in this run. The 17 Oct incident still lacks exact source bytes, output, R2 trace and Meta receipt.
