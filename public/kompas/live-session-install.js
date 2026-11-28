@@ -14,10 +14,17 @@
     fixPhrases = function (text) { return Gate.correctSecurityAsr(origFix(text)); };
   }
 
+  var lastSpeaker = "Interviewer";
+  if (typeof isTabSmallTalk === "function") {
+    var origTabSmall = isTabSmallTalk;
+    isTabSmallTalk = function (text) { return Gate.isSmallTalk(text) || origTabSmall(text); };
+  }
+
   if (typeof utteranceWho === "function") {
     utteranceWho = function (text) {
-      var prev = typeof lastTabRole !== "undefined" && lastTabRole === "You" ? "You" : "Interviewer";
+      var prev = lastSpeaker === "You" || (typeof lastTabRole !== "undefined" && lastTabRole === "You") ? "You" : "Interviewer";
       var role = Gate.attributeSpeaker({ text: text, previousRole: prev, source: "system" });
+      lastSpeaker = role;
       return role === "You" ? "You" : "Them";
     };
   }
@@ -40,28 +47,40 @@
   if (typeof showCaption === "function") {
     var origCaption = showCaption;
     showCaption = function (who, text) {
-      var role = who === "You" ? "You" : Gate.attributeSpeaker({ text: text, previousRole: who === "You" ? "You" : "Interviewer", source: who === "You" ? "mic" : "system" });
-      return origCaption(role === "You" ? "You" : "Them", Gate.correctSecurityAsr(text), arguments[2]);
+      // who is already You or Them. Re-scoring every Them line against a
+      // forced Interviewer previous-role labeled the candidate as Interviewer.
+      if (who === "You") lastSpeaker = "You";
+      return origCaption(who === "You" ? "You" : "Them", Gate.correctSecurityAsr(text), arguments[2]);
     };
   }
 
-  function gateDecision(tail, consume) {
+  function recentRows() {
     var recent = [];
     try {
       if (typeof recentAsks !== "undefined" && recentAsks) recent = recentAsks.map(function (row) { return { text: row.text, at: row.at }; });
     } catch (e) { recent = []; }
-    var previous = "";
+    return recent;
+  }
+  function previousQuestion() {
     try {
-      if (typeof cards !== "undefined" && cards.length) previous = cards[cards.length - 1].question || "";
-    } catch (e) { previous = ""; }
+      if (typeof cards !== "undefined" && cards.length) return cards[cards.length - 1].question || "";
+    } catch (e) {}
+    return "";
+  }
+  function gateDecision(tail, consume, opts) {
+    opts = opts || {};
+    var pause = Number(opts.pauseMs);
+    if (!Number.isFinite(pause)) pause = quietMs();
     var turn = speakerTurn;
     if (consume) speakerTurn = false;
-    return Gate.shouldFire({
+    var decide = typeof Gate.liveAutoDecision === "function" ? Gate.liveAutoDecision : Gate.shouldFire;
+    return decide({
       text: tail,
-      pauseMs: quietMs(),
+      pauseMs: pause,
+      finalLine: opts.finalLine === true,
       speakerTurn: turn,
-      previous: previous,
-      recent: recent,
+      previous: previousQuestion(),
+      recent: recentRows(),
       now: Date.now(),
     });
   }
@@ -69,26 +88,67 @@
   if (typeof shouldAutoAnswer === "function") {
     var origShould = shouldAutoAnswer;
     shouldAutoAnswer = function (opts) {
-      var decision = gateDecision(opts && opts.text, false);
+      var pause = opts && Number(opts.themQuietMs);
+      var decision = gateDecision(opts && opts.text, false, {
+        pauseMs: Number.isFinite(pause) ? pause : quietMs(),
+        finalLine: Number.isFinite(pause) && pause >= Gate.FIRE_PAUSE_MS,
+      });
       if (!decision.fire) return { fire: false, reason: decision.reason === "not-ended" ? "not-quiet" : decision.reason };
       opts = Object.assign({}, opts, { text: decision.text });
       return origShould(opts);
     };
   }
 
+  function cardBody(card) {
+    if (!card) return "";
+    return typeof card.answer === "string" ? card.answer : (Array.isArray(card.answer) ? card.answer.join(" ") : "");
+  }
+  function emptyAutoCard(card) {
+    var body = String(cardBody(card) || "").trim();
+    if (!body || /^[.…\s]+$/.test(body)) return true;
+    return false;
+  }
+
   if (typeof confirmAutoAndAnswer === "function") {
     var origConfirm = confirmAutoAndAnswer;
     confirmAutoAndAnswer = async function (tail) {
-      var decision = gateDecision(tail, true);
+      // finalLine: the caller already has a finished phrase. Silero sets the
+      // quiet clock back to 0 as soon as the next word in a video starts, so
+      // measuring themQuietNow() here dropped every auto answer (0 of 4).
+      var decision = gateDecision(tail, true, { finalLine: true, pauseMs: quietMs() });
       if (!decision.fire) return;
-      return origConfirm(decision.text || tail);
+      var q = decision.text || tail;
+      try {
+        var card = (typeof cards !== "undefined" && cards.length) ? cards[idx] : null;
+        if (card && emptyAutoCard(card) && typeof generateAnswer === "function") {
+          card.question = Gate.stripSpeakerLabels(q);
+          card.answer = ["…"];
+          card.streaming = true;
+          if (typeof renderCard === "function") renderCard();
+          return generateAnswer(q, card, { pinned: true, derived: q, queued: true });
+        }
+      } catch (e) {}
+      return origConfirm(q);
     };
   }
 
   if (typeof onTranscript === "function") {
     var origOn = onTranscript;
     onTranscript = function (who, text, lookedAgain, spokenAt) {
-      var out = origOn.apply(this, arguments);
+      if (who !== "You" && !lookedAgain && typeof transcript !== "undefined" && transcript.length) {
+        var prevRow = null;
+        for (var i = transcript.length - 1; i >= 0; i--) {
+          if (transcript[i] && transcript[i].who === "Them") { prevRow = transcript[i]; break; }
+        }
+        if (prevRow && prevRow.text) {
+          var joined = Gate.joinSplitQuestion([
+            { role: "Interviewer", text: prevRow.text, source: "system" },
+            { text: text, source: "system" },
+          ]);
+          if (joined.length === 1 && joined[0].joined) text = joined[0].text;
+        }
+      }
+      var out = origOn.call(this, who, text, lookedAgain, spokenAt);
       if (who === "You" && !lookedAgain) {
         speakerTurn = true;
         var pending = "";
@@ -159,7 +219,7 @@
   }
 
   function popupHost() {
-    return document.getElementById("overlay") || document.body;
+    return document.body || document.getElementById("overlay");
   }
   function paintSummary(summary) {
     if (!summary || !document.body) return;
@@ -178,19 +238,35 @@
     box.hidden = false;
   }
 
+  function showSessionSummary(at) {
+    var summary = Gate.sessionSummary({
+      turns: typeof transcript !== "undefined" ? transcript : [],
+      cards: typeof cards !== "undefined" ? cards : [],
+      endedAt: at || Date.now(),
+    });
+    paintSummary(summary);
+    return summary;
+  }
+
   if (typeof closeRun === "function") {
     var origClose = closeRun;
     closeRun = function (s, at, by) {
       try {
-        var summary = Gate.sessionSummary({
-          turns: typeof transcript !== "undefined" ? transcript : [],
-          cards: typeof cards !== "undefined" ? cards : [],
-          endedAt: at,
-        });
+        var summary = showSessionSummary(at);
         if (s) s.summary = summary.text;
-        paintSummary(summary);
       } catch (e) {}
       return origClose.apply(this, arguments);
+    };
+  }
+
+  if (typeof stop === "function") {
+    var origStop = stop;
+    stop = async function (say) {
+      var result = await origStop.apply(this, arguments);
+      if (say !== false) {
+        try { showSessionSummary(Date.now()); } catch (e) {}
+      }
+      return result;
     };
   }
 

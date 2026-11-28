@@ -162,8 +162,10 @@ export function primingFor(language: string | undefined): string {
  * The language seed goes FIRST — it anchors the script. Interview terms are
  * ranked ahead of a long previous line so the budget cannot drop them.
  */
+const STT_BIAS = ["SIEM", "SOC", "XSS", "KQL", "SQL", "Splunk", "Sentinel", "SQL injection"]
+
 export function primingPrompt(vocabulary: readonly string[] | undefined, seed = ''): string {
-  return accuracyPrompt(vocabulary ?? [], seed)
+  return accuracyPrompt([...STT_BIAS, ...(vocabulary ?? [])], seed)
 }
 
 /** Split a client hint string into vocabulary terms (comma/semicolon separated). */

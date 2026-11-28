@@ -2,6 +2,10 @@
 
 The Kompas sidebar under Interview now has Roles and Categories under Sessions, including the scrolling phone bar. Each is a live session bound to a seeded pack. Learned notes stay in perfact.packNotes. The live Feedback tab is only on those sessions. Skip-login stays on. Production https://marketfit-app.vercel.app/version.json returned commit 11bf120, commitFull 11bf120b81ef7b5a45da3db1bcca07c97dff59ac, builtAt 2026-11-28T04:29:38.219Z. Not a live listen.
 
+## 28 November 2026 — Kompas live auto-answer regression
+
+Production 11bf120 auto-created question cards and never answered them. The break is dc4f82a2's live-session installer: confirmAutoAndAnswer waits on themQuietNow(), and a continuous mock-interview video keeps that clock at 0. Manual AI Answer never entered that gate. This change treats a finished transcript as ended, repairs SAM tools to SIEM, keeps the streamed opening sentence, drops ITBM/PPM/fraud/KYC/jayeshwar44 tails, labels first-person lines You, blocks can-you and intro small talk, shows the session summary on End and Stop, and does not warn about silence while transcription is in flight. Skip-login stays on. The Google-only login branch was not touched. One version.json read follows the ship. No polling.
+
 ## 28 November 2026 — Kompas approval provenance correction
 
 - The “Owner task, 28 Nov” and same-day add-on in `docs/research/kompas-level-personalities-2026-11-28.md` are branch/PR documentation, not verified direct owner messages. Scoped prior-context retrieval did not recover the corresponding user-authored approval. Keep the personality modules unconnected and PR #620 unmerged/unshipped. The proposed “real customer story for a tool absent from the resume” conflicts with Chief Relevance's source boundary and is not approved. See PR #618 comment 7232103912.
