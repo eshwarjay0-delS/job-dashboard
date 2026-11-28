@@ -1,3 +1,9 @@
+## 2026-11-28 — Hedge lines are failures again
+
+S7 flagged "will not invent", "cannot name a specific", "the resume does not show", and "not directly measured". Those sentences are stripped again. A pack sentence that names a foreign employer, tool, or number still is not spoken as fact. A Citi Bank and Splunk sentence that is on the resume can stay. Server-side, so the page looks the same until the next answer.
+
+**Checked by the hedge test in scripts/tests/kompas-level-contract.test.mjs. CI on PR #639 still has to go green before the squash-merge.**
+
 ## 2026-11-28 — Production level bands, every part answered
 
 Taskmaster S7 on 3362f20: a typed level switch painted a cached answer with no model call, a failed continuation padded with the canned Citi/CVS paragraph, short spoken questions got the 40-160 word quick band, and a two-part live question lost its first half. The prod-band-relevance patch (git am on f36d90b) fixes those. A skipped question part gets its own continuation. Manual presses do not rewrite an answered card. Auto starts on. Server-side answer path, so the page looks the same until the next answer.

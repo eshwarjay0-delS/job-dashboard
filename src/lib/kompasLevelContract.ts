@@ -111,7 +111,7 @@ export function levelContract(level: string, question: string): LevelContract {
   }
 }
 
-export const BANNED_HEDGE = /i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume/i
+export const BANNED_HEDGE = /can(?:'|’)?t name a specific|cannot name a specific|i(?:'ve| have) had less direct hands-on|less direct hands-on|less experience|not directly, but|not directly measured|transfers because|i haven(?:'|’)t used|i haven(?:'|’)t worked|i don(?:'|’)t have my resume|i would want to confirm that|i can(?:'|’)t claim|i can(?:'|’)t point to|i will not invent|i won(?:'|’)t invent|i do not have a matching line|details aren(?:'|’)t in my work history|not in my work history|i(?:'|’)m not going to (?:invent|make up)|i will not make (?:it |that )?up|that (?:detail|part) is not on my resume|the resume does not (?:name|show)|so i will not invent/i
 
 const RESUME_CATALOG = /i handle cybersecurity operations for the bank\b[^.]{0,600}\./i
 

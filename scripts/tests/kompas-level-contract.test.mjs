@@ -167,13 +167,11 @@ test("director padding is removed", () => {
   assert.match(text, /cutover/)
 })
 
-test("a truthful gap stays, and a pack story that is not on the resume is not spoken as fact", () => {
-  const gap = "I cannot name a specific outage. The resume does not show one, so I will not invent it. The control was not directly measured."
+test("hedges are removed, and a pack story that is not on the resume is not spoken as fact", () => {
+  const gap = "I cannot name a specific outage. The resume does not show one, so I will not invent it. The control was not directly measured. I won't invent a number."
   const kept = fitLevelAnswer(`I rotated the key in the vault. ${gap}`, levelContract("engineer", "Tell me about a time you handled an incident."))
-  assert.match(kept, /cannot name a specific/)
-  assert.match(kept, /resume does not show/)
-  assert.match(kept, /will not invent/)
-  assert.match(kept, /not directly measured/)
+  assert.match(kept, /rotated the key/)
+  assert.doesNotMatch(kept, /cannot name a specific|resume does not show|will not invent|won'?t invent|not directly measured/)
   const resume = "Senior Cybersecurity Engineer at Citi Bank. I use Splunk."
   const pack = "At Initech I cut false positives by 40% with PhantomSIEM across 12 sites. At Citi Bank I tuned the Splunk notable for the privileged session."
   const question = "How do you tune a Splunk notable when the same alert keeps paging the queue?"
