@@ -82,8 +82,15 @@ export async function POST(req: NextRequest) {
   if (!serviceClientAvailable()) {
     return NextResponse.json({ error: "Service client not configured." }, { status: 500 })
   }
-  const { runCrawl } = await import("@/lib/crawl/runner")
+  const { runCrawl, CrawlAlreadyRunningError } = await import("@/lib/crawl/runner")
   const body = await req.json().catch(() => ({}))
-  const results = await runCrawl(Array.isArray(body.portals) ? body.portals : undefined)
-  return NextResponse.json({ ok: true, results })
+  try {
+    const results = await runCrawl(Array.isArray(body.portals) ? body.portals : undefined)
+    return NextResponse.json({ ok: true, results })
+  } catch (error) {
+    if (error instanceof CrawlAlreadyRunningError) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 409 })
+    }
+    throw error
+  }
 }
