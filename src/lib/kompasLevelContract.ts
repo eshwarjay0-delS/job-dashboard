@@ -193,7 +193,7 @@ export function fitLevelAnswer(text: string, contract: LevelContract): string {
       const shared = nowWords.filter((w) => prevSet.has(w)).length
       return shared / nowWords.length >= 0.85
     })
-    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || /\bpages once\b|\bstory\s+\d+\s*:|\bonly when the question needs\b|\bby\s*%|\bprotects typed privileged accounts\b/i.test(sentence) || seen.has(key) || near || (open.split(" ").length >= 6 && openings.has(open))) continue
+    if (!key || /^having\b/i.test(sentence) || /^example:\s/i.test(sentence) || /^i do this at citi bank\b/i.test(sentence) || /\bi pull the evidence, decide, and assign the servicenow ticket\b/i.test(sentence) || /having 10\+\s*years|sr\.?\s*servicenow development|servicenow development|10\+\s*years of experience/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || /\bpages once\b|\bstory\s*:|\btools and controls\b|\bprobe habit\b|\bonly when the question needs\b|\bby\s*%|\bprotects typed privileged accounts\b/i.test(sentence) || /\([^)]*$/.test(sentence) || seen.has(key) || near || (open.split(" ").length >= 6 && openings.has(open))) continue
     seen.add(key)
     if (open.split(" ").length >= 6) openings.add(open)
     kept.push(sentence)
@@ -250,20 +250,21 @@ function claimIsOnResume(line: string, resume: string, question: string, pack = 
   return true
 }
 
-const PACK_SCAFFOLD = /\b(?:story\s+\d+\s*:|tools\s*:|playbook\s*:|checklist\s*:|probe\s+\d+\s*:|must mention\s*:|pack drill|only when the question needs|never answer with this line|do not pretend|expand it into|pick the one that fits|pages once|protects typed privileged accounts|by\s+%|the tools i use are)\b/i
+const PACK_SCAFFOLD = /\b(?:story\s*:|tools\s*:|tools and controls|probe habit|playbook\s*:|checklist\s*:|probe\s+\d+\s*:|must mention\s*:|pack drill|only when the question needs|never answer with this line|do not pretend|expand it into|pick the one that fits|pages once|protects typed privileged accounts|by\s+%|the tools i use are)\b/i
 
-/** A pack line the candidate can say. Labels, instructions, and empty metrics stay out. */
+/** A pack line the candidate can say. Only a finished first-person sentence. Labels and cut-off fragments stay out. */
 export function spokenPackSentence(line: string): string {
-  let s = String(line || "")
-    .replace(/^(?:[-•*]\s*)?(?:story\s+\d+|tools|playbook|metrics|checklist|probe\s+\d+|must mention|avoid|frame|director view|subject|citi story|cvs story)\s*:\s*/i, "")
-    .replace(/\bmetrics\s*(?:i report)?\s*:\s*/gi, "")
+  let s = String(line || "").replace(/\s+/g, " ").trim()
+  if (!s || /\([^)]*$/.test(s)) return ""
+  s = s
+    .replace(/^(?:[-•*]\s*)?(?:story(?:\s+\d+)?|tools(?: and controls i use)?|playbook|metrics|checklist|probe(?:\s+habit|\s+\d+)?|must mention|avoid|frame|director view|subject|citi story|cvs story)\s*:\s*/i, "")
     .replace(/\bby\s+\d+(?:\.\d+)?\s*%/gi, "")
     .replace(/\b\d+(?:\.\d+)?\s*%/g, "")
     .replace(/\s{2,}/g, " ")
     .trim()
-  if (!s || PACK_SCAFFOLD.test(s) || !/\b(?:I|we|my|our)\b/.test(s)) return ""
+  if (!s || /^[A-Za-z][^:]{0,48}:/.test(s) || !/[.!?]$/.test(s)) return ""
+  if (PACK_SCAFFOLD.test(s) || !/\b(?:I|we|my|our)\b/.test(s)) return ""
   if (s.split(/\s+/).length < 8) return ""
-  if (!/[.!?]$/.test(s)) s += "."
   return s
 }
 

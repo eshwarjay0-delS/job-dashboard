@@ -40,7 +40,7 @@ jobs:
         continue-on-error: false
 
       - name: Replay the video-2 live question timeline
-        run: node --experimental-strip-types --test scripts/tests/kompas-live-replay-gate.test.mjs scripts/tests/kompas-prod-band-relevance.test.mjs scripts/tests/kompas-intro-you-resume.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/kompas-live-replay-gate.test.mjs scripts/tests/kompas-prod-band-relevance.test.mjs scripts/tests/kompas-intro-you-resume.test.mjs scripts/tests/kompas-s10.test.mjs
 
       - name: Verify one-click Caption Capture and 50-fold question/spelling regression
         run: |

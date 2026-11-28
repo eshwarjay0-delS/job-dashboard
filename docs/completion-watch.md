@@ -1,3 +1,7 @@
+## 28 November 2026 — S10 Architect request, ServiceNow bio, live cards
+
+Taskmaster S10 on fefaaf1. Director was 9/9 in band and Engineer was 9/9. Architect was blank 9/9 because the page refused the model for a derived level and set Answered with an empty pane. The ServiceNow Development bio still reached Say this from the lexicon evidence and from a resume that did not contain eshwarjay05. Pack labels and the stock Citi opener are stripped. Sentinel and escalate are their own questions. Empty cards are not answered. OWASP and CyberArk packs gained the missing stories. Not merged. The next production deploy waits for 29 Nov CT.
+
 ## 28 November 2026 — S9 real-model gate is blocked
 
 Taskmaster S9 on fdd4816. The pack fill now uses clean first-person sentences and aims about 10 percent above the band floor. A pack draft is shown before the model so an Architect call that dies at the 55-second lane does not leave an empty pane. The model text replaces that draft when the model returns. A complete Sentinel, escalate, or SQL injection question is not swallowed into the previous card. Candidate speech is labeled You. Empty cards are not counted as answered. The live Say this panel uses the session resume and drops the Sr. ServiceNow Development line. Press Start is removed from the intro. The page changes are the answer text, the You label, the Say this panel, and whether an empty card is marked answered.

@@ -46,7 +46,7 @@ const STAKE = /\b(users|customers|product owners|control owners|app owners|stake
 const PRESSURE = /\b(audit|incident|on-call|outage|deadline|release)\b/i
 const PERSONAL_LINE = /@|\b(?:\+?1[\s.-]*)?(?:\(\d{3}\)|\d{3})[\s.-]\d{3}[\s.-]\d{4}\b|\b(?:visa|h-?1b|green card|salary|compensation(?!\s+controls?)|relocation|citizenship|notice period)\b|\b(?:houston|saint louis|st\.?\s*louis)\b/i
 const OTHER_PROFILE = /\b(?:jayeshwar44|jayeshwar24|eshwarjay06|eshwarjay05|saint louis|st\.?\s*louis|houston|visa|h-?1b|green card|salary|gmail)\b/i
-const FOREIGN_BIO = /jayeshwar44|jayeshwar24|eshwarjay06|10\+\s*years[\s\S]{0,80}servicenow|sr\.?\s*servicenow development|servicenow fso|servicenow csm/i
+const FOREIGN_BIO = /jayeshwar44|jayeshwar24|eshwarjay06|10\+\s*years[\s\S]{0,80}servicenow|sr\.?\s*servicenow development|servicenow development|servicenow fso|servicenow csm/i
 const STARTER = new Set("The So If Want Should Where What Is This That And But When Which Who How Did Are Was Were Can Could Would Will Have Has Not Just Keep Stay Yes Yeah Why".split(" "))
 const STOP = new Set("that this with what which when where your have about would could should there their them they then than into from were been being does tell describe explain walk give share over under just more some also like time thing things kind sort really okay yeah want doesn does not the and for you how did can will are was who whom why many much long any been our into".split(" "))
 
@@ -60,9 +60,7 @@ function cleanResume(raw: string): string {
     const next = hits.find((h) => h.at > mine.at)
     sliced = text.slice(mine.at, next ? next.at : text.length)
   }
-  const pinned = /eshwarjay05/i.test(sliced)
-    ? sliced.split("\n").filter((line) => !FOREIGN_BIO.test(line)).join("\n")
-    : sliced
+  const pinned = sliced.split("\n").filter((line) => !FOREIGN_BIO.test(line)).join("\n")
   return pinned.split("\n").filter((line) => !PERSONAL_LINE.test(line)).join("\n")
 }
 
