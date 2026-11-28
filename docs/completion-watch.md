@@ -1,3 +1,12 @@
+## 28 November 2026 — Run 35 WhatsApp read-only diagnostic
+
+- iZap read-only inventory: one business, no number. Connection check at `2026-11-28T11:38:11.321718Z` reports disconnected/status_none; inbound webhook/history backfill never; outbound delivery never proven. This is current status only.
+- PR #411 latest head `069707f` is docs-only on stale base `17f8dada`, DRAFT/nonmergeable; no exact-head workflow/status. Prior four-gate green runs on `5b522ec` are not reused. Uploaded-original timeout fallback remains unapproved; explicit same-account Files/Library original fallback only, label **Original resume — NOT TAILORED**.
+- 17 Oct 17:28 incident remains unverified: source/output DOCX, per-run R2 object/version, webhook/request correlation, Meta outbound ID, signed receipt and owner fact reconciliation missing. No send/replay.
+
+**Continue:** obtain authorized historical artifacts and explicit approval for any timeout fallback; reconnect number only for owner-consented future acceptance. No outbound test.
+
+
 ## 28 November 2026 — run 35 confirmed-skill resume guard
 
 - Current production/master fdd4816 contains the confirmedCandidateStatements and non-candidate actor split. Current regression file contains nine passive actor negatives and preserves the ordinary AWS+GCP positive. This is source/test presence; no local execution or final-master CI evidence.
