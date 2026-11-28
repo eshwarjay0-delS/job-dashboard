@@ -1,3 +1,22 @@
+## 28 November 2026 — Run 29: Gmail account-switch privacy guard and WhatsApp CI repair
+
+**Continue:** Verify exact-head remote gates for clean restack `fix/gmail-snapshot-account-switch-race-20261128-watch11`, then review before any merge.
+
+### Gmail privacy slice
+Issue #623 describes a source-level race (not browser-reproduced): delayed account A `snapshotKey()` can publish A's local snapshot after A→B or sign-out. Original PR #626 exact head `98e05b2b` had four reported green remote gates but remained DRAFT/non-mergeable on a stale base. Run 29 ported only its reviewed generation/current-user guards and two deferred-identity tests to current master `be063d6977760f902c1ced3a3078d9323229ea38`.
+
+- Source commit: `05c28574769213f3d4220b5d537c7634260bc8fe`
+- Test commit: `2129c321f0161eaf607207c21ff061ea12fb5977`
+- Tests cover A→B isolation, sign-out, and same-account restore.
+- Local canonical test/build unavailable. Remote gates on the clean branch are pending.
+- No Gmail OAuth, inbox access/mutation, email send, deployment, or browser acceptance.
+
+### WhatsApp/JD resume routing
+PR #628 full CI `46109239024` failed in test 33 because the deploy-build contract compared `prebuild` to an exact old string; the approved branch adds `role-match.test.mjs`. The CI run had lint/typecheck and the preceding 50-fold/question and role tests green, but the full run failed and later steps were skipped. Run 29 committed `784aa5dfac79c142d86c7c169395bbbeeda89db8` on that PR branch to require the existing baseline and all required suites while allowing additive test files. A separate isolated contract probe passed 2/2; that is not canonical CI. PR #628 is stale/non-mergeable against current master and the new exact-head workflow is not yet observable. Do not merge/release until it is restacked and required gates pass.
+
+### Release and acceptance
+Production alias was independently READY at `42659aefe500551979740754e35b09bd2f128949`; current master includes later test/documentation commit `be063d6977760f902c1ced3a3078d9323229ea38`. Neither Gmail account-switch fix nor PR #628 parser is live. The 17 Oct 17:28 Chicago WhatsApp resume incident remains open: iZap was disconnected/no verified matching message, and original resume/JD, exported DOCX, R2 version, webhook correlation, Meta receipt are missing. No real send/replay. Contract crawler PR #590, Poke Gmail multi-account/mobile, and real Kompas 50-pair/native acceptance remain separate backlog items; do not mark finished.
+
 ## 28 November 2026 — Seeded Role and Category cards
 
 The owner asked, before the ship of PR #630, for 20-30 Roles and 20-30 Categories already listed. The pages now render every seeded pack as a ready card. Start creates the session. In-progress sessions sort first. 26 roles and 26 categories. Topics from the owner's list, the Kompas question families, and the leaf names on origin/ops/second-bot-packs. That branch's Fortinet stories were not copied. ops/chief-packs is not on origin. docs/kompas-packs is not on this branch. Not a live click-through.
