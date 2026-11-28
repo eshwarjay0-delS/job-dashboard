@@ -1,3 +1,7 @@
+## Run 29 contract-crawler continuation — PR #636
+
+Approved PR #617 was stale/non-mergeable. Clean restack #636 head `aa1f51e29b385410aef3799e498c76483317fc14` is mergeable and has crawler freshness/classification SUCCESS (`46116253117`), manual-only SUCCESS (`46116253016`) and baseline SUCCESS (`46116253018`); full CI `46116253076` is IN PROGRESS. A previous crawler gate at `bfe9410` failed because the source assertion expected raw `query.ilike` after helper extraction; assertion was corrected and current gate passed. Isolated local query probe: 3/3 (not canonical CI). Plan/REA and confirmed-skill gates not yet observed. No live crawl, portal request, application or DB write.
+
 ## Run 29 status correction — #632 source-link lint fix
 
 PR #632 full CI `46115954313` failed at Lint due to an unterminated string in the Plan Vision source link (line 15, column 492); that link was corrected on the branch. The same exact-head Plan/REA run `46115954191` failed on the existing remote source path `origin/ops/second-bot-packs:docs/kompas-packs/second-bot-INDEX.md`. Test-only PR #635 is the clean fix; its Plan/REA and baseline passed, full CI remains in progress. PR #632 requires corrected-head full CI plus #635 review/merge and rerun Plan/REA. Do not merge.
