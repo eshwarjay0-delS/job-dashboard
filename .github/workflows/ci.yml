@@ -51,6 +51,9 @@ jobs:
           node --experimental-strip-types --test scripts/tests/kompas-session-reauth.test.mjs scripts/tests/auth-disabled-session-start.test.mjs scripts/tests/desktop-session-family.test.mjs scripts/tests/kompas-overlay-ship.test.mjs scripts/tests/kompas-answer-finish.test.mjs scripts/tests/kompas-desktop-skip-login-answer.test.mjs scripts/tests/kompas-answer-model-fallback.test.mjs scripts/tests/kompas-answer-reliable.test.mjs scripts/tests/kompas-second-question.test.mjs scripts/tests/kompas-level-contract.test.mjs
           node --test scripts/tests/kompas-caption-once-50fold.test.mjs scripts/tests/kompas-desktop-screen-action.test.mjs scripts/tests/kompas-computer-audio-state.test.mjs scripts/tests/kompas-caption-birlasoft-regression.test.mjs
 
+      - name: Verify Kompas level personalities and hedge filter
+        run: node --experimental-strip-types --test scripts/tests/kompas-level-personality.test.mjs
+
       - name: Verify 20 full interviewer questions, silent desktop auth and exact release stamp
         run: node --test scripts/tests/kompas-full-question-desktop-reopen-20fold.test.mjs scripts/tests/kompas-desktop-auth-live-continuity.test.mjs scripts/tests/kompas-desktop-release-stamp.test.mjs
 
