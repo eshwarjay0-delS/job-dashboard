@@ -1737,3 +1737,23 @@ html.kd .kd-grip{z-index:2 !important}
 html.kd .kd-grip-n{right:220px !important}
 html.kd #view-copilot{z-index:20 !important;top:48px !important}
 #answer,#answer li,#clarifyLive,.answer-aside,.clarify-live{opacity:1 !important}
+@media (max-width:640px){
+  #tabPreview.tab-preview,
+  .tab-preview{
+    position:static !important;
+    width:100% !important;
+    max-width:100% !important;
+    right:auto !important;
+    bottom:auto !important;
+    left:auto !important;
+    top:auto !important;
+    z-index:1 !important;
+    margin:0 0 8px !important;
+  }
+  #overlay .bar,
+  #overlay .bar-actions,
+  #overlay .statusline,
+  #startBtn,
+  #answerBtn,
+  #autoBtn{position:relative;z-index:40}
+}

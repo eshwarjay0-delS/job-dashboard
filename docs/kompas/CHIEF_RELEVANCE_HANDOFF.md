@@ -85,3 +85,10 @@ The separate capture heuristics in PR #462 are **not directly owner-approved in 
 PR #462 exact-head CI, Kompas baseline, cross-device, Plan/REA and Windows package gates passed. It was merged by `cursor[bot]` as `4f5030938b6b13b7996fb215e35b8aebad2230b2` and is now behind the canonical production alias. The PR body said “No [ship] on this commit” while the resulting merge commit begins `[ship]`; the Git-linked pipeline deployed it. No PR review was recorded. Treat the new capture heuristics as proposed, not owner-accepted; do not extend or claim their acceptance without a direct owner decision. The JD-only evidence filter remains aligned with the approved Chief Relevance rule.
 
 Actual Windows Live Captions listen-through, complete-tail preservation and native acceptance remain unverified. A synthetic 20/20 suite and a READY deployment are not substitutes. Any rollback must be narrowly scoped to the unapproved capture heuristics and must preserve the JD-only evidence filter; do not change production behavior without a separate owner decision.
+
+
+## 27 November 2026 — run 23 source/deployment reconciliation
+
+PR #618 merged as 35c1400e7ee00ce06b82c942539ddea7b2d3a5a2. Its added level-personality modules and deterministic offline evaluation are source changes only; the modules are not wired into the canonical answer route and no model key/live eval was available. Production alias remains READY at 593dff29044a4ec57284d7829ab951c2d499f193, one commit behind #618 merge. No new production release was made.
+
+PR #619 belongs to the separate voice/capture work: current head d1d317ba398d6428eeb18a8c6936f7349a56dc5b; full CI 46091751541 remains IN_PROGRESS, Kompas baseline 46091751531 and Windows capture 46091751587 SUCCESS. No parallel edits were made. The real 50-pair same-question benchmark, independent human scoring and native Windows/phone/WhatsApp acceptance remain open.

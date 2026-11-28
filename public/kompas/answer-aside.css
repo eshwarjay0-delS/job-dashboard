@@ -185,3 +185,58 @@ html.kd #view-copilot #copyBtn{
   #answer{min-width:100%;width:auto}
   .aside-toggle{right:8px;top:148px}
 }
+/* Say this must not squeeze the answer down to one word per line. */
+#overlay.bridge-open .content,
+#overlay.bridge-open .card,
+#overlay.bridge-open .a,
+#overlay.bridge-open #answer{
+  margin-right:0 !important;
+  width:auto !important;
+  max-width:100% !important;
+}
+#view-copilot #answer,
+#view-copilot #answer li{
+  min-width:min(100%, 18rem) !important;
+  white-space:normal !important;
+  word-break:normal !important;
+  overflow-wrap:break-word !important;
+}
+.live-clarifier,.session-summary{
+  position:absolute;
+  z-index:70;
+  top:108px;
+  right:16px;
+  width:min(320px, calc(100vw - 32px));
+  max-height:40vh;
+  overflow:auto;
+  padding:12px 14px;
+  border:1px solid var(--line, #d9d4c8);
+  border-radius:12px;
+  background:var(--surface, #fff);
+  color:var(--ink, #15140f);
+  box-shadow:0 12px 40px rgba(0,0,0,.16);
+}
+.live-clarifier[hidden],.session-summary[hidden]{display:none !important}
+.live-clarifier-head,.session-summary-card h2{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;font:700 12px/1.2 var(--sans, sans-serif)}
+.session-summary-card pre{white-space:pre-wrap;margin:0 0 10px;font:14px/1.45 var(--sans, sans-serif)}
+@media (max-width:640px){
+  .live-clarifier,.session-summary{
+    position:static;
+    top:auto;
+    right:auto;
+    width:auto;
+    max-width:100%;
+    margin:8px 12px 0;
+  }
+  #answerAside.answer-aside,
+  .answer-aside,
+  html.kd #view-copilot .answer-aside{
+    position:static !important;
+    width:auto !important;
+    max-width:100% !important;
+    top:auto !important;
+    right:auto !important;
+    bottom:auto !important;
+    left:auto !important;
+  }
+}
