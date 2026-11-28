@@ -76,3 +76,10 @@ PR #649 is a clean draft on current master `50e6eba7b75ddf28a67cf87a6895795e7c74
 - synthetic regressions for bounded non-cooperative timeout, worker quarantine, cross-run same-portal exclusion, recovery after settlement, and signal forwarding; registered in build preflight.
 
 Remote CI is the next gate. No local tests/build were run because the scheduled runtime lacks the checkout, dependencies and installed Next.js 16.3.8 docs. No portal request, crawl, production DB write, protected preview or deployment occurred. Manual/on-demand only; pacing, request timeout, clearance/freshness/scan bounds, Robert Half manual-only and eTeam excluded are unchanged. This PR is not merged or live.
+
+
+## Run32 CI correction follow-up — 28 Nov 2026 15:08 UTC
+
+PR #649 exact head before correction `3cb2bf37cc92f975155bbfe6bf61d28f8111450` passed crawler freshness (8 collector tests, 25 portal-registry tests), Kompas baseline, confirmed-skill resume and Plan/REA. Full CI `46152439807` failed at `scripts/tests/kompas-deploy-build.test.mjs:12` because the test pinned the old prebuild string and PR #649 intentionally added the two crawler test suites. The run reported 62/63 tests.
+
+Reviewable test correction commit `2f1e6d251ed082da60c259494339cf6445ca3708` replaces the brittle string equality with checks that the Kompas baseline runs first, all prior required suites remain, both crawler tests are included, and ordering is retained. Build/Webpack assertions are unchanged. Exact-final-head remote CI is pending. No local tests/build (no checkout and GitHub DNS unavailable), no crawl/portal request/DB write/preview/deployment.
