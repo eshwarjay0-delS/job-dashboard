@@ -1,3 +1,16 @@
+## 28 November 2026 — Run 31 read-only continuation
+
+**Continue:** trace the 17 Oct 17:28 Chicago WhatsApp resume incident only through owner-authorized read-only sources; keep Gmail account-switch guard #637 in review.
+
+- Current canonical master is `f36d90befb473fccc8ec8fcb84ae840e452f3035`. Production alias `job-dashboard-fawn.vercel.app` independently maps to READY `dpl_74creuAK4D5snFmtUeecpkZwM86y`, SHA `3362f20d3bd1707b14cba1d13a62d3a33117f0ea` (PR #634 ship). Master #635 adds test/REA validation only; no runtime deployment is required for that commit.
+- Read-only iZap inventory: one business, zero linked WhatsApp numbers. Status is disconnected; no inbound webhook/history or outbound delivery has been proven. Search for `resume` on 17 Oct 2026 in America/Chicago returned zero messages. This does not prove R2 or Meta records are absent. Missing: source/output DOCX, R2 object/version, webhook correlation, Meta outbound ID, signed delivery/read receipt, and owner fact reconciliation. No send/replay.
+- Gmail privacy guard #637 exact head `518e08999e4206dbb7b71bcf37d522e32d9a7ace`: full CI 46118344354, Plan/REA 46118344368, baseline 46118344383, confirmed-skill 46118344353 all SUCCESS. Source review comment 6096552394 is favorable. Keep DRAFT; protected preview needs the private `KOMPAS_VERCEL_API_TOKEN`, unavailable in this run. No OAuth/two-inbox/mobile acceptance.
+- PR #633 two-line JD/named-resume parser approval provenance was corrected in comment 7235500274; keep unmerged. PR #636 server-side location/remote filter scope approval was not recovered in comment 7235500545; keep unmerged and do not crawl. Contract crawler remains manual/on-demand only, no cron.
+- No canonical checkout/dependencies, protected preview token, live WhatsApp number, R2 trace access, real inboxes or owner browser/device. No local tests, model calls, exports, crawl, DB writes, or outbound messages.
+
+**Next:** obtain the owner-authorized WhatsApp connection and read-only incident artifact/Meta trace; if unavailable, continue only independent approved work. For #637, acquire the protected-preview credential or approved preview access, then run account-switch/two-inbox and phone acceptance before any merge.
+
+
 ## 28 November 2026 — Live S6 replay gate, not shipped
 
 Live retest S6 on 42659ae missed dashboard, false-positive, escalate, SQL injection, and XSS cards, labeled every line Interviewer, finalized SIEM onto "Having 10+ years", and left typed answers at 15-91 words. The video-2 fixture in scripts/fixtures/replay-fixtures.json is now a CI gate: one card per real question, questions unchanged, latest question on a manual press, You on candidate speech, stub answers on topic. Auto defaults on. Empty Role and Category sessions take the eshwarjay05 resume. The level band is applied when the continuation call fails, and the card prompt no longer caps the answer at two or four sentences. Not merged. Not a live click-through.
