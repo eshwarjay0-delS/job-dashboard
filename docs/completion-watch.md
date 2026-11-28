@@ -4,7 +4,7 @@
 
 - Clean branch `fix/crawler-bounded-noncooperative-timeout-run32-20261128` was created from current master `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`; draft PR #649 is reviewable at https://github.com/eshwarjay0-delS/job-dashboard/pull/649.
 - Source commit `ecd0879b86f4238292e19217f6f2afd48694eb9b` adds abort-aware pacing/fetch timeout, signal propagation to fetch and Supabase writes, and a bounded 1-second drain after a portal timeout. If work remains alive, its worker is quarantined and that portal's promise remains reserved until it settles; subsequent runs skip that portal to avoid overlap. Other healthy workers continue.
-- The non-cooperative regression checks bounded return, worker quarantine, same-portal skip across runs, recovery after settlement, and abort-signal forwarding. The tests are registered in build preflight.
+- The non-cooperative regression checks bounded return, worker quarantine, same-portal skip across runs, recovery after settlement, and abort-signal forwarding. Additional collector regressions now distinguish request timeout, portal cancellation, upstream abort and malformed-URL pacing cleanup. The tests are registered in build preflight.
 - PR #648 is not copied/merged; its timeout branch remains stale. This is a clean current-master restack.
 - **No local test/build ran:** this runtime has no canonical checkout, dependencies, or installed Next.js 16.3.8 docs. GitHub CI is the validation gate and is pending. No crawl, portal request, DB write, protected preview, deployment, or application submission occurred.
 - Manual/on-demand only remains: 600 ms pacing, 25 s request timeout, clearance/freshness/scan bounds; Robert Half manual-only and eTeam excluded. No schedule changes.
