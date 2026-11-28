@@ -1,7 +1,7 @@
 # Contract crawler location and remote filters — Run 32 restack (28 November 2026)
 
-## Owner-approved scope
-The contract-job search/crawler is approved to apply the user's location and remote-only filters to the indexed crawler lane before the bounded snapshot, rather than discarding matches client-side after the first 100 rows. The live aggregator retains its equivalent filtering. This slice does not crawl portals, submit applications, or change manual-only policy.
+## Proposed scope — direct approval not recovered
+The current continuation task prioritizes contract job search/crawler work, but scoped prior-context retrieval did not recover direct owner approval for the exact location-token AND / remote-only filter semantics. The implementation is a reviewable proposal only. It would apply filters to the indexed crawler lane before the bounded snapshot, rather than discard matches client-side after the first 100 rows. The live aggregator retains its equivalent filtering. This slice does not crawl portals, submit applications, or change manual-only policy.
 
 ## Current-master restack
 - Canonical master at the restack base: `50e6eba7b75ddf28a67cf87a6895795e7c74c5e7`.
@@ -19,4 +19,4 @@ The contract-job search/crawler is approved to apply the user's location and rem
 Prior PR #636 checks are predecessor evidence only. Exact-head checks for #651 are pending at this checkpoint. This automation has GitHub remote access but no compliant local checkout, installed dependencies or Next.js 16.3.8 docs; no local test/build was run.
 
 ## Release and acceptance
-No protected preview, public API smoke, live crawl, portal request, Supabase mutation, application submission or deployment was performed. Preserve manual/on-demand only, 600 ms pacing, 25-second request timeout, freshness/clearance/scan bounds, Robert Half manual-only and eTeam excluded. Require exact-head CI, independent review, protected preview, production READY plus canonical alias, and public API smoke before release. Real search acceptance remains separate from unit tests.
+No protected preview, public API smoke, live crawl, portal request, Supabase mutation, application submission or deployment was performed. Preserve manual/on-demand only, 600 ms pacing, 25-second request timeout, freshness/clearance/scan bounds, Robert Half manual-only and eTeam excluded. Require direct owner confirmation of the exact filter semantics, exact-head CI, independent review, protected preview, production READY plus canonical alias, and public API smoke before release. Real search acceptance remains separate from unit tests.
