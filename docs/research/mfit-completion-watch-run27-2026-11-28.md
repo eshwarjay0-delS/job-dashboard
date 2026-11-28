@@ -6,7 +6,7 @@ Updated: 2026-11-28T03:30:00Z
 
 - Canonical master at the start of this review: `bf9a0d41855f35f26d341bc31e88c8033b15dc13`.
 - Production alias `job-dashboard-fawn.vercel.app` independently resolves to READY production deployment `dpl_E3LVFzdJKmXSiJLA25cmTTpdWUHy`, exact runtime SHA `593dff29044a4ec57284d7829ab951c2d499f193`. Master is documentation-only at this checkpoint; no runtime deploy was needed.
-- The run-26 documentation PR #625 original head `42348de8a8c616cc032350565caab9657d0f732e` full CI failed at ESLint parsing `src/lib/plan-vision.ts:7` because a baseline property was malformed. Plan/REA, Kompas baseline and confirmed-skill gates passed. The property is corrected in commit `5e8bc0fe40b864fa584a348d7ab0942da78e3253`; later wording/Resume notes updated Plan Vision to revision `2026-11-28.4` at latest head `6633cdd67106e63896c95af827e414dfc5864306`. The workflow/status tools returned no runs for that exact latest head, so validation remains pending.
+- The run-26 documentation PR #625 original head `42348de8a8c616cc032350565caab9657d0f732e` full CI failed at ESLint parsing `src/lib/plan-vision.ts:7` because a baseline property was malformed. Plan/REA, Kompas baseline and confirmed-skill gates passed. The property is corrected in commit `5e8bc0fe40b864fa584a348d7ab0942da78e3253`; later wording/Resume notes updated Plan Vision to revision `2026-11-28.4` at latest head `6633cdd67106e63896c95af827e414dfc5864306`. The last observed PR-head workflow set on `422ab1c16b4a64fafa9b4db974cc6d84606a3f05` had full CI `46103847113` and confirmed-skill `46103847065` IN_PROGRESS, Plan/REA `46103847078` and Kompas baseline `46103847046` SUCCESS; these do not validate later documentation commits.
 
 ## Continue: contract crawler location review
 
