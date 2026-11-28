@@ -1,3 +1,7 @@
+## Run 29 status correction — #632 source-link lint fix
+
+PR #632 full CI `46115954313` failed at Lint due to an unterminated string in the Plan Vision source link (line 15, column 492); that link was corrected on the branch. The same exact-head Plan/REA run `46115954191` failed on the existing remote source path `origin/ops/second-bot-packs:docs/kompas-packs/second-bot-INDEX.md`. Test-only PR #635 is the clean fix; its Plan/REA and baseline passed, full CI remains in progress. PR #632 requires corrected-head full CI plus #635 review/merge and rerun Plan/REA. Do not merge.
+
 ## Run 29 follow-up — exact gate failure and clean restacks
 
 - Gmail clean PR #632 current-head gates: Kompas baseline SUCCESS; confirmed-skill SUCCESS; full CI still in progress; Plan/REA run 46115504464 FAILED test 7. The failure is unrelated to Gmail: existing REA entry #630 uses remote source `origin/ops/second-bot-packs:docs/kompas-packs/second-bot-INDEX.md`, while `rea-register.test.mjs` requires every path to exist locally.
