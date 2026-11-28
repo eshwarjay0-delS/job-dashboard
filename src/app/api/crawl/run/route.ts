@@ -27,7 +27,14 @@ export async function GET(req: NextRequest) {
   if (!serviceClientAvailable()) {
     return NextResponse.json({ error: "Service client not configured." }, { status: 500 })
   }
-  const { runCrawl } = await import("@/lib/crawl/runner")
-  const results = await runCrawl()
-  return NextResponse.json({ ok: true, results })
+  const { runCrawl, CrawlAlreadyRunningError } = await import("@/lib/crawl/runner")
+  try {
+    const results = await runCrawl()
+    return NextResponse.json({ ok: true, results })
+  } catch (error) {
+    if (error instanceof CrawlAlreadyRunningError) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 409 })
+    }
+    throw error
+  }
 }
