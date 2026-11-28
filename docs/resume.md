@@ -119,3 +119,8 @@ No owner-authorized resume/JD/explicit-confirmation bundle or exported DOCX was 
 ## 28 November 2026 — Run 34 resume/JD alignment
 
 The current target remains 95–100% factual JD coverage with a 95% web raw-overlap floor and 98% target—not a live result. Confirmed skills may be placed into relevant existing project bullets only; JD-only tools, certifications, employers, dates, metrics or actions do not become experience. The 6 Nov WhatsApp policy supersedes the historical 98% hard hold. No source resume/JD/explicit-confirmation bundle or exported DOCX was processed in this run. The 17 Oct incident still lacks exact source bytes, output, R2 trace and Meta receipt.
+
+
+## 28 November 2026 — Run 35 confirmed-skill guard in current production source
+
+Current master `fdd4816` is READY production. The confirmed-candidate attribution guard and regression file are present in source; the test contains nine passive non-candidate actor negatives while retaining the ordinary positive. This is deployed source/test evidence, not a real resume/JD run. The owner-approved 6 Nov cross-role rule still permits only a named first-person-confirmed skill to be mapped into relevant existing project bullets; no new project facts. PR #598 closed unmerged, although corresponding patterns/cases are present in master. No protected preview, private baseline/JD/confirmation bundle, exported DOCX inspection or live 95–100%/98% result. The final-DOCX Gemini score/correction/re-export loop remains separately approved and pending.
