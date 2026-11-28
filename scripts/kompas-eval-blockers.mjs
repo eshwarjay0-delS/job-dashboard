@@ -12,6 +12,7 @@ import {
   houstonResume,
   modelKeyUsable,
   srCyberResumeLookup,
+  unsupportedExperienceClaims,
   wordCount,
 } from "../src/lib/kompasLevelPersonality.ts"
 
@@ -29,7 +30,7 @@ function configured(env = process.env) {
 function row(id, level, text) {
   const check = assessAnswer(id === "iam" ? IAM : INTRO, level, text)
   const saviyntEmployer = /\b(?:worked at|employed by|joined)\s+Saviynt\b/i.test(text)
-  const parts = id !== "iam" || (/IAM|identity/i.test(text) && /implement|integrated/i.test(text) && /Saviynt/.test(text) && /customer|partner/i.test(text) && !saviyntEmployer)
+  const parts = id !== "iam" || (/IAM|identity/i.test(text) && /implement/i.test(text) && unsupportedExperienceClaims(text).length === 0 && !saviyntEmployer)
   const distinct = true
   const ok = check.ok && parts && !saviyntEmployer
   return { id, level, words: wordCount(text), check, parts, saviyntEmployer, distinct, ok, text }

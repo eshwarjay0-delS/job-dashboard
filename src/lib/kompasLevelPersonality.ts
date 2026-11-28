@@ -13,7 +13,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
-import { levelContract } from "./kompasLevelContract.ts"
+import { isQuickQuestion, levelContract } from "./kompasLevelContract.ts"
 import { openingSentences, poolSentences, type PersonalityKind, type PersonalityLevel } from "./kompasLevelPersonalityCopy.ts"
 
 export { openingSentences, poolSentences }
@@ -115,21 +115,44 @@ export function isBriefIntroduction(question: string): boolean {
   return /\b(?:brief|briefly|30 seconds|one minute)\b/i.test(t) && /\b(?:introduc|about yourself|who you are)\b/i.test(t)
 }
 
+/** Brief introductions and quick facts stay on the smaller level-contract budget. */
+export function usesShortBudget(question: string): boolean {
+  return isBriefIntroduction(question) || isQuickQuestion(question)
+}
+
 export function personalityContract(level: string, question: string): PersonalityContract {
   const name = asLevel(level)
   const kind = questionKind(question)
-  if (isBriefIntroduction(question)) {
+  if (usesShortBudget(question)) {
     const brief = levelContract(name, question)
     return {
       level: name,
       kind,
-      min: Math.max(40, Math.round(brief.target * 0.55)),
+      min: Math.max(24, Math.round(brief.target * 0.55)),
       max: brief.max,
       target: brief.target,
       maxTokens: brief.maxTokens,
     }
   }
   return { level: name, kind, ...BANDS[name] }
+}
+
+/** Past-tense stories the Houston resume does not record. Naming the asked tool is allowed. Claiming the event happened is not. */
+export const UNSUPPORTED_EXPERIENCE = [
+  /a customer had a terrible iam experience/i,
+  /the saviynt issue i dealt with/i,
+  /they (?:already )?ran saviynt/i,
+  /i troubleshot (?:it|that|the saviynt|a saviynt)/i,
+  /sql injection alert/i,
+  /sentinel was already showing/i,
+  /a customer (?:raised|brought|called)/i,
+  /i (?:closed|worked) the alert/i,
+  /i sat down with their security partner/i,
+]
+
+export function unsupportedExperienceClaims(text: string): string[] {
+  const hay = String(text || "")
+  return UNSUPPORTED_EXPERIENCE.filter((pattern) => pattern.test(hay)).map((pattern) => pattern.source)
 }
 
 export const BANNED_PHRASES = [
@@ -316,8 +339,13 @@ function topicPass(level: PersonalityLevel, kind: PersonalityKind, text: string,
     return /fortigate|inspection|gateway/.test(t) && /region/.test(t)
   }
   if (kind === "behavioral") return /\bled\b|\bi lead\b/.test(t) && /cutover|zero[- ]downtime/.test(t)
-  if (kind === "security") return /sql injection/.test(t) && /sentinel/.test(t)
-  if (kind === "iam") return (/\biam\b/.test(t) || /identity/.test(t)) && /saviynt/.test(t) && /implement|integrated|troubleshoot/.test(t)
+  if (kind === "security") {
+    const grounded = level === "director" ? /six|zero[- ]downtime|network/.test(t) : /fortigate|cutover|fortianalyzer/.test(t)
+    return /sql injection/.test(t) && grounded && unsupportedExperienceClaims(text).length === 0
+  }
+  if (kind === "iam") {
+    return (/\biam\b/.test(t) || /identity/.test(t)) && /implement/.test(t) && unsupportedExperienceClaims(text).length === 0
+  }
   return false
 }
 

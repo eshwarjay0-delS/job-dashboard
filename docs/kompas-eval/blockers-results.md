@@ -15,11 +15,11 @@ Intro openings differ: yes.
 
 | Case | Level | Words | Word band | Employer | Banned | On topic | Hedges | Parts | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| intro | architect | 1085 | pass | pass | pass | pass | pass | pass | pass |
-| intro | director | 517 | pass | pass | pass | pass | pass | pass | pass |
-| intro | engineer | 766 | pass | pass | pass | pass | pass | pass | pass |
-| iam | architect | 1149 | pass | pass | pass | pass | pass | pass | pass |
-| iam | director | 511 | pass | pass | pass | pass | pass | pass | pass |
-| iam | engineer | 756 | pass | pass | pass | pass | pass | pass | pass |
+| intro | architect | 1061 | pass | pass | pass | pass | pass | pass | pass |
+| intro | director | 515 | pass | pass | pass | pass | pass | pass | pass |
+| intro | engineer | 727 | pass | pass | pass | pass | pass | pass | pass |
+| iam | architect | 1121 | pass | pass | pass | pass | pass | pass | pass |
+| iam | director | 524 | pass | pass | pass | pass | pass | pass | pass |
+| iam | engineer | 754 | pass | pass | pass | pass | pass | pass | pass |
 
 These rows are the deterministic fallback from `fallbackAnswer`, after the answer route's personality filter. They are not fabricated model completions.

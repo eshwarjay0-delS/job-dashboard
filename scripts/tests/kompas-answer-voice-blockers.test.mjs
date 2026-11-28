@@ -9,7 +9,10 @@ import {
   employmentViolations,
   fallbackAnswer,
   houstonResume,
+  personalityContract,
   srCyberResumeLookup,
+  unsupportedExperienceClaims,
+  usesShortBudget,
   wordCount,
 } from "../../src/lib/kompasLevelPersonality.ts"
 
@@ -50,14 +53,38 @@ test("the IAM question answers every part without making Saviynt an employer", (
   for (const level of ["architect", "director", "engineer"]) {
     const text = fallbackAnswer(level, IAM)
     const check = assessAnswer(IAM, level, text)
-    assert.equal(check.ok, true, JSON.stringify({ level, words: check.words, topic: check.topic, employer: check.employerHits }))
+    assert.equal(check.ok, true, JSON.stringify({ level, words: check.words, topic: check.topic, employer: check.employerHits, claims: unsupportedExperienceClaims(text) }))
     assert.match(text, /IAM|identity/i)
-    assert.match(text, /implement|integrated/i)
+    assert.match(text, /implement/i)
     assert.match(text, /Saviynt/)
-    assert.match(text, /customer|partner/i)
     assert.deepEqual(employmentViolations(text), [])
+    assert.deepEqual(unsupportedExperienceClaims(text), [])
     assert.doesNotMatch(text, /I worked at Saviynt|employed by Saviynt|joined Saviynt/i)
     assert.doesNotMatch(text, /jayeshwar44|Accenture|Charter Communications/i)
+  }
+})
+
+test("absent IAM, Saviynt, Sentinel, and SQL injection events are not narrated as past experience", () => {
+  const resume = houstonResume()
+  assert.doesNotMatch(resume, /Saviynt|Sentinel|SQL injection|\bIAM\b/)
+  const security = "How would you investigate a SQL injection alert in Microsoft Sentinel?"
+  for (const level of ["architect", "director", "engineer"]) {
+    for (const question of [IAM, security]) {
+      const text = fallbackAnswer(level, question)
+      assert.deepEqual(unsupportedExperienceClaims(text), [], `${level}: ${unsupportedExperienceClaims(text).join("; ")}`)
+      assert.equal(assessAnswer(question, level, text).ok, true, level)
+    }
+  }
+})
+
+test("brief introductions and quick facts stay inside the smaller budget", () => {
+  const full = personalityContract("engineer", INTRO)
+  for (const question of ["Give me a brief introduction about yourself.", "What does PKI stand for?"]) {
+    assert.equal(usesShortBudget(question), true)
+    const short = personalityContract("engineer", question)
+    assert.ok(short.max < full.min, `${question} max ${short.max} vs full min ${full.min}`)
+    const text = fallbackAnswer("engineer", question)
+    assert.ok(wordCount(text) <= short.max, `${question} produced ${wordCount(text)}`)
   }
 })
 
