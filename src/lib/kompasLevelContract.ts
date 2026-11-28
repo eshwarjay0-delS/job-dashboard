@@ -213,10 +213,10 @@ export function repairIntroHeadline(question: string, text: string): string {
   if (!/tell me about yourself|introduce yourself|your introduction|brief introduction|walk (?:me|us) through your (?:background|career|resume)/i.test(question)) return text
   return String(text || "")
     .replace(/Press Start — answers appear here\\.?/gi, "")
-    .replace(/\\bSenior I Engineer\\b/gi, "Senior Cybersecurity Engineer")
-    .replace(/\\bSanG\\s+Diego\\b/g, "San Diego")
-    .replace(/\\bCity of I Diego\\b/g, "the City of San Diego")
-    .replace(/\\s+/g, " ")
+    .replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer")
+    .replace(/\bSanG\s+Diego\b/g, "San Diego")
+    .replace(/\bCity of I Diego\b/g, "the City of San Diego")
+    .replace(/\s+/g, " ")
     .trim()
 }
 
