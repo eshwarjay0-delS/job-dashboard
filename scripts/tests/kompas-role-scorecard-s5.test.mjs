@@ -69,7 +69,7 @@ test("intro repair preserves supplied facts and does not fabricate a biography",
   const intro = repairIntroHeadline("Tell me about yourself.", bad)
   assert.equal(intro, "I am a Senior Cybersecurity Engineer with 7 years of experience. I work in a SOC.")
   assert.equal(INTRO_HEADLINE, "Your introduction")
-  assert.doesNotMatch(intro, /9\\+ years|Citi Bank|CVS Health|City of San Diego|Charter Communications|Accenture/)
+  assert.doesNotMatch(intro, /9\+ years|Citi Bank|CVS Health|City of San Diego|Charter Communications|Accenture/)
   assert.match(OWNER_RESUME, /Senior Cybersecurity Engineer/)
   assert.doesNotMatch(OWNER_RESUME, /Fortinet|jayeshwar44/i)
 })
