@@ -56,8 +56,8 @@ const YESNO = /^(?:have you|did you|do you|are you|were you)\b/i
 const ASK = /^(?:what|why|how|who|when|where|which|tell me|walk me|describe|design)\b/i
 const STOP = new Set("that this with what which when where your have about would could should there their them they then than into from were been being does tell describe explain walk give share just more some also like time thing kind really okay yeah want the and for you how did can will are was who why".split(" "))
 
-/** Perspectives pass, 12 Nov 2026. Spoken rules, not a biography. */
-export const BRAIN_POLICY = `BRAIN POLICY: Sentence one answers the question that was asked. A story or scenario stays near 150 to 250 words, a technical deep dive stays in that range or longer, and a short fact stays near 25 to 80, then stop. Connect beats by cause. If nothing in the evidence library matches, say I would, and do not borrow another speaker's employer, title, or metric. Never mix the Houston and Saint Louis profiles. Do not add coaching, tips, or a follow-up after the answer.`
+/** In-session panel only. The living brain is the answer guide, so this coaching tail is not appended. */
+export const BRAIN_POLICY = ""
 
 export function emptyBrain(): BrainState {
   return { claims: [], topics: [], openThreads: [], questions: [], answers: [], prewarm: "", log: [] }

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="mf-night.css" />
 <link rel="stylesheet" href="desktop-focus.css" />
 <link rel="stylesheet" href="answer-aside.css?v=20261128-hedge" />
+<link rel="stylesheet" href="brain.css?v=20261128-brain" />
 <link rel="manifest" href="manifest.json" />
 <script src="theme-follow.js"></script>
 <script src="auth-flag.js"></script>
@@ -36,6 +37,7 @@
   <nav class="side-nav">
     <div class="side-group">Interview</div>
     <button class="side-item" id="navSessions" data-view="dashboard"><span class="si-ico">◎</span><span>Sessions</span></button>
+    <button class="side-item" id="navBrain" data-view="brain"><span class="si-ico">◉</span><span>Brain</span></button>
     <button class="side-item" id="navTranscripts" data-view="transcripts"><span class="si-ico">☰</span><span>Transcripts</span></button>
     <div class="side-group">Prepare</div>
     <button class="side-item" id="navQbank" data-view="qbank"><span class="si-ico">?</span><span>Question Bank</span></button>
@@ -81,6 +83,24 @@
       <p>Your sessions will appear here.</p>
       <button class="hidden" id="newSessionBtn2" tabindex="-1" aria-hidden="true"></button>
     </div>
+  </main>
+</section>
+
+<!-- ========================= BRAIN ========================= -->
+<section class="view view-dash with-side hidden" id="view-brain">
+  <main class="dash-body">
+    <div class="dash-head">
+      <div>
+        <h2>Brain</h2>
+        <p class="muted">One document for every answer. Switch a chunk off or change its weight, and the next answer in every session uses it.</p>
+      </div>
+    </div>
+    <p class="muted small" id="brainStatus">Loading the brain…</p>
+    <div id="brainChunks"></div>
+    <h3>Document</h3>
+    <pre class="brain-doc" id="brainDocument"></pre>
+    <h3>Version log</h3>
+    <pre class="brain-doc" id="brainVersions"></pre>
   </main>
 </section>
 
@@ -350,6 +370,14 @@
             <div class="choice-t">Mock practice</div>
             <div class="choice-d">Kompas asks you questions and coaches your answers.</div>
           </button>
+          <button class="choice" data-type="role">
+            <div class="choice-t">Role session</div>
+            <div class="choice-d">Practice one role. Feedback stays available.</div>
+          </button>
+          <button class="choice" data-type="category">
+            <div class="choice-t">Category session</div>
+            <div class="choice-d">Practice one category. Feedback stays available.</div>
+          </button>
         </div>
         <label class="field"><span>Paste a job link (optional)</span><input id="jobLink" placeholder="https://…" /></label>
       </div>
@@ -361,6 +389,7 @@
           <label class="field"><span>Company</span><input id="company" placeholder="e.g. Network Rail" /></label>
           <label class="field"><span>Job title</span><input id="role" placeholder="e.g. Senior Cybersecurity Engineer" /></label>
         </div>
+        <label class="field"><span>Category</span><input id="sessionCategory" placeholder="e.g. PAM, incident response" /></label>
         <label class="field"><span>Job description</span><textarea id="jd" rows="4" placeholder="Paste the job description"></textarea></label>
         <div class="field"><span>Resume</span>
           <select id="resumeSelect"><option value="">Choose a resume</option></select>
@@ -598,6 +627,17 @@
           <div class="a-head"><span class="star">★</span> Answer <span class="follow-heard" id="followHeard" hidden></span>
             <span class="a-tools"><button type="button" class="mini" id="boldBtn" title="Normal weight" aria-label="Answer weight">B</button><button type="button" class="mini" id="textMinus" title="Smaller text">−</button><span class="type-n" id="textSizeN">16</span><button type="button" class="mini" id="textPlus" title="Larger text">+</button><button class="mini" id="copyBtn" title="Copy answer">Copy</button></span>
           </div>
+          <div class="answer-tabs" id="answerTabs" role="tablist">
+            <button type="button" class="answer-tab on" id="answerTabClarify" role="tab" aria-selected="true">Clarify</button>
+            <button type="button" class="answer-tab" id="answerTabFeedback" role="tab" aria-selected="false" hidden>Feedback</button>
+          </div>
+          <div id="answerClarifyPane" class="answer-pane"></div>
+          <div id="answerFeedbackPane" class="answer-pane" hidden>
+            <button type="button" id="feedbackMic" hidden aria-pressed="false">Mic</button>
+            <p id="feedbackMicState" class="muted small"></p>
+            <ul id="feedbackNotes"></ul>
+          </div>
+          <p id="brainTrace" class="brain-trace" hidden></p>
           <ul id="answer"><li>Press Start — both your mic and the call audio are on by default.</li></ul>
         </div>
       </div>
@@ -771,16 +811,19 @@ window.addEventListener("load", function () {
 <script src="dossier-md.js"></script>
 <script src="correct.js"></script>
 <script src="anchor-flight.js"></script>
-<script>window.PERFACT_BUILD = "kompas-20261128-hedge";</script>
+<script>window.PERFACT_BUILD = "kompas-20261128-brain";</script>
 <script src="screen-core.js"></script>
 <script src="screen-review.js"></script>
-  <script src="session-reauth.js?v=20261128-hedge"></script>
+  <script src="question-source.js?v=20261128-brain"></script>
+  <script src="brain-gate.js?v=20261128-brain"></script>
+  <script src="session-reauth.js?v=20261128-brain"></script>
   <script src="readiness-probe.js?v=20261125-p0"></script>
-  <script src="output-audio.js?v=20261128-hedge"></script>
-  <script src="account-sync.js?v=20261128-hedge"></script>
+  <script src="output-audio.js?v=20261128-brain"></script>
+  <script src="account-sync.js?v=20261128-brain"></script>
 <script src="caption-focus.js?v=20261102-three-lines"></script>
   <script src="latest-ask.js?v=20261119-latest"></script>
-  <script src="app.js?v=20261128-hedge"></script>
+  <script src="app.js?v=20261128-brain"></script>
+  <script src="brain-page.js?v=20261128-brain"></script>
   <script src="bridge-lines.js?v=20261128-hedge"></script>
   <script src="answer-aside.js?v=20261128-hedge"></script>
 <script src="caption-once.js?v=20261102-pinned-caption"></script>

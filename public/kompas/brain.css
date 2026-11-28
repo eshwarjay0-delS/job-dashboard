@@ -1,0 +1,10 @@
+.answer-tabs { display: flex; gap: 8px; margin: 8px 0 4px; }
+.answer-tab { border: 0; background: transparent; font: inherit; padding: 4px 2px; cursor: pointer; }
+.answer-tab.on { font-weight: 700; }
+.answer-pane { margin: 4px 0 8px; }
+#feedbackMic[aria-pressed="true"] { font-weight: 700; }
+.brain-trace { margin: 8px 0 0; font-size: 13px; }
+.brain-chunk { border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 10px; padding: 12px; margin: 10px 0; }
+.brain-chunk header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.brain-chunk textarea { width: 100%; min-height: 88px; font: inherit; }
+.brain-doc { white-space: pre-wrap; max-height: 240px; overflow: auto; }

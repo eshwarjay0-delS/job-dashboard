@@ -62,11 +62,11 @@ test("a manual press schedules the request inside 100ms and does not wait out th
 })
 
 test("the page and the desktop shell load this build, not the 12 Nov cache", () => {
-  assert.equal(JSON.parse(read("public/kompas/version.json")).build, "kompas-20261128-hedge")
-  assert.match(html, /window\.PERFACT_BUILD = "kompas-20261128-hedge"/)
-  assert.match(html, /app\.js\?v=20261128-hedge/)
+  assert.equal(JSON.parse(read("public/kompas/version.json")).build, "kompas-20261128-brain")
+  assert.match(html, /window\.PERFACT_BUILD = "kompas-20261128-brain"/)
+  assert.match(html, /app\.js\?v=20261128-brain/)
   assert.match(html, /styles\.css\?v=20261128-hedge/)
-  assert.match(main, /PAGE_BUILD = "kompas-20261128-hedge"/)
+  assert.match(main, /PAGE_BUILD = "kompas-20261128-brain"/)
   assert.match(main, /cache-control", "no-store"/)
   assert.doesNotMatch(html, /app\.js\?v=20261112-output/)
 })
