@@ -194,3 +194,8 @@ PR #639's answer-band patch is separate from WhatsApp. Source review comment 723
 PR #633 exact head `81e839acfeb9d546a22f70ab3c765d6d147ae346` has full CI 46115683036 and Kompas baseline 46115683096 SUCCESS, but Plan/REA and confirmed-skill gates are not observed. Approval correction comment 7235500274 states direct owner-authored approval was not recovered; the PR remains proposed/DRAFT, and no route-level WhatsApp test, protected preview or live send/replay occurred. Its body was corrected to match that provenance. The parser must preserve ordinary short chat; do not ship it until direct approval and required gates are recovered.
 
 PR #639's answer-band patch is separate from WhatsApp. Source review comment 7237158494 notes the expanded hedge filter can remove truthful limitations and the pack-based fallback can append persona stories as first-person experience on keyword overlap. It is not live; full CI 46129231306 is still pending at the last check. Preserve the factuality boundary.
+
+
+## 28 November 2026 — run 33 exact PR639 head
+
+PR #639 head moved to f3c6f03d3d3616cdb2896649107a7660a52d386 after its prior full CI passed on 4e4ab7. Five supplemental gates are green, but current full CI 46130245413 is IN_PROGRESS. The follow-up commit explicitly removes truthful-gap disclosures and deletes the prior “a truthful gap stays” assertion; the resume guard checks employer/tool/number but includes the question in its evidence and does not verify action verbs. Corrected review comment 7237158494 records this. The PR remains unmerged/unreleased; the live alias is still 3362f20.
