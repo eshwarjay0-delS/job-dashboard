@@ -1,3 +1,12 @@
+## 28 November 2026 — run 35 confirmed-skill resume guard
+
+- Current production/master fdd4816 contains the confirmedCandidateStatements and non-candidate actor split. Current regression file contains nine passive actor negatives and preserves the ordinary AWS+GCP positive. This is source/test presence; no local execution or final-master CI evidence.
+- The 6 Nov owner-approved rule is narrow: explicit first-person confirmation may map only the named skill into relevant existing project bullets across roles. PR #598 closed unmerged; do not claim it merged.
+- No real baseline/JD/confirmation model run, exported DOCX inspection, protected preview, or live ATS result. The 95–100%/98% target remains unverified. The final-DOCX Gemini score/correction/re-export loop remains separately approved and pending.
+
+**Continue:** obtain the authorized baseline/JD/confirmation bundle and protected preview; inspect the export, record unrounded coverage, and perform the approved Gemini loop. No 98% claim without evidence.
+
+
 ## 28 November 2026 — run 35 Kompas PR #640 provenance correction
 
 - PR #640 closed/merged at 10:40:58 UTC as fdd4816. Canonical Vercel production deployment dpl_9Kvhj6NKALcsucVniGoqgpy9NPKJ is READY and `job-dashboard-fawn.vercel.app` alias matches exact SHA. This supersedes run34's not-merged status.
