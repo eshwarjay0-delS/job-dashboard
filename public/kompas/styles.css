@@ -480,14 +480,22 @@ h1,h2,h3,.brand-lg,.brand{letter-spacing:-.01em}
 .back-setup{margin:-10px 0 14px -8px}
 @media (max-width:760px){
   .with-side{padding-left:0;padding-bottom:84px}
-  .side{top:auto;left:12px;right:12px;bottom:12px;width:auto;height:62px;flex-direction:row;padding:6px;border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow-md)}
+  .side{top:auto;left:12px;right:12px;bottom:12px;width:auto;height:62px;flex-direction:row;padding:6px;border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow-md);overflow-x:auto;justify-content:flex-start}
   .side-brand,.side-group,.side-foot .credits{display:none}
-  .side-nav{flex-direction:row;gap:2px}
-  .side-item{flex-direction:column;justify-content:center;gap:3px;height:50px;padding:0;border-radius:999px;font-size:11px}
+  .side-nav{flex:0 0 auto;flex-direction:row;gap:2px;overflow-x:auto}
+  .side-item{flex:0 0 auto;min-width:64px;width:auto;flex-direction:column;justify-content:center;gap:3px;height:50px;padding:0 8px;border-radius:999px;font-size:11px}
   .side-item.on{box-shadow:none}
-  .side-foot{border:0;padding:0;flex-direction:row}
+  .side-foot{flex:0 0 auto;border:0;padding:0;flex-direction:row}
   .side-logout{width:56px}
 }
+.live-tabs{display:flex;gap:6px;padding:4px 2px 8px}
+.live-tab{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font:600 13px var(--label);color:var(--muted);cursor:pointer}
+.live-tab.on{color:var(--ink);border-color:var(--ink)}
+.live-feedback:not(.hidden){padding:4px 2px 12px;display:flex;flex-direction:column;gap:10px}
+.live-note{border-top:1px solid var(--line);padding-top:8px}
+.live-note b{display:block}
+.pack-pick-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:12px 4px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer;font:inherit;color:inherit}
+.pack-pick-row small{color:var(--muted)}
 
 /* get-started checklist */
 .gs{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:22px;box-shadow:var(--shadow-sm);animation:viewIn .3s var(--ease) both}

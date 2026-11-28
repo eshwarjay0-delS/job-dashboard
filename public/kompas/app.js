@@ -105,8 +105,8 @@ const LS = {
 };
 
 /* ------------------------------- router ---------------------------------- */
-const VIEWS = ["login", "dashboard", "transcripts", "qbank", "feedback", "resume", "documents", "wizard", "copilot"];
-const SIDE_VIEWS = ["dashboard", "transcripts", "qbank", "feedback", "resume", "documents"];   // pages framed by the sidebar
+const VIEWS = ["login", "dashboard", "roles", "categories", "transcripts", "qbank", "feedback", "resume", "documents", "wizard", "copilot"];
+const SIDE_VIEWS = ["dashboard", "roles", "categories", "transcripts", "qbank", "feedback", "resume", "documents"];   // pages framed by the sidebar
 function show(name) {
   for (const v of VIEWS) $("view-" + v)?.classList.toggle("hidden", v !== name);
   $("sideNav")?.classList.toggle("hidden", !!window.kompasDesktop || !SIDE_VIEWS.includes(name));
@@ -187,7 +187,31 @@ $("gsHide").onclick = () => { LS.set("gsHidden", true); $("getStarted").classLis
 $("gsResumeBtn").onclick = () => openResume("dashboard");
 $("gsSessionBtn").onclick = () => openWizard();
 $("navSessions").onclick = () => openDashboard();
+$("navRoles").onclick = () => openRoles();
+$("navCategories").onclick = () => openCategories();
 $("navTranscripts").onclick = () => openTranscripts();
+function sessionLane(s) { return s && (s.lane === "role" || s.lane === "category") ? s.lane : ""; }
+function openSessionHome(s) {
+  if (sessionLane(s) === "role") openRoles();
+  else if (sessionLane(s) === "category") openCategories();
+  else openDashboard();
+}
+function openRoles() {
+  sessions = LS.get("sessions", []);
+  renderSessions({ lane: "role", list: "roleList", empty: "emptyRoles" });
+  show("roles");
+}
+function openCategories() {
+  sessions = LS.get("sessions", []);
+  renderSessions({ lane: "category", list: "categoryList", empty: "emptyCategories" });
+  show("categories");
+}
+function paintOpenSessionList() {
+  if ($("view-roles") && !$("view-roles").classList.contains("hidden")) renderSessions({ lane: "role", list: "roleList", empty: "emptyRoles" });
+  else if ($("view-categories") && !$("view-categories").classList.contains("hidden")) renderSessions({ lane: "category", list: "categoryList", empty: "emptyCategories" });
+  else renderSessions();
+}
+function openLaneSetup(s) { openEditWizard(s); }
 /* Transcripts page: every session that has a saved run, newest first. */
 function openTranscripts() {
   sessions = LS.get("sessions", []);
@@ -296,7 +320,7 @@ function sweepSessions() {
 // A card can be older than the store (a save elsewhere, another window), so both buttons act on the record as it is stored now.
 function continueSession(s) {
   sessions = LS.get("sessions", []); const x = sessions.find(v => v.id === s.id);
-  if (!x || !sessionOpen(x) || liveElsewhere(x)) { renderSessions(); return; }   // Respect explicit End and another active window.
+  if (!x || !sessionOpen(x) || liveElsewhere(x)) { paintOpenSessionList(); return; }   // Respect explicit End and another active window.
   x.pausedAt = null; LS.set("sessions", sessions);
   launchCopilot(x, { resume: true });
 }
@@ -334,21 +358,26 @@ function endSession(s) {
     closeRun(x, Date.now(), "you"); LS.set("sessions", sessions);
     void syncMiniDossier(x);
   }
-  renderSessions();
+  paintOpenSessionList();
 }
 // Another window changed the sessions: this one takes the new list, so it never writes an old one back.
 window.addEventListener("storage", (e) => {
   if (e.key !== "perfact.sessions") return;
   sessions = LS.get("sessions", []);
-  if (!$("view-dashboard").classList.contains("hidden")) renderSessions();
+  paintOpenSessionList();
 });
 function renderSessions() {
+  const opts = arguments[0];
   sweepSessions();
-  const list = $("sessionList");
+  const lane = opts && opts.lane;
+  const rows = sessions.filter(s => lane ? s.lane === lane : !sessionLane(s));
+  const list = $(opts && opts.list || "sessionList");
+  const empty = $(opts && opts.empty || "emptySessions");
+  if (!list || !empty) return;
   list.innerHTML = "";
-  $("emptySessions").classList.toggle("hidden", sessions.length > 0);
-  list.classList.toggle("hidden", sessions.length === 0);
-  for (const s of sessions) {
+  empty.classList.toggle("hidden", rows.length > 0);
+  list.classList.toggle("hidden", rows.length === 0);
+  for (const s of rows) {
     const card = document.createElement("div");
     card.className = "session-card";
     card.innerHTML = `
@@ -387,20 +416,172 @@ function renderSessions() {
       state.textContent = `Ended ${dayTime(s.endedAt)}${s.endedBy === "clock" ? ", 30 minutes after it was stopped" : ""}.`; state.classList.remove("hidden");
     } else {
       startBtn.onclick = () => { sessions = LS.get("sessions", []); launchCopilot(sessions.find(v => v.id === s.id) || s); };   // the record as it is stored now
+      if (sessionLane(s)) {
+        const edit = card.querySelector(".sc-edit");
+        edit.classList.remove("hidden");
+        edit.onclick = () => openLaneSetup(s);
+      }
     }
     const tx = card.querySelector(".sc-tx"), nTx = (s.transcripts || []).length;
     if (nTx) { tx.classList.remove("hidden"); tx.onclick = () => viewTranscripts(s); }   // one session, one transcript, however many times it was stopped and continued
-    card.querySelector(".sc-del").onclick = () => { sessions = sessions.filter(x => x.id !== s.id); LS.set("sessions", sessions); renderSessions(); };
+    card.querySelector(".sc-del").onclick = () => { sessions = sessions.filter(x => x.id !== s.id); LS.set("sessions", sessions); paintOpenSessionList(); };
     list.append(card);
   }
   // A failed network request does not lose a mini: each completed local
   // transcript can be retried after reconnect. Rate-limit retries per tab.
-  for (const s of sessions.filter(x => x.endedAt && !x.bibleSyncedAt).slice(0, 3)) {
+  if (!lane) for (const s of sessions.filter(x => x.endedAt && !x.bibleSyncedAt).slice(0, 3)) {
     if (Date.now() - (miniAttempts.get(s.id) || 0) > 60000) void syncMiniDossier(s);
   }
 }
 $("newSessionBtn").onclick = openWizard;
 $("newSessionBtn2").onclick = openWizard;
+$("newRoleBtn").onclick = () => openPackPicker("role");
+$("newCategoryBtn").onclick = () => openPackPicker("category");
+
+let packCatalog = null;
+function rememberPackAnswer(question, answer, level) {
+  const s = current;
+  if (!s || !s.packId || !sessionLane(s) || !window.KompasPackNotes) return;
+  const text = String(answer || "").trim();
+  if (text.length < 40) return;
+  const notes = window.KompasPackNotes.learn(window.KompasPackNotes.read(localStorage, s.packId), {
+    question, answer: text, level, at: Date.now(), must: s.mustMention || [],
+  });
+  window.KompasPackNotes.write(localStorage, s.packId, notes);
+  if ($("liveFeedback") && !$("liveFeedback").classList.contains("hidden")) paintPackFeedback();
+}
+function setLivePackTab(name) {
+  const on = !!(current && sessionLane(current));
+  if ($("liveTabs")) $("liveTabs").classList.toggle("hidden", !on);
+  const feedback = on && name === "feedback";
+  if ($("liveTabAnswer")) $("liveTabAnswer").classList.toggle("on", !feedback);
+  if ($("liveTabFeedback")) $("liveTabFeedback").classList.toggle("on", feedback);
+  const question = $("question") && $("question").closest(".q");
+  if (question) question.classList.toggle("hidden", feedback);
+  const answerBox = $("answer") && $("answer").closest(".a");
+  if (answerBox) {
+    const head = answerBox.querySelector(".a-head");
+    const list = $("answer");
+    if (head) head.classList.toggle("hidden", feedback);
+    if (list) list.classList.toggle("hidden", feedback);
+  }
+  if ($("liveFeedback")) $("liveFeedback").classList.toggle("hidden", !feedback);
+  if (feedback) paintPackFeedback();
+}
+function paintPackFeedback() {
+  const box = $("liveFeedback");
+  if (!box || !current || !window.KompasPackNotes) return;
+  const notes = window.KompasPackNotes.read(localStorage, current.packId);
+  box.innerHTML = "";
+  const intro = document.createElement("p");
+  intro.className = "muted small";
+  intro.textContent = notes.length ? "Notes saved for this pack. The next answer uses them." : "Notes appear here after the first answer in this role or category.";
+  box.append(intro);
+  for (const note of notes.slice().reverse()) {
+    const row = document.createElement("div");
+    row.className = "live-note";
+    const title = document.createElement("b");
+    title.textContent = note.question || "Answer";
+    const kept = document.createElement("p");
+    kept.textContent = note.kept || "";
+    const gap = document.createElement("p");
+    gap.className = "muted small";
+    gap.textContent = note.missed && note.missed.length ? "Still bring in: " + note.missed.join("; ") : "Must-mention items showed up in that telling.";
+    row.append(title, kept, gap);
+    box.append(row);
+  }
+}
+function bindLivePackTabs() {
+  if ($("liveTabAnswer")) $("liveTabAnswer").onclick = () => setLivePackTab("answer");
+  if ($("liveTabFeedback")) $("liveTabFeedback").onclick = () => setLivePackTab("feedback");
+}
+bindLivePackTabs();
+async function loadPackCatalog() {
+  if (packCatalog) return packCatalog;
+  const res = await fetch("/api/kompas/packs", { cache: "no-store" });
+  if (!res.ok) throw new Error("packs " + res.status);
+  packCatalog = await res.json();
+  return packCatalog;
+}
+function openPackPicker(kind) {
+  const modal = $("packPickModal");
+  const list = $("packPickList");
+  if (!modal || !list) return;
+  $("packPickTitle").textContent = kind === "role" ? "New role" : "New category";
+  list.innerHTML = "";
+  const wait = document.createElement("p");
+  wait.className = "muted";
+  wait.textContent = "Loading subjects…";
+  list.append(wait);
+  modal.classList.remove("hidden");
+  loadPackCatalog().then((data) => {
+    list.innerHTML = "";
+    const packs = (data.packs || []).filter((pack) => pack.kind === kind);
+    if (!packs.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "No subjects are loaded.";
+      list.append(empty);
+      return;
+    }
+    for (const pack of packs) {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "pack-pick-row";
+      const name = document.createElement("b");
+      name.textContent = pack.title;
+      const blurb = document.createElement("small");
+      blurb.textContent = pack.blurb || "";
+      row.append(name, blurb);
+      row.onclick = () => { modal.classList.add("hidden"); createPackSession(pack, data.ownerResume || ""); };
+      list.append(row);
+    }
+  }).catch(() => {
+    list.innerHTML = "";
+    const err = document.createElement("p");
+    err.className = "muted";
+    err.textContent = "The subject list did not load. Try again.";
+    list.append(err);
+  });
+}
+function createPackSession(pack, ownerResume) {
+  const s = {
+    id: "s" + Date.now() + "_" + Math.random().toString(36).slice(2, 10),
+    createdAt: Date.now(),
+    type: "live",
+    lane: pack.kind,
+    packId: pack.id,
+    mustMention: Array.isArray(pack.mustMention) ? pack.mustMention.slice(0, 24) : [],
+    notebookLmUrl: "",
+    company: "Practice",
+    role: pack.title,
+    jd: String(pack.dossier || "").slice(0, 8000),
+    resume: String(ownerResume || "").slice(0, 40000),
+    documents: "",
+    docIds: [],
+    resumeId: "",
+    model: "claude-haiku-4-5",
+    language: "en",
+    length: "balanced",
+    tone: "simple",
+    format: "script_bullets",
+    star: false,
+    mode: "technical",
+    instructions: "",
+    autoAnswer: true,
+    autoMode: true,
+    saveTranscript: true,
+    interviewer: "engineer",
+    difficulty: "standard",
+    dossierSize: "auto",
+  };
+  sessions = LS.get("sessions", []);
+  sessions.unshift(s);
+  LS.set("sessions", sessions);
+  if (pack.kind === "role") openRoles();
+  else openCategories();
+}
+if ($("packPickClose")) $("packPickClose").onclick = () => $("packPickModal").classList.add("hidden");
 
 /* -------------------------------- wizard ---------------------------------- */
 let step = 0;
@@ -444,7 +625,8 @@ function applyWizardDraft() {
 }
 function openWizard() {
   const prev = sessions[0] || {};
-  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone ? normalizeAnswerTone(prev.tone) : "simple", format: prev.format ? normalizeAnswerFormat(prev.format) : "script_bullets", star: prev.star === true, model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false };
+  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone ? normalizeAnswerTone(prev.tone) : "simple", format: prev.format ? normalizeAnswerFormat(prev.format) : "script_bullets", star: prev.star === true, model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false, lane: "" };
+  if ($("packAudioField")) $("packAudioField").classList.add("hidden");
   step = 0;
   // A new session starts with a blank job. The answer preferences he already saved stay.
   ["jobLink", "company", "role", "jd", "resume"].forEach(id => { if ($(id)) $(id).value = ""; });
@@ -474,7 +656,7 @@ function openWizard() {
 // nothing because the session is only written on Save & continue.
 function openEditWizard(s) {
   const stored = (LS.get("sessions", []) || []).find(v => v.id === s.id) || s;
-  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
+  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id, lane: stored.lane || "" };
   step = 0;
   if ($("jobLink")) $("jobLink").value = stored.jobLink || "";
   $("company").value = stored.company || ""; $("role").value = stored.role || ""; $("jd").value = stored.jd || "";
@@ -490,6 +672,8 @@ function openEditWizard(s) {
   if (!selectedResumeId && stored.resume) { $("resume").value = stored.resume; $("resume").classList.remove("hidden"); }
   else { $("resume").value = ""; $("resume").classList.add("hidden"); }
   selectedDocIds = new Set((stored.docIds || []).filter(id => docsGet().some(d => d.id === id)));
+  if ($("packAudioField")) $("packAudioField").classList.toggle("hidden", !sessionLane(stored));
+  if ($("packAudioUrl")) $("packAudioUrl").value = stored.notebookLmUrl || "";
   renderResumeSelect();
   renderDocPicker();
   gotoStep(0);
@@ -503,14 +687,17 @@ function finishEditWizard() {
   const id = draft.editId;
   sessions = LS.get("sessions", []);
   const x = sessions.find(v => v.id === id);
-  if (!x || !sessionOpen(x) || liveElsewhere(x)) { renderSessions(); openDashboard(); return; }
+  const lane = sessionLane(x);
+  if (!x || liveElsewhere(x) || x.endedAt || (!lane && !sessionOpen(x))) { paintOpenSessionList(); openSessionHome(x); return; }
   x.type = draft.type;
   x.jobLink = $("jobLink").value.trim();
   x.company = $("company").value.trim();
   x.role = $("role").value.trim();
   x.jd = $("jd").value.trim();
-  x.resume = resolveResumeText();
-  x.documents = resolveDocumentsText();
+  const resumeText = resolveResumeText();
+  if (!(lane && !resumeText)) x.resume = resumeText;
+  const documentText = resolveDocumentsText();
+  if (!(lane && !documentText)) x.documents = documentText;
   x.docIds = [...selectedDocIds];
   x.resumeId = selectedResumeId;
   x.model = $("model").value;
@@ -527,9 +714,15 @@ function finishEditWizard() {
   x.interviewer = ($("interviewerSelect") || {}).value || "engineer";
   x.difficulty = ($("difficultySelect") || {}).value || "standard";
   x.dossierSize = ($("dossierSize") || {}).value || "auto";
+  if (lane && $("packAudioUrl")) {
+    const url = $("packAudioUrl").value.trim();
+    x.notebookLmUrl = /^https?:\/\/\S+$/i.test(url) ? url.slice(0, 500) : "";
+  }
   LS.set("sessions", sessions);
   draft = null;
-  continueSession(x);
+  if (sessionOpen(x)) continueSession(x);
+  else if (lane) launchCopilot(x);
+  else openSessionHome(x);
 }
 function gotoStep(n) {
   step = Math.max(0, Math.min(2, n));
@@ -538,8 +731,16 @@ function gotoStep(n) {
   $("wizBack").textContent = step === 0 ? "Cancel" : "Back";
   $("wizNext").textContent = step === 2 ? (draft && draft.editId ? "Save & continue" : "Create & Start") : "Next";
 }
-$("wizClose").onclick = openDashboard;
-$("wizBack").onclick = () => { if (step === 0) openDashboard(); else gotoStep(step - 1); };
+function closeWizard() {
+  const lane = draft && draft.lane;
+  draft = null;
+  if ($("packAudioField")) $("packAudioField").classList.add("hidden");
+  if (lane === "role") openRoles();
+  else if (lane === "category") openCategories();
+  else openDashboard();
+}
+$("wizClose").onclick = closeWizard;
+$("wizBack").onclick = () => { if (step === 0) closeWizard(); else gotoStep(step - 1); };
 $("wizNext").onclick = () => { if (step < 2) gotoStep(step + 1); else finishWizard(); };
 document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
   document.querySelectorAll(".choice").forEach(x => x.classList.remove("on"));
@@ -723,6 +924,7 @@ function launchCopilot(s, opts = {}) {
   renderDrawer();
   renderCard();
   show("copilot");
+  setLivePackTab("answer");
   if (!s.resume) status("No resume is stored on this device. Answers use the job description only and will not invent a work history.", "live");
   beat(true);
   // Continue: the answers and what was heard come back first, and the transcript goes on as the same run. The prep step follows,
@@ -1041,7 +1243,7 @@ async function leaveLive(confirmed) {
     if (note && current) { current.note = note; saveSession(current, true); }
     dropScreen();
     await saveRunTranscript(); await pauseRun();
-    beat(false); dossierAbort = true; resetLiveState(); openDashboard();
+    beat(false); dossierAbort = true; resetLiveState(); openSessionHome(current);
   } finally { leaving = false; }
 }
 let wrapping = false;
@@ -5273,6 +5475,11 @@ function answerRequestBody(question, card, opts, derivedQ, derivedBy, extra) {
     ...(opts && opts.fallbackModel ? { fallbackModel: true } : {}),
     ...fields,
     memory: typeof sessionMemoryPayload === "function" ? sessionMemoryPayload() : undefined,
+    ...(current && sessionLane(current) && current.packId ? {
+      packId: current.packId,
+      notebookLmUrl: current.notebookLmUrl || "",
+      packNotes: window.KompasPackNotes ? window.KompasPackNotes.read(localStorage, current.packId) : [],
+    } : {}),
     ...(rest || {}),
   };
 }
@@ -5359,6 +5566,7 @@ function serveBook(card, hit, depthKey) {
   card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta };
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
+  rememberPackAnswer(card.question, hit.text, $("liveInterviewer").selectedOptions[0].textContent);
   status("Answered.", "live");
   if (cards[idx] === card) { const c = $("card"); if (c) c.classList.remove("q-away"); }
   if (window.KompasDiamond) {
@@ -5469,7 +5677,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
   if (card === follow.card) { follow.pos = 0; follow.livePos = 0; }
   const t0 = performance.now(); let first = 0, text = "", meta = {};
   const depthLabel = () => { const o = $("liveInterviewer").selectedOptions[0]; return o ? o.textContent : ""; };
-  const logAnswer = (extra) => logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n"), meta: card.meta || "", original: card.original || undefined, ...extra });
+  const logAnswer = (extra) => {
+    const spoken = typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n");
+    logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: spoken, meta: card.meta || "", original: card.original || undefined, ...extra });
+    if (!extra || !extra.failed) rememberPackAnswer(card.question, spoken, depthLabel());
+  };
   const consolidated = !!opts.consolidated;
   const epoch = ++answerEpoch;
   const directDesktop = desktopResponses(); let responseKey = "";

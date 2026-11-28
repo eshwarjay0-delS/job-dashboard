@@ -35,6 +35,7 @@ const FIELDS = new Set([
   "autoAnswer", "autoMode", "saveTranscript", "interviewer", "difficulty", "dossierSize",
   "runAt", "pausedAt", "endedAt", "endedBy", "runDeviceId", "lastActiveAt", "transcripts", "bibleSyncedAt",
   "prep", "note", "book", "site", "identity", "savedAt", "startedAt",
+  "lane", "packId", "notebookLmUrl", "mustMention",
 ])
 let useLiteMerge = true
 function isMissingFunction(error: unknown): boolean {
@@ -145,6 +146,10 @@ function safePatch(id: string, patch: unknown): Record<string, unknown> | null {
   for (const k of ["resume", "jd", "documents", "instructions"]) {
     if (data[k] !== undefined && (typeof data[k] !== "string" || data[k].length > 3_700_000)) return null
   }
+  if (data.lane !== undefined && data.lane !== "role" && data.lane !== "category") return null
+  if (data.packId !== undefined && (typeof data.packId !== "string" || data.packId.length > 80)) return null
+  if (data.notebookLmUrl !== undefined && (typeof data.notebookLmUrl !== "string" || data.notebookLmUrl.length > 500)) return null
+  if (data.mustMention !== undefined && (!Array.isArray(data.mustMention) || data.mustMention.length > 24 || data.mustMention.some((v) => typeof v !== "string" || v.length > 180))) return null
   // Tokens, refresh credentials, raw audio and arbitrary browser state are
   // never accepted as account-shared session fields.
   return { ...data, id }
