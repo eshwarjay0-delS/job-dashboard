@@ -1,3 +1,12 @@
+## 28 November 2026 — run 35 Kompas PR #640 provenance correction
+
+- PR #640 closed/merged at 10:40:58 UTC as fdd4816. Canonical Vercel production deployment dpl_9Kvhj6NKALcsucVniGoqgpy9NPKJ is READY and `job-dashboard-fawn.vercel.app` alias matches exact SHA. This supersedes run34's not-merged status.
+- Direct owner approval for the exact S8 batch was not recovered in scoped prior-context search; PR #640 has no comments. Status is **unapproved/deployed**, not accepted. Do not auto-roll back or extend without owner decision.
+- Earlier full CI 46134823553 failed 106/107 on head 21972ceb; final fdd SHA CI was not surfaced. No live Taskmaster S8 retest.
+
+**Continue:** obtain owner decision; verify final-SHA CI and live Taskmaster behavior before acceptance. No rollback or code change in this run.
+
+
 ## 28 November 2026 — Run 34 current-master and backlog reconciliation
 
 **Continue:** clean-restack the Run 31–33 evidence onto current master, then continue the highest-priority approved slice without treating remote CI as local execution.
