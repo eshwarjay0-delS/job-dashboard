@@ -1,3 +1,9 @@
+## 2026-11-28 — Session continuity test sees the list refresh
+
+Continue and End refresh the open Roles, Categories, or Sessions list. The continuity test extracts those functions without the page around them, so it now provides the same refresh call. No screen change. The page behavior is unchanged.
+
+**Checked by scripts/tests/kompas-session-continuity.test.mjs, 10/10, and the 87-test CI step that failed on 3fff6dd2.**
+
 ## 2026-11-28 — Roles and Categories list every seeded subject
 
 The Roles page and the Categories page now show the full seeded catalog as ready cards (Start, End, Transcript, Edit setup) before anyone presses New. Starting a card creates the session. An in-progress session stays first. There are 26 roles and 26 categories, including SOC L1/L2/L3, the identity tools, PeopleSoft, Splunk, Sentinel, and the behavioral set. Stories stay on Citi Bank, CVS Health, the City of San Diego, Charter Communications, and Accenture. The Fortinet copy on ops/second-bot-packs was not imported. ops/chief-packs is not on origin. This is visible on the Roles and Categories pages.

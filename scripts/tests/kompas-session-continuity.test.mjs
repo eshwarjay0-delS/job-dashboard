@@ -13,7 +13,7 @@ function fixture(ageMinutes, { live = false, elsewhere = false, ended = false, i
     CONTINUE_MS: 30 * 60000, endTimer: 0, clearTimeout() {}, setTimeout() { return 1; },
     sessionOpen: s => !!s.runAt && !s.endedAt, liveOpenFor: () => live, liveElsewhere: () => elsewhere,
     lastHeardAt: () => now - ageMinutes * 60000,
-    LS: { get: () => [record], set: () => calls.writes++ }, renderSessions: () => {},
+    LS: { get: () => [record], set: () => calls.writes++ }, renderSessions: () => {}, paintOpenSessionList: () => {},
     launchCopilot: () => calls.launched++, closeRun: (s, at, by) => { calls.closed++; s.endedAt = at; s.endedBy = by; },
   });
   vm.runInContext(life, context);
