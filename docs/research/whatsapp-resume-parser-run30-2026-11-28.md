@@ -12,7 +12,7 @@ Accessible prior owner context recovered direct approval from 21 November 2026: 
 - `docs/whatsapp-kompas.md` and Plan & Vision journal: record approval, current implementation and limits.
 
 ## Validation
-The previous PR #633 head `81e839ac` had full CI run 46115683036 and Kompas baseline 46115683096 SUCCESS. Those results do not validate this fresh restack. No canonical local checkout or dependencies are available; clone attempted but DNS resolution for github.com failed. Fresh exact-head CI is pending. No production deployment, protected-preview HTTP smoke, real WhatsApp send, resume export, R2 mutation, Meta receipt or historical replay occurred.
+The previous PR #633 head `81e839ac` had full CI run 46115683036 and Kompas baseline 46115683096 SUCCESS. Those results do not validate this fresh restack. No canonical local checkout or dependencies are available; clone attempted but DNS resolution for github.com failed. Fresh exact-head CI is pending; the PR remains DRAFT due to the approval gap. No production deployment, protected-preview HTTP smoke, real WhatsApp send, resume export, R2 mutation, Meta receipt or historical replay occurred.
 
 ## Historical 17 October incident
 The 17 Oct 2026 17:28 Chicago resume failure remains unverified. Missing artifacts include the exact input/output DOCX, per-run R2 object/version, webhook correlation, Meta outbound ID, signed delivery/read receipt, and source-fact reconciliation. Do not replay or resend to manufacture evidence.
