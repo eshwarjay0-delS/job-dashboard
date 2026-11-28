@@ -83,3 +83,8 @@ Remote CI is the next gate. No local tests/build were run because the scheduled 
 PR #649 exact head before correction `3cb2bf37cc92f975155bbfe6bf61d28f8111450` passed crawler freshness (8 collector tests, 25 portal-registry tests), Kompas baseline, confirmed-skill resume and Plan/REA. Full CI `46152439807` failed at `scripts/tests/kompas-deploy-build.test.mjs:12` because the test pinned the old prebuild string and PR #649 intentionally added the two crawler test suites. The run reported 62/63 tests.
 
 Reviewable test correction commit `2f1e6d251ed082da60c259494339cf6445ca3708` replaces the brittle string equality with checks that the Kompas baseline runs first, all prior required suites remain, both crawler tests are included, and ordering is retained. Build/Webpack assertions are unchanged. Exact-final-head remote CI is pending. No local tests/build (no checkout and GitHub DNS unavailable), no crawl/portal request/DB write/preview/deployment.
+
+
+## Run32 lock-scope review — 28 Nov 2026 15:18 UTC
+
+Static review of PR #649 found `pendingPortalWork` is a module-level Map; it only reserves a portal within a warm process. It cannot guarantee no overlap across Vercel serverless instances or cold starts. The repeated-call regression is same-process. Review comment 7241370206 records this. Before crawl acceptance, require durable single-run/portal lease with expiry/fencing/cleanup or a storage-level runner guard and cross-worker tests. No crawl, portal request, DB write, preview or deployment.
