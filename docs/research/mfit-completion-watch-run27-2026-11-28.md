@@ -34,9 +34,9 @@ This is a source-derived privacy risk, not a reproduced browser incident. No OAu
 
 ## 17 October WhatsApp resume delivery incident
 
-Read-only iZap `list_businesses` still returns one business named `eshwarjay0` with no linked WhatsApp number. This scope is not established as the incident account. Do not treat empty search as proof of absence.
+Read-only iZap `list_businesses` still returns one business named `eshwarjay0` with no linked WhatsApp number. This scope is not established as the incident account. Do not treat empty search as proof of absence. A targeted Files Library search did not recover the incident's exact input/output DOCX; results were general resume research and unrelated content.
 
-The historical 17 Oct 2026 17:28 America/Chicago delivery remains UNVERIFIED. Missing evidence: exact input/output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound `wamid`, and signed delivered/read receipt or failure status. No send/replay was attempted.
+The historical 17 Oct 2026 17:28 America/Chicago delivery remains UNVERIFIED. Missing evidence: exact input/output DOCX, per-run R2 object/version, request/webhook correlation, Meta outbound `wamid`, and signed delivered/read receipt or failure status. A Vercel Hobby runtime-log query for 17 Oct 22:25–22:35 UTC was rejected: the plan retains only one hour of runtime logs, so historical request logs cannot be retrieved there now. R2 is not accessible through the available connectors. No send/replay was attempted.
 
 ## Execution limits and next steps
 
