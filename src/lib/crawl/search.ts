@@ -36,6 +36,11 @@ export function crawlSearchTerms(input: string): string[] {
  * Broad category search: any distinct term may match any searchable field.
  * This mirrors `/api/jobs` instead of requiring a literal multi-word phrase.
  */
+/** Safe, bounded location tokens applied as AND filters to the location column. */
+export function crawlLocationTerms(input: string): string[] {
+  return crawlSearchTerms(input).slice(0, 4)
+}
+
 export function crawlSearchOrFilter(input: string): string | null {
   const terms = crawlSearchTerms(input)
   if (!terms.length) return null
