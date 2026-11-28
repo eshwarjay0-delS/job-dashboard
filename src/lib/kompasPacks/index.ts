@@ -85,7 +85,7 @@ const SOC_PLAYBOOK = [
   "Tools: Splunk ES with RBA and notables, correlation searches, CIM data models, an ingestion pipeline from the WAF, proxy, identity, and EDR, plus Microsoft Sentinel, CrowdStrike, CyberArk, and Qualys.",
   "Tuning: I cut a noisy notable by naming the entity, the risk score, and the one condition that was paging on a known admin. I keep the search and I drop the duplicate.",
   "Metrics: mean time to detect, mean time to contain, and the share of notables I closed as noise.",
-  "Story: At Citi a privileged account opened a remote session outside the change window. The evidence was the CyberArk session, the Entra sign-in, and the CrowdStrike process tree. I decided it was real, I assigned the ServiceNow ticket to the identity owner, and the SOC lead took the host. We contained it and I tuned the notable so it pages once.",
+  "Story: At Citi a privileged account opened a remote session outside the change window. The evidence was the CyberArk session, the Entra sign-in, and the CrowdStrike process tree. I decided it was real, I assigned the ServiceNow ticket to the identity owner, and the SOC lead took the host. We contained it and I tuned the notable so the same admin no longer woke the queue.",
   "Story: At CVS Health a Qualys finding on a public host lined up with a Tanium process. I opened the ticket for the system owner, I confirmed the patch, and I closed it with the evidence attached.",
   "Story: A web alert looked like SQL injection and a second one looked like XSS. I treated both as detection. I searched the WAF, the web logs, and the database audit in Splunk, then I confirmed the host in EDR. I did not describe a pentest. The ticket went to the application owner.",
 ].join(" ")

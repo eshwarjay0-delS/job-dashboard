@@ -191,7 +191,7 @@
     var text = correctSecurityAsr(stripSpeakerLabels(opts.text));
     if (!text) return { fire: false, reason: "empty", text: "" };
     if (isSmallTalk(text)) return { fire: false, reason: "small-talk", text: text };
-    if (isCandidateNarrative(text) && !interviewerAsk(text)) return { fire: false, reason: "candidate", text: text };
+    if (isCandidateSpeech(text)) return { fire: false, reason: "candidate", text: text };
     var words = contentWords(text);
     if (words.length < MIN_CONTENT && !isStrongShort(text) && !(isQuestionShape(text) && words.length >= 2)) return { fire: false, reason: "too-short", text: text };
     if (isFollowUp(text, opts.previous)) return { fire: false, reason: "follow-up", text: text };
@@ -250,6 +250,14 @@
       .replace(/^(?:(?:uh|um|okay|ok|yes|yeah|so|and|well|right|alright|all right|got it)[,.\s]+)+/i, "");
   }
 
+  function isCandidateSpeech(text) {
+    var t = askLead(text);
+    if (!t) return false;
+    if (isCandidateNarrative(t) && !interviewerAsk(t)) return true;
+    if (/\b(?:i|i'm|i've|i'd|my)\b/i.test(t) && !/\b(?:you|your)\b/i.test(t)) return true;
+    return false;
+  }
+
   function isCandidateNarrative(text) {
     var t = correctSecurityAsr(stripSpeakerLabels(text));
     if (!t) return false;
@@ -270,7 +278,7 @@
       if (isQuestionShape(t) && !isCandidateNarrative(t) && !isSmallTalk(t) && opts.micIsInterviewer) return "Interviewer";
       return "You";
     }
-    if (isCandidateNarrative(t) && !interviewerAsk(t)) return "You";
+    if (isCandidateSpeech(t)) return "You";
     if (interviewerAsk(t) || isQuestionShape(t)) return "Interviewer";
     if (prev === "Interviewer") return "You";
     if (prev === "You") return "You";
@@ -322,13 +330,14 @@
   }
 
   function mergeIntoOpenCard(cards, text) {
+    var raw = correctSecurityAsr(stripSpeakerLabels(text));
     var q = questionWithoutCandidate(text) || "";
-    if (!q || (isCandidateNarrative(q) && !interviewerAsk(q))) return { merge: false, question: "" };
     var last = cards && cards.length ? cards[cards.length - 1] : null;
-    if (!last || answerIsReal(last.answer)) return { merge: false, question: q };
-    var prev = String(last.question || "").trim();
-    if (!prev || /^(?:Preparing|Ready|Your introduction|No question)/i.test(prev)) return { merge: false, question: q };
-    if (/^(?:and|also|plus|then)\b/i.test(q) || isFollowUp(q, prev)) return { merge: true, question: clean(prev.replace(/[?]?\s*$/, "") + ". " + q) };
+    var prev = last ? String(last.question || "").trim() : "";
+    if (last && !answerIsReal(last.answer) && prev && !/^(?:Preparing|Ready|Your introduction|No question)/i.test(prev) && dangling(prev) && raw && !isCandidateSpeech(raw)) {
+      return { merge: true, question: clean(prev.replace(/[?]?\s*$/, "") + " " + raw) };
+    }
+    if (!q || isCandidateSpeech(q)) return { merge: false, question: "" };
     return { merge: false, question: q };
   }
 
@@ -413,7 +422,9 @@
     (opts.cards || []).forEach(function (card) {
       var answer = card && card.answer;
       var body = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
-      push(card && card.question, answerIsReal(answer) && !/^(?:having\b|i handle cybersecurity operations for the bank\b)/i.test(body) && !/10\+ years of experience in servicenow/i.test(body));
+      var words = body.split(/\s+/).filter(Boolean).length;
+      var seedOnly = /^i do this at citi bank\b/i.test(body) && words < 40;
+      push(card && card.question, answerIsReal(answer) && !seedOnly && !/^(?:having\b|i handle cybersecurity operations for the bank\b)/i.test(body) && !/10\+ years of experience in servicenow/i.test(body) && !/\bstory\s+\d+\s*:|\bpages once\b|\bpress start\b/i.test(body) && words >= 12);
     });
     (opts.turns || []).forEach(function (turn) {
       var role = attributeSpeaker({ text: turn && turn.text, source: turn && turn.source, previousRole: turn && turn.who === "You" ? "You" : "Interviewer" });

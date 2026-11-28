@@ -48,6 +48,19 @@ test("video 2 opens one locked card per real question and labels the candidate Y
   assert.deepEqual(again.cards.map((card) => card.question), replay.cards.map((card) => card.question))
 })
 
+test("Sentinel, escalate, and SQL injection each get a non-empty answer in the video-2 replay", () => {
+  const replay = Gate.replayLive(turns)
+  for (const key of [/sentinel/i, /escalate/i, /sql injection/i]) {
+    const card = replay.cards.find((row) => key.test(row.question))
+    assert.ok(card, String(key))
+    const words = String(card.answer || "").split(/\s+/).filter(Boolean)
+    assert.ok(words.length >= 8, card.question)
+    assert.equal(Gate.onTopic(card.question, card.answer), true)
+  }
+  const empty = Gate.sessionSummary({ cards: [{ question: "How do you use Sentinel?", answer: "" }, { question: "How do you use Sentinel?", answer: ["…"] }] })
+  assert.equal(empty.questions.filter((row) => row.answered).length, 0)
+})
+
 test("a manual press answers the latest question, not an earlier card", () => {
   const replay = Gate.replayLive(turns)
   const stale = [{ question: "What is Responsible?", answer: "I own the queue at Citi Bank and I assign the ticket.", locked: true }]

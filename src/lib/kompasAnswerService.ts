@@ -699,8 +699,23 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           for (const sentence of gate.push(d)) show(sentence + " ")
         }
       }
+      let earlyDraft = ""
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
+        if (!levelContract(job.level, job.question).quick && (job.packText || job.resume)) {
+          const draft = expandToBand(
+            "I do this at Citi Bank. I pull the evidence, decide, and assign the ServiceNow ticket.",
+            levelContract(job.level, job.question),
+            job.packText || String(job.resume || ""),
+            job.question,
+            String(job.resume || ""),
+            true,
+          )
+          if (wordCount(draft) >= 40) {
+            emit({ type: "replace", text: draft })
+            earlyDraft = draft
+          }
+        }
         // Owner, 22 Nov 2026: the thesis ("I would answer this directly: <question>") must never
         // reach the screen. It used to be shown as a provisional delta before the model answered,
         // and when the final replace did not cleanly overwrite it the user saw the thesis plus
@@ -891,6 +906,11 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // there is nothing to show. (The button was saying "Answered."
         // with an empty pane because replace "" cleared the delta.)
         const degraded = false
+        if (!raw.trim() && earlyDraft) {
+          raw = earlyDraft
+          lastErr = ""
+          servedModel = "pack-fill"
+        }
         if (!raw.trim()) {
           const local = localSpokenAnswer(job.question, `${job.resume || ""}\n${job.sourceText || ""}`)
           if (local) {
@@ -970,6 +990,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         if (job.resumeState && job.resumeState !== "grounded") finalText = enforceResumeState(finalText, job.resumeState).text
         finalText = dropOffTopicResume(job.question, job.jd || "", keepSpokenOpening(onScreen, keepLongerAnswer(raw.trim(), finalText, job.question, job.jd || "")))
         finalText = await extendLevelOnce(job, finalText, signal)
+        if (!String(raw || "").trim() && earlyDraft && wordCount(finalText) < wordCount(earlyDraft)) finalText = earlyDraft
         repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.

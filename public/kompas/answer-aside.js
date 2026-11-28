@@ -532,6 +532,16 @@
       return mem && Array.isArray(mem.facts) ? "\n" + mem.facts.join("\n") : "";
     } catch (e) { return ""; }
   }
+  function sessionResumeText() {
+    var resume = pageResume();
+    var extra = memoryFacts();
+    if (/eshwarjay05/i.test(resume)) {
+      extra = extra.split("\n").filter(function (line) {
+        return !/jayeshwar44|jayeshwar24|eshwarjay06|10\+\s*years|sr\.?\s*servicenow|servicenow fso|servicenow csm/i.test(line);
+      }).join("\n");
+    }
+    return resume + (extra.trim() ? "\n" + extra.trim() : "");
+  }
   function pageResume() {
     if (resumeText) return resumeText;
     try {
@@ -550,6 +560,7 @@
       return line.replace(/^[\s•▪●\-*]+/, "").trim();
     }).filter(function (line) {
       if (!line || line.split(/\s+/).length < 6) return false;
+      if (/jayeshwar44|jayeshwar24|eshwarjay06|10\+\s*years[\s\S]{0,80}servicenow|sr\.?\s*servicenow development|servicenow fso|servicenow csm/i.test(line)) return false;
       if (/^[^:]{0,56}:\s+\S/.test(line)) return false;
       if (/\b(?:using|via|with|for|and|to|of|the|a|an)\.?$/i.test(line)) return false;
       if (/\b(?:19|20)\d{2}\b/.test(line)) return false;
@@ -591,7 +602,7 @@
     return { question: question, partial: "", mode: "boosters", breakdown: { claim: "", context: "", result: "" }, context: { leads: [], touchPoints: [] }, questions: [], boosters: [], summary: "", sayNow: "", blocked: true };
   }
   function paintLocal() {
-    var aside = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
+    var aside = liveAside(questionText(), transcriptText(), sessionResumeText());
     aside.epoch = window.__kompasAskEpoch;
     if (aside.blocked) { acceptFresh(aside); return; }
     if (!aside.partial && !aside.breakdown.claim && !aside.question) return;
@@ -619,11 +630,11 @@
     if (key === liveKey) { liveDirty = false; return; }
     liveKey = key;
     liveDirty = false;
-    var local = liveAside(questionText(), transcriptText(), pageResume() + memoryFacts());
+    var local = liveAside(questionText(), transcriptText(), sessionResumeText());
     if (!local.breakdown.claim && local.question) local.breakdown.claim = local.question;
     acceptFresh(local);
     if (typeof fetch !== "function") return;
-    var payload = JSON.stringify({ question: questionText(), transcript: transcriptText(), resume: pageResume() + memoryFacts(), epoch: window.__kompasAskEpoch });
+    var payload = JSON.stringify({ question: questionText(), transcript: transcriptText(), resume: sessionResumeText(), epoch: window.__kompasAskEpoch });
     fetch("/api/kompas/aside", { method: "POST", headers: { "content-type": "application/json" }, body: payload }).then(function (res) {
       return res && res.ok && res.json ? res.json() : null;
     }).then(function (data) {
