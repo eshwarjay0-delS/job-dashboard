@@ -1,3 +1,15 @@
+## 2026-11-28 — Quality patch on the live replay gate
+
+The 10-fold patch (d7e3505) is on the video-2 replay branch. Two-part questions stay together. Every pack grounding includes design, stories, a director view, terms, and metrics. A failed continuation still fills the level band. Having lines, "I believe", and "I would" closers are stripped. The live-path card, You label, and Auto-on fixes stay. Ships with the replay gate.
+
+**Checked by the replay gate, the pack and level tests, typecheck, and lint on the touched files. Not a live 10-fold listen.**
+
+## 2026-11-28 — Live path S6, not shipped
+
+Video 2 questions (shifts, day-to-day, tools, Sentinel, dashboard, false positive, escalate, trending, SQL injection, XSS) each open one card. Candidate lines stay You. A manual press uses the latest question. A "Having 10+ years" ServiceNow line is not an answer. Auto defaults on. An empty Role or Category session loads the eshwarjay05 resume. Typed answers expand to the level band even when the continuation call fails, and the card control no longer tells the model to stop after two or four sentences. CI runs the replay before later steps. Not merged.
+
+**Checked by scripts/tests/kompas-live-replay-gate.test.mjs. Not a live click-through.**
+
 ## 2026-11-28 — Session continuity test sees the list refresh
 
 Continue and End refresh the open Roles, Categories, or Sessions list. The continuity test extracts those functions without the page around them, so it now provides the same refresh call. No screen change. The page behavior is unchanged.

@@ -664,7 +664,7 @@ function applyWizardDraft() {
 }
 function openWizard() {
   const prev = sessions[0] || {};
-  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone ? normalizeAnswerTone(prev.tone) : "simple", format: prev.format ? normalizeAnswerFormat(prev.format) : "script_bullets", star: prev.star === true, model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false, lane: "" };
+  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone ? normalizeAnswerTone(prev.tone) : "simple", format: prev.format ? normalizeAnswerFormat(prev.format) : "script_bullets", star: prev.star === true, model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: prev.autoAnswer !== false, saveTranscript: prev.saveTranscript !== false, lane: "" };
   if ($("packAudioField")) $("packAudioField").classList.add("hidden");
   step = 0;
   // A new session starts with a blank job. The answer preferences he already saved stay.
@@ -695,7 +695,7 @@ function openWizard() {
 // nothing because the session is only written on Save & continue.
 function openEditWizard(s) {
   const stored = (LS.get("sessions", []) || []).find(v => v.id === s.id) || s;
-  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id, lane: stored.lane || "" };
+  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone ? normalizeAnswerTone(stored.tone) : "simple", format: stored.format ? normalizeAnswerFormat(stored.format) : "script_bullets", star: stored.star === true, model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: stored.autoAnswer !== false, saveTranscript: stored.saveTranscript !== false, editId: stored.id, lane: stored.lane || "" };
   step = 0;
   if ($("jobLink")) $("jobLink").value = stored.jobLink || "";
   $("company").value = stored.company || ""; $("role").value = stored.role || ""; $("jd").value = stored.jd || "";
@@ -957,7 +957,18 @@ function launchCopilot(s, opts = {}) {
   syncLiveAnswerControls(s);
   renderDepth();
   resetLiveState();
-  setAuto(s.autoMode !== false);          // default ON: a detected question is answered when the speaker goes quiet
+  if (sessionLane(s) && !String(s.resume || "").trim()) {
+    const known = packCatalog && packCatalog.ownerResume;
+    if (known) { s.resume = String(known).slice(0, 40000); saveSession(s); }
+    else loadPackCatalog().then((data) => {
+      if (current === s && !String(s.resume || "").trim() && data && data.ownerResume) {
+        s.resume = String(data.ownerResume).slice(0, 40000);
+        saveSession(s);
+      }
+    }).catch(() => {});
+  }
+  setAuto(true);          // default ON: a detected question is answered when the speaker goes quiet
+  if (s.autoMode === false) setAuto(false);
   setPersonaChip(s);
   renderConnect(s);                      // Parakeet-style connect step before listening
   renderDrawer();

@@ -24,3 +24,12 @@ export type PackNote = {
   kept: string
   missed: string[]
 }
+
+export type PackDepth = {
+  design: string
+  stories: string[]
+  director: string
+  terms: string[]
+  metrics: string[]
+  pitfalls: string[]
+}

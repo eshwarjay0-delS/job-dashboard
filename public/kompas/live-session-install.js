@@ -167,26 +167,51 @@
     };
   }
 
+  function latestHeardQuestion() {
+    var rows = [];
+    try { rows = typeof transcript !== "undefined" ? transcript : []; } catch (e) { rows = []; }
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var row = rows[i];
+      if (!row || row.who === "You") continue;
+      var decision = Gate.liveAutoDecision({ text: row.text, finalLine: true, pauseMs: Gate.FIRE_PAUSE_MS });
+      if (decision.fire) return Gate.questionWithoutCandidate(decision.text || row.text) || decision.text;
+    }
+    return "";
+  }
+
   if (typeof aiAnswer === "function") {
     var origAi = aiAnswer;
     aiAnswer = async function (fromAuto) {
       if (fromAuto) return origAi.apply(this, arguments);
+      var latest = latestHeardQuestion();
       var cur = (typeof cards !== "undefined" && cards.length) ? cards[idx] : null;
+      var plan = cur && latest && typeof Gate.manualAnswerPlan === "function" ? Gate.manualAnswerPlan(cards, cards.indexOf(cur), latest) : null;
+      if (plan && !plan.reuse && typeof showQueuedAnswer === "function") {
+        showQueuedAnswer(plan.question || latest);
+        try {
+          var opened = cards[cards.length - 1];
+          if (opened) { opened.question = plan.question || latest; opened.questionLocked = true; }
+        } catch (e) {}
+        return;
+      }
+      if (plan && plan.reuse && plan.replaceQuestion && cur) {
+        cur.question = plan.question || latest;
+        cur.questionLocked = true;
+      }
       var origAdd = typeof addCard === "function" ? addCard : null;
-      if (origAdd && cur && typeof Gate.manualAnswerPlan === "function") {
+      if (origAdd && cur && plan) {
         addCard = function (question, answer) {
-          var plan = Gate.manualAnswerPlan(cards, cards.indexOf(cur), question);
-          var placeholder = /^(?:Deriving|Answering|Preparing|…|\.{3})/i.test(String(question || "").trim());
-          if (plan.reuse || placeholder) {
+          if (plan.reuse) {
             cur.answer = answer;
             cur.streaming = true;
+            cur.question = plan.question || cur.question;
             cur.questionLocked = true;
             idx = cards.indexOf(cur);
             if (typeof renderCard === "function") renderCard();
             return cur;
           }
           var created = origAdd.apply(this, arguments);
-          if (created) created.questionLocked = true;
+          if (created) { created.question = plan.question || created.question; created.questionLocked = true; }
           return created;
         };
       }

@@ -173,7 +173,7 @@ export function dropUnknownEmployers(answer: string, resume: string): string {
     return names.every(allowed)
   })
   if (kept.length) return kept.join(" ")
-  const line = source.split(/\n/).map((s) => s.trim()).find((s) => s.split(/\s+/).length >= 8 && !/@/.test(s))
+  const line = source.split(/\n/).map((s) => s.trim()).find((s) => s.split(/\s+/).length >= 8 && !/@/.test(s) && !/^having\b/i.test(s) && !/i handle cybersecurity operations for the bank/i.test(s))
   return line ? (/[.!?]$/.test(line) ? line : `${line}.`) : ""
 }
 

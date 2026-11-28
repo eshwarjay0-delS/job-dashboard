@@ -168,10 +168,15 @@ test("an empty or placeholder card is heard, not answered", () => {
 test("manual AI Answer reuses the open card instead of cloning it", () => {
   const cards = [{ question: "How would you prevent SQL injection in a login form?", answer: "" }]
   assert.equal(Gate.manualAnswerPlan(cards, 0, cards[0].question).reuse, true)
-  assert.equal(Gate.manualAnswerPlan(cards, 0, "What is XSS?").reuse, false)
+  const different = Gate.manualAnswerPlan(cards, 0, "What is XSS?")
+  assert.equal(different.reuse, true)
+  assert.equal(different.replaceQuestion, true)
+  assert.match(different.question, /XSS/i)
+  const answered = [{ question: cards[0].question, answer: "I parameterize every query in the login form." }]
+  assert.equal(Gate.manualAnswerPlan(answered, 0, "What is XSS?").reuse, false)
   const install = readFileSync(new URL("public/kompas/live-session-install.js", root), "utf8")
   assert.match(install, /manualAnswerPlan/)
-  assert.match(install, /plan\.reuse \|\| placeholder/)
+  assert.match(install, /plan\.reuse/)
 })
 
 test("the silence warning clears while sound is coming in", () => {

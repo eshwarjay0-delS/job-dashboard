@@ -198,9 +198,9 @@ export function answerControls(config: Record<string, unknown> | undefined): Ans
 
 export function controlsPrompt(k: AnswerControls): string {
   const lines = [`CARD CONTROLS (set by him for this card): format ${k.format.replace("_", " + ")}, length ${k.length}, tone ${k.tone}, STAR ${k.star ? "on" : "off"}.`]
-  if (k.format === "script_bullets") lines.push("Sentence one is the opening line he says out loud; then two to four short sentences, one point each, that read as bullets.")
-  if (k.format === "bullets") lines.push(k.length === "short" ? "Three terse points, one sentence each, no opening line." : "Three or four points, one sentence each, no opening line.")
-  if (k.format === "full_script") lines.push("A short spoken paragraph.")
+  if (k.format === "script_bullets") lines.push("Open with the sentence he says first, then continue in spoken sentences. The level contract sets the word count. Do not stop after two or four sentences.")
+  if (k.format === "bullets") lines.push(k.length === "short" ? "Three terse points, one sentence each, no opening line." : "Cover the level contract's word count as spoken points, not two or four short lines.")
+  if (k.format === "full_script") lines.push("Spoken paragraphs. The level contract sets the length.")
   if (k.length === "short") lines.push("Keep it short: the fewest words that answer it.")
   if (k.length === "long") lines.push("Length is long. Go one level deeper than usual on the how, not on background.")
   lines.push(k.tone === "simple" ? "Tone: plain words, no jargon he would not say out loud." : k.tone === "formal" ? "Tone: formal and precise, still spoken, no slang." : "Tone: professional and direct.")

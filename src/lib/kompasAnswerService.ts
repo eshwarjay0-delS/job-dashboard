@@ -27,8 +27,8 @@ import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogisti
 import { routeAnswer, type JevRoute } from "@/lib/kompasJevRoute"
 import { answerRoute, bridgeFromResume, dropOffTopicResume, dropStreamSentence, gateDisplayedAnswer, HONEST_LINE, keepLongerAnswer, keepSpokenOpening, NARRATIVE_LINE } from "@/lib/kompasConsistency"
 import { levelAwareBand, visibleLengthBand } from "@/lib/kompasDissection"
-import { expandToBand, fitLevelAnswer, levelContract, repairIntroHeadline, wordCount } from "@/lib/kompasLevelContract"
-import { getPack, OWNER_RESUME, ownerResumeForPack, packFrame, packGrounding, sanitizePackNotes } from "./kompasPacks/index.ts"
+import { confidentVoice, dropUnaskedCerts, expandToBand, fitLevelAnswer, levelContract, repairIntroHeadline, wordCount } from "@/lib/kompasLevelContract"
+import { getPack, OWNER_RESUME, ownerResumeForPack, packDrillRules, packFrame, packGrounding, sanitizePackNotes } from "./kompasPacks/index.ts"
 import { dropUnknownEmployers } from "@/lib/kompasResume"
 import { jdOnlyExperience, ungroundedProducts } from "@/lib/kompasAnswerPresentation"
 import { questionKernel } from "@/lib/kompasIntentKernel"
@@ -230,26 +230,40 @@ async function fetchOpenRouter(
   return { text: data.choices?.[0]?.message?.content || "", usage: { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 } }
 }
 
-/** One real continuation. Never stock sentences. If the model adds nothing new, the short answer stands. */
+/** One real continuation. Never stock sentences. If the model adds nothing new, the level band still fills. */
 async function extendLevelOnce(job: AnswerJob, text: string, signal: AbortSignal): Promise<string> {
   const contract = levelContract(job.level, job.question)
-  const base = fitLevelAnswer(text, contract)
-  const grounded = repairIntroHeadline(job.question, dropUnknownEmployers(base, String(job.resume || "")))
+  const base = fitLevelAnswer(job.packText ? confidentVoice(dropUnaskedCerts(text, job.question)) : text, contract)
+  let grounded = repairIntroHeadline(job.question, dropUnknownEmployers(base, String(job.resume || "")))
   if (wordCount(grounded) >= contract.min || !job.orKey || signal.aborted) return expandToBand(grounded, contract) || base
-  try {
-    const missing = Math.max(60, contract.target - wordCount(grounded))
-    const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
-      `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Do not add a number that is not in the resume. Stay on the question and the resume. Write about ${missing} more words.\n\nQUESTION: ${job.question}\n\nRESUME:\n${String(job.resume || "").slice(0, 4000)}\n\nANSWER SO FAR:\n${grounded.slice(-2400)}`,
-      Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
-    const bag = `${job.resume || ""} ${grounded}`.toLowerCase()
-    const added = String(more.text || "").split(/(?<=[.!?])\s+/).filter((sentence) => {
-      const nums = sentence.match(/\d+(?:\.\d+)?/g) || []
-      return nums.every((n) => bag.includes(n))
-    }).join(" ")
-    return expandToBand(repairIntroHeadline(job.question, dropUnknownEmployers(fitLevelAnswer(`${grounded} ${added}`, contract), String(job.resume || ""))), contract)
-  } catch {
-    return grounded || base
+  // A Role/Category drill continues from its pack (the next design detail or story not told yet), up to two passes.
+  // A live session keeps its single resume-only continuation. A failed call still fills the level band.
+  const passes = job.packText && !contract.quick ? 2 : 1
+  for (let pass = 0; pass < passes && wordCount(grounded) < contract.min && !signal.aborted; pass++) {
+    try {
+      const missing = Math.max(60, contract.target - wordCount(grounded))
+      const source = job.packText
+        ? `SUBJECT PACK (use the design, stories, metrics, and terms not yet in the answer):\n${job.packText.slice(0, 9000)}\n\n${job.packRules || ""}`
+        : `RESUME:\n${String(job.resume || "").slice(0, 4000)}`
+      const ask = job.packText
+        ? `Continue this spoken answer with about ${missing} more words. Add the next concrete thing from the pack that the answer has not covered yet: ${job.level === "architect" ? "a design detail, an integration, a tuning or on-call practice, a trade-off, or a full story" : job.level === "director" ? "the business risk, the people and teams I lead, the leadership metric, or a decision story" : "a term defined in plain words, or a full story walked step by step"}. A story opens with the employer (At Citi Bank, At CVS Health, ...) and has the situation, evidence, decision, owner, and the outcome with its number. Never retell a story or a point already in the answer. Cover any part of the question the answer skipped first. Past tense, first person, fully confident. No summary, no opinions, no I believe, no Overall, no staying up to date. Do not repeat a sentence. Name only Citi Bank, CVS Health, the City of San Diego, Charter Communications, or Accenture.`
+        : `Add new spoken sentences that continue this answer. Do not repeat a sentence. Do not use a stock phrase. Name only employers that appear in the resume. Do not add a number that is not in the resume. Stay on the question and the resume. Write about ${missing} more words.`
+      const more = await fetchOpenRouter(job.orKey, PAID_MODEL, job.system,
+        `${ask}\n\nQUESTION: ${job.question}\n\n${source}\n\nANSWER SO FAR:\n${grounded.slice(-2400)}`,
+        Math.min(contract.maxTokens, Math.round(missing * 2.6) + 400), signal)
+      const bag = `${job.resume || ""} ${job.packText || ""} ${grounded}`.toLowerCase()
+      const added = String(more.text || "").split(/(?<=[.!?])\s+/).filter((sentence) => {
+        const nums = sentence.match(/\d+(?:\.\d+)?/g) || []
+        return nums.every((n) => bag.includes(n))
+      }).join(" ")
+      const next = repairIntroHeadline(job.question, dropUnknownEmployers(fitLevelAnswer(`${grounded} ${job.packText ? confidentVoice(dropUnaskedCerts(added, job.question)) : added}`, contract), String(job.resume || "")))
+      if (wordCount(next) <= wordCount(grounded) + 20) break
+      grounded = next
+    } catch {
+      return expandToBand(grounded, contract) || base
+    }
   }
+  return expandToBand(grounded, contract) || base
 }
 
 // A light non-streaming call for the post-generation fact-check (perfACT's
@@ -371,6 +385,9 @@ function str(v: unknown, max: number): string {
 }
 
 type AnswerJob = {
+  /** Role/Category drill: the pack grounding and its drill rules. Empty on a live session. */
+  packText?: string
+  packRules?: string
   question: string
   system: string
   userText: string
@@ -1713,7 +1730,9 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}\n\n${notebookWorkbench}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${memoryPrompt(sessionMemory) ? `${memoryPrompt(sessionMemory)}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question.split("\n")[0]}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}\n\n${TITLE_INSTRUCTION}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${memoryPrompt(sessionMemory) ? `${memoryPrompt(sessionMemory)}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question.split("\n")[0]}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}\n\n${controlsPrompt(cardControls)}${noResumeState !== "grounded" ? `\n\n${resumeStatePrompt(noResumeState)}` : ""}${packText ? `\n\n${packDrillRules(pack, level)}` : ""}\n\n${TITLE_INSTRUCTION}`,
+    packText: packText || undefined,
+    packRules: packText ? packDrillRules(pack, level) : undefined,
     plan,
     interviewer: level,
     level,

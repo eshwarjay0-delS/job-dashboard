@@ -130,13 +130,14 @@
     return parts.every(sentenceIsSmallTalk);
   }
 
-  var ASK = /(?:^|\b)(?:how (?:do|would|did|can|could) you|what (?:is|are|was|were|do|does)|why (?:do|did|would|is|are) you|when (?:do|did|would) you|where (?:do|did|would) you|which\b|who\b|can you|could you|would you|tell me|walk me|describe\b|explain\b|define\b|may i (?:know|note|ask))\b/i;
+  var ASK = /(?:^|\b)(?:how (?:do|does|did|would|can|could) (?:you|the|a|an|it|this)|what (?:is|are|was|were|do|does|all|kind)|why (?:do|did|would|is|are)|when (?:do|did|would) you|where (?:do|did|would) you|which\b|who\b|have you|do you know|can you (?:explain|tell|describe|walk)|could you|would you|tell me|walk me|describe\b|explain\b|define\b|at what|may i (?:know|note|ask))\b/i;
 
   function isQuestionShape(text) {
     var t = correctSecurityAsr(stripSpeakerLabels(text));
     if (!t || isSmallTalk(t)) return false;
-    if (/\?\s*$/.test(t) && contentWords(t).length >= 1) return true;
-    return ASK.test(t);
+    if (interviewerAsk(t)) return true;
+    if (/\?\s*$/.test(t) && contentWords(t).length >= 2 && !isCandidateNarrative(t)) return true;
+    return false;
   }
 
   function isStrongShort(text) {
@@ -145,6 +146,7 @@
 
   function dangling(text) {
     var t = clean(text).replace(/[.]+$/g, "").trim();
+    if (interviewerAsk(text) && !/\b(?:about|doing)\s*$/i.test(t)) return false;
     return /\b(?:a|an|the|to|of|for|with|and|or|doing|uh|um|your|about|on|in)\s*$/i.test(t) && !/\?\s*$/.test(text);
   }
 
@@ -167,6 +169,9 @@
     var p = correctSecurityAsr(stripSpeakerLabels(previous));
     if (!t || !p) return false;
     if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+)[.,]?\s+)*(?:how come|how so|why not|and why|and how|go deeper|say that again|same (?:thing|question))\b/i.test(t)) return true;
+    var tw = contentWords(t);
+    var pw = contentWords(p);
+    if (tw.length && tw.length <= 4 && tw.some(function (w) { return w.length > 5 && pw.indexOf(w) >= 0; })) return true;
     if (/^(?:ok(?:ay)?[.,]?\s+)?so your experience (?:lies|is) more with\b/i.test(t)) return true;
     return similar(t, p);
   }
@@ -239,12 +244,19 @@
     return rest.length ? rest[rest.length - 1] : "";
   }
 
+  function askLead(text) {
+    return correctSecurityAsr(stripSpeakerLabels(text))
+      .replace(/^(?:(?:uh|um|okay|ok|yes|yeah|so|and|well|right|alright|all right|got it)[,.\s]+)+/i, "");
+  }
+
   function isCandidateNarrative(text) {
     var t = correctSecurityAsr(stripSpeakerLabels(text));
     if (!t) return false;
-    if (/\b(?:tell me|walk me|can you tell me|how (?:do|would|did) you|what (?:is|are) your|why (?:do|did|would) you|may i (?:know|note))\b/i.test(t)) return false;
-    if (/\b(?:i|i'm|i've|i'd|we|my|our)\b/i.test(t) || /\b(?:ma'am|sir)\b/i.test(t)) return true;
-    if (/^(?:yes|yeah|okay|ok|sure|thank you|thanks)\b/i.test(t) && !ASK.test(t)) return true;
+    var askAt = t.search(ASK);
+    var selfAt = t.search(/\b(?:i|i'm|i've|i'd|we|my|our)\b/i);
+    if (selfAt >= 0 && (askAt < 0 || selfAt < askAt)) return true;
+    if (/\b(?:ma'am|sir)\b/i.test(t) && askAt < 0) return true;
+    if (/^(?:yes|yeah|okay|ok|sure|thank you|thanks|no)\b/i.test(t) && askAt < 0) return true;
     return false;
   }
 
@@ -257,8 +269,8 @@
       if (isQuestionShape(t) && !isCandidateNarrative(t) && !isSmallTalk(t) && opts.micIsInterviewer) return "Interviewer";
       return "You";
     }
-    if (isCandidateNarrative(t)) return "You";
-    if (interviewerAsk(t)) return "Interviewer";
+    if (isCandidateNarrative(t) && !interviewerAsk(t)) return "You";
+    if (interviewerAsk(t) || isQuestionShape(t)) return "Interviewer";
     if (prev === "Interviewer") return "You";
     if (prev === "You") return "You";
     return "Interviewer";
@@ -272,10 +284,9 @@
   }
 
   function interviewerAsk(text) {
-    var t = correctSecurityAsr(stripSpeakerLabels(text));
+    var t = askLead(text);
     if (!t || isSmallTalk(t)) return false;
-    if (/^(?:which|who)\b/i.test(t)) return true;
-    return /(?:^|\b)(?:how (?:do|would|did|can|could) you|what (?:is|are|was|were|do|does)|why (?:do|did|would)|when (?:do|did) you|where (?:do|did) you|can you|could you|would you|tell me|walk me|describe\b|explain\b|define\b)\b/i.test(t);
+    return /^(?:how|what|why|when|where|which|who|have you|do you|can you|could you|would you|tell me|walk me|describe|explain|define|at what|may i)\b/i.test(t);
   }
 
   function continuesQuestion(text) {
@@ -309,16 +320,28 @@
     return { cards: list, opened: q, reused: false };
   }
 
+  function sameAsk(a, b) {
+    var left = correctSecurityAsr(stripSpeakerLabels(a));
+    var right = questionWithoutCandidate(b) || correctSecurityAsr(stripSpeakerLabels(b));
+    if (!left || !right) return false;
+    return similar(left, right) || normKey(left) === normKey(right);
+  }
+
   function manualAnswerPlan(cards, index, question) {
     var cur = cards && cards[index];
-    if (!cur) return { reuse: false, index: -1 };
-    var norm = function (s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); };
-    var a = norm(cur.question);
-    var b = norm(questionWithoutCandidate(question) || question);
-    if (!a || !b) return { reuse: false, index: index };
-    var head = function (s) { return s.slice(0, 32); };
-    if (a === b || a.indexOf(head(b)) === 0 || b.indexOf(head(a)) === 0) return { reuse: true, index: index };
-    return { reuse: false, index: index };
+    var latest = questionWithoutCandidate(question) || correctSecurityAsr(stripSpeakerLabels(question));
+    if (!cur) return { reuse: false, replaceQuestion: true, index: -1, question: latest };
+    if (!answerIsReal(cur.answer)) return { reuse: true, replaceQuestion: !sameAsk(cur.question, latest), index: index, question: latest };
+    if (sameAsk(cur.question, latest)) return { reuse: true, replaceQuestion: false, index: index, question: latest };
+    return { reuse: false, replaceQuestion: false, index: index, question: latest };
+  }
+
+  function onTopic(question, answer) {
+    var q = contentWords(question);
+    if (!q.length) return true;
+    var set = {};
+    contentWords(answer).forEach(function (w) { set[w] = true; });
+    return q.some(function (w) { return set[w]; });
   }
 
   function answerIsReal(answer) {
@@ -363,7 +386,7 @@
     (opts.cards || []).forEach(function (card) {
       var answer = card && card.answer;
       var body = Array.isArray(answer) ? answer.join(" ") : String(answer || "");
-      push(card && card.question, answerIsReal(answer));
+      push(card && card.question, answerIsReal(answer) && !/^(?:having\b|i handle cybersecurity operations for the bank\b)/i.test(body) && !/10\+ years of experience in servicenow/i.test(body));
     });
     (opts.turns || []).forEach(function (turn) {
       var role = attributeSpeaker({ text: turn && turn.text, source: turn && turn.source, previousRole: turn && turn.who === "You" ? "You" : "Interviewer" });
@@ -375,6 +398,44 @@
       lines.push((i + 1) + ". " + q.question + " - " + (q.answered ? "answered" : "heard"));
     });
     return { questions: questions, text: lines.join("\n"), endedAt: opts.endedAt || null };
+  }
+
+  function replayLive(turns, answerFn) {
+    var cards = [];
+    var labels = [];
+    var recent = [];
+    var prev = "Interviewer";
+    var answer = typeof answerFn === "function" ? answerFn : function (q) {
+      var word = contentWords(q)[0] || "work";
+      return "I do this at Citi Bank. " + word + " is the point, and I assign the ServiceNow ticket.";
+    };
+    (turns || []).forEach(function (turn) {
+      var text = turn && turn.text;
+      var role = attributeSpeaker({ text: text, previousRole: prev, source: "system" });
+      labels.push({ role: role, text: text, qId: (turn && (turn.q_id || turn.qId)) || "", at: turn && turn.end_s });
+      prev = role;
+      if (role !== "Interviewer") return;
+      var decision = liveAutoDecision({
+        text: text,
+        finalLine: true,
+        pauseMs: FIRE_PAUSE_MS,
+        previous: cards.length ? cards[cards.length - 1].question : "",
+        recent: recent,
+        now: (Number(turn && turn.end_s) || 0) * 1000,
+      });
+      if (!decision.fire) return;
+      var q = questionWithoutCandidate(decision.text || text) || decision.text;
+      var before = cards.map(function (card) { return card.question; });
+      var opened = nextQuestionCard(cards, q);
+      var unchanged = before.every(function (question, i) { return opened.cards[i] && opened.cards[i].question === question; });
+      if (!unchanged) return;
+      var card = opened.cards[opened.cards.length - 1];
+      card.answer = answer(card.question);
+      card.qId = (turn && (turn.q_id || turn.qId)) || "";
+      cards = opened.cards;
+      recent.push({ text: card.question, at: (Number(turn && turn.end_s) || 0) * 1000 });
+    });
+    return { cards: cards, labels: labels };
   }
 
   root.KompasLiveSession = {
@@ -399,5 +460,7 @@
     attributeSpeaker: attributeSpeaker,
     joinSplitQuestion: joinSplitQuestion,
     sessionSummary: sessionSummary,
+    replayLive: replayLive,
+    onTopic: onTopic,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

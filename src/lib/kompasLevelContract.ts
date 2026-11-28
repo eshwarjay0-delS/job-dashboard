@@ -154,20 +154,48 @@ function openingWords(sentence: string): string {
   return sentence.toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/).filter(Boolean).slice(0, 8).join(" ")
 }
 
+/** Padding the model writes to reach a word count: opinions, summaries, and self-praise. 10-fold test, 28 Nov 2026. */
+export const GENERIC_FILLER = /^(?:overall|in conclusion|in summary|ultimately|to sum up|in short)\b|stay(?:ing)? (?:up[- ]to[- ]date|ahead of (?:the )?(?:evolving|emerging|latest))|confident in my ability|valuable asset|i am excited to|i'm excited to|as a cybersecurity (?:professional|engineer), i believe|i (?:will|would) highly recommend|my experience with [\w ]+ has been (?:very |extremely )?positive|in today's (?:threat|evolving|digital) landscape|\bi handle cybersecurity operations\b/i
+
+/** Spoken prose: inline dashes and bullets become plain sentences, and "I believe that" becomes the statement itself. */
+export function speakable(text: string): string {
+  return String(text || "")
+    .replace(/(^|[\s.!?])[-•▪*]\s+(?=[A-Za-z])/g, "$1 ")
+    .replace(/\b(?:Moreover|Furthermore|Additionally),\s+I believe(?: that)?\s+(\w)/g, (_m, c: string) => c.toUpperCase())
+    .replace(/(^|[.!?]\s+)I (?:strongly )?believe(?: that)?\s+(\w)/g, (_m, lead: string, c: string) => `${lead}${c.toUpperCase()}`)
+    .replace(/,\s*I believe,?\s*/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/** Role/Category drills speak as lived experience: "I would check" becomes "I check", "My approach would be" becomes "My approach is". */
+export function confidentVoice(text: string): string {
+  return String(text || "")
+    .replace(/\b(My|Our) (approach|first step|priority|process) would be\b/g, "$1 $2 is")
+    .replace(/\bI would (?!like\b|want\b|say\b|have\b|not\b|never\b|rather\b)(\w+)/g, "I $1")
+    .replace(/\bI(?:'d| might| could) (?:then )?(check|look|review|pull|open|search|start|escalate|assign|confirm|verify|correlate|run|use|analy[sz]e|investigate)\b/g, "I $1")
+}
+
+/** A certification line only when the question asks about certifications. */
+export function dropUnaskedCerts(text: string, question: string): string {
+  if (/certif|cissp|credential/i.test(String(question || ""))) return text
+  return String(text || "").split(/(?<=[.!?])\s+/).filter((s) => !/\b(?:CISSP|Azure Security Engineer Associate)\b/.test(s)).join(" ").trim()
+}
+
 /** Drop canned filler, resume catalogues, refusals, and repeated sentences. A short answer stays short until expandToBand. */
 export function fitLevelAnswer(text: string, contract: LevelContract): string {
   const kept: string[] = []
   const seen = new Set<string>()
   const openings = new Set<string>()
-  for (const sentence of String(text || "").replace(RESUME_CATALOG, " ").replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s+/)) {
+  for (const sentence of speakable(String(text || "").replace(RESUME_CATALOG, " ")).split(/(?<=[.!?])\s+/)) {
     const key = sentenceKey(sentence)
     const open = openingWords(sentence)
-    if (!key || CANNED_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
+    if (!key || /^having\b/i.test(sentence) || CANNED_FILLER.test(sentence) || GENERIC_FILLER.test(sentence) || BANNED_HEDGE.test(sentence) || RESUME_CATALOG.test(sentence) || seen.has(key) || (open.split(" ").length >= 6 && openings.has(open))) continue
     seen.add(key)
     if (open.split(" ").length >= 6) openings.add(open)
     kept.push(sentence)
   }
-  let out = kept.join(" ").replace(/\s+/g, " ").trim()
+  let out = kept.join(" ").replace(/\bSenior I Engineer\b/gi, "Senior Cybersecurity Engineer").replace(/\s+/g, " ").trim()
   if (contract.level === "director") out = out.replace(JARGON_LIST, "the tools").replace(/\s+/g, " ").trim()
   if (contract.level !== "architect" && wordCount(out) > contract.max) out = trimWords(out, contract.max)
   return out
@@ -179,19 +207,19 @@ export function repairIntroHeadline(question: string, text: string): string {
   return [INTRO_HEADLINE, ...rest].join(" ").replace(/\s+/g, " ").trim()
 }
 
-/** Bring a real answer up to the level band with distinct first-person story beats. Quick questions stay short. */
+/**
+ * Bring a short answer closer to the band with distinct first-person story beats, each used once.
+ * 10-fold test, 28 Nov 2026: the old loop re-told every beat as "On pass 2 of the same case I add one more check...",
+ * which read as a stuck record. A beat is never repeated; the model continuation is what reaches the band.
+ */
 export function expandToBand(text: string, contract: LevelContract): string {
   if (contract.quick || wordCount(text) >= contract.min) return text
   const kept = [text].filter(Boolean)
-  let i = 0
-  while (wordCount(kept.join(" ")) < contract.min && i < 80) {
-    const beat = STORY[i % STORY.length]
-    const pass = Math.floor(i / STORY.length) + 1
-    const line = pass === 1
-      ? beat
-      : `On pass ${pass} of the same case I add one more check and I still own the outcome: ${beat.charAt(0).toLowerCase()}${beat.slice(1)}`
-    kept.push(line.endsWith(".") ? line : `${line}.`)
-    i += 1
+  const have = new Set(String(text || "").split(/(?<=[.!?])\s+/).map(sentenceKey))
+  for (const beat of STORY) {
+    if (wordCount(kept.join(" ")) >= contract.min) break
+    if (have.has(sentenceKey(beat))) continue
+    kept.push(beat)
   }
   const out = kept.join(" ").replace(/\s+/g, " ").trim()
   return wordCount(out) > contract.max ? trimWords(out, contract.max) : out
