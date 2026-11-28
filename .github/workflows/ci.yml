@@ -155,7 +155,7 @@ jobs:
         run: node --test scripts/tests/login-journey-animation.test.mjs scripts/tests/login-35s-story.test.mjs
 
       - name: Verify Gmail Retry-After, Overview and selected-sender/account isolation
-        run: node --experimental-strip-types --test scripts/tests/gmail-retry-after.test.mjs scripts/tests/mail-overview.test.mjs scripts/tests/gmail-send-account-isolation.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/gmail-retry-after.test.mjs scripts/tests/mail-overview.test.mjs scripts/tests/gmail-send-account-isolation.test.mjs scripts/tests/mail-digest-account-isolation.test.mjs scripts/tests/auth-disabled-access-token.test.mjs scripts/tests/contract-search.test.mjs scripts/tests/apply-clearance-filter.test.mjs
 
       - name: Kompas S1 replay gate
         run: |

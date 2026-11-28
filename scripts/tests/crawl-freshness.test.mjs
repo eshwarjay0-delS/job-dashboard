@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import test from "node:test"
-import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff } from "../../src/lib/crawl/search.ts"
+import { CRAWL_FRESHNESS_DAYS, crawlFreshnessCutoff, collectFilteredSnapshot } from "../../src/lib/crawl/search.ts"
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8")
 
@@ -25,6 +25,12 @@ test("crawler search API applies freshness before returning rows", () => {
   assert.match(route, /freshness_days:\s*CRAWL_FRESHNESS_DAYS/)
 })
 
+test("clearance pagination uses a stable unique tie-breaker for equal timestamps", () => {
+  const route = read("../../src/app/api/crawl/jobs/route.ts")
+  const migration = read("../../supabase/migrations/20261017_crawl_jobs.sql")
+  assert.match(route, /\.order\("last_seen_at",\s*\{\s*ascending:\s*false\s*\}\)\s*\.order\("id",\s*\{\s*ascending:\s*true\s*\}\)/)
+  assert.match(migration, /id uuid primary key/)
+})
 test("eTeam is manual-only until a public feed is verified", () => {
   const adapters = read("../../src/lib/crawl/adapters.ts")
   const active = adapters.match(/export const ADAPTERS: PortalAdapter\[\] = \[([\s\S]*?)\n\]/)
@@ -50,4 +56,65 @@ test("Robert Half remains a manual cybersecurity directory link, not an active c
   const vendors = read("../../src/lib/vendorPortals.ts")
   assert.ok(vendors.includes('firm: "Robert Half Technology", url: "https://www.roberthalf.com/us/en/jobs/all/cyber-security"'))
   assert.ok(vendors.includes("manual-only until express prior written consent for automated collection"))
+})
+test("clearance filtering fills the limit from a single ordered snapshot", () => {
+  const snapshot = [
+    ...Array.from({ length: 100 }, (_, id) => ({ id, clearance: true })),
+    ...Array.from({ length: 10 }, (_, index) => ({ id: 100 + index, clearance: false })),
+  ]
+  const result = collectFilteredSnapshot(snapshot, 10, row => row.clearance, 200)
+  assert.deepEqual(result.items.map(row => row.id), Array.from({ length: 10 }, (_, index) => 100 + index))
+  assert.equal(result.scanned, 110)
+  assert.equal(result.excluded, 100)
+  assert.equal(result.scanLimited, false)
+})
+
+test("single bounded snapshot reports underfill at the scan cap", () => {
+  const snapshot = Array.from({ length: 150 }, (_, id) => ({ id, clearance: true }))
+  const result = collectFilteredSnapshot(snapshot, 10, row => row.clearance, 100)
+  assert.deepEqual(result.items, [])
+  assert.equal(result.scanned, 100)
+  assert.equal(result.excluded, 100)
+  assert.equal(result.scanLimited, true)
+})
+
+test("snapshot helper clamps scans at the hard 1,000-row ceiling", () => {
+  const snapshot = Array.from({ length: 1500 }, (_, id) => ({ id, clearance: true }))
+  const result = collectFilteredSnapshot(snapshot, 100, row => row.clearance, 1500)
+  assert.equal(result.scanned, 1000)
+  assert.equal(result.excluded, 1000)
+  assert.deepEqual(result.items, [])
+  assert.equal(result.scanLimited, true)
+})
+
+test("clearance route uses one bounded query and no mutable offset pages", () => {
+  const route = read("../../src/app/api/crawl/jobs/route.ts")
+  assert.match(route, /const scanLimit = Math\.min\(1000, Math\.max\(100, limit \* 10\)\)/)
+  assert.match(route, /query\.limit\(scanLimit\)/)
+  assert.doesNotMatch(route, /\.range\(offset/)
+})
+
+test("a short terminal snapshot reports underfill without claiming the scan cap was reached", () => {
+  const snapshot = [
+    { id: "1", clearance: true },
+    { id: "2", clearance: false },
+    { id: "3", clearance: true },
+  ]
+  const result = collectFilteredSnapshot(snapshot, 3, row => row.clearance, 100)
+  assert.deepEqual(result.items.map(row => row.id), ["2"])
+  assert.equal(result.scanned, 3)
+  assert.equal(result.excluded, 2)
+  assert.equal(result.scanLimited, false)
+})
+
+test("reaching the scan cap is not reported as limited after the visible limit is filled", () => {
+  const snapshot = [
+    ...Array.from({ length: 10 }, (_, id) => ({ id, clearance: false })),
+    ...Array.from({ length: 5 }, (_, index) => ({ id: 10 + index, clearance: true })),
+  ]
+  const result = collectFilteredSnapshot(snapshot, 10, row => row.clearance, 10)
+  assert.deepEqual(result.items.map(row => row.id), Array.from({ length: 10 }, (_, id) => id))
+  assert.equal(result.scanned, 10)
+  assert.equal(result.excluded, 0)
+  assert.equal(result.scanLimited, false)
 })

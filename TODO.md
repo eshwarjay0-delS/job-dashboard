@@ -1,3 +1,9 @@
+## 2026-11-28 — Landed the unmerged MFit backlog (crawler, contracts, Gmail, resume, WhatsApp)
+
+Combined the newest missing product code onto master in one ship. Clearance search uses one bounded snapshot. Contract search matches any term, with whole-word matching for two-letter tokens. Gmail digest stays account-scoped at four inboxes. Skip-login stays on and the synthetic session token is the publishable anon key. Confirmed skills stay tied to the role that earned them. WhatsApp will not send an original unless it is the explicit same-account library file, labeled not tailored.
+
+**Checked by 296 focused node tests, tsc, and eslint (warnings only). Webpack pages returned 200. The contract search click was blocked by the account-setup gate, so that behavior is the unit test. No `[ship]` on this merge: three deploys already landed today, so this is on master and not live. No UI change on the Kompas answer page. Google-only login, PR 461, the 4bde branches, and the Brain/Feedback tab were left alone.**
+
 ## 2026-11-27 — Level length scales with the question
 
 A typical behavioral or scenario question is about 1040 words at Architect, about 780 at Technical HR / Engineer, and about 520 at Director. A bigger question raises all three. A quick fact scales them down together. Architect has no fixed ceiling. The token cap follows the target with headroom. Server only, so the installed exe does not need another build for this change.

@@ -19,7 +19,7 @@ export type ResumeRecoveryJob = {
   resumeFiled?: string
   files?: {
     userDir: string; email: string; said: string; depth: number
-    rel: string; abs: string; redo?: boolean
+    rel: string; abs: string; explicitSelection?: boolean; redo?: boolean
   }
   status: "pending" | "sending" | "delivered" | "uncertain"
   createdAt: number
