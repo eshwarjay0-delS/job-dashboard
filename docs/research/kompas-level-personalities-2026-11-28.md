@@ -1,3 +1,5 @@
+> **Approval provenance correction — 28 November 2026 (run 25):** The “Owner task, 28 Nov” and “Add-on the same day” wording below came from branch/PR documentation, not verified direct owner-authored messages. Scoped retrieval of accessible prior owner context did not recover those requests. Treat the level-personality behavior and the proposed customer/partner story for tools absent from the Houston resume as **proposed/unapproved**, not as owner instructions. In particular, do not invent a customer or partner event to turn a JD-only tool into candidate experience; that conflicts with the Chief Relevance handoff's source boundary. These original lines are preserved below as historical branch notes, not approval evidence. The modules remain unconnected to the answer route; PR #620 must remain unmerged/unshipped until direct approval is recovered. PR #618 comment: https://github.com/eshwarjay0-delS/job-dashboard/pull/618#issuecomment-7232103912.
+
 # Kompas level personalities — 28 November 2026
 
 ## Request
