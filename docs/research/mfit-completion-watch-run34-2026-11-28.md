@@ -14,8 +14,8 @@
 ## Kompas
 
 - PR #640 is open, non-draft, mergeable, head `21972ceb797733a176850520530f797971dc4f0f`.
-- Cross-device `46134823565`, Plan/REA `46134823596`, baseline `46134823536` SUCCESS.
-- Full CI `46134823553`, Windows Caption Capture `46134823619`, and confirmed-skill `46134823546` IN_PROGRESS at the last read.
+- Cross-device `46134823565`, Plan/REA `46134823596`, baseline `46134823536`, Windows Caption Capture `46134823619`, and confirmed-skill `46134823546` SUCCESS.
+- Full CI `46134823553` FAILED: **106/107 tests pass; one failure** in `scripts/tests/kompas-speed-r6-route.test.mjs:78–82`. The synthetic provider-error test expects the final replace not to contain `Provider returned error`; it received that generic text. No raw provider detail/429 is shown. This is a test-level failure, not authenticated production evidence.
 - The S8 changes include preserving partial text on timeout/402, pack continuation to level band, first-call token cap, using only the session resume, identity/profile repairs, You attribution, empty-answer retry and local-only sync status.
 - No direct owner-authored approval for this batch or the suppression of truthful gaps was recovered. PR #640 is not merged and is not live. No live model response or human score was obtained.
 
@@ -27,7 +27,7 @@ Resume alignment remains evidence-bound: 95% raw-overlap web floor, 98% target a
 
 ## Gmail/mobile
 
-PR #637's full CI, Plan/REA, baseline and confirmed-skill gates are SUCCESS. It remains draft/nonmergeable; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`. No OAuth, inbox read, two-inbox account-switch or narrow-phone acceptance. Four accounts maximum; proactive Poke worker, scheduler, notifications and sending are disabled.
+PR #637's full CI, Plan/REA, baseline and confirmed-skill gates are SUCCESS. It remains draft/nonmergeable; protected preview requires the private `KOMPAS_VERCEL_API_TOKEN`. No OAuth, inbox read, two-inbox/account-switch or narrow-phone acceptance. Four accounts maximum; proactive Poke worker, scheduler, notifications and sending are disabled.
 
 ## Contract crawler
 
@@ -42,6 +42,6 @@ Public GitHub source access through the connector and Vercel metadata reads work
 1. Restore an authorized runnable canonical checkout with dependencies and installed Next.js guide before code edits/tests.
 2. Obtain the correct owner-authorized WhatsApp business/number and read-only R2/Meta/webhook trace to classify the 17 Oct incident; never replay.
 3. Obtain the exact source resume, JD and explicit candidate-confirmed facts for a fresh resume acceptance; inspect the exported DOCX.
-4. Keep PR #640 unmerged until direct approval and factuality review; preserve the factuality boundary.
+4. Keep PR #640 unmerged until direct approval and the provider-error/factuality failure is resolved; preserve the factuality boundary.
 5. Keep PR #637 blocked on protected preview and real two-inbox/phone acceptance; do not bypass the token.
 6. Keep PR #636 and #633 unmerged/unshipped because approval provenance was not recovered; no crawl/send.
