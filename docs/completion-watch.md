@@ -1217,3 +1217,8 @@ Scoped prior-context retrieval recovered direct user-authored approval from 22 N
 ## 28 November 2026 — run 28 parser implementation restack
 
 The approved two-line JD + named-resume parser is now implemented on the current-master branch PR #628 alongside the Kompas pack test-resolver shim. Direct user approval recovered from 22 Nov 12:02:21 UTC: first line must have a job-post signature, short chat remains intact, named resume is preserved, account email is asked when ambiguous, never guessed. Source change in src/lib/role-match.ts uses a fresh non-global regex; regression adds 50 repeated positives and no-signature/short-chat negatives, and package.json prebuild registers it. Commit SHAs: f3b201b4adf5859832d957c6ddf2cb304cb2b9c6, a187e89bdc7f7195c653fee26439f5f7e28e2eca, 57c20832a2a359ed63c52ef0deee389b50e4dc9e; WhatsApp docs cccd10b311c4a4770e7fd7ec18132f358de18312. No local tests/build; exact-head CI on combined PR pending. No account/email selection, DOCX, R2, send/replay, or incident acceptance.
+
+
+## 28 November 2026 — run 28 session-continuity fixture correction
+
+The earlier PR #628 full CI head d2df898 run 46108770685 failed three session-continuity tests with `paintOpenSessionList is not defined`. Source `public/kompas/app.js` contains the function; `scripts/tests/kompas-session-continuity.test.mjs` extracts only the lifecycle slice and did not provide a VM stub. PR #628 now adds a no-op fixture stub only (commit d6dbd39e6cf8b00bc2467ba68dad17c222044751); no production behavior is changed. Exact-head CI on the combined shim+parser+fixture branch is pending.
